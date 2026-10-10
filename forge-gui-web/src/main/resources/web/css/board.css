@@ -629,8 +629,25 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 /* A reveal opens in the same window as a zone, over the same dimmed board */
 .reveal-back { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--scrim-deep); }
 .reveal-panel { max-height: 88vh; }
+/* A reveal's scrim fades in, as a dialog's does */
+.reveal-back:not(.minimised) { animation: backdrop-in .2s ease-out; }
+/* The warning that a computer will not play some of its deck comes once the board has been seen, sized to its cards, which are dealt in */
+.reveal-back:has(.ai-skips) { animation: backdrop-in .22s ease-out .4s backwards; }
+.reveal-panel.ai-skips { width: fit-content; max-width: min(860px, 88vw); animation: box-in .26s cubic-bezier(.2, .8, .2, 1) .46s backwards; }
+.ai-skips header { align-items: start; padding: 18px 22px 4px; border-bottom: 0; }
+.ai-skips .warn-mark { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--danger) 16%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent); color: var(--danger); font-size: 16px; font-weight: 800; }
+.ai-skips-words { flex: 1; min-width: 0; }
+.ai-skips-words p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+.zone-panel.ai-skips footer { padding-top: 4px; border-top: 0; }
+@keyframes card-dealt { from { opacity: 0; translate: 0 18px; scale: .94; } }
+html[data-motion="reduced"] :is(.reveal-back, .reveal-panel.ai-skips, .ai-skips figure) { animation: none; }
 .reveal-panel .cards .section { grid-column: 1 / -1; justify-self: stretch; padding-bottom: 4px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .zone-panel footer { display: flex; align-items: center; gap: 12px; padding: 11px 18px; border-top: 1px solid var(--line); }
+.zone-panel.ai-skips .cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; padding: 16px 22px; }
+.ai-skips .cards .section { width: 100%; }
+.ai-skips figure { margin: 0; display: grid; gap: 7px; justify-items: center; animation: card-dealt .3s cubic-bezier(.2, .8, .2, 1) calc(.62s + var(--i) * var(--deal-step, 60ms)) backwards; }
+.ai-skips figure .card { box-shadow: 0 8px 18px #000a, 0 2px 4px #0008; }
+.ai-skips figcaption { max-width: calc(var(--card-w) * var(--fit)); color: var(--muted); font-size: 12px; line-height: 1.25; text-align: center; }
 .zone-hint { flex: 1; font-size: 12px; color: var(--muted); }
 .zone-answer { display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
 .zone-answer.cancel { background: var(--surface-2); border-color: var(--line); color: var(--muted); }

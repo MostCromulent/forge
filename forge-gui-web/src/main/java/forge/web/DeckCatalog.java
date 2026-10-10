@@ -340,7 +340,7 @@ final class DeckCatalog {
                     DeckEditor.groups(deck.getMain(), NO_FLAGS), DeckEditor.cards(deck.get(DeckSection.Sideboard), NO_FLAGS),
                     deck.getSleeveArtKey(),
                     deck.getSleeveArtOffset(),
-                    format == GameType.Commander ? bracket(deck) : null);
+                    format == GameType.Commander ? bracket(deck) : null, aiSkipNames(deck));
         }
     }
 
@@ -490,6 +490,11 @@ final class DeckCatalog {
                 facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), null,
                 deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null, listedBracket(deck, format),
                 facts.averageMana(), null, aiSkips(deck)));
+    }
+
+    private static List<String> aiSkipNames(final Deck deck) {
+        final List<? extends PaperCard> skipped = deck.getUnplayableAICards().unplayable.get(DeckSection.Main);
+        return skipped == null ? null : skipped.stream().map(PaperCard::getName).distinct().toList();
     }
 
     private static Integer aiSkips(final Deck deck) {

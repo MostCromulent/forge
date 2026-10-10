@@ -107,9 +107,15 @@ final class ToBrowser {
     record DeckDetailsMessage(DeckDetails deck) {
     }
 
+    /** aiSkips names the main deck's cards the computer will not play, and is left out when it plays them all. */
     record DeckDetails(String key, String name, @Nullable String problem, String colors, DeckStats stats,
             List<EditorGroup> main, List<EditorCard> sideboard, @Nullable String sleeveArt, int sleeveOffset,
-            @Nullable Bracket bracket) {
+            @Nullable Bracket bracket, @Nullable List<String> aiSkips) {
+        DeckDetails(final String key, final String name, final String problem, final String colors, final DeckStats stats,
+                final List<EditorGroup> main, final List<EditorCard> sideboard, final String sleeveArt, final int sleeveOffset,
+                final Bracket bracket) {
+            this(key, name, problem, colors, stats, main, sideboard, sleeveArt, sleeveOffset, bracket, null);
+        }
     }
 
     /** A Commander deck's suggested minimum bracket, where clear names the kinds of card the deck has none of. */
@@ -488,11 +494,23 @@ final class ToBrowser {
 
     enum ChoiceKind { choices, reveal }
 
-    /** A reveal only shows the list, and stackKeys is set when every option is a spell on the stack, so the browser picks it there. */
+    /**
+     * A reveal only shows the list, and stackKeys is set when every option is a spell on the stack, so the browser picks it there.
+     * aiSkipsOf is set on the reveal that warns a computer will not play some of its deck, and names that player.
+     */
     @Request
     record ChoicesRequest(ChoiceKind kind, @Nullable String message, int min, int max, List<RequestOption> options,
             List<Integer> selected, @Nullable List<Integer> stackKeys, @Nullable Integer atX, @Nullable Integer atY,
-            @Name("default") List<Integer> defaultAnswer) {
+            @Name("default") List<Integer> defaultAnswer, @Nullable Ref aiSkipsOf) {
+        ChoicesRequest(final ChoiceKind kind, final String message, final int min, final int max, final List<RequestOption> options,
+                final List<Integer> selected, final List<Integer> stackKeys, final Integer atX, final Integer atY,
+                final List<Integer> defaultAnswer) {
+            this(kind, message, min, max, options, selected, stackKeys, atX, atY, defaultAnswer, null);
+        }
+
+        ChoicesRequest warningOf(final Ref player) {
+            return new ChoicesRequest(kind, message, min, max, options, selected, stackKeys, atX, atY, defaultAnswer, player);
+        }
     }
 
     record OrderAnswer(List<Integer> indices, boolean remember) {

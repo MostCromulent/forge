@@ -5,7 +5,7 @@ import { store, stored } from '../storage';
 import { imageUrl } from '../images';
 import { Curve, useDeckView } from './deckhalf';
 import { CardGroup, SITES } from './importer';
-import { ColourToggles, Pips, toggled } from '../symbols';
+import { AI_ICON, ColourToggles, Pips, toggled } from '../symbols';
 import { changeUi, ui } from '../ui';
 import { DECK_FORMATS } from './editor';
 import { normalize, rankByName } from '../search';
@@ -52,13 +52,15 @@ export interface DeckFilter {
   mana: Range;
   folder: string | null;
   favourites: boolean;
+  /** Only decks whose every main-deck card the computer will play. */
+  aiPlays: boolean;
   sort: SortKey;
 }
 
 /** How the finder opens: every source, and only decks the lobby would accept. */
 export const FINDER_DEFAULTS: DeckFilter = {
   query: '', source: 'all', colours: new Set(), cardFormat: 'any', legalOnly: true, bracket: null, card: null, sideboard: null,
-  set: null, identity: null, colourCount: null, main: null, side: null, mana: null, folder: null, favourites: false, sort: 'name',
+  set: null, identity: null, colourCount: null, main: null, side: null, mana: null, folder: null, favourites: false, aiPlays: false, sort: 'name',
 };
 
 /** The folder a deck's key places it in, "" for none. A key is source:folder/name. */
@@ -84,7 +86,8 @@ export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter,
     && within(f.colourCount, d.colors ? identityLetters(d).length : null)
     && within(f.main, d.main) && within(f.side, d.sideboard) && within(f.mana, d.averageMana)
     && (f.folder === null || folderOf(d.key) === f.folder)
-    && (!f.favourites || !!d.favourite));
+    && (!f.favourites || !!d.favourite)
+    && (d.generated || !f.aiPlays || !d.aiSkips));
   const byName = (a: DeckSummary, b: DeckSummary) => a.name.localeCompare(b.name);
   const by: Record<SortKey, (a: DeckSummary, b: DeckSummary) => number> = {
     name: byName,
@@ -128,7 +131,9 @@ export function DeckFinder({ model, actions, seat, close }: {
   const format = model.lobby?.format ?? ui.browse?.format ?? 'Constructed';
   // A Commander table's bracket limit is where the list starts, and can be lifted as its warning can be ignored
   const tableBracket = model.lobby?.format === 'Commander' && model.lobby.maxBracket < 5 ? model.lobby.maxBracket : null;
-  const [filter, setFilter] = useState<DeckFilter>(() => ({ ...FINDER_DEFAULTS, colours: new Set(), bracket: tableBracket }));
+  // A computer's finder opens on the decks it plays in full, which the player can widen as any other filter
+  const forComputer = seat?.seat.type === 'AI';
+  const [filter, setFilter] = useState<DeckFilter>(() => ({ ...FINDER_DEFAULTS, colours: new Set(), bracket: tableBracket, aiPlays: forComputer }));
   const change = (part: Partial<DeckFilter>) => setFilter(f => ({ ...f, ...part }));
   const find = useRef<HTMLInputElement>(null);
   const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
@@ -226,6 +231,7 @@ export function DeckFinder({ model, actions, seat, close }: {
       <div class="finder">
         <header class="finder-head">
           <h2>{seat ? t('lblWebLobbyChooseDeck') : t('lblDecks')}</h2>
+          {forComputer && <span class="for-ai">{AI_ICON}{t('lblWebFinderForComputer', seat.seat.name ?? '')}</span>}
           {!seat && (
             <label class="legality set">
               {t('lblFormat')}
@@ -306,14 +312,14 @@ export function DeckFinder({ model, actions, seat, close }: {
             <div class="dk-hits">
               {list.length
                 ? list.map(d => <Hit key={d.key} deck={d} chosen={d.key === chosen} choose={() => setChosen(d.key)}
-                  use={() => use(d.key)} source={filter.source === 'all'} />)
+                  use={() => use(d.key)} source={filter.source === 'all'} forComputer={forComputer} />)
                 : <p class="none">{t('lblWebFinderNoMatch')}</p>}
             </div>
           </div>
           <aside class="dk-chosen" onPointerOver={e => setPeek(peekAt(e, '.finder') ?? peek)} onPointerLeave={() => setPeek(null)}>
             {!chosen ? <p class="none">{t('lblWebFinderPickHint')}</p>
               : !details ? <p class="none">{t('lblWebFinderReading')}</p>
-                : <Chosen details={details} formats={summary?.formats} />}
+                : <Chosen details={details} formats={summary?.formats} forComputer={forComputer} />}
           </aside>
         </div>
         <footer class="finder-foot">
@@ -453,6 +459,13 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
         value={f.legalOnly ? 'hide' : 'show'} pick={v => { set({ ...f, legalOnly: v === 'hide' }); done(); }} />,
     },
     {
+      id: 'ai', group: legality, label: t('lblWebFilterAiSkips'),
+      chip: f => (f.aiPlays ? t('lblWebFilterAiSkipsNone') : null),
+      clear: f => ({ ...f, aiPlays: false }),
+      panel: (f, set, done) => <OneOf options={[['none', t('lblWebFilterAiSkipsOnlyNone')], ['any', t('lblWebFilterAiSkipsAny')]] as const}
+        value={f.aiPlays ? 'none' : 'any'} pick={v => { set({ ...f, aiPlays: v === 'none' }); done(); }} />,
+    },
+    {
       id: 'bracket', group: legality, label: t('lblBracket'),
       chip: f => (f.bracket === null ? null : `≤ ${f.bracket}`),
       from: f => (model.lobby && f.bracket === model.lobby.maxBracket ? fromTable : null),
@@ -519,8 +532,8 @@ const SOURCE_NAMES: Record<string, TextKey> = {
 const sourceName = (id: string) => (SOURCE_NAMES[id] ? t(SOURCE_NAMES[id]) : id.charAt(0).toUpperCase() + id.slice(1));
 
 // The source is only worth a column while every source is listed; with one picked, the rail already says it
-function Hit({ deck: d, chosen, choose, use, source }: {
-  deck: DeckSummary; chosen: boolean; choose: () => void; use: () => void; source: boolean;
+function Hit({ deck: d, chosen, choose, use, source, forComputer }: {
+  deck: DeckSummary; chosen: boolean; choose: () => void; use: () => void; source: boolean; forComputer: boolean;
 }) {
   // A generator has nothing to measure until it has built something, so it says what it is instead
   if (d.generated) {
@@ -534,8 +547,13 @@ function Hit({ deck: d, chosen, choose, use, source }: {
   }
   // Shown only when asked for, and then marked, so a deck that is here is never hunted for elsewhere
   return (
-    <button class="dk-hit" aria-pressed={chosen} title={d.problem ?? ''} onClick={choose} onDblClick={use}>
+    <button class={forComputer && d.aiSkips ? 'dk-hit ai-poor' : 'dk-hit'} aria-pressed={chosen} title={d.problem ?? ''} onClick={choose} onDblClick={use}>
       <Title deck={d} />
+      {forComputer && !!d.aiSkips && (
+        <span class="ai-skips-tag" title={t(d.aiSkips === 1 ? 'lblWebFinderAiSkipsOne' : 'lblWebFinderAiSkipsN', d.aiSkips)}>
+          {AI_ICON}{t('lblWebFinderAiSkipsTag', d.aiSkips)}
+        </span>
+      )}
       {d.bracket != null && <BracketMark level={d.bracket} />}
       {source && <span class="tag">{d.source}</span>}
       <span class="size">{d.main}{d.sideboard ? `+${d.sideboard}` : ''}</span>
@@ -574,7 +592,7 @@ export function peekAt(e: PointerEvent, frameSelector: string): { image: string;
   };
 }
 
-function Chosen({ details, formats }: { details: DeckDetails; formats?: string }) {
+function Chosen({ details, formats, forComputer }: { details: DeckDetails; formats?: string; forComputer: boolean }) {
   const s = details.stats;
   // Game changers are marked where they sit in the list, whether or not the bracket's reasons are open
   const changers = new Set(details.bracket?.reasons.find(r => r.kind === 'gameChangers')?.cards ?? []);
@@ -593,6 +611,12 @@ function Chosen({ details, formats }: { details: DeckDetails; formats?: string }
         <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? t('lblWebFinderLegalForFormat')}</p>
         {/* The formats the deck's cards are legal in, as the desktop chooser words it */}
         {formats && <p class="deck-formats">{formats}</p>}
+        {forComputer && details.aiSkips && (
+          <p class="ai-skips-note">
+            <b>{AI_ICON}{t(details.aiSkips.length === 1 ? 'lblWebFinderAiSkipsOne' : 'lblWebFinderAiSkipsN', details.aiSkips.length)}</b>
+            <span>{details.aiSkips.join(', ')}</span>
+          </p>
+        )}
         {details.bracket && <BracketPanel bracket={details.bracket} />}
         <div class="stats">
           <Curve curve={s.curve} creatures={s.creatures} px={42} />

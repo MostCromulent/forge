@@ -33,7 +33,8 @@ export function Requests({ model, actions }: { model: Model; actions: Actions })
   }
   // Cards shown and nothing asked of them: the zone window, the same as looking through a pile
   if (req.kind === 'reveal' && !req.atX && !req.atY) {
-    return <RevealWindow key={req.id} model={model} title={req.message ?? ''} cards={req.options} close={() => actions.answer(req.id, [])} />;
+    return <RevealWindow key={req.id} model={model} title={req.message ?? ''} cards={req.options} close={() => actions.answer(req.id, [])}
+      aiSkipsOf={req.aiSkipsOf ? model.objects.get(req.aiSkipsOf.ref) as PlayerView | undefined : undefined} />;
   }
   // Keyed by the question, so nothing picked for one is still picked for the next
   return <RequestDialog key={req.id} req={req} model={model} answer={value => actions.answer(req.id, value)} />;
@@ -134,17 +135,51 @@ function ButtonRow({ children }: { children: ComponentChildren }) {
 // A deck list arrives with its sections marked out as entries of their own, which read as headings, not choices
 const SECTION = /^=+\s*(.*?)\s*=+$/;
 
-/** Cards laid out to be looked at, in a window that folds to a bar so the board under it can be read before answering. */
-export function RevealWindow({ model, title, cards, close }: { model: Model; title: string; cards: RequestOption[]; close: () => void }) {
+/**
+ * Cards laid out to be looked at, in a window that folds to a bar so the board under it can be read before answering.
+ * With aiSkipsOf it is the warning that a computer will not play some of its deck, worded and drawn as one.
+ */
+export function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
+  model: Model; title: string; cards: RequestOption[]; close: () => void; aiSkipsOf?: PlayerView;
+}) {
   const [folded, setFolded] = useState(false);
-  const count = cards.filter(c => c.card || c.imageKey || !SECTION.test(c.label ?? '')).length;
+  const isSection = (c: RequestOption) => !c.card && !c.imageKey && SECTION.test(c.label ?? '');
+  const count = cards.filter(c => !isSection(c)).length;
   const counted = t(count === 1 ? 'lblWebOneCard' : 'lblWebNCards', count);
+  const who = aiSkipsOf?.Name ?? '';
+  const title = !aiSkipsOf ? asSent : count === 1 ? t('lblWebRevealAiSkipsOne', who) : t('lblWebRevealAiSkipsN', who, count);
   if (folded) {
     return (
       <div class="reveal-back minimised">
         <section class="zone-bar">
           <span class="zone-dot" aria-hidden="true" /><b><SymbolText text={title} /></b><span class="zone-count">{counted}</span>
           <button class="zone-unfold primary" onClick={() => setFolded(false)}>{t('lblWebZoneShowCards')}</button>
+        </section>
+      </div>
+    );
+  }
+  if (aiSkipsOf) {
+    // A heading is worth its line only when the cards come from more than one part of the deck
+    const headed = cards.filter(isSection).length > 1;
+    let dealt = 0;
+    return (
+      <div class="reveal-back" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+        {/* Many cards are dealt faster, so the last still lands within half a second of the first */}
+        <section class="zone-panel reveal-panel ai-skips" role="dialog" aria-label={title} style={`--deal-step: ${Math.min(60, Math.round(500 / Math.max(1, count)))}ms`}>
+          <header>
+            <span class="warn-mark" aria-hidden="true">!</span>
+            <div class="ai-skips-words">
+              <b class="zone-who">{title}</b>
+              <p>{t(count === 1 ? 'lblWebRevealAiSkipsWhyOne' : 'lblWebRevealAiSkipsWhyN', who)}</p>
+            </div>
+            <button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>
+          </header>
+          <div class="cards">
+            {cards.map((o, i) => (isSection(o)
+              ? headed && <OptionView key={i} model={model} opt={o} />
+              : <figure key={i} style={`--i: ${dealt++}`}><OptionView model={model} opt={o} /><figcaption>{o.name ?? o.label}</figcaption></figure>))}
+          </div>
+          <footer><span class="zone-hint" /><button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><kbd>{keyName(boundKeys().ok)}</kbd></button></footer>
         </section>
       </div>
     );

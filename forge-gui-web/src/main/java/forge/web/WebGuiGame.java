@@ -47,7 +47,9 @@ import forge.trackable.TrackableTypes.TrackableType;
 import forge.trackable.Tracker;
 import forge.util.FSerializableFunction;
 import forge.util.ITriggerEvent;
+import forge.util.Lang;
 import forge.util.Localizer;
+import forge.util.MessageUtil;
 import forge.web.FromBrowser.*;
 import forge.web.ToBrowser.*;
 import org.tinylog.Logger;
@@ -717,7 +719,9 @@ public class WebGuiGame extends NetworkGuiGame {
     public <T> List<T> getChoices(final String message, final int min, final int max, final List<T> choices, final List<T> selected, final FSerializableFunction<T, String> display) {
         if (min < 0 && max < 0) {
             // AbstractGuiGame.reveal: display only, the return value is ignored
-            ask(choicesRequest(ChoiceKind.reveal, message, min, max, choices, selected, display, null, null, List.of()), v -> true);
+            final ChoicesRequest shown = choicesRequest(ChoiceKind.reveal, message, min, max, choices, selected, display, null, null, List.of());
+            final PlayerView skipper = aiSkipsOwner(message);
+            ask(skipper == null ? shown : shown.warningOf(Ref.player(skipper.getId())), v -> true);
             return new ArrayList<>();
         }
         final int need = Math.min(Math.max(min, 0), choices.size());
@@ -729,6 +733,23 @@ public class WebGuiGame extends NetworkGuiGame {
         final ChoicesRequest request = choicesRequest(ChoiceKind.choices, message, need, max, choices, selected, display,
                 stackKeysFor(choices), null, Answers.range(0, need));
         return Answers.pick(choices, ask(request, Answers.indexList(choices.size(), need, max)));
+    }
+
+    /** Whose deck a reveal warns the computer will not play all of, told by the host's own words for it; null for any other reveal. */
+    private PlayerView aiSkipsOwner(final String message) {
+        final GameView gv = getGameView();
+        final Localizer loc = Localizer.getInstance();
+        final String warning = loc.getMessage("lblAICantPlayCards");
+        if (gv == null || message == null || !message.startsWith(warning)) {
+            return null;
+        }
+        for (final PlayerView p : gv.getPlayers()) {
+            final String whose = Lang.getInstance().getPossessedObject(MessageUtil.mayBeYou(getCurrentPlayer(), p), "");
+            if (message.equals(loc.getMessage("lblActionFromPlayerDeck", warning, whose))) {
+                return p;
+            }
+        }
+        return null;
     }
 
     /** Asks for a number when the choices count up by one, with or without a last entry for any number past them; null when they do not. */

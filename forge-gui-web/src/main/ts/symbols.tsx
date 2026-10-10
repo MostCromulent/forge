@@ -3,6 +3,9 @@
 import { symbolParts, symbolUrl } from './images';
 import { t, type TextKey } from './text';
 
+/** The mark of a computer player: Lucide's bot (ISC, see web/licenses/lucide-license.txt). */
+export const AI_ICON = <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2M20 14h2M15 13v2M9 13v2" /></svg>;
+
 /** Text with its {2}{B} and {T} drawn from the skin's icon sheet, as setSymbolText draws it on the board. */
 export function SymbolText({ text, muted }: { text: string | null | undefined; muted?: boolean }) {
   return <>{symbolParts(text ?? '').map((part, i) => part.symbol

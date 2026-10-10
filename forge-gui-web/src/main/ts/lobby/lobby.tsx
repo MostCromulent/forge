@@ -9,7 +9,7 @@ import { BracketMark, DeckFinder, peekAt } from '../deck/deckfinder';
 import { imageUrl, smallImage } from '../images';
 import { ExtraPicker } from './extrapicker';
 import { CENTRE, SleevePicker, artUrl, objectPosition } from '../sleeves';
-import { Pips } from '../symbols';
+import { AI_ICON, Pips } from '../symbols';
 import { EventHead } from './event';
 import { MatchBar, TableHeader, seatsLeaving } from './matchbar';
 import { SetupHead, WAY_NAMES } from '../header';
@@ -93,8 +93,7 @@ const KIND: Record<string, TextKey> = { LOCAL: 'lblWebLobbyKindYou', AI: 'lblAI'
 /** What a seat of this type is called, or the type itself for one this page does not know. */
 const kindName = (type: string): string => (KIND[type] ? t(KIND[type]) : type);
 
-// Lucide's bot and user (ISC, see web/licenses/lucide-license.txt)
-const AI_ICON = <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2M20 14h2M15 13v2M9 13v2" /></svg>;
+// Lucide's user (ISC, see web/licenses/lucide-license.txt)
 const PLAYER_ICON = <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>;
 
 /** Who plays a seat the host may hand over: a chip that opens the two choices, each with a line saying what it means. */
