@@ -130,11 +130,14 @@ function another(current: number, count: number): number {
 }
 
 /**
- * Decks a seat may be dealt at random: any the lobby would accept, generators included, up to the table's bracket.
+ * Decks a seat may be dealt at random: any the lobby would accept, up to the table's bracket. A generator, which builds
+ * a new deck each time, is dealt only when there is no built deck to deal.
  * A computer is dealt none holding cards it will not play, as desktop deals it none.
  */
 export function randomPool(decks: readonly DeckSummary[], maxBracket = 5, forComputer = false): DeckSummary[] {
-  return decks.filter(d => !d.problem && (d.bracket == null || d.bracket <= maxBracket) && !(forComputer && d.aiSkips));
+  const fit = decks.filter(d => !d.problem && (d.bracket == null || d.bracket <= maxBracket) && !(forComputer && d.aiSkips));
+  const built = fit.filter(d => !d.generated);
+  return built.length ? built : fit;
 }
 
 /** A computer seat given a deck legal here, so a table fills without a trip to the chooser each. */
