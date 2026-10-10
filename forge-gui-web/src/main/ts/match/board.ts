@@ -562,7 +562,9 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, se
       img.dataset.zoom = src;
       el.classList.toggle('back', zoneName === 'Library' && cards.length > 0);
       el.classList.toggle('empty', cards.length === 0);
-      q(el, '.zone-count').textContent = String(cards.length);
+      // A card still on its way here is not counted until it lands (motion.ts holdCounts)
+      el.dataset.count = String(cards.length);
+      if (!el.dataset.heldCount) q(el, '.zone-count').textContent = String(cards.length);
       // The types a graveyard holds matter to delirium and cards like it, so hovering it says them
       if (zoneName === 'Graveyard') {
         el.title = graveyardTitle(cards.length, cardTypes(cards.map(c => stateOf(model, c).Type ?? '')));

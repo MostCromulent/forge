@@ -90,6 +90,12 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   }
   el.dataset.zoom = src;
   if (small) pictures.set(card.$key, { src: small, zoom: src, name: state.Name ?? '' });
+  // A card that shows another face where it stands (a transform, a morph turned up) unfolds to it
+  const face = card.Facedown ? 'down' : state.ImageKey ?? '';
+  if (el.dataset.face !== undefined && el.dataset.face !== face && el.closest('.battlefield') && !reducedMotion()) {
+    q(el, 'img').animate([{ scale: '0 1' }, { scale: '1 1' }], { duration: 220, easing: 'cubic-bezier(.2,.7,.3,1)' });
+  }
+  el.dataset.face = face;
   el.style.setProperty('--pile-img', small ? cssUrl(small) : 'none');
   q(el, '.name').textContent = visible ? (state.Name ?? '') : '';
   setCost(q(el, '.cost'), visible ? state.ManaCost ?? '' : '');

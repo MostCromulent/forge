@@ -96,7 +96,8 @@ final class BrowserEvents {
         }
         if (event instanceof GameEventSpellResolved e && e.spell() != null) {
             final CardView host = e.spell().getHostCard();
-            return new StackResolved(host == null ? null : player(host.getController()));
+            return new StackResolved(host == null ? null : player(host.getController()),
+                    host == null ? null : Ref.card(host.getId()), e.hasFizzled());
         }
         if (event instanceof GameEventPlayerLivesChanged e && e.player() != null) {
             return new LifeChanged(Ref.player(e.player().getId()), e.oldLives(), e.newLives());

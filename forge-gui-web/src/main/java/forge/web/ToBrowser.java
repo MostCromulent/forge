@@ -358,8 +358,9 @@ final class ToBrowser {
     record StackAdded(@Nullable Ref player) {
     }
 
+    /** The card a spell or an ability came from, and whether it did nothing because its targets had gone. */
     @Event("stackResolved")
-    record StackResolved(@Nullable Ref player) {
+    record StackResolved(@Nullable Ref player, @Nullable Ref source, boolean fizzled) {
     }
 
     /** Life gained or lost in any way, damage included. */

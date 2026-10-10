@@ -4,7 +4,7 @@ import { cardImageSrc, noImageOnError, setImage } from '../images';
 import { game, deref, derefAll, me, stackPick, stateOf, type Model } from '../model';
 import { isPortrait } from '../form';
 import { hoverCard, hoverable, inspectCard } from './detail';
-import { journeys } from './motion';
+import { journeys, noteFizzled } from './motion';
 import { stackTargets } from './overlay';
 import { hovers, longPress } from '../press';
 import { byId, q, make, reducedMotion } from '../dom';
@@ -117,6 +117,8 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   const pile = q(root, '.pile');
   // An awaiting spell stands where its item will appear, at the top, so paying for it moves nothing
   const entries: (StackItemView | string)[] = [...awaiting.keys(), ...items];
+  showLeaving(pile, new Set(entries.map(e => typeof e === 'string' ? `awaiting-${e}` : String(e.$key))), events);
+  const arriving: { el: HTMLElement; source: string }[] = [];
   reconcile(pile, entries, e => typeof e === 'string' ? `awaiting-${e}` : e.$key,
     e => {
       if (typeof e === 'string') return createAwaiting(e);
@@ -128,14 +130,14 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
       updateItem(el, model, e);
       if (el.dataset.fresh) {
         delete el.dataset.fresh;
-        if (!flown.has(String(e.SourceCard?.ref)) && document.documentElement.dataset.motion !== 'reduced') {
-          el.animate([{ opacity: 0, scale: '.85' }, { opacity: 1, scale: '1' }], { duration: 200, easing: 'cubic-bezier(.2, .8, .3, 1)' });
-        }
+        if (!flown.has(String(e.SourceCard?.ref)) && !reducedMotion()) arriving.push({ el, source: String(e.SourceCard?.ref ?? '') });
       }
       el.classList.toggle('targetable', (pick?.stackKeys ?? []).includes(e.$key));
     });
   place(root);
   layout(pile, entries.length);
+  // Measured now that every item has its place in the pile
+  for (const { el, source } of arriving) arrive(el, source, collapsed);
   renderMenu(model);
   renderStorm(root, game(model)?.StormCount ?? 0, entries.length > 0);
 }
@@ -295,7 +297,61 @@ function createItem(model: Model): HTMLElement {
   return el;
 }
 
+/** An ability or a trigger comes out of the card it belongs to, where that card is on the board, and otherwise grows into place. */
+function arrive(el: HTMLElement, source: string, collapsed: boolean): void {
+  const from = collapsed || !source ? null : document.querySelector(`.battlefield .card[data-key="${source}"]`)?.getBoundingClientRect();
+  const to = el.getBoundingClientRect();
+  if (!from?.width || !to.width) {
+    el.animate([{ opacity: 0, scale: '.85' }, { opacity: 1, scale: '1' }], { duration: 200, easing: 'cubic-bezier(.2, .8, .3, 1)' });
+    return;
+  }
+  const dx = from.left + from.width / 2 - (to.left + to.width / 2), dy = from.top + from.height / 2 - (to.top + to.height / 2);
+  el.animate([{ translate: `${dx}px ${dy}px`, scale: String(from.width / to.width), opacity: .4 }, { translate: '0px 0px', scale: '1', opacity: 1 }],
+    { duration: 320, easing: 'cubic-bezier(.2, .7, .3, 1)' });
+}
+
+/** How long a resolved ability takes to go, and a spell or ability that failed takes to be seen to fail. */
+const GONE_MS = 140;
+const FIZZLE_MS = 460;
+
+/**
+ * Shows what leaves the stack this frame, before its element is taken away. A spell that resolves is carried off by its
+ * own card's flight, so only an ability fades. One that fizzled, or was taken off while something else resolved (it was
+ * countered), greys, shudders and sinks out of sight.
+ */
+function showLeaving(pile: HTMLElement, staying: Set<string>, events: readonly GameEvent[]): void {
+  if (reducedMotion()) return;
+  const resolved = events.flatMap(e => e.kind === 'stackResolved' ? [e] : []);
+  const somethingResolved = resolved.length > 0;
+  for (const el of [...pile.children] as HTMLElement[]) {
+    const box = el.getBoundingClientRect();
+    if (staying.has(el.dataset.key ?? '') || el.classList.contains('awaiting') || !box.width) continue;
+    const source = el.querySelector('img')?.dataset.key ?? '';
+    const at = resolved.findIndex(e => String(e.source?.ref ?? '') === source);
+    const failed = at < 0 ? somethingResolved : resolved.splice(at, 1)[0].fizzled;
+    const ability = !!el.dataset.ability;
+    if (!failed && !ability) continue;
+    const ghost = el.cloneNode(true) as HTMLElement;
+    ghost.classList.remove('top', 'lifted', 'targetable');
+    ghost.style.cssText += `position: fixed; left: ${box.left}px; top: ${box.top}px; width: ${box.width}px; height: ${box.height}px; margin: 0; z-index: 41; pointer-events: none;`;
+    document.body.append(ghost);
+    const gone = failed ? ghost.animate([
+      { filter: 'none', translate: '0 0', scale: '1', opacity: 1 },
+      { filter: 'grayscale(1) brightness(.8)', translate: '-4px 0', offset: 0.14 },
+      { translate: '4px 0', offset: 0.28 },
+      { translate: '-2px 0', offset: 0.42 },
+      { filter: 'grayscale(1) brightness(.6) blur(0px)', translate: '0 0', scale: '1', opacity: .9, offset: 0.56 },
+      { filter: 'grayscale(1) brightness(.45) blur(3px)', translate: '0 12px', scale: '.9', opacity: 0 },
+    ], { duration: FIZZLE_MS, easing: 'ease-out' })
+      : ghost.animate([{ opacity: 1, scale: '1' }, { opacity: 0, scale: '.92' }], { duration: GONE_MS, easing: 'ease-in' });
+    gone.finished.then(() => ghost.remove(), () => ghost.remove());
+    // A failed spell's card waits under this before it leaves for wherever it is put (motion.ts)
+    if (failed && !ability && source) noteFizzled(source);
+  }
+}
+
 function updateItem(el: HTMLElement, model: Model, item: StackItemView): void {
+  el.dataset.ability = item.Ability ? '1' : '';
   const source = deref(model, item.SourceCard);
   const state = source ? stateOf(model, source) : {};
   const src = cardImageSrc(model, source);

@@ -28,8 +28,8 @@ describe('worthSeeing', () => {
   });
   it("holds for another player's ability on the stack and as it resolves, and not for your own", () => {
     expect(worthSeeing([{ kind: 'stackAdded', player: { ref: THEM } }], [ME])).toBe(true);
-    expect(worthSeeing([{ kind: 'stackResolved', player: { ref: THEM } }], [ME])).toBe(true);
-    expect(worthSeeing([{ kind: 'stackAdded', player: { ref: ME } }, { kind: 'stackResolved', player: { ref: ME } }], [ME])).toBe(false);
+    expect(worthSeeing([{ kind: 'stackResolved', player: { ref: THEM }, fizzled: false }], [ME])).toBe(true);
+    expect(worthSeeing([{ kind: 'stackAdded', player: { ref: ME } }, { kind: 'stackResolved', player: { ref: ME }, fizzled: false }], [ME])).toBe(false);
   });
   it('holds for a life change, counters and an attachment', () => {
     expect(worthSeeing([{ kind: 'lifeChanged', player: { ref: ME }, from: 20, to: 23 }], [ME])).toBe(true);

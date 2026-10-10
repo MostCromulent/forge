@@ -8,6 +8,8 @@ import { echoSound } from '../audio';
 import { TAPPED_SCALE, unmake } from './leaving';
 import type { Model } from '../model';
 import { make } from '../dom';
+import { cardImageSrc } from '../images';
+import { lastPicture } from './cards';
 
 /** Where a card stood, and a copy of how it looked there, for a trip after its own element has gone. */
 interface Snapshot {
@@ -123,8 +125,10 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   const dealt: { el: HTMLElement; start: DOMRect }[] = [];
   const leavingHand: { was: Snapshot; target: DOMRect | null; tile?: boolean; key?: string; onto?: HTMLElement | null }[] = [];
   const trips = journeys(events);
-  // Hand icons and zone tiles already swelling this frame, so several cards arriving at once swell each once
+  // Hand icons already swelling this frame, so several cards drawn at once swell it once
   const swelled = new Set<HTMLElement>();
+  // Zone tiles cards are landing on this frame: how many, and when the first arrives
+  const landings = new Map<HTMLElement, { cards: number; at: number }>();
   let fromLibrary = 0;
   /** How long until the last permanent being unmade where it stood has gone, so the row does not close over it. */
   let unmaking = 0;
@@ -156,7 +160,8 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       const back = away ?? start;
       if (back) {
         if (move.via.zone === 'Library' && move.to?.zone === 'Hand') dealt.push({ el, start: back });
-        else fly(el, back, FLIGHT_MS, 0);
+        // A card that leaves and returns in one update goes out before it comes back
+        else fly(el, back, FLIGHT_MS, away ? FLIGHT_MS : 0);
       }
       continue;
     }
@@ -190,8 +195,8 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       continue;
     }
     // Somewhere not drawn card by card (a library, a graveyard's pile, an opponent's hand): a copy makes the trip
-    const ghost = waiting.get(key)?.ghost ?? seen?.ghost ?? null;
-    const was = waiting.get(key)?.ghost ? { rect: waiting.get(key)!.rect, ghost, size: seen?.size } : seen;
+    let ghost = waiting.get(key)?.ghost ?? seen?.ghost ?? null;
+    let was = waiting.get(key)?.ghost ? { rect: waiting.get(key)!.rect, ghost, size: seen?.size } : seen;
     // Another player's hand is only an icon, so a card drawn into it makes no trip and the icon swells once instead
     const intoFan = move.from?.zone === 'Library' && move.to?.zone === 'Hand' ? handFanOf(move.to) : null;
     if (!ghost && intoFan) {
@@ -214,6 +219,13 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
         sendTo({ rect: start, ghost: cardBack(model, key) }, target, 1, fromLibrary++ * STAGGER_MS);
       }
     }
+    // A spell on the stack, a tile's top card and a card in a hand drawn as an icon have no card to copy, so one is made
+    const fizzling = fizzled.has(key);
+    if (!ghost && start && move.from?.zone !== 'Library' && (tileImageRect(key) ?? placeRect(move.to))) {
+      ghost = standIn(model, key, fizzling);
+      const h = start.height, w = Math.min(start.width, h * CARD_ASPECT);
+      was = { rect: start, ghost, size: { w, h } };
+    }
     if (ghost && start && was) {
       const tile = tileImageRect(key);
       const target = tile ?? placeRect(move.to);
@@ -226,13 +238,15 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
         const leaving = move.from?.zone === 'Battlefield' && (move.to?.zone === 'Graveyard' || move.to?.zone === 'Exile')
           ? unmake(ghost, start, was.size, !!was.tapped, move.to.zone) : 0;
         // A card landing on a zone tile ends on the tile's picture, which is held back until it arrives
-        if (tile) holdTile(key, leaving ? leaving - FLIGHT_MS : 0);
+        // A spell that fizzles is seen to fail on the stack before what is left of it goes
+        const wait = fizzling ? FIZZLE_LEAD_MS : 0;
+        if (tile) holdTile(key, leaving ? leaving - FLIGHT_MS : wait);
         unmaking = Math.max(unmaking, leaving);
-        if (!leaving) sendTo({ ...was, rect: start }, target ?? start, tile ? 1 : target ? 0.25 : 0);
-        arrives = leaving || FLIGHT_MS;
+        if (!leaving) sendTo({ ...was, rect: start }, target ?? start, tile ? 1 : target ? 0.25 : 0, wait);
+        arrives = leaving || FLIGHT_MS + wait;
       }
     }
-    swell(onto, arrives, swelled);
+    swell(onto, arrives, landings);
     land(key);
   }
   // A hand that leaves as another is dealt (a mulligan) has gone before the first new card sets off, and both go quicker
@@ -247,10 +261,15 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   echoSound('draw', dealt.slice(swap ? 0 : 1).map((_, i) => afterLeaving + (swap ? i : i + 1) * apart));
   // Cards leaving the hand together (a mulligan, a discard) go one after another from the right, as a deal arrives
   leavingHand.sort((a, b) => b.was.rect.left - a.was.rect.left).forEach(({ was, target, tile, key, onto }, i) => {
-    swell(onto, i * apart + ms, swelled);
+    swell(onto, i * apart + ms, landings);
     if (tile) holdTile(key, i * apart);
     sendTo(was, target ?? was.rect, tile ? 1 : target ? 0.25 : 0, i * apart, undefined, ms);
   });
+  holdCounts(landings);
+  fizzled.clear();
+  for (const e of events) {
+    if (e.kind === 'shuffled') riffle(e.player.ref);
+  }
   settleWaiting(!!model.prompt?.paying);
   const travelled = new Set(trips.keys());
   arriveElsewhere(travelled);
@@ -539,12 +558,68 @@ function landedTile(model: Model, key: string, to: Place | undefined): HTMLEleme
 }
 
 /** Swells a zone tile once as a card lands on it, however many land together. */
-function swell(tile: HTMLElement | null | undefined, delay: number, swelled: Set<HTMLElement>): void {
-  if (!tile || swelled.has(tile)) {
+function swell(tile: HTMLElement | null | undefined, delay: number, landings: Map<HTMLElement, { cards: number; at: number }>): void {
+  if (!tile) {
     return;
   }
-  swelled.add(tile);
+  const landing = landings.get(tile);
+  if (landing) {
+    landing.cards++;
+    return;
+  }
+  landings.set(tile, { cards: 1, at: delay });
   tile.animate([{ scale: '1' }, { scale: '1.12', filter: 'brightness(1.5)', offset: 0.35 }, { scale: '1' }], { duration: 480, delay, easing: EASE });
+}
+
+/** Keeps a tile's count at what it was until the first card on its way there lands, as its picture is kept. */
+function holdCounts(landings: Map<HTMLElement, { cards: number; at: number }>): void {
+  for (const [tile, { cards, at }] of landings) {
+    const count = tile.querySelector<HTMLElement>('.zone-count');
+    const now = count?.textContent ?? '';
+    if (!count || !at || !/^\d+$/.test(now) || Number(now) < cards) continue;
+    // The board is redrawn many times before the card lands, so the tile is marked and the redraw leaves its count alone
+    tile.dataset.heldCount = '1';
+    count.textContent = String(Number(now) - cards);
+    setTimeout(() => {
+      delete tile.dataset.heldCount;
+      count.textContent = tile.dataset.count ?? now;
+    }, at);
+  }
+}
+
+/** Spells that failed on the stack this frame, by card key (stack.ts): each greys and waits there a moment before it goes. */
+const fizzled = new Set<string>();
+/** How long a fizzled spell is seen to fail before what is left of it sets off. */
+const FIZZLE_LEAD_MS = 320;
+/** A card's width over its height. */
+const CARD_ASPECT = 5 / 7;
+
+export function noteFizzled(key: string): void {
+  fizzled.add(key);
+}
+
+/** A card made to make a trip nothing on the page can be copied for: its picture if the viewer may see it, or its back. */
+function standIn(model: Model, key: string, grey: boolean): HTMLElement {
+  const card = model.objects.get(Number(key)) as CardView | undefined;
+  const src = lastPicture(Number(key))?.src || (card ? cardImageSrc(model, card) : '');
+  if (!src) {
+    return cardBack(model, key);
+  }
+  const el = make('div', 'card');
+  const img = document.createElement('img');
+  img.src = src;
+  img.alt = '';
+  el.append(img);
+  if (grey) el.style.filter = 'grayscale(1) brightness(.7)';
+  return el;
+}
+
+/** A library is seen to be shuffled: its tile shakes from side to side. */
+function riffle(player: number): void {
+  document.querySelector(`.seat[data-player="${player}"] .zone-tile[data-zone="Library"]`)?.animate([
+    { translate: '0 0', rotate: '0deg' }, { translate: '-4px 0', rotate: '-3deg', offset: 0.2 }, { translate: '4px 0', rotate: '3deg', offset: 0.45 },
+    { translate: '-3px 0', rotate: '-2deg', offset: 0.7 }, { translate: '0 0', rotate: '0deg' },
+  ], { duration: 380, easing: 'ease-in-out' });
 }
 
 // A face-down top card is not drawn on its tile, and its hidden picture measures nothing
@@ -804,5 +879,6 @@ function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0, o
   ghost.animate([
     { translate: '0px 0px', scale: '1', rotate: '0deg', opacity: 1 },
     { translate: shiftTo(ghost, scale, target), scale: String(scale), rotate: `${turn * 90}deg`, opacity: endOpacity },
-  ], { duration, delay, easing: 'cubic-bezier(.4,0,.8,.4)', fill: 'backwards' }).finished.then(() => ghost.remove(), () => ghost.remove());
+  // A copy joining a pile on the board slows as it lands; one swallowed by a tile or a hand speeds into it
+  ], { duration, delay, easing: onto ? EASE : 'cubic-bezier(.4,0,.8,.4)', fill: 'backwards' }).finished.then(() => ghost.remove(), () => ghost.remove());
 }
