@@ -23,7 +23,7 @@ let queued: Promise<void> = Promise.resolve();
 const has = (refs: (Ref | null)[] | null | undefined, key: number) => (refs ?? []).some(r => r?.ref === key);
 
 /** The block prompt lists no cards as selectable, so it is known by the step and by whom the attack is aimed at. */
-function declaringBlocks(model: Model): boolean {
+export function declaringBlocks(model: Model): boolean {
   const mine = me(model)?.$key;
   return game(model)?.Phase === 'COMBAT_DECLARE_BLOCKERS' && !!model.prompt
     && (game(model)?.CombatView ?? []).some(b => b.defender?.ref === mine);

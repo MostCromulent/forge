@@ -1,5 +1,5 @@
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from '../images';
-import { deref, derefAll, game, oldestRequest, stackPick, stateOf, type Model } from '../model';
+import { deref, derefAll, game, me, oldestRequest, stackPick, stateOf, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
 import { hoverable, inspectCard } from './detail';
 import { longPress } from '../press';
@@ -12,6 +12,7 @@ import { keyName } from '../keys';
 import { boundKeys, setting } from '../settings';
 import { isPortrait } from '../form';
 import { notePick } from './overlay';
+import { declaringBlocks } from './blockdrag';
 import type { CardView, PlayerView, PromptButton, Ref, StackItemView } from '../protocol';
 import { t } from '../text';
 
@@ -182,7 +183,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     setButton(cancel, pick.min === 0 ? { label: t('lblCancel'), enabled: true } : undefined);
     cancel.onclick = () => actions.answer(pick.id, []);
     root.classList.add('waiting');
-    root.classList.remove('priority', 'attack', 'strike');
+    root.classList.remove('priority', 'attack', 'strike', 'no-blocks');
     return;
   }
   const p = model.prompt;
@@ -211,6 +212,13 @@ function drawPrompt(model: Model, actions: Actions): void {
     setButton(ok, { label: t('lblWebPromptAttackWith', attackers), enabled: true });
     setButton(cancel, { label: t('lblWebPromptClearAttackers'), enabled: p.cancel.enabled });
   }
+  // Declaring blockers has the one answer, which says what it will do as the attack's does
+  const blocks = declaringBlocks(model) && !p.priority && p.ok.enabled && !p.cancel.enabled && p.ok.label === t('lblOK');
+  const mine = me(model)?.$key;
+  const blockers = blocks ? new Set((game(model)?.CombatView ?? []).flatMap(b => [...b.blockers ?? [], ...b.plannedBlockers ?? []])
+    .filter(r => r && (model.objects.get(r.ref) as CardView | undefined)?.Controller?.ref === mine).map(r => r?.ref)).size : 0;
+  if (blocks) setButton(ok, { label: blockers ? t('lblWebPromptBlockWith', blockers) : t('lblWebPromptNoBlocks'), enabled: true });
+  root.classList.toggle('no-blocks', blocks && !blockers);
   q(root, '.ok').classList.toggle('focus', !!p.focusOk);
   const waiting = !!p.ok?.enabled || !!p.cancel?.enabled;
   root.classList.toggle('waiting', waiting);
