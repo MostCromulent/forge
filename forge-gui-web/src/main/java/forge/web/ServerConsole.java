@@ -3,7 +3,9 @@ package forge.web;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gui.download.CdnUuidCache;
 import forge.gui.interfaces.IProgressBar;
+import forge.localinstance.properties.ForgeProfileProperties;
 import forge.util.Localizer;
+import forge.util.LogExporter;
 import org.tinylog.Logger;
 
 import javax.swing.BorderFactory;
@@ -59,12 +61,15 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.BindException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -84,7 +89,6 @@ final class ServerConsole implements IProgressBar {
     /** How wide a line of text runs before it wraps, which sets the width of the window. */
     private static final int TEXT_WIDTH = 480;
     private static final int HELP_WIDTH = TEXT_WIDTH - 26;
-    private static final int DETAILS_WIDTH = 440;
     private static final String GUIDE = "https://github.com/Card-Forge/forge/wiki/Network-Play#network-configuration";
     /** Adapters the rest of the home network cannot reach, though one may be this machine's route to the internet and so be listed first. */
     private static final Pattern NOT_HOME = Pattern.compile("vpn|virtual|hamachi|zerotier|tailscale|wireguard|hyper-v|vmware|wsl|bluetooth",
@@ -471,6 +475,29 @@ final class ServerConsole implements IProgressBar {
         });
     }
 
+    /** Zips the network logs and what this window shows into the Downloads folder, as desktop's Help menu does. */
+    private void exportLogs() {
+        // The links carry the tokens that let a browser in, and a log is sent on to other people
+        final String shown = text.getText().replaceAll("token=\\w+", "token=...");
+        inBackground("WebExportLogs", () -> {
+            String outcome;
+            try {
+                // This window's output is in no file, and the exporter takes every forge*.log in the user folder
+                Files.writeString(Path.of(ForgeProfileProperties.getUserDir(), "forge-server-console.log"), shown);
+                File downloads = new File(System.getProperty("user.home"), "Downloads");
+                if (!downloads.isDirectory()) {
+                    downloads = new File(System.getProperty("user.home"));
+                }
+                final File zip = LogExporter.exportLogs(downloads);
+                outcome = zip == null ? TEXT.getMessage("lblNoLogFilesFound") : TEXT.getMessage("lblSuccess") + "\n" + zip.getAbsolutePath();
+            } catch (final IOException e) {
+                outcome = e.toString();
+            }
+            final String say = outcome;
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(frame, say, TEXT.getMessage("lblExportLogs"), JOptionPane.INFORMATION_MESSAGE));
+        });
+    }
+
     /** Asks before something that drops players who are connected. */
     private boolean confirmed(final String question, final String yes) {
         final String[] answers = {TEXT.getMessage(yes), TEXT.getMessage("lblCancel")};
@@ -653,6 +680,7 @@ final class ServerConsole implements IProgressBar {
         final JPanel numbers = new JPanel();
         numbers.setLayout(new BoxLayout(numbers, BoxLayout.PAGE_AXIS));
         final JPanel title = row(heading(TEXT.getMessage("lblWebConsoleDiagnostics")), Box.createHorizontalGlue(),
+                button(TEXT.getMessage("lblExportLogs"), this::exportLogs), Box.createHorizontalStrut(8),
                 copyButton(TEXT.getMessage("lblWebConsoleCopyLog"), () -> text.getText()));
         title.setAlignmentX(0f);
         numbers.add(title);
@@ -666,7 +694,6 @@ final class ServerConsole implements IProgressBar {
                 BorderFactory.createEmptyBorder(14, 16, 14, 16)));
         details.add(numbers, BorderLayout.NORTH);
         details.add(log, BorderLayout.CENTER);
-        details.setPreferredSize(new Dimension(DETAILS_WIDTH, 480));
         details.setVisible(false);
 
         frame = new JFrame(TEXT.getMessage("lblWebConsoleTitle"));
@@ -713,6 +740,8 @@ final class ServerConsole implements IProgressBar {
         for (final Component part : main.getComponents()) {
             widest = Math.max(widest, part.getPreferredSize().width + main.getInsets().left + main.getInsets().right);
         }
+        // The details stand beside the main column at its width
+        details.setPreferredSize(new Dimension(main.getPreferredSize().width, 480));
         frame.pack();
         frame.setSize(frame.getWidth(), Math.min(frame.getHeight(), GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds().height));
     }

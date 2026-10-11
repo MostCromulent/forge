@@ -623,10 +623,27 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     }
 
     private final class StaticFiles extends SimpleChannelInboundHandler<FullHttpRequest> {
+        /** What the browser last asked for, so a failure can say which file it was. */
+        private String asked;
+
+        @Override
+        public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) {
+            if (cause instanceof IOException) {
+                netLog.warn("Could not send a browser {}: {}", asked, cause.toString());
+            } else {
+                netLog.warn(cause, "Could not send a browser {}", asked);
+            }
+            // The browser would otherwise wait on a request that is never answered
+            if (ctx.channel().isActive()) {
+                respond(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, new byte[0], "text/plain");
+            }
+        }
+
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest req) throws IOException {
             final QueryStringDecoder q = new QueryStringDecoder(req.uri());
             final String path = q.path();
+            asked = path;
             ServerTraffic.carrying(ctx.channel(), "/img".equals(path) || "/sleeveart".equals(path) ? ServerTraffic.Kind.CARD_ART
                     : "/sound".equals(path) || "/music".equals(path) ? ServerTraffic.Kind.AUDIO : ServerTraffic.Kind.PAGE);
             if ("/avatar".equals(path) || "/sleeve".equals(path)) {
