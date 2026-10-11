@@ -786,6 +786,10 @@ final class Lobby {
                     out.add(Localizer.getInstance().getMessage("lblWebLobbyNotReady", String.valueOf(slot.getName())));
                 }
             }
+            // As startGame refuses
+            if (playing < 2) {
+                out.add(0, Localizer.getInstance().getMessage("lblRequiredLeastTwoPlayerStartGame"));
+            }
             if (playing > MAX_SEATS) {
                 out.add(0, Localizer.getInstance().getMessage("lblWebLobbyTooManyPlayers", MAX_SEATS, playing - MAX_SEATS));
             }

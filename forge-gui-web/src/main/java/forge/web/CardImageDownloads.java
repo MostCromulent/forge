@@ -39,6 +39,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import static forge.web.ConsoleWidgets.heading;
+
 /** The console's window for saving card pictures to this computer ahead of time. */
 final class CardImageDownloads {
     private static final Localizer TEXT = Localizer.getInstance();
@@ -49,9 +51,9 @@ final class CardImageDownloads {
     private static final Color MUTED = new Color(0x5d, 0x66, 0x73);
 
     private final JComboBox<Choice> choices = new JComboBox<>();
-    private final JLabel cardCount = count();
-    private final JLabel savedCount = count();
-    private final JLabel neededCount = count();
+    private final JLabel cardCount = heading("…");
+    private final JLabel savedCount = heading("…");
+    private final JLabel neededCount = heading("…");
     private final JLabel downloadState = new JLabel(" ");
     private final JButton downloadButton = new JButton(TEXT.getMessage("lblWebImagesDownload"));
     private final JButton downloadCancel = new JButton(TEXT.getMessage("lblCancel"));
@@ -221,12 +223,6 @@ final class CardImageDownloads {
     /** The look's labels are bold by default; the window's prose is not. */
     private static JLabel plain(final JLabel label) {
         label.setFont(label.getFont().deriveFont(Font.PLAIN));
-        return label;
-    }
-
-    private static JLabel count() {
-        final JLabel label = new JLabel("…");
-        label.setFont(label.getFont().deriveFont(Font.BOLD));
         return label;
     }
 

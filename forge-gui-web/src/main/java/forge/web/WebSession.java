@@ -4,13 +4,9 @@ import com.google.gson.JsonObject;
 import forge.web.FromBrowser.*;
 import forge.web.ToBrowser.*;
 import forge.deck.Deck;
-import forge.deck.DeckFormat;
 import forge.deck.DeckGroup;
 import forge.game.GameType;
-import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
-import forge.gamemodes.quest.QuestEventDraft;
-import forge.gamemodes.limited.GauntletMini;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
@@ -28,8 +24,6 @@ import org.apache.commons.lang3.StringUtils;
 import forge.util.IHasForgeLog;
 import forge.util.LogSafe;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,7 +31,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -89,29 +82,23 @@ public final class WebSession implements IHasForgeLog {
     private final LocalGame local = new LocalGame();
     private final Runnable onQuit;
     private volatile BrowserChannel browser;
-    private volatile Stage stage = new Menu();
+    volatile Stage stage = new Menu();
     /** This player's settings: a guest's own, or the host's, which are Forge's preferences. */
-    private volatile PlayerSettings settings = PlayerSettings.fresh();
+    volatile PlayerSettings settings = PlayerSettings.fresh();
     /** The name this browser chose to play under; null until it has chosen one. */
     private volatile String name;
     /** The face chosen beside the name, before any seat exists to carry it; null until it has chosen one. */
     private volatile Integer avatar;
-    /** Whether a sealed pool is being opened, which takes seconds and may wait on a question to the player. */
-    private final AtomicBoolean openingPacks = new AtomicBoolean();
+    private final OfflineLimited limited;
     /** The offline draft being played, while there is one. */
-    private volatile OfflineDraft offlineDraft;
+    volatile OfflineDraft offlineDraft;
     /** This seat's part in the table's draft or sealed event; a new one comes with each table. */
     private volatile OnlineDraft onlineDraft;
     /** Whether the draft host was told this seat's player left, so it is told when the browser is back. */
     private volatile boolean seatReportedGone;
-    /** A match seats at most eight players, so several opponents at once are at most seven. */
-    private static final int MOST_OPPONENTS = 7;
-    /** Whether this session is playing a limited gauntlet, and the result of its last game. */
-    private volatile boolean gauntletRunning;
-    private volatile LimitedResult lastResult;
     /** What this session alone knows of the open conquest: its selection and the last move. */
     private final ConquestGame conquest = new ConquestGame();
-    private final QuestGame quest = new QuestGame();
+    final QuestGame quest = new QuestGame();
     /** One thread for everything a campaign does, as its model is Forge's own and nothing guards it; it ends when idle, so a finished session holds none. */
     private final ExecutorService campaignWork = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
         final Thread t = new Thread(r, "WebCampaign");
@@ -144,6 +131,7 @@ public final class WebSession implements IHasForgeLog {
         final Map<String, DeckCatalog.OnDevice> device = new ConcurrentHashMap<>();
         this.lobby = new Lobby(local, () -> !isHost, device);
         this.decks = new DeckSession(lobby, ui, () -> isHost, () -> stage instanceof Setup, device);
+        this.limited = new OfflineLimited(this, ui, lobby, decks, local);
         this.onQuit = onQuit;
     }
 
@@ -205,7 +193,7 @@ public final class WebSession implements IHasForgeLog {
                     return;
                 }
                 offlineDraft = new OfflineDraft(() -> draft, true, playerName(), WebSession.this::tell, problem -> {
-                    endDraft();
+                    limited.endDraft();
                     tell(error(problem));
                 });
             }
@@ -213,7 +201,7 @@ public final class WebSession implements IHasForgeLog {
         }
     };
 
-    private void onCampaign(final Runnable work) {
+    void onCampaign(final Runnable work) {
         campaignWork.execute(() -> {
             try {
                 work.run();
@@ -230,7 +218,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** Moves to the next stage only if the browser is still where the caller found it, closing the old GUI unless the new stage keeps it. */
-    private synchronized boolean move(final Stage from, final Stage next) {
+    synchronized boolean move(final Stage from, final Stage next) {
         if (stage != from) {
             return false;
         }
@@ -333,7 +321,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** Shows the browser the game a match is played through, when one is attached. */
-    private void attach(final WebGuiGame gui) {
+    void attach(final WebGuiGame gui) {
         final BrowserChannel b = browser;
         if (b != null) {
             gui.attach(b);
@@ -364,7 +352,7 @@ public final class WebSession implements IHasForgeLog {
         decks.reconnected(channel);
         if (now instanceof Playing p) {
             p.gui().attach(channel);
-            final LimitedResult result = lastResult;
+            final LimitedResult result = limited.lastResult;
             if (result != null) {
                 channel.send(result);
             }
@@ -392,7 +380,7 @@ public final class WebSession implements IHasForgeLog {
                 sessions.seatsChanged();
             }
         } else if (now instanceof Event) {
-            sendLimited(channel);
+            limited.sendLimited(channel);
             final OfflineDraft draft = offlineDraft;
             if (draft != null && draft.latest() != null) {
                 channel.send(draft.latest());
@@ -562,7 +550,7 @@ public final class WebSession implements IHasForgeLog {
                 if (isHost && ((now instanceof Event e && e.kind().equals(kind) && !open.resume())
                         || ((now instanceof Menu || now instanceof Event)
                             && move(now, new Event(kind, open.resume() ? OfflineEvents.latest(kind) : null))))) {
-                    sendLimited(channel);
+                    limited.sendLimited(channel);
                 }
             }
             case "limitedLeave", "poolClose", "poolOpen" -> {
@@ -573,10 +561,8 @@ public final class WebSession implements IHasForgeLog {
                             : new Event(e.kind(), "poolOpen".equals(type) ? Wire.decode(msg, PoolOpen.class).name() : null));
                 }
             }
-            case "poolEdit" -> editPool(channel, Wire.decode(msg, PoolEdit.class).name());
-            case "poolDelete" -> deletePool(channel, Wire.decode(msg, PoolDelete.class).name());
-            case "sealedCreate" -> createSealed(channel, Wire.decode(msg, SealedCreate.class));
-            case "draftStart" -> startDraft(channel, Wire.decode(msg, DraftStart.class));
+            case "poolEdit", "poolDelete", "sealedCreate", "draftStart", "draftSave", "draftDiscard", "gauntletNext", "gauntletRestart", "poolPlay" ->
+                    limited.onMessage(channel, msg);
             case "draftMove" -> {
                 final DraftMove move = Wire.decode(msg, DraftMove.class);
                 final OfflineDraft draft = offlineDraft;
@@ -596,27 +582,6 @@ public final class WebSession implements IHasForgeLog {
                 } else if (online != null && stage instanceof Setup) {
                     online.pick(pick.step(), pick.index(), pick.sideboard());
                 }
-            }
-            case "draftSave" -> saveDraft(channel, Wire.decode(msg, DraftSave.class));
-            case "draftDiscard" -> discardDraft();
-            // The gauntlet starts its rounds itself, which, like any match, happens on the host UI thread
-            case "gauntletNext" -> ui.invokeInEdtLater(() -> {
-                final LimitedResult result = lastResult;
-                if (gauntletRunning && result != null && result.nextRound()) {
-                    lastResult = null;
-                    FModel.getGauntletMini().nextRound();
-                }
-            });
-            case "gauntletRestart" -> ui.invokeInEdtLater(() -> {
-                if (gauntletRunning) {
-                    lastResult = null;
-                    FModel.getGauntletMini().restartRound();
-                }
-            });
-            // A match is started on the host UI thread, as a table's is
-            case "poolPlay" -> {
-                final PoolPlay play = Wire.decode(msg, PoolPlay.class);
-                ui.invokeInEdtLater(() -> playPool(channel, play));
             }
             // A campaign is Forge's own, one for the whole process, so it is the host's
             case "campaignOpen" -> {
@@ -1171,7 +1136,7 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    private Hello hello() {
+    Hello hello() {
         final Stage now = stage;
         return new Hello(now instanceof Playing, now instanceof Setup, now instanceof Opening,
                 now instanceof Playing p && p.spectating(), isHost,
@@ -1200,274 +1165,6 @@ public final class WebSession implements IHasForgeLog {
     private boolean onlineDrafting() {
         final OnlineDraft draft = onlineDraft;
         return draft != null && draft.drafting();
-    }
-
-    /** The Limited pages are drawn from the pools and what the setup form offers. Reading the lists touches files, so not here. */
-    private void sendLimited(final BrowserChannel channel) {
-        ui.runBackgroundTask("Limited", () -> {
-            channel.send(OfflineEvents.pools());
-            channel.send(OfflineEvents.options());
-        });
-    }
-
-    private void editPool(final BrowserChannel channel, final String name) {
-        final Stage now = stage;
-        final DeckGroup group = now instanceof Event e ? e.storage().get(name) : null;
-        if (group == null) {
-            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionNoPool", name)));
-            return;
-        }
-        final Event e = (Event) now;
-        decks.openPool(group.getHumanDeck(), e.storage(), e.type(), channel);
-    }
-
-    private void deletePool(final BrowserChannel channel, final String name) {
-        final Stage now = stage;
-        if (!isHost || !(now instanceof Event e)) {
-            return;
-        }
-        if (name.equals(decks.openPoolName())) {
-            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionClosePoolDeck", name)));
-            return;
-        }
-        synchronized (DeckCatalog.DECKS) {
-            if (e.storage().contains(name)) {
-                e.storage().delete(name);
-            }
-        }
-        if (name.equals(e.pool())) {
-            move(now, new Event(e.kind(), null));
-        }
-        channel.send(OfflineEvents.pools());
-    }
-
-    /** Opens a sealed pool as desktop's sealed screen does, then its deck in the editor. Asking for a taken name comes first. */
-    private void createSealed(final BrowserChannel channel, final SealedCreate create) {
-        if (!isHost || !(stage instanceof Event e) || !"sealed".equals(e.kind())) {
-            return;
-        }
-        final String name = create.name() == null ? "" : create.name().trim();
-        final String problem = DeckStore.nameProblem(name);
-        if (problem != null) {
-            channel.send(error(problem));
-            return;
-        }
-        if (OfflineEvents.sealed().contains(name) && !create.replace()) {
-            channel.send(new NameTaken(name));
-            return;
-        }
-        // A second request while the first is opening would pass the name check above and replace its pool
-        if (!openingPacks.compareAndSet(false, true)) {
-            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionOpeningPacks")));
-            return;
-        }
-        // Opening can wait on a question to the player, so results go to whichever browser is attached when it is done
-        ui.runBackgroundTask("Sealed", () -> {
-            try {
-                final DeckGroup group;
-                try {
-                    group = OfflineEvents.create(create, name);
-                } catch (final IllegalArgumentException ex) {
-                    tell(error(ex.getMessage()));
-                    return;
-                }
-                if (group == null) {
-                    return;
-                }
-                OfflineEvents.store(OfflineEvents.sealed(), group);
-                final Stage now = stage;
-                if (now instanceof Event) {
-                    move(now, new Event("sealed", name));
-                }
-                tell(OfflineEvents.pools());
-                decks.openPool(group.getHumanDeck(), OfflineEvents.sealed(), GameType.Sealed, browser);
-            } finally {
-                openingPacks.set(false);
-            }
-        });
-    }
-
-    /** Starts an offline booster draft against the computer, as desktop's Draft screen does. One runs at a time. */
-    private synchronized void startDraft(final BrowserChannel channel, final DraftStart start) {
-        final Stage now = stage;
-        if (!isHost || !(now instanceof Event e) || !"draft".equals(e.kind())) {
-            return;
-        }
-        if (offlineDraft != null) {
-            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionDraftRunning")));
-            return;
-        }
-        final Supplier<BoosterDraft> make;
-        try {
-            make = OfflineEvents.draft(start);
-        } catch (final IllegalArgumentException ex) {
-            channel.send(error(ex.getMessage()));
-            return;
-        }
-        offlineDraft = new OfflineDraft(make, false, playerName(), this::tell, problem -> {
-            endDraft();
-            tell(error(problem));
-        });
-        move(now, new Event("draft", null));
-    }
-
-    /** Stops the draft without saving it, as desktop's "quit without saving" does. */
-    private void endDraft() {
-        final OfflineDraft draft;
-        synchronized (this) {
-            draft = offlineDraft;
-            offlineDraft = null;
-        }
-        if (draft == null) {
-            return;
-        }
-        draft.close();
-        final Stage now = stage;
-        if (now instanceof Event e) {
-            move(now, new Event(e.kind(), e.pool()));
-        } else {
-            tell(hello());
-        }
-    }
-
-    /** Whether the draft running is a quest tournament's, which the quest's page holds instead of the Limited page. */
-    private boolean tournamentDrafting() {
-        return offlineDraft != null && stage instanceof InCampaign c && "quest".equals(c.mode());
-    }
-
-    /** Stops the draft unsaved; a tournament's is left as desktop leaves it, with its fee given back. */
-    private void discardDraft() {
-        final boolean tournament = tournamentDrafting();
-        endDraft();
-        if (tournament) {
-            onCampaign(() -> {
-                quest.cancelDraft();
-                sendCampaign();
-            });
-        }
-    }
-
-    /** Saves a finished draft as desktop does, asking before replacing one of the same name, then opens its deck. */
-    private void saveDraft(final BrowserChannel channel, final DraftSave save) {
-        final OfflineDraft draft = offlineDraft;
-        if (!isHost || draft == null || draft.latest() == null || !draft.latest().done()) {
-            return;
-        }
-        if (tournamentDrafting()) {
-            // A tournament's draft is kept under the one name Quest gives it, so the browser's name is not used
-            draft.save(QuestEventDraft.DECK_NAME).whenCompleteAsync((group, ex) -> {
-                if (ex != null) {
-                    tell(error(Localizer.getInstance().getMessage("lblWebSessionDraftSaveFailed", String.valueOf(ex.getMessage()))));
-                    return;
-                }
-                endDraft();
-                onCampaign(() -> {
-                    final IStorage<DeckGroup> pools = quest.drafted(group);
-                    sendCampaign();
-                    decks.openPool(group.getHumanDeck(), pools, GameType.QuestDraft, browser);
-                });
-            });
-            return;
-        }
-        final String name = save.name() == null ? "" : save.name().trim();
-        final String problem = DeckStore.nameProblem(name);
-        if (problem != null) {
-            channel.send(error(problem));
-            return;
-        }
-        final IStorage<DeckGroup> drafts = OfflineEvents.storage("draft");
-        if (drafts.contains(name) && !save.replace()) {
-            channel.send(new NameTaken(name));
-            return;
-        }
-        // Off the draft's own thread, which closing the draft interrupts
-        draft.save(name).whenCompleteAsync((group, ex) -> {
-            if (ex != null) {
-                tell(error(Localizer.getInstance().getMessage("lblWebSessionDraftSaveFailed", String.valueOf(ex.getMessage()))));
-                return;
-            }
-            OfflineEvents.store(drafts, group);
-            endDraft();
-            final Stage now = stage;
-            if (now instanceof Event) {
-                move(now, new Event("draft", name));
-            }
-            tell(OfflineEvents.pools());
-            decks.openPool(group.getHumanDeck(), drafts, GameType.Draft, browser);
-        });
-    }
-
-    /** Plays a pool's deck against one of its opponents, several at once, or every one in turn as a gauntlet, and returns to the pool after. */
-    private void playPool(final BrowserChannel channel, final PoolPlay play) {
-        final Stage from = stage;
-        final DeckGroup group = from instanceof Event e ? e.storage().get(play.name()) : null;
-        if (!isHost || group == null) {
-            return;
-        }
-        final Event event = (Event) from;
-        final List<Deck> ai = group.getAiDecks();
-        final Deck human = group.getHumanDeck();
-        if (FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
-            final String illegal = DeckFormat.Limited.getDeckConformanceProblem(human);
-            if (illegal != null) {
-                channel.send(error(Localizer.getInstance().getMessage("lblWebSessionYourDeck", illegal)));
-                return;
-            }
-        }
-        if (play.games() == 1 || play.games() == 3 || play.games() == 5) {
-            FModel.getPreferences().setPref(FPref.UI_MATCHES_PER_GAME, String.valueOf(play.games()));
-            FModel.getPreferences().save();
-        }
-        // Saved before the match so HostedMatch never reaches the first-run name prompt
-        lobby.saveLooks();
-        final Event back = new Event(event.kind(), play.name());
-        switch (play.mode() == null ? "one" : play.mode()) {
-            case "gauntlet" -> {
-                final GauntletMini gauntlet = FModel.getGauntletMini();
-                if (event.type() == GameType.Draft) {
-                    gauntlet.resetGauntletDraft();
-                }
-                gauntletRunning = true;
-                lastResult = null;
-                gauntlet.setRoundStarter((type, players, me) -> playLimited(back, type, List.of(mySeat(players.get(0).getDeck()),
-                        opponentSeat(gauntlet.getCurrentRound(), 1, players.get(1).getDeck()))));
-                try {
-                    gauntlet.launch(ai.size(), human, event.type());
-                } catch (final RuntimeException ex) {
-                    netLog.error(ex, "Could not start the gauntlet");
-                    channel.send(error(Localizer.getInstance().getMessage("lblWebSessionGauntletFailed", String.valueOf(ex.getMessage()))));
-                }
-                // A first round that did not start leaves the pool showing, and no gauntlet to carry on
-                if (!(stage instanceof Playing)) {
-                    stopGauntlet();
-                }
-            }
-            case "several" -> {
-                final int count = Math.min(Math.min(play.count(), MOST_OPPONENTS), ai.size());
-                if (event.type() != GameType.Draft || count < 2) {
-                    channel.send(error(Localizer.getInstance().getMessage("lblWebSessionSeveralNeedsDraft")));
-                    return;
-                }
-                // Chosen at random, as desktop's draft screen chooses them
-                final List<Integer> indices = new ArrayList<>();
-                for (int i = 0; i < ai.size(); i++) {
-                    indices.add(i);
-                }
-                Collections.shuffle(indices);
-                final List<LocalGame.Seat> seats = new ArrayList<>(List.of(mySeat(human)));
-                for (int k = 0; k < count; k++) {
-                    seats.add(opponentSeat(indices.get(k) + 1, k + 1, ai.get(indices.get(k))));
-                }
-                playLimited(back, event.type(), seats);
-            }
-            default -> {
-                if (play.opponent() < 0 || play.opponent() >= ai.size()) {
-                    channel.send(error(Localizer.getInstance().getMessage("lblWebSessionNoSuchOpponent")));
-                    return;
-                }
-                playLimited(back, event.type(), List.of(mySeat(human), opponentSeat(play.opponent() + 1, 1, ai.get(play.opponent()))));
-            }
-        }
     }
 
     /** Opens a campaign's saved games, or one of them. Reading a save is slow, so this is campaign work. */
@@ -1506,7 +1203,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** What the campaign stage draws from: the saved games, or the open one's pages and any reward yet to be shown. */
-    private void sendCampaign() {
+    void sendCampaign() {
         if (!(stage instanceof InCampaign c)) {
             return;
         }
@@ -1570,71 +1267,6 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    private LocalGame.Seat mySeat(final Deck deck) {
-        return new LocalGame.Seat(playerName(), false, avatarIndex(), LocalGame.storedIndex(FPref.UI_SLEEVES, 0), deck);
-    }
-
-    /** An opponent named by its deck's place in the pool, as desktop numbers them, with the looks of seat. */
-    private static LocalGame.Seat opponentSeat(final int number, final int seat, final Deck deck) {
-        return new LocalGame.Seat(Localizer.getInstance().getMessage("lblWebSessionOpponent", number), true, LocalGame.storedIndex(FPref.UI_AVATARS, seat),
-                LocalGame.storedIndex(FPref.UI_SLEEVES, seat), deck);
-    }
-
-    /** Starts a pool's match, from the Limited pages or from the match before it in a gauntlet. Null when it could not start. */
-    private HostedMatch playLimited(final Event back, final GameType type, final List<LocalGame.Seat> seats) {
-        final Stage from = stage;
-        final Playing playing = new Playing(new WebGuiGame(settings), false, false, back);
-        if (!move(from, playing)) {
-            playing.gui().close();
-            return null;
-        }
-        attach(playing.gui());
-        if (gauntletRunning) {
-            playing.gui().onGameOver(() -> recordGauntletGame(playing));
-        }
-        try {
-            local.startLimitedMatch(seats, type, playing.gui());
-            return local.hostedMatch();
-        } catch (final RuntimeException ex) {
-            netLog.error(ex, "Could not start the match");
-            local.endMatch();
-            move(playing, back);
-            tell(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
-            return null;
-        }
-    }
-
-    /** A gauntlet game ended: the win or loss is recorded after every game, as desktop's limited result does. */
-    private void recordGauntletGame(final Playing playing) {
-        final GameView game = playing.gui().getGameView();
-        if (!gauntletRunning || game == null) {
-            return;
-        }
-        final GauntletMini gauntlet = FModel.getGauntletMini();
-        final boolean won = playerName().equals(game.getWinningPlayerName());
-        if (won) {
-            gauntlet.addWin();
-        } else {
-            gauntlet.addLoss();
-        }
-        // The winner of a match's last game is the match's winner
-        final boolean wonMatch = game.isMatchOver() && won;
-        lastResult = new LimitedResult(gauntlet.getCurrentRound(), gauntlet.getRounds(), gauntlet.getWins(), gauntlet.getLosses(),
-                game.isMatchOver(), wonMatch && gauntlet.getCurrentRound() < gauntlet.getRounds());
-        tell(lastResult);
-    }
-
-    /** Leaving a gauntlet ends it, as desktop's Quit does. */
-    private void stopGauntlet() {
-        if (!gauntletRunning) {
-            return;
-        }
-        gauntletRunning = false;
-        lastResult = null;
-        FModel.getGauntletMini().resetCurrentRound();
-        FModel.getGauntletMini().setRoundStarter(null);
-    }
-
     private static boolean invited(final Stage stage) {
         if (stage instanceof Setup s) {
             return s.invited();
@@ -1646,7 +1278,7 @@ public final class WebSession implements IHasForgeLog {
         return List.of(LocalGame.storedIndex(pref, 0), LocalGame.storedIndex(pref, 1));
     }
 
-    private static ErrorMessage error(final String message) {
+    static ErrorMessage error(final String message) {
         return new ErrorMessage(message);
     }
 
@@ -1707,7 +1339,7 @@ public final class WebSession implements IHasForgeLog {
         }
         final BrowserChannel b = browser;
         if (playing.back() != null) {
-            stopGauntlet();
+            limited.stopGauntlet();
             local.endMatch();
             if (playing.back() instanceof InCampaign c) {
                 // Queued behind the last game's result, so the campaign records the game before it is told the match is left
@@ -1721,7 +1353,7 @@ public final class WebSession implements IHasForgeLog {
                     }
                 });
             } else if (move(from, playing.back()) && b != null) {
-                sendLimited(b);
+                limited.sendLimited(b);
             }
             return;
         }

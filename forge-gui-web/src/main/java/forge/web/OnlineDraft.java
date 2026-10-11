@@ -77,7 +77,8 @@ final class OnlineDraft implements IDraftEventHandler {
         serial.execute(() -> {
             mySeat = seatIndex;
             if (packNum != packNumber) {
-                view.log("Pack " + packNum + " · passing " + (packNum % 2 == 1 ? "right" : "left"));
+                view.log(Localizer.getInstance().getMessage("lblDraftLogPackHeader", packNum,
+                        Localizer.getInstance().getMessage(packNum % 2 == 1 ? "lblDraftLogPassingRight" : "lblDraftLogPassingLeft")));
             }
             pack = List.copyOf(cards);
             packNumber = packNum;

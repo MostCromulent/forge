@@ -11,6 +11,14 @@ const COLOUR_HEADINGS: Record<string, TextKey> = {
   W: 'lblWhite', U: 'lblBlue', B: 'lblBlack', R: 'lblRed', G: 'lblGreen', M: 'lblMulticolor', C: 'lblColorless',
 };
 
+const TYPE_HEADINGS: Record<string, TextKey> = {
+  Creatures: 'lblCreatures', Planeswalkers: 'lblPlaneswalkers', Instants: 'lblInstants', Sorceries: 'lblSorceries',
+  Artifacts: 'lblArtifacts', Enchantments: 'lblEnchantments', Battles: 'lblBattles', Lands: 'lblLands',
+};
+
+/** A group's heading as shown: the server names the card types in English, as ids. */
+export const headingText = (heading: string): string => (TYPE_HEADINGS[heading] ? t(TYPE_HEADINGS[heading]) : heading);
+
 /** The main deck under other headings. Lands keep a heading of their own whichever way the rest are grouped. */
 export function regroup(state: EditorState, by: GroupBy): EditorGroup[] {
   if (by === 'type') return state.main;

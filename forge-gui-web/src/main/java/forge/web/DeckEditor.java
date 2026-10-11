@@ -40,7 +40,10 @@ import java.util.function.Supplier;
 /** One deck open in the browser's editor, where every change is checked against the engine's limits, applied and saved at once. */
 final class DeckEditor {
     /** The name a new deck starts with, until its commander names it or the player does. */
-    static final String NEW_DECK = "New deck";
+    static String newDeckName() {
+        return Localizer.getInstance().getMessage("lblNewDeck");
+    }
+
     private static final int MOST_UNDO = 100;
     /** The key of the answer to renaming, duplicating or deleting a pool's deck. */
     private static final String GROUP_OWNS_IT = "lblWebEditorPoolOwnsDeck";
@@ -282,7 +285,7 @@ final class DeckEditor {
                 source.remove(card, 1);
             }
             placeCommander(card, commanders);
-            if (NEW_DECK.equals(deck.getName())) {
+            if (newDeckName().equals(deck.getName())) {
                 nameAfterCommander();
             }
         });
@@ -432,7 +435,7 @@ final class DeckEditor {
             owned = null;
         } else {
             target = new Device(UUID.randomUUID().toString());
-            copy.setName(deck.getName() + " (copy)");
+            copy.setName(Localizer.getInstance().getMessage("lblWebEditorCopyName", deck.getName()));
         }
         deck = copy;
         undo.clear();
@@ -534,7 +537,7 @@ final class DeckEditor {
     /** The first change to a deck that can't be changed in place: from now on the editor works on a copy of its own. */
     private void becomeCopy() {
         if (deck.getName().equals(copyOf)) {
-            deck.setName(copyOf + " (copy)");
+            deck.setName(Localizer.getInstance().getMessage("lblWebEditorCopyName", copyOf));
         }
         copyOf = null;
         owned = null;
@@ -626,7 +629,7 @@ final class DeckEditor {
     }
 
     private void nameAfterCommander() {
-        final String wanted = deck.getCommanders().get(0).getName() + " deck";
+        final String wanted = Localizer.getInstance().getMessage("lblWebImportCommanderDeck", deck.getCommanders().get(0).getName());
         if (target instanceof Stored s) {
             renameTo(DeckStore.freeName(s.storage(), wanted, owned));
         } else {

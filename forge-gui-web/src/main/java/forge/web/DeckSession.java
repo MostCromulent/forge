@@ -157,7 +157,7 @@ final class DeckSession {
         editorPath = "";
         if (o.newFormat() != null) {
             check = Check.of(gameType(o.newFormat()), null);
-            deck = new Deck(DeckEditor.NEW_DECK);
+            deck = new Deck(DeckEditor.newDeckName());
             readOnly = false;
             target = guest ? new DeckEditor.Device(UUID.randomUUID().toString()) : new DeckEditor.Stored(storages.of(check.format()));
         } else {

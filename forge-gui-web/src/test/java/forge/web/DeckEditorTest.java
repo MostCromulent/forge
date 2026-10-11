@@ -80,13 +80,13 @@ public class DeckEditorTest {
     // Fails if a new deck saves over a deck the player already has under the same name
     @Test
     public void newDeckDoesNotOverwriteAStoredNewDeck() {
-        final Deck existing = new Deck(DeckEditor.NEW_DECK);
+        final Deck existing = new Deck(DeckEditor.newDeckName());
         existing.getMain().add(card("Swamp"), 30);
         storages.of(GameType.Constructed).add(existing);
-        final DeckEditor e = editor(new Deck(DeckEditor.NEW_DECK), GameType.Constructed);
+        final DeckEditor e = editor(new Deck(DeckEditor.newDeckName()), GameType.Constructed);
         Assert.assertNull(e.add("Lightning Bolt", DeckSection.Main, 1));
-        Assert.assertEquals(e.deck().getName(), DeckEditor.NEW_DECK + " (2)");
-        Assert.assertEquals(storages.of(GameType.Constructed).get(DeckEditor.NEW_DECK).getMain().countByName("Swamp"), 30);
+        Assert.assertEquals(e.deck().getName(), DeckEditor.newDeckName() + " (2)");
+        Assert.assertEquals(storages.of(GameType.Constructed).get(DeckEditor.newDeckName()).getMain().countByName("Swamp"), 30);
     }
 
     // Fails if a card added in a chosen printing arrives in another, or a printing of a different card is taken for it

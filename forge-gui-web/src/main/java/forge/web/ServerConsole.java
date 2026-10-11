@@ -23,7 +23,6 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
-import javax.swing.JSeparator;
 import javax.swing.JTextArea;
 import javax.swing.JTextPane;
 import javax.swing.JToggleButton;
@@ -36,17 +35,10 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
 import javax.swing.plaf.basic.BasicArrowButton;
 import javax.swing.plaf.basic.BasicHTML;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Element;
-import javax.swing.text.SimpleAttributeSet;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyledDocument;
 import javax.swing.text.View;
-import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -54,36 +46,42 @@ import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.RenderingHints;
-import java.awt.Toolkit;
-import java.awt.datatransfer.StringSelection;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.net.BindException;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DateFormat;
 import java.util.Date;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
+
+import static forge.web.ConsoleWidgets.NOTE;
+import static forge.web.ConsoleWidgets.WARN;
+import static forge.web.ConsoleWidgets.WARN_TEXT;
+import static forge.web.ConsoleWidgets.asLink;
+import static forge.web.ConsoleWidgets.button;
+import static forge.web.ConsoleWidgets.copyButton;
+import static forge.web.ConsoleWidgets.field;
+import static forge.web.ConsoleWidgets.heading;
+import static forge.web.ConsoleWidgets.link;
+import static forge.web.ConsoleWidgets.muted;
+import static forge.web.ConsoleWidgets.note;
+import static forge.web.ConsoleWidgets.reword;
+import static forge.web.ConsoleWidgets.row;
+import static forge.web.ConsoleWidgets.section;
+import static forge.web.ConsoleWidgets.stack;
+import static forge.web.ConsoleWidgets.warning;
+import static forge.web.ConsoleWidgets.wrapped;
 
 /** The desktop window that starts and stops the server, without which a player who closes their tab has no sign Forge still runs. */
 final class ServerConsole implements IProgressBar {
     private static final Localizer TEXT = Localizer.getInstance();
-    /** Enough to see what just happened without holding a whole session's output. */
-    private static final int MAX_LINES = 300;
     /** Card loading prints tens of thousands of lines, so the text is fed on a timer rather than per line. */
     private static final int FLUSH_MILLIS = 250;
     /** How wide a line of text runs before it wraps, which sets the width of the window. */
@@ -97,17 +95,9 @@ final class ServerConsole implements IProgressBar {
     /** Running is a filled lamp, stopped an empty ring: the shape carries it, so the colour need not. */
     private static final Color LIT = new Color(0x3f, 0xb9, 0x50);
     private static final Color DARK = new Color(0xd0, 0x57, 0x4e);
-    private static final Color LINK = new Color(0x1f, 0x5f, 0xc4);
-    private static final Color WARN = new Color(0x9a, 0x5b, 0x00);
-    private static final Color WARN_FILL = new Color(0xfd, 0xf1, 0xd8);
-    private static final Color WARN_TEXT = new Color(0x1a, 0x20, 0x2b);
-    private static final Color NOTE = new Color(0x1f, 0x5f, 0xc4);
-    private static final Color NOTE_FILL = new Color(0xe9, 0xf0, 0xfc);
-    private static final Color FIELD_EDGE = new Color(0xc9, 0xcd, 0xd4);
 
     private final WebGuiBase ui;
     private final Runnable onQuit;
-    private final StringBuilder pending = new StringBuilder();
     private WebService service;
     /** Whether the server is up and the console is not in the middle of starting or stopping it. */
     private boolean up;
@@ -157,8 +147,7 @@ final class ServerConsole implements IProgressBar {
     private volatile ServerTraffic traffic;
     private JFrame frame;
     private JTextPane text;
-    /** The colour of the last error or warning written, so the stack trace under it is coloured with it. */
-    private SimpleAttributeSet carried = PLAIN;
+    private LogCapture capture;
     private JButton browse;
     private JButton startStop;
     private JButton retryNet;
@@ -199,7 +188,7 @@ final class ServerConsole implements IProgressBar {
             Logger.warn(e, "Could not open the console");
             return null;
         }
-        console.captureOutput();
+        console.capture.captureOutput();
         return console;
     }
 
@@ -680,6 +669,11 @@ final class ServerConsole implements IProgressBar {
         text.setBackground(new Color(0x10, 0x14, 0x1c));
         text.setForeground(new Color(0xc8, 0xd1, 0xdb));
         text.setMargin(new Insets(6, 8, 6, 8));
+        capture = new LogCapture(text, () -> {
+            if (!details.isVisible()) {
+                unseenErrors++;
+            }
+        });
 
         final JPanel numbers = new JPanel();
         numbers.setLayout(new BoxLayout(numbers, BoxLayout.PAGE_AXIS));
@@ -722,7 +716,11 @@ final class ServerConsole implements IProgressBar {
         refit();
         frame.setVisible(true);
 
-        new Timer(FLUSH_MILLIS, e -> flush()).start();
+        new Timer(FLUSH_MILLIS, e -> {
+            if (capture.flush()) {
+                labelDetails();
+            }
+        }).start();
         new Timer(TrafficGraph.SAMPLE_MILLIS, e -> {
             final ServerTraffic now = traffic;
             final int here = service == null ? 0 : service.playersHere();
@@ -779,169 +777,6 @@ final class ServerConsole implements IProgressBar {
         }
     }
 
-    private static JButton button(final String label, final Runnable action) {
-        final JButton b = new JButton(label);
-        b.addActionListener(e -> action.run());
-        return b;
-    }
-
-    /** A button drawn as coloured text, for what leads somewhere rather than does something. */
-    private static JButton link(final String label, final Runnable action) {
-        return asLink(button(label, action));
-    }
-
-    private static JButton asLink(final JButton b) {
-        b.setBorderPainted(false);
-        b.setContentAreaFilled(false);
-        b.setMargin(new Insets(0, 0, 0, 0));
-        b.setForeground(LINK);
-        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        return b;
-    }
-
-    /** A button that copies what it is given, and says so for a moment. */
-    private static JButton copyButton(final String label, final Supplier<String> what) {
-        final JButton b = new JButton(label);
-        final Timer reset = new Timer(2000, e -> b.setText(label));
-        reset.setRepeats(false);
-        b.addActionListener(e -> {
-            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(what.get()), null);
-            b.setText(TEXT.getMessage("lblWebMatchBarCopied"));
-            reset.restart();
-        });
-        return b;
-    }
-
-    private static JLabel heading(final String words) {
-        final JLabel label = new JLabel(words);
-        label.setFont(label.getFont().deriveFont(Font.BOLD));
-        return label;
-    }
-
-    private static JLabel heading(final String words, final Color colour) {
-        final JLabel label = heading(words);
-        label.setForeground(colour);
-        return label;
-    }
-
-    /** A white box around an address or a state and the button that acts on it, so the two read as one thing. */
-    private static JPanel field(final Component... parts) {
-        final JPanel field = row(parts);
-        field.setOpaque(true);
-        field.setBackground(Color.WHITE);
-        field.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(FIELD_EDGE),
-                BorderFactory.createEmptyBorder(5, 10, 5, 6)));
-        return field;
-    }
-
-    private static JLabel muted(final String words) {
-        final JLabel label = new JLabel(words);
-        label.setForeground(UIManager.getColor("Label.disabledForeground"));
-        return label;
-    }
-
-    /** Text that wraps at a set width, which a label cannot do. */
-    private static JTextArea wrapped(final String words, final Color colour, final int width) {
-        final JTextArea area = new JTextArea();
-        area.setEditable(false);
-        area.setLineWrap(true);
-        area.setWrapStyleWord(true);
-        area.setOpaque(false);
-        area.setFocusable(false);
-        area.setBorder(null);
-        area.setFont(UIManager.getFont("Label.font"));
-        area.setForeground(colour);
-        reword(area, words, width);
-        return area;
-    }
-
-    /** A wrapped text's height follows from its width, so both are fixed again whenever its words change. */
-    private static void reword(final JTextArea area, final String words, final int width) {
-        area.setText(words);
-        // Room to the right: on a scaled display a line that just fits when measured is drawn a little wider, and would lose its last letters
-        area.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, width / 20));
-        area.setPreferredSize(null);
-        area.setSize(width, Short.MAX_VALUE);
-        final Dimension size = new Dimension(width, area.getPreferredSize().height);
-        area.setPreferredSize(size);
-        area.setMaximumSize(size);
-    }
-
-    private static JPanel row(final Component... parts) {
-        final JPanel row = new JPanel();
-        row.setLayout(new BoxLayout(row, BoxLayout.LINE_AXIS));
-        row.setOpaque(false);
-        for (final Component part : parts) {
-            row.add(part);
-        }
-        return row;
-    }
-
-    private static JPanel stack(final JComponent upper, final JComponent lower) {
-        final JPanel stack = new JPanel();
-        stack.setLayout(new BoxLayout(stack, BoxLayout.PAGE_AXIS));
-        stack.setOpaque(false);
-        upper.setAlignmentX(0f);
-        lower.setAlignmentX(0f);
-        stack.add(upper);
-        stack.add(Box.createVerticalStrut(2));
-        stack.add(lower);
-        return stack;
-    }
-
-    /** Adds one group of rows to the window, with a line under it. */
-    private static void section(final JPanel main, final JComponent... parts) {
-        for (final JComponent part : parts) {
-            part.setAlignmentX(0f);
-            main.add(part);
-            // The space under a part comes and goes with it, so a hidden one leaves no hole
-            final Component gap = Box.createVerticalStrut(9);
-            gap.setVisible(part.isVisible());
-            part.addComponentListener(new ComponentAdapter() {
-                @Override
-                public void componentShown(final ComponentEvent e) {
-                    gap.setVisible(true);
-                }
-
-                @Override
-                public void componentHidden(final ComponentEvent e) {
-                    gap.setVisible(false);
-                }
-            });
-            main.add(gap);
-        }
-        final JSeparator line = new JSeparator();
-        line.setAlignmentX(0f);
-        line.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        main.add(Box.createVerticalStrut(2));
-        main.add(line);
-        main.add(Box.createVerticalStrut(11));
-    }
-
-    /** An amber box for what went wrong and what to do about it. */
-    private static JPanel warning(final JComponent... parts) {
-        return box(WARN, WARN_FILL, parts);
-    }
-
-    /** A blue box for something the host is asked or has to do, which is not a fault. */
-    private static JPanel note(final JComponent... parts) {
-        return box(NOTE, NOTE_FILL, parts);
-    }
-
-    private static JPanel box(final Color edge, final Color fill, final JComponent... parts) {
-        final JPanel box = new JPanel();
-        box.setLayout(new BoxLayout(box, BoxLayout.PAGE_AXIS));
-        box.setBackground(fill);
-        box.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 3, 0, 0, edge),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
-        for (final JComponent part : parts) {
-            part.setAlignmentX(0f);
-            box.add(part);
-            box.add(Box.createVerticalStrut(7));
-        }
-        return box;
-    }
-
     /** A lamp, filled while the server is up and an empty ring while it is not. */
     private static final class Light extends JComponent {
         private static final int SIZE = 11;
@@ -978,226 +813,6 @@ final class ServerConsole implements IProgressBar {
             }
             g2.dispose();
         }
-    }
-
-    /** The last five minutes of bytes through the port, with what was sent stacked by kind and what was received as a dashed line. */
-    private static final class TrafficGraph extends JComponent {
-        static final int SAMPLE_MILLIS = 1000;
-        static final int HEIGHT = 130;
-        static final Color BACKGROUND = new Color(0x10, 0x14, 0x1c);
-        static final Color LABEL = new Color(0xc8, 0xd1, 0xdb);
-        /** Indexed by {@link ServerTraffic.Kind}, and stacked in that order from the bottom. */
-        static final String[] KIND_NAMES = {TEXT.getMessage("lblGame"),
-                TEXT.getMessage("lblWebSleevesCardArt"), TEXT.getMessage("lblAudio"),
-                TEXT.getMessage("lblWebConsoleKindPage")};
-        static final Color[] KIND_COLOURS = {new Color(0xf5, 0xc4, 0x51), new Color(0x4f, 0x86, 0xe8),
-                new Color(0xa9, 0xc4, 0xff), new Color(0x4a, 0x52, 0x60)};
-        private static final ServerTraffic.Kind[] KINDS = ServerTraffic.Kind.values();
-        private static final int SAMPLES = 300;
-        /** The floor of the scale, so a server with nobody on it does not magnify a few bytes into peaks. */
-        private static final long SMALLEST_SCALE = 1024;
-        private static final Color GRID = new Color(0x2a, 0x31, 0x3c);
-        private static final Color IN = new Color(0xe8, 0xee, 0xf4);
-        private static final BasicStroke DASHED = new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND,
-                10f, new float[] {5f, 3f}, 0f);
-
-        private final long[] in = new long[SAMPLES];
-        private final long[][] out = new long[KINDS.length][SAMPLES];
-        /** Where the next sample goes, which is also the oldest one still shown. */
-        private int next;
-        private ServerTraffic counter;
-        private long receivedBefore;
-        private final long[] sentBefore = new long[KINDS.length];
-
-        TrafficGraph() {
-            setPreferredSize(new Dimension(400, HEIGHT));
-            setMaximumSize(new Dimension(Integer.MAX_VALUE, HEIGHT));
-            setAlignmentX(0f);
-        }
-
-        /** The counters only ever grow, so a sample is the difference from the last; a new server starts from zero. */
-        void sample(final ServerTraffic now) {
-            final long received = now == null ? 0 : now.received();
-            final long[] sent = new long[KINDS.length];
-            for (final ServerTraffic.Kind kind : KINDS) {
-                sent[kind.ordinal()] = now == null ? 0 : now.sent(kind);
-            }
-            if (now != counter) {
-                counter = now;
-                receivedBefore = received;
-                System.arraycopy(sent, 0, sentBefore, 0, sent.length);
-            }
-            in[next] = received - receivedBefore;
-            receivedBefore = received;
-            for (int k = 0; k < sent.length; k++) {
-                out[k][next] = sent[k] - sentBefore[k];
-                sentBefore[k] = sent[k];
-            }
-            next = (next + 1) % SAMPLES;
-            repaint();
-        }
-
-        @Override
-        protected void paintComponent(final Graphics g) {
-            final Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            final int w = getWidth();
-            final int h = getHeight();
-            g2.setColor(BACKGROUND);
-            g2.fillRect(0, 0, w, h);
-
-            // stacked[k][i] is everything the first k + 1 kinds sent in sample i, oldest sample first
-            final long[][] stacked = new long[KINDS.length][SAMPLES];
-            final long[] received = new long[SAMPLES];
-            long top = SMALLEST_SCALE;
-            for (int i = 0; i < SAMPLES; i++) {
-                final int at = (next + i) % SAMPLES;
-                long sum = 0;
-                for (int k = 0; k < KINDS.length; k++) {
-                    sum += out[k][at];
-                    stacked[k][i] = sum;
-                }
-                received[i] = in[at];
-                top = Math.max(top, Math.max(sum, in[at]));
-            }
-            final int plotTop = 38;
-            final int plotHeight = h - plotTop - 4;
-            g2.setColor(GRID);
-            g2.drawLine(0, plotTop, w, plotTop);
-            g2.drawLine(0, h - 4, w, h - 4);
-            final int[] xs = xs();
-            // The tallest layer first, so each lower one is painted over the part of it that is not its own
-            for (int k = KINDS.length - 1; k >= 0; k--) {
-                g2.setColor(KIND_COLOURS[k]);
-                g2.fillPolygon(xs, ys(stacked[k], top, plotTop, plotHeight), SAMPLES + 2);
-            }
-            g2.setColor(IN);
-            g2.setStroke(DASHED);
-            g2.drawPolyline(xs, ys(received, top, plotTop, plotHeight), SAMPLES);
-
-            g2.setFont(getFont().deriveFont(11f));
-            g2.setColor(LABEL);
-            g2.drawString(TEXT.getMessage("lblWebConsoleInOut", rate(received[SAMPLES - 1]), rate(stacked[KINDS.length - 1][SAMPLES - 1])), 8, 14);
-            final String scale = TEXT.getMessage("lblWebConsoleScale", rate(top));
-            g2.drawString(scale, w - 8 - g2.getFontMetrics().stringWidth(scale), 14);
-            int x = 8;
-            for (int k = 0; k < KINDS.length; k++) {
-                x = swatch(g2, x, 30, KIND_COLOURS[k], KIND_NAMES[k]) + 14;
-            }
-            g2.setColor(IN);
-            g2.setStroke(DASHED);
-            g2.drawLine(x, 26, x + 16, 26);
-            g2.setColor(LABEL);
-            g2.drawString(TEXT.getMessage("lblWebConsoleReceived"), x + 22, 30);
-            g2.dispose();
-        }
-
-        /** A filled square in a kind's colour and its name; returns where the next entry can start. */
-        static int swatch(final Graphics2D g2, final int x, final int baseline, final Color colour, final String name) {
-            g2.setColor(colour);
-            g2.fillRect(x, baseline - 9, 9, 9);
-            g2.setColor(LABEL);
-            g2.drawString(name, x + 14, baseline);
-            return x + 14 + g2.getFontMetrics().stringWidth(name);
-        }
-
-        /** Each sample's x, then the plot's two bottom corners, so the same points close an area under a line. */
-        private int[] xs() {
-            final int[] xs = new int[SAMPLES + 2];
-            for (int i = 0; i < SAMPLES; i++) {
-                xs[i] = i * (getWidth() - 1) / (SAMPLES - 1);
-            }
-            xs[SAMPLES] = xs[SAMPLES - 1];
-            xs[SAMPLES + 1] = xs[0];
-            return xs;
-        }
-
-        /** Each sample's y, then the plot's floor twice, to go with xs. */
-        private static int[] ys(final long[] values, final long top, final int plotTop, final int plotHeight) {
-            final int[] ys = new int[SAMPLES + 2];
-            for (int i = 0; i < SAMPLES; i++) {
-                ys[i] = plotTop + plotHeight - (int) (values[i] * plotHeight / top);
-            }
-            ys[SAMPLES] = plotTop + plotHeight;
-            ys[SAMPLES + 1] = plotTop + plotHeight;
-            return ys;
-        }
-
-        private static String rate(final long bytesPerSecond) {
-            return bytes(bytesPerSecond) + "/s";
-        }
-    }
-
-    /** Under the graph, in its colours: how long the server has been up, who is on it, and every byte so far. */
-    private static final class StatsBox extends JComponent {
-        private static final String[] NAMES = {TEXT.getMessage("lblWebConsoleUp"),
-                TEXT.getMessage("lblPlayers"), TEXT.getMessage("lblWebConsoleReceived")};
-        /** Up, players and received, then what was sent of each kind, then everything sent. */
-        private String[] values = new String[NAMES.length + TrafficGraph.KIND_NAMES.length + 1];
-
-        StatsBox() {
-            setPreferredSize(new Dimension(210, TrafficGraph.HEIGHT));
-            setMaximumSize(new Dimension(Integer.MAX_VALUE, TrafficGraph.HEIGHT));
-            setAlignmentX(0f);
-            show(null, 0);
-        }
-
-        void show(final ServerTraffic traffic, final int players) {
-            final String[] now = new String[values.length];
-            now[0] = traffic == null ? "—" : uptime(System.currentTimeMillis() - traffic.started());
-            now[1] = String.valueOf(players);
-            now[2] = traffic == null ? "—" : bytes(traffic.received());
-            long sent = 0;
-            for (final ServerTraffic.Kind kind : ServerTraffic.Kind.values()) {
-                final long bytes = traffic == null ? 0 : traffic.sent(kind);
-                now[NAMES.length + kind.ordinal()] = traffic == null ? "—" : bytes(bytes);
-                sent += bytes;
-            }
-            now[now.length - 1] = traffic == null ? "—" : bytes(sent);
-            values = now;
-            repaint();
-        }
-
-        @Override
-        protected void paintComponent(final Graphics g) {
-            final Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            g2.setColor(TrafficGraph.BACKGROUND);
-            g2.fillRect(0, 0, getWidth(), getHeight());
-            g2.setFont(getFont().deriveFont(11f));
-            for (int i = 0; i < values.length; i++) {
-                final int baseline = 16 + i * 15;
-                g2.setColor(TrafficGraph.LABEL);
-                if (i < NAMES.length) {
-                    g2.drawString(NAMES[i], 10, baseline);
-                } else if (i == values.length - 1) {
-                    g2.drawString(TEXT.getMessage("lblWebConsoleSentTotal"), 24, baseline);
-                } else {
-                    final int k = i - NAMES.length;
-                    TrafficGraph.swatch(g2, 10, baseline, TrafficGraph.KIND_COLOURS[k], TEXT.getMessage("lblWebConsoleSentKind", TrafficGraph.KIND_NAMES[k]));
-                }
-                g2.drawString(values[i], getWidth() - 10 - g2.getFontMetrics().stringWidth(values[i]), baseline);
-            }
-            g2.dispose();
-        }
-
-        private static String uptime(final long millis) {
-            final long seconds = millis / 1000;
-            return String.format(Locale.ROOT, "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60);
-        }
-    }
-
-    private static String bytes(final long bytes) {
-        if (bytes < 1024) {
-            return bytes + " B";
-        }
-        if (bytes < 1024 * 1024) {
-            return String.format(Locale.ROOT, "%.1f KB", bytes / 1024.0);
-        }
-        if (bytes < 1024L * 1024 * 1024) {
-            return String.format(Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024));
-        }
-        return String.format(Locale.ROOT, "%.2f GB", bytes / (1024.0 * 1024 * 1024));
     }
 
     private void quit() {
@@ -1248,115 +863,6 @@ final class ServerConsole implements IProgressBar {
             progress.setIndeterminate(maximum <= 0);
             progress.setMaximum(Math.max(1, maximum));
         });
-    }
-
-    // --- the log --------------------------------------------------------------------------------------
-
-    /** Everything the process prints also lands here, which is the log a player can actually see. */
-    private void captureOutput() {
-        System.setOut(tee(System.out));
-        System.setErr(tee(System.err));
-    }
-
-    private PrintStream tee(final PrintStream original) {
-        // var keeps the anonymous type, so drain() is callable without ByteArrayOutputStream's throwing flush
-        final var copyOf = new ByteArrayOutputStream() {
-            void drain() {
-                final String chunk = toString(StandardCharsets.UTF_8);
-                reset();
-                if (!chunk.isEmpty()) {
-                    synchronized (pending) {
-                        pending.append(chunk);
-                    }
-                }
-            }
-        };
-        return new PrintStream(new OutputStream() {
-            @Override
-            public void write(final int b) {
-                original.write(b);
-                copyOf.write(b);
-                if (b == '\n') {
-                    copyOf.drain();
-                }
-            }
-
-            // Card loading prints tens of thousands of lines, and a byte at a time is too slow for that
-            @Override
-            public void write(final byte[] bytes, final int off, final int len) {
-                original.write(bytes, off, len);
-                copyOf.write(bytes, off, len);
-                copyOf.drain();
-            }
-        }, true, StandardCharsets.UTF_8);
-    }
-
-    private void flush() {
-        final String chunk;
-        synchronized (pending) {
-            if (pending.isEmpty()) {
-                return;
-            }
-            chunk = pending.toString();
-            pending.setLength(0);
-        }
-        final StyledDocument doc = text.getStyledDocument();
-        try {
-            for (final String line : chunk.split("(?<=\n)")) {
-                doc.insertString(doc.getLength(), line, styleOf(line));
-                if (!details.isVisible() && line.contains("[ERROR]")) {
-                    unseenErrors++;
-                }
-            }
-        } catch (final BadLocationException e) {
-            text.setText(chunk);
-        }
-        trim();
-        text.setCaretPosition(doc.getLength());
-        labelDetails();
-    }
-
-    // Red for errors and the stack traces under them, amber for warnings; the rest in the log's own colour
-    private static final SimpleAttributeSet PLAIN = new SimpleAttributeSet();
-    private static final SimpleAttributeSet ERROR = colour(new Color(0xff, 0x6b, 0x5c));
-    private static final SimpleAttributeSet WARNING = colour(new Color(0xf2, 0xc3, 0x44));
-
-    private static SimpleAttributeSet colour(final Color c) {
-        final SimpleAttributeSet set = new SimpleAttributeSet();
-        StyleConstants.setForeground(set, c);
-        return set;
-    }
-
-    /** A stack trace line carries on the colour of the error or warning above it, which tinylog marks as [ERROR] or [WARN ]. */
-    private SimpleAttributeSet styleOf(final String line) {
-        if (line.contains("[ERROR]")) {
-            return carried = ERROR;
-        }
-        if (line.contains("[WARN")) {
-            return carried = WARNING;
-        }
-        final String bare = line.strip();
-        final boolean thrown = bare.matches("^[\\w.$]+(Exception|Error)(:.*)?$");
-        final boolean trace = thrown || line.startsWith("\t") || line.startsWith(" ") || bare.startsWith("Caused by")
-                || bare.startsWith("at ") || bare.startsWith("...");
-        if (carried != PLAIN && (trace || bare.isEmpty())) {
-            return carried;
-        }
-        return carried = thrown ? ERROR : PLAIN;
-    }
-
-    private void trim() {
-        final StyledDocument doc = text.getStyledDocument();
-        final Element root = doc.getDefaultRootElement();
-        final int lines = root.getElementCount();
-        if (lines <= MAX_LINES) {
-            return;
-        }
-        try {
-            doc.remove(0, root.getElement(lines - MAX_LINES - 1).getEndOffset());
-        } catch (final BadLocationException e) {
-            text.setText("");
-        }
     }
 
     void close() {

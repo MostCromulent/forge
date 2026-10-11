@@ -11,6 +11,7 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { EditorCard, ImportAction, ImportFix, ImportProblem } from '../protocol';
 import { t } from '../text';
+import { headingText } from './decklist';
 
 const READ_DELAY_MS = 300;
 const LINE_PX = 22;
@@ -241,7 +242,7 @@ export function CardGroup({ heading, cards, marked, stacked }: {
 }) {
   return (
     <div class="group">
-      <h4>{heading}<span>{cards.reduce((n, c) => n + c.count, 0)}</span></h4>
+      <h4>{headingText(heading)}<span>{cards.reduce((n, c) => n + c.count, 0)}</span></h4>
       {cards.map(c => stacked ? (
         <div key={c.name} class={`deck-stack${c.problem ? ' bad' : ''}`} data-image={c.image} title={c.problem ? `${c.name}: ${c.problem}` : c.name}>
           <img alt={c.name} src={imageUrl(c.image)} draggable={false} />

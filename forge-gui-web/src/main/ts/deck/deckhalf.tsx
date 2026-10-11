@@ -4,7 +4,7 @@ import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useState } from 'preact/hooks';
 import { isPortrait } from '../form';
 import { flyingFor, land } from '../flight';
-import { drawHand, regroup, type GroupBy } from './decklist';
+import { drawHand, headingText, regroup, type GroupBy } from './decklist';
 import { imageUrl } from '../images';
 import { Pip, Pips, SymbolText } from '../symbols';
 import type { Actions } from '../actions';
@@ -80,7 +80,7 @@ export function DeckHalf({ actions, state, handlers, check }: {
           {state.main.length === 0 && <p class="none">{state.commanderWanted ? t('lblWebEditorChooseCommanderFirst') : t('lblWebEditorClickToAdd')}</p>}
           {groups.map(g => (
             <div key={g.heading} class="group">
-              <h4>{g.heading}<span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
+              <h4>{headingText(g.heading)}<span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
               {g.cards.map(c => cards
                 ? <Stack key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} handlers={handlers} />
                 : <Line key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} actions={actions} handlers={handlers} mainOnly={state.mainOnly} />)}

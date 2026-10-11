@@ -89,7 +89,10 @@ final class Legality {
         final Map<String, String> flags = new LinkedHashMap<>();
         final Map<String, String> kinds = new LinkedHashMap<>();
         for (final Map.Entry<String, PaperCard> e : byName.entrySet()) {
-            final String[] problem = problemInDeck(e.getValue(), all.countByName(e.getKey()), check, problems);
+            // As the engine counts: a card with its own limit is counted in the main deck alone
+            final int count = DeckFormat.canHaveSpecificNumberInDeck(e.getValue()) != null ? deck.getMain().countByName(e.getKey())
+                    : all.countByName(e.getKey());
+            final String[] problem = problemInDeck(e.getValue(), count, check, problems);
             if (problem != null) {
                 flags.put(e.getKey(), problem[0]);
                 kinds.put(e.getKey(), problem[1]);
@@ -171,6 +174,11 @@ final class Legality {
     /** Problems with the deck as a whole, each worked out here because the engine reports only its first one. */
     private static List<String> deckItems(final Deck deck, final DeckFormat df, final List<PaperCard> commanders,
             final boolean noCardProblems) {
+        final String engine = df.getDeckConformanceProblem(deck);
+        // The engine decides whether the deck stands; what follows only names every fault where it names the first
+        if (engine == null) {
+            return List.of();
+        }
         final List<String> items = new ArrayList<>();
         // The command zone counts toward the deck's size, as players count it: a Commander deck is 100 cards
         final int slots = !df.hasCommander() ? 0 : df.hasSignatureSpell() ? 2 : 1;
@@ -195,10 +203,7 @@ final class Legality {
             items.add(Localizer.getInstance().getMessage("lblWebLegalityNoSignatureSpell"));
         }
         if (items.isEmpty() && noCardProblems) {
-            final String engine = df.getDeckConformanceProblem(deck);
-            if (engine != null) {
-                items.add(engine);
-            }
+            items.add(engine);
         }
         return items;
     }
