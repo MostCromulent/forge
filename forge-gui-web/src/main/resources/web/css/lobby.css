@@ -674,12 +674,14 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .live { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--mtg-g); }
 .chev { width: 15px; height: 15px; flex: none; fill: none; stroke: var(--muted); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
-.roster { margin: 0; padding: 6px 8px; list-style: none; display: grid; gap: 1px; border-bottom: 1px solid var(--line); }
+.roster { margin: 0; padding: 6px 8px; list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; border-bottom: 1px solid var(--line); }
 .roster li { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; }
 .roster li.watching .who { color: var(--muted); }
 .roster li.arrived { background: var(--accent-soft); box-shadow: inset 2px 0 var(--accent-2); }
 .face-small { width: 21px; height: 21px; flex: none; border-radius: 50%; object-fit: cover; }
-.roster .who { font-size: 12px; }
+/* A long name is cut short, so what its player is doing stays in view */
+.roster .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.roster li > :not(.who, .spacer) { flex: none; }
 .roster .spacer { flex: 1; }
 .roster .rename { width: 22px; height: 22px; padding: 0; display: grid; place-items: center; background: none; border-color: transparent; }
 .roster .rename:hover { background: var(--surface-2); }

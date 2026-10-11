@@ -88,6 +88,8 @@ final class WebSessions implements WebServer.Endpoint {
         byChannel.put(channel, session);
         holdOpen();
         session.connected(channel);
+        // The others were told this browser had gone, if it holds a seat
+        announcePresence();
     }
 
     /** Stops the process giving up before anyone connects, for when the console shows Forge is running. */

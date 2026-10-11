@@ -783,7 +783,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return Lists.newArrayList(choices.get(last));
     }
 
-    /** The stack item each choice is, in the same order, or null unless every choice is a spell on the stack. */
+    /** The stack item each choice is, in the same order, or null unless every choice is a different spell on the stack. */
     private <T> List<Integer> stackKeysFor(final List<T> choices) {
         final GameView gv = getGameView();
         if (gv == null || gv.getStack() == null || choices.isEmpty()) {
@@ -802,7 +802,8 @@ public class WebGuiGame extends NetworkGuiGame {
                     }
                 }
             }
-            if (found == null) {
+            // Two abilities of one card are one item on the stack, which a click could not tell apart
+            if (found == null || keys.contains(found)) {
                 return null;
             }
             keys.add(found);
