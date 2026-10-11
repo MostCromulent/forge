@@ -125,7 +125,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
           <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
         </header>
         <div class="imp-sub">
-          <label class="namefield">{t('lblWebEditorDeckName')}
+          <label class="namefield">{t('lblDeckName')}
             <input value={name} maxLength={60} onInput={e => setTypedName(e.currentTarget.value)} />
           </label>
           {/* A deck built from a collection is of one format, which the server reads the list as */}

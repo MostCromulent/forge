@@ -113,13 +113,13 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
     <div class="drafting-page" onPointerLeave={() => setPeek(null)}
       onPointerOver={e => setPeek(packMoving() && (e.target as Element).closest?.('.draft-pack') ? null : peekAt(e, '.drafting-page'))}>
       <PageHeader class="limited-head">
-        <span class="limited-title">{t('lblWebDraftBoosterDraft')}</span>
+        <span class="limited-title">{t('lblBoosterDraft')}</span>
         {state && <span class="muted">{t('lblWebDraftProductSeats', state.product, state.seats.length)}</span>}
         <div class="head-right">
           <HeadControls />
           {online
             ? <button onClick={() => changeUi(u => { u.draftHidden = true; })}>{t('lblWebDraftBackToTable')}</button>
-            : <button onClick={() => setLeaving(true)}>{t('lblWebDraftLeaveDraft')}</button>}
+            : <button onClick={() => setLeaving(true)}>{t('lblLeaveDraft')}</button>}
         </div>
       </PageHeader>
       {model.error && <p class="limited-error">{model.error}</p>}
@@ -322,7 +322,7 @@ function startDrag(e: DragEvent, drag: Drag): void {
 function RankShield({ rank }: { rank: number }) {
   const tier = rank >= 90 ? 's' : rank >= 80 ? 'a' : rank >= 60 ? 'b' : rank >= 25 ? 'c' : 'd';
   return (
-    <span class={`rank tier-${tier}`} title={t('ttWebDraftRanking')}>
+    <span class={`rank tier-${tier}`} title={t('lblDraftRanking')}>
       <svg viewBox="0 0 34 42" aria-hidden="true">
         <defs>
           <linearGradient id={`rank-${tier}`} x1="0" y1="0" x2="0" y2="1">
@@ -382,14 +382,14 @@ function Picks({ state, actions }: { state: DraftState; actions: Actions }) {
         </span>
       </div>
       <div class="draft-sections">
-        <PickSection title={t('lblWebDraftMainDeck')} held={main} by={by} cards={cards} onDrop={drop(false)} move={move} />
+        <PickSection title={t('lblMainDeck')} held={main} by={by} cards={cards} onDrop={drop(false)} move={move} />
         <PickSection title={t('lblSideboard')} held={side} by={by} cards={cards} onDrop={drop(true)} move={move} />
       </div>
     </section>
   );
 }
 
-const GROUP_NAMES: Record<GroupBy, TextKey> = { colour: 'lblColor', type: 'lblType', mv: 'lblWebDraftGroupManaValue', pick: 'lblWebDraftGroupPickOrder' };
+const GROUP_NAMES: Record<GroupBy, TextKey> = { colour: 'lblColor', type: 'lblType', mv: 'lblCMC', pick: 'lblWebDraftGroupPickOrder' };
 
 function PickSection({ title, held, by, cards, onDrop, move }: {
   title: string; held: Held[]; by: GroupBy; cards: boolean; onDrop: (drag: Drag) => void; move: (h: Held) => void;

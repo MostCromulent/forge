@@ -200,7 +200,7 @@ function RenameField({ name, done }: { name: string; done: (name: string | null)
     field.current?.select();
   }, []);
   return (
-    <input ref={field} class="deck-name-field" defaultValue={name} maxLength={60} aria-label={t('lblWebEditorDeckName')}
+    <input ref={field} class="deck-name-field" defaultValue={name} maxLength={60} aria-label={t('lblDeckName')}
       onKeyDown={e => {
         if (e.key === 'Enter') done(e.currentTarget.value.trim());
         if (e.key === 'Escape') done(null);

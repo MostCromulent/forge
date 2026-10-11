@@ -74,7 +74,7 @@ function Events({ pools, draft, actions, create }: { pools: PoolRow[]; draft: bo
       </>}
       foot={p => (p.built
         ? <><button class="primary" onClick={() => actions.poolOpen(p.name)}>{t('lblPlay')}</button>
-            <button onClick={() => actions.poolEdit(p.name)}>{t('lblWebLimitedEditDeck')}</button></>
+            <button onClick={() => actions.poolEdit(p.name)}>{t('btnEditDeck')}</button></>
         : <button class="primary" onClick={() => actions.poolEdit(p.name)}>{t('lblWebLimitedBuildDeck')}</button>)}
       remove={{ item: t('lblWebLimitedDeletePool'), ask: () => t('lblWebLimitedDeletePoolAsk'), keep: t('lblWebLimitedKeep'), go: p => actions.poolDelete(p.name) }} />
   );
@@ -149,7 +149,7 @@ function YourDeck({ pool, actions }: { pool: PoolRow; actions: Actions }) {
     <span class="your-deck">
       {pool.built && <span class="pips"><Pips colors={pool.colors} /></span>}
       <span><b>{t('lblWebSetupYourDeck')}</b> <span class="muted">{t(pool.deckSize === 1 ? 'lblWebLimitedDotOneCard' : 'lblWebLimitedDotCards', pool.deckSize)}</span></span>
-      <button onClick={() => actions.poolEdit(pool.name)}>{t('lblWebLimitedEditDeck')}</button>
+      <button onClick={() => actions.poolEdit(pool.name)}>{t('btnEditDeck')}</button>
     </span>
   );
 }

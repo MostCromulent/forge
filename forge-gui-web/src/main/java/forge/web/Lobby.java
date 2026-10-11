@@ -26,6 +26,7 @@ import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.util.ImageUtil;
 import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.NameGenerator;
@@ -1303,6 +1304,10 @@ final class Lobby {
     }
 
     void setDeck(final int index, final String key) {
+        final GameLobby lobby = view();
+        if (lobby == null || index < 0 || index >= lobby.getNumberOfSlots()) {
+            return;
+        }
         while (deckKeys.size() <= index) {
             deckKeys.add(null);
         }
@@ -1396,6 +1401,12 @@ final class Lobby {
 
     /** Writes a card-art sleeve onto the seat's deck, where every client reads it from. */
     void setSleeveArt(final int index, final String imageKey, final int offset) {
+        final GameLobby lobby = view();
+        // The deck file and the saved sleeves are the host's, and the key goes into that file as written
+        if (lobby == null || guest.getAsBoolean() || !dealsFor(lobby, index) || imageKey == null
+                || (!imageKey.isEmpty() && ImageUtil.getPaperCardFromImageKey(imageKey) == null)) {
+            return;
+        }
         catalog.saveSleeveArt(key(index), imageKey, offset);
         // The slot holds a copy of the deck, so the new sleeve reaches it only with the deck sent again
         compose(index);

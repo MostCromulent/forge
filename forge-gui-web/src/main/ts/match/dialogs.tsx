@@ -618,7 +618,7 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
   return (
     <div class="manipulate" ref={root}>
       <p class="shelf-hint">{t('lblWebDialogReorderHint')}</p>
-      {shelf('top', t('lblWebDialogTopOfLibrary'), t('lblWebDialogDropForTop'))}
+      {shelf('top', t('lblTopOfLibrary'), t('lblWebDialogDropForTop'))}
       <p class="between"><span class="deck-mark" aria-hidden="true"><i /></span>{t('lblWebDialogOtherCards', rest.length)}</p>
       {bothEnds && shelf('bottom', t('lblWebDialogBottomOfLibrary'), t('lblWebDialogDropForBottom'))}
       <ButtonRow>

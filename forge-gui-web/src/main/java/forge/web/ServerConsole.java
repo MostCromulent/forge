@@ -633,7 +633,7 @@ final class ServerConsole implements IProgressBar {
         picturesAsk = note(heading(TEXT.getMessage("lblWebConsolePicturesAsk"), NOTE),
                 wrapped(TEXT.getMessage("lblWebConsolePicturesAskAbout"), WARN_TEXT, HELP_WIDTH),
                 row(button(TEXT.getMessage("lblWebConsolePicturesDownloadNow"), () -> answerPictures(true)), Box.createHorizontalStrut(8),
-                        button(TEXT.getMessage("lblWebConsolePicturesNotNow"), () -> answerPictures(false))));
+                        button(TEXT.getMessage("lblNotNow"), () -> answerPictures(false))));
         picturesAsk.setVisible(false);
 
         quitWhenEmpty.setEnabled(false);

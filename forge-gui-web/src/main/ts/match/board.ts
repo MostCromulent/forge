@@ -452,8 +452,8 @@ function renderManaPool(root: HTMLElement, player: PlayerView, own: boolean, act
 }
 
 const MANA_NAMES: Record<string, TextKey> = {
-  W: 'lblWebBoardManaWhite', U: 'lblWebBoardManaBlue', B: 'lblWebBoardManaBlack', R: 'lblWebBoardManaRed',
-  G: 'lblWebBoardManaGreen', C: 'lblWebBoardManaColourless',
+  W: 'lblWhite', U: 'lblBlue', B: 'lblBlack', R: 'lblRed',
+  G: 'lblGreen', C: 'lblColorless',
 };
 
 // A hand is drawn as a few fanned backs with its count, and opens in a window when clicked, your own included
@@ -1124,17 +1124,17 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
       };
       campaign.buttons.forEach((b, i) => {
         add(b.label, b.primary, does[b.action]);
-        if (i === 0) add(t('lblWebBoardViewBattlefield'), false, () => view(true));
+        if (i === 0) add(t('lblReconnectViewBattlefield'), false, () => view(true));
       });
     };
     draw();
     return;
   }
   if (limited?.nextRound) add(t('lblWebBoardNextRound', limited.round + 1, limited.rounds), true, () => actions.gauntletNext());
-  if (!matchOver) add(t('lblWebBoardNextGame'), true, () => actions.nextGame());
-  add(t('lblWebBoardViewBattlefield'), false, () => view(true));
-  if (limited) add(t('lblWebBoardRestartRound'), false, () => actions.gauntletRestart());
-  add(t(limited ? 'lblQuit' : matchOver ? 'lblWebBoardReturnToLobby' : 'lblWebBoardQuitMatch'), matchOver && !limited?.nextRound, () => {
+  if (!matchOver) add(t('btnNextGame'), true, () => actions.nextGame());
+  add(t('lblReconnectViewBattlefield'), false, () => view(true));
+  if (limited) add(t('btnRestartRound'), false, () => actions.gauntletRestart());
+  add(t(limited ? 'lblQuit' : matchOver ? 'lblWebBoardReturnToLobby' : 'btnQuitMatch'), matchOver && !limited?.nextRound, () => {
     if (!matchOver) actions.quitMatch();
     actions.leave();
   });

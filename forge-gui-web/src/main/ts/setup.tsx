@@ -157,9 +157,9 @@ export interface SealedValue {
 
 /** The sealed products desktop offers, with a line each; LimitedPoolType's names are the ids. */
 const PRODUCTS: [string, TextKey, TextKey][] = [
-  ['Full', 'lblWebSetupProductFull', 'lblWebSetupProductFullLine'],
+  ['Full', 'lblLimitedPoolFull', 'lblWebSetupProductFullLine'],
   ['Block', 'lblBlock', 'lblWebSetupProductBlockLine'],
-  ['FantasyBlock', 'lblWebSetupProductFantasy', 'lblWebSetupProductFantasyLine'],
+  ['FantasyBlock', 'lblLimitedFantasy', 'lblWebSetupProductFantasyLine'],
   ['Prerelease', 'lblLimitedPrerelease', 'lblWebSetupProductPrereleaseLine'],
   ['Custom', 'lblWebSetupProductCustom', 'lblWebSetupProductCustomLine'],
   ['Import', 'lblWebSetupProductCubeCobra', 'lblWebSetupProductCubeCobraLine'],
@@ -353,9 +353,9 @@ const seconds = (n: number, none: string) => (n === 0 ? none : t('lblWebEventSec
 
 /** The draft products desktop offers; LimitedPoolType's names are the ids. */
 const DRAFT_PRODUCTS: [string, TextKey, TextKey][] = [
-  ['Full', 'lblWebSetupProductFull', 'lblWebSetupDraftFullLine'],
+  ['Full', 'lblLimitedPoolFull', 'lblWebSetupDraftFullLine'],
   ['Block', 'lblBlock', 'lblWebSetupProductBlockLine'],
-  ['FantasyBlock', 'lblWebSetupProductFantasy', 'lblWebSetupProductFantasyLine'],
+  ['FantasyBlock', 'lblLimitedFantasy', 'lblWebSetupProductFantasyLine'],
   ['Custom', 'lblWebSetupCube', 'lblWebSetupDraftCubeLine'],
   ['Chaos', 'lblChaos', 'lblWebSetupDraftChaosLine'],
   ['Import', 'lblWebSetupProductCubeCobra', 'lblWebSetupProductCubeCobraLine'],
@@ -525,7 +525,7 @@ function draftProduct(v: DraftValue): string | null {
 /** The offline draft beside its questions: seven computers draft beside you, and their decks are your opponents. */
 export function draftTicket(): Ticket<DraftValue> {
   return {
-    title: t('lblWebDraftBoosterDraft'),
+    title: t('lblBoosterDraft'),
     rows: v => [
       [t('lblProduct'), draftProduct(v)],
       [t('lblWebSetupDrafters'), t('lblWebSetupYouAndSevenAi')],

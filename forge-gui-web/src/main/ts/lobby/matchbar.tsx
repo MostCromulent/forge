@@ -49,7 +49,7 @@ function limitedFormats(): (Format & { kind: 'draft' | 'sealed' })[] {
 /** A game's deck size in a few words, read from its first fact: "60+ cards", "100 cards", or "no deck" when it is dealt. */
 export function deckMark(format: Format): string {
   const size = /^(\d+\+?)/.exec(format.facts[0] ?? '')?.[1];
-  return size ? t('lblWebNCards', size) : t('lblWebMatchBarNoDeck');
+  return size ? t('lblWebNCards', size) : t('lblNoDeck');
 }
 
 /** A mark for each family of games: a deck for Constructed, a crown for the commander games, a die for the Momir games and a pack for Limited. */

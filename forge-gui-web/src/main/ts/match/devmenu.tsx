@@ -22,7 +22,7 @@ const GROUPS: [TextKey, [DevAction, TextKey][]][] = [
   ]],
   ['lblPermanents', [
     ['addCountersToPermanent', 'lblWebDevAddCounters'], ['removeCountersFromPermanent', 'lblWebDevRemoveCounters'],
-    ['tapPermanents', 'lblWebDevTap'], ['untapPermanents', 'lblWebDevUntap'],
+    ['tapPermanents', 'lblTapPermanent'], ['untapPermanents', 'lblUntapPermanent'],
   ]],
   ['lblGame', [
     ['generateMana', 'lblWebDevAddMana'], ['setPlayerLife', 'lblWebDevSetLife'], ['rollbackPhase', 'lblWebDevRollback'],
@@ -49,7 +49,7 @@ export function DevItems({ model, actions, back, close, setUp }: {
   );
   return (
     <>
-      <button type="button" role="menuitem" class="card-menu-item dev-back" onClick={back}>‹ {t('lblWebDevMode')}</button>
+      <button type="button" role="menuitem" class="card-menu-item dev-back" onClick={back}>‹ {t('lblDevMode')}</button>
       <div class="dev-top">
         {toggle('unlimitedLands', t('lblWebDevUnlimitedLands'), model.devState?.unlimitedLands)}
         {toggle('viewAll', t('lblWebDevViewAll'), model.devState?.viewAll)}

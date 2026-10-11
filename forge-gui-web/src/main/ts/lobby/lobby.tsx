@@ -191,7 +191,7 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
       <div class="sleeve-slot" hidden={beforePools} data-image={commander ?? undefined}>
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
         <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt && !commander ? ' card-art' : ''}`} title={dealt ? '' : t('lblWebLobbyChooseDeck')}
-          data-label={seat.mayEdit ? t('lblWebLobbyChooseDeck') : (waiting ? '' : t('lblWebLobbyNoDeck'))}
+          data-label={seat.mayEdit ? t('lblWebLobbyChooseDeck') : (waiting ? '' : t('lblNoDeck'))}
           disabled={!seat.mayEdit || dealt} onClick={() => choose('deck')}
           // A new sleeve dealt under a commander would not be seen
           onContextMenu={e => { if (hasDeck && seat.mayEdit && !commander) { e.preventDefault(); randomSleeve(); } }}>
@@ -234,7 +234,7 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
         )}
         {/* With no deck yet the row offers a random one; the sleeve beside it already offers to choose one */}
         {randomable && !hasDeck && (
-          <button class="deck-row random-row" onClick={random}><Dice />{t('lblWebLobbyRandomDeck')}</button>
+          <button class="deck-row random-row" onClick={random}><Dice />{t('lblRandomDeck')}</button>
         )}
         <div class="deck-line" hidden={dealt || beforePools || (!hasDeck && !waiting)}>
           <button class={`deck-row${hasDeck ? '' : ' unset'}`} disabled={!seat.mayEdit} onClick={() => choose('deck')}>
@@ -244,7 +244,7 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
             {hasDeck && seat.bracket != null && <BracketMark level={seat.bracket} />}
           </button>
           {randomable && hasDeck && (
-            <button class="random-deck" title={t('lblWebLobbyDealAnotherDeck')} aria-label={t('lblWebLobbyRandomDeck')} onClick={random}><Dice /></button>
+            <button class="random-deck" title={t('lblWebLobbyDealAnotherDeck')} aria-label={t('lblRandomDeck')} onClick={random}><Dice /></button>
           )}
         </div>
         <p class="seat-problem" hidden={!seat.problem || !hasDeck}>{seat.problem ?? ''}</p>

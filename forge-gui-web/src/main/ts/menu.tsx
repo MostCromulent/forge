@@ -288,7 +288,7 @@ function Waiting({ model, actions }: { model: Model; actions: Actions }) {
               : t(midMatch ? 'lblWebMenuSeatedAfterMatch' : model.canClaimHost ? 'lblWebMenuNobodyHosting' : 'lblWebMenuSeatedWhenOpens')}
         </p>
         <div class="wait-buttons">
-          {failed && <button onClick={() => actions.join()}>{t('lblWebMenuTryAgain')}</button>}
+          {failed && <button onClick={() => actions.join()}>{t('lblTryAgain')}</button>}
           {model.canClaimHost && <button class="primary" onClick={() => actions.claimHost()}>{t('lblWebMenuHostTable')}</button>}
         </div>
       </section>

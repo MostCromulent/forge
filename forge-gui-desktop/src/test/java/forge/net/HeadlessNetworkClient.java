@@ -34,7 +34,6 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
     private final String username;
     private final String hostname;
     private final int port;
-    private final String inviteLink;
 
     private FGameClient client;
     private ClientGameLobby lobby;
@@ -58,15 +57,6 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
         this.username = username;
         this.hostname = hostname;
         this.port = port;
-        this.inviteLink = null;
-    }
-
-    /** Joins a web host by its invite link, through its web port. */
-    public HeadlessNetworkClient(String username, String inviteLink) {
-        this.username = username;
-        this.hostname = inviteLink;
-        this.port = -1;
-        this.inviteLink = inviteLink;
     }
 
     public boolean connect(long timeoutMs) {
@@ -74,8 +64,7 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
 
         try {
             guiGame = new DeltaLoggingGuiGame(this);
-            client = inviteLink == null ? new FGameClient(username, guiGame, hostname, port)
-                    : new FGameClient(username, guiGame, FGameClient.tunnelOf(inviteLink), null);
+            client = new FGameClient(username, guiGame, hostname, port);
             lobby = new ClientGameLobby();
             client.addLobbyListener(new ClientLobbyListener());
             client.connect();

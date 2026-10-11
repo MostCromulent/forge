@@ -37,7 +37,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
   let why = eventStatus(lobby);
   if (!lim.started) {
     if (lobby.host && lim.product) {
-      button = <button class="primary big" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? t('lblWebEventStartDraft') : t('lblWebEventStageOpen')}</button>;
+      button = <button class="primary big" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? t('lblNetworkStartDraft') : t('lblWebEventStageOpen')}</button>;
     }
   } else if (model.drafting && ui.draftHidden) {
     button = <button class="primary big" onClick={() => changeUi(u => { u.draftHidden = false; })}>{t('lblWebEventReturnToDraft')}</button>;

@@ -30,8 +30,8 @@ const SORTS: [ZoneSort, TextKey][] = [['order', 'lblWebZoneSortOrder'], ['name',
 const ZONE_NAMES: Record<ZoneType, TextKey> = {
   Hand: 'lblWebZoneHand', Library: 'lblLibrary', Graveyard: 'lblGraveyard', Battlefield: 'lblWebZoneBattlefield',
   Exile: 'lblExile', Flashback: 'lblWebZoneFlashback', Command: 'lblWebZoneCommand', Stack: 'lblStack',
-  Sideboard: 'lblSideboard', Ante: 'lblWebZoneAnte', Merged: 'lblWebZoneMerged', SchemeDeck: 'lblWebZoneSchemeDeck',
-  PlanarDeck: 'lblWebZonePlanarDeck', AttractionDeck: 'lblWebZoneAttractionDeck', Junkyard: 'lblWebZoneJunkyard',
+  Sideboard: 'lblSideboard', Ante: 'lblWebZoneAnte', Merged: 'lblWebZoneMerged', SchemeDeck: 'lblSchemeDeck',
+  PlanarDeck: 'lblPlanarDeck', AttractionDeck: 'lblWebZoneAttractionDeck', Junkyard: 'lblWebZoneJunkyard',
   ContraptionDeck: 'lblWebZoneContraptionDeck', Subgame: 'lblWebZoneSubgame', ExtraHand: 'lblWebZoneExtraHand',
   StickerSheets: 'lblStickerSheets', None: 'lblNone',
 };

@@ -224,9 +224,9 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
     panel: (f, set, done) => <Words value={f[id] ?? ''} placeholder={placeholder} apply={v => { set({ ...f, [id]: v }); done(); }} />,
   });
   const kinds: FilterKind<CatalogueFilter>[] = [
-    words('rules', rules, t('lblWebFilterRulesText'), t('lblWebFilterRulesTextHint')),
+    words('rules', rules, t('lblRulesText'), t('lblWebFilterRulesTextHint')),
     words('subtype', rules, t('lblWebFilterSubtype'), t('lblWebFilterSubtypeHint')),
-    range('mv', numbers, t('lblWebDraftGroupManaValue')),
+    range('mv', numbers, t('lblCMC')),
     range('power', numbers, t('lblPower')),
     range('toughness', numbers, t('lblToughness')),
     range('colourCount', numbers, t('lblColorCount')),

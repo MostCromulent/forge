@@ -65,7 +65,7 @@ export const SETTINGS: SettingDef[] = [
   { section: t('lblWebGameMenuStopsTitle'), key: 'interruptTriggers', label: t('lblWebOptionsInterruptTriggers'), type: 'toggle', server: true, menu: 'stops', def: false },
   { section: t('lblWebGameMenuStopsTitle'), key: 'interruptMassRemoval', label: t('lblWebOptionsInterruptMassRemoval'), type: 'toggle', server: true, menu: 'stops', def: false },
   {
-    section: t('lblWebGameMenuDecisionsTitle'), key: 'autoYieldMode', label: t('lblWebOptionsAutoYieldMode'), type: 'choice', server: true, menu: 'decisions',
+    section: t('lblAutoYieldsAndTriggers'), key: 'autoYieldMode', label: t('lblWebOptionsAutoYieldMode'), type: 'choice', server: true, menu: 'decisions',
     hint: t('lblWebOptionsAutoYieldModeHint'),
     options: [['ability', t('lblWebOptionsPerAbility')], ['card', t('lblWebOptionsPerCard')]], def: 'ability',
   },
@@ -97,9 +97,9 @@ export const SETTINGS: SettingDef[] = [
   },
   {
     section: t('lblDisplay'), key: 'handSort', label: t('lblWebOptionsHandSort'), type: 'choice',
-    options: [['mana', t('lblWebDraftGroupManaValue')], ['color', t('lblColor')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
+    options: [['mana', t('lblCMC')], ['color', t('lblColor')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
   },
-  { section: t('lblDisplay'), key: 'handSize', label: t('lblWebOptionsHandSize'), type: 'slider', min: 70, max: 130, def: 100 },
+  { section: t('lblDisplay'), key: 'handSize', label: t('lblHandSize'), type: 'slider', min: 70, max: 130, def: 100 },
   { section: t('lblDisplay'), key: 'tabNewCards', label: t('lblWebOptionsTabNewCards'), hint: t('lblWebOptionsTabNewCardsHint'), type: 'toggle', def: true },
   { section: t('lblDisplay'), key: 'swapPrompt', label: t('lblWebOptionsSwapPrompt'), hint: t('lblWebOptionsSwapPromptHint'), type: 'toggle', def: false },
   {
@@ -125,13 +125,13 @@ export const SETTINGS: SettingDef[] = [
     section: t('lblWebOptionsSectionSound'), key: 'musicVolume', label: t('lblWebOptionsMusicVolume'), type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
   },
   { section: t('lblWebOptionsSectionKeys'), key: 'keyOk', label: t('lblOK'), action: 'ok', type: 'key', def: ' ' },
-  { section: t('lblWebOptionsSectionKeys'), key: 'keyEndTurn', label: t('lblWebOptionsKeyEndTurn'), action: 'endTurn', type: 'key', def: 'e' },
+  { section: t('lblWebOptionsSectionKeys'), key: 'keyEndTurn', label: t('lblEndTurn'), action: 'endTurn', type: 'key', def: 'e' },
   { section: t('lblWebOptionsSectionKeys'), key: 'keyAutoPass', label: t('lblWebOptionsKeyAutoPass'), hint: t('lblWebOptionsKeyAutoPassHint'), action: 'autoPass', type: 'key', def: 'p' },
   { section: t('lblWebOptionsSectionKeys'), key: 'keyUndo', label: t('lblUndo'), action: 'undo', type: 'key', def: 'z' },
   { section: t('lblWebOptionsSectionKeys'), key: 'keyNextFace', label: t('lblWebOptionsKeyNextFace'), hint: t('lblWebOptionsUnderPointer'), action: 'nextFace', type: 'key', def: 'f' },
   { section: t('lblWebOptionsSectionKeys'), key: 'keyCardText', label: t('lblWebOptionsKeyCardText'), hint: t('lblWebOptionsUnderPointer'), action: 'cardText', type: 'key', def: 't' },
   {
-    section: t('lblAdvanced'), key: 'devMode', label: t('lblWebDevMode'), type: 'toggle', server: true, hostOnly: true, def: false,
+    section: t('lblAdvanced'), key: 'devMode', label: t('lblDevMode'), type: 'toggle', server: true, hostOnly: true, def: false,
     hint: t('lblWebOptionsDevModeHint'),
   },
   {

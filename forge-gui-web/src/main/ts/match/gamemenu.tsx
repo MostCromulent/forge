@@ -46,7 +46,7 @@ export function GameMenu({ model, actions, close, open }: {
   return (
     <div class={closing ? 'backdrop anchored closing' : 'backdrop anchored'} onAnimationEnd={gone}
       onMouseDown={e => { if (e.target === e.currentTarget) shut(); }}>
-      <div ref={menu} class={dev ? 'card-menu game-menu dev' : 'card-menu game-menu'} role="menu" aria-label={dev ? t('lblWebDevMode') : t('lblGame')}>
+      <div ref={menu} class={dev ? 'card-menu game-menu dev' : 'card-menu game-menu'} role="menu" aria-label={dev ? t('lblDevMode') : t('lblGame')}>
         {dev ? <DevItems model={model} actions={actions} back={() => setDev(false)} close={close} setUp={() => open('devSetup')} /> : <>
         <button type="button" role="menuitem" class={mats ? 'card-menu-item on' : 'card-menu-item'} aria-expanded={mats}
           onClick={() => setMats(!mats)}><Icon d={ICONS.playmat} />{t('lblWebPlaymat')}<Icon d={ICONS.more} end /></button>
@@ -78,7 +78,7 @@ export function GameMenu({ model, actions, close, open }: {
         {setting('devMode') && model.host && !model.spectating && <>
           <div class="card-menu-sep" role="separator" />
           <button type="button" role="menuitem" class="card-menu-item dev-entry" onClick={() => setDev(true)}>
-            <Icon d={ICONS.dev} />{t('lblWebDevMode')}<Icon d={ICONS.more} end />
+            <Icon d={ICONS.dev} />{t('lblDevMode')}<Icon d={ICONS.more} end />
           </button>
         </>}
         </>}
@@ -151,7 +151,7 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
   const all = model.autoDecisions;
   const entries = all?.entries ?? [];
   return (
-    <OptionsDialog title={t('lblWebGameMenuDecisionsTitle')} kind="decisions-dialog" close={close} footer={<>
+    <OptionsDialog title={t('lblAutoYieldsAndTriggers')} kind="decisions-dialog" close={close} footer={<>
       <span class="hint">{t('lblWebGameMenuDecisionsHint')}</span>
       <button class={armed ? 'clear-all armed' : 'clear-all'} disabled={!entries.length} onClick={() => {
         if (!armed) {

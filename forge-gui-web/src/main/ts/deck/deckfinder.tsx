@@ -357,7 +357,7 @@ export function DeckFinder({ model, actions, seat, close }: {
             }}>
             <div class="dialog new-deck">
               <div class="dialog-head">
-                <h3>{t('lblWebFinderNewDeckTitle')}</h3>
+                <h3>{t('lblNewDeck')}</h3>
                 <button class="dk-close" title={t('lblClose')} onClick={() => setAdding(false)}>&times;</button>
               </div>
               <section>
@@ -476,8 +476,8 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
           pick={v => { set({ ...f, bracket: v }); done(); }} />
       </>,
     },
-    cards('card', contents, t('lblWebFilterHasCard'), t('lblWebFilterCardName')),
-    cards('sideboard', contents, t('lblWebFilterSideboardHasCard'), t('lblWebFilterCardName')),
+    cards('card', contents, t('lblWebFilterHasCard'), t('lblCardName')),
+    cards('sideboard', contents, t('lblWebFilterSideboardHasCard'), t('lblCardName')),
     cards('set', contents, t('lblWebFilterFromSet'), t('lblWebFilterSetName')),
     {
       id: 'identity', group: colourSize, label: t('lblColorIdentity'),
@@ -486,9 +486,9 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
       panel: (f, set, done) => <IdentityPanel value={f.identity} apply={identity => { set({ ...f, identity }); done(); }} />,
     },
     range('colourCount', colourSize, t('lblColorCount'), f => f.colourCount, (f, colourCount) => ({ ...f, colourCount })),
-    range('main', colourSize, t('lblWebFilterMainSize'), f => f.main, (f, main) => ({ ...f, main })),
-    range('side', colourSize, t('lblWebFilterSideSize'), f => f.side, (f, side) => ({ ...f, side })),
-    range('mana', colourSize, t('lblWebFilterAverageMana'), f => f.mana, (f, mana) => ({ ...f, mana })),
+    range('main', colourSize, t('lblMainDeckSize'), f => f.main, (f, main) => ({ ...f, main })),
+    range('side', colourSize, t('lblSideboardSize'), f => f.side, (f, side) => ({ ...f, side })),
+    range('mana', colourSize, t('lblAverageCMC'), f => f.mana, (f, mana) => ({ ...f, mana })),
     {
       id: 'folder', group: yours, label: t('lblFolder'),
       chip: f => f.folder,
@@ -526,7 +526,7 @@ function IdentityPanel({ value, apply }: { value: DeckFilter['identity']; apply:
 }
 
 const SOURCE_NAMES: Record<string, TextKey> = {
-  all: 'lblWebFinderSourceAll', [NET]: 'lblWebFinderSourceNet', yours: 'lblWebFinderSourceYours', device: 'lblWebFinderSourceDevice',
+  all: 'lblWebFinderSourceAll', [NET]: 'lblNetDecks', yours: 'lblWebFinderSourceYours', device: 'lblWebFinderSourceDevice',
   linked: 'lblWebFinderSourceLinked', precons: 'lblWebFinderSourcePrecons', generated: 'lblWebFinderSourceGenerated',
 };
 const sourceName = (id: string) => (SOURCE_NAMES[id] ? t(SOURCE_NAMES[id]) : id.charAt(0).toUpperCase() + id.slice(1));
@@ -622,7 +622,7 @@ function Chosen({ details, formats, forComputer }: { details: DeckDetails; forma
           <Curve curve={s.curve} creatures={s.creatures} px={42} />
           <div class="types">
             {s.types.map(ty => <div key={ty.name} class="type"><span>{ty.name}</span><b>{ty.count}</b></div>)}
-            <div class="type avg"><span>{t('lblWebFilterAverageMana')}</span><b>{s.averageMana}</b></div>
+            <div class="type avg"><span>{t('lblAverageCMC')}</span><b>{s.averageMana}</b></div>
           </div>
         </div>
       </div>

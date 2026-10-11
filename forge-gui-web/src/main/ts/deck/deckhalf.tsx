@@ -60,7 +60,7 @@ export function DeckHalf({ actions, state, handlers, check }: {
       {hasCommander && <CommanderZone actions={actions} state={state} handlers={handlers} />}
       <div class="zone main-zone" data-zone="Main">
         <h4>
-          <span class="zn">{t('lblWebDraftMainDeck')}</span>
+          <span class="zn">{t('lblMainDeck')}</span>
           <span class="count">{state.stats.main}</span>
           <span class="seg view-seg" role="group" aria-label={t('lblWebEditorShowDeckAs')}>
             <button aria-pressed={cards} onClick={() => view(true)}>{t('lblCards')}</button>
@@ -208,7 +208,7 @@ export function Curve({ curve, creatures, average, px }: { curve: number[]; crea
   const tallest = Math.max(1, ...curve);
   return (
     <div class="curve">
-      <h4>{t('lblWebEditorManaCurve')}{average !== undefined && <> <span>{t('lblWebEditorAverage', average)}</span></>}</h4>
+      <h4>{t('lblManaCurve')}{average !== undefined && <> <span>{t('lblWebEditorAverage', average)}</span></>}</h4>
       <div class="bars">
         {curve.map((n, i) => {
           // The last bucket holds everything at that mana value and above
