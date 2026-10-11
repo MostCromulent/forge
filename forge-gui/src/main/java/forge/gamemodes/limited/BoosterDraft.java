@@ -22,10 +22,8 @@ import forge.card.CardEdition;
 import forge.card.DraftOptions;
 import forge.deck.CardPool;
 import forge.deck.Deck;
-import forge.deck.DeckBase;
 import forge.deck.DeckSection;
 import forge.gui.util.SGuiChoose;
-import forge.gui.util.SOptionPane;
 import forge.item.PaperCard;
 import forge.item.SealedTemplate;
 import forge.item.generation.ChaosBoosterSupplier;
@@ -36,7 +34,6 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.model.CardBlock;
 import forge.model.FModel;
 import forge.util.*;
-import forge.util.storage.IStorage;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.io.File;
@@ -64,7 +61,6 @@ public class BoosterDraft implements IBoosterDraft {
     private IDraftLog draftLog = null;
 
     private boolean shouldShowDraftLog = false;
-    private boolean forNetwork = false;
     private String productName;
 
     private DraftOptions.DoublePick doublePickDuringDraft;
@@ -81,160 +77,8 @@ public class BoosterDraft implements IBoosterDraft {
         loadCustomDrafts();
     }
 
-    public static BoosterDraft createDraft(final LimitedPoolType draftType) {
-        final BoosterDraft draft = new BoosterDraft(draftType);
-        if (!draft.generateProduct()) {
-            return null;
-        }
-
-        draft.initializeBoosters();
-        return draft;
-    }
-
-    /**
-     * Create a draft for network play. Product is generated but boosters are NOT
-     * initialized — the caller must configure pod size and human seats, then call
-     * {@link #initializeBoosters()} manually.
-     *
-     * @param draftType the draft pool type
-     * @return a partially-initialized draft, or null if product generation fails
-     */
-    public static BoosterDraft createDraftForNetwork(final LimitedPoolType draftType) {
-        final BoosterDraft draft = new BoosterDraft(draftType);
-        draft.forNetwork = true;
-        if (!draft.generateProduct()) {
-            return null;
-        }
-        return draft;
-    }
-
-    protected boolean generateProduct() {
-        switch (this.draftFormat) {
-            case Full: // Draft from all cards in Forge
-                setupFull();
-                break;
-
-            case Block: // Draft from cards by block or set
-            case FantasyBlock:
-                final List<CardBlock> blocks = new ArrayList<>();
-                final IStorage<CardBlock> storage = this.draftFormat == LimitedPoolType.Block
-                        ? FModel.getBlocks()
-                        : FModel.getFantasyBlocks();
-
-                // TODO Conspiracy blocks gated for network draft: pack-effect prompts
-                // (Agent of Acquisitions, Cogwork Librarian, etc.) pop on the host, the
-                // conspiracy player-flag state isn't replicated to clients, and the draft
-                // log isn't shipped over the wire. Custom/Chaos/Import paths can still
-                // smuggle CNS cards in — fix those when the underlying issues are resolved.
-                for (final CardBlock b : storage) {
-                    if (b.getCntBoostersDraft() > 0) {
-                        if (forNetwork && b.getName().contains("Conspiracy")) continue;
-                        blocks.add(b);
-                    }
-                }
-
-                final CardBlock block = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseBlock"), blocks);
-                if (block == null) {
-                    return false;
-                }
-
-                final List<String> sets = blockSets(block);
-                if (sets.isEmpty()) {
-                    SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblBlockNotContainSetCombinations", block.toString()));
-                    return false;
-                }
-
-                String combo = sets.get(0);
-                if (sets.size() > 1) {
-                    final int nPacks = block.getCntBoostersDraft();
-                    if (nPacks == 3 && sets.size() < 4) {
-                        combo = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseSetCombination"), getSetCombos(sets));
-                    } else {
-                        combo = choosePackByPack(sets, nPacks);
-                    }
-
-                    if (combo == null) {
-                        return false;
-                    }
-                }
-                setupBlock(block, combo);
-                break;
-
-            case Custom:
-                final List<CustomLimited> myDrafts = loadCustomDrafts();
-
-                if (myDrafts.isEmpty()) {
-                    SOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblNotFoundCustomDraftFiles"));
-                } else {
-                    myDrafts.sort(Comparator.comparing(DeckBase::getName));
-
-                    final CustomLimited customDraft = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseCustomDraft"), myDrafts);
-                    if (customDraft == null) {
-                        return false;
-                    }
-
-                    this.setupCustomDraft(customDraft);
-                }
-                break;
-
-            case Chaos:
-                // Get chaos draft themes
-                final List<ThemedChaosDraft> themes = new ArrayList<>();
-                final IStorage<ThemedChaosDraft> themeStorage = FModel.getThemedChaosDrafts();
-                for (final ThemedChaosDraft theme : themeStorage) {
-                    themes.add(theme);
-                }
-                Collections.sort(themes); // sort for user interface
-                // Ask user to select theme
-                final String dialogQuestion = Localizer.getInstance().getMessage("lblChooseChaosTheme");
-                final ThemedChaosDraft theme = SGuiChoose.oneOrNone(dialogQuestion, themes);
-                if (theme == null) {
-                    return false; // abort if no theme is selected
-                }
-                if (!setupChaos(theme)) {
-                    return false;
-                }
-                break;
-
-            case Import:
-                /*
-                 * Import a cube from CubeCobra.
-                 * Default settings are 3 boosters with a size of 15 cards.
-                 */
-
-                String lastCubeId = FModel.getPreferences().getPref(ForgePreferences.FPref.LAST_IMPORTED_CUBE_ID);
-                String inputCubeId = SOptionPane.showInputDialog(
-                        Localizer.getInstance().getMessage("lblEnterCubeCobraURL") + ":",
-                        Localizer.getInstance().getMessage("lblImportCube"),
-                        null,
-                        lastCubeId);
-
-                if (inputCubeId == null) {
-                    return false;
-                }
-
-                try {
-                    CubeImporter importer = new CubeImporter(inputCubeId);
-                    CustomLimited importedDraft = importer.importCube();
-                    if (importedDraft == null) {
-                        SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + inputCubeId);
-                        return false;
-                    }
-                    this.setupCustomDraft(importedDraft);
-                } catch (Exception e) {
-                    SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage());
-                    return false;
-                }
-                break;
-
-            default:
-                throw new NoSuchElementException("Draft for mode " + this.draftFormat + " has not been set up!");
-        }
-
-        return true;
-    }
-
-    private static List<String> blockSets(final CardBlock block) {
+    /** The sets a block can be drafted from, in the order they are offered. */
+    public static List<String> blockSets(final CardBlock block) {
         final List<CardEdition> cardSets = block.getSets();
         final Stack<String> sets = new Stack<>();
         for (int k = cardSets.size() - 1; k >= 0; k--) {
@@ -249,7 +93,7 @@ public class BoosterDraft implements IBoosterDraft {
         return sets;
     }
 
-    private void setupFull() {
+    public void setupFull() {
         final IUnOpenedProduct s = new UnOpenedProduct(SealedTemplate.genericDraftBooster);
 
         for (int i = 0; i < 3; i++) {
@@ -259,7 +103,8 @@ public class BoosterDraft implements IBoosterDraft {
         IBoosterDraft.CUSTOM_RANKINGS_FILE[0] = null;
     }
 
-    private void setupBlock(final CardBlock block, final String combo) {
+    /** combo is one set code per pack, joined with "/". A block with a single set ignores it. */
+    public void setupBlock(final CardBlock block, final String combo) {
         final List<String> sets = blockSets(block);
         final int nPacks = block.getCntBoostersDraft();
 
@@ -303,7 +148,7 @@ public class BoosterDraft implements IBoosterDraft {
      * Examples for themes: sets that take place on a certain plane, core sets, masters sets,
      * or sets that share a mechanic.
      */
-    private boolean setupChaos(final ThemedChaosDraft theme) {
+    public boolean setupChaos(final ThemedChaosDraft theme) {
         this.productName = theme.getLabel();
         // Filter all sets by theme restrictions
         final Predicate<CardEdition> themeFilter = theme.getEditionFilter();
@@ -365,7 +210,7 @@ public class BoosterDraft implements IBoosterDraft {
         this(LimitedPoolType.Full);
     }
 
-    protected BoosterDraft(final LimitedPoolType draftType) {
+    public BoosterDraft(final LimitedPoolType draftType) {
         this(draftType, N_PLAYERS);
     }
 
@@ -497,7 +342,7 @@ public class BoosterDraft implements IBoosterDraft {
         return players.get((player.order + (left ? 1 : -1) + this.podSize) % this.podSize);
     }
 
-    private void setupCustomDraft(final CustomLimited draft) {
+    public void setupCustomDraft(final CustomLimited draft) {
         this.productName = draft.getName();
         final ItemPool<PaperCard> dPool = draft.getCardPool();
         if (dPool == null) {
@@ -533,7 +378,7 @@ public class BoosterDraft implements IBoosterDraft {
     /**
      * Looks for draft files, reads them, returns a list.
      */
-    private static List<CustomLimited> loadCustomDrafts() {
+    public static List<CustomLimited> loadCustomDrafts() {
         if (customs.isEmpty()) {
             String[] dList;
             ConcurrentLinkedQueue<CustomLimited> queue = new ConcurrentLinkedQueue<>();
@@ -822,24 +667,7 @@ public class BoosterDraft implements IBoosterDraft {
 
     }
 
-    private static String choosePackByPack(final List<String> setz, int packs) {
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 1; i <= packs; i++) {
-            String choice = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseSetForNPack", String.valueOf(i), String.valueOf(packs)), setz);
-            if (choice == null) {
-                return null;
-            }
-            sb.append(choice);
-
-            if (i != packs) {
-                sb.append("/");
-            }
-        }
-        return sb.toString();
-    }
-
-    private static List<String> getSetCombos(final List<String> setz) {
+    public static List<String> getSetCombos(final List<String> setz) {
         final String[] sets = setz.toArray(ArrayUtils.EMPTY_STRING_ARRAY);
         final List<String> setCombos = new ArrayList<>();
         if (sets.length >= 2) {

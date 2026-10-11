@@ -14,7 +14,7 @@ import forge.deck.DeckGroup;
 import forge.deck.DeckProxy;
 import forge.game.GameType;
 import forge.game.player.RegisteredPlayer;
-import forge.gamemodes.limited.SealedCardPoolGenerator;
+import forge.gamemodes.limited.LimitedSetupPrompts;
 import forge.gamemodes.match.HostedMatch;
 import forge.gui.GuiBase;
 import forge.gui.SOverlayUtils;
@@ -143,7 +143,7 @@ public enum CSubmenuSealed implements ICDoc {
     }
 
     private void setupSealed() {
-        final DeckGroup sealed = SealedCardPoolGenerator.generateSealedDeck(false);
+        final DeckGroup sealed = LimitedSetupPrompts.generateSealedDeck(false);
         if (sealed == null) { return; }
 
         final CEditorLimited<DeckGroup> editor = new CEditorLimited<>(

@@ -10,6 +10,7 @@ import forge.game.GameType;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.LimitedPoolType;
+import forge.gamemodes.limited.LimitedSetupPrompts;
 import forge.gamemodes.match.HostedMatch;
 import forge.gui.GuiBase;
 import forge.gui.GuiChoose;
@@ -205,7 +206,7 @@ public enum CSubmenuDraft implements ICDoc {
         final LimitedPoolType poolType = GuiChoose.oneOrNone(localizer.getMessage("lblChooseDraftFormat"), LimitedPoolType.values(true));
         if (poolType == null) { return; }
 
-        final BoosterDraft draft = BoosterDraft.createDraft(poolType);
+        final BoosterDraft draft = LimitedSetupPrompts.createDraft(poolType);
         if (draft == null) { return; }
 
         final CEditorDraftingProcess draftController = new CEditorDraftingProcess(CDeckEditorUI.SINGLETON_INSTANCE.getCDetailPicture());

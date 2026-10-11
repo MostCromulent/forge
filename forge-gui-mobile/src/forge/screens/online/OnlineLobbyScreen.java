@@ -14,6 +14,8 @@ import forge.deck.FDeckChooser;
 import forge.deck.FDeckEditor;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.LimitedPoolType;
+import forge.gamemodes.limited.LimitedSetupPrompts;
+import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.net.ChatMessage;
@@ -262,7 +264,7 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby, IDra
             // Building the draft fires set/format sub-dialogs
             BoosterDraft draft = null;
             if (isDraft) {
-                draft = BoosterDraft.createDraftForNetwork(poolType);
+                draft = LimitedSetupPrompts.createDraftForNetwork(poolType);
                 if (draft == null) return;
             }
 
@@ -322,7 +324,8 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby, IDra
 
     private void finishConfigureEvent(ServerGameLobby sgl, LimitedPoolType poolType,
             BoosterDraft draft, int timerSeconds, int graceSeconds) {
-        if (!sgl.configureEvent(poolType, draft, timerSeconds, graceSeconds)) return;
+        final SealedCardPoolGenerator sealed = draft == null ? LimitedSetupPrompts.createSealedGenerator(poolType) : null;
+        if (!sgl.configureEvent(poolType, draft, sealed, timerSeconds, graceSeconds)) return;
         FThreads.invokeInEdtLater(() -> {
             currentEvent = sgl.getCurrentEvent();
             eventDrafted = false;

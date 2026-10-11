@@ -5,6 +5,7 @@ import org.testng.annotations.Test;
 import forge.deck.CardPool;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.LimitedPoolType;
+import forge.gamemodes.limited.LimitedSetupPrompts;
 
 /**
  * Unit test for simple App.
@@ -18,7 +19,7 @@ public class BoosterDraft1Test {
      */
     @Test(groups = { "UnitTest", "fast" }, timeOut = 1000, enabled = false)
     public void boosterDraft1Test1() {
-        final BoosterDraft draft = BoosterDraft.createDraft(LimitedPoolType.Full);
+        final BoosterDraft draft = LimitedSetupPrompts.createDraft(LimitedPoolType.Full);
         if (draft == null) { return; }
 
         while (draft.hasNextChoice()) {

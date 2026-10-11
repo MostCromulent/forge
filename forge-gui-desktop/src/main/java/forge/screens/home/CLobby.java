@@ -20,6 +20,8 @@ import forge.deck.Deck;
 import forge.deck.DeckProxy;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.LimitedPoolType;
+import forge.gamemodes.limited.LimitedSetupPrompts;
+import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.net.EventFormat;
@@ -323,7 +325,7 @@ public class CLobby implements IDraftEventHandler {
         // pop before the timer prompt — matches the offline CSubmenuDraft flow.
         BoosterDraft draft = null;
         if (isDraft) {
-            draft = BoosterDraft.createDraftForNetwork(chosen);
+            draft = LimitedSetupPrompts.createDraftForNetwork(chosen);
             if (draft == null) return;
         }
 
@@ -421,7 +423,8 @@ public class CLobby implements IDraftEventHandler {
             } catch (NumberFormatException ignored) { }
         }
 
-        if (!serverLobby.configureEvent(chosen, draft, timerSeconds, graceSeconds)) {
+        final SealedCardPoolGenerator sealed = isDraft ? null : LimitedSetupPrompts.createSealedGenerator(chosen);
+        if (!serverLobby.configureEvent(chosen, draft, sealed, timerSeconds, graceSeconds)) {
             return;
         }
         view.updateEventPanelState();

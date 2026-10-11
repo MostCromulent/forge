@@ -187,9 +187,10 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
      * On success, broadcasts the fully-configured event to clients.
      *
      * @param draft pre-built draft for {@link EventFormat#BOOSTER_DRAFT} events; ignored for sealed
+     * @param sealed pre-built pool generator for {@link EventFormat#SEALED} events; ignored for draft
      * @return false if no current event exists or sealed pool generation failed, true otherwise
      */
-    public synchronized boolean configureEvent(LimitedPoolType poolType, BoosterDraft draft,
+    public synchronized boolean configureEvent(LimitedPoolType poolType, BoosterDraft draft, SealedCardPoolGenerator sealed,
             int pickTimerSeconds, int disconnectGraceSeconds) {
         NetworkEvent event = getCurrentEvent();
         if (event == null) return false;
@@ -200,11 +201,10 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         event.setDisconnectGraceSeconds(disconnectGraceSeconds);
 
         if (event.getFormat() == EventFormat.SEALED) {
-            SealedCardPoolGenerator gen = new SealedCardPoolGenerator(poolType);
-            if (gen.isEmpty()) return false;
-            event.setSealedGenerator(gen);
-            if (gen.getProductName() != null) {
-                event.setProductDescription(poolType + ": " + gen.getProductName());
+            if (sealed == null || sealed.isEmpty()) return false;
+            event.setSealedGenerator(sealed);
+            if (sealed.getProductName() != null) {
+                event.setProductDescription(poolType + ": " + sealed.getProductName());
             }
         } else {
             event.setDraft(draft);

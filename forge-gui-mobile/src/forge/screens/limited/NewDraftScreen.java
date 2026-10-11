@@ -5,6 +5,7 @@ import forge.assets.FSkinFont;
 import forge.deck.FDeckEditor;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.LimitedPoolType;
+import forge.gamemodes.limited.LimitedSetupPrompts;
 import forge.gui.FThreads;
 import forge.gui.util.SGuiChoose;
 import forge.screens.LaunchScreen;
@@ -49,7 +50,7 @@ public class NewDraftScreen extends LaunchScreen {
             final LimitedPoolType poolType = SGuiChoose.oneOrNone(Forge.getLocalizer().getMessage("lblChooseDraftFormat"), LimitedPoolType.values(true));
             if (poolType == null) { return; }
 
-            final BoosterDraft draft = BoosterDraft.createDraft(poolType);
+            final BoosterDraft draft = LimitedSetupPrompts.createDraft(poolType);
             if (draft == null) { return; }
 
             FThreads.invokeInEdtLater(() -> Forge.openScreen(new DraftingProcessScreen(draft, FDeckEditor.EditorConfigDraft)));

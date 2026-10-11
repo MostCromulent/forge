@@ -6,7 +6,7 @@ import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.deck.FDeckEditor;
 import forge.deck.io.DeckPreferences;
-import forge.gamemodes.limited.SealedCardPoolGenerator;
+import forge.gamemodes.limited.LimitedSetupPrompts;
 import forge.gui.FThreads;
 import forge.screens.LaunchScreen;
 import forge.screens.home.LoadGameMenu;
@@ -44,7 +44,7 @@ public class NewSealedScreen extends LaunchScreen {
     protected void startMatch() {
         //must run in game thread to prevent blocking UI thread
         ThreadUtil.invokeInGameThread(() -> {
-            final DeckGroup sealed = SealedCardPoolGenerator.generateSealedDeck(false);
+            final DeckGroup sealed = LimitedSetupPrompts.generateSealedDeck(false);
             if (sealed == null) { return; }
 
             FThreads.invokeInEdtLater(() -> {

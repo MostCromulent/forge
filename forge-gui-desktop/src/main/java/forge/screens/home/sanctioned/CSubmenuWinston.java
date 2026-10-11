@@ -13,6 +13,7 @@ import forge.deck.DeckProxy;
 import forge.game.GameType;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.limited.LimitedPoolType;
+import forge.gamemodes.limited.LimitedSetupPrompts;
 import forge.gamemodes.limited.WinstonDraft;
 import forge.gamemodes.match.HostedMatch;
 import forge.gui.GuiBase;
@@ -129,7 +130,7 @@ public enum CSubmenuWinston implements ICDoc {
         final LimitedPoolType poolType = GuiChoose.oneOrNone("Choose Draft Format", LimitedPoolType.values());
         if (poolType == null) { return; }
 
-        final WinstonDraft draft = WinstonDraft.createDraft(poolType);
+        final WinstonDraft draft = LimitedSetupPrompts.createWinstonDraft(poolType);
         if (draft == null) { return; }
 
         final CEditorWinstonProcess draftController = new CEditorWinstonProcess(CDeckEditorUI.SINGLETON_INSTANCE.getCDetailPicture());
