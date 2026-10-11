@@ -206,6 +206,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   root.classList.toggle('attack', strike || attackers > 0);
   root.classList.toggle('strike', strike);
   if (strike) setButton(ok, { label: t('lblWebPromptNoAttack'), enabled: true });
+  q(root, '.buttons .cancel kbd').textContent = strike ? 'Ctrl A' : 'Esc';
   if (attackers) {
     setButton(ok, { label: t('lblWebPromptAttackWith', attackers), enabled: true });
     setButton(cancel, { label: t('lblWebPromptClearAttackers'), enabled: p.cancel.enabled });

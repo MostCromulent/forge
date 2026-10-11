@@ -49,12 +49,15 @@ export interface KeyPress {
 }
 
 export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: KeyBindings): KeyCommand | null {
-  if (press.modified) {
-    // The one held key the page takes: undo in the deck editor, which the browser would otherwise spend on nothing
+  // Desktop's key for an all-out attack, which is answered only where the prompt's own keys are
+  const strike = press.modified && model.inMatch && press.key.toLowerCase() === 'a';
+  if (press.modified && !strike) {
+    // The one other held key the page takes: undo in the deck editor, which the browser would otherwise spend on nothing
     const editing = !!model.editor && !model.inMatch && !ui.importer;
     return editing && !press.typing && press.key.toLowerCase() === 'z' ? 'editorUndo' : null;
   }
-  const key = press.key.length === 1 ? press.key.toLowerCase() : press.key;
+  // A held key is no player's chosen key, so it matches none of them on the way down
+  const key = strike ? '' : press.key.length === 1 ? press.key.toLowerCase() : press.key;
   const escape = key === 'Escape';
   const ok = key === keys.ok || key === 'Enter';
   // A question the host is waiting on sits over every page, and Escape declines it
@@ -125,6 +128,7 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
     return escape && pick.min === 0 ? 'cancel' : null;
   }
   const prompt = model.prompt;
+  if (strike) return prompt?.cancel?.enabled && prompt.cancel.label === t('lblAlphaStrike') ? 'cancel' : null;
   if (ok && prompt?.ok?.enabled) return 'ok';
   // Escape takes something back, so it never sends every creature in to attack
   if (escape && prompt?.cancel?.enabled && prompt.cancel.label !== t('lblAlphaStrike')) return 'cancel';
