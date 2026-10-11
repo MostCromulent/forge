@@ -87,7 +87,12 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         }
         byChannel.put(channel, session);
         holdOpen();
-        netLog.info("A browser arrived: {}, {}.", mayHost ? "host link" : "guest link", session.playerName() == null ? "unnamed" : session.playerName());
+        final long away = session.secondsAway();
+        if (away < 0) {
+            netLog.info("{} arrived by the {} link.", session.label(), mayHost ? "host's" : "guests'");
+        } else {
+            netLog.info("{} came back after {} s.", session.label(), away);
+        }
         session.connected(channel);
         // The others were told this browser had gone, if it holds a seat
         announcePresence();
@@ -178,7 +183,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     public void disconnected(final BrowserChannel channel) {
         final WebSession session = byChannel.remove(channel);
         if (session != null) {
-            netLog.info("A browser left: {}.", session.playerName() == null ? "unnamed" : session.playerName());
+            netLog.info("{} left.", session.label());
             session.disconnected(channel);
             announcePresence();
             timer.schedule(session::goneAWhile, DRAFT_HOLD_MILLIS, TimeUnit.MILLISECONDS);

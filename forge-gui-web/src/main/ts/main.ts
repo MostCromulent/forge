@@ -51,6 +51,14 @@ const send = connect(behindItsBoard(receive, 300), online => {
   }
 });
 
+// A script error is otherwise seen only in the player's own browser. A few are enough to tell what broke.
+let reported = 0;
+const report = (text: string): void => {
+  if (reported++ < 5) send({ t: 'pageError', text: text.slice(0, 1500) });
+};
+window.addEventListener('error', e => report(String((e.error as Error | undefined)?.stack ?? e.message)));
+window.addEventListener('unhandledrejection', e => report(String((e.reason as Error | undefined)?.stack ?? e.reason)));
+
 // While messages are held the prompt on screen is an earlier board's, so an answer to it would land on a question not yet seen
 const HELD_INPUT = new Set(['selectCard', 'selectPlayer', 'useMana', 'ok', 'cancel', 'endTurn', 'undo']);
 const wire = createActions(msg => {

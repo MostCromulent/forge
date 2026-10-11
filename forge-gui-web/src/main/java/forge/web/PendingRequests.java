@@ -3,6 +3,7 @@ package forge.web;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.util.IHasForgeLog;
+import forge.util.LogSafe;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -12,17 +13,36 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /** Blocking prompts waiting on the browser. A request survives a browser reload because only its thread waits on it. */
 public final class PendingRequests implements IHasForgeLog {
     private record Pending(JsonObject request, JsonElement defaultAnswer, Predicate<JsonElement> valid, CompletableFuture<JsonElement> answer) {}
 
     private final Consumer<JsonObject> send;
+    private final Supplier<String> who;
     private final Map<Integer, Pending> open = new LinkedHashMap<>();
     private int nextId = 1;
 
-    public PendingRequests(final Consumer<JsonObject> send) {
+    /** who names the player asked, for the log. */
+    public PendingRequests(final Consumer<JsonObject> send, final Supplier<String> who) {
         this.send = send;
+        this.who = who;
+    }
+
+    /** A request as the log tells it: its kind, what it asks, and how much it offers. */
+    private static String described(final JsonObject request) {
+        final StringBuilder out = new StringBuilder(request.get("kind").getAsString());
+        if (request.has("message") && request.get("message").isJsonPrimitive()) {
+            out.append(" \"").append(LogSafe.forLog(request.get("message").getAsString(), 120)).append('"');
+        }
+        if (request.has("options") && request.get("options").isJsonArray()) {
+            out.append(", ").append(request.getAsJsonArray("options").size()).append(" options");
+        }
+        if (request.has("stackKeys") && request.get("stackKeys").isJsonArray()) {
+            out.append(", picked on the stack");
+        }
+        return out.toString();
     }
 
     /** Sends one of the requests in {@link ToBrowser} and waits for its answer, or for its default when the game gives up waiting. */
@@ -37,9 +57,15 @@ public final class PendingRequests implements IHasForgeLog {
             pending = new Pending(request, defaultAnswer, valid, new CompletableFuture<>());
             open.put(id, pending);
         }
+        netLog.info("Asked {} #{}: {}", who.get(), id, described(pending.request()));
+        final long asked = System.nanoTime();
         send.accept(pending.request());
         try {
-            return pending.answer().get();
+            final JsonElement answer = pending.answer().get();
+            // The default is handed back as itself when the game stops waiting
+            netLog.info("#{} {} after {} ms: {}", id, answer == pending.defaultAnswer() ? "took its default" : "answered",
+                    (System.nanoTime() - asked) / 1_000_000, LogSafe.forLog(String.valueOf(answer), 200));
+            return answer;
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             return pending.defaultAnswer();
@@ -58,11 +84,11 @@ public final class PendingRequests implements IHasForgeLog {
             pending = open.get(id);
         }
         if (pending == null) {
-            netLog.warn("Reply for unknown request {}", id);
+            netLog.warn("Reply from {} for unknown request {}", who.get(), id);
             return;
         }
         if (value == null || !pending.valid().test(value)) {
-            netLog.warn("Invalid reply for request {}: {}", id, value);
+            netLog.warn("Invalid reply from {} for request {}: {}", who.get(), id, LogSafe.forLog(String.valueOf(value), 200));
             return;
         }
         pending.answer().complete(value);

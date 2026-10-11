@@ -26,6 +26,7 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import org.apache.commons.lang3.StringUtils;
 import forge.util.IHasForgeLog;
+import forge.util.LogSafe;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,6 +38,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 /** One browser's session, whose place is held in one {@link Stage} that changes only through {@link #move}. */
@@ -116,6 +118,24 @@ public final class WebSession implements IHasForgeLog {
         t.setDaemon(true);
         return t;
     });
+
+    private static final AtomicInteger SESSIONS = new AtomicInteger();
+    /** Tells this session's lines in the log from another's, whose player may have no name yet or the same one. */
+    private final int number = SESSIONS.incrementAndGet();
+    /** When the browser last went, or 0 while it has never gone. */
+    private volatile long leftAt;
+
+    /** This session as the log names it. */
+    String label() {
+        final String who = playerName();
+        return "#" + number + " " + (StringUtils.isBlank(who) ? "unnamed" : who);
+    }
+
+    /** How long the browser was gone before it came back just now, or -1 when this is its first arrival. */
+    long secondsAway() {
+        final long left = leftAt;
+        return left == 0 ? -1 : (System.currentTimeMillis() - left) / 1000;
+    }
 
     WebSession(final WebGuiBase ui, final WebSessions sessions, final Runnable onQuit, final boolean mayHost) {
         this.mayHost = mayHost;
@@ -215,6 +235,7 @@ public final class WebSession implements IHasForgeLog {
             return false;
         }
         stage = next;
+        netLog.info("{}: {} to {}", label(), from.getClass().getSimpleName(), next.getClass().getSimpleName());
         final WebGuiGame old = guiOf(from);
         if (old != null && old != guiOf(next)) {
             old.close();
@@ -393,6 +414,7 @@ public final class WebSession implements IHasForgeLog {
             return;
         }
         browser = null;
+        leftAt = System.currentTimeMillis();
         decks.attach(null);
         if (stage instanceof Playing p) {
             p.gui().detach(channel);
@@ -402,6 +424,7 @@ public final class WebSession implements IHasForgeLog {
     void onMessage(final BrowserChannel channel, final JsonObject msg) {
         switch (msg.get("t").getAsString()) {
             case "decks" -> lobby.sendDecks(channel);
+            case "pageError" -> netLog.warn("Page error for {}: {}", label(), LogSafe.forLog(Wire.decode(msg, PageError.class).text(), 1500));
             case "setName" -> {
                 final SetName chosen = Wire.decode(msg, SetName.class);
                 rename(channel, chosen.name(), chosen.avatar());
@@ -1086,6 +1109,7 @@ public final class WebSession implements IHasForgeLog {
             channel.send(error(problem));
             return;
         }
+        netLog.info("{} takes the name {}.", label(), LogSafe.forLog(wanted.trim()));
         name = wanted.trim();
         if (face != null) {
             avatar = face;

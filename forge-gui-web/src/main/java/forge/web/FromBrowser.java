@@ -38,6 +38,11 @@ final class FromBrowser {
     record Say(String text) {
     }
 
+    /** A script error in the page, which the server's log would otherwise never hear of. */
+    @Command("pageError")
+    record PageError(String text) {
+    }
+
     /** The host gives a disconnected player's seat to someone waiting, who plays on from where it was left. */
     @Command("giveSeat")
     record GiveSeat(String from, String to) {

@@ -75,7 +75,8 @@ public class WebGuiGame extends NetworkGuiGame {
     private final ExecutorService dispatch = Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder().setNameFormat("WebClient").setDaemon(true).build());
     private final BrowserModel model = new BrowserModel();
-    private final PendingRequests requests = new PendingRequests(this::send);
+    private final PendingRequests requests = new PendingRequests(this::send,
+            () -> getCurrentPlayer() == null ? "a player" : getCurrentPlayer().getName());
     private final DeltaSyncManager snapshotter = new DeltaSyncManager();
     private final AtomicInteger skippedProperties = new AtomicInteger();
     // Netplay drops a click's trigger event on its way to the host, so the ability menu reads the click from here
