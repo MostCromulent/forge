@@ -267,13 +267,6 @@ public class SealedCardPoolGenerator {
         productName = draft.getName();
     }
 
-    public void setupCubeCobra(final CustomLimited importedDraft, final int packs) {
-        UnOpenedProduct importedProduct = new UnOpenedProduct(importedDraft.getSealedProductTemplate(), importedDraft.getCardPool());
-        importedProduct.setLimitedPool(importedDraft.isSingleton());
-        addBoosters(importedProduct, packs);
-        this.product.add(importedProduct);
-    }
-
     private void addBoosters(final IUnOpenedProduct product1, final int boosterCount) {
         for (int i = 0; i < boosterCount; i++) {
             this.product.add(product1);

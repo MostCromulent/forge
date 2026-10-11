@@ -324,7 +324,7 @@ public final class LimitedSetupPrompts {
                     }
                     final Integer importPacks = chooseNumberOfBoosters();
                     if (importPacks != null) {
-                        gen.setupCubeCobra(importedDraft, importPacks);
+                        gen.setupCustom(importedDraft, importPacks);
                     }
                 } catch (Exception e) {
                     SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage());
