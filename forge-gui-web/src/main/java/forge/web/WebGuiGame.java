@@ -479,11 +479,6 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     @Override
-    public void showWaitingTimer(final PlayerView forPlayer, final String waitingForPlayerName) {
-        // AbstractGuiGame's timer posts through FThreads to the host UI thread, so none is started here
-    }
-
-    @Override
     protected void updateCurrentPlayer(final PlayerView player) {
     }
 
@@ -493,6 +488,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public void showPromptMessage(final PlayerView playerView, final String message, final CardView card) {
+        cancelAwaitNextInput();
         prompt.message(message, card);
     }
 

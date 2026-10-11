@@ -277,7 +277,7 @@ public class MatchController extends NetworkGuiGame {
 
     @Override
     public void showPromptMessage(final PlayerView player, final String message, final CardView card) {
-        cancelWaitingTimer();
+        cancelAwaitNextInput();
         view.getPrompt(player).setMessage(message, card);
     }
 
@@ -327,6 +327,11 @@ public class MatchController extends NetworkGuiGame {
                 latch.countDown();
             }
         }, 300));
+        try {
+            latch.await();   // block the game thread until the overlay is dismissed
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override

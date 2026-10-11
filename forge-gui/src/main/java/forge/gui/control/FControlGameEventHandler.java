@@ -139,10 +139,10 @@ public class FControlGameEventHandler extends IGameEventVisitor.Base<Void> {
             }
             if (gameFinished) {
                 gameFinished = false;
+                matchController.cancelAwaitNextInput(); //ensure "Waiting for opponent..." doesn't appear behind WinLose
                 if (humanController != null) {
                     humanController.macros().cancelCurrentMacro();
                     final PlayerView localPlayer = humanController.getLocalPlayerView();
-                    humanController.cancelAwaitNextInput(); //ensure "Waiting for opponent..." doesn't appear behind WinLo
                     matchController.showPromptMessage(localPlayer, ""); //clear prompt behind WinLose overlay
                     matchController.updateButtons(localPlayer, "", "", false, false, false);
                     humanController.updateAchievements();
@@ -213,7 +213,7 @@ public class FControlGameEventHandler extends IGameEventVisitor.Base<Void> {
                     ev.flipper().getName(),
                     Localizer.getInstance().getMessage(heads ? "lblHeads" : "lblTails"));
         }
-        matchController.showCoinFlip(heads, msg, ev.startingToss());   // tap required only for the opening toss
+        matchController.showCoinFlip(heads, msg, false);   // always auto-close after the coin lands
         return null;
     }
 
