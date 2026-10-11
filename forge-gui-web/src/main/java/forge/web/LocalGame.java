@@ -348,10 +348,6 @@ public final class LocalGame {
         if (client != null) {
             client.close();
             client = null;
-            // Closing a client switches the log off for the whole process, while the server and any other seats play on
-            if (HostingServer.isHosting()) {
-                NetworkLogConfig.activateNetworkLogging();
-            }
         }
         // Every seat's GUI lives on the one server, so only the host may clear them
         if (hosted != null) {

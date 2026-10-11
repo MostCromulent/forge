@@ -9,6 +9,7 @@ import forge.util.IHasForgeLog;
 import forge.gamemodes.net.ReplyPool;
 import forge.gamemodes.net.WebSocketBytes;
 import forge.gamemodes.net.event.*;
+import forge.gamemodes.net.server.HostingServer;
 import forge.gui.interfaces.IDraftEventHandler;
 import forge.gui.interfaces.IGuiGame;
 import forge.interfaces.ILobbyListener;
@@ -254,7 +255,10 @@ public class FGameClient implements IToServer, IHasForgeLog {
         if (channel != null)
             channel.close();
         reconnectScheduler.shutdownNow();
-        NetworkLogConfig.deactivateNetworkLogging();
+        // A server in this process keeps its log until it stops
+        if (!HostingServer.isHosting()) {
+            NetworkLogConfig.deactivateNetworkLogging();
+        }
     }
 
     @Override
