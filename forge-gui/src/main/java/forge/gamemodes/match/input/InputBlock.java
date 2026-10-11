@@ -18,6 +18,8 @@
 package forge.gamemodes.match.input;
 
 import forge.game.card.Card;
+import forge.game.card.CardCollection;
+import forge.game.card.CardLists;
 import forge.game.card.CardView;
 import forge.game.combat.Combat;
 import forge.game.combat.CombatUtil;
@@ -72,9 +74,8 @@ public class InputBlock extends InputSyncronizedBase {
     @Override
     protected final void showMessage() {
         getController().pushBlockerCandidates(defender, combat);
-        // could add "Reset Blockers" button
         Localizer localizer = Localizer.getInstance();
-        getController().getGui().updateButtons(getOwner(), true, false, true);
+        getController().getGui().updateButtons(getOwner(), localizer.getMessage("lblOK"), localizer.getMessage("lblCallBack"), true, !declaredBlockers().isEmpty(), true);
 
         if (currentAttacker == null) {
             showMessage(localizer.getMessage("lblSelectBlockTarget"));
@@ -113,6 +114,20 @@ public class InputBlock extends InputSyncronizedBase {
             //must run in game thread to prevent problems for mobile game
             ThreadUtil.invokeInGameThread(() -> getController().getGui().message(blockErrors));
         }
+    }
+
+    @Override
+    protected final void onCancel() {
+        for (final Card c : declaredBlockers()) {
+            combat.undoBlockingAssignment(c);
+            c.getGame().getMatch().fireEvent(new UiEventBlockerAssigned(CardView.get(c), null));
+        }
+        getController().getGame().fireEvent(new GameEventCombatChanged());
+        showMessage();
+    }
+
+    private CardCollection declaredBlockers() {
+        return CardLists.filterControlledBy(combat.getAllBlockers(), defender);
     }
 
     /** {@inheritDoc} */
