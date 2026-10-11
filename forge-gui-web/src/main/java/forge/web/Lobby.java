@@ -3,25 +3,16 @@ package forge.web;
 import forge.StaticData;
 import forge.card.CardEdition;
 import forge.card.CardRarity;
-import forge.card.DraftOptions;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
-import forge.deck.DeckProxy;
 import forge.deck.DeckSection;
 import forge.game.GameFormat;
 import forge.game.GameType;
-import forge.gamemodes.limited.BoosterDraft;
-import forge.gamemodes.limited.LimitedPoolType;
-import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
-import forge.gamemodes.net.EventFormat;
-import forge.gamemodes.net.EventPhase;
-import forge.gamemodes.net.NetworkEvent;
-import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -50,14 +41,14 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Match setup read from the engine's lobby: a browser changes its own seat as a client, and the host sets the rest of the table. */
 final class Lobby {
     /** A match seats at most four; a draft pod seats up to eight, of whom any four play each match. */
-    private static final int MAX_SEATS = 8;
-    private static final int MAX_POD = 8;
+    static final int MAX_SEATS = 8;
+    static final int MAX_POD = 8;
     /** The formats on offer, as desktop orders them. Each but Constructed is a variant; Constructed is the absence of one. */
     private static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander,
             GameType.Brawl, GameType.Oathbreaker, GameType.TinyLeaders, GameType.MomirBasic, GameType.MoJhoSto);
 
     /** The casual variants, which stack on top of any format the engine allows them with. */
-    private static final List<GameType> VARIANTS = List.of(GameType.Vanguard, GameType.Planechase,
+    static final List<GameType> VARIANTS = List.of(GameType.Vanguard, GameType.Planechase,
             GameType.Archenemy, GameType.ArchenemyRumble);
 
     private final DeckCatalog catalog = new DeckCatalog();
@@ -66,6 +57,7 @@ final class Lobby {
     /** The deck each of those seats was last sent, main deck and extras together: the deck of record. */
     private final Map<Integer, Deck> composed = new ConcurrentHashMap<>();
     private final LocalGame local;
+    private final LobbyEvents events;
     /** Which deck each seat was given, by catalogue key: the lobby slot holds the deck, this holds the choice. */
     private final List<String> deckKeys = new ArrayList<>();
     /** True once the game was opened for others to join, which is when a link is worth showing. */
@@ -73,6 +65,7 @@ final class Lobby {
 
     Lobby(final LocalGame local, final BooleanSupplier guest, final Map<String, DeckCatalog.OnDevice> device) {
         this.local = local;
+        this.events = new LobbyEvents(this, local);
         this.guest = guest;
         this.device = device;
     }
@@ -87,12 +80,12 @@ final class Lobby {
     }
 
     /** The server's own lobby for the host, whose client copy trails it by an update, and the client copy for a guest. */
-    private GameLobby view() {
+    GameLobby view() {
         final GameLobby hosted = local.hostedLobby();
         return hosted != null ? hosted : local.clientLobby();
     }
 
-    private ServerGameLobby host() {
+    ServerGameLobby host() {
         return local.hostedLobby();
     }
 
@@ -621,7 +614,7 @@ final class Lobby {
                     VARIANTS.stream().map(Lobby::explainedVariant).toList(), variantsOn(lobby),
                     maxSeats(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,
                     local.isHost() && problems.isEmpty(), illegal, FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY),
-                    limitedTable(lobby), maxBracket(), overBracket(lobby)));
+                    events.limitedTable(lobby), maxBracket(), overBracket(lobby)));
         }
     }
 
@@ -868,270 +861,54 @@ final class Lobby {
         return limited(lobby) ? Math.min(MAX_POD, lobby.getSlotLimit()) : MAX_SEATS;
     }
 
-    private static boolean limited(final GameLobby lobby) {
+    static boolean limited(final GameLobby lobby) {
         final GameLobbyData data = lobby.getData();
         return data != null && data.isLimitedMode();
     }
 
     /** Seats stay as they are while their players draft, since each player's seat is where their packs go. */
-    private static boolean drafting(final ServerGameLobby lobby) {
+    static boolean drafting(final ServerGameLobby lobby) {
         return lobby.getDraftHost() != null && !lobby.getDraftHost().isFinished();
     }
 
-    /** Whether the table's event has begun: its packs are out, or a past event's decks were chosen for the match. */
-    boolean eventStarted() {
-        final GameLobby lobby = view();
-        final GameLobbyData data = lobby == null ? null : lobby.getData();
-        if (data == null) {
-            return false;
-        }
-        final NetworkEventView event = data.getEventView();
-        return data.getActiveEventId() != null || (event != null && event.getPhase() != EventPhase.LOBBY_GATHER);
-    }
-
-    /** Whether every seat's finder lists only the table's event's decks, as desktop's conformance switch sets. */
     void setEventDecksOnly(final boolean on) {
-        final ServerGameLobby lobby = host();
-        if (lobby != null && lobby.getData().getActiveEventId() != null) {
-            lobby.selectEventForMatch(lobby.getData().getActiveEventId(), on);
-        }
+        events.setEventDecksOnly(on);
     }
 
-    /** The Limited part of the table, read from the lobby data so a guest reads the same; null at a Constructed table. */
-    private LimitedTable limitedTable(final GameLobby lobby) {
-        if (!limited(lobby)) {
-            return null;
-        }
-        final GameLobbyData data = lobby.getData();
-        final NetworkEventView event = data.getEventView();
-        final boolean draft = data.getLimitedType() != GameType.Sealed;
-        // An event's product is blank until the event is set up
-        String product = event == null || event.getProductDescription() == null || event.getProductDescription().isEmpty()
-                ? null : event.getProductDescription();
-        // A past event played again has no product of its own, so its pools' tag names it
-        if (product == null && data.getActiveEventId() != null) {
-            product = playedAgain(data.getActiveEventId());
-        }
-        return new LimitedTable(draft ? "draft" : "sealed", product,
-                event == null ? 0 : event.getPodSize(),
-                event == null || event.getDoublePick() == null ? null : event.getDoublePick().name(),
-                event == null ? 0 : event.getPickTimerSeconds(), event == null ? null : event.getPhase().name(),
-                data.getActiveEventId(), data.isActiveConformance(), eventStarted(),
-                local.isHost() && data.getActiveEventId() == null && !eventStarted() ? pastEvents() : List.of());
-    }
-
-    /** The events whose pools the host keeps, newest first, as desktop's past events list orders them. */
-    private static List<PastEvent> pastEvents() {
-        final Map<String, PastEvent> events = new java.util.LinkedHashMap<>();
-        synchronized (DeckCatalog.DECKS) {
-            for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
-                final String id = DeckProxy.getEventTag(d, "eventId");
-                if (id != null) {
-                    events.putIfAbsent(id, pastEvent(id, d));
-                }
-            }
-        }
-        // The date is "yyyy-MM-dd HH:mm", so reverse order of the text is newest first
-        return events.values().stream().sorted(java.util.Comparator.comparing(PastEvent::date).reversed()).toList();
-    }
-
-    /** The product of a past event, read from its pools; a pool saved without one still names an event rather than none. */
-    private static String playedAgain(final String eventId) {
-        synchronized (DeckCatalog.DECKS) {
-            for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
-                if (eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
-                    final String product = DeckProxy.getEventTag(d, "eventProduct");
-                    return product == null || product.isBlank() ? Localizer.getInstance().getMessage("lblWebEventAnEarlierEvent") : product;
-                }
-            }
-        }
-        return Localizer.getInstance().getMessage("lblWebEventAnEarlierEvent");
-    }
-
-    /** A past event as one of its pools' tags describe it. */
-    private static PastEvent pastEvent(final String id, final Deck pool) {
-        final boolean draft = EventFormat.BOOSTER_DRAFT.name().equals(DeckProxy.getEventTag(pool, "eventFormat"));
-        return new PastEvent(id, draft ? "draft" : "sealed", Objects.toString(DeckProxy.getEventTag(pool, "eventProduct"), ""),
-                Objects.toString(DeckProxy.getEventTag(pool, "eventDate"), ""));
-    }
-
-    /** Plays an event's decks at this table, where type is Draft or Sealed, and answers why not, or null. */
     String playEvent(final String eventId, final GameType type, final boolean decksOnly) {
-        final ServerGameLobby lobby = host();
-        if (lobby == null || eventId == null) {
-            return null;
-        }
-        if (drafting(lobby)) {
-            return Localizer.getInstance().getMessage("lblWebLobbyDraftStillOn");
-        }
-        lobby.clearCurrentEvent();
-        lobby.setLimitedType(type);
-        lobby.setLimitedMode(true);
-        lobby.selectEventForMatch(eventId, decksOnly);
-        return null;
+        return events.playEvent(eventId, type, decksOnly);
     }
 
-    /** Hosts a past event again, its kind read from its pools as desktop reads it. */
     String hostAgain(final String eventId) {
-        Deck pool = null;
-        synchronized (DeckCatalog.DECKS) {
-            for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
-                if (eventId != null && eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
-                    pool = d;
-                }
-            }
-        }
-        if (pool == null) {
-            return Localizer.getInstance().getMessage("lblWebLobbyNoEventDecks");
-        }
-        final boolean sealed = EventFormat.SEALED.name().equals(DeckProxy.getEventTag(pool, "eventFormat"));
-        return playEvent(eventId, sealed ? GameType.Sealed : GameType.Draft, true);
+        return events.hostAgain(eventId);
     }
 
-    /** Starts a new event of the same kind and keeps the old one's pools so it can be played again, answering why not, or null. */
     String newEvent() {
-        final ServerGameLobby lobby = host();
-        if (lobby == null || !limited(lobby)) {
-            return null;
-        }
-        if (drafting(lobby)) {
-            return Localizer.getInstance().getMessage("lblWebLobbyDraftStillOn");
-        }
-        final String kind = lobby.getData().getLimitedType() == GameType.Sealed ? "sealed" : "draft";
-        lobby.clearCurrentEvent();
-        lobby.selectEventForMatch(null, false);
-        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
-            lobby.getSlot(i).setBenched(false);
-        }
-        return setLimited(kind);
+        return events.newEvent();
     }
 
-    /** Deletes a past event's pools from the host's event decks. The event the table is playing stays. Answers why not, or null. */
     String forgetEvent(final String eventId) {
-        final ServerGameLobby lobby = host();
-        if (lobby == null || eventId == null) {
-            return null;
-        }
-        if (eventId.equals(lobby.getData().getActiveEventId())) {
-            return Localizer.getInstance().getMessage("lblWebLobbyEventInPlay");
-        }
-        synchronized (DeckCatalog.DECKS) {
-            final var stored = FModel.getDecks().getNetworkEventDecks();
-            for (final Deck d : stored.stream().toList()) {
-                if (eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
-                    stored.delete(d.getName());
-                }
-            }
-        }
-        return null;
+        return events.forgetEvent(eventId);
     }
 
-    /** Switches the table to a "draft" or "sealed" event, or to Constructed when kind is null, and answers why not, or null. */
     String setLimited(final String kind) {
-        final ServerGameLobby lobby = host();
-        if (lobby == null) {
-            return null;
-        }
-        if (drafting(lobby)) {
-            return Localizer.getInstance().getMessage("lblWebLobbyDraftStillOn");
-        }
-        if (kind == null) {
-            if (lobby.getNumberOfSlots() > MAX_SEATS) {
-                return Localizer.getInstance().getMessage("lblWebLobbyConstructedSeats", MAX_SEATS);
-            }
-            lobby.clearCurrentEvent();
-            lobby.selectEventForMatch(null, false);
-            // Sitting out is an event's matter; a Constructed table neither shows nor clears it
-            for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
-                lobby.getSlot(i).setBenched(false);
-            }
-            lobby.setLimitedMode(false);
-            return null;
-        }
-        if (eventStarted()) {
-            return Localizer.getInstance().getMessage("lblWebLobbyEventStartedSwitch");
-        }
-        final boolean sealed = "sealed".equals(kind);
-        // An event is played without a format or casual variant, as desktop's Limited mode hides them
-        setFormat(GameType.Constructed.name());
-        for (final GameType v : VARIANTS) {
-            lobby.removeVariant(v);
-        }
-        lobby.setLimitedType(sealed ? GameType.Sealed : GameType.Draft);
-        lobby.createEvent(sealed ? EventFormat.SEALED : EventFormat.BOOSTER_DRAFT);
-        lobby.setLimitedMode(true);
-        return null;
+        return events.setLimited(kind);
     }
 
-    /** Answers why not, or null, and must run off the socket thread because building the product can wait on a web site. */
     String setUpEvent(final EventSetup s) {
-        final ServerGameLobby lobby = host();
-        if (lobby == null || !limited(lobby)) {
-            return Localizer.getInstance().getMessage("lblWebLobbyChooseLimited");
-        }
-        if (eventStarted()) {
-            return Localizer.getInstance().getMessage("lblWebLobbyEventStartedFixed");
-        }
-        try {
-            if (lobby.getData().getLimitedType() == GameType.Sealed) {
-                final SealedCardPoolGenerator gen = OfflineEvents.generator(new SealedCreate(s.product(), s.block(), s.combo(),
-                        s.edition(), s.template(), s.cubeId(), s.packs(), "", false));
-                lobby.createEvent(EventFormat.SEALED);
-                return lobby.configureEvent(LimitedPoolType.valueOf(s.product()), gen, 0, 0) ? null : Localizer.getInstance().getMessage("lblWebLobbySealedSetUpFailed");
-            }
-            final BoosterDraft draft = OfflineEvents.draft(new DraftStart(s.product(), s.block(), s.combo(), s.cube(), s.theme(),
-                    s.cubeId())).get();
-            if (draft == null) {
-                return Localizer.getInstance().getMessage("lblWebLobbyDraftSetUpFailed");
-            }
-            // As desktop's pod choice: never fewer than the seats at the table, and never more than a pod
-            final int wanted = s.podSize() > 0 ? s.podSize() : draft.getPodSize();
-            draft.setPodSize(Math.min(MAX_POD, Math.max(Math.max(2, lobby.getNumberOfSlots()), wanted)));
-            if (s.pickRule() != null) {
-                draft.setDoublePick(DraftOptions.DoublePick.valueOf(s.pickRule()));
-            }
-            lobby.createEvent(EventFormat.BOOSTER_DRAFT);
-            return lobby.configureEvent(LimitedPoolType.valueOf(s.product()), draft, Math.max(0, s.timer()), Math.max(0, s.grace()))
-                    ? null : Localizer.getInstance().getMessage("lblWebLobbyDraftSetUpFailed");
-        } catch (final RuntimeException e) {
-            return e.getMessage() == null ? Localizer.getInstance().getMessage("lblWebLobbyEventSetUpFailed") : e.getMessage();
-        }
+        return events.setUpEvent(s);
     }
 
-    /** Deals the packs or pools once every seat is ready, as desktop's Start Event does. Answers why not, or null. */
     String startEvent() {
-        final ServerGameLobby lobby = host();
-        final NetworkEvent event = lobby == null ? null : lobby.getCurrentEvent();
-        if (event == null || (event.getDraft() == null && event.getSealedGenerator() == null)) {
-            return Localizer.getInstance().getMessage("lblWebLobbySetUpFirst");
-        }
-        if (eventStarted()) {
-            return Localizer.getInstance().getMessage("lblWebLobbyEventStarted");
-        }
-        final LobbySlot unready = lobby.findFirstUnreadySlot();
-        if (unready != null) {
-            return Localizer.getInstance().getMessage("lblWebLobbyNotReady", String.valueOf(unready.getName()));
-        }
-        if (event.getFormat() == EventFormat.SEALED) {
-            lobby.startSealedEvent();
-            return null;
-        }
-        return lobby.startDraftEvent() == null ? Localizer.getInstance().getMessage("lblWebLobbyDraftStartFailed") : null;
+        return events.startEvent();
     }
 
-    /** Whether the host's setup form is open: a Limited table whose event has not begun. */
     boolean settingUpEvent() {
-        final GameLobby lobby = view();
-        return lobby != null && limited(lobby) && !eventStarted();
+        return events.settingUpEvent();
     }
 
-    /** Sits a seat out of the next match, or brings it back. The host's to do, and not while the pod drafts. */
     void benchSeat(final int index, final boolean benched) {
-        final ServerGameLobby lobby = host();
-        if (lobby != null && limited(lobby) && !drafting(lobby) && index >= 0 && index < lobby.getNumberOfSlots()) {
-            lobby.getSlot(index).setBenched(benched);
-            local.pushLobby();
-        }
+        events.benchSeat(index, benched);
     }
 
     /** Returns whether the host's match length preference changed, since no lobby update says so. */
