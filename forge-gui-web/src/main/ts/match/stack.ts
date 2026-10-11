@@ -1,7 +1,7 @@
 import { reconcile } from './render';
 import { lastPicture } from './cards';
 import { cardImageSrc, noImageOnError, setImage } from '../images';
-import { game, deref, derefAll, me, stackPick, stateOf, type Model } from '../model';
+import { game, deref, derefAll, me, players, stackPick, stateOf, zone, type Model } from '../model';
 import { isPortrait } from '../form';
 import { hoverCard, hoverable, inspectCard } from './detail';
 import { FIZZLE_MS, journeys, noteFizzled } from './motion';
@@ -238,7 +238,9 @@ function noteAwaiting(model: Model, items: StackItemView[], events: readonly Gam
     // A cancelled cast is undone without an event, and the card is back in a zone the browser can see
     const back = model.objects.get(Number(key)) as CardView | undefined;
     const given = model.prompt?.priority && Date.now() - spell.since > SETTLE_MS;
-    if (onStack.has(key) || (back?.Zone && back.Zone !== 'Stack') || given) {
+    // A card revealed earlier in the game can say Hand while it is cast, so the zone it names must hold it too
+    const returned = !!back?.Zone && back.Zone !== 'Stack' && players(model).some(p => zone(model, p, back.Zone!).some(c => c.$key === back.$key));
+    if (onStack.has(key) || returned || given) {
       awaiting.delete(key);
     }
   }
