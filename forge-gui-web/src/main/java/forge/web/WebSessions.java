@@ -10,7 +10,7 @@ import forge.web.ToBrowser.Address;
 import forge.web.ToBrowser.ChatLine;
 import forge.web.ToBrowser.Person;
 import forge.web.ToBrowser.Presence;
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /** Every browser attached to this process, each with a session of its own, so only the web port has to be reachable from outside. */
-final class WebSessions implements WebServer.Endpoint {
+final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     private final WebGuiBase ui;
     private final long idleMillis;
     private final Runnable onQuit;
@@ -81,12 +81,13 @@ final class WebSessions implements WebServer.Endpoint {
     public void connected(final BrowserChannel channel, final String clientId, final boolean mayHost) {
         final WebSession session = sessionFor(channel, clientId, mayHost);
         if (session == null) {
-            Logger.warn("Turned a browser away: {} are already here.", MOST_SESSIONS);
+            netLog.warn("Turned a browser away: {} are already here.", MOST_SESSIONS);
             channel.close();
             return;
         }
         byChannel.put(channel, session);
         holdOpen();
+        netLog.info("A browser arrived: {}, {}.", mayHost ? "host link" : "guest link", session.playerName() == null ? "unnamed" : session.playerName());
         session.connected(channel);
         // The others were told this browser had gone, if it holds a seat
         announcePresence();
@@ -112,7 +113,7 @@ final class WebSessions implements WebServer.Endpoint {
         }
         host = session;
         session.becomeHost();
-        Logger.info("A browser has taken the host's seat.");
+        netLog.info("A browser has taken the host's seat.");
         announceSeat();
         announcePresence();
         return true;
@@ -123,7 +124,7 @@ final class WebSessions implements WebServer.Endpoint {
         if (host == null || host.attached() || host.hasGame()) {
             return;
         }
-        Logger.info("The host's browser has not come back. The seat is free again.");
+        netLog.info("The host's browser has not come back. The seat is free again.");
         host = null;
         announceSeat();
     }
@@ -148,7 +149,7 @@ final class WebSessions implements WebServer.Endpoint {
 
     private synchronized void letGo() {
         if (quitWhenEmpty && idle == null && mayGiveUp && byChannel.isEmpty()) {
-            Logger.info("No browser is attached. Forge will close in {} seconds.", idleMillis / 1000);
+            netLog.info("No browser is attached. Forge will close in {} seconds.", idleMillis / 1000);
             idle = timer.schedule(onQuit, idleMillis, TimeUnit.MILLISECONDS);
         }
     }
@@ -177,6 +178,7 @@ final class WebSessions implements WebServer.Endpoint {
     public void disconnected(final BrowserChannel channel) {
         final WebSession session = byChannel.remove(channel);
         if (session != null) {
+            netLog.info("A browser left: {}.", session.playerName() == null ? "unnamed" : session.playerName());
             session.disconnected(channel);
             announcePresence();
             timer.schedule(session::goneAWhile, DRAFT_HOLD_MILLIS, TimeUnit.MILLISECONDS);

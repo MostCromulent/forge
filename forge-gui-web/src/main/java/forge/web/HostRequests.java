@@ -2,7 +2,7 @@ package forge.web;
 
 import com.google.gson.JsonObject;
 import forge.web.ToBrowser.HostChoice;
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import java.util.List;
 import java.util.Map;
@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /** Questions the host asks outside a match, where the calling thread waits for the browser's answer as desktop waits for its dialog. */
-final class HostRequests {
+final class HostRequests implements IHasForgeLog {
     /** Long enough for someone to read the list and decide, short enough that a closed browser gives up. */
     private static final long ANSWER_TIMEOUT_MINUTES = 5;
 
@@ -51,7 +51,7 @@ final class HostRequests {
             Thread.currentThread().interrupt();
             return null;
         } catch (final ExecutionException | TimeoutException e) {
-            Logger.warn("No answer to the host's question: {}", message);
+            netLog.warn("No answer to the host's question: {}", message);
             return null;
         } finally {
             open.remove(id);

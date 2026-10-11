@@ -1,6 +1,6 @@
 package forge.web;
 
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
  * Runs Cloudflare's cloudflared, which calls out to Cloudflare and has it pass players' browsers back down that call,
  * so players on the internet reach this machine without the router letting anyone in.
  */
-final class CloudflareTunnel {
+final class CloudflareTunnel implements IHasForgeLog {
     /** Where the program is offered for each system, since Forge does not fetch it itself. */
     static final String DOWNLOADS = "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/";
 
@@ -135,17 +135,17 @@ final class CloudflareTunnel {
             final String named = readAddress(process);
             if (named != null && answers(named)) {
                 address = named;
-                Logger.info("Players on the internet can join through Cloudflare at {}.", named);
+                netLog.info("Players on the internet can join through Cloudflare at {}.", named);
                 tell(State.CONNECTED);
                 process.waitFor();
                 address = null;
             }
             if (!closed) {
-                Logger.warn("The connection through Cloudflare has ended.");
+                netLog.warn("The connection through Cloudflare has ended.");
                 tell(State.FAILED);
             }
         } catch (final IOException e) {
-            Logger.warn(e, "Could not connect through Cloudflare");
+            netLog.warn(e, "Could not connect through Cloudflare");
             tell(State.FAILED);
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();

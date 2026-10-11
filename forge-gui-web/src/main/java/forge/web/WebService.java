@@ -1,15 +1,17 @@
 package forge.web;
 
+import forge.gamemodes.net.NetworkLogConfig;
 import forge.gamemodes.net.server.PortForward;
 import forge.localinstance.properties.ForgeNetPreferences.FNetPref;
 import forge.model.FModel;
+import forge.util.IHasForgeLog;
 import org.tinylog.Logger;
 
 import java.io.File;
 import java.util.function.Consumer;
 
 /** The web server as something the console can stop and start again, with tokens that outlive a restart so old links still work. */
-final class WebService {
+final class WebService implements IHasForgeLog {
     private final WebGuiBase ui;
     private final long idleMillis;
     private final Runnable onQuit;
@@ -51,6 +53,8 @@ final class WebService {
         if (server != null) {
             return;
         }
+        // One log for as long as the port is bound, from before the first table
+        NetworkLogConfig.activateNetworkLogging();
         final WebSessions fresh = new WebSessions(ui, idleMillis, onQuit);
         final WebServer bound;
         try {
@@ -67,7 +71,9 @@ final class WebService {
         fresh.quitWhenEmpty(quitWhenEmpty);
         sessions = fresh;
         server = bound;
+        // The address carries the host's token, so it stays out of the log that players send on
         Logger.info("Forge web UI: {}", bound.url());
+        netLog.info("The web server has started on port {}.", bound.port());
         if (throughCloudflare()) {
             openTunnel();
         } else if (forwardPort()) {
@@ -86,7 +92,8 @@ final class WebService {
         server.close();
         sessions = null;
         server = null;
-        Logger.info("The web server has stopped.");
+        netLog.info("The web server has stopped.");
+        NetworkLogConfig.deactivateNetworkLogging();
     }
 
     synchronized void quitWhenEmpty(final boolean value) {
@@ -134,9 +141,9 @@ final class WebService {
         asking.open(accepted -> {
             if (forward == asking) {
                 if (accepted) {
-                    Logger.info("The router is forwarding port {}.", asking.port());
+                    netLog.info("The router is forwarding port {}.", asking.port());
                 } else {
-                    Logger.warn("The router did not forward port {}. Players on the internet cannot join until it is forwarded.", asking.port());
+                    netLog.warn("The router did not forward port {}. Players on the internet cannot join until it is forwarded.", asking.port());
                 }
                 setForwarding(accepted ? Forwarding.FORWARDED : Forwarding.REFUSED);
             }

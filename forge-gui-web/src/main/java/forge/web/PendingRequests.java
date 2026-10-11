@@ -2,7 +2,7 @@ package forge.web;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /** Blocking prompts waiting on the browser. A request survives a browser reload because only its thread waits on it. */
-public final class PendingRequests {
+public final class PendingRequests implements IHasForgeLog {
     private record Pending(JsonObject request, JsonElement defaultAnswer, Predicate<JsonElement> valid, CompletableFuture<JsonElement> answer) {}
 
     private final Consumer<JsonObject> send;
@@ -58,11 +58,11 @@ public final class PendingRequests {
             pending = open.get(id);
         }
         if (pending == null) {
-            Logger.warn("Reply for unknown request {}", id);
+            netLog.warn("Reply for unknown request {}", id);
             return;
         }
         if (value == null || !pending.valid().test(value)) {
-            Logger.warn("Invalid reply for request {}: {}", id, value);
+            netLog.warn("Invalid reply for request {}: {}", id, value);
             return;
         }
         pending.answer().complete(value);

@@ -5,7 +5,7 @@ import forge.util.Localizer;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,7 +18,7 @@ import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 
 /** Each launch makes two fresh tokens, one for the host's link and one for guests, so a link from an earlier launch no longer works. */
-public final class WebMain {
+public final class WebMain implements IHasForgeLog {
     /** How long the process waits after the last browser goes, unless the console is told to keep it open. */
     private static final long IDLE_MILLIS = 15_000;
 
@@ -56,7 +56,7 @@ public final class WebMain {
                 if (console == null) {
                     throw e;
                 }
-                Logger.error(e, "Could not start the server");
+                netLog.error(e, "Could not start the server");
                 failure = e;
             }
             if (console != null) {
@@ -90,14 +90,14 @@ public final class WebMain {
                     new ProcessBuilder(exe, "--app=" + url).start();
                     return;
                 } catch (final IOException e) {
-                    Logger.warn(e, "Could not start {}", exe);
+                    netLog.warn(e, "Could not start {}", exe);
                 }
             }
         }
         try {
             ui.browseToUrl(url);
         } catch (final IOException | URISyntaxException e) {
-            Logger.warn(e, "Open {} in a browser", url);
+            netLog.warn(e, "Open {} in a browser", url);
         }
     }
 

@@ -56,7 +56,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import forge.sound.MusicPlaylist;
 import forge.sound.SoundSystem;
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import java.io.File;
 import java.io.IOException;
@@ -80,7 +80,7 @@ import java.util.regex.Pattern;
 import java.util.zip.CRC32;
 
 /** Listens on every interface so a player elsewhere can open a link, and the per-launch tokens in the links keep everyone else out. */
-public final class WebServer implements AutoCloseable {
+public final class WebServer implements AutoCloseable, IHasForgeLog {
     public interface Endpoint {
         /** The id tells one browser from another across a reload, and mayHost says it came in on the host's link. */
         void connected(BrowserChannel channel, String clientId, boolean mayHost);
@@ -247,7 +247,7 @@ public final class WebServer implements AutoCloseable {
                         return;
                     }
                 } catch (final IOException e) {
-                    Logger.warn("Could not send sleeve art {}: {}", key, e.getMessage());
+                    netLog.warn("Could not send sleeve art {}: {}", key, e.getMessage());
                 }
                 notFound(ctx);
             }
@@ -310,7 +310,7 @@ public final class WebServer implements AutoCloseable {
                 respond(ctx, HttpResponseStatus.OK, bytes, imageType(file), null, KEEP_FOREVER, null);
                 return;
             }
-            Logger.warn("Could not draw {}: {}", file, failed.getMessage());
+            netLog.warn("Could not draw {}: {}", file, failed.getMessage());
             try {
                 respondImage(ctx, file);
             } catch (final IOException e) {
@@ -740,7 +740,7 @@ public final class WebServer implements AutoCloseable {
                 try {
                     endpoint.onMessage(browser, JsonParser.parseString(text.text()).getAsJsonObject());
                 } catch (final RuntimeException e) {
-                    Logger.warn(e, "Bad browser message");
+                    netLog.warn(e, "Bad browser message");
                 }
             }
         }

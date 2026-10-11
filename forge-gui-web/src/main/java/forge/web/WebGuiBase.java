@@ -18,7 +18,7 @@ import forge.util.ImageFetcher;
 import forge.web.ToBrowser.Notice;
 import org.jupnp.DefaultUpnpServiceConfiguration;
 import org.jupnp.UpnpServiceConfiguration;
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import java.awt.Desktop;
 import java.io.File;
@@ -36,7 +36,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /** What Forge asks of the program it runs in, answered for the web, with one "WebUI" thread in place of Swing's event thread. */
-public final class WebGuiBase implements IGuiBase {
+public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     private volatile Thread uiThread;
     private final ExecutorService ui = Executors.newSingleThreadExecutor(r -> {
         // Must not start with "Game": ThreadUtil.isGameThread is a name-prefix test
@@ -112,7 +112,7 @@ public final class WebGuiBase implements IGuiBase {
             try {
                 r.run();
             } catch (final RuntimeException e) {
-                Logger.error(e, "WebUI task failed");
+                netLog.error(e, "WebUI task failed");
             }
         };
     }
@@ -174,13 +174,13 @@ public final class WebGuiBase implements IGuiBase {
                 return picked;
             }
         }
-        Logger.warn("Host dialog answered with its default: {} / {}", title, message);
+        netLog.warn("Host dialog answered with its default: {} / {}", title, message);
         return defaultOption;
     }
 
     @Override
     public String showInputDialog(final String message, final String title, final FSkinProp icon, final String initialInput, final List<String> inputOptions, final boolean isNumeric) {
-        Logger.warn("Host input dialog answered with its default: {} / {}", title, message);
+        netLog.warn("Host input dialog answered with its default: {} / {}", title, message);
         return initialInput;
     }
 
@@ -208,7 +208,7 @@ public final class WebGuiBase implements IGuiBase {
         }
         // Nobody answered, so fall back to what the host would have done on its own
         if (result.isEmpty() && min > 0) {
-            Logger.warn("Host choice unanswered, taking the first: {}", message);
+            netLog.warn("Host choice unanswered, taking the first: {}", message);
             result.add(all.get(0));
         }
         return result;
@@ -216,7 +216,7 @@ public final class WebGuiBase implements IGuiBase {
 
     @Override
     public <T> List<T> order(final String title, final String top, final int remainingObjectsMin, final int remainingObjectsMax, final List<T> sourceChoices, final List<T> destChoices) {
-        Logger.warn("Host order dialog answered with its default: {}", title);
+        netLog.warn("Host order dialog answered with its default: {}", title);
         return new ArrayList<>(sourceChoices);
     }
 
@@ -231,7 +231,7 @@ public final class WebGuiBase implements IGuiBase {
         if (answer != null && !answer.isEmpty() && answer.get(0) >= 0 && answer.get(0) < list.size()) {
             return list.get(answer.get(0));
         }
-        Logger.warn("Host card choice unanswered, taking the first: {}", title);
+        netLog.warn("Host card choice unanswered, taking the first: {}", title);
         return list.get(0);
     }
 
@@ -277,7 +277,7 @@ public final class WebGuiBase implements IGuiBase {
         cardsSink.accept(title, list);
         return true;
     }
-    @Override public void showBugReportDialog(final String title, final String text, final boolean showExitAppBtn) { Logger.error("{}: {}", title, text); }
+    @Override public void showBugReportDialog(final String title, final String text, final boolean showExitAppBtn) { netLog.error("{}: {}", title, text); }
     @Override public void showImageDialog(final ISkinImage image, final String message, final String title) { }
     @Override public String showFileDialog(final String title, final String defaultDir) { return null; }
     @Override public File getSaveFile(final File defaultFile) { return null; }

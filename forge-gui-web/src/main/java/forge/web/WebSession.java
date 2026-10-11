@@ -25,7 +25,7 @@ import forge.util.Localizer;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import org.apache.commons.lang3.StringUtils;
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 /** One browser's session, whose place is held in one {@link Stage} that changes only through {@link #move}. */
-public final class WebSession {
+public final class WebSession implements IHasForgeLog {
     /** Where the browser is. Each stage holds what exists there and nothing else. */
     sealed interface Stage permits Menu, Opening, Setup, Event, InCampaign, Playing { }
 
@@ -198,7 +198,7 @@ public final class WebSession {
             try {
                 work.run();
             } catch (final RuntimeException e) {
-                Logger.error(e, "Campaign work failed");
+                netLog.error(e, "Campaign work failed");
             }
         });
     }
@@ -670,7 +670,7 @@ public final class WebSession {
                         final String outcome = Wire.decode(msg, FromBrowser.DevConquestWheel.class).outcome();
                         conquest.setNextWheel(outcome == null || outcome.isEmpty() ? null : ChaosWheelOutcome.valueOf(outcome));
                     } catch (final IllegalArgumentException e) {
-                        Logger.warn("Not a wheel outcome: {}", msg);
+                        netLog.warn("Not a wheel outcome: {}", msg);
                     }
                 }
             }
@@ -870,7 +870,7 @@ public final class WebSession {
                 lobby.openSeat(1);
             }
         } catch (final RuntimeException e) {
-            Logger.error(e, "Could not open the lobby");
+            netLog.error(e, "Could not open the lobby");
             gui.close();
             move(opening, new Menu());
             // The move's hello clears the browser's last error, so the reason has to follow it
@@ -905,7 +905,7 @@ public final class WebSession {
             try {
                 local.openGuest(seatName, gui, this::lobbyChanged, this::chatted, this::gameGone);
             } catch (final RuntimeException e) {
-                Logger.error(e, "Could not take a seat");
+                netLog.error(e, "Could not take a seat");
                 gui.close();
                 move(joining, new Menu());
                 // The waiting card supplies "Could not take a seat", so this is the reason alone
@@ -1410,7 +1410,7 @@ public final class WebSession {
                 try {
                     gauntlet.launch(ai.size(), human, event.type());
                 } catch (final RuntimeException ex) {
-                    Logger.error(ex, "Could not start the gauntlet");
+                    netLog.error(ex, "Could not start the gauntlet");
                     channel.send(error(Localizer.getInstance().getMessage("lblWebSessionGauntletFailed", String.valueOf(ex.getMessage()))));
                 }
                 // A first round that did not start leaves the pool showing, and no gauntlet to carry on
@@ -1537,7 +1537,7 @@ public final class WebSession {
             prepared.human().getPlayer().setSleeveIndex(LocalGame.storedIndex(FPref.UI_SLEEVES, 0));
             local.startPrepared(playerName(), prepared, playing.gui());
         } catch (final RuntimeException ex) {
-            Logger.error(ex, "Could not start the match");
+            netLog.error(ex, "Could not start the match");
             failed.run();
             local.endMatch();
             move(playing, back);
@@ -1572,7 +1572,7 @@ public final class WebSession {
             local.startLimitedMatch(seats, type, playing.gui());
             return local.hostedMatch();
         } catch (final RuntimeException ex) {
-            Logger.error(ex, "Could not start the match");
+            netLog.error(ex, "Could not start the match");
             local.endMatch();
             move(playing, back);
             tell(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
@@ -1648,7 +1648,7 @@ public final class WebSession {
         try {
             begin = local.prepare();
         } catch (final RuntimeException e) {
-            Logger.error(e, "Could not start the match");
+            netLog.error(e, "Could not start the match");
             channel.send(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(e.getMessage()))));
             return;
         }
@@ -1666,7 +1666,7 @@ public final class WebSession {
                 local.spectate();
             }
         } catch (final RuntimeException e) {
-            Logger.error(e, "Could not start the match");
+            netLog.error(e, "Could not start the match");
             local.endMatch();
             move(playing, new Menu());
             // The table went with the match, and nothing else tells the guests seated at it

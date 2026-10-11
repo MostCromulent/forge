@@ -29,7 +29,7 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.player.PlayerControllerHuman;
 import forge.model.FModel;
 import forge.util.Localizer;
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +39,7 @@ import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
 
 /** The netplay seat one browser plays from, as a client of a server inside this process that opens no socket of its own. */
-public final class LocalGame {
+public final class LocalGame implements IHasForgeLog {
     private static final long JOIN_TIMEOUT_SECONDS = 15;
     /** How long a new table waits for the last one's connections to be gone. */
     private static final long FREE_SEATS_TIMEOUT_MILLIS = 5_000;
@@ -142,7 +142,7 @@ public final class LocalGame {
         final long giveUp = System.currentTimeMillis() + FREE_SEATS_TIMEOUT_MILLIS;
         while (anySeatConnected()) {
             if (System.currentTimeMillis() > giveUp) {
-                Logger.warn("A connection from the last table is still open; setting up the new one anyway.");
+                netLog.warn("A connection from the last table is still open; setting up the new one anyway.");
                 return;
             }
             try {
@@ -288,7 +288,7 @@ public final class LocalGame {
     /** Hands the web seat to an AI so the browser spectates, which only the host can do because the seat belongs to its server. */
     public void spectate() {
         if (hosted == null) {
-            Logger.warn("Only the host can hand its seat to the AI");
+            netLog.warn("Only the host can hand its seat to the AI");
             return;
         }
         final HostedMatch match = hostedMatch();
@@ -302,7 +302,7 @@ public final class LocalGame {
         }
         final RemoteClient seat = server.getClientBySlotIndex(webSeat);
         if (seat == null) {
-            Logger.warn("No web seat to hand to the AI");
+            netLog.warn("No web seat to hand to the AI");
             return;
         }
         server.convertToAI(seat);

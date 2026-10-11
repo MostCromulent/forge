@@ -52,7 +52,6 @@ import forge.util.Localizer;
 import forge.util.MessageUtil;
 import forge.web.FromBrowser.*;
 import forge.web.ToBrowser.*;
-import org.tinylog.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -129,7 +128,7 @@ public class WebGuiGame extends NetworkGuiGame {
             try {
                 task.run();
             } catch (final RuntimeException e) {
-                Logger.error(e, "Web client call failed");
+                netLog.error(e, "Web client call failed");
             } finally {
                 mirrorLock.unlock();
             }
@@ -191,7 +190,7 @@ public class WebGuiGame extends NetworkGuiGame {
     private Map<Integer, JsonObject> encode(final Map<Integer, Map<TrackableProperty, Object>> objects) {
         return JsonCodec.encodeAll(objects, name -> {
             skippedProperties.incrementAndGet();
-            Logger.warn("Web client: no JSON form for property {}", name);
+            netLog.warn("Web client: no JSON form for property {}", name);
         });
     }
 
@@ -230,7 +229,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final Map<Integer, Map<TrackableProperty, Object>> snapshot = snapshotter.snapshot(gv);
         if (snapshot == null) {
             // A failed walk must never clear the browser: the old model is closer to the truth than nothing
-            Logger.warn("Web client: game view snapshot failed; keeping the previous browser model");
+            netLog.warn("Web client: game view snapshot failed; keeping the previous browser model");
             return;
         }
         gameOver = false;
@@ -1261,7 +1260,7 @@ public class WebGuiGame extends NetworkGuiGame {
                     }
                 }
                 case "nextGame" -> controller.nextGameDecision(Wire.decode(msg, NextGame.class).decision());
-                default -> Logger.warn("Web client: unknown browser message {}", type);
+                default -> netLog.warn("Web client: unknown browser message {}", type);
             }
         } finally {
             mirrorLock.unlock();
