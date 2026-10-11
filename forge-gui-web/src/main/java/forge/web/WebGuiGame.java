@@ -118,8 +118,9 @@ public class WebGuiGame extends NetworkGuiGame {
         this.gameLog = new WebGameLog(this::mayView, settings);
     }
 
-    /** Frees the thread that sends to the browser; the match it belongs to is over. */
+    /** Frees the thread that sends to the browser and stops the waiting timer; the match it belongs to is over. */
     public void close() {
+        cancelAwaitNextInput();
         dispatch.shutdown();
     }
 
@@ -931,12 +932,6 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     /** Lists, forgets or switches off remembered decisions through the controller, as desktop's dialog does. */
-    private void endTurn(final IGameController controller) {
-        YieldController.endTurn(controller, getCurrentPlayer());
-        // The yield is set on this side at once, so the chip beside the phase pill names it straight away
-        send(controlsMessage());
-    }
-
     private void autoDecisions(final IGameController controller, final AutoDecisionCommand command) {
         final YieldController yields = controller.getYieldController();
         if (yields == null) {
@@ -1200,17 +1195,15 @@ public class WebGuiGame extends NetworkGuiGame {
                     }
                 }
                 case "ok" -> controller.selectButtonOk();
-                case "cancel" -> {
-                    if (prompt.cancelEndsTurn()) {
-                        endTurn(controller);
-                    } else {
-                        controller.selectButtonCancel();
-                    }
-                }
+                case "cancel" -> controller.selectButtonCancel();
                 case "concede" -> controller.concede();
                 case "drawOffer" -> controller.drawOfferAction(Wire.decode(msg, DrawOfferCommand.class).action());
                 case "autoDecisions" -> autoDecisions(controller, Wire.decode(msg, AutoDecisionCommand.class));
-                case "endTurn" -> endTurn(controller);
+                case "endTurn" -> {
+                    YieldController.endTurn(controller, getCurrentPlayer());
+                    // The yield is set on this side at once, so the chip beside the phase pill names it straight away
+                    send(controlsMessage());
+                }
                 case "stopYield" -> {
                     // Ends whichever pass is running: a second press of End Turn, or a click on the chip naming it
                     final YieldController yields = controller.getYieldController();
