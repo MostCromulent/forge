@@ -28,12 +28,10 @@ public final class LimitedSetupPrompts {
     }
 
     public static BoosterDraft createDraft(final LimitedPoolType draftType) {
-        final BoosterDraft draft = new BoosterDraft(draftType);
-        if (!chooseDraftProduct(draft, false)) {
-            return null;
+        final BoosterDraft draft = createDraft(draftType, false);
+        if (draft != null) {
+            draft.initializeBoosters();
         }
-
-        draft.initializeBoosters();
         return draft;
     }
 
@@ -46,32 +44,29 @@ public final class LimitedSetupPrompts {
      * @return a partially-initialized draft, or null if product generation fails
      */
     public static BoosterDraft createDraftForNetwork(final LimitedPoolType draftType) {
-        final BoosterDraft draft = new BoosterDraft(draftType);
-        if (!chooseDraftProduct(draft, true)) {
-            return null;
-        }
-        return draft;
+        return createDraft(draftType, true);
+    }
+
+    private static BoosterDraft createDraft(final LimitedPoolType draftType, final boolean forNetwork) {
+        final DraftProduct product = chooseDraftProduct(draftType, forNetwork);
+        return product == null ? null : new BoosterDraft(product);
     }
 
     public static WinstonDraft createWinstonDraft(final LimitedPoolType draftType) {
-        final WinstonDraft draft = new WinstonDraft(draftType);
-        if (!chooseDraftProduct(draft, false)) {
-            return null;
-        }
-        draft.initializeWinstonDraft();
-        return draft;
+        final DraftProduct product = chooseDraftProduct(draftType, false);
+        return product == null ? null : new WinstonDraft(product);
     }
 
-    private static boolean chooseDraftProduct(final BoosterDraft draft, final boolean forNetwork) {
-        switch (draft.draftFormat) {
+    /** Null when the player backs out of a choice, or there is nothing to choose from. */
+    private static DraftProduct chooseDraftProduct(final LimitedPoolType draftType, final boolean forNetwork) {
+        switch (draftType) {
             case Full: // Draft from all cards in Forge
-                draft.setupFull();
-                break;
+                return new DraftProduct.Full();
 
             case Block: // Draft from cards by block or set
             case FantasyBlock:
                 final List<CardBlock> blocks = new ArrayList<>();
-                final IStorage<CardBlock> storage = draft.draftFormat == LimitedPoolType.Block
+                final IStorage<CardBlock> storage = draftType == LimitedPoolType.Block
                         ? FModel.getBlocks()
                         : FModel.getFantasyBlocks();
 
@@ -89,47 +84,42 @@ public final class LimitedSetupPrompts {
 
                 final CardBlock block = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseBlock"), blocks);
                 if (block == null) {
-                    return false;
+                    return null;
                 }
 
                 final List<String> sets = BoosterDraft.blockSets(block);
                 if (sets.isEmpty()) {
                     SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblBlockNotContainSetCombinations", block.toString()));
-                    return false;
+                    return null;
                 }
 
-                String combo = sets.get(0);
+                List<String> packs = sets;
                 if (sets.size() > 1) {
                     final int nPacks = block.getCntBoostersDraft();
                     if (nPacks == 3 && sets.size() < 4) {
-                        combo = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseSetCombination"), BoosterDraft.getSetCombos(sets));
+                        final String combo = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseSetCombination"), BoosterDraft.getSetCombos(sets));
+                        packs = combo == null ? null : List.of(combo.split("/"));
                     } else {
-                        combo = choosePackByPack(sets, nPacks);
+                        packs = choosePackByPack(sets, nPacks);
                     }
 
-                    if (combo == null) {
-                        return false;
+                    if (packs == null) {
+                        return null;
                     }
                 }
-                draft.setupBlock(block, combo);
-                break;
+                return new DraftProduct.Block(block, packs);
 
             case Custom:
                 final List<CustomLimited> myDrafts = BoosterDraft.loadCustomDrafts();
 
                 if (myDrafts.isEmpty()) {
                     SOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblNotFoundCustomDraftFiles"));
-                } else {
-                    myDrafts.sort(Comparator.comparing(DeckBase::getName));
-
-                    final CustomLimited customDraft = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseCustomDraft"), myDrafts);
-                    if (customDraft == null) {
-                        return false;
-                    }
-
-                    draft.setupCustomDraft(customDraft);
+                    return null;
                 }
-                break;
+                myDrafts.sort(Comparator.comparing(DeckBase::getName));
+
+                final CustomLimited customDraft = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseCustomDraft"), myDrafts);
+                return customDraft == null ? null : new DraftProduct.Cube(customDraft);
 
             case Chaos:
                 // Get chaos draft themes
@@ -142,13 +132,10 @@ public final class LimitedSetupPrompts {
                 // Ask user to select theme
                 final String dialogQuestion = Localizer.getInstance().getMessage("lblChooseChaosTheme");
                 final ThemedChaosDraft theme = SGuiChoose.oneOrNone(dialogQuestion, themes);
-                if (theme == null) {
-                    return false; // abort if no theme is selected
+                if (theme == null || !BoosterDraft.chaosEditions(theme).iterator().hasNext()) {
+                    return null;
                 }
-                if (!draft.setupChaos(theme)) {
-                    return false;
-                }
-                break;
+                return new DraftProduct.Chaos(theme);
 
             case Import:
                 /*
@@ -163,46 +150,40 @@ public final class LimitedSetupPrompts {
                         null,
                         lastCubeId);
 
-                if (inputCubeId == null) {
-                    return false;
-                }
-
-                try {
-                    CubeImporter importer = new CubeImporter(inputCubeId);
-                    CustomLimited importedDraft = importer.importCube();
-                    if (importedDraft == null) {
-                        SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + inputCubeId);
-                        return false;
-                    }
-                    draft.setupCustomDraft(importedDraft);
-                } catch (Exception e) {
-                    SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage());
-                    return false;
-                }
-                break;
+                final CustomLimited importedDraft = inputCubeId == null ? null : importCube(inputCubeId);
+                return importedDraft == null ? null : new DraftProduct.Cube(importedDraft);
 
             default:
-                throw new NoSuchElementException("Draft for mode " + draft.draftFormat + " has not been set up!");
+                throw new NoSuchElementException("Draft for mode " + draftType + " has not been set up!");
         }
-
-        return true;
     }
 
-    private static String choosePackByPack(final List<String> setz, int packs) {
-        StringBuilder sb = new StringBuilder();
+    /** Tells the player why and returns null when the cube can't be imported. */
+    private static CustomLimited importCube(final String cubeId) {
+        try {
+            CubeImporter importer = new CubeImporter(cubeId);
+            CustomLimited importedDraft = importer.importCube();
+            if (importedDraft == null) {
+                SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + cubeId);
+            }
+            return importedDraft;
+        } catch (Exception e) {
+            SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    private static List<String> choosePackByPack(final List<String> setz, int packs) {
+        final List<String> chosen = new ArrayList<>();
 
         for (int i = 1; i <= packs; i++) {
             String choice = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseSetForNPack", String.valueOf(i), String.valueOf(packs)), setz);
             if (choice == null) {
                 return null;
             }
-            sb.append(choice);
-
-            if (i != packs) {
-                sb.append("/");
-            }
+            chosen.add(choice);
         }
-        return sb.toString();
+        return chosen;
     }
 
     public static DeckGroup generateSealedDeck(final boolean addBasicLands) {
@@ -211,7 +192,7 @@ public final class LimitedSetupPrompts {
         if (poolType == null) { return null; }
 
         SealedCardPoolGenerator sd = createSealedGenerator(poolType);
-        if (sd.isEmpty()) { return null; }
+        if (sd == null || sd.isEmpty()) { return null; }
 
         final CardPool humanPool = sd.getCardPool(true);
         if (humanPool == null) { return null; }
@@ -242,16 +223,17 @@ public final class LimitedSetupPrompts {
         return sealed;
     }
 
-    /** The generator is left empty when the player backs out of a choice. */
+    /** Null when the player backs out of a choice, or there is nothing to choose from. */
     public static SealedCardPoolGenerator createSealedGenerator(final LimitedPoolType poolType) {
-        final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
+        final SealedPoolProduct product = chooseSealedPoolProduct(poolType);
+        return product == null ? null : new SealedCardPoolGenerator(product);
+    }
+
+    private static SealedPoolProduct chooseSealedPoolProduct(final LimitedPoolType poolType) {
         switch(poolType) {
             case Full:
                 final Integer packs = chooseNumberOfBoosters();
-                if (packs != null) {
-                    gen.setupFull(packs);
-                }
-                break;
+                return packs == null ? null : new SealedPoolProduct.Full(packs);
 
             case Prerelease:
                 ArrayList<CardEdition> editions = Lists.newArrayList(StaticData.instance().getEditions().getPrereleaseEditions());
@@ -259,10 +241,7 @@ public final class LimitedSetupPrompts {
                 Collections.reverse(editions);
 
                 CardEdition chosenEdition = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseAnEdition"), editions);
-                if (chosenEdition != null) {
-                    gen.setupPrerelease(chosenEdition);
-                }
-                break;
+                return chosenEdition == null ? null : new SealedPoolProduct.Prerelease(chosenEdition);
 
             case Block:
             case FantasyBlock:
@@ -273,14 +252,11 @@ public final class LimitedSetupPrompts {
                 }
 
                 final CardBlock block = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseBlock"), blocks);
-                if (block == null) { break; }
+                if (block == null) { return null; }
 
                 final List<String> setCombos = SealedCardPoolGenerator.blockCombos(block);
                 final String p = setCombos.size() > 1 ? SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChoosePackNumberToPlay"), setCombos) : setCombos.get(0);
-                if (p != null) {
-                    gen.setupBlock(block, p);
-                }
-                break;
+                return p == null ? null : new SealedPoolProduct.Block(block, p);
 
             case Custom:
                 final List<CustomLimited> customs = SealedCardPoolGenerator.loadCustomSealed();
@@ -288,17 +264,14 @@ public final class LimitedSetupPrompts {
                 // present list to user
                 if (customs.isEmpty()) {
                     SOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblNotFoundCustomSealedFiles"));
-                    break;
+                    return null;
                 }
 
                 final CustomLimited draft = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseCustomSealedPool"), customs);
-                if (draft == null) { break; }
+                if (draft == null) { return null; }
 
                 final Integer customPacks = chooseNumberOfBoosters();
-                if (customPacks != null) {
-                    gen.setupCustom(draft, customPacks);
-                }
-                break;
+                return customPacks == null ? null : new SealedPoolProduct.Cube(draft, customPacks);
 
             case Import:
                 /*
@@ -310,28 +283,15 @@ public final class LimitedSetupPrompts {
                         Localizer.getInstance().getMessage("lblImportCube"),
                         null);
 
-                if (inputCubeId == null) {
-                    break;
-                }
+                final CustomLimited importedDraft = inputCubeId == null ? null : importCube(inputCubeId);
+                if (importedDraft == null) { return null; }
 
-                try {
-                    CubeImporter importer = new CubeImporter(inputCubeId);
-                    CustomLimited importedDraft = importer.importCube();
+                final Integer importPacks = chooseNumberOfBoosters();
+                return importPacks == null ? null : new SealedPoolProduct.Cube(importedDraft, importPacks);
 
-                    if (importedDraft == null) {
-                        SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + inputCubeId);
-                        break;
-                    }
-                    final Integer importPacks = chooseNumberOfBoosters();
-                    if (importPacks != null) {
-                        gen.setupCustom(importedDraft, importPacks);
-                    }
-                } catch (Exception e) {
-                    SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage());
-                }
-                break;
+            default:
+                return null;
         }
-        return gen;
     }
 
     private static Integer chooseNumberOfBoosters() {

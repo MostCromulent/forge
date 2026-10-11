@@ -20,13 +20,14 @@ public class WinstonDraft extends BoosterDraft {
     private Stack<PaperCard> deck;           // main deck where all cards
     private List<List<PaperCard>> piles;    // 3 piles to draft from
 
-    WinstonDraft(final LimitedPoolType draftType) {
-        draftFormat = draftType;
+    WinstonDraft(final DraftProduct product) {
         draftAI = new WinstonDraftAI();
+        setUp(product);
+        initializeWinstonDraft();
 
     }
 
-    void initializeWinstonDraft() {
+    private void initializeWinstonDraft() {
         this.deck = new Stack<>();
         for (final Supplier<List<PaperCard>> supply : this.product) {
             for (int j = 0; j < NUM_PLAYERS; j++) {

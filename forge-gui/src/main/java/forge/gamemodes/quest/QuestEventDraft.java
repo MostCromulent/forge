@@ -35,7 +35,6 @@ import forge.deck.Deck;
 import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.gamemodes.limited.BoosterDraft;
-import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
 import forge.gamemodes.quest.io.ReadPriceList;
 import forge.gamemodes.tournament.system.TournamentBracket;
@@ -650,7 +649,7 @@ public class QuestEventDraft implements IQuestEvent {
     public BoosterDraft enter() {
         FModel.getQuest().getAchievements().setCurrentDraft(this);
         FModel.getQuest().getAssets().subtractCredits(getEntryFee());
-        return BoosterDraft.createDraft(LimitedPoolType.Block, FModel.getBlocks().get(getBlock()), getBoosterConfiguration(), 8);
+        return BoosterDraft.createDraft(FModel.getBlocks().get(getBlock()), getBoosterConfiguration(), 8);
     }
 
     public boolean isStarted() {

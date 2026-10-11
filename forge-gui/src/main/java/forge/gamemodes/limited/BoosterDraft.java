@@ -70,7 +70,6 @@ public class BoosterDraft implements IBoosterDraft {
 
     private final Map<String, Float> draftPicks = new TreeMap<>();
     static final List<CustomLimited> customs = new ArrayList<>();
-    protected LimitedPoolType draftFormat;
 
     protected final List<IUnOpenedProduct> product = new ArrayList<>();
     public static void initializeCustomDrafts() {
@@ -93,7 +92,7 @@ public class BoosterDraft implements IBoosterDraft {
         return sets;
     }
 
-    public void setupFull() {
+    private void setupFull() {
         final IUnOpenedProduct s = new UnOpenedProduct(SealedTemplate.genericDraftBooster);
 
         for (int i = 0; i < 3; i++) {
@@ -103,18 +102,16 @@ public class BoosterDraft implements IBoosterDraft {
         IBoosterDraft.CUSTOM_RANKINGS_FILE[0] = null;
     }
 
-    /** combo is one set code per pack, joined with "/". A block with a single set ignores it. */
-    public void setupBlock(final CardBlock block, final String combo) {
+    private void setupBlock(final CardBlock block, final List<String> packs) {
         final List<String> sets = blockSets(block);
         final int nPacks = block.getCntBoostersDraft();
 
         this.shouldShowDraftLog = block.getName().contains("Conspiracy");
 
         if (sets.size() > 1) {
-            this.productName = block.getName() + " (" + combo + ")";
-            final String[] pp = combo.split("/");
+            this.productName = block.getName() + " (" + String.join("/", packs) + ")";
             for (int i = 0; i < nPacks; i++) {
-                this.product.add(block.getBooster(pp[i]));
+                this.product.add(block.getBooster(packs.get(i)));
             }
         } else {
             // Only one set is chosen. If that set lets you draft 2 cards to start adjust draft settings now
@@ -141,6 +138,16 @@ public class BoosterDraft implements IBoosterDraft {
         IBoosterDraft.CUSTOM_RANKINGS_FILE[0] = null;
     }
 
+    /** The sets a chaos theme draws its packs from. A theme with none can't be drafted. */
+    public static Iterable<CardEdition> chaosEditions(final ThemedChaosDraft theme) {
+        // Filter all sets by theme restrictions
+        final Predicate<CardEdition> themeFilter = theme.getEditionFilter();
+        final CardEdition.Collection allEditions = StaticData.instance().getEditions();
+        return IterableUtil.filter(
+                allEditions.getOrderedEditions(),
+                themeFilter);
+    }
+
     /**
      * A chaos draft consists of boosters from many different sets.
      * Default settings are boosters from all sets with a booster size of 15 cards.
@@ -148,34 +155,21 @@ public class BoosterDraft implements IBoosterDraft {
      * Examples for themes: sets that take place on a certain plane, core sets, masters sets,
      * or sets that share a mechanic.
      */
-    public boolean setupChaos(final ThemedChaosDraft theme) {
+    private void setupChaos(final ThemedChaosDraft theme) {
         this.productName = theme.getLabel();
-        // Filter all sets by theme restrictions
-        final Predicate<CardEdition> themeFilter = theme.getEditionFilter();
-        final CardEdition.Collection allEditions = StaticData.instance().getEditions();
-        final Iterable<CardEdition> chaosDraftEditions = IterableUtil.filter(
-                allEditions.getOrderedEditions(),
-                themeFilter);
         // Add chaos "boosters" as special suppliers
-        final IUnOpenedProduct ChaosDraftSupplier;
-        try {
-            ChaosDraftSupplier = new ChaosBoosterSupplier(chaosDraftEditions);
-        } catch(IllegalArgumentException e) {
-            System.out.println(e.getMessage());
-            return false;
-        }
+        final IUnOpenedProduct ChaosDraftSupplier = new ChaosBoosterSupplier(chaosEditions(theme));
         for (int i = 0; i < 3; i++) {
             this.product.add(ChaosDraftSupplier);
         }
-        return true;
     }
 
-    public static BoosterDraft createDraft(final LimitedPoolType draftType, final CardBlock block, final String[] boosters) {
-        return createDraft(draftType, block, boosters, null);
+    public static BoosterDraft createDraft(final CardBlock block, final String[] boosters) {
+        return createDraft(block, boosters, null);
     }
 
-    public static BoosterDraft createDraft(final LimitedPoolType draftType, final CardBlock block, final String[] boosters, Integer numPlayers) {
-        final BoosterDraft draft = new BoosterDraft(draftType);
+    public static BoosterDraft createDraft(final CardBlock block, final String[] boosters, Integer numPlayers) {
+        final BoosterDraft draft = new BoosterDraft();
 
         String setCode = boosters[0];
         CardEdition edition = FModel.getMagicDb().getEditions().get(setCode);
@@ -207,21 +201,31 @@ public class BoosterDraft implements IBoosterDraft {
     }
 
     protected BoosterDraft() {
-        this(LimitedPoolType.Full);
-    }
-
-    public BoosterDraft(final LimitedPoolType draftType) {
-        this(draftType, N_PLAYERS);
-    }
-
-    protected BoosterDraft(final LimitedPoolType draftType, int numPlayers) {
-        this.draftFormat = draftType;
-        this.podSize = numPlayers;
+        this.podSize = N_PLAYERS;
 
         localPlayer = new LimitedPlayer(0, this);
         players.add(localPlayer);
         for (int i = 1; i < this.podSize; i++) {
             players.add(new LimitedPlayerAI(i, this));
+        }
+    }
+
+    public BoosterDraft(final DraftProduct product) {
+        this();
+        setUp(product);
+    }
+
+    protected final void setUp(final DraftProduct product) {
+        if (product instanceof DraftProduct.Full) {
+            setupFull();
+        } else if (product instanceof DraftProduct.Block b) {
+            setupBlock(b.block(), b.packs());
+        } else if (product instanceof DraftProduct.Cube c) {
+            setupCustomDraft(c.cube());
+        } else if (product instanceof DraftProduct.Chaos c) {
+            setupChaos(c.theme());
+        } else {
+            throw new IllegalArgumentException("Unknown draft product " + product);
         }
     }
 
@@ -342,7 +346,7 @@ public class BoosterDraft implements IBoosterDraft {
         return players.get((player.order + (left ? 1 : -1) + this.podSize) % this.podSize);
     }
 
-    public void setupCustomDraft(final CustomLimited draft) {
+    private void setupCustomDraft(final CustomLimited draft) {
         this.productName = draft.getName();
         final ItemPool<PaperCard> dPool = draft.getCardPool();
         if (dPool == null) {

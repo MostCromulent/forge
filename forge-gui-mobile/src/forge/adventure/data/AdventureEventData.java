@@ -19,7 +19,6 @@ import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.LimitedPlayer;
-import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.limited.SealedDeckBuilder;
 import forge.item.SealedTemplate;
 import forge.item.generation.IUnOpenedProduct;
@@ -159,7 +158,7 @@ public class AdventureEventData implements Serializable {
         Random placeholder = MyRandom.getRandom();
         MyRandom.setRandom(getEventRandom());
         if (draft == null && (eventStatus == AdventureEventController.EventStatus.Available || eventStatus == AdventureEventController.EventStatus.Entered)) {
-            draft = BoosterDraft.createDraft(LimitedPoolType.Block, getCardBlock(), packConfiguration, participants.length);
+            draft = BoosterDraft.createDraft(getCardBlock(), packConfiguration, participants.length);
             registeredDeck = draft.getHumanPlayer().getDeck();
             assignPlayerNames(draft);
         }

@@ -63,7 +63,18 @@ public class SealedCardPoolGenerator {
     /** Human-readable name of the specific block / edition / custom pool chosen (null for Full). */
     private String productName = null;
 
-    public SealedCardPoolGenerator() {
+    public SealedCardPoolGenerator(final SealedPoolProduct product) {
+        if (product instanceof SealedPoolProduct.Full f) {
+            setupFull(f.packs());
+        } else if (product instanceof SealedPoolProduct.Prerelease p) {
+            setupPrerelease(p.edition());
+        } else if (product instanceof SealedPoolProduct.Block b) {
+            setupBlock(b.block(), b.packs());
+        } else if (product instanceof SealedPoolProduct.Cube c) {
+            setupCustom(c.cube(), c.packs());
+        } else {
+            throw new IllegalArgumentException("Unknown sealed product " + product);
+        }
     }
 
     /** The human deck, named name with the pool in its sideboard, and a ranked AI deck for each of seven opponents. Not stored. */
@@ -119,12 +130,12 @@ public class SealedCardPoolGenerator {
         return sealed;
     }
 
-    public void setupFull(final int packs) {
+    private void setupFull(final int packs) {
         addBoosters(new UnOpenedProduct(SealedTemplate.genericDraftBooster), packs);
         landSetCode = CardEdition.Predicates.getRandomSetWithAllBasicLands(FModel.getMagicDb().getEditions()).getCode();
     }
 
-    public void setupPrerelease(final CardEdition chosenEdition) {
+    private void setupPrerelease(final CardEdition chosenEdition) {
         String bundle = chosenEdition.getPrerelease();
 
         // Parse prerelease bundle.
@@ -203,8 +214,7 @@ public class SealedCardPoolGenerator {
         return sets;
     }
 
-    /** p is one entry of {@link #blockCombos}. */
-    public void setupBlock(final CardBlock block, final String p) {
+    private void setupBlock(final CardBlock block, final String p) {
         final int nPacks = block.getCntBoostersSealed();
         final List<String> sets = blockSets(block);
 
@@ -258,7 +268,7 @@ public class SealedCardPoolGenerator {
         return customs;
     }
 
-    public void setupCustom(final CustomLimited draft, final int packs) {
+    private void setupCustom(final CustomLimited draft, final int packs) {
         UnOpenedProduct toAdd = new UnOpenedProduct(draft.getSealedProductTemplate(), draft.getCardPool());
         toAdd.setLimitedPool(draft.isSingleton());
         addBoosters(toAdd, packs);
