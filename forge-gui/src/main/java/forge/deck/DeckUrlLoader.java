@@ -32,28 +32,21 @@ public final class DeckUrlLoader {
     private static final String SUPPORTED_PROVIDERS = "Moxfield, Archidekt, TappedOut, MTGGoldfish";
     private static final Localizer localizer = Localizer.getInstance();
 
-    /** A deck list as a site gave it, not yet read into a deck or saved. The text is ready for DeckRecognizer. */
-    public record FetchedDeck(String name, DeckFormat format, String sourceUrl, String text, String providerName) {
-    }
-
     public static DeckProxy load(final String deckUrl) throws IOException {
-        return store(importDeck(fetch(deckUrl)));
+        final String normalizedUrl = normalizeUrl(deckUrl);
+        final DeckUrlProvider provider = getProvider(normalizedUrl);
+        final StorageImmediatelySerialized<Deck> storage = getStorage();
+        final DeckUrlProvider.RemoteDeck remoteDeck = provider.load(normalizedUrl, storage);
+        final Deck deck = importDeck(remoteDeck);
+
+        storage.add(deck);
+        return new DeckProxy(deck, localizer.getMessage("lblUrlDeck"), GameType.Constructed, storage);
     }
 
     /** Fetches a deck list from a supported site without saving anything. */
-    public static FetchedDeck fetch(final String deckUrl) throws IOException {
+    public static DeckUrlProvider.RemoteDeck fetch(final String deckUrl) throws IOException {
         final String normalizedUrl = normalizeUrl(deckUrl);
-        final DeckUrlProvider provider = getProvider(normalizedUrl);
-        final DeckUrlProvider.RemoteDeck remoteDeck = provider.load(normalizedUrl, getStorage());
-        final String text = String.join("\n", getRecognizableImportLines(new DeckRecognizer(), remoteDeck.importText()));
-        return new FetchedDeck(remoteDeck.name(), remoteDeck.format(), remoteDeck.sourceUrl(), text, remoteDeck.providerName());
-    }
-
-    /** Saves a deck among the decks loaded from links, replacing one of the same name. */
-    public static DeckProxy store(final Deck deck) {
-        final StorageImmediatelySerialized<Deck> storage = getStorage();
-        storage.add(deck);
-        return new DeckProxy(deck, localizer.getMessage("lblUrlDeck"), GameType.Constructed, storage);
+        return getProvider(normalizedUrl).load(normalizedUrl, getStorage());
     }
 
     public static String loadImportText(final String deckUrl) throws IOException {
@@ -88,10 +81,10 @@ public final class DeckUrlLoader {
         throw new IOException(localizer.getMessage("lblOnlySupportedDeckUrls", SUPPORTED_PROVIDERS));
     }
 
-    private static Deck importDeck(final FetchedDeck remoteDeck) throws IOException {
+    private static Deck importDeck(final DeckUrlProvider.RemoteDeck remoteDeck) throws IOException {
         final DeckRecognizer recognizer = new DeckRecognizer();
         recognizer.forceImportBannedAndRestrictedCards();
-        final List<Token> tokens = recognizer.parseCardList(remoteDeck.text().split("\n"));
+        final List<Token> tokens = recognizer.parseCardList(getRecognizableImportLines(recognizer, remoteDeck.importText()));
         final Deck deck = new Deck(remoteDeck.name());
         for (final Token token : tokens) {
             final TokenType type = token.getType();

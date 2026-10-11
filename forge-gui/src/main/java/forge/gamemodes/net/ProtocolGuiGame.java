@@ -29,7 +29,6 @@ import forge.util.ITriggerEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -469,8 +468,8 @@ public class ProtocolGuiGame extends NetworkGuiGame implements IHasForgeLog {
     }
 
     @Override
-    public void setSelectablePlayers(final Supplier<Iterable<PlayerView>> players) {
-        send(ProtocolMethod.setSelectablePlayers, players.get());
+    public void setSelectablePlayers(final Iterable<PlayerView> players) {
+        send(ProtocolMethod.setSelectablePlayers, players);
     }
 
     @Override

@@ -6,8 +6,10 @@ import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
 import forge.deck.DeckGroup;
+import forge.deck.DeckRecognizer;
 import forge.deck.DeckSection;
 import forge.deck.DeckUrlLoader;
+import forge.deck.DeckUrlProvider;
 import forge.deck.io.DeckSerializer;
 import forge.game.GameFormat;
 import forge.game.GameType;
@@ -366,11 +368,12 @@ final class DeckSession {
 
     private ImportResult fetched(final ImportFetch fetch) {
         try {
-            final DeckUrlLoader.FetchedDeck f = DeckUrlLoader.fetch(fetch.url());
+            final DeckUrlProvider.RemoteDeck f = DeckUrlLoader.fetch(fetch.url());
+            final String text = String.join("\n", DeckUrlLoader.getRecognizableImportLines(new DeckRecognizer(), f.importText()));
             final Check check = Check.of(DeckStore.family(f.format()), null);
-            final DeckImport.Read read = DeckImport.read(f.text(), check);
+            final DeckImport.Read read = DeckImport.read(text, check);
             final ImportResult result = DeckImport.result(fetch.request(), read, check,
-                    new Fetched(f.providerName(), f.sourceUrl(), f.text(), check.format().name()));
+                    new Fetched(f.providerName(), f.sourceUrl(), text, check.format().name()));
             return new ImportResult(result.request(), result.lines(), result.problems(), result.summary(), f.name(), result.fetched());
         } catch (final IOException | RuntimeException e) {
             Logger.warn(e, "Could not fetch a deck from " + fetch.url());
@@ -509,11 +512,7 @@ final class DeckSession {
             } else if (taken != null) {
                 storage.delete(taken);
             }
-            if (linked) {
-                DeckUrlLoader.store(deck);
-            } else {
-                storage.add(deck);
-            }
+            storage.add(deck);
         }
         return lobby.adopt(linked ? DeckCatalog.LINKED : DeckCatalog.MINE, "", deck);
     }

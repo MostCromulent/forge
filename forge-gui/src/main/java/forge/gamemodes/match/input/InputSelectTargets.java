@@ -64,18 +64,16 @@ public final class InputSelectTargets extends InputSyncronizedBase {
         final int initialMin = numTargets != null ? numTargets : sa.getMinTargets();
         final int initialMax = numTargets != null ? numTargets : sa.getMaxTargets();
         controller.getGui().setSelectables(CardView.getCollection(choices), initialMin, initialMax);
-        // Worked out only if the GUI marks selectable players: canTarget is a real check, once per player
-        controller.getGui().setSelectablePlayers(() -> {
-            final List<PlayerView> players = new ArrayList<>();
-            if (!mustTargetFiltered) {
-                for (final Player p : sa.getHostCard().getGame().getPlayers()) {
-                    if (!p.hasLost() && sa.canTarget(p) && (filter == null || filter.test(p))) {
-                        players.add(p.getView());
-                    }
+        final List<PlayerView> players = new ArrayList<>();
+        if (!mustTargetFiltered) {
+            for (final Player p : sa.getHostCard().getGame().getPlayers()) {
+                final boolean cannotEnchant = sa.isSpell() && sa.getHostCard().isAura() && !p.canBeAttached(sa.getHostCard(), sa);
+                if (!p.hasLost() && !cannotEnchant && sa.canTarget(p) && (filter == null || filter.test(p))) {
+                    players.add(p.getView());
                 }
             }
-            return players;
-        });
+        }
+        controller.getGui().setSelectablePlayers(players);
         final List<GameEntityView> views = new ArrayList<>();
         for (final GameEntity c : targets) {
             if (c instanceof Card) views.add(GameEntityView.get(c));

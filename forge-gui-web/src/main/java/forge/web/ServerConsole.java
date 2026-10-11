@@ -302,6 +302,10 @@ final class ServerConsole implements IProgressBar {
                 case FORWARDED -> TEXT.getMessage("lblWebConsoleForwarded", service.port());
                 case REFUSED -> "";
             };
+            // Forwarding is off until the host asks for it, so the line that says so stands out
+            final boolean off = now == WebService.Forwarding.OFF;
+            forwardState.setForeground(off ? WARN : UIManager.getColor("Label.foreground"));
+            forwardState.setFont(UIManager.getFont("Label.font").deriveFont(off ? Font.BOLD : Font.PLAIN));
             reword(forwardState, words, TEXT_WIDTH - 250);
             forwardLight.setVisible(!words.isEmpty());
             forwardStateRow.setVisible(viaRouter);

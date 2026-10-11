@@ -58,7 +58,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -540,9 +539,9 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     @Override
-    public void setSelectablePlayers(final Supplier<Iterable<PlayerView>> players) {
+    public void setSelectablePlayers(final Iterable<PlayerView> players) {
         final List<Ref> keys = new ArrayList<>();
-        for (final PlayerView p : players.get()) {
+        for (final PlayerView p : players) {
             keys.add(Ref.player(p.getId()));
         }
         prompt.selectablePlayers(keys);

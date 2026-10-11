@@ -37,7 +37,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Supplier;
 
 public interface IGuiGame {
 
@@ -271,15 +270,8 @@ public interface IGuiGame {
      * select-min hotkeys). A maximum of {@code 0} marks display-only highlighting, for which the GUI opens no zones.
      */
     void setSelectables(Iterable<CardView> cards, int min, int max);
-    /**
-     * Players the current input accepts; cleared with {@link #clearSelectables()}. Given as a supplier because
-     * working out which players an ability may target is not free, and a GUI that does not mark them never asks.
-     */
-    default void setSelectablePlayers(Supplier<Iterable<PlayerView>> players) { }
-    /** The same, as a network client receives it: the host has already worked the players out. */
-    default void setSelectablePlayers(Iterable<PlayerView> players) {
-        setSelectablePlayers(() -> players);
-    }
+    /** Players the current input accepts; cleared with {@link #clearSelectables()}. */
+    default void setSelectablePlayers(Iterable<PlayerView> players) { }
     void clearSelectables();
     boolean isSelecting();
 

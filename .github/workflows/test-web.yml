@@ -6,16 +6,13 @@ name: Test web GUI
 on:
   push:
     paths:
-      - '**/*.java'
-      - '**/pom.xml'
       - 'forge-gui-web/**'
       - '.github/workflows/test-web.yml'
   pull_request:
     paths:
-      - '**/*.java'
-      - '**/pom.xml'
       - 'forge-gui-web/**'
       - '.github/workflows/test-web.yml'
+  workflow_dispatch:
 
 jobs:
   build:
