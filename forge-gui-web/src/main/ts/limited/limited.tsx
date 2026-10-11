@@ -23,7 +23,7 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
   const kind = draft ? t('lblDraft') : t('lblSealed');
   const toEvents = pool ? () => actions.poolClose() : creating ? () => setCreating(false) : undefined;
   const trail = [
-    { label: t('lblWebHeadStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.limitedLeave(); } },
+    { label: t('lblStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.limitedLeave(); } },
     { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.limitedLeave(); } },
     { label: kind, go: toEvents },
     ...(pool ? [{ label: pool.name }] : creating ? [{ label: t('lblWebEventNewEvent') }] : []),

@@ -351,7 +351,7 @@ final class ServerConsole implements IProgressBar {
         if (cloudflare == service.throughCloudflare() && !(cloudflare && tunnelling == CloudflareTunnel.State.FAILED)) {
             return;
         }
-        if (service.playersHere() > 1 && !confirmed("lblWebConsoleSwitchAsk", "lblWebConsoleSwitch")) {
+        if (service.playersHere() > 1 && !confirmed("lblWebConsoleSwitchAsk", "lblWebMenuChange")) {
             byRouter.setSelected(!service.throughCloudflare());
             byCloudflare.setSelected(service.throughCloudflare());
             return;

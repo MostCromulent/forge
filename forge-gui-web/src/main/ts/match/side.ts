@@ -42,8 +42,8 @@ export function initSide(): void {
   const volume = q(side, '#side-tools .volume');
   volume.title = t('lblWebHeadVolume');
   volume.onclick = () => changeUi(u => { u.volumeOpen = !u.volumeOpen; });
-  const menu = Object.assign(document.createElement('button'), { id: 'menu-button', title: t('lblWebPortraitMenu') });
-  menu.setAttribute('aria-label', t('lblWebPortraitMenu'));
+  const menu = Object.assign(document.createElement('button'), { id: 'menu-button', title: t('lblMenu') });
+  menu.setAttribute('aria-label', t('lblMenu'));
   menu.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
   menu.onclick = () => changeUi(u => { u.menuSheet = u.menuSheet ? null : 'log'; });
   byId('match').append(menu);

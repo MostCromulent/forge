@@ -209,20 +209,20 @@ function drawSheetActions(zoom: HTMLElement, model: Model): void {
   next.disabled = index >= row.length - 1;
   prev.onclick = () => inspectCard(row[index - 1]);
   next.onclick = () => inspectCard(row[index + 1]);
-  q(bar, '.sheet-at').textContent = t('lblWebPortraitCardOf', index + 1, row.length);
+  q(bar, '.sheet-at').textContent = t('lblWebNOfM', index + 1, row.length);
   const key = hover && 'card' in hover ? hover.card : null;
   const playable = !!card?.classList.contains('playable');
   const selectable = !!card?.classList.contains('selectable');
   const act = q<HTMLButtonElement>(bar, '.sheet-act');
   act.hidden = key === null || (!playable && !selectable);
-  act.textContent = t(selectable ? 'lblWebPortraitChoose' : 'lblWebPortraitPlay');
+  act.textContent = t(selectable ? 'lblChoose' : 'lblWebPortraitPlay');
   act.onclick = () => {
     closeInspect();
     if (key !== null) actions?.selectCard(key, false, 0, 0);
   };
   const more = q<HTMLButtonElement>(bar, '.sheet-abilities');
   more.hidden = !(stacked || (key !== null && playable));
-  more.textContent = t(stacked ? 'lblWebPortraitStackOptions' : 'lblWebPortraitAbilities');
+  more.textContent = t(stacked ? 'lblWebPortraitStackOptions' : 'lblAbilities');
   // The host answers either with a menu, which a phone draws along the bottom edge
   more.onclick = () => {
     closeInspect();

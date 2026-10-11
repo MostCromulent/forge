@@ -20,7 +20,7 @@ export function MenuSheet({ model, actions }: { model: Model; actions: Actions }
   const shown = TABS.filter(x => x !== 'chat' || model.networked);
   const tab: Tab = shown.find(x => x === ui.menuSheet) ?? 'log';
   const close = () => changeUi(u => { u.menuSheet = null; });
-  const labels: Record<Tab, string> = { log: t('lblLog'), chat: t('lblChat'), players: t('lblWebPortraitTabPlayers') };
+  const labels: Record<Tab, string> = { log: t('lblLog'), chat: t('lblChat'), players: t('lblPlayers') };
 
   useLayoutEffect(() => {
     sheet('menu', true, close);
@@ -53,7 +53,7 @@ export function MenuSheet({ model, actions }: { model: Model; actions: Actions }
   }, [tab]);
 
   return (
-    <div ref={root} class="menu-sheet sheet" role="dialog" aria-label={t('lblWebPortraitMenu')}>
+    <div ref={root} class="menu-sheet sheet" role="dialog" aria-label={t('lblMenu')}>
       <div class="menu-tabs" role="tablist">
         {shown.map(x => (
           <button key={x} type="button" role="tab" aria-selected={x === tab} class={x === tab ? 'on' : ''}

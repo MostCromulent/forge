@@ -726,7 +726,7 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
       return { text: values[i] ? t('lblWebDialogLifeAfter', player.Life ?? 0, (player.Life ?? 0) - values[i]) : '' };
     }
     const short = (req.lethal?.[i] ?? 0) - values[i];
-    return short <= 0 ? { text: t('lblWebDialogLethal'), lethal: true } : { text: values[i] ? t('lblWebDialogShortOfLethal', short) : '' };
+    return short <= 0 ? { text: t('lblLethal'), lethal: true } : { text: values[i] ? t('lblWebDialogShortOfLethal', short) : '' };
   };
   // Side by side, each with its count under it, as the cards stand on the table
   return (

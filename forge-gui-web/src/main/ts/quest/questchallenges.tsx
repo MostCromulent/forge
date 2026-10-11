@@ -51,9 +51,9 @@ export function Challenges({ page, duels, actions }: { page: QuestChallenges; du
     <div class="cq-map">
       <div class="qu-list">
         <div class="qu-list-head">
-          <h2>{t('lblChallenges')}</h2><p>{t('lblWebQuestChallengeAsk')}</p>
+          <h2>{t('lblChallenges')}</h2><p>{t('lblWhichChallenge')}</p>
           <span class="sp" />
-          {page.zeppelin && <button disabled={page.zeppelinUsed} onClick={() => actions.questZeppelin()}>{t('lblWebQuestZeppelin')}</button>}
+          {page.zeppelin && <button disabled={page.zeppelinUsed} onClick={() => actions.questZeppelin()}>{t('cbLaunchZeppelin')}</button>}
           <WorldButtons page={duels} actions={actions} />
         </div>
         <div class="qu-status">

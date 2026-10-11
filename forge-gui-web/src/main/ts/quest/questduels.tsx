@@ -73,7 +73,7 @@ export function Brings({ page, actions, zoom, start, label, fixedDeck }: {
         <span>{t('lblMatch')}</span>
         <span class="seg" role="group">
           {page.matchLengths.map(n => (
-            <button key={n} aria-pressed={n === page.matchLength} onClick={() => actions.questMatchLength(n)}>{t('lblWebQuestBestOf', n)}</button>
+            <button key={n} aria-pressed={n === page.matchLength} onClick={() => actions.questMatchLength(n)}>{t('lblWebLimitedBestOf', n)}</button>
           ))}
         </span>
       </div>
@@ -99,7 +99,7 @@ export function Duels({ page, actions }: { page: QuestDuels; actions: Actions })
   return (
     <div class="cq-map">
       <div class="qu-list">
-        <div class="qu-list-head"><h2>{t('lblDuels')}</h2><p>{t('lblWebQuestSelectDuel')}</p><span class="sp" /><WorldButtons page={page} actions={actions} /></div>
+        <div class="qu-list-head"><h2>{t('lblDuels')}</h2><p>{t('lblSelectNextDuel')}</p><span class="sp" /><WorldButtons page={page} actions={actions} /></div>
         <div class="qu-status">
           <span class="cq-chip"><b>{page.wins}</b> {t('lblWins')}</span>
           <span class="cq-chip"><b>{page.losses}</b> {t('lblLosses')}</span>

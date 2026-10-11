@@ -45,7 +45,7 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
         <ForgeLinks foot />
         {choosing && <Chooser who={choosing} model={model} actions={actions} back={() => setChoosing(null)} />}
         <div class="start-step" hidden={!!choosing}>
-          <SetupHead trail={[{ label: t('lblWebHeadStart') }]} title={t('lblWebMenuHowToPlay')} />
+          <SetupHead trail={[{ label: t('lblStart') }]} title={t('lblWebMenuHowToPlay')} />
           <div class="modes">
             <Mode id="play" name={t('lblWebMenuVersusAi')} blurb={t('lblWebMenuVersusAiBlurb')}
               status={[decks ? t('lblWebMenuDecksReady', decks) : t('lblWebMenuNoDecksYet'),
@@ -71,7 +71,7 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
   const computer = who === 'play';
   return (
     <div class="chooser">
-      <SetupHead trail={[{ label: t('lblWebHeadStart'), go: back }, { label: WAY_NAMES[who] }]} title={t('lblWebMenuWhatMode')} />
+      <SetupHead trail={[{ label: t('lblStart'), go: back }, { label: WAY_NAMES[who] }]} title={t('lblWebMenuWhatMode')} />
       <div class="chooser-kinds">
         <Kind id="constructed" name={t('lblConstructed')} onClick={() => actions.openLobby(!computer)}
           blurb={t(computer ? 'lblWebMenuConstructedVsAi' : 'lblWebMenuConstructedFriends')} />

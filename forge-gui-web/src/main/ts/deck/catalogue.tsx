@@ -306,7 +306,7 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
             {limited
               ? <span class="why">{room ? t('lblWebCatalogueLeft', room) : t('lblWebCatalogueNoneLeft')}</span>
               : full && limit < Infinity
-                ? <span class="why">{limit === row.count ? t('lblWebCatalogueNoneLeft') : limit === 1 ? t('lblWebCatalogueSingleton') : t('lblWebLegalityCopies', count, limit)}</span>
+                ? <span class="why">{limit === row.count ? t('lblWebCatalogueNoneLeft') : limit === 1 ? t('lblWebCatalogueSingleton') : t('lblWebNOfM', count, limit)}</span>
                 : mainOnly ? null : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblSide')}</button>}
           </div>
         )}

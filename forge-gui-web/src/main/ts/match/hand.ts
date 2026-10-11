@@ -128,7 +128,7 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
     root.scrollTop = 0;
     return false;
   }
-  q(head, 'b').textContent = `${t('lblWebPortraitHand')} ${count}`;
+  q(head, 'b').textContent = `${t('lblWebZoneHand')} ${count}`;
   // What is about to resolve is said here, since the drawer covers the stack
   const top = (derefAll(model, game(model)?.Stack) as StackItemView[])[0];
   const source = top ? deref(model, top.SourceCard) as CardView | undefined : undefined;

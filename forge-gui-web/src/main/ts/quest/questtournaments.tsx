@@ -12,7 +12,7 @@ import { t, type TextKey } from '../text';
 const CREDITS = 'ICO_QUEST_COINSTACK';
 const PLACES: TextKey[] = ['lblWebQuestFirstPlace', 'lblWebQuestSecondPlace', 'lblWebQuestThirdPlace', 'lblWebQuestFourthPlace'];
 const ROUNDS: TextKey[] = ['lblQuarterfinals', 'lblSemifinals', 'lblFinalMatch', 'lblWinner'];
-const terms = (): string => [t('lblWebQuestEightPlayers'), t('lblWebQuestSingleElimination'), t('lblWebQuestBestOf', 3)].join(' · ');
+const terms = (): string => [t('lblWebQuestEightPlayers'), t('lblWebQuestSingleElimination'), t('lblWebLimitedBestOf', 3)].join(' · ');
 
 function Tile({ row, credits, actions }: { row: QuestTournamentRow; credits: number; actions: Actions }) {
   return (
@@ -132,7 +132,7 @@ function Panel({ bracket, actions }: { bracket: QuestBracket; actions: Actions }
       <div class="cq-panel">
         <div class="cq-where"><span class="cq-kicker">{bracket.title}</span></div>
         <h3>{!bracket.started ? t('lblWebQuestBuildDeck') : playing ? t('lblWebQuestNextMatch') : t('lblCollectPrizes')}</h3>
-        <div class="cq-chips"><span class="cq-chip">{t('lblWebQuestBestOf', 3)}</span></div>
+        <div class="cq-chips"><span class="cq-chip">{t('lblWebLimitedBestOf', 3)}</span></div>
         {!bracket.started && <p class="cq-desc">{t('lblWebQuestBuildDeckLine')}</p>}
         <dl class="qu-facts">
           {playing && <><dt>{t('lblWebQuestOpponent')}</dt><dd>{bracket.next || t('lblUndetermined')}</dd></>}

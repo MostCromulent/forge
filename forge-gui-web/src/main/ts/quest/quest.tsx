@@ -53,7 +53,7 @@ export function Quest({ model, actions }: { model: Model; actions: Actions }) {
 function Shelf({ model, actions, creating, setCreating }: { model: Model; actions: Actions; creating: boolean; setCreating: (on: boolean) => void }) {
   const saves = model.questSaves;
   const trail = [
-    { label: t('lblWebHeadStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.campaignLeave(); } },
+    { label: t('lblStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.campaignLeave(); } },
     { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.campaignLeave(); } },
     creating ? { label: t('lblQuestMode'), go: () => setCreating(false) } : { label: t('lblQuestMode') },
     ...(creating ? [{ label: t('lblWebQuestNew') }] : []),

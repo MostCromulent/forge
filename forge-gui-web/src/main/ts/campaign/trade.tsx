@@ -168,9 +168,9 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
               {card}
               {pick && pick.most > 1 && (
                 <span class="cq-step">
-                  <button aria-label={t('lblWebTradeOneFewer', row.name)} disabled={pick.count <= 1} onClick={() => recount(pick, -1)}>&minus;</button>
-                  <b>{t('lblWebTradeNOf', pick.count, pick.most)}</b>
-                  <button aria-label={t('lblWebTradeOneMore', row.name)} disabled={pick.count >= pick.most} onClick={() => recount(pick, 1)}>+</button>
+                  <button aria-label={t('lblWebEditorOneFewer', row.name)} disabled={pick.count <= 1} onClick={() => recount(pick, -1)}>&minus;</button>
+                  <b>{t('lblWebNOfM', pick.count, pick.most)}</b>
+                  <button aria-label={t('lblWebEditorOneMore', row.name)} disabled={pick.count >= pick.most} onClick={() => recount(pick, 1)}>+</button>
                 </span>
               )}
             </div>

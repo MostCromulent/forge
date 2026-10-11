@@ -150,7 +150,7 @@ final class Legality {
             final Function<PaperCard, String> problems) {
         final int most = check.deckFormat().getMaxCardCopies(card);
         if (count > most) {
-            return new String[] {Localizer.getInstance().getMessage("lblWebLegalityCopies", count, most), Localizer.getInstance().getMessage("lblWebLegalityOverCopyLimit")};
+            return new String[] {Localizer.getInstance().getMessage("lblWebNOfM", count, most), Localizer.getInstance().getMessage("lblWebLegalityOverCopyLimit")};
         }
         final String problem = problems.apply(card);
         if (problem != null) {

@@ -141,7 +141,7 @@ export function NewQuest({ model, actions }: { model: Model; actions: Actions })
       ),
     },
     {
-      id: 'mode', label: t('lblWebQuestMode'), hint: '', fields: ['fantasy', 'commander'],
+      id: 'mode', label: t('lblWebMatchBarMode'), hint: '', fields: ['fantasy', 'commander'],
       answer: v => (v.fantasy === undefined ? null : (v.fantasy ? t('rbFantasyMode') : t('lblClassicMode')) + (v.commander ? ` · ${t('rbCommanderSubformat')}` : '')),
       render: (v, set) => (
         <div class="qu-dist">
@@ -208,7 +208,7 @@ export function NewQuest({ model, actions }: { model: Model; actions: Actions })
     title: () => name.trim() || t('lblQuestMode'),
     rows: v => [
       [t('lblDifficulty'), difficulty?.name ?? null],
-      [t('lblWebQuestMode'), v.fantasy === undefined ? null : v.fantasy ? t('rbFantasyMode') : t('lblClassicMode')],
+      [t('lblWebMatchBarMode'), v.fantasy === undefined ? null : v.fantasy ? t('rbFantasyMode') : t('lblClassicMode')],
       [t('lblStartingWorld'), worldOf(v) ?? null],
       [t('lblStartingPool'), ownSets(v) ? worldOf(v) ?? null : v.choice ?? nameOf(POOLS, v.pool)],
       [t('lblPrizedCards'), v.prizeFormat ?? nameOf(PRIZES, v.prizes)],

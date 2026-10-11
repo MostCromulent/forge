@@ -331,7 +331,7 @@ final class CardImageDownloads {
         final NumberFormat n = NumberFormat.getIntegerInstance();
         final long elapsed = System.currentTimeMillis() - downloadStarted;
         final long left = done > 0 ? elapsed * (total - done) / done / 60_000 : -1;
-        downloadBar.setString(left < 0 ? TEXT.getMessage("lblWebImagesProgress", n.format(done), n.format(total))
+        downloadBar.setString(left < 0 ? TEXT.getMessage("lblWebNOfM", n.format(done), n.format(total))
                 : TEXT.getMessage("lblWebImagesProgressLeft", n.format(done), n.format(total), Math.max(1, left)));
         downloadPercent = total == 0 ? -1 : done * 100 / total;
         showButtonProgress();

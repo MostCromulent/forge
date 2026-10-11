@@ -46,7 +46,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
       <TableHeader model={model} lobby={lobby} />
       <div class="lobby-main" onPointerOver={e => setPeek(peekAt(e, '.lobby-main'))} onPointerLeave={() => setPeek(null)}>
         {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
-        <SetupHead trail={[{ label: t('lblWebHeadStart'), go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }]}
+        <SetupHead trail={[{ label: t('lblStart'), go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }]}
           title={t(lobby.host ? 'lblWebLobbySetUpGame' : lim?.activeEventId ? 'lblWebLobbyBuildThenPlay'
             : lim?.started ? (lim.kind === 'draft' ? 'lblWebLobbyDraftOn' : 'lblWebLobbyOpeningPacks') : 'lblWebLobbyHostSettingUp')} />
         {/* A new kind of event is set up afresh, so the key makes its dialog open again */}
