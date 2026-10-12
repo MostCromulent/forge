@@ -41,7 +41,7 @@ public class SealedProductsTest {
             final String[] pieces = part.trim().split(" ");
             codes.add(pieces[pieces.length - 1]);
         }
-        final CardPool pool = SealedCardPoolGenerator.block(innistrad, combo).getCardPool(false);
+        final CardPool pool = DraftProducts.blockSealed(innistrad, combo).getCardPool(false);
         assertTrue(pool.countAll() > 0);
         for (final Map.Entry<PaperCard, Integer> e : pool) {
             if (!e.getKey().getRules().getType().isBasicLand()) {

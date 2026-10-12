@@ -80,6 +80,7 @@ public class BoosterDraft implements IBoosterDraft {
     public static void initializeCustomDrafts() {
         loadCustomDrafts();
     }
+
     public static BoosterDraft createDraft(final LimitedPoolType draftType) {
         final BoosterDraft draft = new BoosterDraft(draftType);
         if (!draft.generateProduct()) {
@@ -107,81 +108,6 @@ public class BoosterDraft implements IBoosterDraft {
         return draft;
     }
 
-    public static BoosterDraft full() {
-        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Full);
-        draft.setupFull();
-        return draft;
-    }
-
-    /** combo is one set code per pack, joined with "/", or the block's only set's code. */
-    public static BoosterDraft block(final CardBlock block, final String combo, final LimitedPoolType type) {
-        final BoosterDraft draft = new BoosterDraft(type);
-        draft.setupBlock(block, combo);
-        return draft;
-    }
-
-    public static BoosterDraft cube(final CustomLimited cube) {
-        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Custom);
-        draft.setupCube(cube);
-        return draft;
-    }
-
-    /** Throws IllegalArgumentException when no set fits the theme. */
-    public static BoosterDraft chaos(final ThemedChaosDraft theme) {
-        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Chaos);
-        if (!draft.setupChaos(theme)) {
-            throw new IllegalArgumentException("No set fits the theme " + theme.getLabel() + ".");
-        }
-        return draft;
-    }
-
-    /** Throws IllegalArgumentException, with a message a player can read, when the cube can't be imported. */
-    public static BoosterDraft cubeCobra(final String cubeId) {
-        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Import);
-        draft.setupCube(importCube(cubeId));
-        return draft;
-    }
-
-    static CustomLimited importCube(final String cubeId) {
-        final CustomLimited imported;
-        try {
-            imported = new CubeImporter(cubeId).importCube();
-        } catch (Exception e) {
-            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage(), e);
-        }
-        if (imported == null) {
-            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + cubeId);
-        }
-        return imported;
-    }
-
-    /** A block offered for drafting: it has draft packs, and it is not Conspiracy, whose draft-time prompts only a local GUI can answer. */
-    public static boolean isDraftableBlock(final CardBlock block) {
-        return block.getCntBoostersDraft() > 0 && !block.getName().contains("Conspiracy");
-    }
-
-    /** The sets a block offers for its draft packs, in the order desktop lists them. */
-    public static List<String> blockSets(final CardBlock block) {
-        final List<CardEdition> cardSets = block.getSets();
-        final Stack<String> sets = new Stack<>();
-        for (int k = cardSets.size() - 1; k >= 0; k--) {
-            sets.add(cardSets.get(k).getCode());
-        }
-
-        for (final String setCode : block.getMetaSetNames()) {
-            if (block.getMetaSet(setCode).isDraftable()) {
-                sets.push(setCode); // to the beginning
-            }
-        }
-        return sets;
-    }
-
-    /** Desktop's preset combinations for a block, or an empty list when it asks for one set per pack instead. */
-    public static List<String> blockCombos(final CardBlock block) {
-        final List<String> sets = blockSets(block);
-        return block.getCntBoostersDraft() == 3 && sets.size() > 1 && sets.size() < 4 ? getSetCombos(sets) : new ArrayList<>();
-    }
-
     protected boolean generateProduct() {
         switch (this.draftFormat) {
             case Full: // Draft from all cards in Forge
@@ -202,7 +128,7 @@ public class BoosterDraft implements IBoosterDraft {
                 // smuggle CNS cards in — fix those when the underlying issues are resolved.
                 for (final CardBlock b : storage) {
                     if (b.getCntBoostersDraft() > 0) {
-                        if (forNetwork && !isDraftableBlock(b)) continue;
+                        if (forNetwork && b.getName().contains("Conspiracy")) continue;
                         blocks.add(b);
                     }
                 }
@@ -218,18 +144,18 @@ public class BoosterDraft implements IBoosterDraft {
                     return false;
                 }
 
-                final String combo;
+                String combo = sets.get(0);
                 if (sets.size() > 1) {
-                    final List<String> presets = blockCombos(block);
-                    final Object p = presets.isEmpty()
-                            ? choosePackByPack(sets, block.getCntBoostersDraft())
-                            : SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseSetCombination"), presets);
-                    if (p == null) {
+                    final int nPacks = block.getCntBoostersDraft();
+                    if (nPacks == 3 && sets.size() < 4) {
+                        combo = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseSetCombination"), getSetCombos(sets));
+                    } else {
+                        combo = choosePackByPack(sets, nPacks);
+                    }
+
+                    if (combo == null) {
                         return false;
                     }
-                    combo = p.toString();
-                } else {
-                    combo = sets.get(0);
                 }
                 setupBlock(block, combo);
                 break;
@@ -247,7 +173,7 @@ public class BoosterDraft implements IBoosterDraft {
                         return false;
                     }
 
-                    setupCube(customDraft);
+                    this.setupCustomDraft(customDraft);
                 }
                 break;
 
@@ -294,7 +220,7 @@ public class BoosterDraft implements IBoosterDraft {
                         SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + inputCubeId);
                         return false;
                     }
-                    setupCube(importedDraft);
+                    this.setupCustomDraft(importedDraft);
                 } catch (Exception e) {
                     SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage());
                     return false;
@@ -308,7 +234,23 @@ public class BoosterDraft implements IBoosterDraft {
         return true;
     }
 
-    private void setupFull() {
+    /** The sets a block can be drafted from, in the order they are offered. */
+    public static List<String> blockSets(final CardBlock block) {
+        final List<CardEdition> cardSets = block.getSets();
+        final Stack<String> sets = new Stack<>();
+        for (int k = cardSets.size() - 1; k >= 0; k--) {
+            sets.add(cardSets.get(k).getCode());
+        }
+
+        for (final String setCode : block.getMetaSetNames()) {
+            if (block.getMetaSet(setCode).isDraftable()) {
+                sets.push(setCode); // to the beginning
+            }
+        }
+        return sets;
+    }
+
+    public void setupFull() {
         final IUnOpenedProduct s = new UnOpenedProduct(SealedTemplate.genericDraftBooster);
 
         for (int i = 0; i < 3; i++) {
@@ -318,7 +260,8 @@ public class BoosterDraft implements IBoosterDraft {
         IBoosterDraft.CUSTOM_RANKINGS_FILE[0] = null;
     }
 
-    private void setupBlock(final CardBlock block, final String combo) {
+    /** combo is one set code per pack, joined with "/". A block with a single set ignores it. */
+    public void setupBlock(final CardBlock block, final String combo) {
         final List<String> sets = blockSets(block);
         final int nPacks = block.getCntBoostersDraft();
 
@@ -355,11 +298,6 @@ public class BoosterDraft implements IBoosterDraft {
         IBoosterDraft.CUSTOM_RANKINGS_FILE[0] = null;
     }
 
-    private void setupCube(final CustomLimited cube) {
-        this.productName = cube.getName();
-        this.setupCustomDraft(cube);
-    }
-
     /**
      * A chaos draft consists of boosters from many different sets.
      * Default settings are boosters from all sets with a booster size of 15 cards.
@@ -367,7 +305,7 @@ public class BoosterDraft implements IBoosterDraft {
      * Examples for themes: sets that take place on a certain plane, core sets, masters sets,
      * or sets that share a mechanic.
      */
-    private boolean setupChaos(final ThemedChaosDraft theme) {
+    public boolean setupChaos(final ThemedChaosDraft theme) {
         this.productName = theme.getLabel();
         // Filter all sets by theme restrictions
         final Predicate<CardEdition> themeFilter = theme.getEditionFilter();
@@ -429,7 +367,7 @@ public class BoosterDraft implements IBoosterDraft {
         this(LimitedPoolType.Full);
     }
 
-    protected BoosterDraft(final LimitedPoolType draftType) {
+    public BoosterDraft(final LimitedPoolType draftType) {
         this(draftType, N_PLAYERS);
     }
 
@@ -561,7 +499,8 @@ public class BoosterDraft implements IBoosterDraft {
         return players.get((player.order + (left ? 1 : -1) + this.podSize) % this.podSize);
     }
 
-    private void setupCustomDraft(final CustomLimited draft) {
+    public void setupCustomDraft(final CustomLimited draft) {
+        this.productName = draft.getName();
         final ItemPool<PaperCard> dPool = draft.getCardPool();
         if (dPool == null) {
             throw new RuntimeException("BoosterGenerator : deck not found");
@@ -885,7 +824,6 @@ public class BoosterDraft implements IBoosterDraft {
 
     }
 
-
     private static String choosePackByPack(final List<String> setz, int packs) {
         StringBuilder sb = new StringBuilder();
 
@@ -903,7 +841,7 @@ public class BoosterDraft implements IBoosterDraft {
         return sb.toString();
     }
 
-    private static List<String> getSetCombos(final List<String> setz) {
+    public static List<String> getSetCombos(final List<String> setz) {
         final String[] sets = setz.toArray(ArrayUtils.EMPTY_STRING_ARRAY);
         final List<String> setCombos = new ArrayList<>();
         if (sets.length >= 2) {

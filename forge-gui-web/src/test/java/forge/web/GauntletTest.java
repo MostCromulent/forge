@@ -43,8 +43,8 @@ public class GauntletTest {
     @Test
     public void aSetStarterRunsEveryRound() {
         pool = "Gauntlet test " + UUID.randomUUID().toString().substring(0, 8);
-        final SealedCardPoolGenerator gen = SealedCardPoolGenerator.full(6);
-        final DeckGroup group = gen.buildGroup(pool, gen.getCardPool(false));
+        final SealedCardPoolGenerator gen = DraftProducts.fullSealed(6);
+        final DeckGroup group = gen.buildDeckGroup(pool, gen.getCardPool(false), false);
         FModel.getDecks().getSealed().add(group);
 
         final List<Deck> opponents = new ArrayList<>();

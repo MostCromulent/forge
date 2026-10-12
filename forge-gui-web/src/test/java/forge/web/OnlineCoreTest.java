@@ -27,7 +27,7 @@ public class OnlineCoreTest {
     public void configureWithABuiltGenerator() {
         final ServerGameLobby lobby = new ServerGameLobby();
         lobby.createEvent(EventFormat.SEALED);
-        final SealedCardPoolGenerator gen = SealedCardPoolGenerator.full(6);
+        final SealedCardPoolGenerator gen = DraftProducts.fullSealed(6);
         assertTrue(lobby.configureEvent(LimitedPoolType.Full, gen, 0, 0));
         assertSame(lobby.getCurrentEvent().getSealedGenerator(), gen);
     }

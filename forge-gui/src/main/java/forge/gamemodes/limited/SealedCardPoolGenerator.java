@@ -102,44 +102,43 @@ public class SealedCardPoolGenerator {
             sealedDecks.delete(sDeckName);
         }
 
-        final DeckGroup sealed = sd.buildGroup(sDeckName, humanPool);
+        final DeckGroup sealed = sd.buildDeckGroup(sDeckName, humanPool, addBasicLands);
         if (sealed == null) { return null; }
-
-        if (addBasicLands) {
-            final Deck deck = sealed.getHumanDeck();
-            final int landsCount = 10;
-    
-            final boolean isZendikarSet = sd.getLandSetCode().equals("ZEN"); // we want to generate one kind of Zendikar lands at a time only
-            final boolean zendikarSetMode = MyRandom.getRandom().nextBoolean();
-    
-            // TODO: Is this still needed? Just use Add Basic Land UI.
-            for (final String element : MagicColor.Constant.BASIC_LANDS) {
-                int numArt = FModel.getMagicDb().getCommonCards().getArtCount(element, sd.getLandSetCode());
-                int minArtIndex = isZendikarSet ? (zendikarSetMode ? 1 : 5) : 1;
-                int maxArtIndex = isZendikarSet ? minArtIndex + 3 : numArt;
-    
-                if (FModel.getPreferences().getPrefBoolean(FPref.UI_RANDOM_ART_IN_POOLS)) {
-                    for (int i = minArtIndex; i <= maxArtIndex; i++) {
-                        deck.get(DeckSection.Sideboard).add(element, sd.getLandSetCode(), i, numArt > 1 ? landsCount : 30);
-                    }
-                }
-                else {
-                    deck.get(DeckSection.Sideboard).add(element, sd.getLandSetCode(), 30);
-                }
-            }
-        }
 
         FModel.getDecks().getSealed().add(sealed);
         return sealed;
     }
 
-    /** The human deck, named name with the pool in its Sideboard, and an AI deck for each of seven opponents. Not stored. */
-    public DeckGroup buildGroup(final String name, final CardPool humanPool) {
+    /** The human deck, named name with the pool in its sideboard, and a ranked AI deck for each of seven opponents. Not stored. */
+    public DeckGroup buildDeckGroup(final String name, final CardPool humanPool, final boolean addBasicLands) {
         // Just assume 7 opponents, allow to play any/all later
         int rounds = 7;
 
         final Deck deck = new Deck(name);
         deck.getOrCreate(DeckSection.Sideboard).addAll(humanPool);
+
+        if (addBasicLands) {
+            final int landsCount = 10;
+
+            final boolean isZendikarSet = getLandSetCode().equals("ZEN"); // we want to generate one kind of Zendikar lands at a time only
+            final boolean zendikarSetMode = MyRandom.getRandom().nextBoolean();
+
+            // TODO: Is this still needed? Just use Add Basic Land UI.
+            for (final String element : MagicColor.Constant.BASIC_LANDS) {
+                int numArt = FModel.getMagicDb().getCommonCards().getArtCount(element, getLandSetCode());
+                int minArtIndex = isZendikarSet ? (zendikarSetMode ? 1 : 5) : 1;
+                int maxArtIndex = isZendikarSet ? minArtIndex + 3 : numArt;
+
+                if (FModel.getPreferences().getPrefBoolean(FPref.UI_RANDOM_ART_IN_POOLS)) {
+                    for (int i = minArtIndex; i <= maxArtIndex; i++) {
+                        deck.get(DeckSection.Sideboard).add(element, getLandSetCode(), i, numArt > 1 ? landsCount : 30);
+                    }
+                }
+                else {
+                    deck.get(DeckSection.Sideboard).add(element, getLandSetCode(), 30);
+                }
+            }
+        }
 
         final DeckGroup sealed = new DeckGroup(name);
         deck.setDirectory(FModel.getDecks().getSealed().getName());
@@ -163,39 +162,7 @@ public class SealedCardPoolGenerator {
         return sealed;
     }
 
-    public static SealedCardPoolGenerator full(final int packs) {
-        final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
-        gen.setupFull(packs);
-        return gen;
-    }
-
-    public static SealedCardPoolGenerator prerelease(final CardEdition edition) {
-        final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
-        gen.setupPrerelease(edition);
-        return gen;
-    }
-
-    /** combo is one entry of {@link #blockCombos}. */
-    public static SealedCardPoolGenerator block(final CardBlock block, final String combo) {
-        final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
-        gen.setupBlock(block, combo);
-        return gen;
-    }
-
-    public static SealedCardPoolGenerator custom(final CustomLimited template, final int packs) {
-        final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
-        gen.setupCustom(template, packs);
-        return gen;
-    }
-
-    /** Throws IllegalArgumentException, with a message a player can read, when the cube can't be imported. */
-    public static SealedCardPoolGenerator cubeCobra(final String cubeId, final int packs) {
-        final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
-        gen.setupCubeCobra(BoosterDraft.importCube(cubeId), packs);
-        return gen;
-    }
-
-    private SealedCardPoolGenerator() {
+    public SealedCardPoolGenerator() {
     }
 
     /**
@@ -208,15 +175,12 @@ public class SealedCardPoolGenerator {
      */
     public SealedCardPoolGenerator(final LimitedPoolType poolType) {
         switch(poolType) {
-            case Full: {
-                // Choose number of boosters
+            case Full:
                 final Integer packs = chooseNumberOfBoosters();
-                if (packs == null) {
-                    return;
+                if (packs != null) {
+                    setupFull(packs);
                 }
-                setupFull(packs);
                 break;
-            }
 
             case Prerelease:
                 ArrayList<CardEdition> editions = Lists.newArrayList(StaticData.instance().getEditions().getPrereleaseEditions());
@@ -224,11 +188,11 @@ public class SealedCardPoolGenerator {
                 Collections.reverse(editions);
 
                 CardEdition chosenEdition = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseAnEdition"), editions);
-                if (chosenEdition == null) {
-                    return;
+                if (chosenEdition != null) {
+                    setupPrerelease(chosenEdition);
                 }
-                setupPrerelease(chosenEdition);
                 break;
+
             case Block:
             case FantasyBlock:
                 List<CardBlock> blocks = new ArrayList<>();
@@ -238,13 +202,13 @@ public class SealedCardPoolGenerator {
                 }
 
                 final CardBlock block = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseBlock"), blocks);
-                if (block == null) { return; }
+                if (block == null) { break; }
 
                 final List<String> setCombos = blockCombos(block);
                 final String p = setCombos.size() > 1 ? SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChoosePackNumberToPlay"), setCombos) : setCombos.get(0);
-                if (p == null) { return; }
-
-                setupBlock(block, p);
+                if (p != null) {
+                    setupBlock(block, p);
+                }
                 break;
 
             case Custom:
@@ -253,18 +217,18 @@ public class SealedCardPoolGenerator {
                 // present list to user
                 if (customs.isEmpty()) {
                     SOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblNotFoundCustomSealedFiles"));
-                    return;
+                    break;
                 }
 
                 final CustomLimited draft = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseCustomSealedPool"), customs);
-                if (draft == null) { return; }
+                if (draft == null) { break; }
 
                 final Integer customPacks = chooseNumberOfBoosters();
-                if (customPacks == null) {
-                    return;
+                if (customPacks != null) {
+                    setupCustom(draft, customPacks);
                 }
-                setupCustom(draft, customPacks);
                 break;
+
             case Import:
                 /*
                   Import a cube from CubeCobra.
@@ -276,7 +240,7 @@ public class SealedCardPoolGenerator {
                         null);
 
                 if (inputCubeId == null) {
-                    return;
+                    break;
                 }
 
                 try {
@@ -285,28 +249,25 @@ public class SealedCardPoolGenerator {
 
                     if (importedDraft == null) {
                         SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + inputCubeId);
-                        return;
+                        break;
                     }
                     final Integer importPacks = chooseNumberOfBoosters();
-                    if (importPacks == null) {
-                        return;
+                    if (importPacks != null) {
+                        setupCubeCobra(importedDraft, importPacks);
                     }
-                    setupCubeCobra(importedDraft, importPacks);
-
                 } catch (Exception e) {
                     SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage());
-                    return;
                 }
                 break;
         }
     }
 
-    private void setupFull(final int packs) {
+    public void setupFull(final int packs) {
         addBoosters(new UnOpenedProduct(SealedTemplate.genericDraftBooster), packs);
         landSetCode = CardEdition.Predicates.getRandomSetWithAllBasicLands(FModel.getMagicDb().getEditions()).getCode();
     }
 
-    private void setupPrerelease(final CardEdition chosenEdition) {
+    public void setupPrerelease(final CardEdition chosenEdition) {
         String bundle = chosenEdition.getPrerelease();
 
         // Parse prerelease bundle.
@@ -359,7 +320,7 @@ public class SealedCardPoolGenerator {
         productName = chosenEdition.getName();
     }
 
-    /** The sealed pack choices a block offers, as desktop lists them: its set combos, or its only set's code. */
+    /** The pack choices a block offers: its set combos, or its only set's code. */
     public static List<String> blockCombos(final CardBlock block) {
         final List<String> sets = blockSets(block);
         if (sets.size() == 1) {
@@ -385,7 +346,8 @@ public class SealedCardPoolGenerator {
         return sets;
     }
 
-    private void setupBlock(final CardBlock block, final String p) {
+    /** p is one entry of {@link #blockCombos}. */
+    public void setupBlock(final CardBlock block, final String p) {
         final int nPacks = block.getCntBoostersSealed();
         final List<String> sets = blockSets(block);
 
@@ -410,7 +372,6 @@ public class SealedCardPoolGenerator {
         productName = block.getName() + " (" + p + ")";
     }
 
-    /** The custom sealed templates desktop offers: files in the sealed folder expecting more than five cards. */
     public static List<CustomLimited> loadCustomSealed() {
         String[] dList;
         final List<CustomLimited> customs = new ArrayList<>();
@@ -440,7 +401,7 @@ public class SealedCardPoolGenerator {
         return customs;
     }
 
-    private void setupCustom(final CustomLimited draft, final int packs) {
+    public void setupCustom(final CustomLimited draft, final int packs) {
         UnOpenedProduct toAdd = new UnOpenedProduct(draft.getSealedProductTemplate(), draft.getCardPool());
         toAdd.setLimitedPool(draft.isSingleton());
         addBoosters(toAdd, packs);
@@ -449,7 +410,7 @@ public class SealedCardPoolGenerator {
         productName = draft.getName();
     }
 
-    private void setupCubeCobra(final CustomLimited importedDraft, final int packs) {
+    public void setupCubeCobra(final CustomLimited importedDraft, final int packs) {
         UnOpenedProduct importedProduct = new UnOpenedProduct(importedDraft.getSealedProductTemplate(), importedDraft.getCardPool());
         importedProduct.setLimitedPool(importedDraft.isSingleton());
         addBoosters(importedProduct, packs);

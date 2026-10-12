@@ -116,17 +116,17 @@ final class OfflineEvents {
             throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoPacks"));
         }
         final CardPool pool = gen.getCardPool(true);
-        return pool == null ? null : gen.buildGroup(name, pool);
+        return pool == null ? null : gen.buildDeckGroup(name, pool, false);
     }
 
     /** What builds the draft the form describes, run later on the draft's own thread since importing a cube waits on a web site. */
     static Supplier<BoosterDraft> draft(final DraftStart d) {
         final LimitedPoolType type = poolType(d.product());
         return switch (type) {
-            case Full -> BoosterDraft::full;
+            case Full -> DraftProducts::fullDraft;
             case Block, FantasyBlock -> {
                 final CardBlock block = d.block() == null ? null : DraftProducts.block(d.block(), type == LimitedPoolType.FantasyBlock);
-                if (block == null || !BoosterDraft.isDraftableBlock(block)) {
+                if (block == null || !DraftProducts.isDraftableBlock(block)) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsBlockNotDraftable"));
                 }
                 final List<String> sets = BoosterDraft.blockSets(block);
@@ -134,28 +134,28 @@ final class OfflineEvents {
                 if (combo == null || (sets.size() > 1 && !validCombo(combo, sets, block.getCntBoostersDraft()))) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsSetPerPack"));
                 }
-                yield () -> BoosterDraft.block(block, combo, type);
+                yield () -> DraftProducts.blockDraft(block, combo, type);
             }
             case Custom -> {
                 final CustomLimited cube = d.cube() == null ? null : DraftProducts.cube(d.cube());
                 if (cube == null) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoCube", String.valueOf(d.cube())));
                 }
-                yield () -> BoosterDraft.cube(cube);
+                yield () -> DraftProducts.cubeDraft(cube);
             }
             case Chaos -> {
                 final ThemedChaosDraft theme = d.theme() == null ? null : DraftProducts.theme(d.theme());
                 if (theme == null) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoTheme", String.valueOf(d.theme())));
                 }
-                yield () -> BoosterDraft.chaos(theme);
+                yield () -> DraftProducts.chaosDraft(theme);
             }
             case Import -> {
                 if (d.cubeId() == null || d.cubeId().isBlank()) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsEnterCube"));
                 }
                 final String id = d.cubeId().trim();
-                yield () -> BoosterDraft.cubeCobra(id);
+                yield () -> DraftProducts.cubeCobraDraft(id);
             }
             case Prerelease -> throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsPrereleaseNotDrafted"));
         };
@@ -187,33 +187,33 @@ final class OfflineEvents {
     static SealedCardPoolGenerator generator(final SealedCreate c) {
         final LimitedPoolType type = poolType(c.product());
         return switch (type) {
-            case Full -> SealedCardPoolGenerator.full(packs(c.packs()));
+            case Full -> DraftProducts.fullSealed(packs(c.packs()));
             case Prerelease -> {
                 final CardEdition edition = c.edition() == null ? null : StaticData.instance().getEditions().get(c.edition());
                 if (edition == null || edition.getPrerelease() == null) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoPrerelease", String.valueOf(c.edition())));
                 }
-                yield SealedCardPoolGenerator.prerelease(edition);
+                yield DraftProducts.prereleaseSealed(edition);
             }
             case Block, FantasyBlock -> {
                 final CardBlock block = c.block() == null ? null : DraftProducts.block(c.block(), type == LimitedPoolType.FantasyBlock);
                 if (block == null || c.combo() == null || !SealedCardPoolGenerator.blockCombos(block).contains(c.combo())) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsBadCombo"));
                 }
-                yield SealedCardPoolGenerator.block(block, c.combo());
+                yield DraftProducts.blockSealed(block, c.combo());
             }
             case Custom -> {
                 final CustomLimited template = c.template() == null ? null : DraftProducts.sealedTemplate(c.template());
                 if (template == null) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoTemplate", String.valueOf(c.template())));
                 }
-                yield SealedCardPoolGenerator.custom(template, packs(c.packs()));
+                yield DraftProducts.customSealed(template, packs(c.packs()));
             }
             case Import -> {
                 if (c.cubeId() == null || c.cubeId().isBlank()) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsEnterCube"));
                 }
-                yield SealedCardPoolGenerator.cubeCobra(c.cubeId().trim(), packs(c.packs()));
+                yield DraftProducts.cubeCobraSealed(c.cubeId().trim(), packs(c.packs()));
             }
             case Chaos -> throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsChaosNotSealed"));
         };
@@ -231,7 +231,7 @@ final class OfflineEvents {
         return blocks.stream().map(b -> new DraftBlockOption(b.name(), b.packs(), b.sets(), b.combos(), podSize(b.sets()))).toList();
     }
 
-    /** As BoosterDraft.block sets it: a single set's recommended pod, and a full pod for anything else. */
+    /** As BoosterDraft.setupBlock sets it: a single set's recommended pod, and a full pod for anything else. */
     private static int podSize(final List<String> sets) {
         final CardEdition edition = sets.size() == 1 ? StaticData.instance().getEditions().get(sets.get(0)) : null;
         return edition == null ? BoosterDraft.N_PLAYERS : edition.getDraftOptions().getRecommendedPodSize();
