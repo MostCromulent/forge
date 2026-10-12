@@ -205,6 +205,22 @@ function MaxBracket({ lobby, actions }: { lobby: LobbyTable; actions: Actions })
   );
 }
 
+/** Free-for-all, or the seats dealt into teams. A guest reads it; only the host has choices to pick from. */
+function Teams({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
+  const name = (n: number) => (n ? t('lblWebMatchBarNTeams', n) : t('lblWebMatchBarFreeForAll'));
+  return (
+    <Popup label={name(lobby.teams)} disabled={!lobby.teamChoices.length}>
+      {close => (
+        <div class="menu-list" role="menu">
+          {[0, ...lobby.teamChoices].map(n => (
+            <button key={n} role="menuitemradio" aria-checked={n === lobby.teams} onClick={() => { close(); actions.setTeams(n); }}>{name(n)}</button>
+          ))}
+        </div>
+      )}
+    </Popup>
+  );
+}
+
 const MATCH_LENGTHS = [[1, 'lblWebMatchBarBestOfOne'], [3, 'lblWebMatchBarBestOfThree'], [5, 'lblWebMatchBarBestOfFive']] as const;
 
 /** Best-of-one, three or five, as the host's own Forge keeps it; only the host may change it. */
@@ -278,6 +294,7 @@ export function MatchBar({ model, lobby, actions, preview }: {
         <Field name={t('lblPlayers')}><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
         {lobby.format === 'Commander' && <Field name={t('lblBracket')}><MaxBracket lobby={lobby} actions={actions} /></Field>}
         <Field name={t('lblMatch')}><MatchLength lobby={lobby} actions={actions} /></Field>
+        {(lobby.teamChoices.length > 0 || lobby.teams > 0) && <Field name={t('lblWebMatchBarTeams')}><Teams lobby={lobby} actions={actions} /></Field>}
         <Field name={t('lblVariants')} grow><VariantsMenu lobby={lobby} actions={actions} /></Field>
       </div>
     </div>

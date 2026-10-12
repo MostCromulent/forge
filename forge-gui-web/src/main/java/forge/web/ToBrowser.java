@@ -143,7 +143,7 @@ final class ToBrowser {
             @Nullable String cardPool, List<Format> casualVariants, List<String> variantsOn,
             int maxSeats, int gamesPerMatch, List<Seat> seats, List<String> problems, boolean canStart,
             List<String> illegalDecks, boolean legalityEnforced, @Nullable LimitedTable limited, int maxBracket,
-            List<String> overBracket) {
+            List<String> overBracket, int teams, List<Integer> teamChoices) {
     }
 
     /** A Limited table's event, where kind is "draft" or "sealed" and phase is an EventPhase name. */
@@ -182,7 +182,7 @@ final class ToBrowser {
             int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
             @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
             @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard, boolean benched,
-            @Nullable String commander, @Nullable Integer bracket) {
+            @Nullable String commander, @Nullable Integer bracket, @Nullable Integer team) {
     }
 
     /** A planar deck, scheme deck or avatar a seat brings: its name, its size, a detail such as modifiers, a fault. */

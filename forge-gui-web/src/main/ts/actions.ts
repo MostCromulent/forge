@@ -184,6 +184,8 @@ export interface Actions {
   askCardPoolDetails(): void;
   setVariant(variant: string, on: boolean): void;
   setArchenemy(index: number): void;
+  setTeams(count: number): void;
+  setTeam(index: number, team: number): void;
   setSeatExtra(index: number, section: string, choice: string): void;
   askExtraChoices(index: number, section: string): void;
   /** How many seats the table has; seats come and go at the end, and never one a person holds. */
@@ -354,6 +356,8 @@ export function createActions(send: Send): Actions {
     setFormat: format => send({ t: 'setFormat', format }),
     setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),
     setArchenemy: index => send({ t: 'setArchenemy', index }),
+    setTeams: count => send({ t: 'setTeams', count }),
+    setTeam: (index, team) => send({ t: 'setTeam', index, team }),
     setSeatExtra: (index, section, choice) => send({ t: 'setSeatExtra', index, section, choice }),
     askExtraChoices: (index, section) => send({ t: 'extraChoices', index, section }),
     setCardPool: cardPool => send(cardPool ? { t: 'setCardPool', cardPool } : { t: 'setCardPool' }),

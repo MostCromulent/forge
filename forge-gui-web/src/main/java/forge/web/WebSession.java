@@ -438,7 +438,7 @@ public final class WebSession implements IHasForgeLog {
                 }
             });
             // The table can be changed only while it is set up: not while it is being built, and not once it is played
-            case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "setCardPool", "setVariant", "setArchenemy", "setSeatExtra",
+            case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "setCardPool", "setVariant", "setArchenemy", "setTeams", "setTeam", "setSeatExtra",
                     "setPlayerCount", "setMatchLength", "setMaxBracket", "setSeat", "sleeveArt", "forgetSleeveArt" -> {
                 if (stage instanceof Setup) {
                     onSetup(channel, msg);
@@ -731,6 +731,11 @@ public final class WebSession implements IHasForgeLog {
                 relistDecks(channel);
             }
             case "setArchenemy" -> lobby.setArchenemy(Wire.decode(msg, SetArchenemy.class).index());
+            case "setTeams" -> lobby.setTeams(Wire.decode(msg, FromBrowser.SetTeams.class).count());
+            case "setTeam" -> {
+                final FromBrowser.SetTeam move = Wire.decode(msg, FromBrowser.SetTeam.class);
+                lobby.setTeam(move.index(), move.team());
+            }
             case "setSeatExtra" -> {
                 final SetSeatExtra extra = Wire.decode(msg, SetSeatExtra.class);
                 lobby.setSeatExtra(extra.index(), extra.section(), extra.choice());

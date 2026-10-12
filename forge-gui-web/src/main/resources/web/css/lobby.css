@@ -308,6 +308,24 @@ html[data-motion="reduced"] .plate { animation: none; }
 .drop:is(:hover, :focus-visible) { background: var(--remove); border-color: var(--remove); color: #fff; box-shadow: 0 0 0 3px color-mix(in srgb, var(--remove) 35%, transparent); }
 /* A finger gets a larger target than the circle it sees */
 .drop::after { content: ''; position: absolute; inset: -10px; }
+/* A seat's team rides the plate's top edge as the cross rides its corner, centred over the sleeve, and the plate opens up so it clears the sleeve */
+.plate { --sleeve-mid: 68px; }
+.plate.teamed { padding-top: 24px; }
+.seats:has(.plate.teamed) { row-gap: 26px; }
+.team-tab-slot { position: absolute; top: -10px; left: var(--sleeve-mid); transform: translateX(-50%); z-index: 2; }
+.team-tab { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 4px; background: var(--bg-deep); border: 1px solid var(--line-bright); color: var(--muted);
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; }
+button.team-tab { color: var(--text); }
+.plate.mine .team-tab { border-color: var(--accent-2); }
+button.team-tab:hover, button.team-tab[aria-expanded="true"] { border-color: var(--accent-2); color: var(--accent-2); }
+.team-tab .chevron { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: .7; }
+.team-tab-slot .popup { left: 0; top: calc(100% + 6px); width: max-content; min-width: 0; }
+/* A short list of choices in a popup, one of them the current one */
+.menu-list { width: max-content; display: flex; flex-direction: column; gap: 1px; }
+.popup.menu-list, .popup:has(> .menu-list) { padding: 5px; width: max-content; min-width: 0; }
+.menu-list button { padding: 7px 26px 7px 10px; border: 0; border-radius: 6px; background: none; text-align: left; font-size: 13px; font-weight: 400; }
+.menu-list button:hover { background: var(--surface-2); }
+.menu-list button[aria-checked="true"] { background: var(--accent-soft); color: var(--accent-2); }
 
 
 .random-deck { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border-color: var(--accent-2); background: var(--accent-soft); color: var(--accent-2); }

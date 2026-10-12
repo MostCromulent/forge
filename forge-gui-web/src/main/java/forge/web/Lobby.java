@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Match setup read from the engine's lobby: a browser changes its own seat as a client, and the host sets the rest of the table. */
 final class Lobby {
     /** A match seats at most four; a draft pod seats up to eight, of whom any four play each match. */
+    private static final int MOST_TEAMS = 4;
     static final int MAX_SEATS = 8;
     static final int MAX_POD = 8;
     /** The formats on offer, as desktop orders them. Each but Constructed is a variant; Constructed is the absence of one. */
@@ -537,8 +538,8 @@ final class Lobby {
                 } else {
                     lobby.removeVariant(v);
                 }
-                // Only moving the archenemy sets teams in this lobby, so without Archenemy every seat goes back to a team of its own
-                if (!lobby.hasVariant(GameType.Archenemy)) {
+                // The archenemy's role set the teams, so without it every seat goes back to a team of its own
+                if (v == GameType.Archenemy && !on) {
                     for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                         lobby.getSlot(i).setTeam(i);
                     }
@@ -547,6 +548,80 @@ final class Lobby {
                 return;
             }
         }
+    }
+
+    /** Whether seats can be put on teams: not where a draft's pairings or the archenemy's role already decide the sides. */
+    private static boolean teamsAllowed(final GameLobby lobby) {
+        return !limited(lobby) && !lobby.hasVariant(GameType.Archenemy) && !lobby.hasVariant(GameType.ArchenemyRumble);
+    }
+
+    /** How many teams the table is split into, or 0 for a free-for-all, where every seat is a team of its own. */
+    private static int teams(final GameLobby lobby) {
+        if (!teamsAllowed(lobby)) {
+            return 0;
+        }
+        final Set<Integer> seen = new HashSet<>();
+        boolean shared = false;
+        int most = 0;
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            final int team = lobby.getSlot(i).getTeam();
+            shared |= !seen.add(team);
+            most = Math.max(most, team);
+        }
+        return shared ? Math.max(2, most + 1) : 0;
+    }
+
+    /** The team counts the host may deal the seats into: fewer teams than seats, since as many is a free-for-all. */
+    private static List<Integer> teamChoices(final GameLobby lobby) {
+        final List<Integer> out = new ArrayList<>();
+        for (int n = 2; teamsAllowed(lobby) && n < lobby.getNumberOfSlots() && n <= MOST_TEAMS; n++) {
+            out.add(n);
+        }
+        return out;
+    }
+
+    /** Deals the seats into that many teams in turn, or with 0 puts every seat back on a team of its own. */
+    void setTeams(final int count) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null || (count != 0 && !teamChoices(lobby).contains(count))) {
+            return;
+        }
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            lobby.getSlot(i).setTeam(count == 0 ? i : i % count);
+        }
+        local.pushLobby();
+    }
+
+    /** Moves a seat to another of the table's teams: your own seat, or any seat if you run the game. */
+    void setTeam(final int index, final int team) {
+        final GameLobby table = view();
+        if (table == null || index < 0 || index >= table.getNumberOfSlots() || team < 0 || team >= teams(table)) {
+            return;
+        }
+        if (index == local.webSeat()) {
+            local.updateOwnSeat(UpdateLobbyPlayerEvent.teamUpdate(team));
+        } else if (host() != null) {
+            host().getSlot(index).setTeam(team);
+            local.pushLobby();
+        }
+    }
+
+    /** The team a seat added now joins: the smallest of the table's teams, or in a free-for-all one nobody is on. */
+    private static int teamForNewSeat(final GameLobby lobby, final int teams) {
+        final Map<Integer, Integer> sizes = new HashMap<>();
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            sizes.merge(lobby.getSlot(i).getTeam(), 1, Integer::sum);
+        }
+        int best = 0;
+        for (int team = 0; team < (teams > 0 ? teams : lobby.getNumberOfSlots() + 1); team++) {
+            if (teams == 0 && !sizes.containsKey(team)) {
+                return team;
+            }
+            if (sizes.getOrDefault(team, 0) < sizes.getOrDefault(best, 0)) {
+                best = team;
+            }
+        }
+        return best;
     }
 
     /** Moves the archenemy's role. The engine's lobby keeps one archenemy and sets the teams from it. */
@@ -614,7 +689,8 @@ final class Lobby {
                     VARIANTS.stream().map(Lobby::explainedVariant).toList(), variantsOn(lobby),
                     maxSeats(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,
                     local.isHost() && problems.isEmpty(), illegal, FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY),
-                    events.limitedTable(lobby), maxBracket(), overBracket(lobby)));
+                    events.limitedTable(lobby), maxBracket(), overBracket(lobby), teams(lobby),
+                    local.isHost() ? teamChoices(lobby) : List.of()));
         }
     }
 
@@ -640,7 +716,8 @@ final class Lobby {
                 slot.isBenched(),
                 deck == null || !format().getDeckFormat().hasCommander() || deck.getCommanders().isEmpty() ? null
                         : deck.getCommanders().get(0).getImageKey(false),
-                deck == null || format() != GameType.Commander ? null : DeckCatalog.bracketOf(deck));
+                deck == null || format() != GameType.Commander ? null : DeckCatalog.bracketOf(deck),
+                teams(lobby) > 0 ? slot.getTeam() : null);
     }
 
     /** The highest Commander bracket this table plays at, 1 to 4, or 5 for any: the host's own setting, as desktop keeps it. */
@@ -737,6 +814,7 @@ final class Lobby {
                 return out;
             }
             int playing = 0;
+            final Set<Integer> sides = new HashSet<>();
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 final LobbySlot slot = lobby.getSlot(i);
                 // A benched seat sits the match out, so nothing about it stops the match
@@ -748,6 +826,7 @@ final class Lobby {
                     continue;
                 }
                 playing++;
+                sides.add(slot.getTeam());
                 final boolean you = i == local.webSeat();
                 final Deck deck = deckAt(i);
                 // Momir Basic and MoJhoSto deal every seat its deck at the start, as startGame does
@@ -782,6 +861,8 @@ final class Lobby {
             // As startGame refuses
             if (playing < 2) {
                 out.add(0, Localizer.getInstance().getMessage("lblRequiredLeastTwoPlayerStartGame"));
+            } else if (sides.size() < 2 && teamsAllowed(lobby)) {
+                out.add(0, Localizer.getInstance().getMessage("lblNotEnoughTeams"));
             }
             if (playing > MAX_SEATS) {
                 out.add(0, Localizer.getInstance().getMessage("lblWebLobbyTooManyPlayers", MAX_SEATS, playing - MAX_SEATS));
@@ -958,7 +1039,10 @@ final class Lobby {
     private void addSeat(final boolean open) {
         final ServerGameLobby lobby = host();
         if (lobby != null && !drafting(lobby) && lobby.getNumberOfSlots() < maxSeats()) {
+            // The engine puts a new seat on the team its index names, which another seat may hold by now
+            final int team = teamForNewSeat(lobby, teams(lobby));
             lobby.addSlot();
+            lobby.getSlot(lobby.getNumberOfSlots() - 1).setTeam(team);
             if (open) {
                 openSeat(lobby.getNumberOfSlots() - 1);
             } else {

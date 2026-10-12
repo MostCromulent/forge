@@ -122,6 +122,29 @@ function SeatKind({ type, toAi, toOpen }: { type: string; toAi: () => void; toOp
   );
 }
 
+/** A seat's team, on the plate's top edge over the sleeve. It opens the table's teams for whoever may move the seat. */
+function TeamTab({ team, teams, change }: { team: number; teams: number; change: ((team: number) => void) | null }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLSpanElement>(null);
+  useDismiss(open, root, () => setOpen(false));
+  const name = (n: number) => t('lblWebLobbyTeamN', n + 1);
+  if (!change) return <span class="team-tab-slot"><span class="team-tab">{name(team)}</span></span>;
+  return (
+    <span ref={root} class="team-tab-slot">
+      <button class="team-tab" title={t('lblWebLobbyChangeTeam')} aria-expanded={open} onClick={() => setOpen(!open)}>
+        {name(team)}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <div class="popup menu-list" role="menu">
+          {Array.from({ length: teams }, (_, n) => (
+            <button key={n} role="menuitemradio" aria-checked={n === team} onClick={() => { setOpen(false); if (n !== team) change(n); }}>{name(n)}</button>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
+
 /** A number below count other than current, at random; current itself when it is the only one. */
 function another(current: number, count: number): number {
   if (count <= 1) return current;
@@ -187,7 +210,8 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
   // A deck led by a commander shows the commander, which says more about it than its sleeve does
   const commander = seat.commander;
   return (
-    <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${!mine && !waiting && seat.type !== 'AI' ? ' guest' : ''}${seat.benched ? ' benched' : ''}${leaving ? ' leaving' : ''}`}>
+    <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${!mine && !waiting && seat.type !== 'AI' ? ' guest' : ''}${seat.benched ? ' benched' : ''}${leaving ? ' leaving' : ''}${seat.team != null ? ' teamed' : ''}`}>
+      {seat.team != null && <TeamTab team={seat.team} teams={lobby.teams} change={lobby.host || mine ? team => actions.setTeam(index, team) : null} />}
       <div class="sleeve-slot" hidden={beforePools} data-image={commander ?? undefined}>
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
         <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt && !commander ? ' card-art' : ''}`} title={dealt ? '' : t('lblWebLobbyChooseDeck')}

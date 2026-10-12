@@ -97,6 +97,15 @@ final class FromBrowser {
     record SetArchenemy(int index) {
     }
 
+    /** How many teams the seats are dealt into, or 0 for a free-for-all. */
+    @Command("setTeams")
+    record SetTeams(int count) {
+    }
+
+    @Command("setTeam")
+    record SetTeam(int index, int team) {
+    }
+
     /** A seat's planar deck, scheme deck or avatar: the section's name and a choice key from its list. */
     @Command("setSeatExtra")
     record SetSeatExtra(int index, String section, String choice) {
