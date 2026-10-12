@@ -64,7 +64,6 @@ final class DevMode {
             case untapPermanents -> cheat.untapPermanents();
             case setPlayerLife -> cheat.setPlayerLife();
             case winGame -> cheat.winGame();
-            case rollbackPhase -> cheat.rollbackPhase();
             case riggedPlanarRoll -> cheat.riggedPlanarRoll();
             case planeswalkTo -> cheat.planeswalkTo();
             case setupGameState -> setUp(own.getGame(), controller.getGui(), dev.text(), channel);

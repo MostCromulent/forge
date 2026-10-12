@@ -630,6 +630,12 @@ public abstract class GameLobby implements IHasGameType {
         /** A GameFormat name every deck must be legal in, or null for none. Read by the web lobby only. */
         private String cardPool;
 
+        @Override
+        public String toString() {
+            final long ready = slots.stream().filter(LobbySlot::isReady).count();
+            return slots.size() + " slots, " + ready + " ready" + (appliedVariants.isEmpty() ? "" : ", " + appliedVariants);
+        }
+
         public GameLobbyData() {
         }
 

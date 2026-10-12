@@ -25,7 +25,7 @@ const GROUPS: [TextKey, [DevAction, TextKey][]][] = [
     ['tapPermanents', 'lblTapPermanent'], ['untapPermanents', 'lblUntapPermanent'],
   ]],
   ['lblGame', [
-    ['generateMana', 'lblWebDevAddMana'], ['setPlayerLife', 'lblWebDevSetLife'], ['rollbackPhase', 'lblWebDevRollback'],
+    ['generateMana', 'lblWebDevAddMana'], ['setPlayerLife', 'lblWebDevSetLife'],
     ['winGame', 'lblWebDevWinGame'], ['dumpGameState', 'lblWebDevDumpState'],
   ]],
   ['lblPlanechase', [['riggedPlanarRoll', 'lblWebDevRiggedPlanarRoll'], ['planeswalkTo', 'lblWebDevPlaneswalkTo']]],

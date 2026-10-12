@@ -286,7 +286,7 @@ final class FromBrowser {
     enum DevAction { state, unlimitedLands, viewAll, generateMana, tutorForCard, addCardToHand, addCardToBattlefield,
         addTokenToBattlefield, addCardToLibrary, addCardToGraveyard, addCardToExile, repeatLastAddition, castASpell,
         exileCardsFromHand, exileCardsFromBattlefield, removeCardsFromGame, addCountersToPermanent,
-        removeCountersFromPermanent, tapPermanents, untapPermanents, setPlayerLife, winGame, rollbackPhase,
+        removeCountersFromPermanent, tapPermanents, untapPermanents, setPlayerLife, winGame,
         riggedPlanarRoll, planeswalkTo, setupGameState, dumpGameState }
 
     /** A cheat for the host's own seat. text is the game state to set up, for setupGameState. */
