@@ -64,27 +64,27 @@ public final class InputSelectTargets extends InputSyncronizedBase {
         final int initialMin = numTargets != null ? numTargets : sa.getMinTargets();
         final int initialMax = numTargets != null ? numTargets : sa.getMaxTargets();
         controller.getGui().setSelectables(CardView.getCollection(choices), initialMin, initialMax);
-        final List<PlayerView> players = new ArrayList<>();
-        if (!mustTargetFiltered) {
-            for (final Player p : sa.getHostCard().getGame().getPlayers()) {
-                final boolean cannotEnchant = sa.isSpell() && sa.getHostCard().isAura() && !p.canBeAttached(sa.getHostCard(), sa);
-                if (!p.hasLost() && !cannotEnchant && sa.canTarget(p) && (filter == null || filter.test(p))) {
-                    players.add(p.getView());
-                }
+        // also what earlier steps of this spell (other modes) already chose
+        TargetingProgress.showChosen(controller.getGui(), sa);
+    }
+
+    /** Tells the GUI which players can still be picked, so they get the same highlight as the valid cards. */
+    private void refreshSelectablePlayers() {
+        final List<Player> valid = new ArrayList<>();
+        if (!mustTargetFiltered) { // same checks as onPlayerSelected
+            for (final Player p : getController().getGame().getPlayers()) {
+                if (targets.contains(p) || p.hasLost() || !sa.canTarget(p)) { continue; }
+                if (sa.isSpell() && sa.getHostCard().isAura() && !p.canBeAttached(sa.getHostCard(), sa)) { continue; }
+                if (filter != null && !filter.test(p)) { continue; }
+                valid.add(p);
             }
         }
-        if (!players.isEmpty()) {
-            controller.getGui().setSelectablePlayers(players);
-        }
-        final List<GameEntityView> views = new ArrayList<>();
-        for (final GameEntity c : targets) {
-            if (c instanceof Card) views.add(GameEntityView.get(c));
-        }
-        controller.getGui().setHighlighted(views, true);
+        getController().getGui().setSelectableTargets(PlayerView.getCollection(valid));
     }
 
     @Override
     public void showMessage() {
+        refreshSelectablePlayers();
         // Display targeting card in cardDetailPane in case it's not obviously visible.
         getController().getGui().setCard(CardView.get(sa.getHostCard()));
         final StringBuilder sb = new StringBuilder();
@@ -440,9 +440,13 @@ public final class InputSelectTargets extends InputSyncronizedBase {
     }
 
     private void done() {
-        final List<GameEntityView> views = new ArrayList<>(targets.size());
-        for (final GameEntity ge : targets) views.add(GameEntityView.get(ge));
-        getController().getGui().setHighlighted(views, false);
+        // what is chosen stays marked while later steps still have to choose and, for a spell being cast, while its cost
+        // is paid; otherwise the last step (or a cancel) clears it
+        if (bCancel || !(TargetingProgress.hasLaterTargetingStep(sa) || getController().isKeepingTargetsMarked())) {
+            final List<GameEntityView> views = new ArrayList<>(targets.size());
+            for (final GameEntity ge : targets) views.add(GameEntityView.get(ge));
+            getController().getGui().setHighlighted(views, false);
+        }
 
         this.stop();
     }
