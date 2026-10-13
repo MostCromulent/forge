@@ -10,6 +10,7 @@ import forge.game.ability.ApiType;
 import forge.game.card.Card;
 import forge.game.card.CardView;
 import forge.game.player.Player;
+import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbility;
 import forge.game.spellability.TargetRestrictions;
 import forge.localinstance.properties.ForgeConstants;
@@ -63,6 +64,18 @@ public final class InputSelectTargets extends InputSyncronizedBase {
         final int initialMin = numTargets != null ? numTargets : sa.getMinTargets();
         final int initialMax = numTargets != null ? numTargets : sa.getMaxTargets();
         controller.getGui().setSelectables(CardView.getCollection(choices), initialMin, initialMax);
+        final List<PlayerView> players = new ArrayList<>();
+        if (!mustTargetFiltered) {
+            for (final Player p : sa.getHostCard().getGame().getPlayers()) {
+                final boolean cannotEnchant = sa.isSpell() && sa.getHostCard().isAura() && !p.canBeAttached(sa.getHostCard(), sa);
+                if (!p.hasLost() && !cannotEnchant && sa.canTarget(p) && (filter == null || filter.test(p))) {
+                    players.add(p.getView());
+                }
+            }
+        }
+        if (!players.isEmpty()) {
+            controller.getGui().setSelectablePlayers(players);
+        }
         final List<GameEntityView> views = new ArrayList<>();
         for (final GameEntity c : targets) {
             if (c instanceof Card) views.add(GameEntityView.get(c));

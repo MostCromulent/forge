@@ -470,6 +470,11 @@ public class ProtocolGuiGame extends NetworkGuiGame implements IHasForgeLog {
     }
 
     @Override
+    public void setSelectablePlayers(final Iterable<PlayerView> players) {
+        send(ProtocolMethod.setSelectablePlayers, players);
+    }
+
+    @Override
     public void clearSelectables() {
         syncAndSend(ProtocolMethod.clearSelectables);
     }
