@@ -444,7 +444,7 @@ public final class WebSession implements IHasForgeLog {
                     onSetup(channel, msg);
                 }
             }
-            case "setLimited", "eventSetup", "eventStart", "eventNew", "benchSeat", "eventDecksOnly", "eventHostAgain", "eventForget" -> {
+            case "setLimited", "eventSetup", "eventStart", "eventNew", "sitOut", "eventDecksOnly", "eventHostAgain", "eventForget" -> {
                 if (stage instanceof Setup) {
                     onEvent(channel, msg);
                 }
@@ -805,9 +805,9 @@ public final class WebSession implements IHasForgeLog {
                 }
                 relistDecks(channel);
             }
-            case "benchSeat" -> {
-                final BenchSeat bench = Wire.decode(msg, BenchSeat.class);
-                lobby.benchSeat(bench.index(), bench.benched());
+            case "sitOut" -> {
+                final SitOut sitOut = Wire.decode(msg, SitOut.class);
+                lobby.sitOut(sitOut.index(), sitOut.sittingOut());
             }
             // Building a product can wait on a web site, and dealing packs opens every pool, so neither runs here
             case "eventSetup" -> {

@@ -134,16 +134,17 @@ final class WebService implements IHasForgeLog {
         if (forward != null) {
             forward.close();
         }
-        final PortForward asking = new PortForward(server.port());
+        final int port = server.port();
+        final PortForward asking = new PortForward(port);
         forward = asking;
         setForwarding(Forwarding.ASKING);
         // The answer takes no lock, because it arrives on a UPnP thread that stop() may wait on while holding this object's lock
         asking.open(accepted -> {
             if (forward == asking) {
                 if (accepted) {
-                    netLog.info("The router is forwarding port {}.", asking.port());
+                    netLog.info("The router is forwarding port {}.", port);
                 } else {
-                    netLog.warn("The router did not forward port {}. Players on the internet cannot join until it is forwarded.", asking.port());
+                    netLog.warn("The router did not forward port {}. Players on the internet cannot join until it is forwarded.", port);
                 }
                 setForwarding(accepted ? Forwarding.FORWARDED : Forwarding.REFUSED);
             }

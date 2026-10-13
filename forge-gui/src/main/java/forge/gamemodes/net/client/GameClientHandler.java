@@ -75,7 +75,7 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements I
             super.dispatch(protocolMethod, toRun);
             return;
         }
-        // A client sharing a JVM with its host cannot share the host's GUI thread: the host blocks it waiting for this client
+        // The server blocks the GUI thread while it waits for this client's reply, so a client in the same process must not run there
         executor.execute(toRun);
     }
 

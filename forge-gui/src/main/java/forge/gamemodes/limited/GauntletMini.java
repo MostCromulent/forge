@@ -40,9 +40,9 @@ import forge.util.Aggregates;
  * @since 1.2.xx
  */
 public class GauntletMini {
-    /** Starts one round's match and returns it. */
+    /** Starts the match for one round and returns it. */
     public interface RoundStarter {
-        HostedMatch start(GameType type, List<RegisteredPlayer> players, RegisteredPlayer human);
+        HostedMatch start(GameType type, Set<GameType> variants, List<RegisteredPlayer> players, RegisteredPlayer human);
     }
 
     private HostedMatch hostedMatch = null;
@@ -64,17 +64,9 @@ public class GauntletMini {
         gauntletType = GameType.Sealed; // Assignable in launch();
     }
 
-    /** A frontend that builds its match GUI itself starts each round through this; null restores the local default. */
+    /** Replaces GuiBase.hostMatch() as the way each round's match starts. Null restores it. */
     public void setRoundStarter(final RoundStarter starter) {
         roundStarter = starter;
-    }
-
-    /** Plays the current round again, as desktop's Restart does, keeping the round and the record. */
-    public void restartRound() {
-        if (hostedMatch != null) {
-            hostedMatch.endCurrentGame();
-        }
-        startRound();
     }
 
     /**
@@ -167,16 +159,16 @@ public class GauntletMini {
             pl.assignConspiracies();
         }
 
-        if (roundStarter != null) {
-            hostedMatch = roundStarter.start(gauntletType, starter, human);
-            return;
-        }
-        hostedMatch = GuiBase.getInterface().hostMatch();
-
         Set<GameType> gameTypes = null;
         if (gauntletType == GameType.CommanderDraft) {
             gameTypes = java.util.EnumSet.of(GameType.Commander);
         }
+
+        if (roundStarter != null) {
+            hostedMatch = roundStarter.start(gauntletType, gameTypes, starter, human);
+            return;
+        }
+        hostedMatch = GuiBase.getInterface().hostMatch();
 
         hostedMatch.startMatch(gauntletType, gameTypes, starter, human, GuiBase.getInterface().getNewGuiGame());
     }

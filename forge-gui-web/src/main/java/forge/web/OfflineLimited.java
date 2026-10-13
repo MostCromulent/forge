@@ -70,7 +70,10 @@ final class OfflineLimited implements IHasForgeLog {
             case "gauntletRestart" -> ui.invokeInEdtLater(() -> {
                 if (gauntletRunning) {
                     lastResult = null;
-                    FModel.getGauntletMini().restartRound();
+                    final HostedMatch match = local.hostedMatch();
+                    if (match != null) {
+                        match.restartMatch();
+                    }
                 }
             });
             // A match is started on the host UI thread, as a table's is
@@ -310,7 +313,7 @@ final class OfflineLimited implements IHasForgeLog {
                 }
                 gauntletRunning = true;
                 lastResult = null;
-                gauntlet.setRoundStarter((type, players, me) -> playLimited(back, type, List.of(mySeat(players.get(0).getDeck()),
+                gauntlet.setRoundStarter((type, variants, players, me) -> playLimited(back, type, List.of(mySeat(players.get(0).getDeck()),
                         opponentSeat(gauntlet.getCurrentRound(), 1, players.get(1).getDeck()))));
                 try {
                     gauntlet.launch(ai.size(), human, event.type());

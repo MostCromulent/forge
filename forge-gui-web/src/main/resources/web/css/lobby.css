@@ -789,7 +789,7 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .ready-toggle.unset { border: 1px dashed var(--accent-2); color: var(--accent-2); background: transparent; }
 .ready-toggle[aria-pressed="true"] { border: 1px solid var(--accent-2); background: var(--accent-soft); color: var(--text); }
 .sits-out { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin-top: 6px; }
-.plate.benched { opacity: .6; }
+.plate.sitting-out { opacity: .6; }
 .event-setup .wiz { border: none; background: transparent; }
 
 /* The page header: the wordmark, and how to invite, set the sound and options, and leave. The match settings are in the bar under it. */

@@ -223,7 +223,6 @@ public final class CommanderBracketCalculator {
             return earlyGameCombos;
         }
 
-        /** The bracket each kind of card puts the deck in at least, or 0 when it does not raise it. */
         public int getGamechangersBracket() {
             return gamechangers.size() >= 4 ? 4 : gamechangers.isEmpty() ? 0 : 3;
         }

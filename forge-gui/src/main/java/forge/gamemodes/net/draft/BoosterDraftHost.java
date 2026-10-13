@@ -4,7 +4,6 @@ import forge.deck.Deck;
 import forge.deck.DeckSection;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.net.EventParticipant;
-import forge.gamemodes.net.EventPhase;
 import forge.gamemodes.net.NetworkEvent;
 import forge.gamemodes.limited.DraftPack;
 import forge.gamemodes.limited.LimitedPlayer;
@@ -105,7 +104,6 @@ public final class BoosterDraftHost implements IHasForgeLog {
             long humans = participants.stream().filter(EventParticipant::isHuman).count();
             netLog.info("Draft started — {} humans, {} seats total, timer={}s, product={}",
                     humans, participants.size(), event.getPickTimerSeconds(), event.getProductDescription());
-            event.setPhase(EventPhase.DRAFTING);
             captureInitialPackSize();
             dispatches = new ArrayList<>();
             advanceDraft(dispatches);
@@ -113,7 +111,7 @@ public final class BoosterDraftHost implements IHasForgeLog {
         run(dispatches);
     }
 
-    /** Whether the seat's player has gone, so its packs are being held for it or picked for it. */
+    /** True when the seat's player is disconnected. The host is then holding the seat's packs or picking for it. */
     public synchronized boolean isSeatHeld(int seatIndex) {
         return seatIndex >= 0 && seatIndex < seatState.length && seatState[seatIndex] != SeatConnectionState.LIVE;
     }

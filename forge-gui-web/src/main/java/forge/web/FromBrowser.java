@@ -375,8 +375,8 @@ final class FromBrowser {
     }
 
     /** Keeps a seat at the table while it sits the next match out. */
-    @Command("benchSeat")
-    record BenchSeat(int index, boolean benched) {
+    @Command("sitOut")
+    record SitOut(int index, boolean sittingOut) {
     }
 
     /** Plays a past event's decks again at this table, as desktop's Load Past Event does. */

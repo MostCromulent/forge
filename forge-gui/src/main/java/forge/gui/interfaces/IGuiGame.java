@@ -273,7 +273,7 @@ public interface IGuiGame {
      * select-min hotkeys). A maximum of {@code 0} marks display-only highlighting, for which the GUI opens no zones.
      */
     void setSelectables(Iterable<CardView> cards, int min, int max);
-    /** Players the current input accepts; cleared with {@link #clearSelectables()}. */
+    /** Marks the players the current input accepts. {@link #clearSelectables()} clears them. */
     default void setSelectablePlayers(Iterable<PlayerView> players) { }
     void clearSelectables();
     boolean isSelecting();

@@ -14,14 +14,14 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import java.nio.channels.ClosedChannelException;
 
 /**
- * Carries the netplay byte stream inside a WebSocket, so a client can reach a host through a web server's port.
- * The handlers after this one are told the channel is open only once the WebSocket handshake is done, because
- * a client logs in the moment it is told that.
+ * Carries the netplay byte stream in binary WebSocket frames, so a netplay connection can run through a web server's port.
+ * The handlers after this one see channelActive only when the WebSocket handshake completes, because the netplay
+ * handlers register the client and send its login on channelActive.
  */
 public final class WebSocketBytes extends ChannelDuplexHandler {
     private ChannelPromise opened;
 
-    /** Done when the WebSocket is open, and failed when the other side refuses it or the connection ends first. */
+    /** Completes when the WebSocket handshake does. Fails if the other side refuses it or the connection closes first. */
     public ChannelFuture opened() {
         return opened;
     }
@@ -59,14 +59,14 @@ public final class WebSocketBytes extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
-        if (msg instanceof BinaryWebSocketFrame || msg instanceof ContinuationWebSocketFrame) {
-            ctx.fireChannelRead(((WebSocketFrame) msg).content());
-        } else if (msg instanceof WebSocketFrame frame) {
-            // Netplay is bytes only, and nothing further on would free a frame of text
+        if (!(msg instanceof WebSocketFrame frame)) {
+            ctx.fireChannelRead(msg);
+        } else if (frame instanceof BinaryWebSocketFrame || frame instanceof ContinuationWebSocketFrame) {
+            ctx.fireChannelRead(frame.content());
+        } else {
+            // Netplay sends binary frames only. Any other frame is released here because no later handler would release it
             frame.release();
             ctx.close();
-        } else {
-            ctx.fireChannelRead(msg);
         }
     }
 

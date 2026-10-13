@@ -43,7 +43,7 @@ public final class DeckUrlLoader {
         return new DeckProxy(deck, localizer.getMessage("lblUrlDeck"), GameType.Constructed, storage);
     }
 
-    /** Fetches a deck list from a supported site without saving anything. */
+    /** Fetches a deck from a supported site without saving it. */
     public static DeckUrlProvider.RemoteDeck fetch(final String deckUrl) throws IOException {
         final String normalizedUrl = normalizeUrl(deckUrl);
         return getProvider(normalizedUrl).load(normalizedUrl, getStorage());
@@ -103,7 +103,7 @@ public final class DeckUrlLoader {
         return deck;
     }
 
-    /** The lines of a list, with any card line the recognizer misses only because of its set and number rewritten to the name alone. */
+    /** Splits a deck list into lines. A card line that is recognized only without its set and collector number is reduced to the card name. */
     public static String[] getRecognizableImportLines(final DeckRecognizer recognizer, final String importText) {
         final String[] lines = importText.split("\n");
         DeckSection section = null;

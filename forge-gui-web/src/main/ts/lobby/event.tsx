@@ -126,7 +126,7 @@ export function eventStage(lobby: LobbyTable): number {
   const lim = lobby.limited!;
   if (!lim.started) return 0;
   if (!lim.activeEventId) return 1;
-  const playing = lobby.seats.filter(s => s.type !== 'OPEN' && !s.benched);
+  const playing = lobby.seats.filter(s => s.type !== 'OPEN' && !s.sittingOut);
   return playing.every(s => s.deck != null || s.deckName != null) ? 3 : 2;
 }
 

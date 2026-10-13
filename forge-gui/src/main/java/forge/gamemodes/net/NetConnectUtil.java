@@ -25,7 +25,6 @@ import forge.util.Localizer;
 import forge.util.URLValidator;
 import org.apache.commons.lang3.StringUtils;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -173,12 +172,12 @@ public class NetConnectUtil {
         int port;
         final FGameClient client;
 
-        // A web host is joined by its invite link, through its web port
-        final URI tunnel = FGameClient.tunnelOf(url);
+        // An http link with a token is a web server's invite link. It is joined through a WebSocket on the web port
+        final WebSocketTunnel tunnel = WebSocketTunnel.of(url);
         if (tunnel != null) {
-            hostname = tunnel.getHost();
-            port = tunnel.getPort();
-            client = new FGameClient(FModel.getPreferences().getPref(FPref.PLAYER_NAME), gui, tunnel, null);
+            hostname = tunnel.uri().getHost();
+            port = tunnel.uri().getPort();
+            client = new FGameClient(FModel.getPreferences().getPref(FPref.PLAYER_NAME), gui, tunnel);
         } else {
             URLValidator.HostPort hostPort = URLValidator.parseURL(url);
             if (hostPort == null) {

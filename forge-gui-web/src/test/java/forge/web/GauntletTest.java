@@ -49,7 +49,7 @@ public class GauntletTest {
 
         final List<Deck> opponents = new ArrayList<>();
         final GauntletMini gauntlet = FModel.getGauntletMini();
-        gauntlet.setRoundStarter((type, players, human) -> {
+        gauntlet.setRoundStarter((type, variants, players, human) -> {
             assertEquals(type, GameType.Sealed);
             assertSame(players.get(0), human);
             opponents.add(players.get(1).getDeck());
@@ -58,13 +58,11 @@ public class GauntletTest {
 
         gauntlet.launch(2, group.getHumanDeck(), GameType.Sealed);
         gauntlet.nextRound();
-        gauntlet.restartRound();
 
-        assertEquals(opponents.size(), 3);
+        assertEquals(opponents.size(), 2);
         final List<Deck> ai = FModel.getDecks().getSealed().get(pool).getAiDecks();
         assertEquals(cards(opponents.get(0)), cards(ai.get(0)));
         assertEquals(cards(opponents.get(1)), cards(ai.get(1)));
-        assertEquals(cards(opponents.get(2)), cards(ai.get(1)));
         assertEquals(gauntlet.getCurrentRound(), 2);
     }
 

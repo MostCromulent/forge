@@ -177,11 +177,11 @@ final class ToBrowser {
     record Format(String id, String name, String group, String desc, List<String> facts, String play) {
     }
 
-    /** type is a netplay lobby slot's (LOCAL, AI, OPEN or REMOTE), and benched says the seat sits the next match out. */
+    /** type is a netplay lobby slot's (LOCAL, AI, OPEN or REMOTE), and sittingOut says the seat sits the next match out. */
     record Seat(@Nullable String name, String type, boolean mine, boolean mayEdit, boolean ready, int avatar,
             int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
             @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
-            @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard, boolean benched,
+            @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard, boolean sittingOut,
             @Nullable String commander, @Nullable Integer bracket, @Nullable Integer team) {
     }
 

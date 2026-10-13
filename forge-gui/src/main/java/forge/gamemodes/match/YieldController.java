@@ -84,7 +84,7 @@ public class YieldController {
     private final Map<PlayerView, EnumSet<PhaseType>> skipPhases = new HashMap<>();
 
     /** Populated on the host's proxy of a remote player (via {@link #applyClientSeed} and {@link YieldUpdate.SetYieldPref} envelopes), and by a client
-     * that shares its process with other players' clients (the web server) and so cannot keep its settings in FModel. Override wins, FModel is fallback. */
+     * whose player's settings are not the ones in FModel. Override wins, FModel is fallback. */
     private final EnumMap<FPref, String> prefOverrides = new EnumMap<>(FPref.class);
 
     public YieldController(PlayerControllerHuman owner) {

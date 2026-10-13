@@ -173,7 +173,7 @@ export interface Actions {
   eventNew(): void;
   eventForget(eventId: string): void;
   eventDecksOnly(on: boolean): void;
-  benchSeat(index: number, benched: boolean): void;
+  sitOut(index: number, sittingOut: boolean): void;
   ready(on: boolean): void;
 
   // Match setup
@@ -286,7 +286,7 @@ export function createActions(send: Send): Actions {
     eventNew: () => send({ t: 'eventNew' }),
     eventForget: eventId => send({ t: 'eventForget', eventId }),
     eventDecksOnly: on => send({ t: 'eventDecksOnly', on }),
-    benchSeat: (index, benched) => send({ t: 'benchSeat', index, benched }),
+    sitOut: (index, sittingOut) => send({ t: 'sitOut', index, sittingOut }),
     ready: on => send({ t: 'ready', ready: on }),
     limitedOpen: (kind, resume) => send({ t: 'limitedOpen', kind, resume }),
     draftStart: d => send({ t: 'draftStart', ...d }),

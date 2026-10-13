@@ -35,28 +35,22 @@ final class DraftProducts {
     }
 
     static BoosterDraft fullDraft() {
-        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Full);
-        draft.setupFull();
-        return draft;
+        return BoosterDraft.createFullDraft();
     }
 
     /** combo is one set code per pack, joined with "/", or the block's only set's code. */
     static BoosterDraft blockDraft(final CardBlock block, final String combo, final LimitedPoolType type) {
-        final BoosterDraft draft = new BoosterDraft(type);
-        draft.setupBlock(block, combo);
-        return draft;
+        return BoosterDraft.createBlockDraft(type, block, combo);
     }
 
     static BoosterDraft cubeDraft(final CustomLimited cube) {
-        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Custom);
-        draft.setupCustomDraft(cube);
-        return draft;
+        return BoosterDraft.createCubeDraft(LimitedPoolType.Custom, cube);
     }
 
     /** Throws IllegalArgumentException when no set fits the theme. */
     static BoosterDraft chaosDraft(final ThemedChaosDraft theme) {
-        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Chaos);
-        if (!draft.setupChaos(theme)) {
+        final BoosterDraft draft = BoosterDraft.createChaosDraft(theme);
+        if (draft == null) {
             throw new IllegalArgumentException("No set fits the theme " + theme.getLabel() + ".");
         }
         return draft;
@@ -64,9 +58,7 @@ final class DraftProducts {
 
     /** Throws IllegalArgumentException, with a message a player can read, when the cube can't be imported. */
     static BoosterDraft cubeCobraDraft(final String cubeId) {
-        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Import);
-        draft.setupCustomDraft(importCube(cubeId));
-        return draft;
+        return BoosterDraft.createCubeDraft(LimitedPoolType.Import, importCube(cubeId));
     }
 
     private static CustomLimited importCube(final String cubeId) {
@@ -83,35 +75,25 @@ final class DraftProducts {
     }
 
     static SealedCardPoolGenerator fullSealed(final int packs) {
-        final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
-        gen.setupFull(packs);
-        return gen;
+        return SealedCardPoolGenerator.createFull(packs);
     }
 
     static SealedCardPoolGenerator prereleaseSealed(final CardEdition edition) {
-        final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
-        gen.setupPrerelease(edition);
-        return gen;
+        return SealedCardPoolGenerator.createPrerelease(edition);
     }
 
     /** combo is one entry of SealedCardPoolGenerator.blockCombos. */
     static SealedCardPoolGenerator blockSealed(final CardBlock block, final String combo) {
-        final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
-        gen.setupBlock(block, combo);
-        return gen;
+        return SealedCardPoolGenerator.createBlock(block, combo);
     }
 
     static SealedCardPoolGenerator customSealed(final CustomLimited template, final int packs) {
-        final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
-        gen.setupCustom(template, packs);
-        return gen;
+        return SealedCardPoolGenerator.createCustom(template, packs);
     }
 
     /** Throws IllegalArgumentException, with a message a player can read, when the cube can't be imported. */
     static SealedCardPoolGenerator cubeCobraSealed(final String cubeId, final int packs) {
-        final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
-        gen.setupCubeCobra(importCube(cubeId), packs);
-        return gen;
+        return SealedCardPoolGenerator.createImported(importCube(cubeId), packs);
     }
 
     public record Block(String name, int packs, List<String> combos) {

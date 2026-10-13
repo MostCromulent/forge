@@ -713,7 +713,7 @@ final class Lobby {
                 sectionsFor(lobby, index).contains(DeckSection.Planes) ? seatExtra(lobby, index, deck, DeckSection.Planes) : null,
                 sectionsFor(lobby, index).contains(DeckSection.Schemes) ? seatExtra(lobby, index, deck, DeckSection.Schemes) : null,
                 sectionsFor(lobby, index).contains(DeckSection.Avatar) ? seatExtra(lobby, index, deck, DeckSection.Avatar) : null,
-                slot.isBenched(),
+                slot.isSittingOut(),
                 deck == null || !format().getDeckFormat().hasCommander() || deck.getCommanders().isEmpty() ? null
                         : deck.getCommanders().get(0).getImageKey(false),
                 deck == null || format() != GameType.Commander ? null : DeckCatalog.bracketOf(deck),
@@ -734,7 +734,7 @@ final class Lobby {
         }
         for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
             final Deck deck = deckAt(i);
-            if (lobby.getSlot(i).isBenched() || deck == null || DeckCatalog.bracketOf(deck) <= most) {
+            if (lobby.getSlot(i).isSittingOut() || deck == null || DeckCatalog.bracketOf(deck) <= most) {
                 continue;
             }
             final String why = String.join(", ", DeckCatalog.bracket(deck).reasons().stream()
@@ -817,8 +817,8 @@ final class Lobby {
             final Set<Integer> sides = new HashSet<>();
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 final LobbySlot slot = lobby.getSlot(i);
-                // A benched seat sits the match out, so nothing about it stops the match
-                if (slot.isBenched()) {
+                // A seat that sits out is not in the match, so nothing about it stops the match
+                if (slot.isSittingOut()) {
                     continue;
                 }
                 if (slot.getType() == LobbySlotType.OPEN) {
@@ -988,8 +988,8 @@ final class Lobby {
         return events.settingUpEvent();
     }
 
-    void benchSeat(final int index, final boolean benched) {
-        events.benchSeat(index, benched);
+    void sitOut(final int index, final boolean sittingOut) {
+        events.sitOut(index, sittingOut);
     }
 
     /** Returns whether the host's match length preference changed, since no lobby update says so. */

@@ -47,12 +47,12 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -147,7 +147,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         }, deadline, TimeUnit.SECONDS);
     }
 
-    /** Where a client in this process connects to a server started by {@link #startLoopbackServer()}. */
+    /** The address of a server started by {@link #startLoopbackServer()}. Only a client in this process can connect to it. */
     public static final LocalAddress LOOPBACK = new LocalAddress("forge");
 
     private volatile boolean loopbackOnly;
@@ -240,15 +240,15 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         bind(new InetSocketAddress(port), startUPnP);
     }
 
-    /** Hosts a game only clients in this process can join, at {@link #LOOPBACK}: no socket, no UPnP, no AFK timeout. */
+    /** Starts a server at {@link #LOOPBACK} with no socket, no UPnP and no AFK timeout. Its clients are in this process or come through {@link #adopt}. */
     public void startLoopbackServer() {
-        loopbackOnly = true;
         bind(LOOPBACK, false);
     }
 
     /**
-     * Serves a client on a connection something else accepted, such as one a web server carries on its own port.
-     * The channel's pipeline must already turn what arrives into the netplay byte stream.
+     * Serves a netplay client on a channel that another server accepted, such as a WebSocket on a web server's port.
+     * The channel's pipeline must already deliver the netplay byte stream. It must not have fired channelActive yet,
+     * because the handlers added here register the client on channelActive.
      */
     public void adopt(final Channel ch) {
         adopted.add(ch);
@@ -272,6 +272,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
     private void bind(final SocketAddress address, final boolean startUPnP) {
         netLog.info("Starting Multiplayer Server");
         final boolean inProcess = address instanceof LocalAddress;
+        loopbackOnly = inProcess;
         bossGroup = inProcess ? new DefaultEventLoopGroup(1) : new NioEventLoopGroup(1);
         workerGroup = inProcess ? new DefaultEventLoopGroup() : new NioEventLoopGroup();
         try {
@@ -345,15 +346,19 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         forgetDisconnectedClients();
         clients.clear();
         afkSlots.clear();
-        // These belong to whoever accepted them, so stopping this server's own threads would leave them open
+        // Adopted channels run on another server's threads, so shutting down this server's threads does not close them
         adopted.close();
 
         try {
             if (bossGroup != null) {
-                // Nothing outside this process can still be talking to a loopback server, so it need not wait out Netty's quiet period
-                final long quiet = loopbackOnly ? 0 : 2;
-                bossGroup.shutdownGracefully(quiet, 15, TimeUnit.SECONDS).sync();
-                workerGroup.shutdownGracefully(quiet, 15, TimeUnit.SECONDS).sync();
+                if (loopbackOnly) {
+                    // A loopback server has no sockets to drain, so it skips Netty's default quiet period
+                    bossGroup.shutdownGracefully(0, 15, TimeUnit.SECONDS).sync();
+                    workerGroup.shutdownGracefully(0, 15, TimeUnit.SECONDS).sync();
+                } else {
+                    bossGroup.shutdownGracefully().sync();
+                    workerGroup.shutdownGracefully().sync();
+                }
             }
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -365,7 +370,6 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         if (removeShutdownHook) {
             Runtime.getRuntime().removeShutdownHook(shutdownHook);
         }
-        loopbackOnly = false;
         HostingServer.set(null);
         NetworkLogConfig.deactivateNetworkLogging();
     }
@@ -504,7 +508,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
     }
 
     public void setLobby(final ServerGameLobby lobby) {
-        // A seat held for a reconnect belongs to the lobby being replaced
+        // Seats held for a reconnect belong to the old lobby
         forgetDisconnectedClients();
         this.localLobby = lobby;
     }
@@ -951,16 +955,17 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         broadcast(MessageEvent.warning(String.format("%s did not reconnect in time. AI has taken over.", username)));
     }
 
-    /** Hands a seat in the running match to the AI at once, where a dropped connection would first wait for a reconnect. */
+    /**
+     * Converts a connected player's seat in the running match to AI now. A dropped connection waits for a reconnect first.
+     * The caller must close the player's connection afterwards.
+     */
     public void replaceWithAI(final int slotIndex) {
         final RemoteClient client = getClientBySlotIndex(slotIndex);
-        if (client == null || !isMatchActive()) { return; }
-        // Deregistered first, so the connection closing afterwards is not parked for a reconnect
-        clients.values().remove(client);
+        // The client is deregistered first. Otherwise closing its connection would park the seat for a reconnect
+        if (client == null || !isMatchActive() || !clients.values().remove(client)) { return; }
+        client.getReplyPool().cancelAll();
         pauseRemoteClientGuiGame(client);
         convertToAI(client);
-        // The game thread may be waiting on an answer this player will never give
-        client.getReplyPool().cancelAll();
         localLobby.disconnectPlayer(slotIndex);
         broadcast(new MessageEvent(String.format("Host forced AI takeover for %s.", client.getUsername())));
     }

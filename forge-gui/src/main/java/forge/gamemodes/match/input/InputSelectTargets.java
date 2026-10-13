@@ -73,7 +73,9 @@ public final class InputSelectTargets extends InputSyncronizedBase {
                 }
             }
         }
-        controller.getGui().setSelectablePlayers(players);
+        if (!players.isEmpty()) {
+            controller.getGui().setSelectablePlayers(players);
+        }
         final List<GameEntityView> views = new ArrayList<>();
         for (final GameEntity c : targets) {
             if (c instanceof Card) views.add(GameEntityView.get(c));

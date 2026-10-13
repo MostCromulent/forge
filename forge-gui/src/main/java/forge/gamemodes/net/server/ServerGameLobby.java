@@ -67,7 +67,7 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         updateView(true);
     }
 
-    /** The game type a Limited match starts as: Draft, or Sealed for a sealed pool played offline. */
+    /** Sets the game type a Limited match starts with. The default is Draft. */
     public void setLimitedType(GameType type) {
         getData().setLimitedType(type);
         updateView(true);
@@ -204,7 +204,7 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         return configure(event, poolType, draft, sealed, pickTimerSeconds, disconnectGraceSeconds);
     }
 
-    /** As above, for a sealed event whose pool generator was built from choices made up front rather than prompted for. */
+    /** Configures a sealed event with a pool generator the caller already built, so no dialog opens. */
     public synchronized boolean configureEvent(LimitedPoolType poolType, SealedCardPoolGenerator sealed,
             int pickTimerSeconds, int disconnectGraceSeconds) {
         NetworkEvent event = getCurrentEvent();
@@ -367,7 +367,6 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         draftHost = new BoosterDraftHost(draft, event);
         // Broadcast the fully-populated event (with participants and numRounds) so
         // clients can initialize their overlay with pod names before the first pack.
-        // The phase is set first, as startSealedEvent does, so the broadcast says the draft is on.
         event.setPhase(EventPhase.DRAFTING);
         updateView(true);
         draftHost.start();

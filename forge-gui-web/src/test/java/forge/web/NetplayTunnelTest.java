@@ -7,6 +7,7 @@ import forge.deck.Deck;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.client.ClientGameLobby;
+import forge.gamemodes.net.WebSocketTunnel;
 import forge.gamemodes.net.client.FGameClient;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.interfaces.ILobbyListener;
@@ -104,7 +105,7 @@ public class NetplayTunnelTest extends SessionsTest {
     }
 
     private App join(final String name, final String link, final SslContext trust) {
-        return join(name, FGameClient.tunnelOf(link), trust);
+        return join(name, WebSocketTunnel.of(link).uri(), trust);
     }
 
     private App join(final String name, final URI tunnel, final SslContext trust) {
@@ -112,7 +113,7 @@ public class NetplayTunnelTest extends SessionsTest {
         apps.add(app);
         app.gui.attach(app.screen);
         app.gui.setClientLobby(app.lobby);
-        app.client = new FGameClient(name, app.gui, tunnel, trust);
+        app.client = new FGameClient(name, app.gui, new WebSocketTunnel(tunnel, trust));
         app.client.setDispatchExecutor(app.gui.dispatchExecutor());
         app.client.addLobbyListener(app);
         app.client.connect();
@@ -186,13 +187,13 @@ public class NetplayTunnelTest extends SessionsTest {
     @Test(timeOut = 60_000)
     public void anAppWithoutTheTokenIsTurnedAway() throws Exception {
         hostAt("invite");
-        final String route = "ws://127.0.0.1:" + server.port() + FGameClient.TUNNEL_PATH;
+        final String route = "ws://127.0.0.1:" + server.port() + WebSocketTunnel.PATH;
         for (final String address : List.of(route + "?token=wrong", route)) {
             Assert.assertThrows(IllegalStateException.class, () -> join("Stranger", URI.create(address), null));
         }
         // A page in a guest's browser holds the token as a cookie, and must not be able to open the route with it
         final HttpClient http = HttpClient.newHttpClient();
-        final URI page = URI.create("http://127.0.0.1:" + server.port() + FGameClient.TUNNEL_PATH);
+        final URI page = URI.create("http://127.0.0.1:" + server.port() + WebSocketTunnel.PATH);
         final int byCookie = http.send(HttpRequest.newBuilder(page).header("Cookie", "forge_token=" + GUEST_TOKEN).build(),
                 HttpResponse.BodyHandlers.discarding()).statusCode();
         Assert.assertEquals(byCookie, 403, "the netplay route took a cookie for a token");
@@ -204,12 +205,12 @@ public class NetplayTunnelTest extends SessionsTest {
     /** Fails if an address of the older kind is taken for an invite link, which would send a desktop host's guests to a web port. */
     @Test
     public void onlyAnInviteLinkIsTunnelled() {
-        Assert.assertNull(FGameClient.tunnelOf("localhost:36743"));
-        Assert.assertNull(FGameClient.tunnelOf("192.168.1.20:36743"));
-        Assert.assertNull(FGameClient.tunnelOf("http://192.168.1.20:36743"));
-        Assert.assertNull(FGameClient.tunnelOf("not a link"));
-        Assert.assertEquals(String.valueOf(FGameClient.tunnelOf("http://192.168.1.20:36743/?token=abc")), "ws://192.168.1.20:36743/netplay?token=abc");
-        Assert.assertEquals(String.valueOf(FGameClient.tunnelOf(" HTTPS://play.example.com/?token=abc ")), "wss://play.example.com:443/netplay?token=abc");
+        Assert.assertNull(WebSocketTunnel.of("localhost:36743"));
+        Assert.assertNull(WebSocketTunnel.of("192.168.1.20:36743"));
+        Assert.assertNull(WebSocketTunnel.of("http://192.168.1.20:36743"));
+        Assert.assertNull(WebSocketTunnel.of("not a link"));
+        Assert.assertEquals(String.valueOf(WebSocketTunnel.of("http://192.168.1.20:36743/?token=abc").uri()), "ws://192.168.1.20:36743/netplay?token=abc");
+        Assert.assertEquals(String.valueOf(WebSocketTunnel.of(" HTTPS://play.example.com/?token=abc ").uri()), "wss://play.example.com:443/netplay?token=abc");
     }
 
     /** Fails if an https invite link is not joined over TLS, or the host's certificate is not checked against what the client trusts. */

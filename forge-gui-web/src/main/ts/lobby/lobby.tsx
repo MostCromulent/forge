@@ -210,7 +210,7 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
   // A deck led by a commander shows the commander, which says more about it than its sleeve does
   const commander = seat.commander;
   return (
-    <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${!mine && !waiting && seat.type !== 'AI' ? ' guest' : ''}${seat.benched ? ' benched' : ''}${leaving ? ' leaving' : ''}${seat.team != null ? ' teamed' : ''}`}>
+    <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${!mine && !waiting && seat.type !== 'AI' ? ' guest' : ''}${seat.sittingOut ? ' sitting-out' : ''}${leaving ? ' leaving' : ''}${seat.team != null ? ' teamed' : ''}`}>
       {seat.team != null && <TeamTab team={seat.team} teams={lobby.teams} change={lobby.host || mine ? team => actions.setTeam(index, team) : null} />}
       <div class="sleeve-slot" hidden={beforePools} data-image={commander ?? undefined}>
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
@@ -253,8 +253,8 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
         {beforePools && !waiting && <Ready seat={seat} actions={actions} disabled={lim.started} />}
         {/* Sitting out matters only with a match to fill from more players than it needs */}
         {lim?.activeEventId && lobby.host && !waiting && lobby.seats.filter(s => s.type !== 'OPEN').length > 2 && (
-          <label class="sits-out"><input type="checkbox" checked={seat.benched}
-            onChange={e => actions.benchSeat(index, e.currentTarget.checked)} /> {t('lblWebLobbySitsOut')}</label>
+          <label class="sits-out"><input type="checkbox" checked={seat.sittingOut}
+            onChange={e => actions.sitOut(index, e.currentTarget.checked)} /> {t('lblWebLobbySitsOut')}</label>
         )}
         {/* With no deck yet the row offers a random one; the sleeve beside it already offers to choose one */}
         {randomable && !hasDeck && (

@@ -7,7 +7,7 @@ import com.google.common.primitives.Longs;
 import forge.ImageKeys;
 import forge.StaticData;
 import forge.gamemodes.net.WebSocketBytes;
-import forge.gamemodes.net.client.FGameClient;
+import forge.gamemodes.net.WebSocketTunnel;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.HostingServer;
 import forge.gui.GuiBase;
@@ -580,7 +580,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             if (msg instanceof FullHttpRequest req) {
                 final QueryStringDecoder q = new QueryStringDecoder(req.uri());
                 final boolean socket = "/ws".equals(q.path());
-                final boolean netplay = FGameClient.TUNNEL_PATH.equals(q.path());
+                final boolean netplay = WebSocketTunnel.PATH.equals(q.path());
                 // A netplay client is no page: it sends no origin to check, so a cookie must not let it in and only its link's token does
                 final Access access = netplay ? accessOf(param(q, "token")) : access(req, q);
                 // The token keeps other pages out; the origin check keeps them from opening a socket with a stolen cookie
@@ -605,8 +605,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 ServerTraffic.carrying(ctx.channel(), ServerTraffic.Kind.GAME);
                 ctx.pipeline().addLast(
                         new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
-                                .websocketPath(FGameClient.TUNNEL_PATH).checkStartsWith(true)
-                                .maxFramePayloadLength(FGameClient.TUNNEL_FRAME_BYTES).build()),
+                                .websocketPath(WebSocketTunnel.PATH).checkStartsWith(true)
+                                .maxFramePayloadLength(WebSocketTunnel.FRAME_BYTES).build()),
                         new WebSocketBytes());
                 FServerManager.getInstance().adopt(ctx.channel());
                 return;

@@ -118,7 +118,7 @@ public abstract class GameLobby implements IHasGameType {
     public LobbySlot findFirstUnreadySlot() {
         for (int i = 0; i < getNumberOfSlots(); i++) {
             LobbySlot slot = getSlot(i);
-            if (slot == null || slot.getType() == LobbySlotType.OPEN) continue;
+            if (slot == null || slot.getType() == LobbySlotType.OPEN || slot.isSittingOut()) continue;
             if (!slot.isReady()) return slot;
         }
         return null;
@@ -388,7 +388,7 @@ public abstract class GameLobby implements IHasGameType {
     public Runnable startGame() {
         final List<LobbySlot> activeSlots = Lists.newArrayListWithCapacity(getNumberOfSlots());
         for (final LobbySlot slot : data.slots) {
-            if (slot.getType() != LobbySlotType.OPEN && !slot.isBenched()) {
+            if (slot.getType() != LobbySlotType.OPEN && !slot.isSittingOut()) {
                 activeSlots.add(slot);
             }
         }
@@ -587,8 +587,8 @@ public abstract class GameLobby implements IHasGameType {
     }
 
     /**
-     * Starts a match whose players and rules a game mode built itself, with the human at one seat of this lobby.
-     * The seats' decks and the lobby's variants are not read.
+     * Starts a match that a game mode built itself, with the human player in the given seat of this lobby.
+     * It does not read the seats' decks or the lobby's variants.
      */
     public void startPrepared(final PreparedMatch match, final int humanSeat) {
         final RegisteredPlayer human = match.human();

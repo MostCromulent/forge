@@ -32,9 +32,9 @@ public class OnlineCoreTest {
         assertSame(lobby.getCurrentEvent().getSealedGenerator(), gen);
     }
 
-    // Fails if startGame seats a benched slot: two ready seats with one benched are too few to play
+    // Fails if startGame seats a slot that sits out: two ready seats with one sitting out are too few to play
     @Test
-    public void aBenchedSeatSitsOut() {
+    public void aSeatSittingOutIsNotSeated() {
         final ServerGameLobby lobby = new ServerGameLobby();
         final Deck deck = new Deck("Forests");
         deck.getMain().add(StaticData.instance().getCommonCards().getCard("Forest"), 40);
@@ -45,7 +45,7 @@ public class OnlineCoreTest {
             slot.setDeck(deck);
             slot.setIsReady(true);
         }
-        lobby.getSlot(1).setBenched(true);
-        assertNull(lobby.startGame(), "a benched seat was counted as a player");
+        lobby.getSlot(1).setSittingOut(true);
+        assertNull(lobby.startGame(), "a seat sitting out was counted as a player");
     }
 }

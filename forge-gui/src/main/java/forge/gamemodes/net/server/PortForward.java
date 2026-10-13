@@ -14,9 +14,9 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.function.Consumer;
 
-/** Asks the router, over UPnP, to forward a TCP port to this machine, and removes the forwarding again when closed. */
+/** Asks the router over UPnP to forward a TCP port to this machine. close() removes the forwarding. */
 public final class PortForward implements IHasForgeLog {
-    /** How long a router has to confirm the forwarding before it counts as refused. */
+    /** How long to wait for a router to confirm. After that the forwarding counts as failed. */
     private static final long ANSWER_MILLIS = 5000;
 
     private final int port;
@@ -26,11 +26,7 @@ public final class PortForward implements IHasForgeLog {
         this.port = port;
     }
 
-    public int port() {
-        return port;
-    }
-
-    /** Starts asking. result is told once: true when a router accepted the forwarding, false when none did. */
+    /** Starts the request without waiting for the answer. result is called once: true if a router accepted the forwarding, false if none did. */
     public synchronized void open(final Consumer<Boolean> result) {
         close();
         try {
@@ -46,24 +42,23 @@ public final class PortForward implements IHasForgeLog {
                 @Override
                 public void run() {
                     if (listener.finish(false)) {
-                        netLog.warn("UPnP: no gateway confirmed a mapping for port {} within 5 seconds", port);
+                        netLog.warn("UPnP: no gateway confirmed a mapping for port {} within {} seconds", port, ANSWER_MILLIS / 1000);
                     }
                 }
             }, ANSWER_MILLIS);
         } catch (LinkageError | Exception e) {
-            // jupnp's classes fail to load on iOS/MobiVM with a LinkageError, which is caught so the server stays up there
+            // jupnp's classes do not load on iOS/MobiVM. Catching the LinkageError lets hosting continue there without UPnP
             netLog.error(e, "UPnP mapping unavailable");
             result.accept(false);
         }
     }
 
-    /** Removes the forwarding, if there is one. */
     public synchronized void close() {
         if (service == null) {
             return;
         }
         try {
-            // Shutting down tells the router to drop every mapping this service made
+            // Shutting down the service also removes its port mappings from the router
             service.shutdown();
         } catch (Exception | AssertionError e) {
             // The JDK wraps a failed multicast leave in AssertionError, which jupnp doesn't catch
@@ -72,7 +67,7 @@ public final class PortForward implements IHasForgeLog {
         service = null;
     }
 
-    // The superclass maps the port inside deviceAdded, so by the time super.deviceAdded returns the outcome is known
+    // The superclass maps the port synchronously inside deviceAdded, so the outcome is known when super.deviceAdded returns
     private static final class Listener extends PortMappingListener {
         private final Consumer<Boolean> result;
         private boolean finished;
@@ -96,7 +91,7 @@ public final class PortForward implements IHasForgeLog {
             finish(false);
         }
 
-        /** Reports the outcome the first time only. Returns whether this call was the one that reported. */
+        /** Reports the outcome once. Returns true if this call was the one that reported it. */
         synchronized boolean finish(final boolean accepted) {
             if (finished) {
                 return false;
