@@ -149,9 +149,9 @@ public abstract class GameLobby implements IHasGameType {
                     lastArchenemy = otherIndex;
                 }
                 otherSlot.setIsArchenemy(becomesArchenemy);
-                otherSlot.setTeam(becomesArchenemy ? 0 : 1);
             }
         }
+        applyArchenemyTeams();
 
         if (event.getType() != null) {
             //refresh decklist for slot
@@ -203,6 +203,7 @@ public abstract class GameLobby implements IHasGameType {
             slot.setIsArchenemy(true);
             lastArchenemy = 0;
         }
+        applyArchenemyTeams();
         updateView(true);
     }
     private String randomName() {
@@ -248,6 +249,7 @@ public abstract class GameLobby implements IHasGameType {
             lastArchenemy--;
         }
         data.slots.remove(index);
+        applyArchenemyTeams();
         updateView(false);
     }
 
@@ -259,6 +261,7 @@ public abstract class GameLobby implements IHasGameType {
         switch (variant) {
         case Archenemy:
             data.appliedVariants.remove(GameType.ArchenemyRumble);
+            applyArchenemyTeams();
             break;
         case ArchenemyRumble:
             data.appliedVariants.remove(GameType.Archenemy);
@@ -349,9 +352,8 @@ public abstract class GameLobby implements IHasGameType {
 
     private boolean isEnoughTeams() {
         int lastTeam = -1;
-        final boolean useArchenemyTeams = data.appliedVariants.contains(GameType.Archenemy);
         for (final LobbySlot slot : data.slots) {
-            final int team = useArchenemyTeams ? (slot.isArchenemy() ? 0 : 1) : slot.getTeam();
+            final int team = slot.getTeam();
             if (lastTeam == -1) {
                 lastTeam = team;
             } else if (lastTeam != team) {
@@ -359,6 +361,16 @@ public abstract class GameLobby implements IHasGameType {
             }
         }
         return false;
+    }
+
+    /** Under Archenemy a seat's team follows its archenemy flag. */
+    private void applyArchenemyTeams() {
+        if (!hasVariant(GameType.Archenemy)) {
+            return;
+        }
+        for (final LobbySlot slot : data.slots) {
+            slot.setTeam(slot.isArchenemy() ? 0 : 1);
+        }
     }
 
     protected void updateView(final boolean fullUpdate) {
