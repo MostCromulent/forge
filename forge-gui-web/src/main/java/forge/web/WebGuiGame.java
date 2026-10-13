@@ -41,6 +41,7 @@ import forge.localinstance.skin.FSkinProp;
 import forge.player.AutoYieldStore.TriggerDecision;
 import forge.player.PlayerZoneUpdate;
 import forge.trackable.TrackableCollection;
+import forge.trackable.TrackableObject;
 import forge.trackable.TrackableProperty;
 import forge.trackable.TrackableTypes;
 import forge.trackable.TrackableTypes.TrackableType;
@@ -539,12 +540,18 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     @Override
-    public void setSelectablePlayers(final Iterable<PlayerView> players) {
-        final List<Ref> keys = new ArrayList<>();
-        for (final PlayerView p : players) {
-            keys.add(Ref.player(p.getId()));
+    public void setSelectableTargets(final Iterable<? extends TrackableObject> targets) {
+        super.setSelectableTargets(targets);
+        final List<Ref> players = new ArrayList<>();
+        final List<Integer> stackItems = new ArrayList<>();
+        for (final TrackableObject target : targets) {
+            if (target instanceof PlayerView p) {
+                players.add(Ref.player(p.getId()));
+            } else if (target instanceof StackItemView item) {
+                stackItems.add(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, item.getId()));
+            }
         }
-        prompt.selectablePlayers(keys);
+        prompt.selectableTargets(players, stackItems);
     }
 
     @Override
@@ -580,9 +587,9 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     @Override
-    public void setHighlighted(final Iterable<GameEntityView> entities, final boolean b) {
-        super.setHighlighted(entities, b);
-        prompt.highlight(entities, b);
+    public void setHighlighted(final Iterable<? extends TrackableObject> objects, final boolean b) {
+        super.setHighlighted(objects, b);
+        prompt.highlight(objects, b);
     }
 
     @Override
@@ -1234,6 +1241,12 @@ public class WebGuiGame extends NetworkGuiGame {
                     toggleMarker(marker.phase(), marker.mine());
                 }
                 case "useMana" -> controller.useMana(Wire.decode(msg, UseMana.class).color());
+                case "selectStackItem" -> {
+                    final StackItemView item = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.StackItemViewType);
+                    if (item != null) {
+                        controller.selectStackItem(item);
+                    }
+                }
                 case "stackMenu" -> {
                     final StackItemView item = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.StackItemViewType);
                     if (item != null) {

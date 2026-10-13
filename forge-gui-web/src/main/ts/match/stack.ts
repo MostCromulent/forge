@@ -5,7 +5,7 @@ import { game, deref, derefAll, me, players, stackPick, stateOf, zone, type Mode
 import { isPortrait } from '../form';
 import { hoverCard, hoverable, inspectCard } from './detail';
 import { FIZZLE_MS, journeys, noteFizzled } from './motion';
-import { stackTargets } from './overlay';
+import { notePick, stackTargets } from './overlay';
 import { hovers, longPress } from '../press';
 import { byId, q, make, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
@@ -33,6 +33,7 @@ let countSeen = 0;
 let foldedFor: object | null = null;
 let foldedForPick: object | null = null;
 let openedForPick: number | null = null;
+let openedForTargets: object | null = null;
 
 function fold(folded: boolean): void {
   foldedFor = folded ? current?.prompt ?? null : null;
@@ -107,6 +108,10 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   // A spell is picked on the list, so a folded list opens once for the question
   if (pick && pick.id !== openedForPick) ui.stackCollapsed = false;
   openedForPick = pick?.id ?? null;
+  // A target on the stack is clicked on the list too, while the prompt asks for it
+  const offered = model.prompt?.selectableStack ?? [];
+  if (offered.length > 0 && model.prompt !== openedForTargets) ui.stackCollapsed = false;
+  openedForTargets = offered.length > 0 ? model.prompt : null;
   const collapsed = ui.stackCollapsed;
   showPanel(root, items.length + awaiting.size > 0);
   root.classList.toggle('collapsed', collapsed);
@@ -132,7 +137,8 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
         delete el.dataset.fresh;
         if (!flown.has(String(e.SourceCard?.ref)) && !reducedMotion()) arriving.push({ el, source: String(e.SourceCard?.ref ?? '') });
       }
-      el.classList.toggle('targetable', (pick?.stackKeys ?? []).includes(e.$key));
+      el.classList.toggle('targetable', (pick?.stackKeys ?? []).includes(e.$key) || offered.includes(e.$key));
+      el.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(e.$key));
     });
   place(root);
   layout(pile, entries.length);
@@ -271,6 +277,9 @@ function createItem(model: Model): HTMLElement {
     const index = (pick?.stackKeys ?? []).indexOf(Number(el.dataset.key));
     if (pick && index >= 0) {
       actions?.answer(pick.id, [index]);
+    } else if ((current?.prompt?.selectableStack ?? []).includes(Number(el.dataset.key))) {
+      notePick(Number(el.dataset.key));
+      actions?.selectStackItem(Number(el.dataset.key));
     }
   });
   el.addEventListener('pointerenter', e => {
@@ -333,7 +342,7 @@ function showLeaving(pile: HTMLElement, staying: Set<string>, events: readonly G
     const ability = !!el.dataset.ability;
     if (!failed && !ability) continue;
     const ghost = el.cloneNode(true) as HTMLElement;
-    ghost.classList.remove('top', 'lifted', 'targetable');
+    ghost.classList.remove('top', 'lifted', 'targetable', 'highlighted');
     ghost.style.cssText += `position: fixed; left: ${box.left}px; top: ${box.top}px; width: ${box.width}px; height: ${box.height}px; margin: 0; z-index: 41; pointer-events: none;`;
     document.body.append(ghost);
     if (failed) {

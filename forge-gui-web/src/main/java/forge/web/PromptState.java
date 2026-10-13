@@ -1,8 +1,9 @@
 package forge.web;
 
-import forge.game.GameEntityView;
 import forge.game.card.CardView;
+import forge.game.player.PlayerView;
 import forge.gamemodes.net.DeltaPacket;
+import forge.trackable.TrackableObject;
 import forge.util.Localizer;
 import forge.web.ToBrowser.Prompt;
 import forge.web.ToBrowser.PromptButton;
@@ -28,6 +29,7 @@ final class PromptState {
     private List<Ref> selectable = List.of();
     private int selectableMin;
     private List<Ref> selectablePlayers = List.of();
+    private List<Integer> selectableStack = List.of();
     private final Set<Integer> highlighted = new LinkedHashSet<>();
 
     PromptState(final Consumer<Prompt> send) {
@@ -65,21 +67,25 @@ final class PromptState {
         changed();
     }
 
-    synchronized void selectablePlayers(final List<Ref> players) {
+    synchronized void selectableTargets(final List<Ref> players, final List<Integer> stackItems) {
         selectablePlayers = players;
+        selectableStack = stackItems;
         changed();
     }
 
     synchronized void clearSelectables() {
         selectable = List.of();
         selectablePlayers = List.of();
+        selectableStack = List.of();
         selectableMin = 0;
         changed();
     }
 
-    synchronized void highlight(final Iterable<GameEntityView> entities, final boolean on) {
-        for (final GameEntityView e : entities) {
-            final int key = DeltaPacket.makeDeltaKey(e instanceof CardView ? DeltaPacket.TYPE_CARD_VIEW : DeltaPacket.TYPE_PLAYER_VIEW, e.getId());
+    synchronized void highlight(final Iterable<? extends TrackableObject> objects, final boolean on) {
+        for (final TrackableObject e : objects) {
+            final int type = e instanceof CardView ? DeltaPacket.TYPE_CARD_VIEW
+                    : e instanceof PlayerView ? DeltaPacket.TYPE_PLAYER_VIEW : DeltaPacket.TYPE_STACK_ITEM_VIEW;
+            final int key = DeltaPacket.makeDeltaKey(type, e.getId());
             if (on) {
                 highlighted.add(key);
             } else {
@@ -100,7 +106,7 @@ final class PromptState {
 
     private Prompt current() {
         return new Prompt(message, priority, card, ok, cancel, focusOk, paying, selectable, selectableMin,
-                selectablePlayers, List.copyOf(highlighted), starterChoice);
+                selectablePlayers, selectableStack, List.copyOf(highlighted), starterChoice);
     }
 
     /** Whether the message opens with the line the key makes, whatever player's name fills it. */

@@ -55,7 +55,7 @@ public class InputSelectEntitiesFromList<T extends GameEntity> extends InputSele
         }
         getController().getGui().setSelectables(vCards, this.min, this.max);
         if (!vPlayers.isEmpty()) {
-            getController().getGui().setSelectablePlayers(vPlayers);
+            getController().getGui().setSelectableTargets(vPlayers);
         }
     }
 

@@ -12,6 +12,7 @@ export interface Actions {
   /** A click on a card. menu is the right button, which asks for everything the card can do; x and y place that list. */
   selectCard(key: number, menu: boolean, x: number, y: number): void;
   selectPlayer(key: number): void;
+  selectStackItem(key: number): void;
   /** Pays with one colour of the pool, by its bit in the player's Mana property. */
   useMana(color: number): void;
   ok(): void;
@@ -243,6 +244,7 @@ export function createActions(send: Send): Actions {
   return {
     selectCard: (key, menu, x, y) => send({ t: 'selectCard', key, menu, x: Math.round(x), y: Math.round(y) }),
     selectPlayer: key => send({ t: 'selectPlayer', key }),
+    selectStackItem: key => send({ t: 'selectStackItem', key }),
     useMana: color => send({ t: 'useMana', color }),
     ok: () => send({ t: 'ok' }),
     cancel: () => send({ t: 'cancel' }),

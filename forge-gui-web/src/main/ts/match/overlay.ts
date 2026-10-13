@@ -250,7 +250,8 @@ let lastAim: { key: string; targets: number[] } | null = null;
 /** Keeps a clicked target, because a spell with one target goes straight to payment and the prompt never shows it picked. */
 export function notePick(key: number): void {
   const p = drawn?.prompt;
-  const offered = !!p && (p.selectable.some(r => r.ref === key) || p.selectablePlayers.some(r => r.ref === key));
+  const offered = !!p && (p.selectable.some(r => r.ref === key) || p.selectablePlayers.some(r => r.ref === key)
+    || p.selectableStack.includes(key));
   if (aiming && lastAim && offered && !lastAim.targets.includes(key)) lastAim.targets.push(key);
 }
 /** Whether the last paint drew the aim, so moving the mouse only repaints while there is one to follow it. */
@@ -268,7 +269,7 @@ const LET_GO = 4;
 /** Draws the aim while targets are chosen, which only a prompt that both names a card and offers picks marks. */
 function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
   const p = model.prompt;
-  const aimed = !!p?.card && !p.paying && !p.priority && (p.selectable.length > 0 || p.selectablePlayers.length > 0)
+  const aimed = !!p?.card && !p.paying && !p.priority && (p.selectable.length > 0 || p.selectablePlayers.length > 0 || p.selectableStack.length > 0)
     && !(model.zones.length > 0 && !ui.zonesMinimised);
   const key = String(p?.card?.ref);
   // A spell is already on the stack, awaiting payment, while its targets are chosen; an ability's card is on the board
@@ -418,7 +419,8 @@ export function stackTargets(model: Model, item: StackItemView): TrackedObject[]
 function elementFor(key: number | undefined): HTMLElement | null {
   if (key === undefined) return null;
   return document.querySelector<HTMLElement>(`.seat[data-player="${key}"] .avatar`)
-    ?? cardElement(String(key)) ?? pileTopFor(String(key));
+    ?? cardElement(String(key)) ?? pileTopFor(String(key))
+    ?? document.querySelector<HTMLElement>(`#stack .stack-item[data-key="${key}"]`);
 }
 
 function center(el: HTMLElement): Point {

@@ -248,7 +248,7 @@ final class FromBrowser {
     record SelectCard(int key, boolean menu, int x, int y) {
     }
 
-    enum KeyAction { selectPlayer, detail, playerDetail, stackMenu }
+    enum KeyAction { selectPlayer, selectStackItem, detail, playerDetail, stackMenu }
 
     /** Something done to one object in the game's table, named by its delta key. */
     @Command

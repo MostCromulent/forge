@@ -60,7 +60,7 @@ window.addEventListener('error', e => report(String((e.error as Error | undefine
 window.addEventListener('unhandledrejection', e => report(String((e.reason as Error | undefined)?.stack ?? e.reason)));
 
 // While messages are held the prompt on screen is an earlier board's, so an answer to it would land on a question not yet seen
-const HELD_INPUT = new Set(['selectCard', 'selectPlayer', 'useMana', 'ok', 'cancel', 'endTurn', 'undo']);
+const HELD_INPUT = new Set(['selectCard', 'selectPlayer', 'selectStackItem', 'useMana', 'ok', 'cancel', 'endTurn', 'undo']);
 const wire = createActions(msg => {
   if (!held || !HELD_INPUT.has(msg.t)) send(msg);
   else console.warn(`Not sent while the page catches up: ${msg.t}`);

@@ -8,6 +8,7 @@ import forge.game.card.CardView;
 import forge.game.player.DelayedReveal;
 import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbilityView;
+import forge.game.spellability.StackItemView;
 import forge.gamemodes.match.DrawOfferMessage;
 import forge.gamemodes.match.NextGameDecision;
 import forge.gamemodes.match.YieldUpdate;
@@ -62,11 +63,11 @@ public enum ProtocolMethod implements IHasForgeLog {
     manipulateCardList   (Mode.SERVER, List.class, String.class, Iterable.class, Iterable.class, Boolean.TYPE, Boolean.TYPE, Boolean.TYPE),
     setCard             (Mode.SERVER, Void.TYPE, CardView.class),
     setSelectables      (Mode.SERVER, Void.TYPE, Iterable/*CardView*/.class, Integer.TYPE, Integer.TYPE),
-    setSelectablePlayers(Mode.SERVER, Void.TYPE, Iterable/*PlayerView*/.class),
     clearSelectables    (Mode.SERVER, Void.TYPE),
     showRevealedCards   (Mode.SERVER, Void.TYPE, Iterable/*CardView*/.class),
     hideRevealedCards   (Mode.SERVER, Void.TYPE),
-    setHighlighted      (Mode.SERVER, Void.TYPE, Iterable/*GameEntityView*/.class, Boolean.TYPE),
+    setHighlighted      (Mode.SERVER, Void.TYPE, Iterable/*TrackableObject*/.class, Boolean.TYPE),
+    setSelectableTargets(Mode.SERVER, Void.TYPE, Iterable/*PlayerView, StackItemView*/.class),
     setWeaklySelectable (Mode.SERVER, Void.TYPE, Iterable/*CardView*/.class),
     clearWeaklySelectable(Mode.SERVER, Void.TYPE),
     // TODO case "setPlayerAvatar":
@@ -88,6 +89,7 @@ public enum ProtocolMethod implements IHasForgeLog {
     selectButtonOk            (Mode.CLIENT, Void.TYPE),
     selectButtonCancel        (Mode.CLIENT, Void.TYPE),
     selectAbility             (Mode.CLIENT, Void.TYPE, SpellAbilityView.class),
+    selectStackItem           (Mode.CLIENT, Void.TYPE, StackItemView.class),
     nextGameDecision          (Mode.CLIENT, Void.TYPE, NextGameDecision.class),
     getActivateDescription    (Mode.CLIENT, String.class, CardView.class),
     concede                   (Mode.CLIENT, Void.TYPE),

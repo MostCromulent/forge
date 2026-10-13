@@ -42,7 +42,8 @@ export function passingFor(controls: Controls | null | undefined): boolean {
  * While the game passes for them, Cancel only offers to stop that, which asks nothing.
  */
 export function asksPlayer(prompt: Prompt, passing = false): boolean {
-  return prompt.priority || prompt.ok.enabled || (prompt.cancel.enabled && !passing) || prompt.selectable.length > 0 || prompt.selectablePlayers.length > 0;
+  return prompt.priority || prompt.ok.enabled || (prompt.cancel.enabled && !passing) || prompt.selectable.length > 0 || prompt.selectablePlayers.length > 0
+    || prompt.selectableStack.length > 0;
 }
 
 let behind = false;

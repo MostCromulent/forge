@@ -1155,6 +1155,7 @@ html[data-motion="reduced"] .avatar.hit, html[data-motion="reduced"] .avatar.hit
 /* A spell that can be targeted is picked on the stack, where it stays bright while the rest dims */
 #stack .stack-item.targetable { cursor: pointer; }
 #stack .stack-item.targetable:hover { outline-color: var(--text); }
+#stack .stack-item.highlighted { outline: 3px solid var(--pick); }
 
 /* A one-pixel highlight along the top edge is what makes a dark panel read as a solid thing, not a hole */
 #log, .zone-panel { box-shadow: inset 0 1px 0 #ffffff12; }

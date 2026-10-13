@@ -75,7 +75,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   // A prompt offering cards or players to pick, or a spell picked on the stack, dims everything else (board.css); paying a cost is not such a pick
   const p = model.prompt;
   byId('match').classList.toggle('picking', !!stackPick(model) || (!!p && !p.paying
-    && (p.selectable.length > 0 || p.selectablePlayers.length > 0)));
+    && (p.selectable.length > 0 || p.selectablePlayers.length > 0 || p.selectableStack.length > 0)));
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
   const select: CardClick = (el, menu, e) => {
     const key = Number(el.dataset.key);
