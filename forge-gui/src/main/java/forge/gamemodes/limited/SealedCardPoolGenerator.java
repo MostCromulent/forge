@@ -446,7 +446,6 @@ public class SealedCardPoolGenerator {
         UnOpenedProduct importedProduct = new UnOpenedProduct(importedDraft.getSealedProductTemplate(), importedDraft.getCardPool());
         importedProduct.setLimitedPool(importedDraft.isSingleton());
         addBoosters(importedProduct, packs);
-        this.product.add(importedProduct);
     }
 
     private static Integer chooseNumberOfBoosters() {
