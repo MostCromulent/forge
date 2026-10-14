@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import forge.card.CardRarity;
+import forge.deck.DeckSection;
 import forge.game.GameLogEntryType;
 import forge.game.GameLogVerbosity;
 import forge.game.phase.PhaseType;
@@ -237,7 +238,12 @@ final class ToBrowser {
             String target, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderWanted, String identity,
             List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
             @Nullable String verdict, boolean canUndo, @Nullable String landed,
-            boolean limited, @Nullable String landSet, List<LandSet> landSets, @Nullable String collection, boolean mainOnly) {
+            boolean limited, @Nullable String landSet, List<LandSet> landSets, @Nullable String collection, boolean mainOnly,
+            List<EditorSection> sections) {
+    }
+
+    /** A section beyond the main deck, sideboard and commander, such as planes or schemes, which a deck may carry. */
+    record EditorSection(DeckSection section, String name, List<EditorCard> cards) {
     }
 
     /** An edition basic lands can come from, for a limited deck's land row. */

@@ -111,11 +111,20 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 
 /* --- the deck half ---------------------------------------------------------- */
 /* The main deck takes the row that stretches, whether or not a command zone lies above it, and the basic lands close the panel */
-.deck-half { border-left: 1px solid var(--line); background: var(--surface); display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto auto; min-height: 0; }
+.deck-half { border-left: 1px solid var(--line); background: var(--surface); display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto auto auto; min-height: 0; }
 .deck-half > .commander-zone { grid-row: 2; }
 .deck-half > .main-zone { grid-row: 3; }
 .deck-half > .side-zone { grid-row: 4; }
-.deck-half > .land-row { grid-row: 5; }
+.deck-half > .extras { grid-row: 5; border-bottom: 1px solid var(--line); }
+.extras .extra-zones { max-height: 240px; overflow: auto; }
+.deck-half > .land-row { grid-row: 6; }
+.extras .extra-zone { border-bottom: 1px solid var(--line); }
+.extras .extra-zone > h4 .small { margin-left: auto; text-transform: none; letter-spacing: 0; }
+.extras .extra-zone.adding > h4 .zn { color: var(--accent-2); }
+.extras .add-section { padding: 7px 16px; }
+.extras .add-section .deck-menu { left: 16px; right: auto; top: auto; bottom: calc(100% - 2px); transform-origin: 0 100%; }
+.catalogue .adding-to { margin: 8px 0 0; padding: 6px 10px; display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; font-weight: 600;
+  color: var(--accent-2); background: var(--accent-soft); border-radius: 6px; }
 .deck-head { padding: 12px 16px 10px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; }
 .deck-head h3 { margin: 0 0 2px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
 .deck-head .sizes { margin: 0; color: var(--muted); font-size: 12.5px; }

@@ -1,6 +1,7 @@
 package forge.web;
 
 import forge.StaticData;
+import forge.card.CardDb;
 import forge.card.CardEdition;
 import forge.card.CardRules;
 import forge.card.CardType;
@@ -18,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
@@ -60,6 +63,24 @@ final class CardCatalog {
 
     static CardCatalog get() {
         return Holder.INSTANCE;
+    }
+
+    private static final Map<DeckSection, CardCatalog> SECTIONS = new ConcurrentHashMap<>();
+
+    /** The cards a section beyond the main deck holds, planes or schemes say, built the first time it is asked for. */
+    static CardCatalog of(final DeckSection section) {
+        return SECTIONS.computeIfAbsent(section, s -> {
+            FModel.getMagicDb().ensureAllCardsLoaded();
+            final List<Row> rows = new ArrayList<>();
+            for (final CardDb db : List.of(StaticData.instance().getCommonCards(), StaticData.instance().getVariantCards())) {
+                for (final PaperCard card : db.getUniqueCards()) {
+                    if (!card.getRules().isUnsupported() && DeckSection.matchingSection(card) == s) {
+                        rows.add(row(card));
+                    }
+                }
+            }
+            return new CardCatalog(rows);
+        });
     }
 
     private static final class Sets {

@@ -1,7 +1,8 @@
 // The editor's right half: the deck as the deck finder shows it, made editable
 
 import type { ComponentChildren } from 'preact';
-import { useLayoutEffect, useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useDismiss } from '../hooks';
 import { isPortrait } from '../form';
 import { flyingFor, land } from '../flight';
 import { drawHand, headingText, regroup, type GroupBy } from './decklist';
@@ -9,7 +10,7 @@ import { imageUrl } from '../images';
 import { Pip, Pips, SymbolText } from '../symbols';
 import type { Actions } from '../actions';
 import type { CardHandlers } from './drag';
-import type { DeckSection, EditorCard, EditorState } from '../protocol';
+import type { DeckSection, EditorCard, EditorSection, EditorState } from '../protocol';
 import { store, stored } from '../storage';
 import { t } from '../text';
 
@@ -17,8 +18,9 @@ const GROUP_KEY = 'forge.groupBy';
 const VIEW_KEY = 'forge.deckView';
 const HAND = 7;
 
-export function DeckHalf({ actions, state, handlers, check }: {
+export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
   actions: Actions; state: EditorState; handlers: CardHandlers; check?: ComponentChildren;
+  adding: DeckSection | null; addTo: (section: DeckSection | null) => void;
 }) {
   const [by, setBy] = useState<GroupBy>(storedGroup);
   const [cards, view] = useDeckView();
@@ -108,6 +110,17 @@ export function DeckHalf({ actions, state, handlers, check }: {
             </div>
           )}
       </div>}
+      {state.sections.length > 0 && (
+        <div class="extras">
+          <div class="extra-zones">
+            {state.sections.filter(s => s.cards.length || s.section === adding).map(s => (
+              <ExtraZone key={s.section} section={s} cards={cards} adding={s.section === adding} landed={state.landed}
+                addTo={addTo} actions={actions} />
+            ))}
+          </div>
+          <AddSection sections={state.sections.filter(s => !s.cards.length && s.section !== adding)} addTo={addTo} />
+        </div>
+      )}
       <div class="land-row">
         <span class="band-lab">{t('lblWebEditorBasicLands')}</span>
         {state.lands.map(l => (
@@ -132,6 +145,67 @@ export function DeckHalf({ actions, state, handlers, check }: {
       {hand && <SampleHand hand={hand} again={() => setHand(drawHand(state, HAND))}
         more={() => setHand(drawHand(state, hand.length + 1))} close={() => setHand(null)} />}
     </section>
+  );
+}
+
+/** A section beyond the main deck, planes or schemes say, whose cards the catalogue adds while the section is chosen. */
+function ExtraZone({ section, cards, adding, landed, addTo, actions }: {
+  section: EditorSection; cards: boolean; adding: boolean; landed?: string | null; addTo: (section: DeckSection | null) => void; actions: Actions;
+}) {
+  const from = section.section;
+  const remove = (name: string) => actions.edit({ op: 'remove', name, from, count: 1 });
+  return (
+    <div class={adding ? 'zone extra-zone adding' : 'zone extra-zone'}>
+      <h4>
+        <span class="zn">{section.name}</span><span class="count">{section.cards.reduce((n, c) => n + c.count, 0)}</span>
+        <button class="small" aria-pressed={adding} onClick={() => addTo(adding ? null : from)}>
+          {adding ? t('lblWebEditorAddingHere') : t('lblWebEditorAddCards')}</button>
+      </h4>
+      <div class={cards ? 'zone-body deck-cols' : 'zone-body'}>
+        {!section.cards.length && <p class="none">{t('lblWebEditorSectionEmpty')}</p>}
+        {cards
+          ? <div class="group">{section.cards.map(c => (
+              <div key={c.name} class={landed === c.name ? 'deck-stack landed' : 'deck-stack'} data-image={c.image} data-card={c.name} data-from={from}
+                onDblClick={() => remove(c.name)}>
+                <img alt={c.name} src={imageUrl(c.image)} draggable={false} />
+                {c.count > 1 && <span class="deck-count">×{c.count}</span>}
+              </div>
+            ))}</div>
+          : section.cards.map(c => (
+              <div key={c.name} class={landed === c.name ? 'dk-line ed-line landed' : 'dk-line ed-line'} data-image={c.image} data-card={c.name} data-from={from}>
+                <span class="n">{c.count}</span>
+                <span class="nm">{c.name}</span>
+                <span class="ra">
+                  <button aria-label={t('lblWebEditorOneFewer', c.name)} onClick={() => remove(c.name)}>&minus;</button>
+                  <button aria-label={t('lblWebEditorOneMore', c.name)} onClick={() => actions.edit({ op: 'add', name: c.name, to: from, count: 1 })}>+</button>
+                </span>
+              </div>
+            ))}
+      </div>
+    </div>
+  );
+}
+
+/** The sections a deck does not carry yet; choosing one shows it, empty, and turns the catalogue to its cards. */
+function AddSection({ sections, addTo }: { sections: EditorSection[]; addTo: (section: DeckSection) => void }) {
+  const [open, setOpen] = useState(false);
+  const anchor = useRef<HTMLDivElement>(null);
+  useDismiss(open, anchor, () => setOpen(false));
+  if (!sections.length) return null;
+  return (
+    <div ref={anchor} class="menu-anchor add-section">
+      <button class="small" aria-expanded={open} onClick={() => setOpen(!open)}>{t('lblWebEditorAddSection')}</button>
+      {open && (
+        <div class="deck-menu" role="menu">
+          {sections.map(s => (
+            <button key={s.section} role="menuitem" onClick={() => {
+              setOpen(false);
+              addTo(s.section);
+            }}><span>{s.name}</span></button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -49,6 +49,8 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   const [picking, setPicking] = useState<{ name: string; zone: DeckSection | null } | null>(null);
   /** Which half a phone shows, where there is room for one at a time. */
   const [half, setHalf] = useState<'find' | 'deck'>('find');
+  /** The section beyond the main deck the catalogue adds to, planes say, or null for the main deck. */
+  const [addingTo, setAddingTo] = useState<DeckSection | null>(null);
   // A list pasted anywhere but a field opens the importer with it, as a file dropped on the page does
   useEffect(() => {
     const pasted = (e: ClipboardEvent) => {
@@ -64,6 +66,8 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   if (!state) {
     return null;
   }
+  // Another deck may not carry the section chosen for the last one
+  const adding = addingTo && state.sections.some(s => s.section === addingTo) ? addingTo : null;
   const dropped = (carried: Carried, v: Verdict) => {
     if (v.zone === 'catalogue' && carried.from !== 'catalogue') {
       actions.edit({ op: 'remove', name: carried.name, from: carried.from, count: carried.count });
@@ -165,8 +169,11 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
         </button>
       </div>
       <div class={half === 'deck' ? 'editor-shell deck' : 'editor-shell'}>
-        <Catalogue model={model} actions={actions} state={state} handlers={handlers} />
-        <DeckHalf actions={actions} state={state} handlers={handlers} check={check} />
+        <Catalogue model={model} actions={actions} state={state} handlers={handlers} adding={adding} stopAdding={() => setAddingTo(null)} />
+        <DeckHalf actions={actions} state={state} handlers={handlers} check={check} adding={adding} addTo={section => {
+          setAddingTo(section);
+          if (section) setHalf('find');
+        }} />
       </div>
       {dialog === 'text' && <TextDialog state={state} close={() => setDialog(null)} />}
       {dialog === 'delete' && (

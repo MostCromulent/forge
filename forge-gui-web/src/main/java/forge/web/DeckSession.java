@@ -372,6 +372,13 @@ final class DeckSession {
         }
         final Check check = e == null ? Check.none() : e.check();
         final Deck deck = e == null ? new Deck("") : e.deck();
+        final DeckSection section = q.section();
+        if (section != null && section != DeckSection.Main && section != DeckSection.Sideboard && section != DeckSection.Commander) {
+            // A section's own cards answer to no format, so none is left out as unusable
+            final CardPool held = deck.get(section);
+            return CardCatalog.of(section).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
+                    q.offset(), q.showAll()), c -> null, printedIn(q.sets(), q.format()), name -> held == null ? 0 : held.countByName(name), null);
+        }
         final List<PaperCard> commanders = Legality.commanders(deck, check);
         final DeckFormat df = check.deckFormat();
         // A commander deck without its commander shows only cards that can be one, and a Background only once a commander can choose one

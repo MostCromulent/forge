@@ -207,7 +207,7 @@ final class FromBrowser {
     @Command("catalogue")
     record CatalogueQuery(int request, String text, String colours, String type, String filters, String sort, int offset,
             boolean showAll, @Nullable String identity, @Nullable String source, @Nullable String group,
-            @Nullable List<String> sets, @Nullable String format) {
+            @Nullable List<String> sets, @Nullable String format, @Nullable DeckSection section) {
     }
 
     @Command("importRead")

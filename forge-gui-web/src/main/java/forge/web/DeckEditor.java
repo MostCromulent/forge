@@ -23,6 +23,7 @@ import forge.web.ToBrowser.EditorCard;
 import forge.web.ToBrowser.EditorGroup;
 import forge.web.ToBrowser.EditorLand;
 import forge.web.ToBrowser.EditorPrinting;
+import forge.web.ToBrowser.EditorSection;
 import forge.web.ToBrowser.EditorState;
 import forge.web.ToBrowser.LandSet;
 
@@ -580,7 +581,19 @@ final class DeckEditor {
                 DeckCatalog.stats(deck), legality.verdict(), !undo.isEmpty(), landed,
                 limited(), landSet, limited() ? LandSets.ALL : collection == null ? List.of()
                         : collection.landSets().apply(deck).stream().map(e -> new LandSet(e.getCode(), e.getName())).toList(),
-                collection == null ? null : collection.owner(), collection != null && collection.mainOnly());
+                collection == null ? null : collection.owner(), collection != null && collection.mainOnly(), sections(legality));
+    }
+
+    /** Every section beyond the main deck a constructed deck can carry, as desktop's editor offers them. A pool or a collection has none. */
+    private List<EditorSection> sections(final Legality.Result legality) {
+        if (limited() || collection != null) {
+            return List.of();
+        }
+        final List<EditorSection> out = new ArrayList<>();
+        for (final DeckSection section : DeckSection.NONTRADITIONAL_SECTIONS) {
+            out.add(new EditorSection(section, section.getLocalizedName(), cards(deck.get(section), legality)));
+        }
+        return out;
     }
 
     private String change(final String cardName, final Runnable op) {
@@ -843,7 +856,12 @@ final class DeckEditor {
                 only = e.getKey();
             }
         }
-        return only != null ? only : StaticData.instance().getCommonCards().getCard(name);
+        if (only != null) {
+            return only;
+        }
+        // Planes, schemes and avatars are kept apart from every other card
+        final PaperCard common = StaticData.instance().getCommonCards().getCard(name);
+        return common != null ? common : StaticData.instance().getVariantCards().getCard(name);
     }
 
     /** How many more copies of a card the copy limit allows, counted by name across the deck, and a collection can supply. */
