@@ -1,7 +1,7 @@
 // Choosing a deck: one query runs across every source at once, and a panel beside the results shows the chosen deck's cards
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { store, stored } from '../storage';
+import { store, stored, storeJson, storedJson } from '../storage';
 import { imageUrl } from '../images';
 import { Curve, useDeckView } from './deckhalf';
 import { CardGroup, SITES } from './importer';
@@ -63,6 +63,8 @@ export const FINDER_DEFAULTS: DeckFilter = {
   set: null, identity: null, colourCount: null, main: null, side: null, mana: null, folder: null, favourites: false, aiPlays: false, sort: 'name',
 };
 
+const GUEST_STARS = 'forge.guestStars';
+
 /** The folder a deck's key places it in, "" for none. A key is source:folder/name. */
 export const folderOf = (key: string) => key.slice(key.indexOf(':') + 1, Math.max(key.indexOf(':') + 1, key.lastIndexOf('/')));
 const within = (r: Range, n: number | null | undefined) =>
@@ -100,7 +102,9 @@ export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter,
   if (normalize(f.query)) {
     return rankByName(list.map(d => d.name), f.query).map(i => list[i]);
   }
-  return list.sort(by[f.sort] ?? byName);
+  // Starred decks lead whatever the order, so a favourite is never hunted for
+  const order = by[f.sort] ?? byName;
+  return list.sort((a, b) => Number(!!b.favourite) - Number(!!a.favourite) || order(a, b));
 }
 
 /** How many decks each source holds, with every net-deck category counted as the one source. */
@@ -117,7 +121,18 @@ export function sourceCounts(decks: readonly DeckSummary[]): Map<string, number>
 export function DeckFinder({ model, actions, seat, close }: {
   model: Model; actions: Actions; seat?: { index: number; seat: Seat }; close: () => void;
 }) {
-  const decks = model.decks ?? [];
+  // A guest's stars are its own, kept in its browser, where the host's are kept with Forge's decks
+  const [guestStars, setGuestStars] = useState<string[]>(() => storedJson(GUEST_STARS, []));
+  const decks = model.host ? model.decks ?? [] : (model.decks ?? []).map(d => ({ ...d, favourite: guestStars.includes(d.key) || undefined }));
+  const star = (key: string, on: boolean) => {
+    if (model.host) {
+      actions.favouriteDeck(key, on);
+      return;
+    }
+    const next = on ? [...guestStars, key] : guestStars.filter(k => k !== key);
+    storeJson(GUEST_STARS, next);
+    setGuestStars(next);
+  };
   const [chosen, setChosen] = useState<string | null>(seat?.seat.deck ?? null);
   // A deck file on its way to being saved, kept until the list shows it, in case its name is taken
   const [file, setFile] = useState<string | null>(null);
@@ -313,7 +328,7 @@ export function DeckFinder({ model, actions, seat, close }: {
               {list.length
                 ? list.map(d => <Hit key={d.key} deck={d} chosen={d.key === chosen} choose={() => setChosen(d.key)}
                   use={() => use(d.key)} source={filter.source === 'all'} forComputer={forComputer}
-                  star={model.host ? on => actions.favouriteDeck(d.key, on) : null} />)
+                  star={on => star(d.key, on)} />)
                 : <p class="none">{t('lblWebFinderNoMatch')}</p>}
             </div>
           </div>
@@ -535,8 +550,7 @@ const sourceName = (id: string) => (SOURCE_NAMES[id] ? t(SOURCE_NAMES[id]) : id.
 // The source is only worth a column while every source is listed; with one picked, the rail already says it
 function Hit({ deck: d, chosen, choose, use, source, forComputer, star }: {
   deck: DeckSummary; chosen: boolean; choose: () => void; use: () => void; source: boolean; forComputer: boolean;
-  /** Stars the deck or takes the star away; null for a guest, whose list is the host's. */
-  star: ((on: boolean) => void) | null;
+  star: (on: boolean) => void;
 }) {
   // A generator has nothing to measure until it has built something, so it says what it is instead
   if (d.generated) {
@@ -552,7 +566,7 @@ function Hit({ deck: d, chosen, choose, use, source, forComputer, star }: {
   return (
     <button class={forComputer && d.aiSkips ? 'dk-hit ai-poor' : 'dk-hit'} aria-pressed={chosen} title={d.problem ?? ''} onClick={choose} onDblClick={use}>
       {/* A row is a button, so the star inside it is a span that keeps its click to itself */}
-      {star && (
+      {(
         <span class={d.favourite ? 'dk-star on' : 'dk-star'} role="button" aria-pressed={!!d.favourite}
           aria-label={t(d.favourite ? 'lblWebFinderUnstar' : 'lblWebFinderStar')} title={t(d.favourite ? 'lblWebFinderUnstar' : 'lblWebFinderStar')}
           onClick={e => { e.stopPropagation(); star(!d.favourite); }} onDblClick={e => e.stopPropagation()}>{d.favourite ? '\u2605' : '\u2606'}</span>
