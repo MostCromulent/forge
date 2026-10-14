@@ -47,6 +47,21 @@ public interface IGameController {
 
     IMacroSystem macros();
 
+    /** Starts recording a macro, or stops one and offers to repeat it. */
+    default void setRememberedActions() {
+        macros().setRememberedActions();
+    }
+
+    /** Plays the next action of the recorded macro. */
+    default void nextRememberedAction() {
+        macros().nextRememberedAction();
+    }
+
+    /** Asks how many times, then plays the recorded macro that often. */
+    default void repeatRememberedActions() {
+        macros().repeatRememberedActions();
+    }
+
     void nextGameDecision(NextGameDecision decision);
 
     String getActivateDescription(CardView card);

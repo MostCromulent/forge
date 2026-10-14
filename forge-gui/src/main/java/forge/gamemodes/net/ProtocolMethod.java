@@ -71,8 +71,6 @@ public enum ProtocolMethod implements IHasForgeLog {
     setWeaklySelectable (Mode.SERVER, Void.TYPE, Iterable/*CardView*/.class),
     clearWeaklySelectable(Mode.SERVER, Void.TYPE),
     // TODO case "setPlayerAvatar":
-    setRememberedActions(Mode.SERVER, Void.TYPE),
-    nextRememberedAction(Mode.SERVER, Void.TYPE),
     awaitNextInput      (Mode.SERVER, Void.TYPE),
     applyDelta          (Mode.SERVER, Void.TYPE, DeltaPacket.class),
     /** Server→client push of authoritative yield-state changes. */
@@ -84,6 +82,9 @@ public enum ProtocolMethod implements IHasForgeLog {
     // the threads that're supposed to give that response
     useMana                   (Mode.CLIENT, Void.TYPE, Byte.TYPE),
     undoLastAction            (Mode.CLIENT, Void.TYPE),
+    setRememberedActions      (Mode.CLIENT, Void.TYPE),
+    nextRememberedAction      (Mode.CLIENT, Void.TYPE),
+    repeatRememberedActions   (Mode.CLIENT, Void.TYPE),
     selectPlayer              (Mode.CLIENT, Void.TYPE, PlayerView.class, ITriggerEvent.class),
     selectCard                (Mode.CLIENT, Void.TYPE, CardView.class, List.class, ITriggerEvent.class),
     selectButtonOk            (Mode.CLIENT, Void.TYPE),
