@@ -474,7 +474,7 @@ const AMBIENT = '<span class="ambient" aria-hidden="true">' + '<i></i>'.repeat(6
 /** Decks some variants and cards bring, shown only while they hold something. Only the junkyard is face up. */
 const EXTRA_ZONES: [ZoneType, TextKey][] = [['PlanarDeck', 'lblPlanes'], ['SchemeDeck', 'lblSchemes'],
   ['AttractionDeck', 'lblAttractions'], ['ContraptionDeck', 'lblContraptions'], ['Junkyard', 'lblWebZoneJunkyard'],
-  ['Sideboard', 'lblSideboard'], ['Ante', 'lblWebZoneAnte']];
+  ['Sideboard', 'lblSideboard'], ['Ante', 'lblWebZoneAnte'], ['StickerSheets', 'lblStickerSheets']];
 const FACE_DOWN_DECKS: ReadonlySet<ZoneType> = new Set(['PlanarDeck', 'SchemeDeck', 'AttractionDeck', 'ContraptionDeck']);
 
 /** The card types rule 205.2a names, in its order. Delirium and the like count how many a graveyard holds. */

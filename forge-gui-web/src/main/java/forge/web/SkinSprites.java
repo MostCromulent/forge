@@ -55,6 +55,10 @@ final class SkinSprites {
 
     /** PNG bytes of one mana or tap symbol, cut from the skin's icon sheet, or null for a symbol it has no image for. */
     static byte[] manaPng(final String symbol) {
+        // A ticket is on the icon sheet, and desktop draws {TK} with it as it draws mana
+        if ("TK".equals(symbol)) {
+            return encoded.computeIfAbsent("mTK", k -> cell(iconSheet(FSkinProp.IMG_TICKET.getType().getFilename()), FSkinProp.IMG_TICKET, k));
+        }
         final FSkinProp prop = FSkinProp.MANA_IMG.get(symbol);
         if (prop == null) {
             return null;

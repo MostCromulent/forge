@@ -1195,3 +1195,15 @@ html[data-motion="reduced"] .avatar.hit, html[data-motion="reduced"] .avatar.hit
 .block-tip.leaving { animation: block-tip-out .2s ease-in forwards; }
 @keyframes block-tip-in { from { opacity: 0; transform: translateY(3px); } }
 @keyframes block-tip-out { to { opacity: 0; } }
+
+/* Stickers lie on the picture as pieces cut from their sheet's own picture, with the white edge the paper ones have */
+.card > .stickers, #zoom .shot > .stickers { position: absolute; inset: 0; z-index: 2; pointer-events: none; container-type: size; }
+.stickers .stk { position: absolute; display: block; background-repeat: no-repeat; border-radius: 6% / 10%; filter: drop-shadow(0 .4cqw .5cqw #000a); }
+.stickers .stk.art { border-radius: 18%; }
+/* An ability is written on lavender paper, as the sheets print it */
+.stickers .stk.words { left: 7%; right: 7%; padding: .6cqw 2cqw; border: .5cqw solid #fff; border-radius: 1.5cqw; background: #dcd3f0; color: #1b1a17;
+  font: 600 6cqw/1.15 Georgia, "Times New Roman", serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#zoom .shot > .stickers .stk.words { white-space: normal; }
+/* Where a sticker has been peeled off its sheet: hatched, with a dashed edge, so it reads as gone without colour alone */
+.stickers .stk.peeled { filter: none; border: .5cqw dashed #9c8f73; border-radius: 1.5cqw; background: repeating-linear-gradient(135deg, #e9dfc6 0 1.2cqw, #c9bc9c 1.2cqw 2.4cqw); }
+.text-option .stk-cut { display: inline-block; height: 26px; margin-right: 8px; vertical-align: middle; background-repeat: no-repeat; border-radius: 4px; }

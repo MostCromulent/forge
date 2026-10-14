@@ -10,6 +10,7 @@ import { boundKeys } from '../settings';
 import type { Actions } from '../actions';
 import { deref, stateOf, type Model } from '../model';
 import { isAiming } from './overlay';
+import { drawStickers } from './stickers';
 import { hovers } from '../press';
 import { sheet, swipeDown } from '../sheet';
 import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from '../protocol';
@@ -311,6 +312,7 @@ function drawDetail(model: Model): void {
   if (!text) setImage(img, src);
   showFoil(q<HTMLCanvasElement>(zoom, 'canvas'), text ? '' : src);
   q(zoom, '.detail').hidden = !face;
+  if (!d || !face) drawStickers(q(zoom, '.stickers'), model, undefined);
   setSource(q(zoom, '.from'), hover.from);
   setSource(q(zoom, '.from-tab'), hover.from);
   q(zoom, '.hint').textContent = '';
@@ -327,6 +329,7 @@ function drawDetail(model: Model): void {
   set.textContent = face.set ?? '';
   set.dataset.rarity = face.rarity ?? '';
   const card = face === d.faces[0] && hover.card !== null ? model.objects.get(hover.card) as CardView | undefined : undefined;
+  drawStickers(q(zoom, '.stickers'), model, text ? undefined : card);
   const state = card ? stateOf(model, card) : undefined;
   // A token or a face-down card has no printed text of its own to differ from
   const changes = card && state && !card.Token && !card.Facedown
@@ -492,7 +495,7 @@ function drawPt(el: HTMLElement, model: Model, key: number | null, face: CardFac
 
 function ensureZoom(zoom: HTMLElement): void {
   if (zoom.firstChild) return;
-  zoom.innerHTML = '<span class="shot"><img alt=""><canvas class="foil" hidden></canvas><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cid"></span><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
+  zoom.innerHTML = '<span class="shot"><img alt=""><span class="stickers" aria-hidden="true"></span><canvas class="foil" hidden></canvas><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cid"></span><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
   const img = q<HTMLImageElement>(zoom, 'img');
   hideOnError(img);
   // Cleared once played: a preview still carrying the class would flip again the next time it is shown

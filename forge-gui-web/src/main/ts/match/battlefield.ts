@@ -323,7 +323,7 @@ export function signature(model: Model, card: CardView, marks: Set<number>[]): s
   // A land played this turn is no different from the lands played before it, so it belongs in their pile
   return JSON.stringify([s.Name, s.Power ?? null, s.Toughness ?? null, s.Loyalty && s.Loyalty !== '0' ? s.Loyalty : null, !!card.Tapped,
     counters(card.Counters), card.Damage ?? 0, !!card.Attacking, !!card.Blocking, isSick(model, card), !!card.PhasedOut,
-    !!card.Token, !!card.Cloned, card.EntityAttachedTo?.ref ?? null, !!card.IsRingBearer, ...marks.map(m => m.has(card.$key))]);
+    !!card.Token, !!card.Cloned, card.EntityAttachedTo?.ref ?? null, !!card.IsRingBearer, card.Stickers ?? null, ...marks.map(m => m.has(card.$key))]);
 }
 
 /** Counters as they show: none at all whether the game sent nothing, nothing left, or zeroes; in a fixed order. */

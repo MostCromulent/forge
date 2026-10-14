@@ -19,6 +19,7 @@ import type {
 } from '../protocol';
 import { t } from '../text';
 import { make, reducedMotion } from '../dom';
+import { cutFor } from './stickers';
 
 type Answer = (value: unknown) => void;
 
@@ -217,7 +218,13 @@ function OptionView({ model, opt, picked, onClick }: { model: Model; opt: Option
     return <InlineCard imageKey={opt.imageKey} name={opt.name ?? opt.label} title={opt.label ?? opt.name}
       picked={picked} onClick={onClick} />;
   }
-  return <button class={picked ? 'text-option picked' : 'text-option'} onClick={onClick}><SymbolText text={opt.label} /></button>;
+  // A sticker offered by name shows the piece of its sheet it is
+  const sticker = cutFor(model, opt.label);
+  return (
+    <button class={picked ? 'text-option picked' : 'text-option'} onClick={onClick}>
+      {sticker && <span class="stk-cut" style={sticker} />}<SymbolText text={opt.label} />
+    </button>
+  );
 }
 
 /** A player as the board shows them: their portrait, or their initial without one, with their life and name. */
@@ -303,11 +310,13 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
     : searchable && picked.size ? t('lblWebDialogSelected', picked.size) : '';
   const ready = reveal || (picked.size >= req.min && (req.max < 0 || picked.size <= req.max));
   const colours = !reveal && req.options.every(o => o.symbol);
+  // Choices that are only words read down a list, as a menu does, rather than across the page
+  const words = !colours && req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player && !o.symbol);
   return (
     <>
       {searchable && <input ref={search} class="choice-search" placeholder={t('lblWebDialogSearchOptions', req.options.length)}
         value={typed} onInput={e => setTyped(e.currentTarget.value)} />}
-      <div class={reveal ? 'options grid' : colours ? 'options colours' : 'options'}>
+      <div class={reveal && !words ? 'options grid' : colours ? 'options colours' : words ? 'options words' : 'options'}>
         {shown.map(i => colours
           ? <ColourOption key={i} symbol={req.options[i].symbol ?? ''} picked={picked.has(i)} onClick={() => toggle(i)} />
           : <OptionView key={i} model={model} opt={req.options[i]} picked={picked.has(i)} onClick={() => toggle(i)} />)}

@@ -262,7 +262,7 @@ export const isLocal = (model: Model, player: PlayerView): boolean => model.loca
 export const me = (model: Model): PlayerView | undefined => players(model).find(p => isLocal(model, p));
 export const opponents = (model: Model): PlayerView[] => players(model).filter(p => !isLocal(model, p));
 const PLAYER_ZONES: ReadonlySet<string> = new Set<PlayerZone>(['Hand', 'Library', 'Graveyard', 'Battlefield', 'Exile',
-  'Flashback', 'Command', 'Sideboard', 'Ante', 'SchemeDeck', 'PlanarDeck', 'AttractionDeck', 'Junkyard', 'ContraptionDeck']);
+  'Flashback', 'Command', 'Sideboard', 'Ante', 'SchemeDeck', 'PlanarDeck', 'AttractionDeck', 'Junkyard', 'ContraptionDeck', 'StickerSheets']);
 const isPlayerZone = (name: ZoneType): name is PlayerZone => PLAYER_ZONES.has(name);
 
 /** The cards in one of a player's zones. A zone that is not a player's (the stack, a merged pile) holds none. */
