@@ -144,6 +144,7 @@ function paintArrows(model: Model): void {
     clearTags();
     drawAim(ctx, model);
   }
+  drawPair(ctx, model);
   const mode = setting('arrows');
   if (mode === '0') {
     drawQueued(ctx);
@@ -182,6 +183,38 @@ function paintArrows(model: Model): void {
     }
   }
   drawQueued(ctx);
+}
+
+const PAIR = '#6fd3c7';
+let bonded: HTMLElement[] = [];
+
+/** A soulbond pair is ringed and joined only while the pointer is on one of the two, so no line lies across the board at rest. */
+function drawPair(ctx: CanvasRenderingContext2D, model: Model): void {
+  const hover = ui.hover;
+  const card = hover && 'card' in hover && hover.card !== null ? model.objects.get(hover.card) as CardView | undefined : undefined;
+  const pair = [elementFor(card?.$key), elementFor(card?.PairedWith?.ref)].filter((el): el is HTMLElement => !!el);
+  const now = pair.length === 2 ? pair : [];
+  bonded.filter(el => !now.includes(el)).forEach(el => el.classList.remove('bonded'));
+  now.forEach(el => {
+    el.classList.add('bonded');
+    el.style.setProperty('--bonded', PAIR);
+  });
+  bonded = now;
+  if (!now.length) return;
+  const [a, b] = now.map(el => {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top - 4 };
+  });
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.quadraticCurveTo((a.x + b.x) / 2, Math.min(a.y, b.y) - Math.max(40, Math.abs(b.x - a.x) * 0.28), b.x, b.y);
+  ctx.setLineDash([8, 6]);
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = PAIR;
+  ctx.stroke();
+  ctx.restore();
 }
 
 function clearTags(): void {

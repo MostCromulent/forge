@@ -132,7 +132,9 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   hurt.classList.toggle('hurt', creature && damage > 0);
   pt.classList.toggle('on', !!(power + toughness));
   showDamage(el, damage);
-  showKeywords(q(el, '.kws'), visible ? state.Keywords : undefined, visible ? card.ShieldCount : undefined);
+  const partner = visible ? deref(model, card.PairedWith) as CardView | undefined : undefined;
+  showKeywords(q(el, '.kws'), visible ? state.Keywords : undefined, visible ? card.ShieldCount : undefined,
+    partner && t('lblWebCardPaired', stateOf(model, partner).Name ?? ''));
   const mech = visible ? mechanic(card, type) : [];
   const box = q(el, '.mech');
   const html = mech.map(n => (n as HTMLElement).outerHTML).join('');
@@ -152,16 +154,20 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   q(el, '.badges').textContent = badges.join(' · ');
 }
 
+/** Forge has no icon for a soulbond pair, so the page brings its own and lists it with the keywords. */
+const PAIRED = 'paired.svg';
+
 /** Only keywords the host names an icon for appear, so neither client keeps its own table of them. */
-function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined, shields: number | undefined): void {
+function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined, shields: number | undefined, paired?: string): void {
   const shown = (keywords ?? []).filter(k => k.icon);
+  if (paired) shown.push({ icon: PAIRED, title: paired, reminder: '' });
   reconcile(root, shown, k => k.icon ?? k.title, () => {
     const img = document.createElement('img');
     img.alt = '';
     hideOnError(img);
     return img;
   }, (img, k) => {
-    setImage(img as HTMLImageElement, abilityUrl(k.icon ?? ''));
+    setImage(img as HTMLImageElement, k.icon === PAIRED ? PAIRED : abilityUrl(k.icon ?? ''));
     img.title = k.reminder ? `${k.title} — ${k.reminder}` : k.title;
   });
   // A shield counter sits with the keywords because it is looked for when working out whether removal or a block kills

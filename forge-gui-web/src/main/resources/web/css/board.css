@@ -959,6 +959,7 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 #match.picking:not(:has(.card.landing)) :is(.card, .avatar, .emblem, .cmd-tile, .zone-tile):not(.selectable):not(.highlighted),
 #match.picking:not(:has(.card.landing)) #stack .stack-item:not(.targetable) { filter: brightness(.42) saturate(.6); }
 /* Important, because the picking and selectable outlines above are more specific and would hide the aimed arrow's mark (overlay.ts) */
+#match .card.bonded { box-shadow: 0 0 0 2px var(--bonded), var(--lift, 0 0 #0000); }
 #match .aimed { outline: 2px solid var(--aimed) !important; outline-offset: 1px; box-shadow: 0 0 16px 2px var(--aimed) !important; }
 .avatar, .emblem, .cmd-tile, .zone-tile { transition: filter .3s ease; }
 /* The whole slot steps forward so attachments travel with the attacker, and a tapped one steps further so the leading edges line up */
