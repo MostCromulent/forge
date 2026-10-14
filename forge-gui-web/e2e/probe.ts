@@ -323,7 +323,7 @@ export async function drafting(p: Probe): Promise<void> {
   await page.click('[data-mode=play]');
   await page.click('.chooser [data-kind=draft]');
   await page.click('.ev.new');
-  await page.click('.tile-choice:has-text("Full card pool")');
+  await page.locator('.tile-choice', { hasText: /full card ?pool/i }).click();
   await page.click('.ticket button:has-text("Start drafting")');
   await expect(page.locator('#drafting')).toBeVisible({ timeout: 60_000 });
 }

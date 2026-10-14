@@ -18,6 +18,7 @@ import type { Model } from '../model';
 import { useDismiss } from '../hooks';
 import type { DraftCard, DraftSeat, DraftState } from '../protocol';
 import { make, reducedMotion } from '../dom';
+import { isPortrait } from '../form';
 
 type GroupBy = 'colour' | 'type' | 'mv' | 'pick';
 type Drag = { from: 'pack' | 'pick'; index: number };
@@ -105,6 +106,8 @@ function launch(index: number): void {
 export function Drafting({ model, actions }: { model: Model; actions: Actions }) {
   const state = model.draft;
   const [leaving, setLeaving] = useState(false);
+  /** On a phone the picks are a drawer over the pack, opened from its bar at the foot of the screen. */
+  const [picksOpen, setPicksOpen] = useState(false);
   const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
   // An online draft belongs to the table and goes on without this browser, so leaving only goes back to the table
   const online = model.inLobby;
@@ -128,9 +131,10 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
       {state && (
         <div class="drafting-shell">
           <Pack state={state} faces={faces} actions={actions} log={online && state.log.length > 0} hidePeek={() => setPeek(null)} />
-          <Picks state={state} actions={actions} />
+          <Picks state={state} actions={actions} open={picksOpen} toggle={() => setPicksOpen(o => !o)} />
         </div>
       )}
+      {picksOpen && isPortrait() && <div class="picks-scrim" onClick={() => setPicksOpen(false)} />}
       {state?.done && (model.campaign === 'quest' ? <TournamentDrafted state={state} actions={actions} /> : <SaveDraft model={model} state={state} actions={actions} />)}
       {leaving && (
         <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) setLeaving(false); }}>
@@ -259,8 +263,8 @@ function Pack({ state, faces, actions, log, hidePeek }: { state: DraftState; fac
       </div>
       <div class="draft-panel-head tool-line">
         <span class="chip">{tNodes(direction > 0 ? 'lblWebDraftPassingRightTo' : 'lblWebDraftPassingLeftTo', seat(to))}</span>
-        {next !== null && <span class="chip">{tNodes('lblWebDraftNextFrom', seat(next))}</span>}
-        {depths[busiest] > 2 && <span class="chip">{busiest === 0 ? t('lblWebDraftYouHoldingPacks', depths[busiest]) : t('lblWebDraftSeatHoldingPacks', state.seats[busiest].name, depths[busiest])}</span>}
+        {next !== null && <span class="chip more">{tNodes('lblWebDraftNextFrom', seat(next))}</span>}
+        {depths[busiest] > 2 && <span class="chip more">{busiest === 0 ? t('lblWebDraftYouHoldingPacks', depths[busiest]) : t('lblWebDraftSeatHoldingPacks', state.seats[busiest].name, depths[busiest])}</span>}
         <span class="head-end">
           {log && <Dropdown label={t('lblWebDraftLog')}>{() => <DraftLog lines={state.log} />}</Dropdown>}
           <TableMenu state={state} faces={faces} />
@@ -337,7 +341,7 @@ function RankShield({ rank }: { rank: number }) {
   );
 }
 
-function Picks({ state, actions }: { state: DraftState; actions: Actions }) {
+function Picks({ state, actions, open, toggle }: { state: DraftState; actions: Actions; open: boolean; toggle: () => void }) {
   const [by, setBy] = useState<GroupBy>('type');
   const [cards, setCards] = useState(true);
   const held: Held[] = state.picks.map((card, index) => ({ card, index }));
@@ -355,19 +359,28 @@ function Picks({ state, actions }: { state: DraftState; actions: Actions }) {
   };
   const move = (h: Held) => actions.draftMove(h.index, !h.card.sideboard);
   const panel = useRef<HTMLElement>(null);
+  const bar = useRef<HTMLButtonElement>(null);
   const count = useRef(state.picks.length);
   // A pick made by a click in the pack flies here once it is drawn; the newest pick is the last in pick order
   useLayoutEffect(() => {
     if (state.picks.length > count.current) {
-      const pick = panel.current?.querySelector<HTMLElement>(`[data-pick="${state.picks.length - 1}"]`) ?? null;
-      land(pick, pick?.closest('.draft-sections'), pick?.closest('.pick-section')?.querySelector('h3'));
+      // A closed drawer shows only its bar, which is where the pick goes
+      if (isPortrait() && !open) land(bar.current, null, bar.current);
+      else {
+        const pick = panel.current?.querySelector<HTMLElement>(`[data-pick="${state.picks.length - 1}"]`) ?? null;
+        land(pick, pick?.closest('.draft-sections'), pick?.closest('.pick-section')?.querySelector('h3'));
+      }
     }
     count.current = state.picks.length;
   }, [state.picks.length]);
   return (
-    <section class="draft-panel draft-picks" ref={panel}>
+    <section class={open ? 'draft-panel draft-picks open' : 'draft-panel draft-picks'} ref={panel}>
       <div class="draft-panel-head">
-        <b>{tNodes('lblWebDraftYourPicks', <span class="muted">{state.picks.length}</span>)}</b>
+        {isPortrait()
+          ? <button ref={bar} class="picks-toggle" aria-expanded={open} onClick={toggle}>
+              {tNodes('lblWebDraftYourPicks', <span class="muted">{state.picks.length}</span>)}<span class="caret" aria-hidden="true">{open ? '▾' : '▴'}</span>
+            </button>
+          : <b>{tNodes('lblWebDraftYourPicks', <span class="muted">{state.picks.length}</span>)}</b>}
         <span class="seg" role="group" aria-label={t('lblWebDraftShowPicksAs')}>
           <button aria-pressed={cards} onClick={() => setCards(true)}>{t('lblCards')}</button>
           <button aria-pressed={!cards} onClick={() => setCards(false)}>{t('lblWebDraftList')}</button>
@@ -408,7 +421,7 @@ function PickSection({ title, held, by, cards, onDrop, move }: {
         onDrop(JSON.parse(raw) as Drag);
       }}>
       <h3>{title} <span class="muted">{held.length}</span></h3>
-      {held.length === 0 && <p class="drop-hint">{t('lblWebDraftDragCardsHere')}</p>}
+      {held.length === 0 && <p class="drop-hint">{t(isPortrait() ? 'lblWebDraftDoubleTapHere' : 'lblWebDraftDragCardsHere')}</p>}
       <div class={cards ? 'pick-cols' : 'zone-body cols'}>
         {grouped(held, by).map(([heading, group]) => (
           <div key={heading} class="group">

@@ -16,7 +16,7 @@ test('an offline draft is picked, saved, built and played as a gauntlet', async 
   await expect(page.locator('#limited')).toBeVisible();
 
   await page.click('.ev.new');
-  await page.click('.tile-choice:has-text("Full card pool")');
+  await page.locator('.tile-choice', { hasText: /full card ?pool/i }).click();
   await page.click('.ticket button:has-text("Start drafting")');
   await expect(page.locator('#drafting')).toBeVisible({ timeout: 60_000 });
   await expect(page.locator('.table-btn')).toBeVisible();

@@ -529,3 +529,30 @@ html[data-form="portrait"] .menu-page .wordmark { flex-wrap: wrap; justify-conte
 html[data-form="portrait"] .menu-page .wordmark .beta { position: static; flex-basis: 100%; margin: .8em 0 0; text-align: center; }
 /* Three sleeves across a phone, where the desktop's size would leave two */
 html[data-form="portrait"] :is(.art-grid, .sleeve-grid) { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+
+/* Drafting on a phone: the pack fills the screen, and the picks are a drawer that rises over it from a bar at the foot */
+html[data-form="portrait"] #drafting .limited-head { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
+html[data-form="portrait"] #drafting .limited-head :is(.wordmark-block, .icon-button) { display: none; }
+html[data-form="portrait"] #drafting .limited-head .limited-title { flex: none; font-size: 15px; font-weight: 700; }
+html[data-form="portrait"] #drafting .limited-head > .muted { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+html[data-form="portrait"] #drafting .limited-head .head-right { margin-left: auto; }
+html[data-form="portrait"] #drafting .drafting-shell { grid-template-columns: minmax(0, 1fr); padding: 0; gap: 0; }
+html[data-form="portrait"] #drafting .draft-pack { border: 0; border-radius: 0; }
+html[data-form="portrait"] #drafting .pick-line { padding: 8px 12px; }
+/* The table shows who feeds you and who holds packs, so the line keeps only where your pack goes and the table itself */
+html[data-form="portrait"] #drafting .tool-line { padding: 6px 12px; }
+html[data-form="portrait"] #drafting .tool-line .chip { font-size: 12px; }
+html[data-form="portrait"] #drafting .tool-line .chip.more { display: none; }
+/* The table is drawn in pixels for a desktop panel, so a phone pins it across the screen and draws it smaller */
+html[data-form="portrait"] #drafting .table-pop { position: fixed; left: 8px; right: 8px; top: auto; display: grid; justify-items: center; }
+html[data-form="portrait"] #drafting .table-pop .dial { zoom: .8; }
+html[data-form="portrait"] #drafting .draft-pack .cat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 8px; padding: 12px 10px 76px; }
+html[data-form="portrait"] #drafting .draft-picks { position: fixed; left: 0; right: 0; bottom: 0; z-index: 35; height: min(80vh, calc(100% - 64px));
+  border-radius: 14px 14px 0 0; border-bottom: 0; box-shadow: 0 -10px 30px var(--scrim-deep); transform: translateY(calc(100% - 56px));
+  transition: transform .25s cubic-bezier(.2, .7, .3, 1); }
+html[data-form="portrait"] #drafting .draft-picks.open { transform: none; }
+html[data-form="portrait"] #drafting .draft-picks > .draft-panel-head { min-height: 56px; padding: 0 12px; flex-wrap: nowrap; }
+html[data-form="portrait"] #drafting .draft-group-by { flex-wrap: wrap; padding: 8px 12px 4px; }
+.picks-toggle { flex: 1; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--text); font-size: 15px; font-weight: 700; text-align: left; }
+.picks-toggle .caret { margin-left: auto; color: var(--muted); font-size: 13px; }
+.picks-scrim { position: fixed; inset: 0; z-index: 34; background: var(--scrim-deep); }
