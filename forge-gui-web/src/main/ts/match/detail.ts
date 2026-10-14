@@ -19,6 +19,8 @@ import { t, type TextKey } from '../text';
 // The host composes a hovered card's text (CardDetailUtil, as on desktop), and it arrives in the model a moment after the pointer does
 
 let actions: Actions | null = null;
+/** How far, in degrees, the preview leans with the pointer at its card's edge. */
+const MAX_LEAN = 3;
 
 export function initDetail(actionsFor: Actions): void {
   actions = actionsFor;
@@ -26,12 +28,17 @@ export function initDetail(actionsFor: Actions): void {
   document.addEventListener('pointerover', () => {
     if (hoverGone()) hoverCard(null);
   });
-  // The preview lets the pointer through, so a foil's streaks follow it across the card the preview is of
+  // The preview lets the pointer through, so it leans, and a foil's streaks move, with the pointer across the card the preview is of
   document.addEventListener('pointermove', e => {
     const hover = ui.hover;
     if (!hover || !('card' in hover) || !hover.at) return;
     const box = hover.at.getBoundingClientRect();
-    tiltFoil((e.clientX - box.left) / box.width - 0.5, (e.clientY - box.top) / box.height - 0.5);
+    const x = Math.max(-0.5, Math.min(0.5, (e.clientX - box.left) / box.width - 0.5));
+    const y = Math.max(-0.5, Math.min(0.5, (e.clientY - box.top) / box.height - 0.5));
+    tiltFoil(x, y);
+    const zoom = byId('zoom');
+    zoom.style.setProperty('--lean-x', `${(-y * MAX_LEAN * 2).toFixed(2)}deg`);
+    zoom.style.setProperty('--lean-y', `${(x * MAX_LEAN * 2).toFixed(2)}deg`);
   });
 }
 
