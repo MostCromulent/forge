@@ -3,6 +3,9 @@
 :root { --preview-w: clamp(280px, 60vh * 63 / 88, 340px); }
 :root[data-preview="small"] { --preview-w: 280px; }
 :root[data-preview="large"] { --preview-w: clamp(280px, 60vh * 63 / 88, 400px); }
+/* A preview's picture leans with the pointer (dom.ts lean). In the match its layers lean, not .shot, whose transform the flip animates, and the from-tab stays level. */
+#zoom .shot > :not(.from-tab), .deck-peek > * { transform: perspective(900px) rotateX(var(--lean-x, 0deg)) rotateY(var(--lean-y, 0deg)); transition: transform .14s cubic-bezier(.2, .7, .3, 1); }
+html[data-motion="reduced"] :is(#zoom .shot, .deck-peek) > * { transform: none; }
 
 :root {
   /* The table is lit at the centre and falls away at the edges, so the board is not one flat rectangle */
