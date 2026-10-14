@@ -473,7 +473,9 @@ const AMBIENT = '<span class="ambient" aria-hidden="true">' + '<i></i>'.repeat(6
 
 /** Decks some variants and cards bring, shown only while they hold something. Only the junkyard is face up. */
 const EXTRA_ZONES: [ZoneType, TextKey][] = [['PlanarDeck', 'lblPlanes'], ['SchemeDeck', 'lblSchemes'],
-  ['AttractionDeck', 'lblAttractions'], ['ContraptionDeck', 'lblContraptions'], ['Junkyard', 'lblWebZoneJunkyard']];
+  ['AttractionDeck', 'lblAttractions'], ['ContraptionDeck', 'lblContraptions'], ['Junkyard', 'lblWebZoneJunkyard'],
+  ['Sideboard', 'lblSideboard'], ['Ante', 'lblWebZoneAnte']];
+const FACE_DOWN_DECKS: ReadonlySet<ZoneType> = new Set(['PlanarDeck', 'SchemeDeck', 'AttractionDeck', 'ContraptionDeck']);
 
 /** The card types rule 205.2a names, in its order. Delirium and the like count how many a graveyard holds. */
 const CORE_TYPES = ['Artifact', 'Battle', 'Creature', 'Enchantment', 'Instant', 'Kindred', 'Land', 'Planeswalker', 'Sorcery'];
@@ -546,7 +548,7 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, se
       const extra = EXTRA_ZONES.find(([z]) => z === zoneName)?.[1];
       q(el, '.zone-name').textContent = extra ? t(extra) : zoneTitle(zoneName);
       // A planar, scheme, attraction or contraption deck is face down, so only its count is shown
-      el.classList.toggle('hidden-deck', zoneName !== 'Junkyard' && EXTRA_ZONES.some(([z]) => z === zoneName));
+      el.classList.toggle('hidden-deck', FACE_DOWN_DECKS.has(zoneName));
       const img = q<HTMLImageElement>(el, 'img');
       hideOnError(img);
       el.onclick = () => {
