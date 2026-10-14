@@ -518,7 +518,8 @@ public abstract class GameLobby implements IHasGameType {
                             isOathbreakerMatch ? GameType.Oathbreaker :
                                 isTinyLeadersMatch ? GameType.TinyLeaders :
                                     isBrawlMatch ? GameType.Brawl :
-                                        GameType.Commander;
+                                        data.isLimitedMode() && data.getLimitedType() == GameType.CommanderDraft ? GameType.CommanderDraft :
+                                            GameType.Commander;
                     if (checkLegality) {
                         final String errMsg = commanderGameType.getDeckFormat().getDeckConformanceProblem(deck);
                         if (errMsg != null) {
