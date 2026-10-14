@@ -256,13 +256,22 @@ html[data-motion="reduced"] .plate { animation: none; }
 .plate .sleeve { position: relative; padding: 0; border-radius: 8px; overflow: hidden; width: 108px; height: 151px; display: block; background: var(--surface-2); }
 /* Pointing at the slot names its two parts: most of the sleeve changes the deck, and the strip along the bottom the sleeve */
 .sleeve-deck, .sleeve-style { position: absolute; left: 6px; right: 6px; border-radius: 6px; font-size: 12px; font-weight: 600; text-align: center; opacity: 0; transition: opacity .12s ease; }
-.sleeve-deck { top: 6px; bottom: 38px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent-2) 90%, transparent); color: var(--on-brass); }
-.sleeve-style { bottom: 6px; height: 28px; padding: 0 2px; background: #0b0e14e0; border-color: var(--line-bright); }
-.sleeve-slot:hover :is(.sleeve-deck, .sleeve-style), .sleeve:focus-visible .sleeve-deck, .sleeve-style:focus-visible { opacity: 1; }
+/* The buttons share the picture equally: two halves, or three thirds when the commander can be changed too */
+.sleeve-deck { top: 6px; height: calc((100% - 18px) / 2); display: grid; place-items: center; background: color-mix(in srgb, var(--accent-2) 90%, transparent); color: var(--on-brass); }
+.sleeve-style { bottom: 6px; height: calc((100% - 18px) / 2); padding: 0 2px; background: #0b0e14e0; border-color: var(--line-bright); }
+.sleeve-cmdr { position: absolute; left: 6px; right: 6px; top: calc(12px + (100% - 24px) / 3); height: calc((100% - 24px) / 3); padding: 0 2px; border-radius: 6px; font-size: 12px; font-weight: 600; line-height: 1.15; text-align: center; background: #0b0e14e0; border-color: var(--line-bright); opacity: 0; transition: opacity .12s ease; }
+.sleeve-slot.three :is(.sleeve-deck, .sleeve-style) { height: calc((100% - 24px) / 3); }
+.sleeve-slot:hover :is(.sleeve-deck, .sleeve-style, .sleeve-cmdr), .sleeve:focus-visible .sleeve-deck, :is(.sleeve-style, .sleeve-cmdr):focus-visible { opacity: 1; }
+.commander-picker { width: min(680px, calc(100vw - 32px)); }
+.commander-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin: 12px 0; max-height: 60vh; overflow-y: auto; }
+.commander-option { display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 8px; border: 1px solid var(--line-bright); background: none; color: var(--text); text-align: left; font: inherit; font-size: 12px; }
+.commander-option.on { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
+.commander-option img { width: 100%; aspect-ratio: 63 / 88; object-fit: cover; border-radius: 5px; }
+.commander-option small { color: var(--muted); }
 .plate .sleeve img { width: 100%; height: 100%; object-fit: cover; display: block; transition: filter .12s ease; }
 .sleeve-slot:hover .sleeve-deck ~ *, .sleeve-slot:hover .sleeve:has(.sleeve-deck) img { filter: brightness(.5); }
 /* A finger cannot point without pressing, so a touch screen shows both labels all the time */
-@media (hover: none) { .sleeve-deck, .sleeve-style { opacity: 1; } }
+@media (hover: none) { .sleeve-deck, .sleeve-style, .sleeve-cmdr { opacity: 1; } }
 .plate .sleeve:hover { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 /* An empty slot is a card-shaped outline, not a sleeve: there is nothing sleeved yet */
 .plate .sleeve.empty {

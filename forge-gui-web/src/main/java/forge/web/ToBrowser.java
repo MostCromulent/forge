@@ -183,7 +183,12 @@ final class ToBrowser {
             int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
             @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
             @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard, boolean sittingOut,
-            @Nullable String commander, @Nullable Integer bracket, @Nullable Integer team) {
+            @Nullable String commander, @Nullable Integer bracket, @Nullable Integer team, List<CommanderChoice> commanderChoices) {
+    }
+
+    /** Who else can lead a seat's deck, as desktop's lobby offers it: the leader's name (two joined by +), the first one's picture,
+     *  whether it is the deck's own, one its file suggests or another in it, and whether it leads now. */
+    record CommanderChoice(String name, String image, String kind, boolean chosen) {
     }
 
     /** A planar deck, scheme deck or avatar a seat brings: its name, its size, a detail such as modifiers, a fault. */

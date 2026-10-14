@@ -1139,6 +1139,9 @@ public final class WebSession implements IHasForgeLog {
         if (seat.sleeve() != null) {
             lobby.setSleeve(seat.index(), seat.sleeve());
         }
+        if (seat.commander() != null) {
+            lobby.setCommander(seat.index(), seat.commander());
+        }
     }
 
     Hello hello() {

@@ -73,6 +73,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
         <ExtraPicker model={model} actions={actions} index={picker.seat} seat={seat} kind={picker.kind} close={close} />
       )}
       {seat && picker?.kind === 'sleeve' && <SleevePicker model={model} actions={actions} index={picker.seat} seat={seat} close={close} />}
+      {seat && picker?.kind === 'commander' && <CommanderPicker actions={actions} index={picker.seat} seat={seat} close={close} />}
       {seat && picker?.kind === 'avatar' && (
         <LookPicker title={t('lblWebLobbyChooseAvatarFor', seat.name ?? '')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
           current={seat.avatar} taken={lobby.seats.filter((_, i) => i !== picker.seat).map(s => s.avatar)} close={chosen => {
@@ -212,7 +213,8 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
   return (
     <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${!mine && !waiting && seat.type !== 'AI' ? ' guest' : ''}${seat.sittingOut ? ' sitting-out' : ''}${leaving ? ' leaving' : ''}${seat.team != null ? ' teamed' : ''}`}>
       {seat.team != null && <TeamTab team={seat.team} teams={lobby.teams} change={lobby.host || mine ? team => actions.setTeam(index, team) : null} />}
-      <div class="sleeve-slot" hidden={beforePools} data-image={commander ?? undefined}>
+      <div class={hasDeck && seat.mayEdit && !dealt && seat.commanderChoices.length > 1 ? 'sleeve-slot three' : 'sleeve-slot'}
+        hidden={beforePools} data-image={commander ?? undefined}>
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
         <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt && !commander ? ' card-art' : ''}`} title={dealt ? '' : t('lblWebLobbyChooseDeck')}
           data-label={seat.mayEdit ? t('lblWebLobbyChooseDeck') : (waiting ? '' : t('lblNoDeck'))}
@@ -225,6 +227,10 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
           {hasDeck && seat.mayEdit && !dealt && <span class="sleeve-deck">{t('lblWebLobbyChangeDeck')}</span>}
         </button>
         {/* A sleeve is worn by a deck, so there is nothing to choose until there is one */}
+        {/* A deck that more than one card could lead offers the choice between deck and sleeve, the three the same size */}
+        {hasDeck && seat.mayEdit && !dealt && seat.commanderChoices.length > 1 && (
+          <button class="sleeve-cmdr" onClick={() => choose('commander')}>{t('lblWebLobbyChangeCommander')}</button>
+        )}
         <button class="sleeve-style" title={t('lblWebSleevesChooseSleeve')} hidden={!hasDeck || !seat.mayEdit}
           onClick={() => choose('sleeve')}>{t('lblWebLobbyChangeSleeve')}</button>
       </div>
@@ -379,6 +385,32 @@ function IllegalDecks({ lobby }: { lobby: LobbyTable }) {
       <b>{t('lblWebLobbyNotLegal')}</b>
       <ul>{lobby.illegalDecks.map(p => <li key={p}>{p}</li>)}</ul>
       <p class="hint">{t(lobby.legalityEnforced ? 'lblWebLobbyAskIgnoreIllegal' : 'lblWebLobbyLegalityNotEnforced')}</p>
+    </div>
+  );
+}
+
+const CHOICE_KIND: Record<string, TextKey> = {
+  default: 'lblWebLobbyCommanderBuiltWith', suggested: 'lblWebLobbyCommanderSuggested', other: 'lblWebLobbyCommanderOther',
+};
+
+/** Who leads a seat's deck at this table, chosen from the cards that can, as desktop's lobby offers. */
+function CommanderPicker({ actions, index, seat, close }: { actions: Actions; index: number; seat: Seat; close: () => void }) {
+  return (
+    <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+      <div class="dialog commander-picker" role="dialog" aria-label={t('lblWebLobbySwapCommander')}>
+        <h3>{t('lblWebLobbySwapCommander')}</h3>
+        <div class="commander-options">
+          {seat.commanderChoices.map((c, i) => (
+            <button key={c.name} class={c.chosen ? 'commander-option on' : 'commander-option'} aria-pressed={c.chosen}
+              onClick={() => { actions.setSeat(index, { commander: i }); close(); }}>
+              <img alt="" src={smallImage(imageUrl(c.image))} />
+              <b>{c.name}</b>
+              <small>{t(CHOICE_KIND[c.kind] ?? 'lblWebLobbyCommanderOther')}</small>
+            </button>
+          ))}
+        </div>
+        <div class="actions"><button onClick={close}>{t('lblCancel')}</button></div>
+      </div>
     </div>
   );
 }

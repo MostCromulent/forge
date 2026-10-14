@@ -71,7 +71,7 @@ final class FromBrowser {
     /** Changes one or more of a seat's choices; a field left out is left alone, and a blank name gives the computer a new random one. */
     @Command("setSeat")
     record SetSeat(int index, @Nullable String name, @Nullable String deck, @Nullable Integer avatar,
-            @Nullable Integer sleeve) {
+            @Nullable Integer sleeve, @Nullable Integer commander) {
     }
 
     /** How many games the table's match is: 1, 3 or 5. */
