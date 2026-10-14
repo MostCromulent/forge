@@ -5,7 +5,7 @@ import type { UiState } from './ui';
 import { t } from './text';
 
 export type KeyCommand =
-  | 'closeOptions' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
+  | 'closeOptions' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closeZones' | 'closePicker' | 'declineHostChoice'
   | 'ok' | 'cancel' | 'toggleAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
   | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'confirmDistribute' | 'editorUndo' | 'closeImporter' | 'closeBrowse'
   | 'stackAlwaysYes' | 'stackAlwaysNo';
@@ -94,6 +94,10 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
   }
   if (ui.stopsOpen) {
     return escape ? 'closeStops' : null;
+  }
+  // A zone window the player opened is put away first, so the same Escape never also takes back their last action
+  if (escape && ui.openZones.size) {
+    return 'closeZones';
   }
   if (press.typing) {
     return null;

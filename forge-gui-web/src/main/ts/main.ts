@@ -204,6 +204,7 @@ function runKey(command: KeyCommand): void {
     case 'stackAlwaysYes': if (ui.hoveredStackItem !== null) actions.stackYield(ui.hoveredStackItem, 'alwaysYes'); break;
     case 'stackAlwaysNo': if (ui.hoveredStackItem !== null) actions.stackYield(ui.hoveredStackItem, 'alwaysNo'); break;
     case 'closeStops': changeUi(u => { u.stopsOpen = false; }); break;
+    case 'closeZones': changeUi(u => { u.openZones.clear(); u.zonesMinimised = false; }); break;
     case 'closePicker': changeUi(u => { u.picker = null; }); break;
     case 'closeImporter': changeUi(u => { u.importer = null; }); break;
     case 'closeBrowse': changeUi(u => { u.browse = null; }); break;

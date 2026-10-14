@@ -735,7 +735,8 @@ public class WebGuiGame extends NetworkGuiGame {
             return new ArrayList<>();
         }
         final int need = Math.min(Math.max(min, 0), choices.size());
-        final List<T> number = max == 1 ? askNumber(message, need == 0, choices) : null;
+        // Choices labelled by the host, such as stickers offered by their place in a list, are read as their labels, not as numbers
+        final List<T> number = max == 1 && display == null ? askNumber(message, need == 0, choices) : null;
         if (number != null) {
             return number;
         }
