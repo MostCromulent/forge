@@ -308,7 +308,8 @@ final class Lobby {
             seenCardPool = poolName;
             seenRules = rules();
             out = new Decks(catalog.refresh(format, cardPool, guest.getAsBoolean(), device, eventFilter()), names(FModel.getFormats().getSanctionedList()),
-                    poolName);
+                    poolName, guest.getAsBoolean() ? null : new ToBrowser.DeckGenOptions(FModel.getPreferences().getPrefBoolean(FPref.DECKGEN_SINGLETONS),
+                            FModel.getPreferences().getPrefBoolean(FPref.DECKGEN_ARTIFACTS)));
         }
         if (newPool) {
             dealGeneratorsAgain();

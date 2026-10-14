@@ -284,6 +284,11 @@ final class FromBrowser {
     record UseMana(byte color) {
     }
 
+    /** How the host's generators build decks: one of each card, and no artifacts. */
+    @Command("setDeckGen")
+    record SetDeckGen(boolean singletons, boolean noArtifacts) {
+    }
+
     @Command("setSetting")
     record SetSetting(String key, String value) {
     }

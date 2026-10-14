@@ -303,6 +303,19 @@ export function DeckFinder({ model, actions, seat, close }: {
               {/* Core asks which category through a dialog on the host's screen, so only the host can answer it */}
               <button class="get-net" hidden={!model.host} onClick={() => actions.fetchNetDecks()}>{t('lblWebFinderDownloadNetDecks')}</button>
             </section>
+            {/* What the next generated deck is built with, as desktop's lobby offers under its generators */}
+            {filter.source === 'generated' && model.deckGen && (
+              <section class="gen-options">
+                <h4>{t('lblWebFinderGeneratorOptions')}</h4>
+                {/* A commander deck is one of each card whatever this says, so it is offered beside the colour generators only */}
+                {decks.some(d => d.key.startsWith('gen:color:')) && (
+                  <label title={t('nlSingletons')}><input type="checkbox" checked={model.deckGen.singletons}
+                    onChange={e => actions.setDeckGen(e.currentTarget.checked, model.deckGen!.noArtifacts)} /> {t('cbSingletons')}</label>
+                )}
+                <label title={t('lblRemoveArtifacts')}><input type="checkbox" checked={model.deckGen.noArtifacts}
+                  onChange={e => actions.setDeckGen(model.deckGen!.singletons, e.currentTarget.checked)} /> {t('cbRemoveArtifacts')}</label>
+              </section>
+            )}
           </nav>
           <div class="results">
             <FilterBar kinds={kinds} filter={filter} set={setFilter} clearAll={clearAll} narrowed={narrowed}>

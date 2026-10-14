@@ -504,6 +504,16 @@ public final class WebSession implements IHasForgeLog {
             }
             case "cardPoolDetails" -> channel.send(Lobby.cardPoolDetails());
             case "cardSets" -> channel.send(CardCatalog.sets());
+            case "setDeckGen" -> {
+                if (isHost) {
+                    final FromBrowser.SetDeckGen gen = Wire.decode(msg, FromBrowser.SetDeckGen.class);
+                    final var prefs = FModel.getPreferences();
+                    prefs.setPref(FPref.DECKGEN_SINGLETONS, gen.singletons());
+                    prefs.setPref(FPref.DECKGEN_ARTIFACTS, gen.noArtifacts());
+                    prefs.save();
+                    lobby.sendDecks(channel);
+                }
+            }
             case "cardSearch" -> channel.send(new CardSearch(
                     DeckCatalog.searchCardNames(Wire.decode(msg, SearchCards.class).query(), CARD_SEARCH_LIMIT)));
             case "printings" -> {

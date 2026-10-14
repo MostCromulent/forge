@@ -188,6 +188,8 @@ export interface Actions {
   askCardPoolDetails(): void;
   /** Every edition, for the catalogue's set filter; it arrives later in the model. */
   askCardSets(): void;
+  /** The host's generators: one of each card, and no artifacts. */
+  setDeckGen(singletons: boolean, noArtifacts: boolean): void;
   setVariant(variant: string, on: boolean): void;
   setArchenemy(index: number): void;
   setTeams(count: number): void;
@@ -373,6 +375,7 @@ export function createActions(send: Send): Actions {
     setCardPool: cardPool => send(cardPool ? { t: 'setCardPool', cardPool } : { t: 'setCardPool' }),
     askCardPoolDetails: () => send({ t: 'cardPoolDetails' }),
     askCardSets: () => send({ t: 'cardSets' }),
+    setDeckGen: (singletons, noArtifacts) => send({ t: 'setDeckGen', singletons, noArtifacts }),
     setPlayerCount: count => send({ t: 'setPlayerCount', count }),
     setMatchLength: games => send({ t: 'setMatchLength', games }),
     setMaxBracket: bracket => send({ t: 'setMaxBracket', bracket }),

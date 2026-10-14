@@ -4,6 +4,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.collect.MapMaker;
 import forge.StaticData;
 import forge.deck.CardPool;
+import forge.deck.CommanderDeckGenerator;
 import forge.deck.CommanderBracketCalculator;
 import forge.deck.Deck;
 import forge.deck.ArchetypeDeckGenerator;
@@ -60,6 +61,7 @@ final class DeckCatalog {
     private static final String PRECON = "precons";
     /** Sources that make a deck when you pick one, rather than loading a saved deck. */
     private static final String GENERATED = "generated";
+    private static final String COMMANDER_GEN = "gen:commander:";
     private static final String NET = "net";
     /** A colour generator knows its own colour before it builds anything; the other generators do not. */
     private static final Map<String, String> COLOUR_LETTERS = Map.of(
@@ -253,6 +255,9 @@ final class DeckCatalog {
             }, MINE);
             if (format == GameType.Commander) {
                 add(out, format, DeckProxy.getAllCommanderPreconDecks(), PRECON);
+            }
+            if (format == GameType.Commander || format == GameType.Oathbreaker || format == GameType.Brawl || format == GameType.TinyLeaders) {
+                addCommanderGenerators(out, format);
             } else if (format == GameType.Constructed) {
                 add(out, format, DeckProxy.getAllPreconstructedDecks(QuestController.getPrecons()), PRECON);
                 addGenerators(out);
@@ -283,7 +288,7 @@ final class DeckCatalog {
             if (e.built() != null) {
                 return e.built();
             }
-            final Deck deck = e.proxy() == null ? buildColours(key, pool) : e.proxy().getDeck();
+            final Deck deck = e.proxy() != null ? e.proxy().getDeck() : key.startsWith(COMMANDER_GEN) ? buildCommander(key) : buildColours(key, pool);
             if (e.generated()) {
                 byKey.put(key, new Entry(e.proxy(), true, deck));
             }
@@ -311,6 +316,16 @@ final class DeckCatalog {
         final int colon = key.indexOf(':');
         final int slash = key.lastIndexOf('/');
         return colon < 0 || slash <= colon ? "" : key.substring(colon + 1, slash);
+    }
+
+    /** Builds a deck around a commander chosen at random, as desktop's Random button picks from its list of every legal one. */
+    private static Deck buildCommander(final String key) {
+        // gen:commander:<format>:<random or cardgen>
+        final String[] parts = key.split(":");
+        // Built for the computer's sake, since the key does not say who will play it and a person can play anything it can
+        final List<DeckProxy> legends = CommanderDeckGenerator.getCommanderDecks(GameType.valueOf(parts[2]).getDeckFormat(), true,
+                "cardgen".equals(parts[3]));
+        return legends.isEmpty() ? null : legends.get(MyRandom.getRandom().nextInt(legends.size())).getDeck();
     }
 
     /** Builds the colour generator behind a "gen:color:" key, from the chosen card pool when there is one. */
@@ -480,6 +495,21 @@ final class DeckCatalog {
                     generated(out, key, archetype.getName(), text.getMessage("lblWebDeckCatalogArchetype", f.getName()), "");
                 }
             }
+        }
+    }
+
+    private void addCommanderGenerators(final List<DeckSummary> out, final GameType format) {
+        final Localizer text = Localizer.getInstance();
+        final List<String> kinds = new ArrayList<>(List.of("random"));
+        // The card-based generator reads what Forge learned from real decks, which loads at startup only when asked for
+        if (FModel.isdeckGenMatrixLoaded()) {
+            kinds.add("cardgen");
+        }
+        for (final String kind : kinds) {
+            final String key = COMMANDER_GEN + format.name() + ":" + kind;
+            byKey.put(key, new Entry(null, true, null));
+            generated(out, key, text.getMessage("random".equals(kind) ? "lblWebDeckCatalogRandomCommander" : "lblWebDeckCatalogCardBasedCommander"),
+                    text.getMessage("lblWebDeckCatalogBuiltOnPick"), "");
         }
     }
 

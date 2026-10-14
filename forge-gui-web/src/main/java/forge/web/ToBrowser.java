@@ -84,7 +84,11 @@ final class ToBrowser {
     }
 
     @Message("decks")
-    record Decks(List<DeckSummary> decks, List<String> cardFormats, @Nullable String cardPool) {
+    record Decks(List<DeckSummary> decks, List<String> cardFormats, @Nullable String cardPool, @Nullable DeckGenOptions deckGen) {
+    }
+
+    /** How the host's generators build their decks, as desktop's lobby sets it; sent to the host only, whose preferences they are. */
+    record DeckGenOptions(boolean singletons, boolean noArtifacts) {
     }
 
     /**

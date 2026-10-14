@@ -1,6 +1,6 @@
 // The browser's copy of the game, which server messages change here and everything on the page is drawn from
 
-import type { CardPoolDetails, CardPoolGroup, LimitedEdition, ConquestAetherState, CampaignBar, ConquestPlanes, CampaignPrefs, CampaignStats, Trading, ConquestOptions, ConquestParty, CampaignResult, Reward, ConquestSaves, ConquestState, QuestBazaar, QuestChallenges, QuestDecks, QuestDuels, QuestOptions, QuestSaves, QuestTournaments, DeckMatches, DevState, MatchScore } from './protocol';
+import type { CardPoolDetails, CardPoolGroup, DeckGenOptions, LimitedEdition, ConquestAetherState, CampaignBar, ConquestPlanes, CampaignPrefs, CampaignStats, Trading, ConquestOptions, ConquestParty, CampaignResult, Reward, ConquestSaves, ConquestState, QuestBazaar, QuestChallenges, QuestDecks, QuestDuels, QuestOptions, QuestSaves, QuestTournaments, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -54,6 +54,8 @@ export interface Model {
   networked: boolean;
   /** The formats a deck's cards can be checked against, for narrowing the deck list. */
   cardFormats: string[];
+  /** How the host's generators build decks; null for a guest, who cannot change them. */
+  deckGen: DeckGenOptions | null;
   /** The card pool the lobby holds decks to, which the deck finder pins. */
   deckCardPool: string | null;
   /** What the seat being edited may choose for a planar deck, scheme deck or avatar. */
@@ -149,7 +151,7 @@ export function createModel(): Model {
     inMatch: false, inLobby: false, joining: false, playerName: '', decks: [], error: null,
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], presence: [], networked: false,
-    cardFormats: [], deckCardPool: null, extraChoices: null, deckDetails: null, deckMatches: {}, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
+    cardFormats: [], deckGen: null, deckCardPool: null, extraChoices: null, deckDetails: null, deckMatches: {}, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
     drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
     inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, cardSets: null, limitedPools: null,

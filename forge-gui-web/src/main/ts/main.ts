@@ -445,6 +445,7 @@ function apply(msg: ServerMessage): void {
       model.decks = msg.decks;
       model.cardFormats = msg.cardFormats ?? [];
       model.deckCardPool = msg.cardPool ?? null;
+      model.deckGen = msg.deckGen ?? null;
       break;
     case 'lobby': {
       model.lobby = msg.table ?? null;
