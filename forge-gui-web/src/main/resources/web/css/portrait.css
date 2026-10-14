@@ -546,7 +546,17 @@ html[data-form="portrait"] #drafting .tool-line .chip.more { display: none; }
 /* The table is drawn in pixels for a desktop panel, so a phone pins it across the screen and draws it smaller */
 html[data-form="portrait"] #drafting .table-pop { position: fixed; left: 8px; right: 8px; top: auto; display: grid; justify-items: center; }
 html[data-form="portrait"] #drafting .table-pop .dial { zoom: .8; }
-html[data-form="portrait"] #drafting .draft-pack .cat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 8px; padding: 12px 10px 76px; }
+html[data-form="portrait"] #drafting .draft-pack .cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 10px; padding: 12px 12px 76px; }
+/* A tapped card fills the screen, its picture as large as the screen allows, with the pack's arrows and the pick under it */
+.card-viewer { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; justify-items: center; gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--scrim-deep); touch-action: pan-y; }
+.card-viewer .viewer-count { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.card-viewer .viewer-card { position: relative; align-self: center; width: min(100%, calc((100vh - 140px) * 63 / 88)); aspect-ratio: 63 / 88; }
+.card-viewer .viewer-card > img { width: 100%; height: 100%; border-radius: 4.5% / 3.5%; object-fit: cover; box-shadow: 0 16px 40px #000c; }
+.card-viewer .text-face { font-size: 14px; line-height: 1.4; padding: 14px 16px; border-radius: 12px; }
+.card-viewer .viewer-bar { display: grid; grid-template-columns: 48px 1fr 1.6fr 48px; gap: 8px; width: 100%; max-width: 420px; }
+.card-viewer .viewer-bar button { min-height: 48px; font-size: 15px; }
+.card-viewer .viewer-bar button[aria-label] { font-size: 24px; padding: 0; }
 html[data-form="portrait"] #drafting .draft-picks { position: fixed; left: 0; right: 0; bottom: 0; z-index: 35; height: min(80vh, calc(100% - 64px));
   border-radius: 14px 14px 0 0; border-bottom: 0; box-shadow: 0 -10px 30px var(--scrim-deep); transform: translateY(calc(100% - 56px));
   transition: transform .25s cubic-bezier(.2, .7, .3, 1); }
