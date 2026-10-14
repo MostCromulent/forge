@@ -466,6 +466,7 @@ public abstract class GameLobby implements IHasGameType {
 
         // The flag decides sides under Archenemy; a seat's own team is set only when the role moves
         final boolean archenemyTeams = variantTypes.contains(GameType.Archenemy);
+        final GameType baseGameType = data.isLimitedMode() ? data.getLimitedType() : GameType.Constructed;
         final List<RegisteredPlayer> players = new ArrayList<>();
         final Map<RegisteredPlayer, IGuiGame> guis = Maps.newHashMap();
         final Map<RegisteredPlayer, LobbySlot> playerToSlot = Maps.newHashMap();
@@ -518,7 +519,7 @@ public abstract class GameLobby implements IHasGameType {
                             isOathbreakerMatch ? GameType.Oathbreaker :
                                 isTinyLeadersMatch ? GameType.TinyLeaders :
                                     isBrawlMatch ? GameType.Brawl :
-                                        data.isLimitedMode() && data.getLimitedType() == GameType.CommanderDraft ? GameType.CommanderDraft :
+                                        baseGameType == GameType.CommanderDraft ? GameType.CommanderDraft :
                                             GameType.Commander;
                     if (checkLegality) {
                         final String errMsg = commanderGameType.getDeckFormat().getDeckConformanceProblem(deck);
@@ -580,7 +581,6 @@ public abstract class GameLobby implements IHasGameType {
         }
 
         //if above checks succeed, return runnable that can be used to finish starting game
-        final GameType baseGameType = data.isLimitedMode() ? data.getLimitedType() : GameType.Constructed;
         return () -> {
             hostedMatch = GuiBase.getInterface().hostMatch();
             hostedMatch.setOnMatchOver(this::onMatchOver);
