@@ -457,13 +457,20 @@ public class WebGuiGame extends NetworkGuiGame {
         final String yieldKey = item.getKey();
         return new StackMenu(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, item.getId()),
                 item.isAbility() ? controller.shouldAutoYield(yieldKey) : null,
-                item.isOptionalTrigger() && isLocalPlayer(item.getActivatingPlayer()) && !yieldKey.isEmpty()
-                        ? controller.getTriggerDecision(yieldKey) : null);
+                answersTrigger(item) ? controller.getTriggerDecision(yieldKey) : null);
+    }
+
+    private boolean answersTrigger(final StackItemView item) {
+        return item.isOptionalTrigger() && isLocalPlayer(item.getActivatingPlayer()) && !item.getKey().isEmpty();
     }
 
     private void stackYield(final IGameController controller, final StackItemView item, final YieldAction action) {
         final String yieldKey = item.getKey();
         final boolean abilityScope = controller.getYieldController().isAbilityScope();
+        // A key press reaches here for any stack item, where the menu offers these two only for the player's own optional trigger
+        if ((action == YieldAction.alwaysYes || action == YieldAction.alwaysNo) && !answersTrigger(item)) {
+            return;
+        }
         switch (action) {
             case autoYield -> controller.setShouldAutoYield(yieldKey, !controller.shouldAutoYield(yieldKey), abilityScope);
             case alwaysYes -> controller.setTriggerDecision(yieldKey,
@@ -951,6 +958,7 @@ public class WebGuiGame extends NetworkGuiGame {
                 yields.getAutoTriggers().forEach(e -> keys.add(e.getKey()));
                 keys.forEach(key -> forget(controller, yields, key, abilityScope));
             }
+            case clearOrders -> controller.sendYieldUpdate(new YieldUpdate.ClearAbilityOrders());
             case disableYields -> controller.setDisableAutoYields(command.on());
             case disableTriggers -> controller.setDisableAutoTriggers(command.on());
             case list -> { }

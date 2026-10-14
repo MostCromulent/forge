@@ -148,6 +148,7 @@ const KIND_LABEL: Record<AutoDecision['kind'], TextKey> = {
 /** The auto-yields and trigger answers set during play, each of which can be forgotten, as desktop's dialog lists them. */
 export function AutoDecisionsDialog({ model, actions, close }: { model: Model; actions: Actions; close: () => void }) {
   const [armed, setArmed] = useState(false);
+  const [ordersReset, setOrdersReset] = useState(false);
   const all = model.autoDecisions;
   const entries = all?.entries ?? [];
   return (
@@ -185,6 +186,14 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
           <div class="setting">
             <div>{t('lblWebGameMenuPauseTriggers')}</div>
             <OnOff on={all.triggersOff} label={t('lblWebGameMenuPauseTriggers')} change={on => actions.autoDecisions('disableTriggers', undefined, on)} />
+          </div>
+          {/* The host keeps no list of saved orders to show, so the button only says that it has been pressed */}
+          <div class="setting">
+            <div>{t('lblResetSavedAbilityOrders')}</div>
+            <button disabled={ordersReset} onClick={() => {
+              actions.autoDecisions('clearOrders');
+              setOrdersReset(true);
+            }}>{ordersReset ? t('lblDone') : t('lblReset')}</button>
           </div>
         </>
       )}

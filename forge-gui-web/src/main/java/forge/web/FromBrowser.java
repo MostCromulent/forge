@@ -303,9 +303,9 @@ final class FromBrowser {
     record DrawOfferCommand(DrawOfferMessage.Action action) {
     }
 
-    enum AutoDecisionAction { list, remove, clear, disableYields, disableTriggers }
+    enum AutoDecisionAction { list, remove, clear, clearOrders, disableYields, disableTriggers }
 
-    /** Lists or forgets the player's auto-yields and trigger answers, or switches either kind off when on is true. */
+    /** Lists or forgets the player's auto-yields and trigger answers, forgets saved ability orders, or switches either kind off when on is true. */
     @Command("autoDecisions")
     record AutoDecisionCommand(AutoDecisionAction action, @Nullable String key, boolean on) {
     }

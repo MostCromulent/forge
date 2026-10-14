@@ -201,6 +201,8 @@ function runKey(command: KeyCommand): void {
     }
     case 'closeVolume': changeUi(u => { u.volumeOpen = false; }); break;
     case 'closeStackMenu': changeUi(u => { u.stackMenuAt = null; }); break;
+    case 'stackAlwaysYes': if (ui.hoveredStackItem !== null) actions.stackYield(ui.hoveredStackItem, 'alwaysYes'); break;
+    case 'stackAlwaysNo': if (ui.hoveredStackItem !== null) actions.stackYield(ui.hoveredStackItem, 'alwaysNo'); break;
     case 'closeStops': changeUi(u => { u.stopsOpen = false; }); break;
     case 'closePicker': changeUi(u => { u.picker = null; }); break;
     case 'closeImporter': changeUi(u => { u.importer = null; }); break;

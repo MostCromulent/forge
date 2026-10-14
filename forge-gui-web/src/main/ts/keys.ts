@@ -7,7 +7,8 @@ import { t } from './text';
 export type KeyCommand =
   | 'closeOptions' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
   | 'ok' | 'cancel' | 'toggleAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
-  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'confirmDistribute' | 'editorUndo' | 'closeImporter' | 'closeBrowse';
+  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'confirmDistribute' | 'editorUndo' | 'closeImporter' | 'closeBrowse'
+  | 'stackAlwaysYes' | 'stackAlwaysNo';
 
 type Digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 
@@ -103,6 +104,10 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
   }
   if (key === keys.cardText) {
     return 'cardText';
+  }
+  // Desktop's keys for always answering an optional trigger, given to the stack item under the pointer
+  if (ui.hoveredStackItem !== null && (key === 'y' || key === 'n')) {
+    return key === 'y' ? 'stackAlwaysYes' : 'stackAlwaysNo';
   }
   // A card's menu of abilities: Escape closes it, and its items are numbered as desktop's are
   const menu = cardMenu(model);
