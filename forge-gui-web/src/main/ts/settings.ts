@@ -58,12 +58,28 @@ const YOURS = '<rect class="yours" x="4" y="44" width="96" height="32" rx="3"/>'
 /** A table of five or more shows one opponent at a time whatever is chosen, so the other layouts cannot be picked during one. */
 const tabsOnly = () => Number(document.querySelector<HTMLElement>('#match:not([hidden])')?.dataset.opponents ?? 0) > 3;
 
+/** How often a yield suggestion comes back once it is declined, as desktop offers it. */
+const SCOPES: [string, string][] = [['NEVER', t('lblNever')], ['ALWAYS', t('lblAlways')], ['STACK', t('lblDeclScopeStack')], ['TURN', t('lblDeclScopeTurn')]];
+
 export const SETTINGS: SettingDef[] = [
   { section: t('lblWebGameMenuStopsTitle'), key: 'interruptAttackers', label: t('lblWebOptionsInterruptAttackers'), type: 'toggle', server: true, menu: 'stops', def: true },
   { section: t('lblWebGameMenuStopsTitle'), key: 'interruptOpponentSpell', label: t('lblWebOptionsInterruptOpponentSpell'), type: 'toggle', server: true, menu: 'stops', def: true },
   { section: t('lblWebGameMenuStopsTitle'), key: 'interruptTargeting', label: t('lblWebOptionsInterruptTargeting'), type: 'toggle', server: true, menu: 'stops', def: false },
   { section: t('lblWebGameMenuStopsTitle'), key: 'interruptTriggers', label: t('lblWebOptionsInterruptTriggers'), type: 'toggle', server: true, menu: 'stops', def: false },
   { section: t('lblWebGameMenuStopsTitle'), key: 'interruptMassRemoval', label: t('lblWebOptionsInterruptMassRemoval'), type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptReveal', label: t('lblWebOptionsInterruptReveal'), type: 'toggle', server: true, menu: 'stops', def: false },
+  {
+    section: t('lblWebOptionsYieldOffers'), key: 'suggestStackYield', label: t('lblWebOptionsSuggestStackYield'), type: 'choice', server: true, menu: 'stops',
+    options: SCOPES, def: 'NEVER',
+  },
+  {
+    section: t('lblWebOptionsYieldOffers'), key: 'suggestNoActions', label: t('lblWebOptionsSuggestNoActions'), type: 'choice', server: true, menu: 'stops',
+    options: SCOPES, def: 'NEVER',
+  },
+  { section: t('lblWebOptionsYieldOffers'), key: 'suppressAfterYield', label: t('lblWebOptionsSuppressAfterYield'), type: 'toggle', server: true, menu: 'stops', def: true },
+  { section: t('lblWebOptionsYieldOffers'), key: 'suppressOwnTurn', label: t('lblWebOptionsSuppressOwnTurn'), type: 'toggle', server: true, menu: 'stops', def: true },
+  { section: t('lblSpeedSettings'), key: 'skipPhaseDelay', label: t('lblSkipPhaseDelay'), type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: t('lblSpeedSettings'), key: 'skipResolveDelay', label: t('lblSkipResolveDelay'), type: 'toggle', server: true, menu: 'stops', def: false },
   {
     section: t('lblAutoYieldsAndTriggers'), key: 'autoYieldMode', label: t('lblWebOptionsAutoYieldMode'), type: 'choice', server: true, menu: 'decisions',
     hint: t('lblWebOptionsAutoYieldModeHint'),

@@ -110,6 +110,9 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .setup-aside { display: flex; align-items: center; gap: 10px; }
 .setup-sub { margin: -2px 0 0; font-size: 13px; color: var(--muted); }
 button.ghost { background: none; border-color: transparent; color: var(--muted); }
+.dk-star { flex: none; width: 22px; text-align: center; font-size: 15px; line-height: 1; color: var(--faint); cursor: pointer; }
+.dk-star:hover { color: var(--text); }
+.dk-star.on { color: var(--accent-2); }
 button.ghost:hover { color: var(--text); background: var(--surface-2); }
 /* The start page's trail and question sit over its plaques, at their width */
 .start-step { display: grid; gap: 14px; width: min(100%, 698px); }

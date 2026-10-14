@@ -116,6 +116,11 @@ export function CardMenu({ at, state, actions, close, printings }: {
       )}
       {/* A card in the deck changes the printing of its copies there; one in the catalogue, the printing this browser prefers for it */}
       <button role="menuitem" onClick={act(() => printings(zone))}>{t(zone ? 'lblChangePrinting' : 'lblWebCardMenuPreferredPrinting')}</button>
+      {zone !== null && inDeck && (
+        <button role="menuitem" onClick={act(() => actions.edit({ op: 'foil', name: at.name, from: zone, count: 1 }))}>
+          {t(inDeck.foil ? 'lblWebCardMenuRemoveFoil' : 'lblWebCardMenuMakeFoil')}
+        </button>
+      )}
       {zone !== null && <>
         <hr />
         <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: 1 }))}>{t('lblWebCardMenuRemoveOne')}</button>

@@ -127,8 +127,9 @@ final class ToBrowser {
     }
 
     /** total counts the commanders with the main deck, and the last curve entry holds its mana value and above. */
+    /** colours counts the main deck's spells as W, U, B, R, G, several colours and none; symbols counts the coloured mana symbols in their costs as W, U, B, R, G. */
     record DeckStats(int total, int main, int sideboard, int lands, float averageMana, List<Integer> curve, List<Integer> creatures,
-            List<TypeCount> types) {
+            List<TypeCount> types, List<Integer> colours, List<Integer> symbols) {
     }
 
     record TypeCount(String name, int count) {
@@ -238,7 +239,7 @@ final class ToBrowser {
 
     /** One name in a section, however many printings it is split over. mv and colors let the browser group it differently. */
     record EditorCard(String name, int count, String image, String cost, int mv, String colors, int printings,
-            List<EditorPrinting> split, @Nullable String problem) {
+            List<EditorPrinting> split, @Nullable String problem, boolean foil) {
     }
 
     /** How many copies of a card in one section are of one printing, named by its image key. */
@@ -301,6 +302,11 @@ final class ToBrowser {
     /** A guest's deck changed: the deck as .dck text to keep in its browser, or no text when it was deleted. */
     @Message("deviceDeck")
     record DeviceDeck(String id, @Nullable String text, String format) {
+    }
+
+    /** The deck open in the editor as .dck text, for the browser to save as a file. */
+    @Message("deckFileText")
+    record DeckFileText(String name, String text) {
     }
 
     /** A question outside a match, answered with the indices chosen, where kind is "confirm" (a few buttons) or "choices" (a list). */
@@ -439,7 +445,9 @@ final class ToBrowser {
 
     /** The Forge preferences the options dialog shares with the desktop client. */
     record ServerSettings(boolean interruptAttackers, boolean interruptOpponentSpell, boolean interruptTargeting,
-            boolean interruptTriggers, boolean interruptMassRemoval, boolean autoTapPreview,
+            boolean interruptTriggers, boolean interruptMassRemoval, boolean interruptReveal,
+            String suggestStackYield, String suggestNoActions, boolean suppressAfterYield, boolean suppressOwnTurn,
+            boolean skipPhaseDelay, boolean skipResolveDelay, boolean autoTapPreview,
             String autoYieldMode, GameLogVerbosity logDetail, String arrows, boolean devMode,
             String highlightColor, int soundVolume, int musicVolume) {
     }

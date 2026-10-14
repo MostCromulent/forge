@@ -115,6 +115,14 @@ final class DeckSession {
             case "importCommit" -> commit(channel, Wire.decode(msg, ImportCommit.class));
             case "deckFile" -> addFile(channel, Wire.decode(msg, DeckFile.class));
             case "deckDelete" -> deleteDeck(channel, Wire.decode(msg, DeckDelete.class).key());
+            case "deckFavourite" -> {
+                // The stars are the host's own, kept where desktop keeps them
+                if (host.getAsBoolean()) {
+                    final DeckFavourite star = Wire.decode(msg, DeckFavourite.class);
+                    lobby.setFavourite(star.key(), star.on());
+                    lobby.sendDecks(channel);
+                }
+            }
             default -> edit(channel, type, msg);
         }
     }
@@ -134,7 +142,16 @@ final class DeckSession {
                 yield editor.setCheck(check(c.format(), c.cardPool(), c.unrestricted()));
             }
             case "editorUndo" -> editor.undo();
-            case "editorDeck" -> Wire.decode(msg, EditorDeck.class).op() == FromBrowser.DeckOp.delete ? delete(channel) : editor.duplicate();
+            case "editorDeck" -> {
+                final FromBrowser.DeckOp op = Wire.decode(msg, EditorDeck.class).op();
+                if (op == FromBrowser.DeckOp.file) {
+                    // The serializer ends some lines for Windows and some plainly, and a file wants one or the other
+                    channel.send(new DeckFileText(editor.deck().getName(),
+                            String.join("\n", DeckSerializer.serializeDeck(editor.deck())).replace("\r\n", "\n")));
+                    yield null;
+                }
+                yield op == FromBrowser.DeckOp.delete ? delete(channel) : editor.duplicate();
+            }
             case "editorClose" -> close(channel);
             default -> null;
         };
@@ -295,6 +312,7 @@ final class DeckSession {
             case commander -> editor.makeCommander(e.name(), e.from());
             case printings -> editor.setPrintings(e.name(), from, counts(e.printings()));
             case lands -> editor.setLands(counts(e.lands()));
+            case foil -> editor.toggleFoil(e.name(), from);
             case landSet -> editor.setLandSet(e.name());
             case suggestLands -> editor.suggestLands();
         };

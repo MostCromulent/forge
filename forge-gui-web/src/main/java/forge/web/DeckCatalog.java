@@ -12,6 +12,8 @@ import forge.deck.DeckUrlLoader;
 import forge.deck.DeckgenUtil;
 import forge.deck.NetDeckCategory;
 import forge.deck.DeckSection;
+import forge.deck.io.DeckPreferences;
+import forge.card.ColorSet;
 import forge.card.CardEdition;
 import forge.game.GameFormat;
 import forge.game.GameType;
@@ -391,11 +393,22 @@ final class DeckCatalog {
     }
 
     /** What the panel reports about a deck beside its card list. */
+    /** Stars a listed deck as desktop does, in the deck preferences both clients read. */
+    void setFavourite(final String key, final boolean on) {
+        final Entry e = key == null ? null : byKey.get(key);
+        if (e == null || e.proxy() == null) {
+            return;
+        }
+        DeckPreferences.getPrefs(e.proxy()).setStarCount(on ? 1 : 0);
+    }
+
     static DeckStats stats(final Deck deck) {
         final CardPool main = deck.get(DeckSection.Main);
         final int[] curve = new int[CURVE_BUCKETS];
         final int[] creatures = new int[CURVE_BUCKETS];
         final Map<String, Integer> types = new LinkedHashMap<>();
+        final int[] colours = new int[7];
+        final int[] symbols = new int[5];
         int lands = 0;
         int spells = 0;
         int totalMana = 0;
@@ -416,11 +429,19 @@ final class DeckCatalog {
                 }
                 spells += n;
                 totalMana += cmc * n;
+                final ColorSet colour = card.getRules().getColor();
+                colours[colour.isColorless() ? 6 : colour.isMulticolor() ? 5 : Integer.numberOfTrailingZeros(colour.getColor())] += n;
+                // A hybrid symbol counts for each of its colours, as desktop's statistics count it
+                final int[] shards = card.getRules().getManaCost().getColorShardCounts();
+                for (int i = 0; i < symbols.length; i++) {
+                    symbols[i] += shards[i] * n;
+                }
             }
         }
         return new DeckStats(played(deck), count(main), count(deck.get(DeckSection.Sideboard)), lands,
                 spells == 0 ? 0 : Math.round((totalMana * 100f) / spells) / 100f, Ints.asList(curve), Ints.asList(creatures),
-                types.entrySet().stream().map(e -> new TypeCount(e.getKey(), e.getValue())).toList());
+                types.entrySet().stream().map(e -> new TypeCount(e.getKey(), e.getValue())).toList(),
+                Ints.asList(colours), Ints.asList(symbols));
     }
 
     /** Generators are listed by name only, because asking each for a deck to fill a row would build hundreds of them. */

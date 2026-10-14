@@ -136,6 +136,10 @@ final class Lobby {
         return catalog.deck(key);
     }
 
+    void setFavourite(final String key, final boolean on) {
+        catalog.setFavourite(key, on);
+    }
+
     /** The description is the web's own wording, since the engine's older lines still call a commander a "General". */
     static Format explained(final GameType type) {
         final Localizer text = Localizer.getInstance();

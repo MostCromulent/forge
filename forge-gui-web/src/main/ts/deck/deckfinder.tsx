@@ -312,7 +312,8 @@ export function DeckFinder({ model, actions, seat, close }: {
             <div class="dk-hits">
               {list.length
                 ? list.map(d => <Hit key={d.key} deck={d} chosen={d.key === chosen} choose={() => setChosen(d.key)}
-                  use={() => use(d.key)} source={filter.source === 'all'} forComputer={forComputer} />)
+                  use={() => use(d.key)} source={filter.source === 'all'} forComputer={forComputer}
+                  star={model.host ? on => actions.favouriteDeck(d.key, on) : null} />)
                 : <p class="none">{t('lblWebFinderNoMatch')}</p>}
             </div>
           </div>
@@ -532,8 +533,10 @@ const SOURCE_NAMES: Record<string, TextKey> = {
 const sourceName = (id: string) => (SOURCE_NAMES[id] ? t(SOURCE_NAMES[id]) : id.charAt(0).toUpperCase() + id.slice(1));
 
 // The source is only worth a column while every source is listed; with one picked, the rail already says it
-function Hit({ deck: d, chosen, choose, use, source, forComputer }: {
+function Hit({ deck: d, chosen, choose, use, source, forComputer, star }: {
   deck: DeckSummary; chosen: boolean; choose: () => void; use: () => void; source: boolean; forComputer: boolean;
+  /** Stars the deck or takes the star away; null for a guest, whose list is the host's. */
+  star: ((on: boolean) => void) | null;
 }) {
   // A generator has nothing to measure until it has built something, so it says what it is instead
   if (d.generated) {
@@ -548,6 +551,12 @@ function Hit({ deck: d, chosen, choose, use, source, forComputer }: {
   // Shown only when asked for, and then marked, so a deck that is here is never hunted for elsewhere
   return (
     <button class={forComputer && d.aiSkips ? 'dk-hit ai-poor' : 'dk-hit'} aria-pressed={chosen} title={d.problem ?? ''} onClick={choose} onDblClick={use}>
+      {/* A row is a button, so the star inside it is a span that keeps its click to itself */}
+      {star && (
+        <span class={d.favourite ? 'dk-star on' : 'dk-star'} role="button" aria-pressed={!!d.favourite}
+          aria-label={t(d.favourite ? 'lblWebFinderUnstar' : 'lblWebFinderStar')} title={t(d.favourite ? 'lblWebFinderUnstar' : 'lblWebFinderStar')}
+          onClick={e => { e.stopPropagation(); star(!d.favourite); }} onDblClick={e => e.stopPropagation()}>{d.favourite ? '\u2605' : '\u2606'}</span>
+      )}
       <Title deck={d} />
       {forComputer && !!d.aiSkips && (
         <span class="ai-skips-tag" title={t(d.aiSkips === 1 ? 'lblWebFinderAiSkipsOne' : 'lblWebFinderAiSkipsN', d.aiSkips)}>

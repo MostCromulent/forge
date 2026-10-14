@@ -1,7 +1,7 @@
 // The game menu behind the prompt's ⋯ button, which keeps how priority passes by itself one click from the prompt
 
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { CloseIcon, OnOff, OptionsDialog, Row } from '../options';
+import { CloseIcon, OnOff, OptionsDialog, Row, SectionHeading } from '../options';
 import { PLAYMATS, SETTINGS, set, setting, type SettingDef } from '../settings';
 import { DevItems } from './devmenu';
 import type { Actions } from '../actions';
@@ -132,9 +132,12 @@ function PlaymatPicker({ beside }: { beside: { current: HTMLDivElement | null } 
 /** Where auto-passing stops by itself, as the options dialog would list them. */
 export function AutoPassStops({ close }: { close: () => void }) {
   return (
-    <OptionsDialog title={t('lblWebGameMenuStopsTitle')} label={t('lblWebGameMenuStopsLabel')} kind="stops-dialog" close={close}
+    <OptionsDialog title={t('lblYieldSettings')} label={t('lblYieldSettings')} kind="stops-dialog" close={close}
       footer={<span class="hint">{t('lblWebGameMenuStopsHint')}</span>}>
-      {SETTINGS.filter(def => def.menu === 'stops').map(def => <Row key={def.key} def={def} />)}
+      {SETTINGS.filter(def => def.menu === 'stops').flatMap((def, i, all) => [
+        ...(def.section !== all[i - 1]?.section ? [<SectionHeading key={`section ${def.section}`} name={def.section} keys={false} />] : []),
+        <Row key={def.key} def={def} />,
+      ])}
     </OptionsDialog>
   );
 }

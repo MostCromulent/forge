@@ -55,7 +55,11 @@ export function DeckHalf({ actions, state, handlers, check }: {
           {check && <div class="deck-check">{check}</div>}
           <button class="small" disabled={!state.stats.main} onClick={() => setHand(drawHand(state, HAND))}>{t('lblWebEditorSampleHand')}</button>
         </div>
-        <Curve curve={state.stats.curve} creatures={state.stats.creatures} average={state.stats.averageMana} px={34} />
+        <div class="deck-numbers">
+          <Curve curve={state.stats.curve} creatures={state.stats.creatures} average={state.stats.averageMana} px={34} />
+          <Breakdown title={t('lblWebEditorCardsByColour')} counts={state.stats.colours} />
+          <Breakdown title={t('lblWebEditorManaSymbols')} counts={state.stats.symbols} />
+        </div>
       </div>
       {hasCommander && <CommanderZone actions={actions} state={state} handlers={handlers} />}
       <div class="zone main-zone" data-zone="Main">
@@ -198,6 +202,24 @@ function Line({ card, zone, landed, actions, handlers, mainOnly, takeOut }: {
         <button aria-label={t('lblWebEditorOneMore', card.name)} onClick={() => actions.edit({ op: 'add', name: card.name, to: zone, count: 1 })}>+</button>
         {!mainOnly && <button onClick={() => actions.edit({ op: 'move', name: card.name, from: zone, to: other, count: 1 })}>{other === 'Main' ? t('lblMain') : t('lblSide')}</button>}
       </span>
+    </div>
+  );
+}
+
+const SHARES = ['W', 'U', 'B', 'R', 'G', 'M', 'C'];
+
+/** How a count divides among the colours, as one bar and a key of the colours that have any. Each key carries its letter, so no colour is told by hue alone. */
+function Breakdown({ title, counts }: { title: string; counts: number[] }) {
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (!total) return null;
+  const parts = counts.map((n, i) => ({ n, letter: SHARES[i] })).filter(p => p.n > 0);
+  return (
+    <div class="breakdown">
+      <h4>{title} <span>{total}</span></h4>
+      <div class="share-bar">{parts.map(p => <i key={p.letter} data-colour={p.letter} style={{ flexGrow: p.n }} />)}</div>
+      <div class="share-key">
+        {parts.map(p => <span key={p.letter}><i data-colour={p.letter}>{p.letter}</i>{p.n} <small>{Math.round((p.n / total) * 100)}%</small></span>)}
+      </div>
     </div>
   );
 }

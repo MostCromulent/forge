@@ -512,7 +512,7 @@ public final class WebSession implements IHasForgeLog {
             }
             // A match takes the whole page, so nothing about decks is done during one
             case "browseFormat", "editorOpen", "editorClose", "editorUndo", "editorEdit", "editorRename", "editorCheck",
-                    "editorDeck", "deckDelete", "catalogue", "importRead", "importFetch", "importCommit", "deckFile", "deviceDecks" -> {
+                    "editorDeck", "deckDelete", "deckFavourite", "catalogue", "importRead", "importFetch", "importCommit", "deckFile", "deviceDecks" -> {
                 if ("catalogue".equals(msg.get("t").getAsString()) && msg.has("source") && !msg.get("source").isJsonNull()) {
                     // A campaign's own cards, which need no deck open
                     final FromBrowser.CatalogueQuery q = Wire.decode(msg, FromBrowser.CatalogueQuery.class);

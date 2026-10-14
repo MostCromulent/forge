@@ -167,7 +167,7 @@ final class FromBrowser {
     record EditorOpen(@Nullable String key, @Nullable String newFormat, @Nullable Integer seat, boolean copy) {
     }
 
-    enum EditOp { add, remove, move, commander, printings, lands, landSet, suggestLands }
+    enum EditOp { add, remove, move, commander, printings, lands, landSet, suggestLands, foil }
 
     /** A name and how many: a card printing's image key in a printings change, a basic land's name in a lands change. */
     record CountedName(String name, int count) {
@@ -187,7 +187,7 @@ final class FromBrowser {
     record EditorCheck(String format, @Nullable String cardPool, boolean unrestricted) {
     }
 
-    enum DeckOp { duplicate, delete }
+    enum DeckOp { duplicate, delete, file }
 
     @Command("editorDeck")
     record EditorDeck(DeckOp op) {
@@ -196,6 +196,11 @@ final class FromBrowser {
     /** Deletes one of the player's own decks from the finder, without opening it. */
     @Command("deckDelete")
     record DeckDelete(String key) {
+    }
+
+    /** Stars one of the decks the finder lists, or takes its star away. */
+    @Command("deckFavourite")
+    record DeckFavourite(String key, boolean on) {
     }
 
     /** A page of the catalogue, where request is echoed back so a late answer to an old query is dropped. */

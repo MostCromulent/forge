@@ -252,6 +252,23 @@ final class DeckEditor {
         return change(name, () -> addOwned(deck.getOrCreate(to), card, 1));
     }
 
+    /** Makes every copy of a card in a section foil, or plain again when they all are, as desktop's editor converts them. */
+    String toggleFoil(final String name, final DeckSection in) {
+        if (limited() || collection != null) {
+            return Localizer.getInstance().getMessage(DECK_FIXED);
+        }
+        final CardPool pool = deck.get(in);
+        final int have = pool == null ? 0 : pool.countByName(name);
+        if (have == 0) {
+            return Localizer.getInstance().getMessage("lblWebEditorNoneToMove", String.valueOf(name));
+        }
+        return change(name, () -> {
+            final CardPool copies = take(pool, name, have);
+            final boolean plain = copies.toFlatList().stream().anyMatch(c -> !c.isFoil());
+            copies.forEach(e -> pool.add(plain ? e.getKey().getFoiled() : e.getKey().getUnFoiled(), e.getValue()));
+        });
+    }
+
     String remove(final String name, final DeckSection from, final int count) {
         if (limited() && from != DeckSection.Sideboard) {
             return move(name, from, DeckSection.Sideboard, count);
@@ -958,7 +975,7 @@ final class DeckEditor {
                     .map(p -> new EditorPrinting(p.getKey().getImageKey(false), p.getValue())).toList();
             out.add(new EditorCard(name, printings.stream().mapToInt(Map.Entry::getValue).sum(), Foil.key(shown),
                     JsonCodec.manaCost(rules.getManaCost()), rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()),
-                    printings.size(), split, legality.flags().get(name)));
+                    printings.size(), split, legality.flags().get(name), printings.stream().allMatch(p -> p.getKey().isFoil())));
         });
         out.sort(Comparator.comparingInt(EditorCard::mv).thenComparing(EditorCard::name));
         return out;

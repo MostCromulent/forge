@@ -6,6 +6,7 @@ import forge.game.phase.PhaseType;
 import forge.interfaces.IGameController;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
+import forge.gamemodes.match.DeclineScope;
 import forge.gamemodes.match.YieldController;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.web.ToBrowser.ServerSettings;
@@ -20,14 +21,24 @@ final class WebSettings {
     private WebSettings() {
     }
 
-    private static final Map<String, FPref> BOOLEAN_PREFS = Map.of(
-            "interruptAttackers", FPref.YIELD_INTERRUPT_ON_ATTACKERS,
-            "interruptOpponentSpell", FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL,
-            "interruptTargeting", FPref.YIELD_INTERRUPT_ON_TARGETING,
-            "interruptTriggers", FPref.YIELD_INTERRUPT_ON_TRIGGERS,
-            "interruptMassRemoval", FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL,
-            "autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW,
-            "autoPassNoActions", FPref.YIELD_AUTO_PASS_NO_ACTIONS);
+    private static final Map<String, FPref> BOOLEAN_PREFS = Map.ofEntries(
+            Map.entry("interruptAttackers", FPref.YIELD_INTERRUPT_ON_ATTACKERS),
+            Map.entry("interruptOpponentSpell", FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL),
+            Map.entry("interruptTargeting", FPref.YIELD_INTERRUPT_ON_TARGETING),
+            Map.entry("interruptTriggers", FPref.YIELD_INTERRUPT_ON_TRIGGERS),
+            Map.entry("interruptMassRemoval", FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL),
+            Map.entry("interruptReveal", FPref.YIELD_INTERRUPT_ON_REVEAL),
+            Map.entry("suppressAfterYield", FPref.YIELD_SUPPRESS_AFTER_END),
+            Map.entry("suppressOwnTurn", FPref.YIELD_SUPPRESS_ON_OWN_TURN),
+            Map.entry("skipPhaseDelay", FPref.YIELD_SKIP_PHASE_DELAY),
+            Map.entry("skipResolveDelay", FPref.YIELD_SKIP_RESOLVE_DELAY),
+            Map.entry("autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW),
+            Map.entry("autoPassNoActions", FPref.YIELD_AUTO_PASS_NO_ACTIONS));
+
+    /** When each yield suggestion is offered again after it is declined, by its DeclineScope name. */
+    private static final Map<String, FPref> SCOPE_PREFS = Map.of(
+            "suggestStackYield", FPref.YIELD_DECLINE_SCOPE_STACK_YIELD,
+            "suggestNoActions", FPref.YIELD_DECLINE_SCOPE_NO_ACTIONS);
 
     static ServerSettings values(final PlayerSettings player) {
         return new ServerSettings(
@@ -36,6 +47,13 @@ final class WebSettings {
                 player.getBoolean(FPref.YIELD_INTERRUPT_ON_TARGETING),
                 player.getBoolean(FPref.YIELD_INTERRUPT_ON_TRIGGERS),
                 player.getBoolean(FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL),
+                player.getBoolean(FPref.YIELD_INTERRUPT_ON_REVEAL),
+                DeclineScope.fromPref(player.get(FPref.YIELD_DECLINE_SCOPE_STACK_YIELD)).name(),
+                DeclineScope.fromPref(player.get(FPref.YIELD_DECLINE_SCOPE_NO_ACTIONS)).name(),
+                player.getBoolean(FPref.YIELD_SUPPRESS_AFTER_END),
+                player.getBoolean(FPref.YIELD_SUPPRESS_ON_OWN_TURN),
+                player.getBoolean(FPref.YIELD_SKIP_PHASE_DELAY),
+                player.getBoolean(FPref.YIELD_SKIP_RESOLVE_DELAY),
                 player.getBoolean(FPref.UI_SHOW_AUTOTAP_PREVIEW),
                 ForgeConstants.AUTO_DECISION_PER_CARD.equals(player.get(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability",
                 GameLogVerbosity.fromString(player.get(FPref.DEV_LOG_ENTRY_TYPE)),
@@ -53,6 +71,8 @@ final class WebSettings {
         if (pref != null) {
             // The host decides from its own copy of these, seeded when the game opened, so a change mid-game has to reach it as well
             setEverywhere(player, controller, pref, String.valueOf(Boolean.parseBoolean(value)));
+        } else if (SCOPE_PREFS.containsKey(key)) {
+            setEverywhere(player, controller, SCOPE_PREFS.get(key), DeclineScope.fromPref(value).name());
         } else if ("devMode".equals(key)) {
             final boolean on = Boolean.parseBoolean(value);
             player.set(FPref.DEV_MODE_ENABLED, on);

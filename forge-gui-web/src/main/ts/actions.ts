@@ -227,6 +227,7 @@ export interface Actions {
   deckOp(op: DeckOp): void;
   /** Deletes one of your own decks by its finder key. */
   deleteDeck(key: string): void;
+  favouriteDeck(key: string, on: boolean): void;
   /** A page of the catalogue. request numbers the query, so an answer to an older one can be told apart. */
   queryCatalogue(request: number, q: Omit<CatalogueQuery, 't' | 'request'>): void;
   readImport(request: number, text: string, format: string, cardPool: string | null, unrestricted: boolean): void;
@@ -388,6 +389,7 @@ export function createActions(send: Send): Actions {
     setCheck: (format, cardPool, unrestricted) => send(cardPool ? { t: 'editorCheck', format, cardPool, unrestricted } : { t: 'editorCheck', format, unrestricted }),
     deckOp: op => send({ t: 'editorDeck', op }),
     deleteDeck: key => send({ t: 'deckDelete', key }),
+    favouriteDeck: (key, on) => send({ t: 'deckFavourite', key, on }),
     queryCatalogue: (request, q) => send({ t: 'catalogue', request, ...q }),
     readImport: (request, text, format, cardPool, unrestricted) =>
       send(cardPool ? { t: 'importRead', request, text, format, cardPool, unrestricted } : { t: 'importRead', request, text, format, unrestricted }),

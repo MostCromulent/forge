@@ -529,6 +529,7 @@ function apply(msg: ServerMessage): void {
     case 'notice': notify(msg); break;
     case 'devState': model.devState = msg; break;
     case 'devDump': saveText(msg.text, 'game-state.txt', 'text/plain'); return;
+    case 'deckFileText': saveText(msg.text, `${msg.name}.dck`, 'text/plain'); return;
     case 'flash': flash(); return;
     default: break;
   }

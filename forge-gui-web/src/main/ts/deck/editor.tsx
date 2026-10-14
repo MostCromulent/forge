@@ -134,6 +134,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
                   {ownDeck && <hr />}
                   {!state.limited && item(ICONS.down, t('lblWebEditorImportList'), () => changeUi(u => { u.importer = { from: 'editor' }; }))}
                   {item(ICONS.up, t('lblWebEditorCopyAsText'), () => setDialog('text'))}
+                  {item(ICONS.up, t('lblWebEditorDownloadDeckFile'), () => actions.deckOp('file'))}
                   {/* A deck only being read (a precon, someone else's) has nothing of the player's to delete */}
                   {ownDeck && !state.copyOf && <hr />}
                   {ownDeck && !state.copyOf && item(ICONS.bin, t('lblWebEditorDeleteThisDeck'), () => setDialog('delete'), false, 'danger')}
