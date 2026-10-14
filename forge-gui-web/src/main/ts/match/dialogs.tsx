@@ -5,7 +5,7 @@ import type { ComponentChildren } from 'preact';
 import { createCard, updateCard } from './cards';
 import { imageUrl, symbolUrl } from '../images';
 import { hoverCard } from './detail';
-import { rankByName } from '../search';
+import { matchedSpan, rankByName } from '../search';
 import { COLOURS, SymbolText } from '../symbols';
 import { useDebounced } from '../hooks';
 import type { Actions } from '../actions';
@@ -19,6 +19,7 @@ import type {
 } from '../protocol';
 import { t } from '../text';
 import { make, reducedMotion } from '../dom';
+import { isPortrait } from '../form';
 import { cutFor } from './stickers';
 
 type Answer = (value: unknown) => void;
@@ -75,7 +76,9 @@ const FOLDABLE = new Set<Request['kind']>(['choices', 'reveal', 'order', 'manipu
 function RequestDialog({ req, model, answer }: { req: Request; model: Model; answer: Answer }) {
   const body = (() => {
     switch (req.kind) {
-      case 'choices':
+      case 'choices': return onlyWords(req)
+        ? <WordChoices req={req} model={model} answer={answer} />
+        : <Choices req={req} model={model} answer={answer} />;
       case 'reveal': return <Choices req={req} model={model} answer={answer} />;
       case 'order': return <Order req={req} model={model} answer={answer} />;
       case 'manipulate': return <Manipulate req={req} model={model} answer={answer} />;
@@ -284,6 +287,8 @@ function InlineCard({ imageKey, name, title, picked, onClick }: {
 // Naming a card offers every card face, so long lists get a search box and draw only the first matches
 const SEARCH_FROM = 20;
 const SHOW_AT_MOST = 200;
+// A line of text costs little to draw, so every creature type can be scrolled to without typing
+const WORDS_AT_MOST = 1000;
 
 function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; answer: Answer }) {
   const reveal = req.kind === 'reveal';
@@ -311,7 +316,7 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
   const ready = reveal || (picked.size >= req.min && (req.max < 0 || picked.size <= req.max));
   const colours = !reveal && req.options.every(o => o.symbol);
   // Choices that are only words read down a list, as a menu does, rather than across the page
-  const words = !colours && req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player && !o.symbol);
+  const words = onlyWords(req);
   return (
     <>
       {searchable && <input ref={search} class="choice-search" placeholder={t('lblWebDialogSearchOptions', req.options.length)}
@@ -334,6 +339,128 @@ function ColourOption({ symbol, picked, onClick }: { symbol: string; picked: boo
     <button class={picked ? 'colour-option picked' : 'colour-option'} aria-pressed={picked} onClick={onClick}>
       <img alt="" src={symbolUrl(symbol)} /><span>{name ? t(name) : symbol}</span>
     </button>
+  );
+}
+
+/** Every option is a line of text, with no card, player or mana symbol to draw. */
+function onlyWords(req: ChoicesRequest): boolean {
+  return req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player && !o.symbol);
+}
+
+/** A label with the typed text picked out, unless it draws mana symbols, which a mark would split. */
+function Marked({ label, typed }: { label: string; typed: string }) {
+  const span = label.includes('{') ? null : matchedSpan(label, typed);
+  if (!span) return <SymbolText text={label} />;
+  return <span>{label.slice(0, span[0])}<mark>{label.slice(...span)}</mark>{label.slice(span[1])}</span>;
+}
+
+/**
+ * Words to choose from, as one searchable list worked from the keyboard: the highlight moves with the arrows,
+ * Enter answers, and on a single pick a double-click, or a second tap on a phone, answers too.
+ */
+function WordChoices({ req, model, answer }: { req: ChoicesRequest; model: Model; answer: Answer }) {
+  const single = req.max === 1;
+  const labels = req.options.map(o => String(o.label ?? ''));
+  const [typed, setTyped] = useState('');
+  const [chosen, setChosen] = useState<ReadonlySet<number>>(() => new Set(single ? [] : req.selected));
+  const matches = rankByName(labels, typed);
+  const shown = matches.slice(0, WORDS_AT_MOST);
+  const [hi, setHi] = useState(() => (single && req.selected.length ? Math.max(0, matches.indexOf(req.selected[0])) : 0));
+  const tapped = useRef(-1);
+  const search = useRef<HTMLInputElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // On a phone the keyboard would cover the list, so it waits for a tap on the box
+    if (!isPortrait()) search.current?.focus();
+  }, []);
+  useEffect(() => {
+    list.current?.querySelector('.hi')?.scrollIntoView({ block: 'nearest' });
+  }, [hi, typed]);
+  const narrow = (text: string) => {
+    setTyped(text);
+    setHi(0);
+    tapped.current = -1;
+  };
+  const toggle = (i: number) => setChosen(old => {
+    const next = new Set(old);
+    if (old.has(i)) next.delete(i);
+    else if (req.max < 0 || old.size < req.max) next.add(i);
+    return next;
+  });
+  const ready = single ? shown.length > 0 : chosen.size >= req.min && (req.max < 0 || chosen.size <= req.max);
+  const confirm = () => {
+    if (ready) answer(single ? [shown[hi]] : [...chosen]);
+  };
+  const onKey = (e: KeyboardEvent) => {
+    const typing = e.target === search.current;
+    // Cancel and a chip's remove button answer their own keys
+    const other = e.target instanceof HTMLButtonElement && !e.target.classList.contains('word');
+    if (other && (e.key === 'Enter' || e.key === ' ')) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      setHi(h => Math.max(0, Math.min(shown.length - 1, h + (e.key === 'ArrowDown' ? 1 : -1))));
+    } else if (e.key === 'Enter') {
+      confirm();
+    } else if (e.key === 'Escape' && typed) {
+      narrow('');
+    } else if (e.key === ' ' && !single && shown.length && !(typing && typed)) {
+      toggle(shown[hi]);
+    } else {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const click = (pos: number) => {
+    setHi(pos);
+    const i = shown[pos];
+    if (!single) {
+      toggle(i);
+    } else if (isPortrait()) {
+      if (tapped.current === i) answer([i]);
+      tapped.current = i;
+    }
+  };
+  const count = !single ? (req.max > 1 ? t('lblWebDialogChosenOfMax', chosen.size, req.max) : t('lblWebDialogSelected', chosen.size))
+    : typed ? t('lblWebDialogMatchesOf', matches.length, labels.length) : '';
+  return (
+    <div class="word-choices" onKeyDown={onKey}>
+      <div class="word-search">
+        <input ref={search} placeholder={t('lblWebDialogSearchOptions', labels.length)} value={typed}
+          onInput={e => narrow(e.currentTarget.value)} />
+        {typed && <button class="word-clear" title={t('lblWebDialogClearSearch')} onClick={() => { narrow(''); search.current?.focus(); }}>×</button>}
+      </div>
+      {!single && chosen.size > 0 && (
+        <div class="word-chips">
+          {[...chosen].map(i => (
+            <span key={i} class="word-chip"><SymbolText text={labels[i]} />
+              <button title={t('lblWebDialogRemoveChoice')} onClick={() => toggle(i)}>×</button></span>
+          ))}
+        </div>
+      )}
+      <div ref={list} class="word-list" role="listbox" aria-multiselectable={!single}>
+        {shown.length === 0 && <p class="word-empty">{t('lblWebDialogNoMatch', typed)}</p>}
+        {shown.map((i, pos) => {
+          const on = chosen.has(i);
+          const sticker = cutFor(model, labels[i]);
+          return (
+            <button key={i} type="button" tabIndex={-1} role="option" aria-selected={single ? pos === hi : on}
+              class={`word${pos === hi ? ' hi' : ''}${on ? ' on' : ''}`}
+              onClick={() => click(pos)} onDblClick={() => { if (single) answer([i]); }}>
+              {!single && <span class="word-box" aria-hidden="true" />}
+              {sticker && <span class="stk-cut" style={sticker} />}
+              <Marked label={labels[i]} typed={typed} />
+            </button>
+          );
+        })}
+      </div>
+      {matches.length > WORDS_AT_MOST && <p class="hint">{t('lblWebDialogShowingFirst', WORDS_AT_MOST, matches.length)}</p>}
+      <div class="word-foot">
+        <span class="word-count">{count}</span>
+        {single && req.min === 0 && <Button onClick={() => answer([])}>{t('lblCancel')}</Button>}
+        <Button primary disabled={!ready} onClick={confirm}>{t('lblWebDialogConfirm')} <kbd>Enter</kbd></Button>
+      </div>
+      <p class="word-keys">{t(single ? 'lblWebDialogKeysOne' : 'lblWebDialogKeysMany')}</p>
+    </div>
   );
 }
 
