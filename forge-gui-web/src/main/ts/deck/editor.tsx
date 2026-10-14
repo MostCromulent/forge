@@ -9,10 +9,7 @@ import { DeckHalf } from './deckhalf';
 import { addCard } from './preferred';
 import { saveText } from '../dom';
 import { startDrag, verdictFor, type CardHandlers, type Carried, type Verdict } from './drag';
-import { longPress } from '../press';
 import { deckText } from './decklist';
-import { peekAt } from './deckfinder';
-import { imageUrl } from '../images';
 import { changeUi } from '../ui';
 import { HeadControls, PageHeader } from '../header';
 import type { Actions } from '../actions';
@@ -44,7 +41,6 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   const [renaming, setRenaming] = useState(false);
   const nameMenu = useRef<HTMLDivElement>(null);
   useDismiss(menu !== null, nameMenu, () => setMenu(null));
-  const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
   const [cardMenu, setCardMenu] = useState<MenuAt | null>(null);
   const [picking, setPicking] = useState<{ name: string; zone: DeckSection | null } | null>(null);
   /** Which half a phone shows, where there is room for one at a time. */
@@ -81,10 +77,11 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   };
   // Alt at the press carries every copy, and the command zone takes any card because the server decides what can lead a deck
   const handlers: CardHandlers = (name, from, image, count) => ({
+    // A rested finger opens the card's preview, whose More button opens this menu
+    'data-menu': '',
     onPointerDown: e => {
       const carried: Carried = { name, from, count: e.altKey ? Math.max(1, count) : 1 };
       startDrag(e, carried, image, zone => verdictFor(carried, zone, state, true), v => dropped(carried, v));
-      longPress(e, (x, y) => setCardMenu({ name, from, x, y }));
     },
     onContextMenu: e => {
       e.preventDefault();
@@ -114,7 +111,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
     : state.collection ? <span class="check-fixed">{state.check}</span>
     : <CheckControl model={model} state={state} actions={actions} />;
   return (
-    <div class="editor-page" onPointerOver={e => setPeek(peekAt(e, '.editor-page'))} onPointerLeave={() => setPeek(null)}>
+    <div class="editor-page">
       <PageHeader class="editor-head">
         {state.collection && <span class="deck-owner">{state.collection} &rsaquo;</span>}
         {renaming
@@ -192,7 +189,6 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
         printings={zone => setPicking({ name: cardMenu.name, zone })} />}
       {picking && <PrintingPicker name={picking.name} zone={picking.zone} model={model} state={state} actions={actions}
         close={() => setPicking(null)} />}
-      {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
     </div>
   );
 }

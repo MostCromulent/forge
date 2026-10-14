@@ -43,7 +43,7 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
     land(place, place?.closest('.zone-body'), place?.closest('.zone')?.querySelector('h4'));
   }, [state]);
   return (
-    <section class="deck-half">
+    <section class="deck-half" data-list>
       <div class="deck-head">
         <div>
           <h3>{state.name} <span class="pips"><Pips colors={state.identity} /></span></h3>

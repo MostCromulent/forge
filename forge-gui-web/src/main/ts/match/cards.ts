@@ -1,7 +1,7 @@
 // One card on the page, built here by every zone that shows one, so a card looks the same wherever it is
 
 import { combatShown, commanderTax, deref, game, stateOf, type Model } from '../model';
-import { hoverable, inspectCard } from './detail';
+import { hoverable, inspectCard } from '../preview';
 import { longPress } from '../press';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from '../images';
 import { playerSleeveUrl, cssUrl } from '../looks';

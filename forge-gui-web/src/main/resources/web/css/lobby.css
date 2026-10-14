@@ -586,10 +586,6 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .dk-line:hover { background: var(--surface-2); }
 .dk-line .n { color: var(--muted); min-width: 16px; text-align: right; }
 
-/* The hovered card, shown beside the list as it is over the table */
-.deck-peek { position: absolute; width: var(--preview-w); pointer-events: none; z-index: 5; }
-/* A card's corner is about a twentieth of its width, and a scan is white outside it */
-.deck-peek img { width: 100%; border-radius: 5% / 3.6%; display: block; box-shadow: 0 10px 30px rgba(0, 0, 0, .6); }
 .finder { position: relative; }
 
 /* --- sleeve picker: fill the dialog rather than leaving it half empty --- */

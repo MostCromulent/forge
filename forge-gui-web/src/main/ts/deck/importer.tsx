@@ -206,7 +206,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
                       ))}
                     </div>
                   )}
-                  <div class="readlist cols">
+                  <div class="readlist cols" data-list>
                     <div>{summary.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
                     <div>{summary.sideboardCards.length > 0 && <CardGroup heading={t('lblSideboard')} cards={summary.sideboardCards} />}</div>
                   </div>

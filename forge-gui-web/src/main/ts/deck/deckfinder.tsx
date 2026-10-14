@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { store, stored, storeJson, storedJson } from '../storage';
-import { imageUrl } from '../images';
 import { Curve, useDeckView } from './deckhalf';
 import { CardGroup, SITES } from './importer';
 import { AI_ICON, ColourToggles, Pips, toggled } from '../symbols';
@@ -151,7 +150,6 @@ export function DeckFinder({ model, actions, seat, close }: {
   const [filter, setFilter] = useState<DeckFilter>(() => ({ ...FINDER_DEFAULTS, colours: new Set(), bracket: tableBracket, aiPlays: forComputer }));
   const change = (part: Partial<DeckFilter>) => setFilter(f => ({ ...f, ...part }));
   const find = useRef<HTMLInputElement>(null);
-  const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
 
   // A long list costs an image request per row, so typing waits for a pause
   useEffect(() => {
@@ -345,7 +343,7 @@ export function DeckFinder({ model, actions, seat, close }: {
                 : <p class="none">{t('lblWebFinderNoMatch')}</p>}
             </div>
           </div>
-          <aside class="dk-chosen" onPointerOver={e => setPeek(peekAt(e, '.finder') ?? peek)} onPointerLeave={() => setPeek(null)}>
+          <aside class="dk-chosen">
             {!chosen ? <p class="none">{t('lblWebFinderPickHint')}</p>
               : !details ? <p class="none">{t('lblWebFinderReading')}</p>
                 : <Chosen details={details} formats={summary?.formats} forComputer={forComputer} />}
@@ -430,7 +428,6 @@ export function DeckFinder({ model, actions, seat, close }: {
             </div>
           </div>
         )}
-        {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
       </div>
     </div>
   );
@@ -608,26 +605,6 @@ function Title({ deck }: { deck: DeckSummary }) {
   );
 }
 
-// Shows a hovered card beside the line pointed at, pushed left of it so the cursor never covers the card
-export function peekAt(e: PointerEvent, frameSelector: string): { image: string; left: number; top: number } | null {
-  const el = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-image]') : null;
-  const frame = el?.closest(frameSelector)?.getBoundingClientRect();
-  if (!el || !frame) {
-    return null;
-  }
-  const box = el.getBoundingClientRect();
-  // The width every preview shares, which grows with the window (theme.css)
-  const peekW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--preview-w')) || 280;
-  const peekH = peekW * 88 / 63;
-  const before = box.left - frame.left - peekW - 16;
-  return {
-    image: el.dataset.image ?? '',
-    // With no room to its left, as for a card at the edge of a grid, it goes to the right instead
-    left: before >= 12 ? before : Math.min(frame.width - peekW - 12, box.right - frame.left + 16),
-    top: Math.min(frame.height - peekH - 12, Math.max(12, box.top - frame.top - peekH / 2)),
-  };
-}
-
 function Chosen({ details, formats, forComputer }: { details: DeckDetails; formats?: string; forComputer: boolean }) {
   const s = details.stats;
   // Game changers are marked where they sit in the list, whether or not the bracket's reasons are open
@@ -662,7 +639,7 @@ function Chosen({ details, formats, forComputer }: { details: DeckDetails; forma
           </div>
         </div>
       </div>
-      <div class={cards ? 'dk-cards deck-cols' : 'dk-cards'}>
+      <div class={cards ? 'dk-cards deck-cols' : 'dk-cards'} data-list>
         {details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} marked={changers} stacked={cards} />)}
         {details.sideboard.length > 0 && <CardGroup heading={t('lblSideboard')} cards={details.sideboard} marked={changers} stacked={cards} />}
       </div>

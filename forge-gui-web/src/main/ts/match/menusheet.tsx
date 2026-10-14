@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { byId } from '../dom';
 import { changeUi, ui } from '../ui';
 import { sheet, swipeDown } from '../sheet';
-import { inspectPlayer } from './detail';
+import { inspectPlayer } from '../preview';
 import { players, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
 import type { Actions } from '../actions';

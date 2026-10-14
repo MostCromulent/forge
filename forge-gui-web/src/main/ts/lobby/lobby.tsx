@@ -5,7 +5,7 @@ import { changeUi, ui, type Picker } from '../ui';
 import { sleeveUrl, avatarUrl } from '../looks';
 import { LookPicker } from '../lookpicker';
 import { rememberAvatar } from '../menu';
-import { BracketMark, DeckFinder, peekAt } from '../deck/deckfinder';
+import { BracketMark, DeckFinder } from '../deck/deckfinder';
 import { imageUrl, smallImage } from '../images';
 import { ExtraPicker } from './extrapicker';
 import { CENTRE, SleevePicker, artUrl, objectPosition } from '../sleeves';
@@ -24,7 +24,6 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const lobby = model.lobby;
   // A lower player count being pointed at, whose leaving seats are dimmed before anything changes
   const [preview, setPreview] = useState<number | null>(null);
-  const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
   if (!lobby) {
     return null;
   }
@@ -44,8 +43,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   return (
     <>
       <TableHeader model={model} lobby={lobby} />
-      <div class="lobby-main" onPointerOver={e => setPeek(peekAt(e, '.lobby-main'))} onPointerLeave={() => setPeek(null)}>
-        {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
+      <div class="lobby-main">
         <SetupHead trail={[{ label: t('lblStart'), go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }]}
           title={t(lobby.host ? 'lblWebLobbySetUpGame' : lim?.activeEventId ? 'lblWebLobbyBuildThenPlay'
             : lim?.started ? (lim.kind === 'draft' ? 'lblWebLobbyDraftOn' : 'lblWebLobbyOpeningPacks') : 'lblWebLobbyHostSettingUp')} />

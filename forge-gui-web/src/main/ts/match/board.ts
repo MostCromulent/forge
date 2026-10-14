@@ -6,7 +6,7 @@ import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLoc
 import { renderHand } from './hand';
 import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
-import { followPointer, hoverPlayer, hoverable, inspectCard, inspectPlayer } from './detail';
+import { followPointer, hoverPlayer, hoverable, inspectCard, inspectPlayer } from '../preview';
 import { foldStack, renderStack } from './stack';
 import { renderPlanes } from './planes';
 import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';

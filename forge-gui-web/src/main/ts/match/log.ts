@@ -1,7 +1,7 @@
 // The game log panel, kept scrolled to the newest entry unless the player has scrolled back
 
 import { imageUrl, setSymbolText } from '../images';
-import { hoverable } from './detail';
+import { hoverable } from '../preview';
 import { byId, make } from '../dom';
 import type { LogMessage } from '../protocol';
 

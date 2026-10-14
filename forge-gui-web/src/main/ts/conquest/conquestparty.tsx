@@ -6,7 +6,6 @@ import { FIVE_COLOURS } from '../symbols';
 import { Curve } from '../deck/deckhalf';
 import { DeckPanel, Plate } from '../deck/deckplate';
 import { CardGroup } from '../deck/importer';
-import { peekAt } from '../deck/deckfinder';
 import { AnyOf, FilterBar, type FilterKind, OneOf } from '../deck/filters';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -27,7 +26,6 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
   const [typed, setTyped] = useState('');
   const [filter, setFilter] = useState<PartyFilter>(NO_FILTER);
   const [reading, setReading] = useState(false);
-  const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
   useEffect(() => { actions.conquestParty(); }, []);
 
   const lead = party?.commanders.find(c => c.selected);
@@ -62,7 +60,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
   const commanders = party.commanders.filter(c => shown(c.name, c.colors, c.origin));
   const walkers = party.planeswalkers.filter(w => shown(w.name, w.colors));
   return (
-    <div class="cq-party" onPointerOver={e => setPeek(peekAt(e, '.cq-party'))} onPointerLeave={() => setPeek(null)}>
+    <div class="cq-party">
       <div class="cq-party-list">
         <FilterBar kinds={kinds} filter={filter} set={setFilter} narrowed={!!typed || filter.colours.length > 0 || !!filter.plane}
           clearAll={() => { setTyped(''); setFilter(NO_FILTER); }}>
@@ -94,7 +92,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
             </>}
             details={<>
               {details && commander.deckSize > 0 && <Curve curve={details.stats.curve} creatures={details.stats.creatures} px={44} />}
-              {reading && details && <div class="dk-cards">{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>}
+              {reading && details && <div class="dk-cards" data-list>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>}
             </>}>
               <div class="cq-two">
                 <button aria-pressed={reading} disabled={!commander.deckSize} onClick={() => setReading(!reading)}>{t('lblViewDeck')}</button>
@@ -105,7 +103,6 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
               </button>
           </DeckPanel>
         )}
-      {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
     </div>
   );
 }

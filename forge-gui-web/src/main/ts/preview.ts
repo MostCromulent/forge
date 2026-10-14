@@ -1,20 +1,20 @@
-import { appendSymbolText, cardImageSrc, hideOnError, imageUrl, setImage, setSymbolText } from '../images';
-import { COMMANDER_LETHAL, COMMANDER_WARNING } from './board';
-import { frameColour } from './cards';
-import { showFoil, tiltFoil } from './foil';
-import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './rulestext';
-import { byId, lean, pointerOn, q, replay, make } from '../dom';
-import { changeUi, ui } from '../ui';
-import { keyName } from '../keys';
-import { boundKeys } from '../settings';
-import type { Actions } from '../actions';
-import { deref, stateOf, type Model } from '../model';
-import { isAiming } from './overlay';
-import { drawStickers } from './stickers';
-import { hovers } from '../press';
-import { sheet, swipeDown } from '../sheet';
-import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from '../protocol';
-import { t, type TextKey } from '../text';
+import { appendSymbolText, cardImageSrc, imageUrl, setImage, setSymbolText } from './images';
+import { COMMANDER_LETHAL, COMMANDER_WARNING } from './match/board';
+import { frameColour } from './match/cards';
+import { showFoil, tiltFoil } from './match/foil';
+import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './match/rulestext';
+import { byId, lean, pointerOn, q, replay, make } from './dom';
+import { changeUi, ui } from './ui';
+import { keyName } from './keys';
+import { boundKeys } from './settings';
+import type { Actions } from './actions';
+import { deref, stateOf, type Model } from './model';
+import { isAiming } from './match/overlay';
+import { drawStickers } from './match/stickers';
+import { hovers, longPress } from './press';
+import { sheet, swipeAcross, swipeDown } from './sheet';
+import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from './protocol';
+import { t, type TextKey } from './text';
 
 // The host composes a hovered card's text (CardDetailUtil, as on desktop), and it arrives in the model a moment after the pointer does
 
@@ -22,28 +22,44 @@ let actions: Actions | null = null;
 
 export function initDetail(actionsFor: Actions): void {
   actions = actionsFor;
-  // A card taken off the page under the pointer never reports the pointer leaving it, so its preview would stay
-  document.addEventListener('pointerover', () => {
+  document.addEventListener('pointerover', e => {
+    // A card taken off the page under the pointer never reports the pointer leaving it, so its preview would stay
     if (hoverGone()) hoverCard(null);
+    const item = menuItem(e.target);
+    // A card still sliding in, as a new draft pack's do, has only arrived under the pointer
+    if (item && hovers(e) && !within(item, e.relatedTarget) && !item.getAnimations().length) hoverCard(item);
+  });
+  document.addEventListener('pointerout', e => {
+    const item = menuItem(e.target);
+    if (item && hovers(e) && !within(item, e.relatedTarget)) hoverCard(null);
+  });
+  document.addEventListener('pointerdown', e => {
+    const item = menuItem(e.target);
+    if (item) longPress(e, () => inspectCard(item));
   });
   // The preview lets the pointer through, so it leans, and a foil's streaks move, with the pointer across the card the preview is of
   document.addEventListener('pointermove', e => {
     const hover = ui.hover;
-    if (hover && 'card' in hover && hover.at) {
-      const at = pointerOn(hover.at, e);
-      tiltFoil(at.x, at.y);
-      lean(at);
-      return;
-    }
-    // A menu's preview is of the line or card that carries data-image
-    const line = e.target instanceof Element ? e.target.closest('[data-image]') : null;
-    if (line) lean(pointerOn(line, e));
+    if (!hover || !('card' in hover) || !hover.at) return;
+    const at = pointerOn(hover.at, e);
+    tiltFoil(at.x, at.y);
+    lean(at);
   });
 }
 
+/** A menu's card line or tile, which carries its picture's key in data-image and previews as a card on the board does. */
+const menuItem = (target: EventTarget | null): HTMLElement | null => (target instanceof Element ? target.closest<HTMLElement>('[data-image]') : null);
+
+const within = (el: HTMLElement, other: EventTarget | null): boolean => other instanceof Node && el.contains(other);
+
+/** The picture an element previews: a match card's address in data-zoom, or a menu item's image key in data-image. */
+const previewSrc = (el: HTMLElement): string => el.dataset.zoom ?? (el.dataset.image ? imageUrl(el.dataset.image) : '');
+
 const hoverGone = () => {
   const hover = ui.hover;
-  return !!hover && 'card' in hover && !!hover.at && !hover.at.isConnected;
+  if (!hover || !('card' in hover) || !hover.at) return false;
+  // A page put away keeps its items on the page unseen, as the lobby does when its match starts
+  return !hover.at.isConnected || (!ui.inspect && hover.at.getClientRects().length === 0);
 };
 
 /** The F key turns the hovered card to its next face. Needs the model, which knows how many faces it has. */
@@ -69,7 +85,7 @@ function afterRest(show: () => void): void {
 // el carries data-key, data-zoom (empty when the viewer may not see the card) and data-from for a card in hand that is elsewhere
 export function hoverCard(el: HTMLElement | null): void {
   if (ui.inspect) return;
-  if (!el || !el.dataset.zoom) {
+  if (!el || !previewSrc(el)) {
     clearTimeout(opening);
     byId('zoom').classList.remove('settling');
     changeUi(u => { u.hover = null; u.faceIndex = 0; });
@@ -83,7 +99,7 @@ export function hoverCard(el: HTMLElement | null): void {
 function showCard(el: HTMLElement): void {
   const key = Number(el.dataset.key);
   const card = Number.isInteger(key) ? key : null;
-  const src = el.dataset.zoom ?? '';
+  const src = previewSrc(el);
   const from = el.dataset.from;
   changeUi(u => { u.hover = { card, src, from, at: el }; u.faceIndex = 0; });
   if (card !== null) actions?.inspectCard(card);
@@ -103,7 +119,7 @@ function showCard(el: HTMLElement): void {
 
 /** Opens a card's details and keeps them open, which is what a rested finger asks for. */
 export function inspectCard(el: HTMLElement): void {
-  if (!el.dataset.zoom && !el.dataset.key) return;
+  if (!previewSrc(el) && !el.dataset.key) return;
   clearTimeout(opening);
   showCard(el);
   changeUi(u => { u.inspect = true; });
@@ -114,6 +130,9 @@ export function inspectPlayer(key: number): void {
   changeUi(u => { u.hover = { player: key }; u.faceIndex = 0; u.inspect = true; });
   actions?.inspectPlayer(key);
 }
+
+/** Whether el's preview is pinned open, so that a tap on it can mean the second tap a desktop's click needs, as a draft card's pick does. */
+export const isPinned = (el: Element): boolean => ui.inspect && !!ui.hover && 'card' in ui.hover && ui.hover.at === el;
 
 export function closeInspect(): void {
   changeUi(u => { u.hover = null; u.faceIndex = 0; u.inspect = false; });
@@ -201,14 +220,22 @@ function drawSheetActions(zoom: HTMLElement, model: Model): void {
     q(bar, '.sheet-close').onclick = closeInspect;
     q(bar, '.sheet-flip').onclick = () => changeUi(u => { u.cardText = !u.cardText; });
     swipeDown(zoom, closeInspect);
+    // Only on the picture, since a swipe on the rules text scrolls it; up does the card's action, as mobile's card zoom does
+    swipeAcross(zoom, '.shot', way => {
+      const b = q<HTMLButtonElement>(zoom, way === 'left' ? '.sheet-next' : way === 'right' ? '.sheet-prev' : '.sheet-act');
+      if (!b.hidden && !b.disabled) b.click();
+    });
   }
   const hover = ui.hover;
   const at = hover && 'card' in hover ? hover.at : undefined;
-  const card = at?.closest<HTMLElement>('.card') ?? null;
+  const item = at && menuItem(at) === at ? at : null;
+  const card = item ? null : at?.closest<HTMLElement>('.card') ?? null;
   const stacked = at?.closest<HTMLElement>('.stack-item:not(.awaiting)') ?? null;
-  // Its neighbours in the same zone, in the order the page shows them
-  const row = card ? [...card.closest('.battlefield, #hand, .cards')?.querySelectorAll<HTMLElement>('.card[data-key]') ?? []].filter(c => c.offsetParent !== null) : [];
-  const index = card ? row.indexOf(card) : -1;
+  // Its neighbours in the same zone or list, in the order the page shows them
+  const row = card ? [...card.closest('.battlefield, #hand, .cards')?.querySelectorAll<HTMLElement>('.card[data-key]') ?? []].filter(c => c.offsetParent !== null)
+    : item ? listOf(item) : [];
+  const shownAt = card ?? item;
+  const index = shownAt ? row.indexOf(shownAt) : -1;
   const prev = q<HTMLButtonElement>(bar, '.sheet-prev');
   const next = q<HTMLButtonElement>(bar, '.sheet-next');
   prev.hidden = next.hidden = q(bar, '.sheet-at').hidden = row.length < 2 || index < 0;
@@ -221,22 +248,28 @@ function drawSheetActions(zoom: HTMLElement, model: Model): void {
   const playable = !!card?.classList.contains('playable');
   const selectable = !!card?.classList.contains('selectable');
   const act = q<HTMLButtonElement>(bar, '.sheet-act');
-  act.hidden = key === null || (!playable && !selectable);
-  act.textContent = t(selectable ? 'lblChoose' : 'lblWebPortraitPlay');
+  // A menu item names what a tap on it does in data-act, and has no button when a tap does nothing
+  act.hidden = item ? !item.dataset.act : key === null || (!playable && !selectable);
+  act.textContent = item?.dataset.act ?? t(selectable ? 'lblChoose' : 'lblWebPortraitPlay');
   act.onclick = () => {
+    // The button stands for a tap on the item, made while its preview is still pinned (isPinned)
+    item?.click();
     closeInspect();
-    if (key !== null) actions?.selectCard(key, false, 0, 0);
+    if (!item && key !== null) actions?.selectCard(key, false, 0, 0);
   };
   const more = q<HTMLButtonElement>(bar, '.sheet-abilities');
-  more.hidden = !(stacked || (key !== null && playable));
-  more.textContent = t(stacked ? 'lblWebPortraitStackOptions' : 'lblAbilities');
+  more.hidden = item ? item.dataset.menu === undefined : !(stacked || (key !== null && playable));
+  more.textContent = t(item ? 'lblMore' : stacked ? 'lblWebPortraitStackOptions' : 'lblAbilities');
   // The host answers either with a menu, which a phone draws along the bottom edge
   more.onclick = () => {
     closeInspect();
-    if (stacked) {
-      const item = Number(stacked.dataset.key);
-      changeUi(u => { u.stackMenuAt = { key: item, x: innerWidth / 2, y: innerHeight / 2 }; });
-      actions?.askStackMenu(item);
+    if (item) {
+      // What a right-click on the item opens, as the match's abilities are its right-click
+      item.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: innerWidth / 2, clientY: innerHeight / 2 }));
+    } else if (stacked) {
+      const entry = Number(stacked.dataset.key);
+      changeUi(u => { u.stackMenuAt = { key: entry, x: innerWidth / 2, y: innerHeight / 2 }; });
+      actions?.askStackMenu(entry);
     } else if (key !== null) {
       actions?.selectCard(key, true, innerWidth / 2, innerHeight / 2);
     }
@@ -244,11 +277,24 @@ function drawSheetActions(zoom: HTMLElement, model: Model): void {
   const flip = q<HTMLButtonElement>(bar, '.sheet-flip');
   const details = key !== null ? model.cardDetails.get(key) : undefined;
   // A card with no rules text has nothing on its other side, unless that side is the one showing
-  const hasText = !!(details?.faces[ui.faceIndex] ?? details?.faces[0])?.text;
-  flip.hidden = !details || !(hover && 'card' in hover && hover.src) || (!hasText && !ui.cardText);
+  const face = details?.faces[ui.faceIndex] ?? details?.faces[0] ?? itemFace(item);
+  flip.hidden = !face || !(hover && 'card' in hover && hover.src) || (!face.text && !ui.cardText);
   flip.textContent = t(ui.cardText ? 'lblWebPortraitShowImage' : 'lblWebPortraitShowRules');
   // A card with more than one face turns to the next when it is tapped
   q<HTMLElement>(zoom, '.shot').onclick = () => nextFace(model);
+}
+
+/** The items in a menu item's list, in the order shown: everything under the container marked data-list. */
+function listOf(item: HTMLElement): HTMLElement[] {
+  const list = item.closest('[data-list]');
+  return list ? [...list.querySelectorAll<HTMLElement>('[data-image]')].filter(c => c.offsetParent !== null) : [item];
+}
+
+/** A menu item's own text, which a draft card carries so that a card with no picture can still be read. */
+function itemFace(el: HTMLElement | null | undefined): CardFace | undefined {
+  const text = el?.dataset.text;
+  if (!el || text === undefined) return undefined;
+  return { name: el.dataset.card, cost: el.dataset.cost ?? '', type: el.dataset.type ?? '', pt: el.dataset.pt || undefined, text, colors: 0 };
 }
 
 /** The gap kept between a card and its preview, and between the preview and the edges it must stay inside. */
@@ -286,6 +332,8 @@ function placeZoom(zoom: HTMLElement, at: HTMLElement): void {
 
 /** The hovered card and the side the preview last showed it on, so turning the same card over can be seen. */
 let shown: { hover: object; text: boolean } | null = null;
+/** The last picture that would not load, so its card shows its text in its place. */
+let brokenSrc = '';
 
 function drawDetail(model: Model): void {
   const zoom = byId('zoom');
@@ -301,12 +349,18 @@ function drawDetail(model: Model): void {
     return;
   }
   const d = hover.card !== null ? model.cardDetails.get(hover.card) : undefined;
-  const face = d?.faces[ui.faceIndex] ?? d?.faces[0];
+  const face = d?.faces[ui.faceIndex] ?? d?.faces[0] ?? itemFace(hover.at);
   ensureZoom(zoom);
   const img = q<HTMLImageElement>(zoom, 'img');
   const src = face?.imageKey ? imageUrl(face.imageKey) : hover.src;
-  // A card the viewer may not see has no image, so its text is all there is to show
-  const text = ui.cardText || !src;
+  const menu = hover.at?.dataset.image !== undefined;
+  // A card the viewer may not see has no image, so its text is all there is to show, as for a picture that would not load
+  const text = (ui.cardText && (!menu || !!face)) || !src || src === brokenSrc;
+  // A menu item with no text of its own has nothing to show without its picture
+  if (text && menu && !face) {
+    zoom.hidden = true;
+    return;
+  }
   // Turned to its other side, the same card plays a flip; moving to another card does not
   if (shown?.hover === hover && shown.text !== text) {
     replay(zoom, 'flipping');
@@ -322,7 +376,7 @@ function drawDetail(model: Model): void {
   setSource(q(zoom, '.from'), hover.from);
   setSource(q(zoom, '.from-tab'), hover.from);
   q(zoom, '.hint').textContent = '';
-  if (!d || !face) return;
+  if (!face) return;
   q(zoom, '.name').textContent = face.name ?? '';
   // The log names a card by its id, as in "Floodpits Drowner (51)", so the same id here tells two copies apart
   q(zoom, '.cid').textContent = hover.card !== null && model.objects.has(hover.card) ? `(${hover.card})` : '';
@@ -334,7 +388,7 @@ function drawDetail(model: Model): void {
   const set = q(zoom, '.set');
   set.textContent = face.set ?? '';
   set.dataset.rarity = face.rarity ?? '';
-  const card = face === d.faces[0] && hover.card !== null ? model.objects.get(hover.card) as CardView | undefined : undefined;
+  const card = face === d?.faces[0] && hover.card !== null ? model.objects.get(hover.card) as CardView | undefined : undefined;
   drawStickers(q(zoom, '.stickers'), model, text ? undefined : card);
   const state = card ? stateOf(model, card) : undefined;
   // A token or a face-down card has no printed text of its own to differ from
@@ -343,10 +397,10 @@ function drawDetail(model: Model): void {
     : undefined;
   const sorted = setRulesText(q(zoom, '.text'), q(zoom, '.foot'), face.text ?? '', state?.Keywords ?? [], changes);
   q(zoom, '.kind-chip').textContent = sorted.tag ?? '';
-  drawPt(q(zoom, '.pt'), model, hover.card, face, face === d.faces[0]);
+  drawPt(q(zoom, '.pt'), model, hover.card, face, face === d?.faces[0]);
   // The keys are the player's own, since either can be changed in the options
   const keys = boundKeys();
-  const faces = d.faces.length > 1 ? t('lblWebDetailNextFace', keyName(keys.nextFace), ui.faceIndex + 1, d.faces.length) : '';
+  const faces = d && d.faces.length > 1 ? t('lblWebDetailNextFace', keyName(keys.nextFace), ui.faceIndex + 1, d.faces.length) : '';
   const flip = src ? t(text ? 'lblWebDetailFlipToImage' : 'lblWebDetailFlipToRules', keyName(keys.cardText)) : '';
   q(zoom, '.hint').textContent = [faces, flip].filter(Boolean).join(' · ');
 }
@@ -503,7 +557,10 @@ function ensureZoom(zoom: HTMLElement): void {
   if (zoom.firstChild) return;
   zoom.innerHTML = '<span class="shot"><img alt=""><span class="stickers" aria-hidden="true"></span><canvas class="foil" hidden></canvas><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cid"></span><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
   const img = q<HTMLImageElement>(zoom, 'img');
-  hideOnError(img);
+  img.addEventListener('error', () => {
+    brokenSrc = img.getAttribute('src') ?? '';
+    changeUi(() => {});
+  });
   // Cleared once played: a preview still carrying the class would flip again the next time it is shown
   zoom.addEventListener('animationend', e => {
     if (e.animationName === 'zoom-flip') zoom.classList.remove('flipping');

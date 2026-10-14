@@ -64,7 +64,7 @@ export function Decks({ page, model, actions }: { page: QuestDecks; model: Model
           </>}
           details={details && deck.size > 0 && <>
             <Curve curve={details.stats.curve} creatures={details.stats.creatures} px={44} />
-            <div class="dk-cards">{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
+            <div class="dk-cards" data-list>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
           </>}>
           {asking === 'rename'
             ? <NameForm initial={deck.name} submit={t('lblRename')} cancel={() => setAsking(null)}

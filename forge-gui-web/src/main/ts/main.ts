@@ -15,7 +15,7 @@ import { announceComing, renderMatch, resetTable } from './match/board';
 import { renderPrompt, flash, pressPromptButton } from './match/prompt';
 import { appendLog, initLog, logTints } from './match/log';
 import { initSide, renderSide, renderSky } from './match/side';
-import { initDetail, nextFace, renderDetail } from './match/detail';
+import { initDetail, nextFace, renderDetail } from './preview';
 import { initStack } from './match/stack';
 import { initOverlay, drawOverlay } from './match/overlay';
 import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './match/blockdrag';
@@ -626,6 +626,8 @@ function render(): void {
   // The name page comes before the player's volumes are known
   playMusic(page === 'name' ? null : page !== 'match' ? 'menu' : model.gameOver ? null : 'match');
   if (!model.inMatch) {
+    // Every page's cards share the one preview, so it is drawn with no match on too
+    renderDetail(model);
     return;
   }
   renderSide(model);

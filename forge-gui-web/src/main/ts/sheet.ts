@@ -75,6 +75,9 @@ export function sheet(id: string, isOpen: boolean, close: () => void): void {
   }
 }
 
+/** How far a finger travels before a swipe counts. */
+const SWIPE_PX = 60;
+
 /** A swipe down from a sheet's handle closes it; lower down, the same swipe scrolls what the sheet holds. */
 export function swipeDown(el: HTMLElement, close: () => void): void {
   // Touch events, since a browser that takes a drag for a scroll cancels the pointer and never says where it lifted
@@ -84,8 +87,25 @@ export function swipeDown(el: HTMLElement, close: () => void): void {
     from = y - el.getBoundingClientRect().top <= 48 ? y : null;
   }, { passive: true });
   el.addEventListener('touchend', e => {
-    if (from !== null && e.changedTouches[0].clientY - from > 60) close();
+    if (from !== null && e.changedTouches[0].clientY - from > SWIPE_PX) close();
     from = null;
+  });
+  el.addEventListener('touchcancel', () => { from = null; });
+}
+
+/** A swipe left, right or up that starts on the part of el matching inside. */
+export function swipeAcross(el: HTMLElement, inside: string, swiped: (way: 'left' | 'right' | 'up') => void): void {
+  let from: Touch | null = null;
+  el.addEventListener('touchstart', e => {
+    from = e.target instanceof Element && e.target.closest(inside) ? e.touches[0] : null;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (!from) return;
+    const dx = e.changedTouches[0].clientX - from.clientX;
+    const dy = e.changedTouches[0].clientY - from.clientY;
+    from = null;
+    if (Math.abs(dx) > SWIPE_PX && Math.abs(dx) > Math.abs(dy)) swiped(dx < 0 ? 'left' : 'right');
+    else if (-dy > SWIPE_PX && -dy > Math.abs(dx)) swiped('up');
   });
   el.addEventListener('touchcancel', () => { from = null; });
 }

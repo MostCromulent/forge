@@ -1,6 +1,6 @@
 // Decides how each cardMoved event looks, from where a card stood before the board was drawn to where it stands now
 
-import { hoverable } from './detail';
+import { hoverable } from '../preview';
 import type { CardMoved, GameEvent, Place } from '../protocol';
 import type { CardView, PlayerView } from '../protocol';
 import { cssUrl, playerSleeveUrl } from '../looks';

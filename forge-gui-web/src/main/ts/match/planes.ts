@@ -3,7 +3,7 @@
 import { reconcile } from './render';
 import { cardImageSrc, setImage } from '../images';
 import { deref, game, me, players, stateOf, zone, type Model } from '../model';
-import { hoverable } from './detail';
+import { hoverable } from '../preview';
 import { cssUrl } from '../looks';
 import { byId, q, make } from '../dom';
 import { commandKind } from './command';

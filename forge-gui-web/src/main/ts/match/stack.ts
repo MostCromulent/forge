@@ -3,7 +3,7 @@ import { lastPicture } from './cards';
 import { cardImageSrc, noImageOnError, setImage } from '../images';
 import { game, deref, derefAll, me, players, stackPick, stateOf, zone, type Model } from '../model';
 import { isPortrait } from '../form';
-import { hoverCard, hoverable, inspectCard } from './detail';
+import { hoverCard, hoverable, inspectCard } from '../preview';
 import { FIZZLE_MS, journeys, noteFizzled } from './motion';
 import { notePick, stackTargets } from './overlay';
 import { hovers, longPress } from '../press';

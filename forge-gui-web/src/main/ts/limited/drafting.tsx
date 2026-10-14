@@ -10,7 +10,7 @@ import { rememberedAvatar } from '../menu';
 import { SymbolText } from '../symbols';
 import { changeUi } from '../ui';
 import { HeadControls, PageHeader } from '../header';
-import { peekAt } from '../deck/deckfinder';
+import { hoverCard, inspectCard, isPinned } from '../preview';
 import { t, tNodes, type TextKey } from '../text';
 import type { ComponentChildren } from 'preact';
 import type { Actions } from '../actions';
@@ -36,9 +36,6 @@ const COLUMN_STAGGER_MS = 22;
 
 /** When the last pack started leaving, so the next one can follow it out rather than cross it. */
 let passedAt = 0;
-/** When the pack stops moving. Until then a card sliding under the pointer shows no preview. */
-let packStillAt = 0;
-const packMoving = () => performance.now() < packStillAt;
 
 /** The side of the screen a pack passes to: -1 for left, 1 for right. */
 const passSide = (direction: number): -1 | 1 => (direction < 0 ? -1 : 1);
@@ -63,7 +60,6 @@ function passPack(picked: number, side: -1 | 1): void {
   const inner = make('div', 'cat-grid');
   layer.append(inner);
   const columns = columnsFrom(slots, side);
-  packStillAt = Math.max(packStillAt, performance.now() + (reduced ? 160 : PASS_MS + Math.max(...columns) * COLUMN_STAGGER_MS));
   const slides = slots.map((slot, i) => {
     const at = slot.getBoundingClientRect();
     const copy = slot.cloneNode(true) as HTMLElement;
@@ -88,7 +84,6 @@ function arrive(grid: HTMLElement, from: -1 | 1): void {
   const columns = columnsFrom(slots, -from as -1 | 1);
   // A pack the next player had waiting comes in behind the one leaving, once that one is mostly gone
   const behind = Math.max(0, passedAt + PASS_MS * 0.6 - performance.now());
-  packStillAt = Math.max(packStillAt, performance.now() + behind + (reduced ? 200 : ARRIVE_MS + Math.max(0, ...columns) * COLUMN_STAGGER_MS));
   slots.forEach((slot, i) => {
     // A card the new pack shares with the old, in the same place, is the same element, still hidden from the pass
     slot.style.visibility = '';
@@ -108,13 +103,11 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
   const [leaving, setLeaving] = useState(false);
   /** On a phone the picks are a drawer over the pack, opened from its bar at the foot of the screen. */
   const [picksOpen, setPicksOpen] = useState(false);
-  const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
   // An online draft belongs to the table and goes on without this browser, so leaving only goes back to the table
   const online = model.inLobby;
   const faces = state ? seatFaces(model, state.seats) : [];
   return (
-    <div class="drafting-page" onPointerLeave={() => setPeek(null)}
-      onPointerOver={e => setPeek(packMoving() && (e.target as Element).closest?.('.draft-pack') ? null : peekAt(e, '.drafting-page'))}>
+    <div class="drafting-page">
       <PageHeader class="limited-head">
         <span class="limited-title">{t('lblBoosterDraft')}</span>
         {state && <span class="muted">{t('lblWebDraftProductSeats', state.product, state.seats.length)}</span>}
@@ -130,7 +123,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
       {!state && <p class="muted drafting-wait">{t('lblWebDraftOpeningPacks')}</p>}
       {state && (
         <div class="drafting-shell">
-          <Pack state={state} faces={faces} actions={actions} log={online && state.log.length > 0} hidePeek={() => setPeek(null)} />
+          <Pack state={state} faces={faces} actions={actions} log={online && state.log.length > 0} />
           <Picks state={state} actions={actions} open={picksOpen} toggle={() => setPicksOpen(o => !o)} />
         </div>
       )}
@@ -147,11 +140,6 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
               <button class="danger" onClick={() => actions.draftDiscard()}>{t('lblLeave')}</button>
             </div>
           </div>
-        </div>
-      )}
-      {peek && (
-        <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}>
-          <span class="peek-card"><CardFace card={cardFor(state, peek.image)} /></span>
         </div>
       )}
     </div>
@@ -217,19 +205,13 @@ function useClock(state: DraftState): number {
   return state.clockSeconds ? Math.max(0, state.clockLeftMillis - (now - stamp.current)) : 0;
 }
 
-function Pack({ state, faces, actions, log, hidePeek }: { state: DraftState; faces: string[]; actions: Actions; log: boolean;
-  hidePeek: () => void }) {
+function Pack({ state, faces, actions, log }: { state: DraftState; faces: string[]; actions: Actions; log: boolean }) {
   const [selected, setSelected] = useState<number | null>(null);
-  /** On a phone a tapped card opens full screen, where it is picked, since a card a third of the screen wide cannot be read. */
-  const [viewing, setViewing] = useState<number | null>(null);
   // A new state clears the selection, since its cards are not the ones selected
-  useEffect(() => {
-    setSelected(null);
-    setViewing(null);
-  }, [state.step]);
+  useEffect(() => setSelected(null), [state.step]);
   const pick = (index: number) => {
     // The card under the pointer is about to leave with the pack, so its preview goes now
-    hidePeek();
+    hoverCard(null);
     launch(index);
     passPack(index, passSide(state.direction));
     actions.draftPick(state.step, index, false);
@@ -275,12 +257,17 @@ function Pack({ state, faces, actions, log, hidePeek }: { state: DraftState; fac
           <TableMenu state={state} faces={faces} />
         </span>
       </div>
-      <div class="cat-grid" ref={grid}>
+      <div class="cat-grid" data-list ref={grid}>
         {state.cards.map((card, i) => (
-          <div key={`${card.image}-${i}`} class={i === selected ? 'slot draft-slot chosen' : 'slot draft-slot'} data-card={card.name} data-image={card.image}>
-            <button class="tile" title={card.name} draggable
-              onDragStart={e => startDrag(e, { from: 'pack', index: i })}
-              onClick={() => (isPortrait() ? setViewing(i) : i === selected ? pick(i) : setSelected(i))}>
+          <div key={`${card.image}-${i}`} class={i === selected ? 'slot draft-slot chosen' : 'slot draft-slot'} data-image={card.image} {...textData(card)}
+            data-act={t('lblWebDraftPick')} onClick={e => {
+              // A card a third of a phone's screen wide cannot be read, so there a tap opens its preview, whose Pick taps it again
+              if (isPinned(e.currentTarget)) pick(i);
+              else if (isPortrait()) inspectCard(e.currentTarget);
+              else if (i === selected) pick(i);
+              else setSelected(i);
+            }}>
+            <button class="tile" title={card.name} draggable onDragStart={e => startDrag(e, { from: 'pack', index: i })}>
               <span class="tile-name">{card.name}</span>
               <CardFace card={card} />
               {card.rank !== undefined && <RankShield rank={card.rank} />}
@@ -290,21 +277,13 @@ function Pack({ state, faces, actions, log, hidePeek }: { state: DraftState; fac
         ))}
         {state.cards.length === 0 && !state.done && <p class="muted">{t('lblWebDraftWaitingForPack')}</p>}
       </div>
-      {viewing !== null && state.cards[viewing] && (
-        <CardViewer cards={state.cards} index={viewing} go={setViewing} close={() => setViewing(null)}
-          label={t('lblWebDraftPick')} act={i => {
-            setViewing(null);
-            pick(i);
-          }} />
-      )}
     </section>
   );
 }
 
-/** The pack card or pick drawn from an image key, so its preview can fall back to its text as well. */
-function cardFor(state: DraftState | null, image: string): DraftCard {
-  return [...(state?.cards ?? []), ...(state?.picks ?? [])].find(c => c.image === image)
-    ?? { name: '', image, cost: '', mv: 0, colors: '', type: '', text: '', rarity: '', pack: 0, pick: 0, sideboard: false };
+/** A card's text on its pack slot or pick, which its preview shows when the card has no picture. */
+function textData(card: DraftCard) {
+  return { 'data-card': card.name, 'data-cost': card.cost, 'data-type': card.type, 'data-text': card.text, 'data-pt': card.pt ?? '' };
 }
 
 /** A card's picture, or when none can be had, its name, cost, type and rules text in the card's own shape. */
@@ -370,9 +349,6 @@ function Picks({ state, actions, open, toggle }: { state: DraftState; actions: A
     else if (state.picks[drag.index]?.sideboard !== sideboard) actions.draftMove(drag.index, sideboard);
   };
   const move = (h: Held) => actions.draftMove(h.index, !h.card.sideboard);
-  const [viewing, setViewing] = useState<number | null>(null);
-  const shown = [...main, ...side];
-  const at = shown.findIndex(h => h.index === viewing);
   const panel = useRef<HTMLElement>(null);
   const bar = useRef<HTMLButtonElement>(null);
   const count = useRef(state.picks.length);
@@ -409,24 +385,26 @@ function Picks({ state, actions, open, toggle }: { state: DraftState; actions: A
           ))}
         </span>
       </div>
-      <div class="draft-sections">
-        <PickSection title={t('lblMainDeck')} held={main} by={by} cards={cards} onDrop={drop(false)} move={move} view={h => setViewing(h.index)} />
-        <PickSection title={t('lblSideboard')} held={side} by={by} cards={cards} onDrop={drop(true)} move={move} view={h => setViewing(h.index)} />
+      <div class="draft-sections" data-list>
+        <PickSection title={t('lblMainDeck')} held={main} by={by} cards={cards} onDrop={drop(false)} move={move} />
+        <PickSection title={t('lblSideboard')} held={side} by={by} cards={cards} onDrop={drop(true)} move={move} />
       </div>
-      {at >= 0 && (
-        <CardViewer cards={shown.map(h => h.card)} index={at} go={i => setViewing(shown[i].index)} close={() => setViewing(null)}
-          label={t(shown[at].card.sideboard ? 'lblWebDraftMoveToMain' : 'lblWebDraftMoveToSideboard')} act={i => move(shown[i])} />
-      )}
     </section>
   );
 }
 
 const GROUP_NAMES: Record<GroupBy, TextKey> = { colour: 'lblColor', type: 'lblType', mv: 'lblCMC', pick: 'lblWebDraftGroupPickOrder' };
 
-function PickSection({ title, held, by, cards, onDrop, move, view }: {
-  title: string; held: Held[]; by: GroupBy; cards: boolean; onDrop: (drag: Drag) => void; move: (h: Held) => void; view: (h: Held) => void;
+function PickSection({ title, held, by, cards, onDrop, move }: {
+  title: string; held: Held[]; by: GroupBy; cards: boolean; onDrop: (drag: Drag) => void; move: (h: Held) => void;
 }) {
-  const tap = (h: Held) => (isPortrait() ? () => view(h) : undefined);
+  // On a phone a tap opens the pick's preview, whose button taps it again to move it, as a double click does
+  const tap = (h: Held) => (e: MouseEvent) => {
+    const el = e.currentTarget as HTMLElement;
+    if (isPinned(el)) move(h);
+    else if (isPortrait()) inspectCard(el);
+  };
+  const pickData = (h: Held) => ({ ...textData(h.card), 'data-act': t(h.card.sideboard ? 'lblWebDraftMoveToMain' : 'lblWebDraftMoveToSideboard') });
   const [over, setOver] = useState(false);
   const accepts = (e: DragEvent) => !!e.dataTransfer?.types.includes(DRAG_TYPE);
   return (
@@ -449,11 +427,11 @@ function PickSection({ title, held, by, cards, onDrop, move, view }: {
             {cards
               ? <div class="pick-stack">{group.map(h => (
                   <img key={h.index} alt={h.card.name} title={t('ttWebDraftDoubleClickToMoveCard', h.card.name)} src={imageUrl(h.card.image)}
-                    data-image={h.card.image} data-pick={h.index} draggable onDragStart={e => startDrag(e, { from: 'pick', index: h.index })}
+                    data-image={h.card.image} {...pickData(h)} data-pick={h.index} draggable onDragStart={e => startDrag(e, { from: 'pick', index: h.index })}
                     onClick={tap(h)} onDblClick={() => move(h)} />
                 ))}</div>
               : group.map(h => (
-                  <div key={h.index} class="ed-line" data-card={h.card.name} data-image={h.card.image} data-pick={h.index} draggable
+                  <div key={h.index} class="ed-line" data-image={h.card.image} {...pickData(h)} data-pick={h.index} draggable
                     title={t('ttWebDraftDoubleClickToMove')} onDragStart={e => startDrag(e, { from: 'pick', index: h.index })} onClick={tap(h)}
                     onDblClick={() => move(h)}>
                     <span class="nm">{h.card.name}</span>
@@ -463,33 +441,6 @@ function PickSection({ title, held, by, cards, onDrop, move, view }: {
                 ))}
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-/** One card filling a phone's screen, with the cards beside it a press away and one thing to do with it. */
-function CardViewer({ cards, index, go, close, label, act }: {
-  cards: DraftCard[]; index: number; go: (index: number) => void; close: () => void; label: string; act: (index: number) => void;
-}) {
-  const start = useRef<number | null>(null);
-  const step = (by: number) => go((index + by + cards.length) % cards.length);
-  return (
-    <div class="card-viewer" role="dialog" aria-label={cards[index].name} onClick={e => { if (e.target === e.currentTarget) close(); }}
-      // A swipe across the card shows the next one, as the arrows do
-      onPointerDown={e => { start.current = e.clientX; }}
-      onPointerUp={e => {
-        const from = start.current;
-        start.current = null;
-        if (from !== null && Math.abs(e.clientX - from) > 50) step(e.clientX < from ? 1 : -1);
-      }}>
-      <span class="viewer-count">{index + 1} / {cards.length}</span>
-      <span class="viewer-card"><CardFace card={cards[index]} /></span>
-      <div class="viewer-bar">
-        <button aria-label={t('lblWebPrevious')} disabled={cards.length < 2} onClick={() => step(-1)}>‹</button>
-        <button onClick={close}>{t('lblClose')}</button>
-        <button class="primary" onClick={() => act(index)}>{label}</button>
-        <button aria-label={t('lblNext')} disabled={cards.length < 2} onClick={() => step(1)}>›</button>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { createCard, updateCard } from './cards';
 import { imageUrl, symbolUrl } from '../images';
-import { hoverCard } from './detail';
+import { hoverCard } from '../preview';
 import { matchedSpan, rankByName } from '../search';
 import { COLOURS, SymbolText } from '../symbols';
 import { useDebounced } from '../hooks';

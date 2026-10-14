@@ -55,15 +55,31 @@ probe('a long-press asks for no ability menu', async p => {
   await board(p, 'humanbattlefield=Forest\naibattlefield=Grizzly Bears');
   // A right-click asks the host what the card can do; a rested finger must not, on any browser
   await p.page.evaluate(() => {
-    const seen = window as unknown as { menus: number };
-    seen.menus = 0;
+    const seen = window as unknown as { menus: number; asked: number };
+    seen.menus = seen.asked = 0;
     const send = window.forge.actions.selectCard;
     window.forge.actions.selectCard = (key, menu, x, y) => { if (menu) seen.menus++; send(key, menu, x, y); };
+    addEventListener('contextmenu', e => { if ((e.target as Element).closest('#opponent .card')) seen.asked++; }, true);
   });
+  // The press must land on the card itself, so the coin toss over the board goes first
+  await expect(p.page.locator('#coin-toss')).toBeHidden();
   const card = p.page.locator('#opponent .card').first();
-  await hold(p.page, card);
-  await card.dispatchEvent('contextmenu', { bubbles: true, cancelable: true });
-  expect(await p.page.evaluate(() => (window as unknown as { menus: number }).menus)).toBe(0);
+  const at = (await card.boundingBox())!;
+  const x = Math.round(at.x + at.width / 2);
+  const y = Math.round(at.y + at.height / 2);
+  // The browser's own context menu arrives while the finger still rests, as a real right-click does
+  const cdp = await p.page.context().newCDPSession(p.page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+  await p.page.waitForTimeout(200);
+  await p.page.mouse.click(x, y, { button: 'right' });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.detach();
+  const seen = await p.page.evaluate(() => {
+    const { menus, asked } = window as unknown as { menus: number; asked: number };
+    return { menus, asked };
+  });
+  expect(seen.asked).toBeGreaterThan(0);
+  expect(seen.menus).toBe(0);
 }, WIDE_TOUCH);
 
 const box = async (page: Page, sel: string) => (await page.locator(sel).boundingBox())!;

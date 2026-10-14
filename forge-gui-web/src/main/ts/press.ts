@@ -33,9 +33,9 @@ export function initPress(): void {
   }, true);
   document.addEventListener('pointerup', lifted, true);
   document.addEventListener('pointercancel', lifted, true);
-  // Android answers a long touch with a context menu, which would do the right-click's job on top of the press's own
+  // Android answers a long touch with its own context menu, which would do the right-click's job on top of the press's own
   document.addEventListener('contextmenu', e => {
-    if (touching || performance.now() - touchEnded < AFTER_TOUCH_MS) {
+    if (e.isTrusted && (touching || performance.now() - touchEnded < AFTER_TOUCH_MS)) {
       e.preventDefault();
       e.stopPropagation();
     }

@@ -1,7 +1,7 @@
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from '../images';
 import { deref, derefAll, game, me, oldestRequest, stackPick, stateOf, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
-import { hoverable, inspectCard } from './detail';
+import { hoverable, inspectCard } from '../preview';
 import { longPress } from '../press';
 import { stepName } from './phasebar';
 import { boardBehind } from './pace';

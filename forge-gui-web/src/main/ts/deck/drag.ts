@@ -114,8 +114,9 @@ export function startDrag(e: PointerEvent, carried: Carried, image: string, judg
   document.addEventListener('pointercancel', end);
 }
 
-/** Pointer handlers for a card that can be dragged, and whose menu opens on right-click or a long touch. */
+/** Pointer handlers for a card that can be dragged, and whose menu opens on right-click or from its preview's More button. */
 export type CardHandlers = (name: string, from: Zone, image: string, count: number) => {
+  'data-menu': string;
   onPointerDown: (e: PointerEvent) => void;
   onContextMenu: (e: MouseEvent) => void;
 };

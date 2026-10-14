@@ -4,6 +4,8 @@ html[data-form="portrait"], html[data-form="portrait"] body { overscroll-behavio
 @media (hover: none) {
   #match { touch-action: manipulation; }
   #match :is(.card, .avatar, .zone-tile, .stack-item, #phase-strip, #prompt, img) { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+  /* A menu's card is held to open its preview, which then covers it, so the browser's own flash would show over the preview */
+  :is([data-image], [data-image] img) { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
   /* A hover stays on the last thing tapped, so the ones that move or grow a card are cancelled */
   #hand .card:hover { transform: translateX(var(--shift, 0px)) translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg)); z-index: auto; box-shadow: var(--lift, none); }
   #hand .card:hover::after { content: none; }
@@ -118,9 +120,9 @@ html[data-form="portrait"] #hand-head .on-stack { flex: 1; min-width: 0; overflo
 html[data-form="portrait"] #hand-head .close { min-width: 64px; min-height: 44px; margin-left: auto; }
 
 /* A sheet rises from the top of the dock, never over it */
-html[data-form="portrait"] :is(#match, #dialog-layer) .sheet { position: fixed; left: 0; right: 0; bottom: var(--dock-h, 110px); top: auto; z-index: 50; width: auto; max-width: none; max-height: calc(100dvh - var(--dock-h, 110px) - 40px); margin: 0; box-sizing: border-box;
+html[data-form="portrait"] :is(#match, #dialog-layer) .sheet, html[data-form="portrait"] #zoom.sheet { position: fixed; left: 0; right: 0; bottom: var(--dock-h, 110px); top: auto; z-index: 50; width: auto; max-width: none; max-height: calc(100dvh - var(--dock-h, 110px) - 40px); margin: 0; box-sizing: border-box;
   overflow-y: auto; overscroll-behavior: contain; background: var(--surface); border: 0; border-top: 1px solid var(--line-bright); border-radius: 16px 16px 0 0; box-shadow: 0 -16px 40px #000c; padding: 22px 12px 12px; transform: none; }
-html[data-form="portrait"] :is(#match, #dialog-layer) .sheet::before { content: ''; position: absolute; top: 8px; bottom: auto; left: 50%; width: 40px; height: 5px; margin-left: -20px; border: 0; border-radius: 3px; background: var(--line-bright); transform: none; }
+html[data-form="portrait"] :is(#match, #dialog-layer) .sheet::before, html[data-form="portrait"] #zoom.sheet::before { content: ''; position: absolute; top: 8px; bottom: auto; left: 50%; width: 40px; height: 5px; margin-left: -20px; border: 0; border-radius: 3px; background: var(--line-bright); transform: none; }
 html[data-form="portrait"] :is(#match, #dialog-layer) .sheet[hidden] { display: none; }
 
 /* The strip: whose turn, the step, and what is either side of it. A tap anywhere on it opens the stops. */
@@ -166,7 +168,9 @@ html[data-form="portrait"] #match .seat .hand-fan { display: none; }
 #zoom.sheet { right: auto; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; padding: 14px; box-sizing: border-box;
   background: var(--surface); border: 1px solid var(--line-bright); border-radius: 14px; box-shadow: 0 16px 50px #000d; }
 #zoom.sheet > .hint { display: none; }
-html[data-form="portrait"] #match #zoom.sheet { --zoom-w: min(62vw, calc((100dvh - var(--dock-h, 110px) - 250px) * 63 / 88)); }
+html[data-form="portrait"] #zoom.sheet { --zoom-w: min(62vw, calc((100dvh - var(--dock-h, 110px) - 250px) * 63 / 88)); }
+/* Away from a match there is no dock, so the sheet rises from the foot of the screen */
+html[data-form="portrait"] #match[hidden] ~ #zoom.sheet { --dock-h: 0px; }
 .sheet-actions { display: none; }
 #zoom.sheet .sheet-actions:not([hidden]) { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 44px; gap: 8px; width: 100%; min-width: min(var(--zoom-w), 90vw); align-items: center; }
 .sheet-actions button { min-height: 48px; min-width: 0; grid-column: span 2; }
@@ -462,7 +466,6 @@ html[data-form="portrait"] #editor .editor-tabs .n { font-variant-numeric: tabul
 html[data-form="portrait"] #editor .editor-tabs .n.no { background: none; box-shadow: inset 0 0 0 1.5px var(--text); }
 html[data-form="portrait"] #editor .editor-shell { grid-template-columns: minmax(0, 1fr); }
 html[data-form="portrait"] #editor .editor-shell:not(.deck) > .deck-half, html[data-form="portrait"] #editor .editor-shell.deck > .catalogue { display: none; }
-html[data-form="portrait"] #editor .deck-peek { display: none; }
 
 /* Find cards: search on a line of its own, then colours, type and filters on one line */
 html[data-form="portrait"] #editor .cat-bar { padding: 8px 10px 6px; }
@@ -550,16 +553,6 @@ html[data-form="portrait"] #drafting .tool-line .chip.more { display: none; }
 html[data-form="portrait"] #drafting .table-pop { position: fixed; left: 8px; right: 8px; top: auto; display: grid; justify-items: center; }
 html[data-form="portrait"] #drafting .table-pop .dial { zoom: .8; }
 html[data-form="portrait"] #drafting .draft-pack .cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 10px; padding: 12px 12px 76px; }
-/* A tapped card fills the screen, its picture as large as the screen allows, with the pack's arrows and the pick under it */
-.card-viewer { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; justify-items: center; gap: 10px;
-  padding: calc(10px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--scrim-deep); touch-action: pan-y; }
-.card-viewer .viewer-count { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.card-viewer .viewer-card { position: relative; align-self: center; width: min(100%, calc((100vh - 140px) * 63 / 88)); aspect-ratio: 63 / 88; }
-.card-viewer .viewer-card > img { width: 100%; height: 100%; border-radius: 4.5% / 3.5%; object-fit: cover; box-shadow: 0 16px 40px #000c; }
-.card-viewer .text-face { font-size: 14px; line-height: 1.4; padding: 14px 16px; border-radius: 12px; }
-.card-viewer .viewer-bar { display: grid; grid-template-columns: 48px 1fr 1.6fr 48px; gap: 8px; width: 100%; max-width: 420px; }
-.card-viewer .viewer-bar button { min-height: 48px; font-size: 15px; }
-.card-viewer .viewer-bar button[aria-label] { font-size: 24px; padding: 0; }
 html[data-form="portrait"] #drafting .draft-picks { position: fixed; left: 0; right: 0; bottom: 0; z-index: 35; height: min(80vh, calc(100% - 64px));
   border-radius: 14px 14px 0 0; border-bottom: 0; box-shadow: 0 -10px 30px var(--scrim-deep); transform: translateY(calc(100% - 56px));
   transition: transform .25s cubic-bezier(.2, .7, .3, 1); }
