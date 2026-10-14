@@ -106,7 +106,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   );
   // Shown in the head, and on a phone in the deck's own summary, beside the verdict it explains
   const check = state.limited
-    ? <span class="check-fixed">{t('lblWebEditorLimitedFixed')}</span>
+    ? <span class="check-fixed">{state.format === 'CommanderDraft' ? state.check : t('lblWebEditorLimitedFixed')}</span>
     : state.collection ? <span class="check-fixed">{state.check}</span>
     : <CheckControl model={model} state={state} actions={actions} />;
   return (

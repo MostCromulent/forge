@@ -43,6 +43,7 @@ final class OfflineDraft {
     /** Picks made from the current round's packs, which numbers the pick; pack sizes can differ within a round. */
     private int roundPicks;
     private final DraftView view = new DraftView();
+    static final String COMMANDER_DRAFT = "CommanderDraft";
 
     /** make builds the draft, on the draft's thread, since importing a cube waits on a web site; dealt says it has its packs already, as a quest tournament's has; fail hears why it could not. */
     OfflineDraft(final Supplier<BoosterDraft> make, final boolean dealt, final String playerName, final Consumer<DraftState> publish,
@@ -126,11 +127,20 @@ final class OfflineDraft {
             final LimitedPlayer me = draft.getHumanPlayer();
             final Deck human = new Deck(me.getDeck(), name);
             human.setDraftNotes(me.getSerializedDraftNotes());
+            // The tag desktop gives the deck, which is how either client knows the pool again
+            if (draft.isCommanderDraft()) {
+                human.getTags().add(COMMANDER_DRAFT);
+            }
             final DeckGroup group = new DeckGroup(name);
             group.setHumanDeck(human);
             group.addAiDecks(computer);
             return group;
         }, thread);
+    }
+
+    /** The commander the drafted set gives every player, or null. Read once the draft is done, when nothing else touches it. */
+    String freeCommander() {
+        return draft == null ? null : draft.getFreeCommanderName();
     }
 
     void close() {

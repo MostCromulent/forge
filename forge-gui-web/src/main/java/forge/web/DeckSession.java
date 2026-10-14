@@ -208,8 +208,15 @@ final class DeckSession {
 
     /** Opens a pool's deck that saves back into its pool, with a null channel when no browser is attached to show it yet. */
     synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final BrowserChannel channel) {
+        openPool(human, storage, type, null, channel);
+    }
+
+    /** freeCommander is the commander a Commander Draft's set gives every player, known only straight after the draft. */
+    synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final String freeCommander,
+            final BrowserChannel channel) {
         editor = new DeckEditor(human, false, true, new DeckEditor.Group(storage), Check.of(type, null), storages,
                 !host.getAsBoolean(), this::sendDeviceDeck, null);
+        editor.setFreeCommander(freeCommander);
         editorSeat = null;
         editorPath = "";
         if (channel != null) {

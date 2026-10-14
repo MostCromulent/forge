@@ -12,7 +12,9 @@ import forge.deck.DeckgenUtil;
 import forge.deck.DeckSection;
 import forge.deck.io.DeckSerializer;
 import forge.game.GameType;
+import forge.gamemodes.limited.CommanderDraftUtil;
 import forge.item.PaperCard;
+import forge.model.FModel;
 import forge.util.ImageUtil;
 import forge.util.Localizer;
 import forge.util.MyRandom;
@@ -96,6 +98,7 @@ final class DeckEditor {
     private final DeviceSink sink;
     /** The cards the deck is built from, or null when it is built from every card. */
     private final Collection collection;
+    private String freeCommander;
     private final Deque<Snapshot> undo = new ArrayDeque<>();
     private Deck deck;
     private Target target;
@@ -133,7 +136,29 @@ final class DeckEditor {
 
     /** A sealed or draft deck: the pool is the catalogue, and cards move between it and the deck rather than appear. */
     boolean limited() {
-        return !check.unrestricted() && check.deckFormat() == DeckFormat.Limited;
+        return !check.unrestricted() && (check.deckFormat() == DeckFormat.Limited || commanderDraft());
+    }
+
+    /** A Commander Draft pool, whose commander comes from the pool or from the few every player may use without drafting them. */
+    private boolean commanderDraft() {
+        return !check.unrestricted() && check.deckFormat() == DeckFormat.CommanderDraft;
+    }
+
+    void setFreeCommander(final String name) {
+        freeCommander = name;
+    }
+
+    private List<String> freeCommanders() {
+        final List<String> names = new ArrayList<>();
+        if (freeCommander != null && !freeCommander.isEmpty()) {
+            names.add(freeCommander);
+        }
+        names.addAll(List.of(CommanderDraftUtil.FREE_COMMANDER_FALLBACKS));
+        return names;
+    }
+
+    private boolean isFreeCommander(final String name) {
+        return commanderDraft() && freeCommanders().contains(name);
     }
 
     /** The cards the catalogue offers: the pool in limited mode, a collection's cards, otherwise every card. */
@@ -152,6 +177,18 @@ final class DeckEditor {
         for (final Map.Entry<PaperCard, Integer> e : deck.getMain()) {
             if (!e.getKey().getRules().getType().isBasicLand()) {
                 byName.putIfAbsent(e.getKey().getName(), e.getKey());
+            }
+        }
+        if (commanderDraft()) {
+            final CardPool commanders = deck.get(DeckSection.Commander);
+            if (commanders != null) {
+                commanders.forEach(e -> byName.putIfAbsent(e.getKey().getName(), e.getKey()));
+            }
+            for (final String name : freeCommanders()) {
+                final PaperCard free = FModel.getMagicDb().getCommonCards().getCard(name);
+                if (free != null) {
+                    byName.putIfAbsent(name, free);
+                }
             }
         }
         return CardCatalog.of(byName.values());
@@ -242,9 +279,14 @@ final class DeckEditor {
         if (have == 0 || from == to) {
             return Localizer.getInstance().getMessage("lblWebEditorNoneToMove", String.valueOf(name));
         }
+        // A drafted commander that stands down goes back to the pool, and one that was never drafted goes nowhere
+        final boolean leaving = commanderDraft() && from == DeckSection.Commander;
+        final DeckSection home = leaving ? DeckSection.Sideboard : to;
         return change(name, () -> {
             final CardPool moving = take(pool, name, Math.min(count, have));
-            deck.getOrCreate(to).addAll(moving);
+            if (!(leaving && isFreeCommander(name))) {
+                deck.getOrCreate(home).addAll(moving);
+            }
         });
     }
 
@@ -257,9 +299,13 @@ final class DeckEditor {
         if (!df.hasCommander()) {
             return Localizer.getInstance().getMessage("lblWebEditorNoCommanderFormat");
         }
-        final CardPool source = from == null ? null : deck.get(from);
+        final CardPool source = from != null ? deck.get(from) : commanderDraft() ? holding(name) : null;
         final PaperCard card = source != null ? source.find(c -> c.getName().equals(name))
+                : commanderDraft() ? (isFreeCommander(name) ? FModel.getMagicDb().getCommonCards().getCard(name) : null)
                 : collection == null ? printingFor(name) : ownedByName().get(name);
+        if (card == null && commanderDraft()) {
+            return Localizer.getInstance().getMessage("lblWebEditorNoneInPool", String.valueOf(name));
+        }
         if (card == null && collection != null) {
             return Localizer.getInstance().getMessage(NOT_OWNED, String.valueOf(name));
         }
@@ -274,7 +320,7 @@ final class DeckEditor {
         if (commanders.countByName(name) > 0) {
             return Localizer.getInstance().getMessage("lblWebEditorAlreadyCommander", String.valueOf(name));
         }
-        if (source == null) {
+        if (source == null && !commanderDraft()) {
             final String limit = overLimit(card, 1);
             if (limit != null) {
                 return limit;
@@ -651,7 +697,12 @@ final class DeckEditor {
             final boolean partner = existing.size() == 1 && card.getRules().canBePartnerCommander()
                     && existing.get(0).getRules().canBePartnerCommanders(card.getRules());
             if (!partner) {
-                deck.getMain().addAll(commanders);
+                final CardPool home = commanderDraft() ? deck.getOrCreate(DeckSection.Sideboard) : deck.getMain();
+                for (final Map.Entry<PaperCard, Integer> e : commanders) {
+                    if (!isFreeCommander(e.getKey().getName())) {
+                        home.add(e.getKey(), e.getValue());
+                    }
+                }
                 commanders.clear();
             }
         }
@@ -693,6 +744,17 @@ final class DeckEditor {
             }
         }
         return taken;
+    }
+
+    /** The section of a pool's deck that holds a card to make commander: the pool first, then the main deck. */
+    private CardPool holding(final String name) {
+        for (final DeckSection section : List.of(DeckSection.Sideboard, DeckSection.Main)) {
+            final CardPool pool = deck.get(section);
+            if (pool != null && pool.countByName(name) > 0) {
+                return pool;
+            }
+        }
+        return null;
     }
 
     private String addFromPool(final String name, final DeckSection to, final int count) {

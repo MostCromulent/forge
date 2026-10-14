@@ -23,7 +23,7 @@ export interface Verdict {
 }
 
 const THRESHOLD_PX = 4;
-const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders']);
+const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders', 'CommanderDraft']);
 // A refusal's words follow this mark, which also tells the zone to show it as refusing
 const REFUSED = '⊘';
 const ADD: Record<'Main' | 'Sideboard', TextKey> = { Main: 'lblWebEditorDragAddMain', Sideboard: 'lblWebEditorDragAddSideboard' };

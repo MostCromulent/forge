@@ -77,10 +77,20 @@ final class Legality {
         }
     }
 
+    private static CardPool played(final Deck deck) {
+        final CardPool cards = new CardPool();
+        cards.addAll(deck.getMain());
+        if (deck.has(DeckSection.Commander)) {
+            cards.addAll(deck.get(DeckSection.Commander));
+        }
+        return cards;
+    }
+
     static Result check(final Deck deck, final Check check) {
         final DeckFormat df = check.deckFormat();
         final List<PaperCard> commanders = commanders(deck, check);
-        final CardPool all = deck.getAllCardsInASinglePool(df.hasCommander(), false);
+        // A Commander Draft's sideboard is the rest of the drafted pool, which the deck's rules do not reach
+        final CardPool all = df == DeckFormat.CommanderDraft ? played(deck) : deck.getAllCardsInASinglePool(df.hasCommander(), false);
         final Map<String, PaperCard> byName = new LinkedHashMap<>();
         for (final Map.Entry<PaperCard, Integer> e : all) {
             byName.putIfAbsent(e.getKey().getName(), e.getKey());

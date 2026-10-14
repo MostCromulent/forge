@@ -23,7 +23,7 @@ const IN_SECTION: Record<DeckSection, TextKey> = {
   Contraptions: 'lblWebCardMenuInContraptions', Stickers: 'lblWebCardMenuInStickers',
 };
 
-const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders']);
+const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders', 'CommanderDraft']);
 
 export interface MenuAt {
   name: string;
@@ -67,7 +67,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
       </div>
     );
   }
-  // A pool's cards only move between the pool and the deck: there is no sideboard of its own, commander or printing to choose
+  // A pool's cards only move between the pool and the deck: there is no sideboard of its own or printing to choose
   if (state.limited) {
     return (
       <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
@@ -81,6 +81,11 @@ export function CardMenu({ at, state, actions, close, printings }: {
             </button>
           )}
         </>}
+        {commanderFormat && zone !== 'Commander' && (
+          <button role="menuitem" onClick={act(() => actions.edit({ op: 'commander', name: at.name, from: zone ?? undefined, count: 1 }))}>
+            {t('lblWebCardMenuMakeCommander')}
+          </button>
+        )}
       </div>
     );
   }

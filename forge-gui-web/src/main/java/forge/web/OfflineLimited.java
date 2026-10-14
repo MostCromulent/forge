@@ -8,8 +8,8 @@ import forge.web.WebSession.InCampaign;
 import forge.web.WebSession.Playing;
 import forge.web.WebSession.Stage;
 import forge.deck.Deck;
-import forge.deck.DeckFormat;
 import forge.deck.DeckGroup;
+import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
@@ -100,7 +100,7 @@ final class OfflineLimited implements IHasForgeLog {
             return;
         }
         final Event e = (Event) now;
-        decks.openPool(group.getHumanDeck(), e.storage(), e.type(), channel);
+        decks.openPool(group.getHumanDeck(), e.storage(), poolType(e, group.getHumanDeck()), channel);
     }
 
     private void deletePool(final BrowserChannel channel, final String name) {
@@ -277,8 +277,18 @@ final class OfflineLimited implements IHasForgeLog {
                 session.move(now, new Event("draft", name));
             }
             session.tell(OfflineEvents.pools());
-            decks.openPool(group.getHumanDeck(), drafts, GameType.Draft, session.browser());
+            decks.openPool(group.getHumanDeck(), drafts, poolType(GameType.Draft, group.getHumanDeck()), draft.freeCommander(), session.browser());
         });
+    }
+
+    /** A drafted pool is a Commander Draft when its deck carries desktop's tag or a commander, as desktop tells one. */
+    private static GameType poolType(final GameType type, final Deck human) {
+        return type == GameType.Draft && (human.getTags().contains(OfflineDraft.COMMANDER_DRAFT) || human.has(DeckSection.Commander))
+                ? GameType.CommanderDraft : type;
+    }
+
+    private static GameType poolType(final Event event, final Deck human) {
+        return poolType(event.type(), human);
     }
 
     /** Plays a pool's deck against one of its opponents, several at once, or every one in turn as a gauntlet, and returns to the pool after. */
@@ -291,8 +301,9 @@ final class OfflineLimited implements IHasForgeLog {
         final Event event = (Event) from;
         final List<Deck> ai = group.getAiDecks();
         final Deck human = group.getHumanDeck();
+        final GameType limitedType = poolType(event, human);
         if (FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
-            final String illegal = DeckFormat.Limited.getDeckConformanceProblem(human);
+            final String illegal = limitedType.getDeckFormat().getDeckConformanceProblem(human);
             if (illegal != null) {
                 channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionYourDeck", illegal)));
                 return;
@@ -316,7 +327,7 @@ final class OfflineLimited implements IHasForgeLog {
                 gauntlet.setRoundStarter((type, variants, players, me) -> playLimited(back, type, List.of(mySeat(players.get(0).getDeck()),
                         opponentSeat(gauntlet.getCurrentRound(), 1, players.get(1).getDeck()))));
                 try {
-                    gauntlet.launch(ai.size(), human, event.type());
+                    gauntlet.launch(ai.size(), human, limitedType);
                 } catch (final RuntimeException ex) {
                     netLog.error(ex, "Could not start the gauntlet");
                     channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionGauntletFailed", String.valueOf(ex.getMessage()))));
@@ -342,14 +353,14 @@ final class OfflineLimited implements IHasForgeLog {
                 for (int k = 0; k < count; k++) {
                     seats.add(opponentSeat(indices.get(k) + 1, k + 1, ai.get(indices.get(k))));
                 }
-                playLimited(back, event.type(), seats);
+                playLimited(back, limitedType, seats);
             }
             default -> {
                 if (play.opponent() < 0 || play.opponent() >= ai.size()) {
                     channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionNoSuchOpponent")));
                     return;
                 }
-                playLimited(back, event.type(), List.of(mySeat(human), opponentSeat(play.opponent() + 1, 1, ai.get(play.opponent()))));
+                playLimited(back, limitedType, List.of(mySeat(human), opponentSeat(play.opponent() + 1, 1, ai.get(play.opponent()))));
             }
         }
     }
