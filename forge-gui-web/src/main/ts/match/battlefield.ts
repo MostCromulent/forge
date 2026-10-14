@@ -273,7 +273,9 @@ export function slotsFor(model: Model, cards: CardView[], onField: CardView[]): 
   }
   // A card a permanent holds in exile, such as an Oblivion Ring's, sits under it as an attachment would, as a ghost
   for (const holder of onField) {
-    const held = (holder.UntilLeavesBattlefield ?? []).map(r => r && model.objects.get(r.ref) as CardView | undefined)
+    // The spell a prepared creature can cast comes first, as desktop and mobile place it
+    const held = [holder.PreparedSpell, ...(holder.UntilLeavesBattlefield ?? [])]
+      .map(r => r && model.objects.get(r.ref) as CardView | undefined)
       .filter((c): c is CardView => c?.Zone === 'Exile');
     if (!held.length) continue;
     const host = rootOf(holder).$key;
