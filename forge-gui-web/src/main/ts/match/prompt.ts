@@ -101,6 +101,7 @@ function drawPrompt(model: Model, actions: Actions): void {
         <button class="end-turn">${icon('endTurn')}</button>
         <button class="auto-pass">${icon('autoPass')}</button>
         <button class="undo">${icon('undo')}</button>
+        <button class="macro" hidden></button>
         <span class="tools-gap" aria-hidden="true"></span>
         <button class="more">${icon('more')}</button>
       </div>
@@ -169,6 +170,19 @@ function drawPrompt(model: Model, actions: Actions): void {
   endTurnButton.title = endingTurn ? t('lblWebPromptEndingTurnTip')
     : t('lblWebPromptEndTurnTip', keyName(keys.endTurn));
   q(tools, '.more').classList.toggle('open', !!ui.gameMenu);
+  // While a macro is recorded it is one press from the prompt: a press stops the recording, or plays the macro again
+  const macro = q<HTMLButtonElement>(tools, '.macro');
+  macro.hidden = ui.macro === 'none';
+  macro.classList.toggle('recording', ui.macro === 'recording');
+  macro.textContent = t(ui.macro === 'recording' ? 'lblWebPromptMacroStop' : 'lblWebPromptMacroRepeat');
+  macro.onclick = () => {
+    if (ui.macro === 'recording') {
+      actions.macroRecord();
+      changeUi(u => { u.macro = 'recorded'; });
+    } else {
+      actions.macroRepeat();
+    }
+  };
   const ok = q<HTMLButtonElement>(root, '.ok');
   const cancel = q<HTMLButtonElement>(root, '.cancel');
   ok.onclick = () => actions.ok();

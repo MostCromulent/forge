@@ -39,6 +39,8 @@ export interface UiState {
   optionsOpen: boolean;
   /** The game menu behind the prompt's ⋯ button, or a dialog opened from it. */
   gameMenu: 'menu' | 'stops' | 'decisions' | 'dev' | 'devSetup' | null;
+  /** The host keeps the macro and does not report on it, so the page remembers whether it is recording one or has one. */
+  macro: 'none' | 'recording' | 'recorded';
   /** The volume control beside the options button is open. */
   volumeOpen: boolean;
   /** The menu is asking for a new name and face, as the dock's edit button asked. */
@@ -98,6 +100,7 @@ export const ui: UiState = {
   stopsOpen: false,
   optionsOpen: false,
   gameMenu: null,
+  macro: 'none',
   volumeOpen: false,
   renaming: false,
   menuChoice: null,
@@ -186,6 +189,7 @@ export function resetMatchUi(): void {
   ui.stopsOpen = false;
   ui.optionsOpen = false;
   ui.gameMenu = null;
+  ui.macro = 'none';
   ui.volumeOpen = false;
   ui.menuSheet = null;
   ui.picker = null;

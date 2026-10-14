@@ -9,6 +9,7 @@ import type { AutoDecision } from '../protocol';
 import { deref, type Model } from '../model';
 import { t, type TextKey } from '../text';
 import { useClosing } from '../closing';
+import { changeUi, ui } from '../ui';
 
 // Icons from Lucide (ISC, see web/licenses/lucide-license.txt)
 export const ICONS = {
@@ -20,6 +21,7 @@ export const ICONS = {
   concede: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
   dev: '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
   more: '<path d="m9 18 6-6-6-6"/>',
+  macro: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor"/>',
 };
 
 function Icon({ d, end }: { d: string; end?: boolean }) {
@@ -58,6 +60,11 @@ export function GameMenu({ model, actions, close, open }: {
           actions.autoDecisions('list');
           open('decisions');
         }}><Icon d={ICONS.yields} />{t('lblWebGameMenuDecisions')}</button>
+        <button type="button" role="menuitem" class="card-menu-item" disabled={model.spectating} onClick={() => {
+          actions.macroRecord();
+          changeUi(u => { u.macro = u.macro === 'recording' ? 'recorded' : 'recording'; });
+          close();
+        }}><Icon d={ICONS.macro} />{t(ui.macro === 'recording' ? 'lblWebGameMenuMacroStop' : 'lblWebGameMenuMacroRecord')}</button>
         <div class="card-menu-sep" role="separator" />
         <button type="button" role="menuitem" class="card-menu-item" disabled={!!offer || model.spectating}
           onClick={() => { actions.drawOffer('OFFER'); close(); }}>

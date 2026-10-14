@@ -1234,6 +1234,9 @@ public class WebGuiGame extends NetworkGuiGame {
                     send(controlsMessage());
                 }
                 case "undo" -> controller.undoLastAction();
+                // The host records the player's actions and asks how many times to repeat them, as desktop's dock buttons do
+                case "macroRecord" -> controller.setRememberedActions();
+                case "macroRepeat" -> controller.repeatRememberedActions();
                 case "autoPass" -> {
                     WebSettings.set(settings, controller, "autoPassNoActions",
                             String.valueOf(!settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)));

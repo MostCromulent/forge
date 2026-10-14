@@ -22,6 +22,9 @@ export interface Actions {
   stopYield(): void;
   toggleAutoPass(): void;
   undo(): void;
+  /** Starts recording a macro, or stops recording, when the host asks how many times to play it. */
+  macroRecord(): void;
+  macroRepeat(): void;
   concede(): void;
   drawOffer(action: 'OFFER' | 'ACCEPT' | 'DECLINE'): void;
   autoDecisions(action: AutoDecisionAction, key?: string, on?: boolean): void;
@@ -253,6 +256,8 @@ export function createActions(send: Send): Actions {
     stopYield: () => send({ t: 'stopYield' }),
     toggleAutoPass: () => send({ t: 'autoPass' }),
     undo: () => send({ t: 'undo' }),
+    macroRecord: () => send({ t: 'macroRecord' }),
+    macroRepeat: () => send({ t: 'macroRepeat' }),
     concede: () => send({ t: 'concede' }),
     drawOffer: action => send({ t: 'drawOffer', action }),
     autoDecisions: (action, key, on = false) => send({ t: 'autoDecisions', action, key, on }),

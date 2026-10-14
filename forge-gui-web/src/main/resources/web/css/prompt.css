@@ -27,6 +27,9 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 #match .tools .on, #match .tools .on:hover { background: var(--brass); }
 #match .tools .on svg, #match .tools .on:hover svg { stroke: var(--on-brass); }
 #match .tools .more.open { background: var(--surface-2); }
+#match .tools .macro { width: auto; padding: 0 9px; font-size: 12px; font-weight: 600; border-radius: 13px; border: 1px solid var(--accent-2); color: var(--accent-2); white-space: nowrap; }
+#match .tools .macro.recording { border-color: var(--error); color: #ffb4ac; background: color-mix(in srgb, var(--error) 18%, transparent); }
+#match .tools .macro.recording::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--error); vertical-align: 1px; }
 #match .tools .tools-gap { width: 1px; height: 14px; margin: 0 4px; background: var(--line-bright); }
 #prompt .prompt-body { display: flex; gap: 10px; align-items: flex-start; }
 #prompt .prompt-body:not(:has(.message:not(:empty))):not(:has(img:not([hidden]))) { display: none; }
