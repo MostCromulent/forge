@@ -1,6 +1,7 @@
 package forge.web;
 
 import forge.StaticData;
+import forge.card.CardEdition;
 import forge.card.CardRules;
 import forge.card.CardType;
 import forge.card.ColorSet;
@@ -14,6 +15,7 @@ import forge.web.ToBrowser.CatalogueRow;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
@@ -58,6 +60,26 @@ final class CardCatalog {
 
     static CardCatalog get() {
         return Holder.INSTANCE;
+    }
+
+    private static final class Sets {
+        static final ToBrowser.CardSets ALL = build();
+
+        private static ToBrowser.CardSets build() {
+            final List<CardEdition> editions = new ArrayList<>();
+            for (final CardEdition e : StaticData.instance().getEditions()) {
+                if (!e.getAllCardsInSet().isEmpty()) {
+                    editions.add(e);
+                }
+            }
+            Collections.sort(editions);
+            Collections.reverse(editions);
+            return new ToBrowser.CardSets(editions.stream().map(e -> new ToBrowser.LimitedEdition(e.getCode(), e.getName())).toList());
+        }
+    }
+
+    static ToBrowser.CardSets sets() {
+        return Sets.ALL;
     }
 
     private static CardCatalog build() {

@@ -19,7 +19,7 @@ final class FromBrowser {
     // ---- Start page and lobby ----------------------------------------------------------------------------------
 
     /** Messages that are only their name. */
-    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
+    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, cardSets, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede, macroRecord, macroRepeat,
         campaignLeave, conquestMove, conquestBattle, rewardClaim, conquestParty, trading,
         conquestPlanes, campaignPrefs, campaignPrefsReset,
@@ -206,7 +206,8 @@ final class FromBrowser {
     /** A page of the catalogue, where request is echoed back so a late answer to an old query is dropped. */
     @Command("catalogue")
     record CatalogueQuery(int request, String text, String colours, String type, String filters, String sort, int offset,
-            boolean showAll, @Nullable String identity, @Nullable String source, @Nullable String group) {
+            boolean showAll, @Nullable String identity, @Nullable String source, @Nullable String group,
+            @Nullable List<String> sets, @Nullable String format) {
     }
 
     @Command("importRead")

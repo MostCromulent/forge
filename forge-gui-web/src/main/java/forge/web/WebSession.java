@@ -503,6 +503,7 @@ public final class WebSession implements IHasForgeLog {
                 }
             }
             case "cardPoolDetails" -> channel.send(Lobby.cardPoolDetails());
+            case "cardSets" -> channel.send(CardCatalog.sets());
             case "cardSearch" -> channel.send(new CardSearch(
                     DeckCatalog.searchCardNames(Wire.decode(msg, SearchCards.class).query(), CARD_SEARCH_LIMIT)));
             case "printings" -> {

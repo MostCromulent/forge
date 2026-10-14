@@ -409,6 +409,7 @@ function apply(msg: ServerMessage): void {
     case 'limitedOptions': model.limitedOptions = msg; break;
     case 'cardPools': model.cardPools = msg.groups; break;
     case 'cardPoolDetails': model.cardPoolDetails = msg; break;
+    case 'cardSets': model.cardSets = msg.sets; break;
     case 'limitedPools': model.limitedPools = msg; break;
     case 'limitedResult': model.limitedResult = msg; break;
     case 'conquestSaves': model.conquestSaves = msg; break;

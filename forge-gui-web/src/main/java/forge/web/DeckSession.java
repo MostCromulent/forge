@@ -14,6 +14,7 @@ import forge.deck.io.DeckSerializer;
 import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.item.PaperCard;
+import forge.itemmanager.SFilterUtil;
 import forge.model.FModel;
 import forge.util.FileSection;
 import forge.util.Localizer;
@@ -378,8 +379,8 @@ final class DeckSession {
                 ? c -> df.isLegalCommander(c.getRules()) && !c.getRules().getType().hasSubtype("Background")
                 : null;
         final ColorSet within = q.identity() == null ? null : ColorSet.fromNames(q.identity().toCharArray());
-        final Predicate<PaperCard> only = within == null ? commanderOnly
-                : c -> c.getRules().getColorIdentity().hasNoColorsExcept(within) && (commanderOnly == null || commanderOnly.test(c));
+        final Predicate<PaperCard> only = SFilterUtil.optimizedAnd(printedIn(q.sets(), q.format()), within == null ? commanderOnly
+                : c -> c.getRules().getColorIdentity().hasNoColorsExcept(within) && (commanderOnly == null || commanderOnly.test(c)));
         final CardPool inDeck = deck.getAllCardsInASinglePool(true, false);
         final Function<PaperCard, String> problems = Legality.cardProblems(check, commanders);
         final DeckEditor.Collection collection = e == null ? null : e.collection();
@@ -389,6 +390,13 @@ final class DeckSession {
                 q.offset(), q.showAll()), problems, only, inDeck::countByName,
                 collection == null ? null : c -> new CardCatalog.Extra(collection.isNew().test(c) ? Boolean.TRUE : null, null,
                         owned == null ? null : owned.countByName(c.getName()), null, null, null));
+    }
+
+    /** Cards printed in any of these sets and legal in this format, as desktop's card filters read them: any printing counts. */
+    private static Predicate<PaperCard> printedIn(final List<String> sets, final String format) {
+        final GameFormat named = format == null ? null : FModel.getFormats().getFormat(format);
+        return SFilterUtil.optimizedAnd(sets == null || sets.isEmpty() ? null : new GameFormat(null, sets, null).getFilterRules(),
+                named == null ? null : named.getFilterRules());
     }
 
     private ImportResult fetched(final ImportFetch fetch) {

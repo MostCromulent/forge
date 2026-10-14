@@ -162,6 +162,11 @@ final class ToBrowser {
     record CardPools(List<CardPoolGroup> groups) {
     }
 
+    /** Every edition, newest first, for the catalogue's set filter. Asked for the first time that filter opens. */
+    @Message("cardSets")
+    record CardSets(List<LimitedEdition> sets) {
+    }
+
     /** What the card pool picker shows beyond the names: where each format's cards come from. */
     @Message("cardPoolDetails")
     record CardPoolDetails(List<CardPoolLine> lines) {

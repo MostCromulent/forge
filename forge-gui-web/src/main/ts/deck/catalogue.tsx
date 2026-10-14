@@ -9,7 +9,7 @@ import { AnyOf, Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } 
 import type { Actions } from '../actions';
 import type { CardHandlers } from './drag';
 import type { Model } from '../model';
-import type { CatalogueRow, EditorState } from '../protocol';
+import type { CatalogueRow, EditorState, LimitedEdition } from '../protocol';
 import { store, stored } from '../storage';
 import { addCard, choosesPrintings, preferredPrinting } from './preferred';
 import { t, type TextKey } from '../text';
@@ -77,13 +77,14 @@ export function Catalogue({ model, actions, state, handlers }: {
   const [view, setView] = useState<'cards' | 'table'>(() => storedView());
   const asked = useRef(0);
   const query = { text, colours: [...colours].join(''), type, filters: asSyntax(filter), sort, showAll: filter.showAll,
-    identity: owned ? filter.identity ?? undefined : undefined };
+    identity: owned ? filter.identity ?? undefined : undefined, sets: filter.sets, format: filter.format ?? undefined };
 
   // The deck's rules decide which cards show, so a new commander or check asks again
   useEffect(() => {
     asked.current = 0;
     actions.queryCatalogue(0, { ...query, offset: 0 });
-  }, [text, query.colours, type, query.filters, sort, filter.showAll, query.identity, state.check, state.identity, state.commanderWanted]);
+  }, [text, query.colours, type, query.filters, sort, filter.showAll, query.identity, filter.sets.join(), filter.format, state.check, state.identity,
+    state.commanderWanted]);
 
   // A page of a conquest's collection, left from that page, is not this deck's catalogue
   const page = model.catalogue && !model.catalogue.source ? model.catalogue : null;
@@ -109,7 +110,7 @@ export function Catalogue({ model, actions, state, handlers }: {
       actions.queryCatalogue(0, { ...query, offset: rows.length });
     }
   };
-  const kinds = catalogueKinds(state);
+  const kinds = catalogueKinds(state, model, actions);
   const narrowed = !!typed || colours.size > 0 || type !== 'any'
     || kinds.some(k => k.id !== 'identity' && k.chip(filter) !== null && !k.fixed?.(filter));
   const clearAll = () => {
@@ -172,7 +173,9 @@ type Range = { from: number | null; to: number | null } | null;
 interface CatalogueFilter {
   mv: Range;
   rarity: string[];
-  set: string | null;
+  /** Set codes, any printing in which counts. The server reads these and the format, which search syntax cannot say. */
+  sets: string[];
+  format: string | null;
   rules: string | null;
   subtype: string | null;
   power: Range;
@@ -184,7 +187,7 @@ interface CatalogueFilter {
 }
 
 const NO_FILTER: CatalogueFilter = {
-  mv: null, rarity: [], set: null, rules: null, subtype: null, power: null, toughness: null, colourCount: null, showAll: false,
+  mv: null, rarity: [], sets: [], format: null, rules: null, subtype: null, power: null, toughness: null, colourCount: null, showAll: false,
   identity: null,
 };
 const RARITIES: [string, TextKey][] = [['common', 'lblCommon'], ['uncommon', 'lblUncommon'], ['rare', 'lblRare'], ['mythic', 'lblMythic']];
@@ -197,13 +200,12 @@ function asSyntax(f: CatalogueFilter): string {
   return [
     ...between('mv', f.mv), ...between('pow', f.power), ...between('tou', f.toughness), ...between('c', f.colourCount),
     f.rarity.length ? `(${f.rarity.map(r => `r:${r}`).join(' | ')})` : '',
-    f.set ? `s:${f.set.replace(/\s/g, '')}` : '',
     quoted('o', f.rules), quoted('t', f.subtype),
   ].filter(Boolean).join(' ');
 }
 
 /** Everything the catalogue can be narrowed by beyond the bar, as desktop's card filters have it. */
-function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
+function catalogueKinds(state: EditorState, model: Model, actions: Actions): FilterKind<CatalogueFilter>[] {
   const rules = t('lblWebFilterGroupRules');
   const numbers = t('lblWebFilterGroupNumbers');
   const printing = t('lblWebFilterGroupPrinting');
@@ -217,7 +219,7 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
       done();
     }} />,
   });
-  const words = (id: 'set' | 'rules' | 'subtype', group: string, label: string, placeholder: string): FilterKind<CatalogueFilter> => ({
+  const words = (id: 'rules' | 'subtype', group: string, label: string, placeholder: string): FilterKind<CatalogueFilter> => ({
     id, group, label,
     chip: f => f[id],
     clear: f => ({ ...f, [id]: null }),
@@ -237,7 +239,32 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
       panel: (f, set, done) => <AnyOf options={RARITIES.map(([r, name]) => [r, t(name)] as const)} value={f.rarity}
         apply={rarity => { set({ ...f, rarity }); done(); }} />,
     },
-    words('set', printing, t('lblSet'), t('lblWebFilterSetCode')),
+    {
+      id: 'sets', group: printing, label: t('lblSets'),
+      chip: f => (f.sets.length ? f.sets.join(', ') : null),
+      clear: f => ({ ...f, sets: [] }),
+      panel: (f, set, done) => {
+        if (!model.cardSets) actions.askCardSets();
+        return <SetsPanel sets={model.cardSets} value={f.sets} apply={sets => { set({ ...f, sets }); done(); }} />;
+      },
+    },
+    {
+      // Forge's formats under its own headings, blocks among them, as desktop's format filter lists them
+      id: 'format', group: printing, label: t('lblFormat'),
+      chip: f => f.format,
+      clear: f => ({ ...f, format: null }),
+      panel: (f, set, done) => (
+        <div class="fopts" role="radiogroup">
+          {model.cardPools.flatMap(group => [
+            <span key={group.name} class="mhead">{group.name}</span>,
+            ...group.formats.map(name => (
+              <button key={name} role="radio" aria-checked={f.format === name} class={f.format === name ? 'fopt on' : 'fopt'}
+                onClick={() => { set({ ...f, format: name }); done(); }}><i class="dot" />{name}</button>
+            )),
+          ])}
+        </div>
+      ),
+    },
     {
       // The commander's colours are the deck's rule, so the chip is fixed, except on a collection's deck, which has no such rule
       id: 'identity', group: deck, label: t('lblColorIdentity'),
@@ -269,6 +296,30 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
   // A limited deck's catalogue is its pool, where nothing is unusable; only a chosen commander sets an identity
   return kinds.filter(k => (k.id !== 'unusable' || !(state.limited || state.collection)) && (k.id !== 'source' || !!state.collection)
     && (k.id !== 'identity' || !!state.collection || (!!state.identity && !state.commanderWanted)));
+}
+
+/** Every set, found by name or code. A ticked set stays listed whatever is typed; Apply applies them. */
+function SetsPanel({ sets, value, apply }: { sets: readonly LimitedEdition[] | null; value: readonly string[]; apply: (codes: string[]) => void }) {
+  const [find, setFind] = useState('');
+  const [ticked, setTicked] = useState<Set<string>>(() => new Set(value));
+  if (!sets) return <p class="fnote">{t('lblWebEventLoading')}</p>;
+  const words = find.trim().toLowerCase();
+  const shown = sets.filter(s => ticked.has(s.code) || !words || s.name.toLowerCase().includes(words) || s.code.toLowerCase() === words);
+  return (
+    <>
+      <input type="search" autoFocus placeholder={t('lblWebFilterSetFind')} value={find} onInput={e => setFind(e.currentTarget.value)} />
+      <div class="fopts">
+        {shown.map(s => (
+          <button key={s.code} role="checkbox" aria-checked={ticked.has(s.code)} class={ticked.has(s.code) ? 'fopt box on' : 'fopt box'} onClick={() => {
+            const next = new Set(ticked);
+            if (!next.delete(s.code)) next.add(s.code);
+            setTicked(next);
+          }}><i class="dot" /><span class="fset">{s.name}</span><span class="fcode">{s.code}</span></button>
+        ))}
+      </div>
+      <div class="fapply"><button class="primary" onClick={() => apply([...ticked])}>{t('lblWebFilterApply')}</button></div>
+    </>
+  );
 }
 
 /** Lifts the card being added out of the catalogue, as a draft pick is lifted, to fly to its line in the deck. */

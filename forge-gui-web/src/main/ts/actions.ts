@@ -186,6 +186,8 @@ export interface Actions {
   setCardPool(cardPool: string | null): void;
   /** Where each format's cards come from, and the old snapshots, for the card pool picker; they arrive later in the model. */
   askCardPoolDetails(): void;
+  /** Every edition, for the catalogue's set filter; it arrives later in the model. */
+  askCardSets(): void;
   setVariant(variant: string, on: boolean): void;
   setArchenemy(index: number): void;
   setTeams(count: number): void;
@@ -370,6 +372,7 @@ export function createActions(send: Send): Actions {
     askExtraChoices: (index, section) => send({ t: 'extraChoices', index, section }),
     setCardPool: cardPool => send(cardPool ? { t: 'setCardPool', cardPool } : { t: 'setCardPool' }),
     askCardPoolDetails: () => send({ t: 'cardPoolDetails' }),
+    askCardSets: () => send({ t: 'cardSets' }),
     setPlayerCount: count => send({ t: 'setPlayerCount', count }),
     setMatchLength: games => send({ t: 'setMatchLength', games }),
     setMaxBracket: bracket => send({ t: 'setMaxBracket', bracket }),
