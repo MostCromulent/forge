@@ -470,12 +470,12 @@ public class YieldController {
      * yield state or APINA on), clears everything. Otherwise turns APINA on. So one
      * key acts as both "stop any yielding" and "start auto-passing" depending on state.
      */
-    public static void toggleAutoPassOrStopAll(IGameController ctrl, PlayerView local) {
+    public static void toggleAutoPassOrStopAll(IGameController ctrl, PlayerView local, IGuiGame gui) {
         if (ctrl == null) return;
         YieldController yc = ctrl.getYieldController();
         boolean apinaOn = FModel.getPreferences().getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS);
         if (yc.isYieldActive() || apinaOn) {
-            stopYielding(ctrl, local);
+            stopYielding(ctrl, local, gui);
             if (apinaOn) toggleAutoPassNoActions(ctrl);
         } else {
             toggleAutoPassNoActions(ctrl);
@@ -483,10 +483,11 @@ public class YieldController {
     }
 
     /**
-     * Ends every yield {@code local} has running. A netplay client's controller has no owner to clear on,
-     * so it asks the host to clear each one through the yield update path.
+     * Ends every running yield. On a local seat the controller's owner clears its own. A netplay client's controller
+     * has no owner, so the yields of {@code local} are cleared through the update path, which reaches the host, and
+     * {@code gui} shows the change.
      */
-    public static void stopYielding(IGameController ctrl, PlayerView local) {
+    public static void stopYielding(IGameController ctrl, PlayerView local, IGuiGame gui) {
         if (ctrl == null) return;
         YieldController yc = ctrl.getYieldController();
         if (yc.owner != null) {
@@ -497,6 +498,10 @@ public class YieldController {
         if (yc.getAutoPassUntilMarker() != null) ctrl.sendYieldUpdate(new YieldUpdate.ClearMarker(local));
         if (yc.autoPassUntilStackEmpty()) ctrl.sendYieldUpdate(new YieldUpdate.StackYield(local, false, false));
         if (yc.autoPassUntilEndOfTurn()) ctrl.sendYieldUpdate(new YieldUpdate.SetAutoPassUntilEndOfTurn(local, false));
+        if (gui != null) {
+            gui.refreshYieldUi(local);
+            gui.updateAutoPassPrompt();
+        }
     }
 
     /** Activate auto-pass-until-end-of-turn for {@code local} via the unified envelope path. */

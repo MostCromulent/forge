@@ -1216,7 +1216,7 @@ public class WebGuiGame extends NetworkGuiGame {
                 }
                 case "stopYield" -> {
                     // Ends whichever pass is running: a second press of End Turn, or a click on the chip naming it
-                    YieldController.stopYielding(controller, getCurrentPlayer());
+                    YieldController.stopYielding(controller, getCurrentPlayer(), this);
                     send(controlsMessage());
                 }
                 case "undo" -> controller.undoLastAction();
