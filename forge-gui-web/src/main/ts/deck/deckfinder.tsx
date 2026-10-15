@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { store, stored, storeJson, storedJson } from '../storage';
 import { useDeckView } from './deckhalf';
-import { SITES } from './importer';
 import { AI_ICON, ColourToggles, Pips, toggled } from '../symbols';
 import { changeUi, ui } from '../ui';
 import { DECK_FORMATS } from './editor';
@@ -13,8 +12,9 @@ import type { Model } from '../model';
 import type { Bracket, DeckDetails, DeckMatches, DeckSummary, Seat } from '../protocol';
 import { Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } from './filters';
 import { t, type TextKey } from '../text';
-import { Backdrop } from '../dialog';
 import { CardGroup, Curve } from './deckview';
+import { NewDeck } from './newdeck';
+import { NameTaken } from './nametaken';
 
 const SEARCH_DEBOUNCE_MS = 200;
 /** Every net-deck category is its own source, so they answer to one facet and list their categories under it. */
@@ -141,7 +141,6 @@ export function DeckFinder({ model, actions, seat, close }: {
   const picker = useRef<HTMLInputElement>(null);
   const [adding, setAdding] = useState(false);
   const [link, setLink] = useState('');
-  const linkField = useRef<HTMLInputElement>(null);
   const [deleting, setDeleting] = useState(false);
   const [typed, setTyped] = useState('');
   const format = model.lobby?.format ?? ui.browse?.format ?? 'Constructed';
@@ -161,10 +160,6 @@ export function DeckFinder({ model, actions, seat, close }: {
   useEffect(() => {
     find.current?.focus();
   }, []);
-  // Escape reaches the dialog before the finder only while the focus is inside it
-  useEffect(() => {
-    if (adding) linkField.current?.focus();
-  }, [adding]);
   // Only the server reads every deck's cards, and asks again once the list is rebuilt, since that renews the keys
   useEffect(() => { if (filter.card) actions.deckQuery('card', filter.card); }, [filter.card, model.decks]);
   useEffect(() => { if (filter.sideboard) actions.deckQuery('sideboard', filter.sideboard); }, [filter.sideboard, model.decks]);
@@ -377,58 +372,11 @@ export function DeckFinder({ model, actions, seat, close }: {
               </>
             : <button class="primary" disabled={!chosen} onClick={edit}>{summary?.readOnly ? t('lblWebFinderEditCopy') : t('lblEdit')}</button>}
         </footer>
-        {adding && (
-          <Backdrop dismiss={() => setAdding(false)}
-            onKeyDown={e => {
-              if (e.key !== 'Escape') return;
-              e.stopPropagation();
-              setAdding(false);
-            }}>
-            <div class="dialog new-deck">
-              <div class="dialog-head">
-                <h3>{t('lblNewDeck')}</h3>
-                <button class="dk-close" title={t('lblClose')} onClick={() => setAdding(false)}>&times;</button>
-              </div>
-              <section>
-                <h4>{t('lblWebFinderFromSite')}</h4>
-                <p>{t('lblWebFinderFromSiteHint', SITES)}</p>
-                <div class="linkfield">
-                  <input ref={linkField} class="find" placeholder="https://moxfield.com/decks/…" value={link}
-                    onInput={e => setLink(e.currentTarget.value)}
-                    onPaste={e => { fetchLink(e.clipboardData?.getData('text') ?? ''); e.preventDefault(); }}
-                    onKeyDown={e => { if (e.key === 'Enter') fetchLink(link); }} />
-                  <button class="primary" onClick={() => fetchLink(link)}>{t('lblWebImportFetch')}</button>
-                </div>
-              </section>
-              <section>
-                <h4>{t('lblWebFinderOtherWays')}</h4>
-                <button class="way" onClick={() => { actions.openEditor({ newFormat: format, seat: seat?.index }); close(); }}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="11" height="15" rx="2" /><path d="M9 21h9a2 2 0 0 0 2-2V8" /><path d="M9.5 8v5M7 10.5h5" /></svg>
-                  <span><b>{t('lblWebFinderBuild')}</b><small>{t('lblWebFinderBuildHint')}</small></span>
-                </button>
-                <button class="way" onClick={() => { setAdding(false); importer(); }}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h8" /><circle cx="4" cy="6" r=".8" /><circle cx="4" cy="12" r=".8" /><circle cx="4" cy="18" r=".8" /></svg>
-                  <span><b>{t('lblWebFinderPasteList')}</b><small>{t('lblWebFinderPasteListHint')}</small></span>
-                </button>
-                <button class="way" onClick={() => picker.current?.click()}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M12 17v-6M9.5 13.5 12 11l2.500 2.500" /></svg>
-                  <span><b>{t('lblWebFinderAddFile')}</b><small>{t('lblWebFinderAddFileHint')}</small></span>
-                </button>
-              </section>
-            </div>
-          </Backdrop>
-        )}
+        {adding && <NewDeck link={link} setLink={setLink} fetchLink={fetchLink} close={() => setAdding(false)}
+          build={() => { actions.openEditor({ newFormat: format, seat: seat?.index }); close(); }}
+          pasteList={() => { setAdding(false); importer(); }} addFile={() => picker.current?.click()} />}
         {file && model.nameTaken && (
-          <Backdrop>
-            <div class="dialog">
-              <h3>{t('lblWebImportNameTaken', model.nameTaken)}</h3>
-              <div class="actions">
-                <button onClick={() => setFile(null)}>{t('lblCancel')}</button>
-                <button onClick={() => actions.addDeckFile(file, format, 'replace')}>{t('lblWebDraftReplaceIt')}</button>
-                <button class="primary" onClick={() => actions.addDeckFile(file, format, 'keep')}>{t('lblWebImportKeepBoth')}</button>
-              </div>
-            </div>
-          </Backdrop>
+          <NameTaken name={model.nameTaken} cancel={() => setFile(null)} resolve={clash => actions.addDeckFile(file, format, clash)} />
         )}
       </div>
     </div>

@@ -16,21 +16,22 @@ import { artUrl } from '../sleeves';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from '../looks';
 import { animateCardMoves, noteBoard, resetMotion, showCount } from './motion';
 import { boardBehind } from './pace';
-import { canShatter, shatter } from './shatter';
 import { byId, q, replay, make, onPressOutside, relayout } from '../dom';
 import { setting } from '../settings';
 import { logTints } from './log';
 import type { CardClick } from './cards';
 import type { Actions } from '../actions';
-import type { CardStateView, CardView, GameEvent, GameView, PlayerView, Ref, StateMessage, ZoneType } from '../protocol';
+import type { CardStateView, CardView, GameEvent, PlayerView, ZoneType } from '../protocol';
 import { avatarModifiers, commandKind, type CommandKind } from './command';
 import { notePick, resetOverlay } from './overlay';
-import { coinInAir, readyCoin, tossCoin } from './coin';
+import { resetStarter, showStarter, wentFirst } from './starter';
+import { announceTurn, resetTurnBanner } from './turnbanner';
+import { noticeLosses, renderGameOver, resetGameOver } from './gameover';
 import { hovers, isTouch, longPress } from '../press';
 import { fieldChanged, repeatTap, seatToOpen, tapInspects } from './portrait';
 import { isPortrait } from '../form';
 import { sheet, swipeDown } from '../sheet';
-import { changeUi, redrawUi, ui } from '../ui';
+import { changeUi, ui } from '../ui';
 import { t, type TextKey } from '../text';
 import { ICONS, iconSvg } from '../icons';
 import { COLOUR_BITS, COMMANDER_LETHAL, COMMANDER_WARNING } from './rules';
@@ -45,30 +46,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   if (!g) return;
   // Before anything is redrawn, so each card's move is measured from where it stood on screen
   noteBoard();
-  for (const e of events) {
-    if (e.kind === 'coinTossed') toss(model, model.localPlayers.includes(e.winner.ref));
-    if (e.kind === 'gameStarted') {
-      firstPlayer = e.first.ref;
-      firstDue = true;
-    }
-  }
-  const choice = model.prompt?.starterChoice;
-  // The winner is asked who starts as the toss is made, and that prompt can reach the page before the toss's own event
-  if (choice === 'toss') toss(model, true);
-  // Who goes first is said or asked once the coin has come down
-  if (!coinInAir()) {
-    if (firstDue) {
-      firstDue = false;
-      // Who chose who starts already knows who does
-      if (!choseStarter) revealFirst(model, firstPlayer);
-    }
-    if (choice && !choseStarter) {
-      choseStarter = true;
-      chooseFirst(model, actions, choice);
-    }
-  }
-  // Answered from the prompt's own buttons instead, or a game conceded before anyone chose, the faces have nothing left to ask
-  if (!choice || model.gameOver) document.querySelector('#first-reveal.choosing')?.remove();
+  showStarter(model, actions, events);
   noticeLosses(model, actions);
   // A prompt offering cards or players to pick, or a spell picked on the stack, dims everything else (board.css); paying a cost is not such a pick
   const p = model.prompt;
@@ -375,7 +353,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   avatar.classList.toggle('selectable', (model.prompt?.selectablePlayers ?? []).some(r => r.ref === player.$key));
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
   // Who went first stays marked until their first turn is over, for anyone who missed the reveal
-  avatar.classList.toggle('first', firstPlayer === player.$key && !firstDue && (game(model)?.Turn ?? 0) <= 1);
+  avatar.classList.toggle('first', wentFirst(player.$key) && (game(model)?.Turn ?? 0) <= 1);
   // A player who has lost leaves an empty socket: their portrait broke, or breaks now, out of it
   avatar.classList.toggle('lost', !!player.HasLost);
   renderHandFan(q(root, '.hand-fan'), model, player);
@@ -596,156 +574,21 @@ function castFromCommand(model: Model, cards: CardView[]): CardView[] {
   return cards.filter(c => ['commander', 'signature'].includes(commandKind(c, stateOf(model, c))));
 }
 
-// The turn last announced, null on a new table so one first seen part way through says nothing until the turn changes
-let announced: string | null = null;
-
 /** Clears what is kept per game, so a new table announces its first turn even when the same player starts it. */
 export function resetTable(): void {
-  announced = null;
+  resetTurnBanner();
   resetMotion();
   stopWaiting();
   forgetPictures();
-  firstPlayer = null;
-  firstDue = false;
-  tossed = false;
-  readyCoin();
+  resetStarter();
   seating = null;
   outSaid = false;
   document.getElementById('out-banner')?.remove();
-  choseStarter = false;
-  broken = null;
   resetSchemes();
   resetStack();
   resetHand();
   resetOverlay();
-  titleReady = true;
-  finalRunning = false;
-  byId('match').classList.remove('ending');
-  const over = byId('game-over');
-  over.hidden = true;
-  over.replaceChildren();
-}
-
-/** The player the game said takes the first turn, from the moment it is settled until the next game. */
-let firstPlayer: number | null = null;
-/** The game has said who starts and the page has yet to show it, which waits for the coin. */
-let firstDue = false;
-/** This viewer was asked who starts, having won the toss or lost the last game. */
-let choseStarter = false;
-/** The first game's toss has been shown. */
-let tossed = false;
-
-/** Shows the toss once, to a player at the table, whichever of its event and the winner's prompt arrives first. */
-function toss(model: Model, heads: boolean): void {
-  const name = me(model)?.Name;
-  if (tossed || name === undefined) return;
-  tossed = true;
-  // The page is drawn again as the coin is put away, which is when who goes first is said or asked
-  tossCoin(heads, t(heads ? 'lblYouHaveWonTheCoinToss' : 'lblYouLostTheCoinToss', name), redrawUi);
-}
-
-/** Two players are asked to play or draw, so your own face answers OK and the other cancels, while with more a face picks that player. */
-function chooseFirst(model: Model, actions: Actions, choice: string): void {
-  const mine = me(model)?.$key;
-  const two = players(model).length === 2;
-  revealFirst(model, null, t(choice === 'toss' ? 'lblWebBoardWonCoinToss' : 'lblWebBoardLostLastGame'), key => {
-    if (!two) actions.selectPlayer(key);
-    else if (key === mine) actions.ok();
-    else actions.cancel();
-    document.getElementById('first-reveal')?.remove();
-  });
-}
-
-/** Shows who goes first over the board, or with pick asks it: the faces are buttons and it stays until one is chosen. */
-function revealFirst(model: Model, first: number | null, said?: string, pick?: (key: number) => void): void {
-  const everyone = players(model);
-  const starter = everyone.find(p => p.$key === first);
-  if (!starter && !pick) return;
-  document.getElementById('first-reveal')?.remove();
-  const reveal = document.createElement('div');
-  reveal.id = 'first-reveal';
-  reveal.setAttribute('role', pick ? 'dialog' : 'status');
-  reveal.classList.toggle('choosing', !!pick);
-  const faces = make('div', 'reveal-faces');
-  for (const p of everyone) {
-    const face = document.createElement(pick ? 'button' : 'div');
-    face.className = p.$key === first ? 'reveal-face first' : 'reveal-face';
-    if (pick) face.onclick = () => pick(p.$key);
-    const url = playerAvatarUrl(p);
-    const picture = document.createElement(url ? 'img' : 'span');
-    if (picture instanceof HTMLImageElement) {
-      picture.alt = '';
-      picture.src = url;
-    } else {
-      picture.textContent = (p.Name ?? '?').slice(0, 1).toUpperCase();
-    }
-    const name = make('span', 'reveal-name');
-    name.textContent = p.Name ?? '';
-    face.append(picture, name);
-    faces.append(face);
-  }
-  const line = document.createElement('p');
-  line.textContent = said ?? (starter && isLocal(model, starter) ? t('lblWebBoardYouGoFirst') : t('lblWebBoardPlayerGoesFirst', starter?.Name ?? ''));
-  reveal.append(faces, line);
-  byId('match').append(reveal);
-  reveal.addEventListener('animationend', e => {
-    if (e.animationName === 'first-reveal') reveal.remove();
-  });
-}
-
-/** Announces the turn a state message starts before it is shown, and runs `then` only if a banner went up, as it leaves. */
-export function announceComing(model: Model, msg: StateMessage, then: () => void): boolean {
-  const g = game(model);
-  const delta = msg.deltas[model.root] as { Turn?: number; PlayerTurn?: Ref } | undefined;
-  // Only the turn's number starts a turn: its player is named in the cleanup step, which can come a message earlier
-  if (msg.full || !g || !delta || delta.Turn === undefined) {
-    return false;
-  }
-  return announce(model, delta.Turn, deref(model, delta.PlayerTurn ?? g.PlayerTurn), then);
-}
-
-// Only catches the turn a table was first drawn in, as every later turn is announced when its message arrives
-function announceTurn(model: Model, g: GameView): void {
-  if (announced === null) announce(model, g.Turn, deref(model, g.PlayerTurn), () => {});
-}
-
-/** How long before the turn banner has gone that the turn's own actions start. */
-const TURN_OVERLAP_MS = 300;
-
-function announce(model: Model, turnNumber: number | undefined, active: PlayerView | undefined, then: () => void): boolean {
-  const turn = `${turnNumber ?? 0}/${active?.$key ?? ''}`;
-  if (!active || announced === turn) {
-    return false;
-  }
-  const seenBefore = announced !== null;
-  announced = turn;
-  if (!seenBefore && turnNumber !== 1) {
-    return false;
-  }
-  const mine = isLocal(model, active);
-  // With several opponents most turns are someone else's, and the phase pill already names whose it is
-  if (!mine && players(model).length > 2) {
-    return false;
-  }
-  const banner = make('div', `turn-banner${mine ? ' mine' : ''}`);
-  banner.textContent = mine ? t('lblWebPhaseYourTurn') : t('lblWebBoardPlayersTurn', active.Name ?? '');
-  // The banner takes the pill's place instead of covering it, because the pill animates its own width
-  const strip = byId('phase-strip');
-  strip.append(banner);
-  strip.classList.add('announcing');
-  // The pill returns as the banner starts to fade (84% of turn-sweep), so one fades in while the other fades out
-  const sweep = parseFloat(getComputedStyle(banner).animationDuration) * 1000;
-  // unless the next turn's banner has gone up meanwhile, which a turn that passes at once allows
-  setTimeout(() => {
-    if ([...strip.querySelectorAll('.turn-banner')].at(-1) === banner) strip.classList.remove('announcing');
-  }, sweep * 0.84);
-  // The turn goes on just before the banner has quite gone
-  setTimeout(then, Math.max(0, sweep - TURN_OVERLAP_MS));
-  // The end of the ::after light's animation reaches the banner too, so the sweep is named or the banner leaves early
-  banner.addEventListener('animationend', e => {
-    if (e.animationName === 'turn-sweep') banner.remove();
-  });
-  return true;
+  resetGameOver();
 }
 
 // A life change is easy to miss as a number, so the amount floats off the avatar and the ring answers
@@ -916,219 +759,4 @@ function tileBand(kind: CommandKind, state: Partial<CardStateView>, tax: number)
   }
   if (kind === 'signature') return t('lblWebBoardSignature');
   return tax > 0 ? t('lblWebBoardTax', tax) : '';
-}
-
-/** Players whose portrait has broken this game, so each breaks once. Null until the table is first drawn. */
-let broken: Set<number> | null = null;
-/** False while a portrait breaking at the end of the game has not reached the moment its title follows. */
-let titleReady = true;
-let finalRunning = false;
-/** The longest the result waits on a breaking portrait: a slow machine draws its frames too far apart to keep the break's pace. */
-const TITLE_LIMIT_MS = 6000;
-
-/** Breaks the portrait of each player who has just lost, taking the losses a table already had when first seen as broken. */
-function noticeLosses(model: Model, actions: Actions): void {
-  const lost = players(model).filter(p => p.HasLost);
-  if (!broken) {
-    broken = new Set(lost.map(p => p.$key));
-    return;
-  }
-  const fresh = lost.filter(p => !broken!.has(p.$key));
-  if (!fresh.length) return;
-  fresh.forEach(p => broken!.add(p.$key));
-  // The loss and the end of the game can arrive a message apart, so the ending is decided a moment later
-  titleReady = false;
-  window.setTimeout(() => breakPortraits(model, fresh, actions), 120);
-}
-
-function breakPortraits(model: Model, losers: PlayerView[], actions: Actions): void {
-  const g = game(model);
-  const final = !!g?.GameOver;
-  let released = false;
-  const release = () => {
-    if (released) return;
-    released = true;
-    titleReady = true;
-    const now = game(model);
-    if (now) renderGameOver(model, now, actions);
-  };
-  const seated = losers
-    .map(p => ({ p, avatar: document.querySelector<HTMLElement>(`.seat[data-player="${p.$key}"] .avatar`) }))
-    .filter(s => s.avatar && s.avatar.offsetWidth);
-  if (!canShatter() || !seated.length) {
-    release();
-    return;
-  }
-  const centre = pageCentre();
-  seated.forEach(({ p, avatar }, i) => {
-    const centreStage = final && i === 0;
-    const run = shatter({
-      from: avatar!.getBoundingClientRect(), image: playerAvatarUrl(p), final: centreStage, centre,
-      onTitle: centreStage ? release : undefined,
-    });
-    if (centreStage) {
-      finalRunning = true;
-      const match = byId('match');
-      match.style.setProperty('--end-x', centre.x + 'px');
-      match.style.setProperty('--end-y', centre.y + 'px');
-      match.classList.add('ending');
-      // Without WebGL nothing has shown yet, so the result is not held back
-      run.catch(release);
-      window.setTimeout(release, TITLE_LIMIT_MS);
-    } else {
-      run.catch(() => {});
-    }
-  });
-  if (!final) release();
-}
-
-/** The middle of the window, not of the board, so a breaking portrait lands where the result then shows the winner's face. */
-function pageCentre(): { x: number; y: number } {
-  return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-}
-
-/** Each player's games won in the match: their portrait, their name and the count, the match's winner in gold. */
-function drawTally(root: HTMLElement, everyone: PlayerView[], wins: (p: PlayerView) => number | undefined,
-  champion: PlayerView | undefined): void {
-  const counted = everyone.filter(p => wins(p) !== undefined);
-  root.hidden = counted.length === 0;
-  for (const p of counted) {
-    const row = make('div', p === champion ? 'tally-player champion' : 'tally-player');
-    row.innerHTML = '<span class="tally-face"></span><span class="tally-name"></span><b class="tally-won"></b>';
-    q(row, '.tally-face').style.backgroundImage = cssUrl(playerAvatarUrl(p));
-    q(row, '.tally-name').textContent = p.Name ?? '';
-    const n = wins(p) ?? 0;
-    q(row, '.tally-won').textContent = String(n);
-    row.title = t(n === 1 ? 'lblWebBoardOneGameWon' : 'lblWebBoardGamesWon', n);
-    root.append(row);
-  }
-}
-
-/** How many motes of light rise past a winner's portrait. */
-const WIN_MOTES = 16;
-
-/** Shows the result once the losing portrait has broken, drawn once per ending so what fades in does so once. */
-function renderGameOver(model: Model, g: GameView, actions: Actions): void {
-  const root = byId('game-over');
-  const show = model.gameOver && titleReady;
-  // Looking over the final board lifts the ending off it, and the result comes back from a button
-  byId('match').classList.toggle('ending', (show || finalRunning) && !root.classList.contains('viewing'));
-  if (!show) {
-    if (!root.hidden) {
-      root.hidden = true;
-      root.classList.remove('viewing');
-      root.replaceChildren();
-    }
-    return;
-  }
-  // A gauntlet's result and the match's score follow the game's end, so a panel drawn before they arrive is drawn again
-  const limited = model.limitedResult;
-  // A campaign's result says which buttons the ending offers, so the panel waits for it
-  const campaign = model.campaignResult;
-  if (model.campaignSave && !campaign) return;
-  const drawnFor = `${!!limited}/${campaign ? `${campaign.won}:${campaign.matchOver}` : ''}/${model.matchScore.map(s => `${s.player.ref}:${s.won}`).join(',')}`;
-  if (!root.hidden && root.dataset.drawnFor === drawnFor) return;
-  root.dataset.drawnFor = drawnFor;
-  root.hidden = false;
-  const matchOver = !!g.MatchOver;
-  const everyone = players(model);
-  const winner = everyone.find(p => p.Name === g.WinningPlayerName);
-  const losers = everyone.filter(p => p.HasLost);
-  const seated = everyone.some(p => isLocal(model, p));
-  const won = !!winner && isLocal(model, winner);
-  const outcome = !winner ? 'draw' : !seated ? 'watched' : won ? 'win' : 'lose';
-  // In a match of several games, a game is won or lost, and only the match is a victory or a defeat
-  const games = g.NumGamesInMatch ?? 1;
-  const inMatch = games > 1;
-  const midMatch = inMatch && !matchOver;
-  const word = t(midMatch
-    ? ({ draw: 'lblWebBoardDraw', watched: 'lblWebBoardGameOver', win: 'lblWebBoardGameWon', lose: 'lblWebBoardGameLost' } as const)[outcome]
-    : ({ draw: 'lblWebBoardDraw', watched: 'lblWebBoardGameOver', win: 'lblWebBoardVictory', lose: 'lblWebBoardDefeat' } as const)[outcome]);
-  const wins = (p: PlayerView) => model.matchScore.find(s => s.player.ref === p.$key)?.won;
-  // Two players' match score reads as the winner's wins to the other's, as it is said aloud
-  const score = winner && everyone.length === 2 && wins(winner) !== undefined
-    ? [wins(winner) ?? 0, wins(everyone.find(p => p !== winner) as PlayerView) ?? 0] : null;
-  // The count of games played is taken as the game starts, so it counts the ones before this
-  const gameNumber = (g.NumPlayedGamesInMatch ?? 0) + 1;
-  const sub = !winner ? t('lblWebBoardNobodyWins')
-    : midMatch ? (won ? t('lblWebBoardYouWinGame', gameNumber) : t('lblWebBoardPlayerWinsGame', winner.Name ?? '', gameNumber))
-    : inMatch && score ? (won ? t('lblWebBoardYouWinMatchScore', score[0], score[1])
-      : t('lblWebBoardPlayerWinsMatchScore', winner.Name ?? '', score[0], score[1]))
-    : inMatch ? (won ? t('lblWebBoardYouWinMatch') : t('lblWebBoardPlayerWinsMatch', winner.Name ?? ''))
-    : won && everyone.length === 2 && losers.length === 1 ? t('lblWebBoardPlayerHasLost', losers[0].Name ?? '')
-    : won ? t('lblWebBoardLastOneStanding')
-    : t('lblWebBoardPlayerWins', winner.Name ?? '');
-  root.innerHTML = '<div class="panel"><p class="stage"></p><div class="face-wrap"><div class="face"></div></div><p class="word"></p><div class="rule"></div><p class="sub"></p>'
-    + '<div class="tally"></div><div class="actions"></div></div>'
-    + '<button class="to-result primary"></button>';
-  q(root, '.to-result').textContent = t('lblWebBoardShowResult');
-  const stage = q(root, '.stage');
-  stage.hidden = !inMatch;
-  stage.textContent = matchOver ? t('lblWebBoardMatchOverBestOf', games) : t('lblWebBoardGameBestOf', gameNumber, games);
-  drawTally(q(root, '.tally'), inMatch ? everyone : [], wins, matchOver ? winner : undefined);
-  const view = (board: boolean) => {
-    root.classList.toggle('viewing', board);
-    byId('match').classList.toggle('ending', !board);
-  };
-  q(root, '.to-result').onclick = () => view(false);
-  const panel = q(root, '.panel');
-  panel.classList.add(outcome);
-  const face = q(root, '.face');
-  // Your own win is lit from behind the portrait: rays that stay, and motes that rise past it once
-  if (outcome === 'win') {
-    face.before(make('span', 'win-rays'), ...Array.from({ length: WIN_MOTES }, (_, i) => {
-      const mote = make('span', 'win-mote');
-      mote.style.setProperty('--at', `${(i * 83) % 300 - 150}px`);
-      mote.style.setProperty('--drift', `${(i * 53) % 50 - 25}px`);
-      mote.style.setProperty('--wait', `${(0.35 + i * 0.16).toFixed(2)}s`);
-      return mote;
-    }));
-  }
-  if (winner) face.style.backgroundImage = cssUrl(playerAvatarUrl(winner));
-  face.hidden = !winner;
-  q(root, '.word').textContent = word;
-  q(root, '.sub').textContent = limited
-    ? t('lblWebBoardGauntletResult', sub, limited.round, limited.rounds, limited.wins, limited.losses)
-    : campaign?.line ?? sub;
-  const buttons = q(root, '.actions');
-  const add = (label: string, primary: boolean, onClick: () => void) => {
-    const b = document.createElement('button');
-    b.textContent = label;
-    if (primary) b.className = 'primary';
-    b.onclick = onClick;
-    buttons.append(b);
-  };
-  // A campaign's match ends as its mode says, and the battlefield can be looked at whatever the mode offers
-  if (campaign) {
-    const quit = () => { actions.quitMatch(); actions.leave(); };
-    const draw = () => {
-      buttons.replaceChildren();
-      const does: Record<string, () => void> = {
-        nextGame: () => actions.nextGame(), leave: () => actions.leave(), restart: () => actions.restartGame(), quit,
-        // A forfeit loses what was paid to enter, so it is asked first, as desktop asks
-        forfeit: () => {
-          buttons.replaceChildren();
-          const ask = make('p', 'ask');
-          ask.textContent = t('lblWebQuestForfeitAsk');
-          buttons.append(ask);
-          add(t('lblCancel'), true, draw);
-          add(t('lblWebQuestForfeitTournament'), false, quit);
-        },
-      };
-      campaign.buttons.forEach((b, i) => {
-        add(b.label, b.primary, does[b.action]);
-        if (i === 0) add(t('lblReconnectViewBattlefield'), false, () => view(true));
-      });
-    };
-    draw();
-    return;
-  }
-  if (limited?.nextRound) add(t('lblWebBoardNextRound', limited.round + 1, limited.rounds), true, () => actions.gauntletNext());
-  if (!matchOver) add(t('btnNextGame'), true, () => actions.nextGame());
-  add(t('lblReconnectViewBattlefield'), false, () => view(true));
-  if (limited) add(t('btnRestartRound'), false, () => actions.gauntletRestart());
-  add(t(limited ? 'lblQuit' : matchOver ? 'lblWebBoardReturnToLobby' : 'btnQuitMatch'), matchOver && !limited?.nextRound, () => {
-    if (!matchOver) actions.quitMatch();
-    actions.leave();
-  });
 }

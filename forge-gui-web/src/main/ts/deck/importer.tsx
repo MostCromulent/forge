@@ -14,6 +14,7 @@ import type { ImportAction, ImportFix, ImportProblem } from '../protocol';
 import { t } from '../text';
 import { CardGroup } from './deckview';
 import { Backdrop } from '../dialog';
+import { NameTaken } from './nametaken';
 
 const READ_DELAY_MS = 300;
 const LINE_PX = 22;
@@ -222,16 +223,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
           <button class="primary" disabled={!cards || fetching} onClick={() => commit(primary[0])}>{primary[1]}</button>
         </footer>
         {model.nameTaken && sent && (
-          <Backdrop>
-            <div class="dialog">
-              <h3>{t('lblWebImportNameTaken', model.nameTaken)}</h3>
-              <div class="actions">
-                <button onClick={() => setSent(null)}>{t('lblCancel')}</button>
-                <button onClick={() => commit(sent.action, 'replace')}>{t('lblWebDraftReplaceIt')}</button>
-                <button class="primary" onClick={() => commit(sent.action, 'keep')}>{t('lblWebImportKeepBoth')}</button>
-              </div>
-            </div>
-          </Backdrop>
+          <NameTaken name={model.nameTaken} cancel={() => setSent(null)} resolve={clash => commit(sent.action, clash)} />
         )}
       </div>
     </Backdrop>
