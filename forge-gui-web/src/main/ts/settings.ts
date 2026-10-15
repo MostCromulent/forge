@@ -33,6 +33,8 @@ interface SettingBase {
   hostOnly?: boolean;
   /** Also set in a dialog opened from the game menu. */
   menu?: 'stops' | 'decisions' | 'playmat';
+  /** Set from another setting's control, so the options give it no row of its own. */
+  inside?: boolean;
 }
 
 /** A choice shown as a picture: its value, name, a line under the name, the drawing's SVG, and when it cannot be chosen. */
@@ -48,6 +50,7 @@ export type SettingDef = SettingBase & (
   | { type: 'toggle'; def: boolean }
   | { type: 'choice'; options: [string, string][]; def: string }
   | { type: 'tiles'; options: Tile[]; def: string }
+  | { type: 'playmat'; def: string }
   | { type: 'slider'; min: number; max: number; def: number; step?: number; unit?: 'seconds' }
   | { type: 'css'; def: string }
   | { type: 'key'; action: keyof KeyBindings; def: string }
@@ -123,11 +126,10 @@ export const SETTINGS: SettingDef[] = [
     options: [['small', t('lblWebOptionsSmall')], ['medium', t('lblMedium')], ['large', t('lblWebOptionsLarge')]], def: 'medium',
   },
   {
-    section: t('lblDisplay'), key: 'playmat', label: t('lblWebPlaymat'), type: 'choice', menu: 'playmat',
-    options: PLAYMATS.map(m => [m.id, t(m.name)]), def: 'nebula',
+    section: t('lblDisplay'), key: 'playmat', label: t('lblWebPlaymat'), type: 'playmat', menu: 'playmat', def: 'nebula',
   },
   {
-    section: t('lblDisplay'), key: 'playmatBrightness', label: t('lblWebPlaymatBrightness'), type: 'choice', menu: 'playmat',
+    section: t('lblDisplay'), key: 'playmatBrightness', label: t('lblWebPlaymatBrightness'), type: 'choice', menu: 'playmat', inside: true,
     options: [['dark', t('lblWebPlaymatDark')], ['dim', t('lblWebPlaymatDim')], ['light', t('lblWebPlaymatLight')], ['bright', t('lblWebPlaymatBright')]], def: 'dim',
   },
   {

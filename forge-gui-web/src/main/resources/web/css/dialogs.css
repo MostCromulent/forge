@@ -301,16 +301,21 @@ html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
 .playmat-picker { position: fixed; z-index: 61; width: 330px; display: grid; gap: 12px; padding: 12px; background: var(--surface);
   border: 1px solid var(--line-bright); border-radius: 10px; box-shadow: 0 16px 40px #000c; }
 .playmat-picker h3 { margin: 0; font-size: 14px; }
-.playmat-picker .mats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.playmat-picker .mat { min-width: 0; display: grid; gap: 6px; padding: 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2);
+/* Each mat's picture lies under the wash the board would give it, so the brightness shows on the pictures too (board.css) */
+.playmat-choice { display: grid; gap: 12px; }
+.playmat-choice .mats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(120px, 28%), 1fr)); gap: 10px; }
+.playmat-choice .mat { min-width: 0; display: grid; gap: 6px; padding: 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2);
   color: var(--text); font-size: 12.5px; text-align: left; }
-.playmat-picker .mat:hover { border-color: var(--line-bright); }
-.playmat-picker .mat img, .playmat-picker .mat .plain { display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 6px; object-fit: cover; }
-.playmat-picker .mat .plain { background: radial-gradient(120% 90% at 50% 42%, #1a202c 0%, #0f131b 100%); }
-.playmat-picker .mat.on { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); background: var(--accent-soft); }
-.playmat-picker .brightness { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted); }
-.playmat-picker .seg { border-radius: 7px; }
-.playmat-picker .seg button { padding: 5px 12px; font-size: 12.5px; }
+.playmat-choice .mat:hover { border-color: var(--line-bright); }
+.playmat-choice .mat .pic { display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 6px; filter: saturate(var(--mat-saturate, 1));
+  background: radial-gradient(120% 90% at 50% 42%, rgb(10 13 19 / calc(var(--mat-wash, 0) - .12)) 0%, rgb(8 10 15 / calc(var(--mat-wash, 0) + .12)) 100%),
+    var(--thumb) center / cover no-repeat; }
+.playmat-choice .mat .pic.plain { filter: none; background: radial-gradient(120% 90% at 50% 42%, #1a202c 0%, #0f131b 100%); }
+.playmat-choice .mat.on { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); background: var(--accent-soft); }
+.playmat-choice .brightness { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted); }
+.playmat-choice .seg { border-radius: 7px; }
+.playmat-choice .seg button { padding: 5px 12px; font-size: 12.5px; }
+.playmat-picker .mats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .game-menu .card-menu-item.on { background: var(--surface-3); }
 /* The game menu's rows shade only under the pointer, grouped by rules: the table, passing, the match, dev mode */
 .game-menu .card-menu-item { align-items: center; }

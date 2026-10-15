@@ -5,10 +5,10 @@
   background: radial-gradient(120% 90% at 50% 42%, var(--table) 0%, var(--table-deep) 100%);
 }
 /* A playmat lies under a dark wash so a busy picture never fights the cards, and the brightness setting sets how thick the wash is */
-html[data-playmat="dark"] #match { --mat-wash: .62; --mat-saturate: .75; }
-html[data-playmat="dim"] #match { --mat-wash: .46; --mat-saturate: .9; }
-html[data-playmat="light"] #match { --mat-wash: .32; --mat-saturate: 1; }
-html[data-playmat="bright"] #match { --mat-wash: .2; --mat-saturate: 1; }
+html[data-playmat="dark"] :is(#match, .playmat-choice) { --mat-wash: .62; --mat-saturate: .75; }
+html[data-playmat="dim"] :is(#match, .playmat-choice) { --mat-wash: .46; --mat-saturate: .9; }
+html[data-playmat="light"] :is(#match, .playmat-choice) { --mat-wash: .32; --mat-saturate: 1; }
+html[data-playmat="bright"] :is(#match, .playmat-choice) { --mat-wash: .2; --mat-saturate: 1; }
 html:not([data-playmat=""]) #match::after {
   background: radial-gradient(120% 90% at 50% 42%, rgb(10 13 19 / calc(var(--mat-wash) - .12)) 0%, rgb(8 10 15 / calc(var(--mat-wash) + .12)) 100%),
     var(--playmat) center / cover no-repeat;

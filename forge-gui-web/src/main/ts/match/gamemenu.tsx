@@ -1,8 +1,8 @@
 // The game menu behind the prompt's ⋯ button, which keeps how priority passes by itself one click from the prompt
 
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { CloseIcon, OnOff, OptionsDialog, Row, SectionHeading } from '../options';
-import { PLAYMATS, SETTINGS, set, setting, type SettingDef } from '../settings';
+import { CloseIcon, OnOff, OptionsDialog, PlaymatChoice, Row, SectionHeading } from '../options';
+import { SETTINGS, setting, type SettingDef } from '../settings';
 import { DevItems } from './devmenu';
 import type { Actions } from '../actions';
 import type { AutoDecision } from '../protocol';
@@ -79,9 +79,6 @@ export function GameMenu({ model, actions, close, open }: {
   );
 }
 
-const BRIGHTNESS: [string, TextKey][] = [['dark', 'lblWebPlaymatDark'], ['dim', 'lblWebPlaymatDim'], ['light', 'lblWebPlaymatLight'],
-  ['bright', 'lblWebPlaymatBright']];
-
 /** The playmats beside the game menu. A choice changes the table at once, so the board behind it is the preview. */
 function PlaymatPicker({ beside }: { beside: { current: HTMLDivElement | null } }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -93,29 +90,10 @@ function PlaymatPicker({ beside }: { beside: { current: HTMLDivElement | null } 
     el.style.right = `${Math.max(8, innerWidth - button.right) + beside.current.offsetWidth + 8}px`;
     el.style.bottom = `${innerHeight - button.top + 6}px`;
   }, []);
-  const chosen = setting('playmat');
-  const brightness = setting('playmatBrightness');
   return (
     <div ref={panel} class="playmat-picker" role="dialog" aria-label={t('lblWebPlaymat')}>
       <h3>{t('lblWebPlaymat')}</h3>
-      <div class="mats">
-        {PLAYMATS.map(m => (
-          <button key={m.id} type="button" class={m.id === chosen ? 'mat on' : 'mat'} aria-pressed={m.id === chosen}
-            onClick={() => set('playmat', m.id)}>
-            {m.thumb ? <img alt="" src={m.thumb} /> : <span class="plain" />}
-            <span class="nm">{t(m.name)}</span>
-          </button>
-        ))}
-      </div>
-      <div class="brightness">
-        <span>{t('lblWebPlaymatBrightness')}</span>
-        <span class="seg" role="group" aria-label={t('lblWebPlaymatBrightness')}>
-          {BRIGHTNESS.map(([id, name]) => (
-            <button key={id} type="button" aria-pressed={id === brightness} disabled={chosen === 'table'}
-              onClick={() => set('playmatBrightness', id)}>{t(name)}</button>
-          ))}
-        </span>
-      </div>
+      <PlaymatChoice />
     </div>
   );
 }

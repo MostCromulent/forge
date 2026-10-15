@@ -6,7 +6,7 @@ import { ForgeLinks } from './links';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { saveText } from './dom';
 import { keyName, rebind, type KeyBindings } from './keys';
-import { SETTINGS, boundKeys, defaultKeys, isGuest, set, setKeys, setting, type SettingDef } from './settings';
+import { PLAYMATS, SETTINGS, boundKeys, defaultKeys, isGuest, set, setKeys, setting, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
 import { t, textLanguage } from './text';
 import { easedLocal } from './ui';
@@ -58,7 +58,7 @@ export function Options({ close }: { close: () => void }) {
   }, []);
   const searching = !!query.trim();
   const tab = TABS[at];
-  const all = SETTINGS.filter(def => !(def.hostOnly && isGuest()));
+  const all = SETTINGS.filter(def => !def.inside && !(def.hostOnly && isGuest()));
   // A tab lists its sections in its own order; a search looks through every tab
   const shown = searching ? matching(all, query) : tab.sections.flatMap(section => all.filter(def => def.section === section));
   // The rail runs down the side, so the next tab's page comes up from below and an earlier one down from above (dialogs.css)
@@ -182,7 +182,7 @@ export function OptionsDialog({ title, label, kind, head, rail, footer, close, c
 export function Row({ def, onChange }: { def: SettingDef; onChange?: () => void }) {
   const [editing, setEditing] = useState(false);
   return (
-    <div class={def.type === 'tiles' ? 'setting wide' : 'setting'}>
+    <div class={def.type === 'tiles' || def.type === 'playmat' ? 'setting wide' : 'setting'}>
       <div>
         <div>{def.label}</div>
         {def.hint && <div class="hint">{def.hint}</div>}
@@ -230,6 +230,8 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
         </div>
       );
     }
+    case 'playmat':
+      return <PlaymatChoice />;
     case 'css':
       // Row draws the CSS editor's own button and editor, since the editor is too big for the control column
       return null;
@@ -245,6 +247,36 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
         </div>
       );
   }
+}
+
+const BRIGHTNESS = (SETTINGS.find(def => def.key === 'playmatBrightness') as SettingDef & { type: 'choice' }).options;
+
+/** The playmats as pictures under the chosen brightness, with the brightness beneath them. */
+export function PlaymatChoice() {
+  const chosen = setting('playmat');
+  const brightness = setting('playmatBrightness');
+  return (
+    <div class="playmat-choice">
+      <div class="mats">
+        {PLAYMATS.map(m => (
+          <button key={m.id} type="button" class={m.id === chosen ? 'mat on' : 'mat'} aria-pressed={m.id === chosen}
+            onClick={() => set('playmat', m.id)}>
+            <span class={m.thumb ? 'pic' : 'pic plain'} style={m.thumb ? { '--thumb': `url("${m.thumb}")` } : undefined} />
+            <span class="nm">{t(m.name)}</span>
+          </button>
+        ))}
+      </div>
+      <div class="brightness">
+        <span>{t('lblWebPlaymatBrightness')}</span>
+        <span class="seg" role="group" aria-label={t('lblWebPlaymatBrightness')}>
+          {BRIGHTNESS.map(([id, name]) => (
+            <button key={id} type="button" aria-pressed={id === brightness} disabled={chosen === 'table'}
+              onClick={() => set('playmatBrightness', id)}>{name}</button>
+          ))}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 /** A delay in milliseconds as seconds, to one or two decimal places: 1.5, 0.25, 0.0. */
