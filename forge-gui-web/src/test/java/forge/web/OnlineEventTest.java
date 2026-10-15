@@ -155,7 +155,7 @@ public class OnlineEventTest extends SessionsTest {
         final BoosterDraftHost draftHost = table.getDraftHost();
         Assert.assertNotNull(draftHost);
         sessions.onMessage(host, JsonCodec.message("leaveLobby"));
-        host.awaitMatching("hello", h -> !h.get("inLobby").getAsBoolean(), "the host never left the table");
+        host.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()), "the host never left the table");
         // The browser is told it left before the table is taken down
         for (int i = 0; i < 250 && !draftHost.isFinished(); i++) {
             Thread.sleep(20);

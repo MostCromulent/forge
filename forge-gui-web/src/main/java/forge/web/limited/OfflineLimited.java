@@ -134,7 +134,7 @@ public final class OfflineLimited implements IHasForgeLog {
 
     /** Opens a sealed pool as desktop's sealed screen does, then its deck in the editor. Asking for a taken name comes first. */
     private void createSealed(final BrowserChannel channel, final SealedCreate create) {
-        if (!session.hosting() || !(session.stage() instanceof Event e) || !"sealed".equals(e.kind())) {
+        if (!session.hosting() || !(session.stage() instanceof Event e) || e.kind() != EventKind.sealed) {
             return;
         }
         final String name = create.name() == null ? "" : create.name().trim();
@@ -168,7 +168,7 @@ public final class OfflineLimited implements IHasForgeLog {
                 OfflineEvents.store(OfflineEvents.sealed(), group);
                 final Stage now = session.stage();
                 if (now instanceof Event) {
-                    session.move(now, new Event("sealed", name));
+                    session.move(now, new Event(EventKind.sealed, name));
                 }
                 session.tell(OfflineEvents.pools());
                 decks.openPool(group.getHumanDeck(), OfflineEvents.sealed(), GameType.Sealed, session.browser());
@@ -182,7 +182,7 @@ public final class OfflineLimited implements IHasForgeLog {
     private void startDraft(final BrowserChannel channel, final DraftStart start) {
         synchronized (session) {
             final Stage now = session.stage();
-            if (!session.hosting() || !(now instanceof Event e) || !"draft".equals(e.kind())) {
+            if (!session.hosting() || !(now instanceof Event e) || e.kind() != EventKind.draft) {
                 return;
             }
             if (draft != null) {
@@ -197,7 +197,7 @@ public final class OfflineLimited implements IHasForgeLog {
                 return;
             }
             beginDraft(make, false);
-            session.move(now, new Event("draft", null));
+            session.move(now, new Event(EventKind.draft, null));
         }
     }
 
@@ -241,7 +241,7 @@ public final class OfflineLimited implements IHasForgeLog {
 
     /** Whether the draft running is a quest tournament's, which the quest's page holds instead of the Limited page. */
     private boolean tournamentDrafting() {
-        return draft != null && session.stage() instanceof InCampaign c && "quest".equals(c.mode());
+        return draft != null && session.stage() instanceof InCampaign c && c.mode() == CampaignMode.quest;
     }
 
     /** Stops the draft unsaved; a tournament's is left as desktop leaves it, with its fee given back. */
@@ -284,7 +284,7 @@ public final class OfflineLimited implements IHasForgeLog {
             channel.send(WebSession.error(problem));
             return;
         }
-        final IStorage<DeckGroup> drafts = OfflineEvents.storage("draft");
+        final IStorage<DeckGroup> drafts = OfflineEvents.storage(EventKind.draft);
         if (drafts.contains(name) && !save.replace()) {
             channel.send(new NameTaken(name));
             return;
@@ -299,7 +299,7 @@ public final class OfflineLimited implements IHasForgeLog {
             endDraft();
             final Stage now = session.stage();
             if (now instanceof Event) {
-                session.move(now, new Event("draft", name));
+                session.move(now, new Event(EventKind.draft, name));
             }
             session.tell(OfflineEvents.pools());
             decks.openPool(group.getHumanDeck(), drafts, poolType(GameType.Draft, group.getHumanDeck()), draft.freeCommander(), session.browser());
@@ -339,8 +339,8 @@ public final class OfflineLimited implements IHasForgeLog {
             FModel.getPreferences().save();
         }
         final Event back = new Event(event.kind(), play.name());
-        switch (play.mode() == null ? "one" : play.mode()) {
-            case "gauntlet" -> {
+        switch (play.mode() == null ? PoolPlayMode.one : play.mode()) {
+            case gauntlet -> {
                 final GauntletMini gauntlet = FModel.getGauntletMini();
                 if (event.type() == GameType.Draft) {
                     gauntlet.resetGauntletDraft();
@@ -360,7 +360,7 @@ public final class OfflineLimited implements IHasForgeLog {
                     stopGauntlet();
                 }
             }
-            case "several" -> {
+            case several -> {
                 final int count = Math.min(Math.min(play.count(), MOST_OPPONENTS), ai.size());
                 if (event.type() != GameType.Draft || count < 2) {
                     channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionSeveralNeedsDraft")));

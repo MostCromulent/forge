@@ -105,7 +105,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
   /** On a phone the picks are a drawer over the pack, opened from its bar at the foot of the screen. */
   const [picksOpen, setPicksOpen] = useState(false);
   // An online draft belongs to the table and goes on without this browser, so leaving only goes back to the table
-  const online = model.inLobby;
+  const online = model.screen === 'setup';
   const faces = state ? seatFaces(model, state.seats) : [];
   return (
     <div class="drafting-page">

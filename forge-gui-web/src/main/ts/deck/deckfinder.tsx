@@ -9,7 +9,7 @@ import { DECK_FORMATS } from './editor';
 import { normalize, rankByName } from '../search';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { Bracket, DeckDetails, DeckMatches, DeckSummary, Seat } from '../protocol';
+import type { Bracket, DeckDetails, DeckMatches, DeckQuery, DeckSummary, Seat } from '../protocol';
 import { Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } from './filters';
 import { t, type TextKey } from '../text';
 import { CardGroup, Curve } from './deckview';
@@ -28,7 +28,7 @@ const SORTS: [SortKey, TextKey][] = [['name', 'lblWebEditorSortName'], ['colors'
 /** Numbers from and to, either left open; null is no limit at all. */
 type Range = { from: number | null; to: number | null } | null;
 /** The filters asked of the server, which alone reads every deck's cards. */
-type DeckQueryKind = 'card' | 'sideboard' | 'set';
+type DeckQueryKind = DeckQuery['kind'];
 
 interface DeckFilter {
   /** As typed. While there is one, it orders the list instead of the sort. */

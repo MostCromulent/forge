@@ -676,7 +676,7 @@ public final class Lobby {
         sendDecks(to);
     }
 
-    public ToBrowser.DeckMatches deckMatches(final String kind, final String value) {
+    public ToBrowser.DeckMatches deckMatches(final DeckQueryKind kind, final String value) {
         return new ToBrowser.DeckMatches(kind, value, catalog.matching(kind, value));
     }
 
@@ -722,7 +722,7 @@ public final class Lobby {
         final Deck deck = deckAt(index);
         // Your own seat wherever you are, and the computer's seats if you run the game. Another player's is theirs
         final boolean mayEdit = index == local.webSeat() || (local.isHost() && slot.getType() == LobbySlotType.AI);
-        return new Seat(slot.getName(), slot.getType().name(), index == local.webSeat(), mayEdit,
+        return new Seat(slot.getName(), slot.getType(), index == local.webSeat(), mayEdit,
                 slot.isReady(), slot.getAvatarIndex(), slot.getSleeveIndex(), key(index),
                 deck == null ? null : deck.getName(),
                 deck == null ? 0 : DeckCatalog.played(deck),
@@ -1009,7 +1009,7 @@ public final class Lobby {
         return events.forgetEvent(eventId);
     }
 
-    public String setLimited(final String kind) {
+    public String setLimited(final EventKind kind) {
         return events.setLimited(kind);
     }
 

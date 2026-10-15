@@ -52,7 +52,7 @@ public class DeckFileTest {
         Assert.assertEquals(read.deck().getMain().countAll(), 10);
         Assert.assertEquals(read.deck().get(DeckSection.Sideboard).countAll(), 2);
         Assert.assertEquals(read.notImported(), 0);
-        Assert.assertEquals(read.lines().stream().map(l -> l.kind()).toList().subList(0, 9),
+        Assert.assertEquals(read.lines().stream().map(l -> l.kind().name()).toList().subList(0, 9),
                 java.util.List.of("ignored", "heading", "heading", "read", "read", "read", "read", "heading", "read"));
         final PaperCard forest = read.deck().getMain().toFlatList().stream().filter(c -> c.getName().equals("Forest")).findFirst().orElseThrow();
         Assert.assertEquals(forest.getCollectorNumber(), "246");
@@ -66,7 +66,7 @@ public class DeckFileTest {
                 Check.of(GameType.Constructed, null));
         Assert.assertEquals(read.deck().getMain().countAll(), 4);
         Assert.assertEquals(read.notImported(), 1);
-        Assert.assertEquals(read.lines().get(4).kind(), "problem");
+        Assert.assertEquals(read.lines().get(4).kind().name(), "problem");
         Assert.assertTrue(read.problems().stream().anyMatch(p -> p.line() == 4));
     }
 }

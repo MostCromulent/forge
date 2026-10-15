@@ -245,8 +245,8 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
 
 /** A browser with no seat: one is being taken, the last attempt at one failed, or nobody has opened a table yet. */
 function Waiting({ model, actions }: { model: Model; actions: Actions }) {
-  const failed = !model.joining && !!model.error;
-  const state = model.joining ? 'joining' : failed ? 'failed' : 'idle';
+  const failed = model.screen !== 'opening' && !!model.error;
+  const state = model.screen === 'opening' ? 'joining' : failed ? 'failed' : 'idle';
   // A match takes nobody new, so the wait is for the host to give up a seat or open the next table
   const midMatch = state === 'idle' && model.presence.some(p => p.host && (p.doing === 'playing' || p.doing === 'watching'));
   return (
@@ -260,10 +260,10 @@ function Waiting({ model, actions }: { model: Model; actions: Actions }) {
         </ol>
         <div class="wait-head">
           <span class="wait-mark" aria-hidden="true" />
-          <b>{t(model.joining ? 'lblWebMenuTakingSeat' : failed ? 'lblWebMenuCouldNotTakeSeat' : midMatch ? 'lblWebMenuMatchInProgress' : 'lblWebMenuNoTableYet')}</b>
+          <b>{t(model.screen === 'opening' ? 'lblWebMenuTakingSeat' : failed ? 'lblWebMenuCouldNotTakeSeat' : midMatch ? 'lblWebMenuMatchInProgress' : 'lblWebMenuNoTableYet')}</b>
         </div>
         <p class="wait-body">
-          {model.joining ? t('lblWebMenuMakingRoom')
+          {model.screen === 'opening' ? t('lblWebMenuMakingRoom')
             : failed ? model.error
               : t(midMatch ? 'lblWebMenuSeatedAfterMatch' : model.canClaimHost ? 'lblWebMenuNobodyHosting' : 'lblWebMenuSeatedWhenOpens')}
         </p>

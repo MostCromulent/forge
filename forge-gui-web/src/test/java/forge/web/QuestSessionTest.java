@@ -104,9 +104,9 @@ public class QuestSessionTest extends SessionsTest {
         if (host == null) {
             return;
         }
-        if (host.hello.get("inMatch").getAsBoolean()) {
+        if ("playing".equals(host.hello.get("screen").getAsString())) {
             send(host, JsonCodec.message("leave"));
-            if (host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean()) == null) {
+            if (host.awaitMatching("hello", h -> !"playing".equals(h.get("screen").getAsString())) == null) {
                 return;
             }
         }
@@ -214,7 +214,7 @@ public class QuestSessionTest extends SessionsTest {
         final TestBrowser host = hostInQuest(data);
         host.awaitNewest("questDuels", "the duels were not sent");
         send(host, message("questDuel", "index", 0));
-        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the duel did not start");
+        host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the duel did not start");
         awaitPriority(host);
         return host;
     }
@@ -490,7 +490,7 @@ public class QuestSessionTest extends SessionsTest {
         final String id = row.get("id").getAsString();
         final long credits = FModel.getQuest().getAssets().getCredits();
         send(host, message("questChallenge", "id", id));
-        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the challenge did not start");
+        host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the challenge did not start");
         awaitPriority(host);
         computerLoses(host);
         host.awaitMatching("campaignResult", r -> true, "no result was sent");
@@ -544,7 +544,7 @@ public class QuestSessionTest extends SessionsTest {
         final TestBrowser host = hostInQuest(data);
         host.awaitNewest("questTournaments", "the tournaments were not sent");
         send(host, JsonCodec.message("questTournamentNext"));
-        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the tournament match did not start");
+        host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the tournament match did not start");
         awaitPriority(host);
         return host;
     }
@@ -585,7 +585,7 @@ public class QuestSessionTest extends SessionsTest {
         send(host, JsonCodec.message("questTournamentStart"));
         host.awaitMatching("questTournaments", p -> p.getAsJsonObject("bracket").get("started").getAsBoolean(), "the tournament did not start");
         send(host, JsonCodec.message("questTournamentNext"));
-        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the player's match did not start");
+        host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the player's match did not start");
         final String[] standings = draftOf(data).getStandings();
         Assert.assertNotEquals(standings[8], QuestEventDraft.UNDETERMINED, "the first computer match was not decided");
         Assert.assertNotEquals(standings[9], QuestEventDraft.UNDETERMINED, "the second computer match was not decided");
@@ -662,7 +662,7 @@ public class QuestSessionTest extends SessionsTest {
         host.awaitNewest("questTournaments", "the tournaments were not sent");
         send(host, JsonCodec.message("questTournamentNext"));
         final JsonObject page = host.awaitMatching("questTournaments", p -> true, "the page was not sent again");
-        Assert.assertFalse(host.hello.get("inMatch").getAsBoolean());
+        Assert.assertFalse("playing".equals(host.hello.get("screen").getAsString()));
         final JsonObject bracket = page.getAsJsonObject("bracket");
         Assert.assertTrue(!bracket.has("next") || bracket.get("next").isJsonNull(), "a next match is offered: " + page);
     }

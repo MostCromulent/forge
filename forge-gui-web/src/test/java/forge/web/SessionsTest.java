@@ -89,9 +89,9 @@ abstract class SessionsTest {
         sessions.onMessage(host, message("setName", "name", "Host"));
         send(host, JsonCodec.message(open));
         // The table an earlier test left can still speak until the new one is open, and only then is a command taken
-        final JsonObject opening = host.awaitMatching("hello", h -> h.get("joining").getAsBoolean(), "the host's table never started opening");
+        final JsonObject opening = host.awaitMatching("hello", h -> "opening".equals(h.get("screen").getAsString()), "the host's table never started opening");
         final JsonObject opened = host.awaitMatching("hello", h -> host.got.indexOf(h) > host.got.indexOf(opening)
-                && h.get("inLobby").getAsBoolean(), "the host's table never opened");
+                && "setup".equals(h.get("screen").getAsString()), "the host's table never opened");
         host.awaitMatching("lobby", l -> host.got.indexOf(l) > host.got.indexOf(opened) && l.has("table")
                 && l.getAsJsonObject("table").get("mySeat").getAsInt() >= 0, "the host never sat at its table");
         return host;

@@ -8,6 +8,7 @@ import forge.util.Localizer;
 import forge.web.protocol.ToBrowser.Prompt;
 import forge.web.protocol.ToBrowser.PromptButton;
 import forge.web.protocol.ToBrowser.Ref;
+import forge.web.protocol.ToBrowser.StarterChoice;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -19,7 +20,7 @@ final class PromptState {
     private final Consumer<Prompt> send;
     private String message = "";
     /** "toss" or "lastGame" while the player is asked who starts, having won the toss or lost the last game. */
-    private String starterChoice;
+    private StarterChoice starterChoice;
     private boolean priority;
     private Ref card;
     private PromptButton ok = new PromptButton("", false);
@@ -45,8 +46,8 @@ final class PromptState {
         final String trimmed = withoutTurnState(text);
         message = trimmed;
         priority = !trimmed.equals(text);
-        starterChoice = opensWith(trimmed, "lblYouHaveWonTheCoinToss") ? "toss"
-                : opensWith(trimmed, "lblYouLostTheLastGame") ? "lastGame" : null;
+        starterChoice = opensWith(trimmed, "lblYouHaveWonTheCoinToss") ? StarterChoice.toss
+                : opensWith(trimmed, "lblYouLostTheLastGame") ? StarterChoice.lastGame : null;
         card = cardRef(about);
         changed();
     }

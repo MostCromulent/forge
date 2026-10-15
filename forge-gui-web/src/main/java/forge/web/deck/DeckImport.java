@@ -13,7 +13,9 @@ import forge.item.PaperCard;
 import forge.util.Localizer;
 import forge.web.protocol.ToBrowser.Fetched;
 import forge.web.protocol.ToBrowser.ImportFix;
+import forge.web.protocol.ToBrowser.ImportFixKind;
 import forge.web.protocol.ToBrowser.ImportLine;
+import forge.web.protocol.ToBrowser.ImportLineKind;
 import forge.web.protocol.ToBrowser.ImportProblem;
 import forge.web.protocol.ToBrowser.ImportResult;
 import forge.web.protocol.ToBrowser.ImportSummary;
@@ -34,10 +36,6 @@ import java.util.Set;
  * recognizer's tokens do not keep their line positions.
  */
 public final class DeckImport {
-    private static final String READ = "read";
-    private static final String PROBLEM = "problem";
-    private static final String IGNORED = "ignored";
-    private static final String HEADING = "heading";
     private static final int MOST_COMMANDER_CHOICES = 4;
     private static final Set<TokenType> CARDS = EnumSet.of(TokenType.LEGAL_CARD, TokenType.LIMITED_CARD,
             TokenType.CARD_FROM_NOT_ALLOWED_SET, TokenType.CARD_FROM_INVALID_SET);
@@ -66,7 +64,7 @@ public final class DeckImport {
         final DeckRecognizer recognizer = new DeckRecognizer();
         recognizer.forceImportBannedAndRestrictedCards();
         final Deck deck = new Deck("");
-        final String[] kinds = new String[raw.length];
+        final ImportLineKind[] kinds = new ImportLineKind[raw.length];
         final Map<String, Integer> lineOf = new HashMap<>();
         final List<ImportProblem> problems = new ArrayList<>();
         String name = null;
@@ -86,11 +84,11 @@ public final class DeckImport {
                     final String heading = line.substring(1, line.length() - 1);
                     fileSection = DeckSection.smartValueOf(heading);
                     fileHead = "metadata".equalsIgnoreCase(heading);
-                    kinds[i] = fileSection == null ? IGNORED : HEADING;
+                    kinds[i] = fileSection == null ? ImportLineKind.ignored : ImportLineKind.heading;
                     continue;
                 }
                 if (fileHead && line.startsWith("Name=")) {
-                    kinds[i] = HEADING;
+                    kinds[i] = ImportLineKind.heading;
                     name = line.substring("Name=".length());
                     continue;
                 }
@@ -98,12 +96,12 @@ public final class DeckImport {
                     listed.addAll(CardPool.fromCardList(List.of(line)));
                 }
                 if (listed.isEmpty()) {
-                    kinds[i] = IGNORED;
+                    kinds[i] = ImportLineKind.ignored;
                     continue;
                 }
                 // A card Forge does not have is read as a stand-in, which no game can play
                 if (listed.toFlatList().get(0).getRules().isUnsupported()) {
-                    kinds[i] = PROBLEM;
+                    kinds[i] = ImportLineKind.problem;
                     notImported++;
                     problems.add(unknown(i, line.replaceFirst("\\|.*$", ""), false));
                     continue;
@@ -113,35 +111,35 @@ public final class DeckImport {
                 if (line.startsWith("//")) {
                     // A comment, unless it is the "// Name:" line some sites put first
                     final String named = DeckRecognizer.deckNameMatch(line);
-                    kinds[i] = named.isEmpty() ? IGNORED : HEADING;
+                    kinds[i] = named.isEmpty() ? ImportLineKind.ignored : ImportLineKind.heading;
                     name = named.isEmpty() ? name : named;
                     continue;
                 }
                 final Token token = i < lines.length ? recognizer.recognizeLine(lines[i], section) : null;
                 if (token == null) {
-                    kinds[i] = IGNORED;
+                    kinds[i] = ImportLineKind.ignored;
                     continue;
                 }
                 switch (token.getType()) {
                     case DECK_NAME -> {
-                        kinds[i] = HEADING;
+                        kinds[i] = ImportLineKind.heading;
                         name = token.getText();
                         continue;
                     }
                     case DECK_SECTION_NAME -> {
-                        kinds[i] = HEADING;
+                        kinds[i] = ImportLineKind.heading;
                         section = DeckSection.valueOf(token.getText());
                         continue;
                     }
                     case UNKNOWN_CARD, UNSUPPORTED_CARD -> {
-                        kinds[i] = PROBLEM;
+                        kinds[i] = ImportLineKind.problem;
                         notImported++;
                         problems.add(unknown(i, line, token.getType() == TokenType.UNSUPPORTED_CARD));
                         continue;
                     }
                     default -> {
                         if (!CARDS.contains(token.getType())) {
-                            kinds[i] = IGNORED;
+                            kinds[i] = ImportLineKind.ignored;
                             continue;
                         }
                         listed.add(token.getCard(), token.getQuantity());
@@ -150,21 +148,21 @@ public final class DeckImport {
                 }
             }
             if (collection != null && collection.mainOnly() && to != DeckSection.Main) {
-                kinds[i] = IGNORED;
+                kinds[i] = ImportLineKind.ignored;
                 continue;
             }
             final PaperCard first = listed.toFlatList().get(0);
             // The listed printing stands for the name: the editor takes the printings owned when the deck is made
             final boolean taken = collection == null || first.getRules().getType().isBasicLand() || owned.contains(first.getName());
             if (!taken) {
-                kinds[i] = PROBLEM;
+                kinds[i] = ImportLineKind.problem;
                 notImported++;
                 problems.add(new ImportProblem(i, Localizer.getInstance().getMessage("lblWebImportLineCard", i + 1, first.getName()),
                         Localizer.getInstance().getMessage(DeckEditor.NOT_OWNED),
-                        List.of(new ImportFix("leaveOut", Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null))));
+                        List.of(new ImportFix(ImportFixKind.leaveOut, Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null))));
                 continue;
             }
-            kinds[i] = READ;
+            kinds[i] = ImportLineKind.read;
             deck.getOrCreate(to).addAll(listed);
             lineOf.putIfAbsent(first.getName(), i);
         }
@@ -174,16 +172,16 @@ public final class DeckImport {
         flags.forEach((card, flag) -> {
             final Integer at = lineOf.get(card);
             if (at != null) {
-                kinds[at] = PROBLEM;
+                kinds[at] = ImportLineKind.problem;
                 cardProblems.add(new ImportProblem(at, Localizer.getInstance().getMessage("lblWebImportLineCard", at + 1, card),
                         Localizer.getInstance().getMessage("lblWebLegalitySentence", StringUtils.capitalize(flag)),
-                        List.of(new ImportFix("leaveOut", Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null))));
+                        List.of(new ImportFix(ImportFixKind.leaveOut, Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null))));
             }
         });
         problems.addAll(cardProblems);
         problems.sort((a, b) -> Integer.compare(a.line(), b.line()));
         final List<ImportLine> marks = new ArrayList<>();
-        for (final String kind : kinds) {
+        for (final ImportLineKind kind : kinds) {
             marks.add(new ImportLine(kind));
         }
         deck.setName(name == null ? "" : name.trim());
@@ -210,14 +208,14 @@ public final class DeckImport {
     private static ImportProblem unknown(final int line, final String text, final boolean unsupported) {
         final String title = Localizer.getInstance().getMessage("lblWebImportLineText", line + 1, text);
         if (unsupported) {
-            return new ImportProblem(line, title, Localizer.getInstance().getMessage("lblWebImportUnsupported"), List.of(new ImportFix("leaveOut", Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null)));
+            return new ImportProblem(line, title, Localizer.getInstance().getMessage("lblWebImportUnsupported"), List.of(new ImportFix(ImportFixKind.leaveOut, Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null)));
         }
         final String closest = CardCatalog.get().closestName(text.replaceFirst("^\\s*\\d+x?\\s+", "").replaceFirst("\\s*[\\[(].*$", ""));
         final List<ImportFix> fixes = new ArrayList<>();
         if (closest != null) {
-            fixes.add(new ImportFix("use", Localizer.getInstance().getMessage("lblWebImportUse", closest), closest));
+            fixes.add(new ImportFix(ImportFixKind.use, Localizer.getInstance().getMessage("lblWebImportUse", closest), closest));
         }
-        fixes.add(new ImportFix("leaveOut", Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null));
+        fixes.add(new ImportFix(ImportFixKind.leaveOut, Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null));
         return new ImportProblem(line, title, Localizer.getInstance().getMessage("lblWebImportNotACard"), fixes);
     }
 
@@ -244,9 +242,9 @@ public final class DeckImport {
         }
         final List<ImportFix> fixes = new ArrayList<>();
         for (final PaperCard c : candidates.subList(0, Math.min(MOST_COMMANDER_CHOICES, candidates.size()))) {
-            fixes.add(new ImportFix("commander", c.getName(), c.getName()));
+            fixes.add(new ImportFix(ImportFixKind.commander, c.getName(), c.getName()));
         }
-        fixes.add(new ImportFix("other", Localizer.getInstance().getMessage("lblWebImportOther"), null));
+        fixes.add(new ImportFix(ImportFixKind.other, Localizer.getInstance().getMessage("lblWebImportOther"), null));
         problems.add(new ImportProblem(-1, Localizer.getInstance().getMessage("lblWebImportNoCommander"), candidates.isEmpty()
                 ? Localizer.getInstance().getMessage("lblWebImportNoLeader")
                 : Localizer.getInstance().getMessage("lblWebImportNoCommanderSection"), fixes));

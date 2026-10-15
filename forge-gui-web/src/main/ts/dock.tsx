@@ -39,7 +39,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   }, [model.chat.length, open]);
   // The last line you could have read, held by the line itself so a chat replayed after a reconnect is counted from its start
   const lastSeen = useRef<ChatEntry | undefined>(model.chat[model.chat.length - 1]);
-  if (open || model.inMatch) {
+  if (open || model.screen === 'playing') {
     lastSeen.current = model.chat[model.chat.length - 1];
   }
   // Who was here when the dock was last touched, so anyone who has arrived since is marked until it is touched again
@@ -61,7 +61,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
       redraw(n => n + 1);
     }
   };
-  const inMatch = model.inMatch;
+  const inMatch = model.screen === 'playing';
   // In a match the roster is a summary until asked, because the board already names everyone with a seat
   const mayReseat = model.host && people.some(p => p.disconnected);
   // A disconnected seat is the host's to settle, so the host is shown it without asking

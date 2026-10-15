@@ -9,8 +9,12 @@ import forge.game.GameLogEntryType;
 import forge.game.GameLogVerbosity;
 import forge.game.phase.PhaseType;
 import forge.game.zone.ZoneType;
+import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.DeltaPacket;
 import forge.player.AutoYieldStore.TriggerDecision;
+import forge.web.protocol.FromBrowser.CampaignMode;
+import forge.web.protocol.FromBrowser.DeckQueryKind;
+import forge.web.protocol.FromBrowser.EventKind;
 import forge.web.protocol.Wire.Event;
 import forge.web.protocol.Wire.Message;
 import forge.web.protocol.Wire.Name;
@@ -37,11 +41,15 @@ public final class ToBrowser {
         }
     }
 
+    /** The page the browser shows: the start page, a seat being taken, match setup, the Limited pages, a campaign's, or a match. */
+    public enum Screen { menu, opening, setup, event, campaign, playing }
+
+    /** eventKind is set on the event screen, and campaign on the campaign screen. */
     @Message("hello")
-    public record Hello(boolean inMatch, boolean inLobby, boolean joining, boolean spectating, boolean host,
+    public record Hello(Screen screen, boolean spectating, boolean host,
             boolean canClaimHost, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
-            int sleeveCount, List<SavedSleeveArt> sleeveArt, boolean inEvent, @Nullable String eventPool, int sealedPools,
-            @Nullable @Ts("'sealed' | 'draft'") String eventKind, boolean drafting, int draftPools, @Nullable @Ts("'conquest' | 'quest'") String campaign, @Nullable String campaignSave,
+            int sleeveCount, List<SavedSleeveArt> sleeveArt, @Nullable String eventPool, int sealedPools,
+            @Nullable EventKind eventKind, boolean drafting, int draftPools, @Nullable CampaignMode campaign, @Nullable String campaignSave,
             @Nullable String currentConquest, @Nullable String currentQuest, @Nullable String version, ServerSettings settings) {
     }
 
@@ -53,8 +61,10 @@ public final class ToBrowser {
     public record Presence(List<Person> people) {
     }
 
-    /** What a person is doing: waiting, joining, at a table, playing or watching one. disconnected is a guest whose browser has gone while it holds a seat. */
-    public record Person(String name, int avatar, String doing, boolean host, boolean disconnected) {
+    public enum Doing { waiting, joining, table, playing, watching }
+
+    /** disconnected is a guest whose browser has gone while it holds a seat. */
+    public record Person(String name, int avatar, Doing doing, boolean host, boolean disconnected) {
     }
 
     @Message("error")
@@ -103,7 +113,7 @@ public final class ToBrowser {
 
     /** The keys of the listed decks a card or set filter lets through, for the query it answers. */
     @Message("deckMatches")
-    public record DeckMatches(String kind, String value, List<String> keys) {
+    public record DeckMatches(DeckQueryKind kind, String value, List<String> keys) {
     }
 
     @Message("deckDetails")
@@ -125,8 +135,10 @@ public final class ToBrowser {
     public record Bracket(int level, List<BracketReason> reasons, List<String> clear) {
     }
 
+    public enum BracketReasonKind { gameChangers, massLandDenial, extraTurns, chainedExtraTurns, lateCombos, earlyCombos }
+
     /** One kind of card that bears on the bracket, where raises is the bracket it makes the deck, or 0 when it raises nothing on its own. */
-    public record BracketReason(String kind, String title, String brief, List<String> cards, int raises, @Nullable String why) {
+    public record BracketReason(BracketReasonKind kind, String title, String brief, List<String> cards, int raises, @Nullable String why) {
     }
 
     /**
@@ -153,14 +165,14 @@ public final class ToBrowser {
             List<String> overBracket, int teams, List<Integer> teamChoices, List<String> aiProfiles) {
     }
 
-    /** A Limited table's event, where kind is "draft" or "sealed" and phase is an EventPhase name. */
-    public record LimitedTable(String kind, @Nullable String product, int podSize, @Nullable String pickRule, int timer,
+    /** A Limited table's event, where phase is an EventPhase name. */
+    public record LimitedTable(EventKind kind, @Nullable String product, int podSize, @Nullable String pickRule, int timer,
             @Nullable String phase, @Nullable String activeEventId, boolean eventDecksOnly, boolean started,
             List<PastEvent> pastEvents) {
     }
 
-    /** An earlier event whose pools the host keeps: "draft" or "sealed", its product, and when it was played (yyyy-MM-dd HH:mm). */
-    public record PastEvent(String id, String kind, String product, String date) {
+    /** An earlier event whose pools the host keeps: its kind, its product, and when it was played (yyyy-MM-dd HH:mm). */
+    public record PastEvent(String id, EventKind kind, String product, String date) {
     }
 
     /** Card pools the card pool control offers, under the heading Forge files them by. Sent once per browser. */
@@ -189,9 +201,8 @@ public final class ToBrowser {
     public record Format(String id, String name, String group, String desc, List<String> facts, String play) {
     }
 
-    /** type is a netplay lobby slot's (LOCAL, AI, OPEN or REMOTE), sittingOut says the seat sits the next match out,
-     *  and aiProfile is how a computer seat plays. */
-    public record Seat(@Nullable String name, String type, boolean mine, boolean mayEdit, boolean ready, int avatar,
+    /** sittingOut says the seat sits the next match out, and aiProfile is how a computer seat plays. */
+    public record Seat(@Nullable String name, LobbySlotType type, boolean mine, boolean mayEdit, boolean ready, int avatar,
             int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
             @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
             @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard, boolean sittingOut,
@@ -287,16 +298,20 @@ public final class ToBrowser {
             @Nullable String name, @Nullable Fetched fetched) {
     }
 
-    /** kind is read, problem, ignored, or heading (a section heading or the deck's name). */
-    public record ImportLine(String kind) {
+    /** A heading is a section heading or the deck's name. */
+    public enum ImportLineKind { read, problem, ignored, heading }
+
+    public record ImportLine(ImportLineKind kind) {
     }
 
     /** line counts from 0, and is -1 for a problem no one line has, such as a missing commander. */
     public record ImportProblem(int line, String title, String detail, List<ImportFix> fixes) {
     }
 
-    /** kind is use (text is the name to use), leaveOut, commander (text is the card) or other. */
-    public record ImportFix(String kind, String label, @Nullable String text) {
+    public enum ImportFixKind { use, leaveOut, commander, other }
+
+    /** text is the name to use, or the commander's. */
+    public record ImportFix(ImportFixKind kind, String label, @Nullable String text) {
     }
 
     public record ImportSummary(int cards, int sideboard, int notImported, @Nullable String commander, boolean commanderChosen,
@@ -340,9 +355,12 @@ public final class ToBrowser {
     public record DeckFileText(String name, String text) {
     }
 
-    /** A question outside a match, answered with the indices chosen, where kind is "confirm" (a few buttons) or "choices" (a list). */
+    /** A few buttons, or a list. */
+    public enum HostChoiceKind { confirm, choices }
+
+    /** A question outside a match, answered with the indices chosen. */
     @Message("hostChoice")
-    public record HostChoice(int id, String kind, @Nullable String title, @Nullable String message, int min, int max, List<String> options,
+    public record HostChoice(int id, HostChoiceKind kind, @Nullable String title, @Nullable String message, int min, int max, List<String> options,
             @Nullable List<String> images, @Nullable String pictured) {
     }
 
@@ -433,10 +451,13 @@ public final class ToBrowser {
     static final List<Class<? extends Record>> EVENTS = Wire.marked(ToBrowser.class, Event.class);
 
 
+    /** Why this player chooses who goes first: it won the coin toss, or lost the last game. */
+    public enum StarterChoice { toss, lastGame }
+
     @Message("prompt")
     public record Prompt(String message, boolean priority, @Nullable Ref card, PromptButton ok, PromptButton cancel,
             boolean focusOk, boolean paying, List<Ref> selectable, int selectableMin, List<Ref> selectablePlayers,
-            List<Integer> selectableStack, List<Integer> highlighted, @Nullable String starterChoice) {
+            List<Integer> selectableStack, List<Integer> highlighted, @Nullable StarterChoice starterChoice) {
     }
 
     public record PromptButton(String label, boolean enabled) {

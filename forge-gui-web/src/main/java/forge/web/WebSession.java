@@ -69,19 +69,19 @@ public final class WebSession implements IHasForgeLog {
     /** Match setup, at a seat whose GUI the match will be played through. Invited means others can join. */
     record Setup(WebGuiGame gui, boolean invited) implements Stage { }
 
-    /** The Limited pages for kind (sealed or draft): the saved pools, the setup form, and the opponents screen of pool, when it is not null. */
-    public record Event(String kind, String pool) implements Stage {
+    /** The Limited pages for a kind of event: the saved pools, the setup form, and the opponents screen of pool, when it is not null. */
+    public record Event(EventKind kind, String pool) implements Stage {
         public IStorage<DeckGroup> storage() {
             return OfflineEvents.storage(kind);
         }
 
         public GameType type() {
-            return "draft".equals(kind) ? GameType.Draft : GameType.Sealed;
+            return kind == EventKind.draft ? GameType.Draft : GameType.Sealed;
         }
     }
 
     /** A campaign mode's pages: its saved games while save is null, otherwise the one that is open. */
-    public record InCampaign(String mode, String save) implements Stage { }
+    public record InCampaign(CampaignMode mode, String save) implements Stage { }
 
     /** In a match, playing it or watching the computer play it. back is where leaving it returns to: a pool, a campaign, or null for the table. */
     public record Playing(WebGuiGame gui, boolean invited, boolean spectating, Stage back) implements Stage { }
@@ -172,12 +172,8 @@ public final class WebSession implements IHasForgeLog {
         return mayHost;
     }
 
-    private Campaign campaign(final String mode) {
-        return switch (mode == null ? "" : mode) {
-            case "conquest" -> conquest;
-            case "quest" -> quest;
-            default -> null;
-        };
+    private Campaign campaign(final CampaignMode mode) {
+        return mode == CampaignMode.quest ? quest : mode == CampaignMode.conquest ? conquest : null;
     }
 
     private final Campaign.Host campaignHost = new Campaign.Host() {
@@ -317,16 +313,16 @@ public final class WebSession implements IHasForgeLog {
         return face == null ? 0 : face;
     }
 
-    /** What this session is doing, in the words the panel that says who is here uses. */
-    String doing() {
+    /** What this session is doing, for the panel that says who is here. */
+    Doing doing() {
         final Stage now = stage;
         if (now instanceof Playing p) {
-            return p.spectating() ? "watching" : "playing";
+            return p.spectating() ? Doing.watching : Doing.playing;
         }
         if (now instanceof Setup) {
-            return "table";
+            return Doing.table;
         }
-        return now instanceof Opening ? "joining" : "waiting";
+        return now instanceof Opening ? Doing.joining : Doing.waiting;
     }
 
     /** Sends one message to this session's browser, if it has one. */
@@ -434,8 +430,8 @@ public final class WebSession implements IHasForgeLog {
             .on(Plain.join, (s, ch, c) -> s.joinHostGame())
             .on(Plain.claimHost, (s, ch, c) -> s.claimHost(ch))
             // Opening a game connects a client to a server, which the host UI thread owns
-            .on(Plain.lobby, (s, ch, c) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, false)))
-            .on(Plain.invite, (s, ch, c) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, true)))
+            .on(Plain.lobby, (s, ch, c) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, false, null)))
+            .on(Invite.class, (s, ch, i) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, true, i.limited())))
             .on(Plain.leaveLobby, (s, ch, c) -> s.ui.invokeInEdtLater(s::leaveLobby))
             .on(Ready.class, atSetup((s, ch, r) -> s.lobby.setReady(r.ready())))
             .on(SeatCommand.class, atSetup(WebSession::seatCommand))
@@ -494,16 +490,7 @@ public final class WebSession implements IHasForgeLog {
                 }
                 s.relistDecks(ch);
             }))
-            .on(SetLimited.class, atEvent((s, ch, l) -> {
-                final String kind = l.kind();
-                final String problem = s.lobby.setLimited(kind == null ? null : "sealed".equals(kind) ? "sealed" : "draft");
-                if (problem != null) {
-                    ch.send(error(problem));
-                } else if (kind != null) {
-                    s.sendEventOptions(ch);
-                }
-                s.relistDecks(ch);
-            }))
+            .on(SetLimited.class, atEvent((s, ch, l) -> s.setLimited(ch, l.kind())))
             .on(SitOut.class, atEvent((s, ch, o) -> s.lobby.sitOut(o.index(), o.sittingOut())))
             // Building a product can wait on a web site, and dealing packs opens every pool, so neither runs here
             .on(EventSetup.class, atEvent((s, ch, e) -> s.ui.runBackgroundTask("Event", () -> reportProblem(ch, s.lobby.setUpEvent(e)))))
@@ -775,10 +762,21 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
+    /** Switches the table to a kind of event, or back to Constructed when kind is null. */
+    private void setLimited(final BrowserChannel channel, final EventKind kind) {
+        final String problem = lobby.setLimited(kind);
+        if (problem != null) {
+            channel.send(error(problem));
+        } else if (kind != null) {
+            sendEventOptions(channel);
+        }
+        relistDecks(channel);
+    }
+
     private void openLimited(final BrowserChannel channel, final LimitedOpen open) {
-        final String kind = "draft".equals(open.kind()) ? "draft" : "sealed";
+        final EventKind kind = open.kind() == EventKind.draft ? EventKind.draft : EventKind.sealed;
         final Stage now = stage;
-        if (isHost && ((now instanceof Event e && e.kind().equals(kind) && !open.resume())
+        if (isHost && ((now instanceof Event e && e.kind() == kind && !open.resume())
                 || ((now instanceof Menu || now instanceof Event)
                     && move(now, new Event(kind, open.resume() ? OfflineEvents.latest(kind) : null))))) {
             limited.sendLimited(channel);
@@ -804,8 +802,8 @@ public final class WebSession implements IHasForgeLog {
         ui.runBackgroundTask("Limited", () -> channel.send(OfflineEvents.options()));
     }
 
-    /** Opens match setup: a game of this machine's own, or a seat in the host's. Tells the browser how it went. */
-    private void openLobby(final BrowserChannel channel, final boolean invite) {
+    /** Opens match setup: a game of this machine's own, set for an event when limited is not null, or a seat in the host's. Tells the browser how it went. */
+    private void openLobby(final BrowserChannel channel, final boolean invite, final EventKind limited) {
         if (!isHost) {
             joinHostGame();
             return;
@@ -843,6 +841,9 @@ public final class WebSession implements IHasForgeLog {
             return;
         }
         applyChosenAvatar();
+        if (limited != null) {
+            setLimited(channel, limited);
+        }
         lobby.sendDecks(channel);
         lobby.sendState(channel);
         sessions.hostGameOpened();
@@ -1119,8 +1120,7 @@ public final class WebSession implements IHasForgeLog {
 
     public Hello hello() {
         final Stage now = stage;
-        return new Hello(now instanceof Playing, now instanceof Setup, now instanceof Opening,
-                now instanceof Playing p && p.spectating(), isHost,
+        return new Hello(screen(now), now instanceof Playing p && p.spectating(), isHost,
                 // Nobody hosts by arriving, so a browser is offered the seat whenever it is free
                 !isHost && sessions.hostSeatFree(this),
                 // A game nobody was invited to has nobody to talk to, so the browser leaves the chat out altogether
@@ -1129,9 +1129,9 @@ public final class WebSession implements IHasForgeLog {
                 // Seat 0 is the player and seat 1 the opponent, as in the desktop lobby's saved choices
                 seatIndices(FPref.UI_AVATARS), seatIndices(FPref.UI_SLEEVES),
                 SkinSprites.avatarCount(), SkinSprites.sleeveCount(), DeckCatalog.savedSleeveArt(),
-                now instanceof Event, now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
+                now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
                 now instanceof Event e ? e.kind() : null, limited.draft() != null || (now instanceof Setup && onlineDrafting()),
-                isHost ? OfflineEvents.storage("draft").size() : 0,
+                isHost ? OfflineEvents.storage(EventKind.draft).size() : 0,
                 now instanceof InCampaign m ? m.mode() : null,
                 // The open save is named in its matches too, so the result screen knows whose ending it shows
                 now instanceof InCampaign c ? c.save() : now instanceof Playing p && p.back() instanceof InCampaign c ? c.save() : null,
@@ -1141,6 +1141,22 @@ public final class WebSession implements IHasForgeLog {
                 WebSession.class.getPackage().getImplementationVersion(),
                 // The menu's volume slider and music need them before any match sends them with its controls
                 WebSettings.values(settings));
+    }
+
+    private static Screen screen(final Stage stage) {
+        if (stage instanceof Opening) {
+            return Screen.opening;
+        }
+        if (stage instanceof Setup) {
+            return Screen.setup;
+        }
+        if (stage instanceof Event) {
+            return Screen.event;
+        }
+        if (stage instanceof InCampaign) {
+            return Screen.campaign;
+        }
+        return stage instanceof Playing ? Screen.playing : Screen.menu;
     }
 
     /** The draft this browser picks in: its own against the computer, or its seat's while the table drafts. */
@@ -1155,7 +1171,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** Opens a campaign's saved games, or one of them. Reading a save is slow, so this is campaign work. */
-    private void openCampaign(final String mode, final String save) {
+    private void openCampaign(final CampaignMode mode, final String save) {
         final Stage from = stage;
         if (!isHost || !(from instanceof Menu || from instanceof InCampaign)) {
             return;
@@ -1341,7 +1357,7 @@ public final class WebSession implements IHasForgeLog {
             final GameType type = data == null ? null : data.getLimitedType();
             final boolean decksOnly = data != null && data.isActiveConformance();
             // Opening the lobby moves on from the match, and closes it
-            openLobby(b, playing.invited());
+            openLobby(b, playing.invited(), null);
             if (event != null) {
                 lobby.playEvent(event, type, decksOnly);
                 relistDecks(b);

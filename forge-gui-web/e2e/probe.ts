@@ -80,7 +80,7 @@ export function explain(page: Page): Promise<string> {
     const prompt = m.prompt;
     const text = (sel: string) => [...document.querySelectorAll<HTMLElement>(sel)].map(e => e.innerText.replace(/\s+/g, ' ').trim()).filter(Boolean);
     return JSON.stringify({
-      where: m.inMatch ? 'match' : m.inLobby ? 'lobby' : 'elsewhere',
+      where: m.screen === 'playing' ? 'match' : m.screen === 'setup' ? 'lobby' : 'elsewhere',
       prompt: prompt && { message: prompt.message, priority: prompt.priority, ok: prompt.ok, cancel: prompt.cancel,
         selectable: prompt.selectable.length, players: prompt.selectablePlayers.length },
       problems: m.lobby?.problems,

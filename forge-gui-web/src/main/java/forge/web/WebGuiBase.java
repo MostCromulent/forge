@@ -19,6 +19,7 @@ import forge.util.ImageFetcher;
 import forge.web.images.Foil;
 import forge.web.images.WebDownloads;
 import forge.web.images.WebImageFetcher;
+import forge.web.protocol.ToBrowser.HostChoiceKind;
 import forge.web.protocol.ToBrowser.Notice;
 import forge.web.protocol.Wire;
 import org.jupnp.DefaultUpnpServiceConfiguration;
@@ -171,7 +172,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
             noticeSink.accept(Wire.encode(new Notice(title, message, icon == FSkinProp.ICO_ERROR || icon == FSkinProp.ICO_WARNING)));
             return defaultOption;
         }
-        final List<Integer> answer = hostRequests.ask("confirm", title, message, options, 1, 1, null, null);
+        final List<Integer> answer = hostRequests.ask(HostChoiceKind.confirm, title, message, options, 1, 1, null, null);
         if (answer != null && !answer.isEmpty()) {
             final int picked = answer.get(0);
             if (picked >= 0 && picked < options.size()) {
@@ -201,7 +202,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         final boolean cards = !all.isEmpty() && all.stream().allMatch(PaperCard.class::isInstance);
         final List<String> images = packs ? all.stream().map(e -> boosterImage((CardEdition) e)).toList()
                 : cards ? all.stream().map(c -> Foil.key((PaperCard) c)).toList() : null;
-        final List<Integer> answer = hostRequests.ask("choices", null, message, options, min, max, images, packs ? "pack" : cards ? "card" : null);
+        final List<Integer> answer = hostRequests.ask(HostChoiceKind.choices, null, message, options, min, max, images, packs ? "pack" : cards ? "card" : null);
         final List<T> result = new ArrayList<>();
         if (answer != null) {
             for (final int i : answer) {
@@ -229,7 +230,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         if (list == null || list.isEmpty()) {
             return null;
         }
-        final List<Integer> answer = hostRequests.ask("choices", title, message,
+        final List<Integer> answer = hostRequests.ask(HostChoiceKind.choices, title, message,
                 list.stream().map(c -> c.getDisplayName() + " (" + c.getEdition() + ")").toList(), 1, 1,
                 list.stream().map(Foil::key).toList(), "card");
         if (answer != null && !answer.isEmpty() && answer.get(0) >= 0 && answer.get(0) < list.size()) {

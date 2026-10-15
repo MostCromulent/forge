@@ -2,7 +2,7 @@
 
 import { connect } from './net';
 import { createModel, applyState, cardMenu, isLocal, oldestRequest, players, stackPick, NO_CAMPAIGN, NO_CONQUEST, NO_QUEST } from './model';
-import { asked, createActions, pendingTable, type Actions } from './actions';
+import { asked, createActions, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { initForm, isPortrait } from './form';
 import { initPress } from './press';
@@ -243,9 +243,7 @@ function apply(msg: ServerMessage): void {
       model.canClaimHost = msg.canClaimHost;
       onServerSettings(msg.settings);
       applyAudioSettings();
-      model.inMatch = msg.inMatch;
-      model.inLobby = msg.inLobby;
-      model.inEvent = msg.inEvent;
+      model.screen = msg.screen;
       model.eventPool = msg.eventPool ?? null;
       model.sealedPools = msg.sealedPools;
       model.draftPools = msg.draftPools;
@@ -257,7 +255,7 @@ function apply(msg: ServerMessage): void {
       model.currentConquest = msg.currentConquest ?? null;
       model.currentQuest = msg.currentQuest ?? null;
       // A match's result belongs to its match, and a campaign's pages to the campaign
-      if (!msg.inMatch) model.campaignResult = null;
+      if (msg.screen !== 'playing') model.campaignResult = null;
       if (!msg.campaign) Object.assign(model, NO_CAMPAIGN);
       if (msg.campaign !== 'conquest') {
         Object.assign(model, NO_CONQUEST);
@@ -266,7 +264,7 @@ function apply(msg: ServerMessage): void {
       if (msg.campaign !== 'quest') {
         Object.assign(model, NO_QUEST);
         // A match is played from the quest's page, so the tab it was started from is the one returned to
-        if (!msg.inMatch) ui.questTab = 'duels';
+        if (msg.screen !== 'playing') ui.questTab = 'duels';
       }
       model.drafting = msg.drafting;
       if (!msg.drafting) {
@@ -274,8 +272,7 @@ function apply(msg: ServerMessage): void {
         ui.draftHidden = false;
       }
       // A picker belongs to the table it was opened over
-      if (!model.inLobby) ui.picker = null;
-      model.joining = msg.joining;
+      if (model.screen !== 'setup') ui.picker = null;
       model.spectating = msg.spectating;
       model.playerName = msg.playerName ?? '';
       model.nameSent = false;
@@ -289,14 +286,14 @@ function apply(msg: ServerMessage): void {
       model.savedSleeveArt = msg.sleeveArt ?? [];
       model.error = null;
       // A new lobby has an address and a conversation of its own; coming back to the same one keeps them
-      if (!msg.inLobby) {
+      if (msg.screen !== 'setup') {
         model.addresses = null;
         askedAddresses = false;
       }
       model.networked = msg.networked;
       // The server replays open requests after every hello
       model.requests.clear();
-      if (!msg.inMatch) {
+      if (msg.screen !== 'playing') {
         model.objects.clear();
         model.gameOver = false;
         model.matchScore = [];
@@ -311,7 +308,7 @@ function apply(msg: ServerMessage): void {
       break;
     case 'editor':
       // Back from a pool's deck, the pools are asked for again, since the deck just built changes them
-      if (!msg.state && model.editor && model.inEvent) wire.limitedOpen(model.eventKind === 'draft' ? 'draft' : 'sealed', false);
+      if (!msg.state && model.editor && model.screen === 'event') wire.limitedOpen(model.eventKind ?? 'sealed', false);
       model.editor = msg.state ?? null;
       break;
     // Scrolling asks for the next page of the same query, which is added to what is shown
@@ -367,11 +364,6 @@ function apply(msg: ServerMessage): void {
       break;
     case 'lobby': {
       model.lobby = msg.table ?? null;
-      // A draft or sealed table from the start page opens as a table first, then becomes one
-      if (pendingTable.kind && model.lobby?.host) {
-        if (!model.lobby.limited) wire.setLimited(pendingTable.kind);
-        pendingTable.kind = null;
-      }
       // Renaming your seat renames you, so the next server you reach knows you by it too
       const mine = model.lobby?.seats[model.lobby.mySeat]?.name;
       if (mine) rememberName(mine);
@@ -500,7 +492,7 @@ function render(): void {
   renderScreens(model, actions);
   // The name page comes before the player's volumes are known
   playMusic(page === 'name' ? null : page !== 'match' ? 'menu' : model.gameOver ? null : 'match');
-  if (!model.inMatch) {
+  if (model.screen !== 'playing') {
     // Every page's cards share the one preview, so it is drawn with no match on too
     renderDetail(model);
     return;

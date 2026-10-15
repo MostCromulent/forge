@@ -89,17 +89,19 @@ export function renderScreens(model: Model, actions: Actions): void {
 /** Which page is showing. A browser without a name is asked for one before it goes anywhere. */
 export function screenOf(model: Model): 'name' | 'menu' | 'lobby' | 'editor' | 'drafting' | 'limited' | 'conquest' | 'quest' | 'match' {
   // The editor sits over the page it was opened from without leaving it, so closing it returns there
-  return model.editor && !model.inMatch && model.playerName ? 'editor' : pageUnder(model);
+  return model.editor && model.screen !== 'playing' && model.playerName ? 'editor' : pageUnder(model);
 }
 
 /** The page the deck editor lies over as a panel, which is the page showing when it is shut. */
 export function pageUnder(model: Model): 'name' | 'menu' | 'lobby' | 'drafting' | 'limited' | 'conquest' | 'quest' | 'match' {
-  if (model.inMatch) return 'match';
+  if (model.screen === 'playing') return 'match';
   if (!model.playerName) return 'name';
   // An online draft runs at a table, which the player may look at while it goes on
-  if (model.drafting && !(model.inLobby && ui.draftHidden)) return 'drafting';
-  if (model.inEvent) return 'limited';
-  if (model.campaign === 'conquest') return 'conquest';
-  if (model.campaign === 'quest') return 'quest';
-  return model.inLobby ? 'lobby' : 'menu';
+  if (model.drafting && !(model.screen === 'setup' && ui.draftHidden)) return 'drafting';
+  switch (model.screen) {
+    case 'event': return 'limited';
+    case 'campaign': return model.campaign ?? 'menu';
+    case 'setup': return 'lobby';
+    default: return 'menu';
+  }
 }

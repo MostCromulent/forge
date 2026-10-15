@@ -51,10 +51,10 @@ interface KeyPress {
 
 export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: KeyBindings): KeyCommand | null {
   // Desktop's key for an all-out attack, which is answered only where the prompt's own keys are
-  const strike = press.modified && model.inMatch && press.key.toLowerCase() === 'a';
+  const strike = press.modified && model.screen === 'playing' && press.key.toLowerCase() === 'a';
   if (press.modified && !strike) {
     // The one other held key the page takes: undo in the deck editor, which the browser would otherwise spend on nothing
-    const editing = !!model.editor && !model.inMatch && !ui.importer;
+    const editing = !!model.editor && model.screen !== 'playing' && !ui.importer;
     return editing && !press.typing && press.key.toLowerCase() === 'z' ? 'editorUndo' : null;
   }
   // A held key is no player's chosen key, so it matches none of them on the way down
@@ -65,18 +65,18 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
   if (model.hostChoice) {
     return escape ? 'declineHostChoice' : null;
   }
-  if (!model.inMatch) {
+  if (model.screen !== 'playing') {
     if (ui.importer) {
       return escape ? 'closeImporter' : null;
     }
     if (ui.browse && !model.editor) {
       return escape ? 'closeBrowse' : null;
     }
-    if (model.inLobby && ui.picker) {
+    if (model.screen === 'setup' && ui.picker) {
       return escape ? 'closePicker' : null;
     }
     const table = model.lobby;
-    return !press.typing && model.inLobby && key === 'Enter' && table?.host && table.canStart
+    return !press.typing && model.screen === 'setup' && key === 'Enter' && table?.host && table.canStart
       // A deck above the table's bracket is started past only by Play, which asks first
       && !table.overBracket.length ? 'startMatch' : null;
   }

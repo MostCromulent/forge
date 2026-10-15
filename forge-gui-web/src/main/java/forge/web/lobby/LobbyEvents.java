@@ -73,7 +73,7 @@ final class LobbyEvents {
         if (product == null && data.getActiveEventId() != null) {
             product = playedAgain(data.getActiveEventId());
         }
-        return new LimitedTable(draft ? "draft" : "sealed", product,
+        return new LimitedTable(draft ? EventKind.draft : EventKind.sealed, product,
                 event == null ? 0 : event.getPodSize(),
                 event == null || event.getDoublePick() == null ? null : event.getDoublePick().name(),
                 event == null ? 0 : event.getPickTimerSeconds(), event == null ? null : event.getPhase().name(),
@@ -112,7 +112,7 @@ final class LobbyEvents {
     /** A past event as one of its pools' tags describe it. */
     private static PastEvent pastEvent(final String id, final Deck pool) {
         final boolean draft = EventFormat.BOOSTER_DRAFT.name().equals(DeckProxy.getEventTag(pool, "eventFormat"));
-        return new PastEvent(id, draft ? "draft" : "sealed", Objects.toString(DeckProxy.getEventTag(pool, "eventProduct"), ""),
+        return new PastEvent(id, draft ? EventKind.draft : EventKind.sealed, Objects.toString(DeckProxy.getEventTag(pool, "eventProduct"), ""),
                 Objects.toString(DeckProxy.getEventTag(pool, "eventDate"), ""));
     }
 
@@ -158,7 +158,7 @@ final class LobbyEvents {
         if (Lobby.drafting(lobby)) {
             return Localizer.getInstance().getMessage("lblWebLobbyDraftStillOn");
         }
-        final String kind = lobby.getData().getLimitedType() == GameType.Sealed ? "sealed" : "draft";
+        final EventKind kind = lobby.getData().getLimitedType() == GameType.Sealed ? EventKind.sealed : EventKind.draft;
         lobby.clearCurrentEvent();
         lobby.selectEventForMatch(null, false);
         for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
@@ -187,8 +187,8 @@ final class LobbyEvents {
         return null;
     }
 
-    /** Switches the table to a "draft" or "sealed" event, or to Constructed when kind is null, and answers why not, or null. */
-    String setLimited(final String kind) {
+    /** Switches the table to a kind of event, or to Constructed when kind is null, and answers why not, or null. */
+    String setLimited(final EventKind kind) {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null) {
             return null;
@@ -212,7 +212,7 @@ final class LobbyEvents {
         if (eventStarted()) {
             return Localizer.getInstance().getMessage("lblWebLobbyEventStartedSwitch");
         }
-        final boolean sealed = "sealed".equals(kind);
+        final boolean sealed = kind == EventKind.sealed;
         // An event is played without a format or casual variant, as desktop's Limited mode hides them
         owner.setFormat(GameType.Constructed.name());
         for (final GameType v : Lobby.VARIANTS) {

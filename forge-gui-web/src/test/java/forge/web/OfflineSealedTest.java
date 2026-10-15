@@ -41,7 +41,7 @@ public class OfflineSealedTest extends SessionsTest {
         Assert.assertNotNull(host.awaitMatching("hello", h -> h.get("host").getAsBoolean()));
         sessions.onMessage(host, message("setName", "name", "Host"));
         sessions.onMessage(host, message("limitedOpen", "kind", "sealed"));
-        host.awaitMatching("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean(), "the Limited page never opened");
+        host.awaitMatching("hello", h -> "event".equals(h.get("screen").getAsString()), "the Limited page never opened");
         return host;
     }
 
@@ -93,7 +93,7 @@ public class OfflineSealedTest extends SessionsTest {
             sessions.onMessage(host, JsonCodec.message("claimHost"));
             sessions.onMessage(host, message("setName", "name", "Host"));
             sessions.onMessage(host, message("limitedOpen", "kind", "draft"));
-            host.awaitMatching("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean(), "the Limited page never opened");
+            host.awaitMatching("hello", h -> "event".equals(h.get("screen").getAsString()), "the Limited page never opened");
             sessions.onMessage(host, message("poolOpen", "name", name));
             // No game count is sent, so the saved games-per-match is left as other tests expect it
             sessions.onMessage(host, message("poolPlay", "name", name, "mode", "several", "opponent", 0, "count", 7, "games", 0));
@@ -102,7 +102,7 @@ public class OfflineSealedTest extends SessionsTest {
             Assert.assertEquals(sessions.hostLobby().getHostedMatch().getGame().getRegisteredPlayers().size(), 8);
             awaitPriority(host);
             send(host, JsonCodec.message("leave"));
-            host.awaitMatching("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean(), "leaving did not return to the pool");
+            host.awaitMatching("hello", h -> "event".equals(h.get("screen").getAsString()), "leaving did not return to the pool");
         } finally {
             drafts.delete(name);
         }

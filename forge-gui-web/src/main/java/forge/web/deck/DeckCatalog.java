@@ -27,8 +27,10 @@ import forge.util.Lang;
 import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.SleeveArt;
+import forge.web.protocol.FromBrowser.DeckQueryKind;
 import forge.web.protocol.ToBrowser.Bracket;
 import forge.web.protocol.ToBrowser.BracketReason;
+import forge.web.protocol.ToBrowser.BracketReasonKind;
 import forge.web.protocol.ToBrowser.DeckDetails;
 import forge.web.protocol.ToBrowser.DeckStats;
 import forge.web.protocol.ToBrowser.DeckSummary;
@@ -124,14 +126,14 @@ public final class DeckCatalog {
         final List<BracketReason> reasons = new ArrayList<>();
         final List<String> clear = new ArrayList<>();
         final int changers = r.getGamechangers().size();
-        reason(reasons, clear, "gameChangers", text.getMessage("lblCommanderBracketGameChangers"),
+        reason(reasons, clear, BracketReasonKind.gameChangers, text.getMessage("lblCommanderBracketGameChangers"),
                 text.getMessage("lblWebBracketBriefGameChangers", changers), r.getGamechangers(), r.getGamechangersBracket(),
                 text.getMessage(r.getGamechangersBracket() == 4 ? "lblCommanderBracketReasonGameChangersFour" : "lblCommanderBracketReasonGameChangersOne"));
-        reason(reasons, clear, "massLandDenial", text.getMessage("lblCommanderBracketMassLandDenial"),
+        reason(reasons, clear, BracketReasonKind.massLandDenial, text.getMessage("lblCommanderBracketMassLandDenial"),
                 text.getMessage("lblCommanderBracketMassLandDenial"), r.getMassLandDenial(), r.getMassLandDenialBracket(),
                 text.getMessage("lblCommanderBracketReasonMassLandDenial"));
         final int turns = r.getExtraTurns().size();
-        reason(reasons, clear, "extraTurns", text.getMessage("lblCommanderBracketExtraTurns"),
+        reason(reasons, clear, BracketReasonKind.extraTurns, text.getMessage("lblCommanderBracketExtraTurns"),
                 text.getMessage("lblWebBracketBriefExtraTurns", turns), r.getExtraTurns(), r.getExtraTurnsBracket(),
                 text.getMessage(switch (r.getExtraTurnsBracket()) {
                     case 4 -> "lblCommanderBracketReasonExtraTurnsFour";
@@ -139,7 +141,7 @@ public final class DeckCatalog {
                     case 2 -> "lblCommanderBracketReasonExtraTurnsTwo";
                     default -> "lblCommanderBracketReasonExtraTurnsFew";
                 }));
-        reason(reasons, clear, "chainedExtraTurns", text.getMessage("lblCommanderBracketChainedExtraTurns"),
+        reason(reasons, clear, BracketReasonKind.chainedExtraTurns, text.getMessage("lblCommanderBracketChainedExtraTurns"),
                 text.getMessage("lblCommanderBracketChainedExtraTurns"), r.getChainedExtraTurns(), r.getChainedExtraTurnsBracket(),
                 text.getMessage("lblCommanderBracketReasonChainedExtraTurn"));
         final List<String> late = r.getLateGameCombos().stream().map(Object::toString).toList();
@@ -149,11 +151,11 @@ public final class DeckCatalog {
             clear.add(combos);
         }
         if (!late.isEmpty()) {
-            reasons.add(new BracketReason("lateCombos", combos + " · " + text.getMessage("lblCommanderBracketLateGame"),
+            reasons.add(new BracketReason(BracketReasonKind.lateCombos, combos + " · " + text.getMessage("lblCommanderBracketLateGame"),
                     text.getMessage("lblWebBracketBriefLateCombo"), late, r.getLateGameCombosBracket(), text.getMessage("lblCommanderBracketReasonLateGameCombo")));
         }
         if (!early.isEmpty()) {
-            reasons.add(new BracketReason("earlyCombos", combos + " · " + text.getMessage("lblCommanderBracketEarlyGame"),
+            reasons.add(new BracketReason(BracketReasonKind.earlyCombos, combos + " · " + text.getMessage("lblCommanderBracketEarlyGame"),
                     text.getMessage("lblWebBracketBriefEarlyCombo"), early, r.getEarlyGameCombosBracket(), text.getMessage("lblCommanderBracketReasonEarlyGameCombo")));
         }
         // What raised it most first
@@ -161,7 +163,7 @@ public final class DeckCatalog {
         return new Bracket(r.getBracket(), reasons, clear);
     }
 
-    private static void reason(final List<BracketReason> reasons, final List<String> clear, final String kind, final String title,
+    private static void reason(final List<BracketReason> reasons, final List<String> clear, final BracketReasonKind kind, final String title,
             final String brief, final List<String> cards, final int raises, final String why) {
         if (cards.isEmpty()) {
             clear.add(title);
@@ -364,12 +366,12 @@ public final class DeckCatalog {
         }
     }
 
-    /** The keys of listed decks holding a matching card, where kind is "card" (outside the sideboard), "sideboard" or "set" (a code or name). */
-    public List<String> matching(final String kind, final String value) {
+    /** The keys of listed decks holding a matching card, outside the sideboard or in it, or from a set, given by its code or name. */
+    public List<String> matching(final DeckQueryKind kind, final String value) {
         final String words = value.trim().toLowerCase();
-        final CardEdition set = "set".equals(kind) ? edition(value.trim()) : null;
+        final CardEdition set = kind == DeckQueryKind.set ? edition(value.trim()) : null;
         final List<String> out = new ArrayList<>();
-        if (words.isEmpty() || "set".equals(kind) && set == null) {
+        if (words.isEmpty() || kind == DeckQueryKind.set && set == null) {
             return out;
         }
         synchronized (DECKS) {
@@ -379,7 +381,7 @@ public final class DeckCatalog {
                     return;
                 }
                 for (final Map.Entry<DeckSection, CardPool> section : deck) {
-                    if ("sideboard".equals(kind) != (section.getKey() == DeckSection.Sideboard) && !"set".equals(kind)) {
+                    if ((kind == DeckQueryKind.sideboard) != (section.getKey() == DeckSection.Sideboard) && kind != DeckQueryKind.set) {
                         continue;
                     }
                     if (section.getValue().find(c -> set != null ? set.getCode().equals(c.getEdition())

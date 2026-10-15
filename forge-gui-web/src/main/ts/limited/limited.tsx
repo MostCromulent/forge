@@ -9,7 +9,7 @@ import { COLOUR_NAMES, Pips } from '../symbols';
 import { changeUi } from '../ui';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { PoolRow } from '../protocol';
+import type { PoolPlayMode, PoolRow } from '../protocol';
 import { t, tNodes, shortDay } from '../text';
 
 /** Desktop's limited deck is at least forty cards. */
@@ -154,7 +154,7 @@ function Opponents({ pool, draft, actions }: { pool: PoolRow; draft: boolean; ac
   const [games, setGames] = useState(3);
   const short = pool.deckSize < DECK_SIZE;
   const several = draft && cap >= 2;
-  const play = (mode: 'one' | 'several' | 'gauntlet', opponent = 0) => actions.poolPlay(pool.name, mode, opponent, count, games);
+  const play = (mode: PoolPlayMode, opponent = 0) => actions.poolPlay(pool.name, mode, opponent, count, games);
   return (
     <div class="opponents">
       <div class="opp-head">

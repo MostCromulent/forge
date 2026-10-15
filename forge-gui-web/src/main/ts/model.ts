@@ -1,6 +1,6 @@
 // The browser's copy of the game, which server messages change here and everything on the page is drawn from
 
-import type { CardPoolDetails, CardPoolGroup, DeckGenOptions, LimitedEdition, ConquestAetherState, CampaignBar, ConquestPlanes, CampaignPrefs, CampaignStats, Trading, ConquestOptions, ConquestParty, CampaignResult, Reward, ConquestSaves, ConquestState, QuestBazaar, QuestChallenges, QuestDecks, QuestDuels, QuestOptions, QuestSaves, QuestTournaments, DeckMatches, DevState, MatchScore } from './protocol';
+import type { CampaignMode, EventKind, Screen, CardPoolDetails, CardPoolGroup, DeckGenOptions, LimitedEdition, ConquestAetherState, CampaignBar, ConquestPlanes, CampaignPrefs, CampaignStats, Trading, ConquestOptions, ConquestParty, CampaignResult, Reward, ConquestSaves, ConquestState, QuestBazaar, QuestChallenges, QuestDecks, QuestDuels, QuestOptions, QuestSaves, QuestTournaments, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -28,10 +28,8 @@ export interface Model {
   playable: Playable | null;
   looks: Looks | null;
   spectating: boolean;
-  inMatch: boolean;
-  inLobby: boolean;
-  /** A seat is being taken: the server is between the menu and the table. */
-  joining: boolean;
+  /** The page the server has the browser on. While it is opening, a seat is being taken: the server is between the menu and the table. */
+  screen: Screen;
   playerName: string;
   decks: DeckSummary[];
   error: string | null;
@@ -89,14 +87,13 @@ export interface Model {
   importResult: ImportResult | null;
   /** An import's or a pool's name belongs to one already, and the page asks what to do. */
   nameTaken: string | null;
-  /** On the Limited pages; eventPool names the pool whose opponents screen shows. */
-  inEvent: boolean;
+  /** On the Limited pages, the pool whose opponents screen shows. */
   eventPool: string | null;
   /** How many sealed pools are saved, for the menu. */
   sealedPools: number;
   draftPools: number;
   /** Which Limited pages are open: 'sealed' or 'draft'. */
-  eventKind: 'sealed' | 'draft' | null;
+  eventKind: EventKind | null;
   /** An offline draft is running, and draft is its latest state. */
   drafting: boolean;
   draft: DraftState | null;
@@ -111,7 +108,7 @@ export interface Model {
   cardSets: LimitedEdition[] | null;
   limitedPools: LimitedPools | null;
   /** The campaign mode whose pages are showing, and the save open in it, which its matches name too. currentConquest and currentQuest are what a Resume opens. */
-  campaign: 'conquest' | 'quest' | null;
+  campaign: CampaignMode | null;
   campaignSave: string | null;
   currentConquest: string | null;
   currentQuest: string | null;
@@ -157,12 +154,12 @@ export function createModel(): Model {
     objects: new Map(), root: -1, visible: new Set(), localPlayers: [],
     prompt: null, zones: [], requests: new Map(), gameOver: false, matchScore: [], controls: null, playable: null,
     looks: null, spectating: false,
-    inMatch: false, inLobby: false, joining: false, playerName: '', decks: [], error: null,
+    screen: 'menu', playerName: '', decks: [], error: null,
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], presence: [], networked: false,
     cardFormats: [], deckGen: null, deckCardPool: null, extraChoices: null, deckDetails: null, deckMatches: {}, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
     drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
-    inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
+    eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, cardSets: null, limitedPools: null,
     campaign: null, campaignSave: null, currentConquest: null, currentQuest: null, conquestSaves: null, questOptions: null,
     campaignResult: null, conquestOptions: null, campaignPrefs: null, ...NO_CAMPAIGN, ...NO_CONQUEST, ...NO_QUEST,

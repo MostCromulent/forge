@@ -3,6 +3,7 @@ package forge.web;
 import com.google.gson.JsonObject;
 import forge.util.IHasForgeLog;
 import forge.web.protocol.ToBrowser.HostChoice;
+import forge.web.protocol.ToBrowser.HostChoiceKind;
 import forge.web.protocol.Wire;
 
 import java.util.List;
@@ -42,7 +43,7 @@ final class HostRequests implements IHasForgeLog {
     }
 
     /** Asks the browser to pick from a list and waits. images, when given, picture each option, as cards or as packs as pictured says. Returns the indices chosen, or null when nobody answers. */
-    List<Integer> ask(final String kind, final String title, final String message, final List<String> options, final int min, final int max,
+    List<Integer> ask(final HostChoiceKind kind, final String title, final String message, final List<String> options, final int min, final int max,
             final List<String> images, final String pictured) {
         final int id = nextId.incrementAndGet();
         final HostChoice request = new HostChoice(id, kind, title, message, min, max, options, images, pictured);

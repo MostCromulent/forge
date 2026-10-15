@@ -20,6 +20,7 @@ import forge.util.storage.IStorage;
 import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
 import forge.web.protocol.FromBrowser.DraftStart;
+import forge.web.protocol.FromBrowser.EventKind;
 import forge.web.protocol.FromBrowser.SealedCreate;
 import forge.web.protocol.ToBrowser.DraftBlockOption;
 import forge.web.protocol.ToBrowser.LimitedEdition;
@@ -47,9 +48,9 @@ public final class OfflineEvents {
         return FModel.getDecks().getSealed();
     }
 
-    /** Where pools of a kind are kept: "draft" in desktop's drafts, anything else in its sealed pools. */
-    public static IStorage<DeckGroup> storage(final String kind) {
-        return "draft".equals(kind) ? FModel.getDecks().getDraft() : sealed();
+    /** Where pools of a kind are kept: desktop's drafts or its sealed pools. */
+    public static IStorage<DeckGroup> storage(final EventKind kind) {
+        return kind == EventKind.draft ? FModel.getDecks().getDraft() : sealed();
     }
 
     public static LimitedOptions options() {
@@ -61,8 +62,8 @@ public final class OfflineEvents {
     }
 
     /** The pool of a kind saved or played most recently, by its files' times on disk; null if there is none. */
-    public static String latest(final String kind) {
-        final String dir = "draft".equals(kind) ? ForgeConstants.DECK_DRAFT_DIR : ForgeConstants.DECK_SEALED_DIR;
+    public static String latest(final EventKind kind) {
+        final String dir = kind == EventKind.draft ? ForgeConstants.DECK_DRAFT_DIR : ForgeConstants.DECK_SEALED_DIR;
         String latest = null;
         long newest = Long.MIN_VALUE;
         synchronized (DeckCatalog.DECKS) {
@@ -90,7 +91,7 @@ public final class OfflineEvents {
     }
 
     public static LimitedPools pools() {
-        return new LimitedPools(rows(sealed(), ForgeConstants.DECK_SEALED_DIR), rows(storage("draft"), ForgeConstants.DECK_DRAFT_DIR));
+        return new LimitedPools(rows(sealed(), ForgeConstants.DECK_SEALED_DIR), rows(storage(EventKind.draft), ForgeConstants.DECK_DRAFT_DIR));
     }
 
     private static List<PoolRow> rows(final IStorage<DeckGroup> storage, final String dir) {

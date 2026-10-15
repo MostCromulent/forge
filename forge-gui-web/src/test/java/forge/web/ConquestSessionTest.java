@@ -211,7 +211,7 @@ public class ConquestSessionTest extends SessionsTest {
     private TestBrowser inBattle(final ConquestData data) throws InterruptedException {
         final TestBrowser host = hostInConquest(data);
         send(host, JsonCodec.message("conquestBattle"));
-        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the battle did not start");
+        host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the battle did not start");
         awaitPriority(host);
         return host;
     }
@@ -297,7 +297,7 @@ public class ConquestSessionTest extends SessionsTest {
         send(host, JsonCodec.message("leave"));
         host.awaitMatching("reward", r -> true, "the reward was not sent");
         send(host, JsonCodec.message("rewardClaim"));
-        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the chaos battle did not start");
+        host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the chaos battle did not start");
         awaitPriority(host);
         Assert.assertEquals(sessions.hostLobby().getHostedMatch().getGame().getRules().getGamesPerMatch(), 3);
         final int losses = FModel.getConquest().getModel().getChaosBattleRecord().getLosses();
@@ -318,12 +318,12 @@ public class ConquestSessionTest extends SessionsTest {
         FModel.getConquest().prepareBattle(loc.getEvent().createBattle(loc, 0), null);
         send(host, JsonCodec.message("conquestBattle"));
         host.awaitMatching("error", e -> true, "the failed start was not reported");
-        host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean() && "conquest".equals(str(h, "campaign")), "the page did not return to the map");
+        host.awaitMatching("hello", h -> !"playing".equals(h.get("screen").getAsString()) && "conquest".equals(str(h, "campaign")), "the page did not return to the map");
         Assert.assertNull(FModel.getConquest().getActiveBattle());
         Assert.assertNull(FModel.getConquest().getModel().getCurrentPlaneData().getEventRecord(loc), "a battle that never started was recorded");
 
         send(host, JsonCodec.message("conquestBattle"));
-        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "a second battle did not start");
+        host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "a second battle did not start");
         awaitPriority(host);
     }
 
@@ -361,9 +361,9 @@ public class ConquestSessionTest extends SessionsTest {
         if (host == null) {
             return;
         }
-        if (host.hello.get("inMatch").getAsBoolean()) {
+        if ("playing".equals(host.hello.get("screen").getAsString())) {
             send(host, JsonCodec.message("leave"));
-            if (host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean()) == null) {
+            if (host.awaitMatching("hello", h -> !"playing".equals(h.get("screen").getAsString())) == null) {
                 return;
             }
         }

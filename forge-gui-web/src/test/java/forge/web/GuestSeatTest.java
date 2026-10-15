@@ -80,10 +80,10 @@ public class GuestSeatTest extends SessionsTest {
                     "the host still counted the guest as having no deck: " + problem.getAsString());
         }
 
-        // The hello sent before the guest sat down also says inLobby false, so only what follows counts
+        // The hello sent before the guest sat down also says it is not at the table, so only what follows counts
         guestBrowser.forget();
         sessions.onMessage(hostBrowser, JsonCodec.message("leaveLobby"));
-        guestBrowser.awaitMatching("hello", h -> !h.get("inLobby").getAsBoolean(),
+        guestBrowser.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()),
                 "the guest was left in a lobby the host had closed");
     }
 
@@ -122,7 +122,7 @@ public class GuestSeatTest extends SessionsTest {
 
         guest.forget();
         sessions.onMessage(host, message("start", "spectate", false));
-        Assert.assertNotNull(guest.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean()),
+        Assert.assertNotNull(guest.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString())),
                 "the guest was left in match setup when the host started the match" + diagnosis(host, guest));
         guest.awaitMatching("state", m -> m.get("full").getAsBoolean(),
                 "the guest was taken into the match but never shown the table");
@@ -152,7 +152,7 @@ public class GuestSeatTest extends SessionsTest {
 
         final TestBrowser back = connect("first");
         final JsonObject greeted = back.awaitNewest("hello", "the browser that left was never greeted");
-        Assert.assertFalse(greeted.has("playerName") || greeted.get("inLobby").getAsBoolean(), "the browser that left came back to the seat it had lost");
+        Assert.assertFalse(greeted.has("playerName") || "setup".equals(greeted.get("screen").getAsString()), "the browser that left came back to the seat it had lost");
         sessions.disconnected(back);
 
         sessions.disconnected(second);
@@ -168,7 +168,7 @@ public class GuestSeatTest extends SessionsTest {
         Assert.assertNotNull(third.awaitLobbyWithSeat(), "the removed player's name or seat was still held");
         // A host that comes back to a table is sent its decks once, before the next test can ask for them
         send(host, JsonCodec.message("leaveLobby"));
-        host.awaitMatching("hello", h -> !h.get("inLobby").getAsBoolean(), "the host did not leave its table");
+        host.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()), "the host did not leave its table");
     }
 
     /** Fails if a guest can empty another guest's seat, or the host emptying one leaves its guest at the table, the seat held, or the table a seat short. */
@@ -188,16 +188,16 @@ public class GuestSeatTest extends SessionsTest {
         ann.forget();
         sessions.onMessage(bob, message("openSeat", "index", annSeat));
         sessions.onMessage(bob, message("removeSeat", "index", annSeat));
-        Assert.assertTrue(ann.got.stream().noneMatch(m -> "hello".equals(m.get("t").getAsString()) && !m.get("inLobby").getAsBoolean()),
+        Assert.assertTrue(ann.got.stream().noneMatch(m -> "hello".equals(m.get("t").getAsString()) && !"setup".equals(m.get("screen").getAsString())),
                 "a guest sent another guest away from the table");
 
         send(host, message("removeSeat", "index", annSeat));
-        ann.awaitMatching("hello", h -> !h.get("inLobby").getAsBoolean(), "the guest was left at the table when the host emptied its seat");
+        ann.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()), "the guest was left at the table when the host emptied its seat");
         host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 3
                         && "OPEN".equals(l.getAsJsonArray("seats").get(annSeat).getAsJsonObject().get("type").getAsString()),
                 "emptying a guest's seat did not leave it open, or took the seat away with the guest");
         send(host, JsonCodec.message("leaveLobby"));
-        host.awaitMatching("hello", h -> !h.get("inLobby").getAsBoolean(), "the host did not leave its table");
+        host.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()), "the host did not leave its table");
     }
 
     /** Fails if a seat given away mid-match does not show its new browser the game, or one taken away is not played by the AI. */
@@ -219,14 +219,14 @@ public class GuestSeatTest extends SessionsTest {
         }
         host.awaitLobby(l -> l.get("canStart").getAsBoolean(), "the host could not start");
         sessions.onMessage(host, message("start", "spectate", false));
-        guest.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the guest was not taken into the match");
+        guest.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the guest was not taken into the match");
 
         sessions.disconnected(guest);
         final TestBrowser other = connect("other");
         sessions.onMessage(other, message("setName", "name", "Sub"));
         other.awaitMatching("hello", h -> "Sub".equals(str(h, "playerName")), "the second guest was not named");
         send(host, message("giveSeat", "from", "Player", "to", "Sub"));
-        other.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the browser given the seat was not taken into the match");
+        other.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the browser given the seat was not taken into the match");
         other.awaitMatching("state", m -> m.get("full").getAsBoolean(), "the browser given the seat was never shown the table");
 
         sessions.disconnected(other);
@@ -257,7 +257,7 @@ public class GuestSeatTest extends SessionsTest {
         }
         host.awaitLobby(l -> l.get("canStart").getAsBoolean(), "the host could not start");
         sessions.onMessage(host, message("start", "spectate", false));
-        guest.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the guest was not taken into the match");
+        guest.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the guest was not taken into the match");
         final HostedMatch match = sessions.hostLobby().getHostedMatch();
         awaitTrue(() -> match.getGame() != null && match.getHumanControllers().stream().anyMatch(c -> c.getInputQueue().getInput() != null),
                 "the first game never asked a player anything");
@@ -309,7 +309,7 @@ public class GuestSeatTest extends SessionsTest {
         guest.awaitLobby(l -> l.get("mySeat").getAsInt() == 1, "the guest was not told its seat had moved down");
         guest.forget();
         sessions.onMessage(host, message("start", "spectate", false));
-        guest.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(),
+        guest.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()),
                 "the guest was left in match setup when the match started" + diagnosis(host, guest));
     }
 
@@ -525,7 +525,7 @@ public class GuestSeatTest extends SessionsTest {
         Assert.assertEquals(prompt.get("selectableMin").getAsInt(), 1);
         // The match is left, so the next test does not find a game still waiting on this one's answer
         send(host, JsonCodec.message("leave"));
-        host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean(), "leaving did not end the match");
+        host.awaitMatching("hello", h -> !"playing".equals(h.get("screen").getAsString()), "leaving did not end the match");
     }
 
     private static List<String> seatTypes(final JsonObject table) {

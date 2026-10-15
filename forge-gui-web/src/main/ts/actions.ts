@@ -1,8 +1,8 @@
 // Everything a player can do, which the controller alone turns into messages, so renderers and screens never see the protocol
 
 import type {
-  AutoDecisionAction, CatalogueQuery, DeckOp, DevAction, DeviceDeckText, EditorEdit, EventSetup, QuestCreate, ImportCommit, PhaseType, SealedCreate, DraftStart, Send, SetSeat,
-  YieldAction,
+  AutoDecisionAction, CampaignMode, CatalogueQuery, DeckOp, DeckQuery, DevAction, DeviceDeckText, EditorEdit, EventSetup, QuestCreate, ImportCommit, PhaseType, SealedCreate, DraftStart, Send, SetSeat,
+  EventKind, PoolPlayMode, YieldAction,
 } from './protocol';
 
 /** What a seat's owner can change about it. */
@@ -61,7 +61,7 @@ export interface Actions {
   quit(): void;
 
   /** Opens the Limited pages for a kind of event. */
-  limitedOpen(kind: 'sealed' | 'draft', resume: boolean): void;
+  limitedOpen(kind: EventKind, resume: boolean): void;
   draftStart(d: Omit<DraftStart, 't'>): void;
   /** Picks the card at index of the pack shown in state step. */
   draftPick(step: number, index: number, sideboard: boolean): void;
@@ -76,12 +76,12 @@ export interface Actions {
   poolEdit(name: string): void;
   poolDelete(name: string): void;
   /** Plays a pool: mode is one, several or gauntlet; opponent counts from 0 and count is how many for several. */
-  poolPlay(name: string, mode: 'one' | 'several' | 'gauntlet', opponent: number, count: number, games: number): void;
+  poolPlay(name: string, mode: PoolPlayMode, opponent: number, count: number, games: number): void;
   gauntletNext(): void;
   gauntletRestart(): void;
 
   /** Opens a mode's saved games, or with resume, the one played last. */
-  campaignOpen(mode: string, resume: boolean): void;
+  campaignOpen(mode: CampaignMode, resume: boolean): void;
   campaignLoad(name: string): void;
   /** Back from an open game to the saved ones, or from those to the start page. */
   campaignLeave(): void;
@@ -163,9 +163,9 @@ export interface Actions {
   questCreate(c: Omit<QuestCreate, 't'>): void;
 
   /** Opens a table others can join by link and makes it a draft or sealed table once it is open. */
-  openLimitedTable(kind: 'sealed' | 'draft'): void;
+  openLimitedTable(kind: EventKind): void;
   /** The table's Limited switch: a kind of event, or null for Constructed. */
-  setLimited(kind: 'sealed' | 'draft' | null): void;
+  setLimited(kind: EventKind | null): void;
   eventSetup(s: Omit<EventSetup, 't'>): void;
   eventStart(): void;
   eventHostAgain(eventId: string): void;
@@ -207,7 +207,7 @@ export interface Actions {
   /** Asks for a deck's card list and statistics, which arrive later in the model. */
   askDeckDetails(key: string): void;
   /** Asks which listed decks hold a card, in the sideboard or anywhere else, or cards from a set. */
-  deckQuery(kind: 'card' | 'sideboard' | 'set', value: string): void;
+  deckQuery(kind: DeckQuery['kind'], value: string): void;
   fetchNetDecks(): void;
   /** Card names and their printings, for picking a card's art; both arrive later in the model. */
   searchCards(query: string): void;
@@ -240,9 +240,6 @@ export interface Actions {
 
 /** The newest catalogue and import queries, numbered as sent, so an answer to an older one is told apart and dropped. */
 export const asked = { catalogue: 0, import: 0 };
-
-/** The kind of event a table opened from the start page is to be, until the table arrives and is switched to it. */
-export const pendingTable: { kind: 'sealed' | 'draft' | null } = { kind: null };
 
 export function createActions(send: Send): Actions {
   return {
@@ -283,10 +280,7 @@ export function createActions(send: Send): Actions {
     join: () => send({ t: 'join' }),
     quit: () => send({ t: 'quit' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
-    openLimitedTable: kind => {
-      pendingTable.kind = kind;
-      send({ t: 'invite' });
-    },
+    openLimitedTable: kind => send({ t: 'invite', limited: kind }),
     setLimited: kind => send(kind ? { t: 'setLimited', kind } : { t: 'setLimited' }),
     eventSetup: s => send({ t: 'eventSetup', ...s }),
     eventStart: () => send({ t: 'eventStart' }),

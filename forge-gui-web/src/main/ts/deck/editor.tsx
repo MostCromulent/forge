@@ -79,7 +79,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
     },
   });
   const openAnother = () => {
-    const seat = model.inLobby ? model.lobby?.mySeat : undefined;
+    const seat = model.screen === 'setup' ? model.lobby?.mySeat : undefined;
     actions.closeEditor();
     changeUi(u => {
       if (seat !== undefined) u.picker = { kind: 'deck', seat };

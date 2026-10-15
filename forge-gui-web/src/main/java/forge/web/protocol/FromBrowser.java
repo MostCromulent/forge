@@ -17,7 +17,7 @@ public final class FromBrowser {
     }
 
     /** Messages that are only their name. */
-    public enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, cardSets, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
+    public enum Plain { decks, claimHost, join, lobby, leaveLobby, addresses, cardPoolDetails, cardSets, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede, macroRecord, macroRepeat,
         campaignLeave, conquestMove, conquestBattle, rewardClaim, conquestParty, trading,
         conquestPlanes, campaignPrefs, campaignPrefsReset,
@@ -25,6 +25,15 @@ public final class FromBrowser {
 
     @Command
     public record Bare(Plain t) {
+    }
+
+    public enum EventKind { sealed, draft }
+
+    public enum CampaignMode { conquest, quest }
+
+    /** Opens a table others can join, set from the start for a draft or sealed event when limited is not null. */
+    @Command("invite")
+    public record Invite(@Nullable EventKind limited) {
     }
 
     /** The name and face this browser plays under, both chosen before anything else. */
@@ -123,9 +132,11 @@ public final class FromBrowser {
     public record AskDeckDetails(String key) {
     }
 
-    /** Which listed decks hold a card (kind "card" or "sideboard") or cards from a set (kind "set"). */
+    public enum DeckQueryKind { card, sideboard, set }
+
+    /** Which listed decks hold a card in the main deck or the sideboard, or cards from a set. */
     @Command("deckQuery")
-    public record DeckQuery(String kind, String value) {
+    public record DeckQuery(DeckQueryKind kind, String value) {
     }
 
     @Command("hostChoice")
@@ -318,7 +329,7 @@ public final class FromBrowser {
 
     /** Opens the Limited pages for a kind of event, or with resume, straight to the pool saved last. */
     @Command("limitedOpen")
-    public record LimitedOpen(String kind, boolean resume) {
+    public record LimitedOpen(EventKind kind, boolean resume) {
     }
 
     /** Opens a sealed pool, where product is a LimitedPoolType name and the fields that product does not need are null. */
@@ -361,14 +372,17 @@ public final class FromBrowser {
     public record PoolDelete(String name) {
     }
 
+    /** Against one opponent, count of them at once, or each in turn. */
+    public enum PoolPlayMode { one, several, gauntlet }
+
     /** Plays a pool's deck against one of its opponents, 0-based, for games in the match. */
     @Command("poolPlay")
-    public record PoolPlay(String name, @Nullable String mode, int opponent, int count, int games) {
+    public record PoolPlay(String name, @Nullable PoolPlayMode mode, int opponent, int count, int games) {
     }
 
-    /** The table's Limited switch, the host's: "draft" or "sealed" for an event, null for Constructed. */
+    /** The table's Limited switch, the host's: the kind of event, or null for Constructed. */
     @Command("setLimited")
-    public record SetLimited(@Nullable String kind) {
+    public record SetLimited(@Nullable EventKind kind) {
     }
 
     /** Sets the table's event up or sets it up again, with timer and grace in seconds and pickRule a DoublePick name. */
@@ -398,9 +412,9 @@ public final class FromBrowser {
     public record EventDecksOnly(boolean on) {
     }
 
-    /** Opens a campaign mode's saved games, or with resume, straight into the one played last. mode is "conquest". */
+    /** Opens a campaign mode's saved games, or with resume, straight into the one played last. */
     @Command("campaignOpen")
-    public record CampaignOpen(String mode, boolean resume) {
+    public record CampaignOpen(CampaignMode mode, boolean resume) {
     }
 
     @Command("campaignLoad")
