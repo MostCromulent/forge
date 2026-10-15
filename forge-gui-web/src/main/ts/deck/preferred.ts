@@ -3,7 +3,7 @@
 import type { Actions } from '../actions';
 import type { DeckSection, EditorState } from '../protocol';
 import { storeJson, storedJson } from '../storage';
-import { changeUi } from '../ui';
+import { redrawUi } from '../ui';
 
 const KEY = 'forge.printings';
 let byName: Record<string, string> | null = null;
@@ -23,7 +23,7 @@ export function preferPrinting(name: string, key: string | null): void {
   else next[name] = key;
   byName = next;
   storeJson(KEY, next);
-  changeUi(() => {});
+  redrawUi();
 }
 
 /** Adds a card to the deck. One the deck does not hold yet arrives in its preferred printing; one it holds keeps the deck's printing. */

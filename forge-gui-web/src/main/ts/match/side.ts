@@ -1,6 +1,6 @@
 // The column beside the board, holding the game log and, in a networked game, the chat dock, each of which collapses to its tab
 
-import { byId, q } from '../dom';
+import { byId, q, relayout } from '../dom';
 import { changeUi, eased, rememberSidePanels, ui, type UiState } from '../ui';
 import type { Model } from '../model';
 import { isSilent } from '../volume';
@@ -48,7 +48,7 @@ export function initSide(): void {
     document.documentElement.style.setProperty('--dock-h', `${byId('prompt').offsetHeight}px`);
     // The board's halves take what the dock leaves, so their cards are fitted again once it has settled
     clearTimeout(refit);
-    refit = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 200);
+    refit = window.setTimeout(relayout, 200);
   }).observe(byId('prompt'));
   for (const panel of PANELS) {
     q(side, `.side-toggle[data-panel="${panel}"]`).onclick = () => folding(u => {
@@ -102,5 +102,5 @@ export function renderSide(model: Model): void {
   for (const panel of PANELS) q(side, `.side-toggle[data-panel="${panel}"]`).setAttribute('aria-expanded', String(shown[panel]));
   byId('match').classList.toggle('side-folded', !shown.log && !shown.chat);
   // The board changes width; anything placed by measuring it must be placed again
-  window.dispatchEvent(new Event('resize'));
+  relayout();
 }

@@ -2,7 +2,7 @@
 
 import { combatShown, game, derefAll, players, type Model } from '../model';
 import { setting } from '../settings';
-import { byId, reducedMotion } from '../dom';
+import { byId, onRelayout, reducedMotion } from '../dom';
 import { cardElement, pileTopFor } from './motion';
 import { ui } from '../ui';
 import { isPortrait } from '../form';
@@ -48,7 +48,7 @@ let drawn: Model | null = null;
 let repaintQueued = false;
 
 export function initOverlay(schedule: () => void): void {
-  window.addEventListener('resize', schedule);
+  onRelayout(schedule);
   // A scrolling log or zone panel moves the cards the arrows point at, so only the arrows are redrawn, once a frame
   document.addEventListener('scroll', repaintSoon, true);
   document.addEventListener('pointermove', e => {

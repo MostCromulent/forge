@@ -1,4 +1,4 @@
-// Helpers for markup drawn by hand: lookups that treat a miss as a bug and say which, building, pointer and motion helpers, and a file to save
+// Helpers for markup drawn by hand: lookups that treat a miss as a bug and say which, building, pointer and motion helpers, re-placing after a layout change, and a file to save
 
 export function q<T extends HTMLElement = HTMLElement>(root: ParentNode, selector: string): T {
   const el = root.querySelector<T>(selector);
@@ -56,6 +56,19 @@ export function placeBeside(el: HTMLElement, x: number, y: number, gap: number):
 }
 
 /** Hands the player a file to save, holding text. */
+const relayouts: (() => void)[] = [];
+
+/** Runs place when the window resizes, and when relayout says the board moved without it. */
+export function onRelayout(place: () => void): void {
+  relayouts.push(place);
+  window.addEventListener('resize', place);
+}
+
+/** Places again whatever is placed by measuring the board, after the board changed size while the window did not. */
+export function relayout(): void {
+  for (const place of relayouts) place();
+}
+
 export function saveText(text: string, fileName: string, type: string): void {
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([text], { type }));

@@ -17,7 +17,7 @@ import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from '../looks';
 import { animateCardMoves, noteBoard, resetMotion, showCount } from './motion';
 import { boardBehind } from './pace';
 import { canShatter, shatter } from './shatter';
-import { byId, q, replay, make, onPressOutside } from '../dom';
+import { byId, q, replay, make, onPressOutside, relayout } from '../dom';
 import { setting } from '../settings';
 import { logTints } from './log';
 import type { CardClick } from './cards';
@@ -30,7 +30,7 @@ import { hovers, isTouch, longPress } from '../press';
 import { fieldChanged, repeatTap, seatToOpen, tapInspects } from './portrait';
 import { isPortrait } from '../form';
 import { sheet, swipeDown } from '../sheet';
-import { changeUi, ui } from '../ui';
+import { changeUi, redrawUi, ui } from '../ui';
 import { t, type TextKey } from '../text';
 import { ICONS, iconSvg } from '../icons';
 import { COLOUR_BITS, COMMANDER_LETHAL, COMMANDER_WARNING } from './rules';
@@ -257,7 +257,7 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
     }
     shownSeat = open;
     // A seat that was out of sight had no size to fit its cards to
-    window.dispatchEvent(new Event('resize'));
+    relayout();
   }
 }
 
@@ -299,11 +299,6 @@ function renderOut(model: Model, actions: Actions): void {
 
 const SKULL = iconSvg(ICONS.skull);
 
-interface Badge {
-  key: string;
-  text: string;
-  title: string;
-}
 
 function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefined, onField: CardView[], actions: Actions, select: CardClick): void {
   if (!player) {
@@ -388,16 +383,9 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   renderZonesPill(root, model, player);
   renderManaPool(q(root, '.mana'), player, isLocal(model, player), actions);
   showCommanderDamage(avatar, model, player);
-  const badges: Badge[] = Object.entries(player.Counters ?? {}).map(([name, n]) => ({ key: name, text: `${name.toLowerCase()} ${n}`, title: '' }));
-  reconcile(q(root, '.player-counters'), badges, b => b.key,
-    () => {
-      const el = make('span', 'player-counter');
-      return el;
-    },
-    (el, b) => {
-      el.textContent = b.text;
-      el.title = b.title;
-    });
+  reconcile(q(root, '.player-counters'), Object.entries(player.Counters ?? {}), ([name]) => name,
+    () => make('span', 'player-counter'),
+    (el, [name, n]) => { el.textContent = `${name.toLowerCase()} ${n}`; });
   renderEmblems(q(root, '.emblems'), model, player, zone(model, player, 'Command'), select);
   q(root, '.role-tag').hidden = !isArchenemy(model, player);
   renderOngoing(q(root, '.schemes-ongoing'), model, player);
@@ -653,7 +641,7 @@ function toss(model: Model, heads: boolean): void {
   if (tossed || name === undefined) return;
   tossed = true;
   // The page is drawn again as the coin is put away, which is when who goes first is said or asked
-  tossCoin(heads, t(heads ? 'lblYouHaveWonTheCoinToss' : 'lblYouLostTheCoinToss', name), () => changeUi(() => {}));
+  tossCoin(heads, t(heads ? 'lblYouHaveWonTheCoinToss' : 'lblYouLostTheCoinToss', name), redrawUi);
 }
 
 /** Two players are asked to play or draw, so your own face answers OK and the other cancels, while with more a face picks that player. */

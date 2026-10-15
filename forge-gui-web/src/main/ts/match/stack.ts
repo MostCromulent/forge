@@ -9,7 +9,7 @@ import { hoverCard, hoverable, inspectCard } from '../preview';
 import { FIZZLE_MS, SETTLE_MS, journeys, noteFizzled } from './motion';
 import { notePick, stackTargets } from './overlay';
 import { hovers, longPress } from '../press';
-import { byId, q, make, reducedMotion } from '../dom';
+import { byId, q, make, onRelayout, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
 import { t } from '../text';
@@ -58,7 +58,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     q(root, '.head').onclick = e => {
       if (isPortrait() && !(e.target as Element).closest('.collapse')) fold(!ui.stackCollapsed);
     };
-    window.addEventListener('resize', () => place(root));
+    onRelayout(() => place(root));
   }
   const items: StackItemView[] = derefAll(model, game(model)?.Stack);
   // Spells arrive by flying in, and anything else, an ability or a trigger, has no card move and grows into place instead

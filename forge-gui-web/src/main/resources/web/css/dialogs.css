@@ -177,7 +177,8 @@ html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
   position: absolute;
   left: -9px;
   top: -9px;
-  z-index: 4;
+  /* Above a hovered card (.card:hover), which a tap leaves hovered on a phone */
+  z-index: 6;
   min-width: 22px;
   height: 22px;
   display: grid;

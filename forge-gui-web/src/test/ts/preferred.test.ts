@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../main/ts/ui', () => ({ changeUi: () => {} }));
+vi.mock('../../main/ts/ui', () => ({ redrawUi: () => {} }));
 
 import { addCard, preferPrinting } from '../../main/ts/deck/preferred';
 import type { Actions } from '../../main/ts/actions';

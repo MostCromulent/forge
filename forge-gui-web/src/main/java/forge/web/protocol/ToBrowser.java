@@ -41,7 +41,7 @@ public final class ToBrowser {
     public record Hello(boolean inMatch, boolean inLobby, boolean joining, boolean spectating, boolean host,
             boolean canClaimHost, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
             int sleeveCount, List<SavedSleeveArt> sleeveArt, boolean inEvent, @Nullable String eventPool, int sealedPools,
-            @Nullable String eventKind, boolean drafting, int draftPools, @Nullable String campaign, @Nullable String campaignSave,
+            @Nullable @Ts("'sealed' | 'draft'") String eventKind, boolean drafting, int draftPools, @Nullable @Ts("'conquest' | 'quest'") String campaign, @Nullable String campaignSave,
             @Nullable String currentConquest, @Nullable String currentQuest, @Nullable String version, ServerSettings settings) {
     }
 

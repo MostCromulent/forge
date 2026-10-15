@@ -6,7 +6,7 @@ import { appendSymbolText, cardImageSrc, imageUrl, setImage, setSymbolText } fro
 import { showFoil, tiltFoil } from './match/foil';
 import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './match/rulestext';
 import { byId, lean, pointerOn, q, replay, make, placeBeside } from './dom';
-import { changeUi, ui } from './ui';
+import { changeUi, redrawUi, ui } from './ui';
 import { keyName } from './keys';
 import { boundKeys } from './settings';
 import type { Actions } from './actions';
@@ -555,7 +555,7 @@ function ensureZoom(zoom: HTMLElement): void {
   const img = q<HTMLImageElement>(zoom, 'img');
   img.addEventListener('error', () => {
     brokenSrc = img.getAttribute('src') ?? '';
-    changeUi(() => {});
+    redrawUi();
   });
   // Cleared once played: a preview still carrying the class would flip again the next time it is shown
   zoom.addEventListener('animationend', e => {

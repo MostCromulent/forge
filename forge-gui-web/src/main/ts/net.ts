@@ -1,21 +1,18 @@
 import type { ClientMessage, Send, ServerMessage } from './protocol';
+import { store, stored } from './storage';
 
 // The id says which browser this is, so a reload returns to the seat it left instead of taking another one.
 const ID_KEY = 'forge.clientId';
 
+/** This browser's id. Where storage is blocked, a new one each page load, so the seat lasts until the page is reloaded. */
 export function clientId(): string {
-  try {
-    let id = localStorage.getItem(ID_KEY);
-    if (!id) {
-      // randomUUID exists only on https or localhost, and a guest's link is usually plain http
-      id = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
-      localStorage.setItem(ID_KEY, id);
-    }
-    return id;
-  } catch {
-    // Storage can be unavailable; the seat then lasts only as long as the socket
-    return '';
+  let id = stored(ID_KEY);
+  if (!id) {
+    // randomUUID exists only on https or localhost, and a guest's link is usually plain http
+    id = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+    store(ID_KEY, id);
   }
+  return id;
 }
 
 // The server replays full state, prompt, zones and open requests on every connect, so a reconnect needs no bookkeeping here.

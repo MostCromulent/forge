@@ -25,7 +25,7 @@ import { createPacer } from './match/pacer';
 import { setVersion } from './links';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { rememberStops, restoreStops } from './match/stopmemory';
-import { byId, saveText } from './dom';
+import { byId, relayout, saveText } from './dom';
 import { initNotices, showNotice } from './notices';
 import { forgetWakeLock, keepAwake } from './wakelock';
 import { deleteDeviceDeck, listDeviceDecks, putDeviceDeck } from './deck/devicedecks';
@@ -146,7 +146,7 @@ initForm(() => {
   ui.handOpen = false;
   ui.stopsOpen = false;
   ui.zonesFor = null;
-  window.dispatchEvent(new Event('resize'));
+  relayout();
   schedule();
 });
 initNotices(model, schedule);

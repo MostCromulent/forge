@@ -178,6 +178,11 @@ export function changeUi(change: (state: UiState) => void): void {
   redraw();
 }
 
+/** Draws again for a change kept outside ui, such as a stored preference or a picture that failed to load. */
+export function redrawUi(): void {
+  redraw();
+}
+
 /** A new match: the cards the arrangement was about are gone, but how the player likes the side column stays. */
 export function resetMatchUi(): void {
   ui.openPiles.clear();

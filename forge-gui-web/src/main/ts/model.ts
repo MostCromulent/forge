@@ -96,7 +96,7 @@ export interface Model {
   sealedPools: number;
   draftPools: number;
   /** Which Limited pages are open: 'sealed' or 'draft'. */
-  eventKind: string | null;
+  eventKind: 'sealed' | 'draft' | null;
   /** An offline draft is running, and draft is its latest state. */
   drafting: boolean;
   draft: DraftState | null;
@@ -111,7 +111,7 @@ export interface Model {
   cardSets: LimitedEdition[] | null;
   limitedPools: LimitedPools | null;
   /** The campaign mode whose pages are showing, and the save open in it, which its matches name too. currentConquest and currentQuest are what a Resume opens. */
-  campaign: string | null;
+  campaign: 'conquest' | 'quest' | null;
   campaignSave: string | null;
   currentConquest: string | null;
   currentQuest: string | null;

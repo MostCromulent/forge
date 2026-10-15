@@ -1,4 +1,4 @@
-/* A phone or tablet held upright (form.ts sets data-form). Nothing here applies to the desktop layout. */
+/* A phone or tablet held upright (form.ts sets data-form). Every rule for it is here, and nothing here applies to the desktop layout. A page's own file keeps only what the desktop alone needs, under html:not([data-form="portrait"]). */
 /* The browser's own answers to a finger: pull to refresh, double-tap zoom, and the long-press callout */
 html[data-form="portrait"], html[data-form="portrait"] body { overscroll-behavior: none; }
 @media (hover: none) {
@@ -533,6 +533,8 @@ html[data-form="portrait"] #editor .land-row { display: grid; grid-template-colu
 html[data-form="portrait"] #editor .land-row .band-lab, html[data-form="portrait"] #editor .land-row .land-set { grid-column: 1 / -1; }
 html[data-form="portrait"] #editor .land-row .band-lab { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
 html[data-form="portrait"] #editor .land-row .step { width: 36px; height: 36px; font-size: 18px; }
+/* A card's printings, two to a row */
+html[data-form="portrait"] .print-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 /* A phone has no room beside the word, so the tag goes under it */
 html[data-form="portrait"] .menu-page .wordmark { flex-wrap: wrap; justify-content: center; }
 html[data-form="portrait"] .menu-page .wordmark .beta { position: static; flex-basis: 100%; margin: .8em 0 0; text-align: center; }

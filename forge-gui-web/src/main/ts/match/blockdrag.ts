@@ -182,7 +182,7 @@ function until(test: () => boolean): Promise<boolean> {
   });
 }
 
-/** TODO: the shared input code should take a block as one intent, so that a drag need not be translated into clicks here. */
+/** Makes a drag's block as the block prompt takes one, by clicking the attacker and then the blocker, after first taking a blocker off the attacker it already blocks. */
 async function block(actions: Actions, blocker: number, attacker: number, at: Point): Promise<void> {
   if (!current || blocking(blocker, attacker)) return;
   // The prompt names the attacker being blocked by its id, and one already named is not clicked again
