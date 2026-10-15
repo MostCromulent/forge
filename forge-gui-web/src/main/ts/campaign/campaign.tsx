@@ -1,4 +1,5 @@
-// What every campaign mode's pages share: the bar over them, a balance of one of its currencies, its statistics and its preferences
+// What every campaign mode shares: the page that holds its shelf of saves or an open save, the bar over an open one's pages, a balance of one
+// of its currencies, its statistics, its preferences and the reveal of a reward
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
@@ -8,6 +9,9 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { CampaignBar as Bar, PrefRow } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
+import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from '../header';
+import { changeUi, eased, type UiState } from '../ui';
+import { Reveal, type Owed } from './reward';
 import { Backdrop } from '../dialog';
 
 /** A balance: its icon, its number, and its name for a reader that cannot see the icon. */
@@ -199,4 +203,81 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
       </div>
     </Backdrop>
   );
+}
+
+/**
+ * A campaign mode's page: its saved games as a shelf, which a form that starts one takes the place of, and an open save's pages.
+ * icons are the balances' icons, asked for as the mode opens, since on a first visit they would wait behind every picture of its first page.
+ */
+export function CampaignShell({ model, actions, icons, shelf, open }: {
+  model: Model; actions: Actions; icons: string[];
+  shelf: (creating: boolean, setCreating: (on: boolean) => void) => ComponentChildren; open: () => ComponentChildren;
+}) {
+  const inside = model.campaignSave !== null;
+  useEffect(() => { for (const icon of icons) new Image().src = skinIconUrl(icon); }, []);
+  // The form that starts a save gives the shelf back when left or when its save opens
+  const [creating, setCreating] = useState(false);
+  useEffect(() => { if (inside) setCreating(false); }, [inside]);
+  return (
+    <div key={inside ? 'open' : 'shelf'} class={inside ? 'cq-shell' : 'limited-page'}>
+      {/* A reward being revealed is gone through to its end: nothing behind it can be reached, by key or by pointer */}
+      <div class="cq-under" inert={inside && !!model.reward}>
+        <PageHeader class="limited-head">
+          <div class="head-right">
+            <HeadControls />
+            <button onClick={() => (creating && !inside ? setCreating(false) : actions.campaignLeave())}>{t('lblBack')}</button>
+          </div>
+        </PageHeader>
+      </div>
+      {inside ? open() : shelf(creating, setCreating)}
+    </div>
+  );
+}
+
+/** The saved games under the way back to the start page, or the form that starts one. saves is null while they are being read. */
+export function CampaignShelf({ model, actions, creating, setCreating, words, form, saves }: {
+  model: Model; actions: Actions; creating: boolean; setCreating: (on: boolean) => void;
+  words: { mode: string; new: string; yours: string; reading: string }; form: ComponentChildren; saves: ComponentChildren | null;
+}) {
+  const trail = [
+    { label: t('lblStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.campaignLeave(); } },
+    { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.campaignLeave(); } },
+    creating ? { label: words.mode, go: () => setCreating(false) } : { label: words.mode },
+    ...(creating ? [{ label: words.new }] : []),
+  ];
+  return <>
+    <SetupHead trail={trail} title={creating ? words.new : words.yours} />
+    {model.error && !creating && <p class="limited-error">{model.error}</p>}
+    {creating ? form : saves ?? <p class="muted pools-wait">{words.reading}</p>}
+  </>;
+}
+
+/** A change of tab slides the page the way the tabs run (dialogs.css). */
+export function slideTab<Tab extends string>(tabs: [Tab, TextKey][], from: Tab, to: Tab, set: (u: UiState) => void): void {
+  const order = tabs.map(([id]) => id);
+  if (to !== from) eased(set, () => ({ way: order.indexOf(to) > order.indexOf(from) ? 'on' : 'back' }));
+}
+
+/**
+ * An open save: the bar, the open tab's page, the preferences and a reward's reveal. page draws the tab's page under a key that
+ * changes when the preferences close, since they set the prices the pages show, so the page asks again.
+ */
+export function CampaignPages<Tab extends string>({ model, actions, tabs, tab, setTab, extra, page }: {
+  model: Model; actions: Actions; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void; extra?: ComponentChildren;
+  page: (key: number) => ComponentChildren;
+}) {
+  // What a reward being revealed has yet to show. The server's balances already hold it all, so the bar shows less.
+  const [owed, setOwed] = useState<Owed>({});
+  const reward = model.reward;
+  const [prefs, setPrefs] = useState(false);
+  const [priced, setPriced] = useState(0);
+  useEffect(() => { if (!reward) setOwed({}); }, [reward]);
+  const bar = model.campaignBar!;
+  return <>
+    <CampaignBar bar={bar} tabs={tabs} tab={tab} setTab={setTab} held={reward ? owed : {}} prefs={() => setPrefs(true)} under={!!reward} extra={extra} />
+    {model.error && <p class="limited-error">{model.error}</p>}
+    <div class="cq-main" inert={!!reward}>{page(priced)}</div>
+    {prefs && <Prefs model={model} actions={actions} close={() => { setPrefs(false); setPriced(priced + 1); }} />}
+    {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.rewardClaim()} />}
+  </>;
 }

@@ -1,69 +1,37 @@
 // Quest: the saved quests as a shelf, and inside one, the bar every page shares over the page itself.
 
-import { useEffect, useState } from 'preact/hooks';
 import { Shelf as Cards } from '../shelf';
-import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from '../header';
-import { changeUi, ui, type QuestTab } from '../ui';
-import { skinIconUrl } from '../images';
-import { CampaignBar, Prefs, Purse, Stats } from '../campaign/campaign';
+import { ui, type QuestTab } from '../ui';
+import { CampaignPages, CampaignShelf, CampaignShell, Purse, Stats, slideTab } from '../campaign/campaign';
 import { Duels } from './questduels';
 import { Decks } from './questdecks';
 import { Shop } from './questshop';
 import { Challenges } from './questchallenges';
 import { Bazaar } from './questbazaar';
 import { Tournaments } from './questtournaments';
-import { Reveal, type Owed } from '../conquest/conquestreward';
 import { NewQuest } from './questnew';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { QuestSave } from '../protocol';
 import { t, shortDay, type TextKey } from '../text';
 
-/** The two balances' icons, asked for as the mode opens: on a first visit they would wait behind every picture of the duels. */
-const BALANCE_ICONS = ['ICO_QUEST_COINSTACK', 'ICO_QUEST_LIFE'];
 const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels'], ['challenges', 'lblChallenges'], ['tournaments', 'lblTournaments'], ['decks', 'lblQuestDecks'],
   ['shop', 'lblSpellShop'], ['bazaar', 'lblBazaar'], ['stats', 'lblStatistics']];
 /** The bazaar is Fantasy mode's only, which a Classic quest's bar shows by having no life. */
 const FANTASY_ONLY: QuestTab[] = ['bazaar'];
 
 export function Quest({ model, actions }: { model: Model; actions: Actions }) {
-  const open = model.campaignSave !== null;
-  useEffect(() => { for (const icon of BALANCE_ICONS) new Image().src = skinIconUrl(icon); }, []);
-  // The form that starts a quest takes the shelf's place, and gives it back when left or when its quest opens
-  const [creating, setCreating] = useState(false);
-  useEffect(() => { if (open) setCreating(false); }, [open]);
-  return (
-    <div key={open ? 'open' : 'shelf'} class={open ? 'cq-shell' : 'limited-page'}>
-      {/* A reward being revealed is gone through to its end: nothing behind it can be reached, by key or by pointer */}
-      <div class="cq-under" inert={open && !!model.reward}>
-        <PageHeader class="limited-head">
-          <div class="head-right">
-            <HeadControls />
-            <button onClick={() => (creating && !open ? setCreating(false) : actions.campaignLeave())}>{t('lblBack')}</button>
-          </div>
-        </PageHeader>
-      </div>
-      {open ? <Campaign model={model} actions={actions} /> : <Shelf model={model} actions={actions} creating={creating} setCreating={setCreating} />}
-    </div>
-  );
-}
-
-/** The saved quests as cards, each with the one thing to do next, after a card that starts a new one. */
-function Shelf({ model, actions, creating, setCreating }: { model: Model; actions: Actions; creating: boolean; setCreating: (on: boolean) => void }) {
   const saves = model.questSaves;
-  const trail = [
-    { label: t('lblStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.campaignLeave(); } },
-    { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.campaignLeave(); } },
-    creating ? { label: t('lblQuestMode'), go: () => setCreating(false) } : { label: t('lblQuestMode') },
-    ...(creating ? [{ label: t('lblWebQuestNew') }] : []),
-  ];
-  return <>
-    <SetupHead trail={trail} title={creating ? t('lblWebQuestNew') : t('lblWebQuestYours')} />
-    {model.error && !creating && <p class="limited-error">{model.error}</p>}
-    {creating ? <NewQuest model={model} actions={actions} />
-      : !saves ? <p class="muted pools-wait">{t('lblWebQuestReading')}</p>
-      : <Saves saves={saves.saves} current={saves.current ?? null} actions={actions} create={() => setCreating(true)} />}
-  </>;
+  return (
+    <CampaignShell model={model} actions={actions} icons={['ICO_QUEST_COINSTACK', 'ICO_QUEST_LIFE']}
+      shelf={(creating, setCreating) => (
+        <CampaignShelf model={model} actions={actions} creating={creating} setCreating={setCreating}
+          words={{ mode: t('lblQuestMode'), new: t('lblWebQuestNew'), yours: t('lblWebQuestYours'), reading: t('lblWebQuestReading') }}
+          form={<NewQuest model={model} actions={actions} />}
+          saves={saves && <Saves saves={saves.saves} current={saves.current ?? null} actions={actions} create={() => setCreating(true)} />} />
+      )}
+      open={() => <Campaign model={model} actions={actions} />} />
+  );
 }
 
 function Saves({ saves, current, actions, create }: { saves: QuestSave[]; current: string | null; actions: Actions; create: () => void }) {
@@ -91,28 +59,25 @@ function Saves({ saves, current, actions, create }: { saves: QuestSave[]; curren
 }
 
 function Campaign({ model, actions }: { model: Model; actions: Actions }) {
-  // What a reward being revealed has yet to show. The server's balances already hold it all, so the bar shows less.
-  const [owed, setOwed] = useState<Owed>({});
-  const [prefs, setPrefs] = useState(false);
-  const reward = model.reward;
-  useEffect(() => { if (!reward) setOwed({}); }, [reward]);
   if (!model.campaignBar || !model.questDuels || !model.questDecks || !model.questChallenges || !model.questTournaments) return <p class="muted pools-wait">{t('lblWebQuestReading')}</p>;
-  const bar = model.campaignBar;
-  const fantasy = bar.balances.some(b => b.icon === 'ICO_QUEST_LIFE');
-  return <>
-    <CampaignBar bar={bar} tabs={fantasy ? TABS : TABS.filter(([id]) => !FANTASY_ONLY.includes(id))} tab={ui.questTab} setTab={tab => changeUi(u => { u.questTab = tab; })}
-      held={reward ? owed : {}} prefs={() => setPrefs(true)} under={!!reward} />
-    {model.error && <p class="limited-error">{model.error}</p>}
-    <div class="cq-main" inert={!!reward}>
-      {ui.questTab === 'decks' ? <Decks page={model.questDecks} model={model} actions={actions} />
-        : ui.questTab === 'shop' ? <Shop model={model} actions={actions} />
-        : ui.questTab === 'stats' ? <Stats model={model} actions={actions} />
-        : ui.questTab === 'tournaments' ? <Tournaments model={model} page={model.questTournaments} actions={actions} />
-        : ui.questTab === 'challenges' ? <Challenges page={model.questChallenges} duels={model.questDuels} actions={actions} />
-        : ui.questTab === 'bazaar' && fantasy ? <Bazaar model={model} actions={actions} />
-        : <Duels page={model.questDuels} actions={actions} />}
-    </div>
-    {prefs && <Prefs model={model} actions={actions} close={() => setPrefs(false)} />}
-    {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.rewardClaim()} />}
-  </>;
+  const fantasy = model.campaignBar.balances.some(b => b.icon === 'ICO_QUEST_LIFE');
+  const tabs = fantasy ? TABS : TABS.filter(([id]) => !FANTASY_ONLY.includes(id));
+  return (
+    <CampaignPages model={model} actions={actions} tabs={tabs} tab={ui.questTab}
+      setTab={tab => slideTab(tabs, ui.questTab, tab, u => { u.questTab = tab; })}
+      page={key => <Page key={key} tab={ui.questTab} fantasy={fantasy} model={model} actions={actions} />} />
+  );
+}
+
+/** The page of the open tab. */
+function Page({ tab, fantasy, model, actions }: { tab: QuestTab; fantasy: boolean; model: Model; actions: Actions }) {
+  switch (tab) {
+    case 'decks': return <Decks page={model.questDecks!} model={model} actions={actions} />;
+    case 'shop': return <Shop model={model} actions={actions} />;
+    case 'stats': return <Stats model={model} actions={actions} />;
+    case 'tournaments': return <Tournaments model={model} page={model.questTournaments!} actions={actions} />;
+    case 'challenges': return <Challenges page={model.questChallenges!} duels={model.questDuels!} actions={actions} />;
+    case 'bazaar': return fantasy ? <Bazaar model={model} actions={actions} /> : <Duels page={model.questDuels!} actions={actions} />;
+    default: return <Duels page={model.questDuels!} actions={actions} />;
+  }
 }

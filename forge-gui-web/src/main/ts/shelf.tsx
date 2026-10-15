@@ -34,17 +34,11 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
           <div class="ev-top">
             {rename && renaming === r.name
               ? (
-                <form class="cq-rename" onSubmit={e => {
-                  e.preventDefault();
-                  const to = new FormData(e.currentTarget).get('name')?.toString().trim();
-                  setRenaming(null);
-                  if (to && to !== r.name) rename.go(r, to);
-                }}>
-                  <input name="name" defaultValue={r.name} maxLength={60} aria-label={rename.field} autoFocus
-                    onKeyDown={e => { if (e.key === 'Escape') setRenaming(null); }} />
-                  <button class="primary" type="submit">{t('lblRename')}</button>
-                  <button type="button" onClick={() => setRenaming(null)}>{t('lblCancel')}</button>
-                </form>
+                <NameForm cls="cq-rename" initial={r.name} label={rename.field} submit={t('lblRename')} cancel={() => setRenaming(null)}
+                  done={to => {
+                    setRenaming(null);
+                    if (to !== r.name) rename.go(r, to);
+                  }} />
               )
               : <b>{r.name}</b>}
             {sub(r)}
@@ -78,5 +72,24 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
         </article>
       ))}
     </div>
+  );
+}
+
+/** A name typed in: submitted, a name that is not blank goes to done, and a blank one, Escape or Cancel goes to cancel. */
+export function NameForm({ cls, initial, label, placeholder, submit, done, cancel }: {
+  cls: string; initial: string; label: string; placeholder?: string; submit: string; done: (name: string) => void; cancel: () => void;
+}) {
+  return (
+    <form class={cls} onSubmit={e => {
+      e.preventDefault();
+      const name = new FormData(e.currentTarget).get('name')?.toString().trim();
+      if (name) done(name);
+      else cancel();
+    }}>
+      <input name="name" defaultValue={initial} maxLength={60} placeholder={placeholder} aria-label={label} autoFocus
+        onKeyDown={e => { if (e.key === 'Escape') cancel(); }} />
+      <button class="primary" type="submit">{submit}</button>
+      <button type="button" onClick={cancel}>{t('lblCancel')}</button>
+    </form>
   );
 }

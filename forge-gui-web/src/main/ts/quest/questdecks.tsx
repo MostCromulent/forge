@@ -7,23 +7,8 @@ import { CardGroup } from '../deck/importer';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { QuestDecks } from '../protocol';
+import { NameForm } from '../shelf';
 import { t } from '../text';
-
-/** A deck's name being typed: for a new deck, or a new name for one. */
-function NameForm({ initial, submit, done, cancel }: { initial: string; submit: string; done: (name: string) => void; cancel: () => void }) {
-  return (
-    <form class="qu-name" onSubmit={e => {
-      e.preventDefault();
-      const name = new FormData(e.currentTarget).get('name')?.toString().trim();
-      if (name) done(name);
-    }}>
-      <input name="name" defaultValue={initial} maxLength={60} placeholder={t('lblDeckName')} aria-label={t('lblDeckName')} autoFocus
-        onKeyDown={e => { if (e.key === 'Escape') cancel(); }} />
-      <button class="primary" type="submit">{submit}</button>
-      <button type="button" onClick={cancel}>{t('lblCancel')}</button>
-    </form>
-  );
-}
 
 export function Decks({ page, model, actions }: { page: QuestDecks; model: Model; actions: Actions }) {
   const [chosen, setChosen] = useState<string | null>(null);
@@ -44,7 +29,7 @@ export function Decks({ page, model, actions }: { page: QuestDecks; model: Model
           <h4>{t('lblQuestDecks')}<span>{page.decks.length}</span></h4>
           <div class="cq-cmd-grid">
             {naming
-              ? <div class="qu-new"><NameForm initial="" submit={t('lblCreate')} done={name => { setNaming(false); setChosen(name); actions.questDeckNew(name); }}
+              ? <div class="qu-new"><NameForm cls="qu-name" initial="" label={t('lblDeckName')} placeholder={t('lblDeckName')} submit={t('lblCreate')} done={name => { setNaming(false); setChosen(name); actions.questDeckNew(name); }}
                   cancel={() => setNaming(false)} /></div>
               : <button class="qu-new" onClick={() => setNaming(true)}><span class="plus" aria-hidden="true">+</span><b>{t('lblNewDeck')}</b></button>}
             {page.decks.map(d => (
@@ -67,7 +52,7 @@ export function Decks({ page, model, actions }: { page: QuestDecks; model: Model
             <div class="dk-cards" data-list>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
           </>}>
           {asking === 'rename'
-            ? <NameForm initial={deck.name} submit={t('lblRename')} cancel={() => setAsking(null)}
+            ? <NameForm cls="qu-name" initial={deck.name} label={t('lblDeckName')} placeholder={t('lblDeckName')} submit={t('lblRename')} cancel={() => setAsking(null)}
                 done={to => { setAsking(null); setChosen(to); actions.questDeckRename(deck.name, to); }} />
             : asking === 'delete'
               ? <div class="qu-ask">

@@ -2,9 +2,9 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { skinIconUrl, imageUrl } from '../images';
-import { mountPack, type Pack } from './conquestpack';
-import { mountWheel, spotFor, type Wheel, type WheelOutcome } from './conquestwheel';
-import { pendingAmounts } from './conquestpending';
+import { mountPack, type Pack } from '../conquest/conquestpack';
+import { mountWheel, spotFor, type Wheel, type WheelOutcome } from '../conquest/conquestwheel';
+import { pendingAmounts } from '../conquest/conquestpending';
 import type { Reward, RewardStep } from '../protocol';
 import { t, formatNumber } from '../text';
 import { make, reducedMotion } from '../dom';
