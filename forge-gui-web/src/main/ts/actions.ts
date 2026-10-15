@@ -235,15 +235,18 @@ export interface Actions {
   /** Deletes one of your own decks by its finder key. */
   deleteDeck(key: string): void;
   favouriteDeck(key: string, on: boolean): void;
-  /** A page of the catalogue. request numbers the query, so an answer to an older one can be told apart. */
-  queryCatalogue(request: number, q: Omit<CatalogueQuery, 't' | 'request'>): void;
-  readImport(request: number, text: string, format: string, cardPool: string | null, unrestricted: boolean): void;
-  fetchImport(request: number, url: string): void;
+  /** A page of the catalogue. */
+  queryCatalogue(q: Omit<CatalogueQuery, 't' | 'request'>): void;
+  readImport(text: string, format: string, cardPool: string | null, unrestricted: boolean): void;
+  fetchImport(url: string): void;
   commitImport(c: Omit<ImportCommit, 't'>): void;
   /** Saves a .dck file's deck under the format, with no importer. clash answers a name that is already taken. */
   addDeckFile(text: string, format: string, clash?: 'replace' | 'keep'): void;
   deviceDecks(decks: DeviceDeckText[]): void;
 }
+
+/** The newest catalogue and import queries, numbered as sent, so an answer to an older one is told apart and dropped. */
+export const asked = { catalogue: 0, import: 0 };
 
 /** The kind of event a table opened from the start page is to be, until the table arrives and is switched to it. */
 export const pendingTable: { kind: 'sealed' | 'draft' | null } = { kind: null };
@@ -401,10 +404,12 @@ export function createActions(send: Send): Actions {
     deckOp: op => send({ t: 'editorDeck', op }),
     deleteDeck: key => send({ t: 'deckDelete', key }),
     favouriteDeck: (key, on) => send({ t: 'deckFavourite', key, on }),
-    queryCatalogue: (request, q) => send({ t: 'catalogue', request, ...q }),
-    readImport: (request, text, format, cardPool, unrestricted) =>
-      send(cardPool ? { t: 'importRead', request, text, format, cardPool, unrestricted } : { t: 'importRead', request, text, format, unrestricted }),
-    fetchImport: (request, url) => send({ t: 'importFetch', request, url }),
+    queryCatalogue: q => send({ t: 'catalogue', request: ++asked.catalogue, ...q }),
+    readImport: (text, format, cardPool, unrestricted) => {
+      const request = ++asked.import;
+      send(cardPool ? { t: 'importRead', request, text, format, cardPool, unrestricted } : { t: 'importRead', request, text, format, unrestricted });
+    },
+    fetchImport: url => send({ t: 'importFetch', request: ++asked.import, url }),
     commitImport: c => send({ t: 'importCommit', ...c }),
     addDeckFile: (text, format, clash) => send({ t: 'deckFile', text, format, clash }),
     deviceDecks: decks => send({ t: 'deviceDecks', decks }),

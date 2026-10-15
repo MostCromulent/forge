@@ -1,12 +1,13 @@
 // A campaign's lists of cards and the trade between them, where every price shown is the server's
 
 import type { ComponentChildren } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { imageUrl, skinIconUrl } from '../images';
 import { ColourToggles, toggled } from '../symbols';
 import { useDebounced } from '../hooks';
 import { showNotice } from '../notices';
 import type { Actions } from '../actions';
+import { useCataloguePages } from '../deck/catalogue';
 import type { Model } from '../model';
 import type { CatalogueRow } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
@@ -77,7 +78,6 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
   /** What is picked, by key, which for a card is its image key, the key of its printing. */
   const [picked, setPicked] = useState<Map<string, Pick>>(() => new Map());
   const [asking, setAsking] = useState(false);
-  const asked = useRef(0);
   const query = { text, colours: [...colours].join(''), type, filters: '', sort: 'name', showAll: true, source, group: group || undefined };
   const sizes = info?.lists.map(l => l.count).join(',');
   const priced = (sentence: string) => {
@@ -86,23 +86,12 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
   };
 
   useEffect(() => { actions.trading(); }, []);
-  // The lists change when cards are traded, which their sizes say
-  useEffect(() => {
-    asked.current = 0;
-    actions.queryCatalogue(0, { ...query, offset: 0 });
-  }, [text, query.colours, type, group, source, sizes]);
-  useEffect(() => { setPicked(new Map()); setAsking(false); }, [source, sizes]);
-
   // The catalogue is shared with the deck editor and the other lists, whose page may still be the one held
   const page = model.catalogue?.source === source ? model.catalogue : null;
   const rows = page?.rows ?? [];
-  const more = (e: Event) => {
-    const el = e.currentTarget as HTMLElement;
-    if (page && rows.length < page.total && asked.current < rows.length && el.scrollTop + el.clientHeight > el.scrollHeight - 600) {
-      asked.current = rows.length;
-      actions.queryCatalogue(0, { ...query, offset: rows.length });
-    }
-  };
+  // The lists change when cards are traded, which their sizes say
+  const more = useCataloguePages(actions, query, page, [text, query.colours, type, group, source, sizes]);
+  useEffect(() => { setPicked(new Map()); setAsking(false); }, [source, sizes]);
   const toggle = (pick: Pick) => {
     const next = new Map(picked);
     if (!next.delete(pick.key)) next.set(pick.key, pick);

@@ -52,7 +52,6 @@ export function CardMenu({ at, state, actions, close, printings }: {
   const inDeck = at.from === 'catalogue' ? undefined : cardIn(state, at.from, at.name);
   const zone = at.from === 'catalogue' ? null : at.from;
   const other: DeckSection = zone === 'Main' ? 'Sideboard' : 'Main';
-  const anywhere = (['Main', 'Sideboard', 'Commander'] as DeckSection[]).find(z => cardIn(state, z, at.name));
   // Conquest's deck is its main deck alone, each card in the printing owned
   if (state.mainOnly) {
     return (

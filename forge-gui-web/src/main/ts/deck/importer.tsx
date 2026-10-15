@@ -53,7 +53,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
     if (fetching) return;
     const timer = setTimeout(() => {
       const [format, pool] = check.split('|');
-      if (text.trim()) actions.readImport(0, text, format === 'none' ? 'Constructed' : format, pool || null, format === 'none');
+      if (text.trim()) actions.readImport(text, format === 'none' ? 'Constructed' : format, pool || null, format === 'none');
     }, READ_DELAY_MS);
     return () => clearTimeout(timer);
   }, [text, check]);
@@ -109,7 +109,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   const fetch = (link: string) => {
     if (!link.trim()) return;
     setFetching(true);
-    actions.fetchImport(0, link.trim());
+    actions.fetchImport(link.trim());
   };
   const lines = text.split('\n');
   const marks = result?.lines ?? [];

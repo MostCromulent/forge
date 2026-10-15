@@ -2,7 +2,7 @@
 
 import { connect } from './net';
 import { createModel, applyState, cardMenu, isLocal, oldestRequest, players, stackPick } from './model';
-import { createActions, pendingTable, type Actions } from './actions';
+import { asked, createActions, pendingTable, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { initForm, isPortrait } from './form';
 import { initPress } from './press';
@@ -38,8 +38,6 @@ let restored = false;
 // A guest's decks live in its browser, so each connection tells the server which it holds
 let sentDeviceDecks = false;
 // Queries are numbered, so an answer to one the player has since changed is dropped
-let catalogueRequest = 0;
-let importRequest = 0;
 // A sound or a log line is sent ahead of the board it belongs to, and is taken after it (pace.ts)
 const send = connect(behindItsBoard(receive, 300), online => {
   byId('banner').hidden = online;
@@ -89,9 +87,6 @@ const actions: Actions = {
     wire.answerHostChoice(id, value);
     schedule();
   },
-  queryCatalogue: (_, q) => wire.queryCatalogue(++catalogueRequest, q),
-  readImport: (_, text, format, cardPool, unrestricted) => wire.readImport(++importRequest, text, format, cardPool, unrestricted),
-  fetchImport: (_, url) => wire.fetchImport(++importRequest, url),
   commitImport: c => {
     model.nameTaken = null;
     wire.commitImport(c);
@@ -399,11 +394,11 @@ function apply(msg: ServerMessage): void {
       break;
     // Scrolling asks for the next page of the same query, which is added to what is shown
     case 'catalogue':
-      if (msg.request !== catalogueRequest) return;
+      if (msg.request !== asked.catalogue) return;
       model.catalogue = msg.offset > 0 && model.catalogue ? { ...msg, rows: [...model.catalogue.rows, ...msg.rows] } : msg;
       break;
     case 'importResult':
-      if (msg.request !== importRequest) return;
+      if (msg.request !== asked.import) return;
       model.importResult = msg;
       break;
     case 'nameTaken': model.nameTaken = msg.name; break;

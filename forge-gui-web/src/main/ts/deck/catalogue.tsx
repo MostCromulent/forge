@@ -9,7 +9,7 @@ import { AnyOf, Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } 
 import type { Actions } from '../actions';
 import type { CardHandlers } from './drag';
 import type { Model } from '../model';
-import type { CatalogueRow, DeckSection, EditorState, LimitedEdition } from '../protocol';
+import type { CataloguePage, CatalogueQuery, CatalogueRow, DeckSection, EditorState, LimitedEdition } from '../protocol';
 import { store, stored } from '../storage';
 import { addCard, choosesPrintings, preferredPrinting } from './preferred';
 import { CARD_TYPES } from './decklist';
@@ -35,6 +35,24 @@ const SEARCH_TIPS: [string, TextKey][] = [
   ['Enter', 'lblWebCatalogueTipEnter'],
 ];
 const BASICS = new Set(['Plains', 'Island', 'Swamp', 'Mountain', 'Forest', 'Wastes']);
+
+/** Pages through the catalogue: the first page whenever deps change, and the next as the list scrolls near its end. Returns the list's scroll handler. */
+export function useCataloguePages(actions: Actions, query: Omit<CatalogueQuery, 't' | 'request' | 'offset'>, page: CataloguePage | null,
+  deps: unknown[]): (e: Event) => void {
+  const asked = useRef(0);
+  useEffect(() => {
+    asked.current = 0;
+    actions.queryCatalogue({ ...query, offset: 0 });
+  }, deps);
+  const shown = page?.rows.length ?? 0;
+  return e => {
+    const el = e.currentTarget as HTMLElement;
+    if (page && shown < page.total && asked.current < shown && el.scrollTop + el.clientHeight > el.scrollHeight - 600) {
+      asked.current = shown;
+      actions.queryCatalogue({ ...query, offset: shown });
+    }
+  };
+}
 
 /** How many copies of each card the deck holds, by name, across every section. A limited deck's sideboard is its pool, not the deck. */
 export function countsInDeck(state: EditorState): Map<string, number> {
@@ -73,7 +91,6 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
   const opening: CatalogueFilter = owned && leader ? { ...NO_FILTER, identity: leader } : NO_FILTER;
   const [filter, setFilter] = useState<CatalogueFilter>(opening);
   const [view, setView] = useState<'cards' | 'table'>(() => storedView());
-  const asked = useRef(0);
   const query = { text, colours: [...colours].join(''), type, filters: asSyntax(filter), sort, showAll: filter.showAll,
     identity: owned ? filter.identity ?? undefined : undefined, sets: filter.sets, format: filter.format ?? undefined,
     section: adding ?? undefined };
@@ -81,15 +98,11 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
   const extra = adding ? state.sections.find(s => s.section === adding) : undefined;
   const wanted = state.commanderWanted && !extra;
 
-  // The deck's rules decide which cards show, so a new commander or check asks again
-  useEffect(() => {
-    asked.current = 0;
-    actions.queryCatalogue(0, { ...query, offset: 0 });
-  }, [text, query.colours, type, query.filters, sort, filter.showAll, query.identity, filter.sets.join(), filter.format, state.check, state.identity,
-    state.commanderWanted, adding]);
-
   // A page of a conquest's collection, left from that page, is not this deck's catalogue
   const page = model.catalogue && !model.catalogue.source ? model.catalogue : null;
+  // The deck's rules decide which cards show, so a new commander or check asks again
+  const more = useCataloguePages(actions, query, page, [text, query.colours, type, query.filters, sort, filter.showAll, query.identity,
+    filter.sets.join(), filter.format, state.check, state.identity, state.commanderWanted, adding]);
   // A card shows in the printing this browser prefers for it, in the tile, the table, the preview and the drag alike
   const rows = (page?.rows ?? []).map(row => {
     const key = choosesPrintings(state) ? preferredPrinting(row.name) : undefined;
@@ -106,13 +119,6 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
   };
   const remove = (name: string) => actions.edit({ op: 'remove', name, from: adding ?? 'Main', count: 1 });
   const makeCommander = (name: string) => actions.edit({ op: 'commander', name, count: 1 });
-  const more = (e: Event) => {
-    const el = e.currentTarget as HTMLElement;
-    if (page && rows.length < page.total && asked.current < rows.length && el.scrollTop + el.clientHeight > el.scrollHeight - 600) {
-      asked.current = rows.length;
-      actions.queryCatalogue(0, { ...query, offset: rows.length });
-    }
-  };
   const kinds = catalogueKinds(state, model, actions).filter(k => !extra || (k.id !== 'identity' && k.id !== 'unusable'));
   const narrowed = !!typed || colours.size > 0 || type !== 'any'
     || kinds.some(k => k.id !== 'identity' && k.chip(filter) !== null && !k.fixed?.(filter));

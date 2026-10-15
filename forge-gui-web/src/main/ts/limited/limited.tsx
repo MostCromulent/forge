@@ -9,7 +9,7 @@ import { changeUi } from '../ui';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { PoolRow } from '../protocol';
-import { t, tNodes, shortDay, type TextKey } from '../text';
+import { t, tNodes, shortDay } from '../text';
 
 /** Desktop's limited deck is at least forty cards. */
 const DECK_SIZE = 40;
