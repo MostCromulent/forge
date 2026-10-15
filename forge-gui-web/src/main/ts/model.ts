@@ -143,6 +143,15 @@ export interface Model {
   campaignPrefs: CampaignPrefs | null;
 }
 
+/** An open campaign's pages, as they stand with none open; hello resets them to this when the campaign is left. */
+export const NO_CAMPAIGN = { campaignBar: null, reward: null, trading: null, campaignStats: null } satisfies Partial<Model>;
+/** The same for an open conquest's own pages. */
+export const NO_CONQUEST = { conquestState: null, conquestParty: null, conquestAether: null, conquestPlanes: null } satisfies Partial<Model>;
+/** The same for an open quest's own pages. */
+export const NO_QUEST = {
+  questSaves: null, questDuels: null, questDecks: null, questChallenges: null, questBazaar: null, questTournaments: null,
+} satisfies Partial<Model>;
+
 export function createModel(): Model {
   return {
     objects: new Map(), root: -1, visible: new Set(), localPlayers: [],
@@ -155,9 +164,8 @@ export function createModel(): Model {
     drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
     inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, cardSets: null, limitedPools: null,
-    campaign: null, campaignSave: null, currentConquest: null, currentQuest: null, conquestSaves: null, questSaves: null, questDuels: null, questDecks: null, questChallenges: null, questBazaar: null, questOptions: null, questTournaments: null, campaignBar: null, conquestState: null,
-    campaignResult: null, reward: null, conquestParty: null, trading: null, conquestOptions: null,
-    conquestAether: null, conquestPlanes: null, campaignStats: null, campaignPrefs: null,
+    campaign: null, campaignSave: null, currentConquest: null, currentQuest: null, conquestSaves: null, questOptions: null,
+    campaignResult: null, conquestOptions: null, campaignPrefs: null, ...NO_CAMPAIGN, ...NO_CONQUEST, ...NO_QUEST,
   };
 }
 

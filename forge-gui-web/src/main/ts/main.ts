@@ -1,7 +1,7 @@
 // The controller, which is the only place that talks to the server and draws the model once per frame
 
 import { connect } from './net';
-import { createModel, applyState, cardMenu, isLocal, oldestRequest, players, stackPick } from './model';
+import { createModel, applyState, cardMenu, isLocal, oldestRequest, players, stackPick, NO_CAMPAIGN, NO_CONQUEST, NO_QUEST } from './model';
 import { asked, createActions, pendingTable, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { initForm, isPortrait } from './form';
@@ -258,26 +258,13 @@ function apply(msg: ServerMessage): void {
       model.currentQuest = msg.currentQuest ?? null;
       // A match's result belongs to its match, and a campaign's pages to the campaign
       if (!msg.inMatch) model.campaignResult = null;
-      if (!msg.campaign) {
-        model.campaignBar = null;
-        model.reward = null;
-        model.trading = null;
-        model.campaignStats = null;
-      }
+      if (!msg.campaign) Object.assign(model, NO_CAMPAIGN);
       if (msg.campaign !== 'conquest') {
-        model.conquestState = null;
-        model.conquestParty = null;
-        model.conquestAether = null;
-        model.conquestPlanes = null;
+        Object.assign(model, NO_CONQUEST);
         ui.conquestTab = 'map';
       }
       if (msg.campaign !== 'quest') {
-        model.questSaves = null;
-        model.questDuels = null;
-        model.questDecks = null;
-        model.questChallenges = null;
-        model.questBazaar = null;
-        model.questTournaments = null;
+        Object.assign(model, NO_QUEST);
         // A match is played from the quest's page, so the tab it was started from is the one returned to
         if (!msg.inMatch) ui.questTab = 'duels';
       }
