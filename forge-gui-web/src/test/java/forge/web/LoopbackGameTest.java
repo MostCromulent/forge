@@ -57,6 +57,7 @@ public class LoopbackGameTest {
 
     @Test(timeOut = 360000)
     public void passiveGameCompletesAndIncrementalMatchesFull() throws Exception {
+        WebTestSupport.skipUnlessStress();
         final Deck bears = TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 20);
         final Deck islands = TestDecks.of("Islands", "Island", 40);
         TestMatch.play(islands, bears, gui -> new TestBrowser(gui, true), (local, gui, browser) -> {
@@ -75,7 +76,6 @@ public class LoopbackGameTest {
             Assert.assertEquals(scored.getAsJsonArray("score").asList().stream().mapToInt(e -> e.getAsJsonObject().get("won").getAsInt()).sum(), 1);
             final int root = browser.last("state").get("root").getAsInt();
             final int turns = browser.model.objectsCopy().get(root).get("Turn").getAsInt();
-            System.out.println("Loopback game: " + turns + " turns, " + browser.all("state").size() + " state messages");
             Assert.assertTrue(turns > 2, "the game ended on turn " + turns);
             final BrowserModel fresh = CompletableFuture.supplyAsync(gui::freshSnapshot, gui.dispatchExecutor()).get(10, TimeUnit.SECONDS);
             assertSameIgnoringZone(browser.model.objectsCopy(), fresh.objectsCopy());

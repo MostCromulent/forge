@@ -47,6 +47,7 @@ public class BatchBoundaryTest {
 
     @Test(timeOut = 360000)
     public void aMessageHoldsWholeActionsAndNoMoreThanOne() throws Exception {
+        WebTestSupport.skipUnlessStress();
         final Deck red = TestDecks.of("Red", "Mountain", 22, "Shock", 10, "Goblin Piker", 14, "Raging Goblin", 14);
         TestMatch.play(red, red, gui -> new TestBrowser(gui, true), (local, gui, browser) -> {
             for (int i = 0; i < 300; i++) {
