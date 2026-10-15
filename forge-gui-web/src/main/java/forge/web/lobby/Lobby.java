@@ -23,6 +23,7 @@ import forge.model.FModel;
 import forge.util.ImageUtil;
 import forge.util.Localizer;
 import forge.util.MyRandom;
+import forge.util.NameGenerator;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.ExtraSections;
 import forge.web.deck.ExtraSections.Extra;
@@ -1106,11 +1107,16 @@ public final class Lobby {
         if (lobby != null && !drafting(lobby) && index != local.webSeat() && index < lobby.getNumberOfSlots()) {
             final LobbySlot slot = lobby.getSlot(index);
             slot.setType(LobbySlotType.AI);
-            slot.setName(lobby.randomName());
+            slot.setName(computerName(lobby));
             slot.setIsReady(true);
             local.pushLobby();
             compose(index);
         }
+    }
+
+    /** A name for the computer as desktop gives one: random, and not one already at the table. */
+    public static String computerName(final GameLobby lobby) {
+        return NameGenerator.getRandomName("Any", "Any", seatNames(lobby, -1));
     }
 
     private static List<String> seatNames(final GameLobby lobby, final int except) {
@@ -1190,7 +1196,7 @@ public final class Lobby {
         } else if (host() != null && index >= 0 && index < host().getNumberOfSlots()
                 && host().getSlot(index).getType() == LobbySlotType.AI
                 && seatNames(host(), index).stream().noneMatch(name.trim()::equalsIgnoreCase)) {
-            host().getSlot(index).setName(name.isBlank() ? host().randomName() : name.trim());
+            host().getSlot(index).setName(name.isBlank() ? computerName(host()) : name.trim());
             local.pushLobby();
         }
     }

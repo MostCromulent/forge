@@ -108,7 +108,7 @@ public final class LocalGame implements IHasForgeLog {
             if (i != webSeat) {
                 final LobbySlot slot = hosted.getSlot(i);
                 slot.setType(LobbySlotType.AI);
-                slot.setName(hosted.randomName());
+                slot.setName(Lobby.computerName(hosted));
                 slot.setIsReady(true);
             }
         }

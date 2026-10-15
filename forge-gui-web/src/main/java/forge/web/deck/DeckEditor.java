@@ -349,7 +349,7 @@ public final class DeckEditor {
             if (source != null) {
                 source.remove(card, 1);
             }
-            placeCommander(card);
+            placeCommander(card, commanders);
             if (newDeckName().equals(deck.getName())) {
                 nameAfterCommander();
             }
@@ -715,17 +715,32 @@ public final class DeckEditor {
         }
     }
 
-    /** Puts a card in the command zone as desktop's editors do. A Commander Draft also pairs two that draft rules let partner, and takes back to its pool what a new commander displaces, leaving out the free ones. */
-    private void placeCommander(final PaperCard card) {
-        final boolean draft = commanderDraft();
-        final CardPool displaced = deck.placeCommander(card, check.format() == GameType.Oathbreaker,
-                draft ? (one, other) -> CommanderDraftUtil.isPartnerEligible(one) && CommanderDraftUtil.isPartnerEligible(other) : null);
-        final CardPool home = draft ? deck.getOrCreate(DeckSection.Sideboard) : deck.getMain();
-        for (final Map.Entry<PaperCard, Integer> e : displaced) {
-            if (!isFreeCommander(e.getKey().getName())) {
-                home.add(e.getKey(), e.getValue());
+    /** Puts a card in the command zone as desktop's editors do: a partner joins, anything else replaces, and in Oathbreaker each slot holds one. */
+    private void placeCommander(final PaperCard card, final CardPool commanders) {
+        if (check.format() == GameType.Oathbreaker) {
+            final boolean oathbreaker = card.getRules().canBeOathbreaker();
+            final PaperCard sameSlot = commanders.find(c -> c.getRules().canBeOathbreaker() == oathbreaker);
+            if (sameSlot != null) {
+                deck.getMain().add(sameSlot, commanders.count(sameSlot));
+                commanders.remove(sameSlot, commanders.count(sameSlot));
+            }
+        } else if (commanders.countAll() > 0) {
+            final List<PaperCard> existing = commanders.toFlatList();
+            final boolean partner = existing.size() == 1 && (card.getRules().canBePartnerCommander()
+                    && existing.get(0).getRules().canBePartnerCommanders(card.getRules())
+                    // A Commander Draft also pairs two that draft rules let partner, such as two one-colour legends
+                    || commanderDraft() && CommanderDraftUtil.isPartnerEligible(existing.get(0)) && CommanderDraftUtil.isPartnerEligible(card));
+            if (!partner) {
+                final CardPool home = commanderDraft() ? deck.getOrCreate(DeckSection.Sideboard) : deck.getMain();
+                for (final Map.Entry<PaperCard, Integer> e : commanders) {
+                    if (!isFreeCommander(e.getKey().getName())) {
+                        home.add(e.getKey(), e.getValue());
+                    }
+                }
+                commanders.clear();
             }
         }
+        commanders.add(card, 1);
     }
 
     private void replaceCards(final Deck from, final List<DeckSection> sections) {

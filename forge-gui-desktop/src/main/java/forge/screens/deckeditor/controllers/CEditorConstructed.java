@@ -510,7 +510,27 @@ public final class CEditorConstructed extends CDeckEditor<Deck> {
 
     private void placeCardInCommanderSection(PaperCard card) {
         Deck deck = controller.getModel();
-        deck.getMain().addAll(deck.placeCommander(card, gameType == GameType.Oathbreaker, null));
+        CardPool dest = deck.getOrCreate(DeckSection.Commander);
+
+        if (gameType == GameType.Oathbreaker) {
+            boolean newIsOathbreaker = card.getRules().canBeOathbreaker();
+            PaperCard sameSlot = dest.find(c -> c.getRules().canBeOathbreaker() == newIsOathbreaker);
+            if (sameSlot != null) {
+                deck.getMain().add(sameSlot, dest.count(sameSlot));
+                dest.remove(sameSlot, dest.count(sameSlot));
+            }
+        } else if (dest.countAll() > 0) {
+            List<PaperCard> existing = dest.toFlatList();
+            boolean keepAsPartner = existing.size() == 1
+                    && card.getRules().canBePartnerCommander()
+                    && existing.get(0).getRules().canBePartnerCommanders(card.getRules());
+            if (!keepAsPartner) {
+                deck.getMain().addAll(dest);
+                dest.clear();
+            }
+        }
+
+        dest.add(card, 1);
     }
 
     /*
