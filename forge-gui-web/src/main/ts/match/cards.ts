@@ -10,12 +10,12 @@ import { q, replay, make, reducedMotion } from '../dom';
 import type { CardView, KeywordText, PlayerView, Ref } from '../protocol';
 import { t } from '../text';
 import { drawStickers } from './stickers';
+import { ICONS, iconSvg } from '../icons';
 
 /** What a card does when clicked: the board selects it, a dialog toggles an option. menu is a right-click. */
 export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void;
 
-// Lucide's eye (ISC, see web/licenses/lucide-license.txt)
-const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE = iconSvg(ICONS.eye);
 
 export function createCard(onClick: CardClick): HTMLDivElement {
   const el = make('div', 'card');

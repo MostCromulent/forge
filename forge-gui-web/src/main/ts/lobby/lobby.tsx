@@ -18,6 +18,7 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { DeckSummary, LobbyTable, Seat, SeatExtra } from '../protocol';
 import { Backdrop, Dropdown } from '../dialog';
+import { ICONS, Icon } from '../icons';
 
 export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const picker = ui.picker;
@@ -92,8 +93,7 @@ const KIND: Record<string, TextKey> = { LOCAL: 'lblWebLobbyKindYou', AI: 'lblAI'
 /** What a seat of this type is called, or the type itself for one this page does not know. */
 const kindName = (type: string): string => (KIND[type] ? t(KIND[type]) : type);
 
-// Lucide's user (ISC, see web/licenses/lucide-license.txt)
-const PLAYER_ICON = <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>;
+const PLAYER_ICON = <Icon d={ICONS.user} />;
 
 /** Who plays a seat the host may hand over: a chip that opens the two choices, each with a line saying what it means. */
 function SeatKind({ type, toAi, toOpen }: { type: string; toAi: () => void; toOpen: () => void }) {

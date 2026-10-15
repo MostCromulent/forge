@@ -12,6 +12,7 @@ import { t, textLanguage } from './text';
 import { easedLocal } from './ui';
 import { useClosing } from './closing';
 import { Backdrop } from './dialog';
+import { ICONS, Icon } from './icons';
 
 // A setting found only through its section or its hint ranks after label matches, and each section stays together in its usual place
 function matching(defs: SettingDef[], typed: string): SettingDef[] {
@@ -27,23 +28,22 @@ function matching(defs: SettingDef[], typed: string): SettingDef[] {
   return ranked.map(i => defs[i]).sort((a, b) => (firstOf.get(a.section) ?? 0) - (firstOf.get(b.section) ?? 0));
 }
 
-// Icons from Lucide (ISC, see web/licenses/lucide-license.txt)
-const TABS: { name: string; sections: string[]; icon: ComponentChildren }[] = [
+const TABS: { name: string; sections: string[]; icon: string }[] = [
   {
     name: t('lblWebOptionsSectionGameplay'),
     sections: [t('lblWebOptionsSectionGameplay'), t('lblWebGameMenuStopsTitle'), t('lblWebOptionsYieldOffers'), t('lblSpeedSettings'), t('lblAutoYieldsAndTriggers')],
-    icon: <><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01" /><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258A4 4 0 0 0 17.32 5z" /></>,
+    icon: ICONS.gamepad,
   },
-  { name: t('lblDisplay'), sections: [t('lblDisplay')], icon: <><rect width="20" height="14" x="2" y="3" rx="2" /><path d="M8 21h8M12 17v4" /></> },
+  { name: t('lblDisplay'), sections: [t('lblDisplay')], icon: ICONS.monitor },
   {
     name: t('lblWebOptionsSectionSound'), sections: [t('lblWebOptionsSectionSound')],
-    icon: <><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" /><path d="M16 9a5 5 0 0 1 0 6" /></>,
+    icon: ICONS.speaker,
   },
   {
     name: t('lblWebOptionsSectionKeys'), sections: [t('lblWebOptionsSectionKeys')],
-    icon: <><rect width="20" height="16" x="2" y="4" rx="2" /><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10" /></>,
+    icon: ICONS.keyboard,
   },
-  { name: t('lblAdvanced'), sections: [t('lblAdvanced')], icon: <><path d="m16 18 6-6-6-6" /><path d="m8 6-6 6 6 6" /></> },
+  { name: t('lblAdvanced'), sections: [t('lblAdvanced')], icon: ICONS.dev },
 ];
 
 /** The tab last looked at, so the dialog opens where it was left. */
@@ -74,7 +74,7 @@ export function Options({ close }: { close: () => void }) {
       rail={<>
         {TABS.map((tb, i) => (
           <button key={tb.name} role="tab" aria-selected={!searching && i === at} onClick={() => open(i)}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">{tb.icon}</svg>{tb.name}
+            <Icon d={tb.icon} />{tb.name}
             {!searching && i === at && <span class="rail-mark" />}
           </button>
         ))}

@@ -32,6 +32,7 @@ import { isPortrait } from '../form';
 import { sheet, swipeDown } from '../sheet';
 import { changeUi, ui } from '../ui';
 import { t, type TextKey } from '../text';
+import { ICONS, iconSvg } from '../icons';
 
 // The Mana property counts the pool by Forge's mana bit (ManaAtom): the five colours as MagicColor has them, and colourless its own bit
 const MANA: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
@@ -39,8 +40,7 @@ const MANA: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, '
 /** Commander damage that loses the game, and the point from which the portrait warns of it. */
 export const COMMANDER_LETHAL = 21;
 export const COMMANDER_WARNING = 15;
-// Lucide's swords (ISC, see web/licenses/lucide-license.txt)
-const SWORDS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5 18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2"/></svg>';
+const SWORDS = iconSvg(ICONS.swords);
 
 export function renderMatch(model: Model, actions: Actions, events: readonly GameEvent[]): void {
   const g = game(model);
@@ -263,8 +263,7 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
   }
 }
 
-// Lucide's users (ISC, see web/licenses/lucide-license.txt)
-const PLAYERS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><i class="dot" aria-hidden="true"></i>';
+const PLAYERS_ICON = `${iconSvg(ICONS.users)}<i class="dot" aria-hidden="true"></i>`;
 
 /** Out of a game that goes on: said once, over the board, with a way to leave when nobody else is waiting on you. */
 let outSaid = false;
@@ -300,8 +299,7 @@ function renderOut(model: Model, actions: Actions): void {
   byId('match').append(banner);
 }
 
-// Lucide's skull (ISC, see web/licenses/lucide-license.txt)
-const SKULL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="12" r="1"/></svg>';
+const SKULL = iconSvg(ICONS.skull);
 
 interface Badge {
   key: string;

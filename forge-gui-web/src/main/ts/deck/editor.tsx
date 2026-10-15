@@ -1,6 +1,5 @@
 // The deck editor: every change is sent to the server, which saves it at once, so there is no Save button
 
-import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useDismiss } from '../hooks';
 import { Catalogue } from './catalogue';
@@ -17,17 +16,7 @@ import type { Model } from '../model';
 import type { DeckSection, EditorState } from '../protocol';
 import { t, type TextKey } from '../text';
 import { Backdrop } from '../dialog';
-
-// Lucide's plus, folder, copy, pencil-line, download, upload and trash-2 (ISC, see web/licenses/lucide-license.txt)
-const ICONS = {
-  plus: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>,
-  folder: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>,
-  copy: <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>,
-  pen: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>,
-  down: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>,
-  up: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 21h14" /></svg>,
-  bin: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>,
-};
+import { ICONS, Icon } from '../icons';
 
 /** The formats a deck can be built for, as the lobby names them. */
 export const DECK_FORMATS: [string, TextKey][] = [
@@ -100,11 +89,11 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   // A draft or sealed pool, and a deck built from a campaign's cards, are neither made, opened, renamed nor deleted from here
   const ownDeck = !state.limited && !state.collection;
   /** A row of the deck's menu, which closes the menu unless it opens another. */
-  const item = (icon: ComponentChildren, label: string, act: () => void, stays = false, cls?: string) => (
+  const item = (icon: string, label: string, act: () => void, stays = false, cls?: string) => (
     <button role="menuitem" class={cls} onClick={() => {
       if (!stays) setMenu(null);
       act();
-    }}>{icon}<span>{label}</span></button>
+    }}><Icon d={icon} /><span>{label}</span></button>
   );
   // Shown in the head, and on a phone in the deck's own summary, beside the verdict it explains
   const check = state.limited
@@ -134,9 +123,9 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
                   {ownDeck && item(ICONS.copy, t('lblDuplicate'), () => actions.deckOp('duplicate'))}
                   {ownDeck && item(ICONS.pen, t('lblRename'), () => setRenaming(true))}
                   {ownDeck && <hr />}
-                  {!state.limited && item(ICONS.down, t('lblWebEditorImportList'), () => changeUi(u => { u.importer = { from: 'editor' }; }))}
-                  {item(ICONS.up, t('lblWebEditorCopyAsText'), () => setDialog('text'))}
-                  {item(ICONS.up, t('lblWebEditorDownloadDeckFile'), () => actions.deckOp('file'))}
+                  {!state.limited && item(ICONS.download, t('lblWebEditorImportList'), () => changeUi(u => { u.importer = { from: 'editor' }; }))}
+                  {item(ICONS.upload, t('lblWebEditorCopyAsText'), () => setDialog('text'))}
+                  {item(ICONS.upload, t('lblWebEditorDownloadDeckFile'), () => actions.deckOp('file'))}
                   {/* A deck only being read (a precon, someone else's) has nothing of the player's to delete */}
                   {ownDeck && !state.copyOf && <hr />}
                   {ownDeck && !state.copyOf && item(ICONS.bin, t('lblWebEditorDeleteThisDeck'), () => setDialog('delete'), false, 'danger')}

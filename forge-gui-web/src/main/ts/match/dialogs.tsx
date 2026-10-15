@@ -14,7 +14,8 @@ import { boundKeys } from '../settings';
 import { playerAvatarUrl } from '../looks';
 import { cardMenu, deref, derefAll, game, isLocal, oldestRequest, stackPick, stateOf, type Model } from '../model';
 import { changeUi, ui } from '../ui';
-import { ICONS, Icon } from './gamemenu';
+import { MenuIcon } from './gamemenu';
+import { ICONS } from '../icons';
 import type {
   ChoicesRequest, DistributeRequest, ManipulateRequest, NumberRequest, OptionRequest, OrderRequest, Request, RequestOption,
   CardView, PlayerView, SideboardRequest, StackItemView, TextRequest, TrackedObject, YieldAction,
@@ -94,7 +95,7 @@ export function StackMenu({ model, actions }: { model: Model; actions: Actions }
   const item = (label: string, action: YieldAction, checked?: boolean) => (
     <button type="button" class="card-menu-item" role={checked === undefined ? 'menuitem' : 'menuitemcheckbox'} aria-checked={checked}
       onClick={() => { actions.stackYield(answer.key, action); close(); }}>
-      <Icon d={checked === undefined ? ICONS.yields : ICONS.check} cls={checked === undefined ? undefined : 'tick'} />{label}
+      <MenuIcon d={checked === undefined ? ICONS.yields : ICONS.check} cls={checked === undefined ? undefined : 'tick'} />{label}
     </button>
   );
   const remembered = answer.autoYield !== undefined || answer.trigger !== undefined;

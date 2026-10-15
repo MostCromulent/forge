@@ -15,17 +15,10 @@ import { notePick } from './overlay';
 import { declaringBlocks } from './blockdrag';
 import type { CardView, PlayerView, PromptButton, Ref, StackItemView } from '../protocol';
 import { t } from '../text';
+import { ICONS, iconSvg } from '../icons';
 
 // The console in the bottom-left corner, whose rim lights while the game waits on you
 
-// Icons from Lucide (ISC, see web/licenses/lucide-license.txt), drawn on the same 24-unit grid
-const ICONS = {
-  endTurn: '<path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/>',
-  autoPass: '<path d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"/><circle cx="12" cy="12" r="10"/>',
-  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>',
-  more: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
-};
-const icon = (name: keyof typeof ICONS) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
 
 let built = false;
 /** The row of tools, which a phone moves out of the prompt and onto the player's bar. */
@@ -98,12 +91,12 @@ function drawPrompt(model: Model, actions: Actions): void {
   if (!built) {
     root.innerHTML = `
       <div class="tools">
-        <button class="end-turn">${icon('endTurn')}</button>
-        <button class="auto-pass">${icon('autoPass')}</button>
-        <button class="undo">${icon('undo')}</button>
+        <button class="end-turn">${iconSvg(ICONS.yields)}</button>
+        <button class="auto-pass">${iconSvg(ICONS.autoPass)}</button>
+        <button class="undo">${iconSvg(ICONS.undo)}</button>
         <button class="macro" hidden></button>
         <span class="tools-gap" aria-hidden="true"></span>
-        <button class="more">${icon('more')}</button>
+        <button class="more">${iconSvg(ICONS.ellipsis)}</button>
       </div>
       <p class="step"></p>
       <div class="prompt-body">
