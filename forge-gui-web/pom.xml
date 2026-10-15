@@ -83,7 +83,7 @@
                             <goal>java</goal>
                         </goals>
                         <configuration>
-                            <mainClass>forge.web.ProtocolTypes</mainClass>
+                            <mainClass>forge.web.protocol.ProtocolTypes</mainClass>
                             <arguments>
                                 <argument>${project.basedir}/src/main/ts/protocol.gen.ts</argument>
                                 <argument>${project.basedir}/../forge-gui/res/languages/</argument>

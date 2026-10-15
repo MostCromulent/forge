@@ -38,6 +38,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import forge.web.campaign.QuestGame;
+import forge.web.protocol.JsonCodec;
 
 /** A quest as a browser drives it, and its duels as netplay plays them. */
 public class QuestSessionTest extends SessionsTest {

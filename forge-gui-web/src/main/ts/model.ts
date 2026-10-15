@@ -12,7 +12,7 @@ export interface Looks {
 /** A line of chat, where from is empty for a netplay announcement and earlier marks a line said before this browser arrived. */
 export interface ChatEntry { from: string; text: string; earlier: boolean }
 
-// Everything the browser knows. objects is its copy of the game's table, which forge.web.BrowserModel applies and prunes by the same rules
+// Everything the browser knows. objects is its copy of the game's table, which forge.web.match.BrowserModel applies and prunes by the same rules
 export interface Model {
   objects: Map<number, TrackedObject>;
   root: number;

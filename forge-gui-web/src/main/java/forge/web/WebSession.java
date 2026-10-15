@@ -1,8 +1,8 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
-import forge.web.FromBrowser.*;
-import forge.web.ToBrowser.*;
+import forge.web.protocol.FromBrowser.*;
+import forge.web.protocol.ToBrowser.*;
 import forge.deck.Deck;
 import forge.deck.DeckGroup;
 import forge.game.GameType;
@@ -33,11 +33,67 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import forge.web.campaign.Campaign;
+import forge.web.campaign.ConquestGame;
+import forge.web.campaign.QuestGame;
+import forge.web.deck.CardCatalog;
+import forge.web.deck.DeckCatalog;
+import forge.web.deck.DeckSession;
+import forge.web.images.SkinSprites;
+import forge.web.limited.Draft;
+import forge.web.limited.OfflineDraft;
+import forge.web.limited.OfflineEvents;
+import forge.web.limited.OfflineLimited;
+import forge.web.limited.OnlineDraft;
+import forge.web.lobby.Lobby;
+import forge.web.match.LocalGame;
+import forge.web.match.WebGuiGame;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.Wire;
+import forge.web.protocol.FromBrowser;
+import forge.web.protocol.FromBrowser.PageError;
+import forge.web.protocol.FromBrowser.SetName;
+import forge.web.protocol.FromBrowser.SetSeat;
+import forge.web.protocol.FromBrowser.Start;
+import forge.web.protocol.ToBrowser.ErrorMessage;
+import forge.web.protocol.ToBrowser.Hello;
+import forge.web.protocol.ToBrowser.LimitedResult;
+import forge.web.protocol.FromBrowser.AskDeckDetails;
+import forge.web.protocol.FromBrowser.AskExtraChoices;
+import forge.web.protocol.FromBrowser.AskPrintings;
+import forge.web.protocol.FromBrowser.DeckQuery;
+import forge.web.protocol.FromBrowser.DraftMove;
+import forge.web.protocol.FromBrowser.DraftPick;
+import forge.web.protocol.FromBrowser.EventDecksOnly;
+import forge.web.protocol.FromBrowser.EventForget;
+import forge.web.protocol.FromBrowser.EventHostAgain;
+import forge.web.protocol.FromBrowser.ForgetSleeveArt;
+import forge.web.protocol.FromBrowser.HostChoiceAnswer;
+import forge.web.protocol.FromBrowser.LimitedOpen;
+import forge.web.protocol.FromBrowser.PoolOpen;
+import forge.web.protocol.FromBrowser.Ready;
+import forge.web.protocol.FromBrowser.Say;
+import forge.web.protocol.FromBrowser.SearchCards;
+import forge.web.protocol.FromBrowser.SeatCommand;
+import forge.web.protocol.FromBrowser.SetArchenemy;
+import forge.web.protocol.FromBrowser.SetCardPool;
+import forge.web.protocol.FromBrowser.SetFormat;
+import forge.web.protocol.FromBrowser.SetLimited;
+import forge.web.protocol.FromBrowser.SetSeatExtra;
+import forge.web.protocol.FromBrowser.SetSetting;
+import forge.web.protocol.FromBrowser.SetStops;
+import forge.web.protocol.FromBrowser.SetVariant;
+import forge.web.protocol.FromBrowser.SitOut;
+import forge.web.protocol.FromBrowser.SleeveArt;
+import forge.web.protocol.ToBrowser;
+import forge.web.protocol.ToBrowser.Addresses;
+import forge.web.protocol.ToBrowser.CardSearch;
+import forge.web.protocol.ToBrowser.Printings;
 
 /** One browser's session, whose place is held in one {@link Stage} that changes only through {@link #move}. */
 public final class WebSession implements IHasForgeLog {
     /** Where the browser is. Each stage holds what exists there and nothing else. */
-    sealed interface Stage permits Menu, Opening, Setup, Event, InCampaign, Playing { }
+    public sealed interface Stage permits Menu, Opening, Setup, Event, InCampaign, Playing { }
 
     /** The start page; for a guest, waiting for the host to open a game. */
     record Menu() implements Stage { }
@@ -49,21 +105,21 @@ public final class WebSession implements IHasForgeLog {
     record Setup(WebGuiGame gui, boolean invited) implements Stage { }
 
     /** The Limited pages for kind (sealed or draft): the saved pools, the setup form, and the opponents screen of pool, when it is not null. */
-    record Event(String kind, String pool) implements Stage {
-        IStorage<DeckGroup> storage() {
+    public record Event(String kind, String pool) implements Stage {
+        public IStorage<DeckGroup> storage() {
             return OfflineEvents.storage(kind);
         }
 
-        GameType type() {
+        public GameType type() {
             return "draft".equals(kind) ? GameType.Draft : GameType.Sealed;
         }
     }
 
     /** A campaign mode's pages: its saved games while save is null, otherwise the one that is open. */
-    record InCampaign(String mode, String save) implements Stage { }
+    public record InCampaign(String mode, String save) implements Stage { }
 
     /** In a match, playing it or watching the computer play it. back is where leaving it returns to: a pool, a campaign, or null for the table. */
-    record Playing(WebGuiGame gui, boolean invited, boolean spectating, Stage back) implements Stage { }
+    public record Playing(WebGuiGame gui, boolean invited, boolean spectating, Stage back) implements Stage { }
 
     private static final int CARD_SEARCH_LIMIT = 60;
     /** Chat is shown to every player, so one message is kept to a length a chat box can hold. */
@@ -82,23 +138,23 @@ public final class WebSession implements IHasForgeLog {
     private final LocalGame local = new LocalGame();
     private final Runnable onQuit;
     private volatile BrowserChannel browser;
-    volatile Stage stage = new Menu();
+    public volatile Stage stage = new Menu();
     /** This player's settings: a guest's own, or the host's, which are Forge's preferences. */
-    volatile PlayerSettings settings = PlayerSettings.fresh();
+    public volatile PlayerSettings settings = PlayerSettings.fresh();
     /** The name this browser chose to play under; null until it has chosen one. */
     private volatile String name;
     /** The face chosen beside the name, before any seat exists to carry it; null until it has chosen one. */
     private volatile Integer avatar;
     private final OfflineLimited limited;
     /** The offline draft being played, while there is one. */
-    volatile OfflineDraft offlineDraft;
+    public volatile OfflineDraft offlineDraft;
     /** This seat's part in the table's draft or sealed event; a new one comes with each table. */
     private volatile OnlineDraft onlineDraft;
     /** Whether the draft host was told this seat's player left, so it is told when the browser is back. */
     private volatile boolean seatReportedGone;
     /** What this session alone knows of the open conquest: its selection and the last move. */
     private final ConquestGame conquest = new ConquestGame();
-    final QuestGame quest = new QuestGame();
+    public final QuestGame quest = new QuestGame();
     /** One thread for everything a campaign does, as its model is Forge's own and nothing guards it; it ends when idle, so a finished session holds none. */
     private final ExecutorService campaignWork = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
         final Thread t = new Thread(r, "WebCampaign");
@@ -201,7 +257,7 @@ public final class WebSession implements IHasForgeLog {
         }
     };
 
-    void onCampaign(final Runnable work) {
+    public void onCampaign(final Runnable work) {
         campaignWork.execute(() -> {
             try {
                 work.run();
@@ -218,7 +274,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** Moves to the next stage only if the browser is still where the caller found it, closing the old GUI unless the new stage keeps it. */
-    synchronized boolean move(final Stage from, final Stage next) {
+    public synchronized boolean move(final Stage from, final Stage next) {
         if (stage != from) {
             return false;
         }
@@ -249,7 +305,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** The saved player name is the host's, so only a host that has not chosen a name plays under it. */
-    String playerName() {
+    public String playerName() {
         final String chosen = name;
         return chosen != null || !isHost ? chosen : FModel.getPreferences().getPref(FPref.PLAYER_NAME);
     }
@@ -269,7 +325,7 @@ public final class WebSession implements IHasForgeLog {
         return browser != null;
     }
 
-    BrowserChannel browser() {
+    public BrowserChannel browser() {
         return browser;
     }
 
@@ -290,12 +346,12 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** Whether this session holds the host's seat. */
-    boolean hosting() {
+    public boolean hosting() {
         return isHost;
     }
 
     /** The face chosen on the start page; the first avatar until one is. */
-    int avatarIndex() {
+    public int avatarIndex() {
         final Integer face = avatar;
         return face == null ? 0 : face;
     }
@@ -313,7 +369,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** Sends one message to this session's browser, if it has one. */
-    void tell(final Record message) {
+    public void tell(final Record message) {
         final BrowserChannel b = browser;
         if (b != null) {
             b.send(message);
@@ -321,7 +377,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** Shows the browser the game a match is played through, when one is attached. */
-    void attach(final WebGuiGame gui) {
+    public void attach(final WebGuiGame gui) {
         final BrowserChannel b = browser;
         if (b != null) {
             gui.attach(b);
@@ -1151,7 +1207,7 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    Hello hello() {
+    public Hello hello() {
         final Stage now = stage;
         return new Hello(now instanceof Playing, now instanceof Setup, now instanceof Opening,
                 now instanceof Playing p && p.spectating(), isHost,
@@ -1224,7 +1280,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** What the campaign stage draws from: the saved games, or the open one's pages and any reward yet to be shown. */
-    void sendCampaign() {
+    public void sendCampaign() {
         if (!(stage instanceof InCampaign c)) {
             return;
         }
@@ -1299,7 +1355,7 @@ public final class WebSession implements IHasForgeLog {
         return List.of(LocalGame.storedIndex(pref, 0), LocalGame.storedIndex(pref, 1));
     }
 
-    static ErrorMessage error(final String message) {
+    public static ErrorMessage error(final String message) {
         return new ErrorMessage(message);
     }
 

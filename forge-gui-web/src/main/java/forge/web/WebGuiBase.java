@@ -15,7 +15,7 @@ import forge.sound.IAudioMusic;
 import forge.util.BuildInfo;
 import forge.util.FSerializableFunction;
 import forge.util.ImageFetcher;
-import forge.web.ToBrowser.Notice;
+import forge.web.protocol.ToBrowser.Notice;
 import org.jupnp.DefaultUpnpServiceConfiguration;
 import org.jupnp.UpnpServiceConfiguration;
 import forge.util.IHasForgeLog;
@@ -34,6 +34,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import forge.web.images.Foil;
+import forge.web.images.WebDownloads;
+import forge.web.images.WebImageFetcher;
+import forge.web.protocol.Wire;
 
 /** What Forge asks of the program it runs in, answered for the web, with one "WebUI" thread in place of Swing's event thread. */
 public final class WebGuiBase implements IGuiBase, IHasForgeLog {
@@ -249,12 +253,12 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     @Override public boolean hasNetGame() { return false; }
 
     /** The picture of a set's booster, as BoosterPack names its first one. */
-    static String boosterImage(final CardEdition edition) {
+    public static String boosterImage(final CardEdition edition) {
         return ImageKeys.BOOSTER_PREFIX + edition.getCode() + (edition.getCntBoosterPictures() > 1 ? "_1" : "");
     }
 
     /** A picture the browser draws itself: a skin icon by its FSkinProp, or a file by its path, which only says which picture is meant. */
-    record WebSkinImage(FSkinProp prop, String path) implements ISkinImage {
+    public record WebSkinImage(FSkinProp prop, String path) implements ISkinImage {
     }
 
     @Override public ISkinImage getSkinIcon(final FSkinProp skinProp) { return new WebSkinImage(skinProp, null); }

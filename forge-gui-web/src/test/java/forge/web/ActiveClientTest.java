@@ -18,6 +18,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import forge.web.match.WebGuiGame;
 
 public class ActiveClientTest {
     @BeforeClass

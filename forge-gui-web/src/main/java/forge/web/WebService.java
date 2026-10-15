@@ -9,9 +9,11 @@ import org.tinylog.Logger;
 
 import java.io.File;
 import java.util.function.Consumer;
+import forge.web.console.CloudflareTunnel;
+import forge.web.console.ServerTraffic;
 
 /** The web server as something the console can stop and start again, with tokens that outlive a restart so old links still work. */
-final class WebService implements IHasForgeLog {
+public final class WebService implements IHasForgeLog {
     private final WebGuiBase ui;
     private final long idleMillis;
     private final Runnable onQuit;
@@ -22,7 +24,7 @@ final class WebService implements IHasForgeLog {
     private WebServer server;
     private volatile WebSessions sessions;
     /** Set at launch for a server that should outlast its browsers, such as one with no window to untick the choice in. */
-    static final boolean KEEP_OPEN = Boolean.getBoolean("forge.web.keepOpen");
+    public static final boolean KEEP_OPEN = Boolean.getBoolean("forge.web.keepOpen");
     private boolean quitWhenEmpty = !KEEP_OPEN;
     private volatile PortForward forward;
     private volatile Forwarding forwarding = Forwarding.OFF;
@@ -32,7 +34,7 @@ final class WebService implements IHasForgeLog {
     private volatile Consumer<CloudflareTunnel.State> onTunnel = t -> { };
 
     /** Where asking the router to forward the port stands. */
-    enum Forwarding { OFF, ASKING, FORWARDED, REFUSED }
+    public enum Forwarding { OFF, ASKING, FORWARDED, REFUSED }
 
     WebService(final WebGuiBase ui, final long idleMillis, final Runnable onQuit, final boolean consoleShown,
             final String hostToken, final String guestToken) {
@@ -44,12 +46,12 @@ final class WebService implements IHasForgeLog {
         this.guestToken = guestToken;
     }
 
-    synchronized boolean running() {
+    public synchronized boolean running() {
         return server != null;
     }
 
     /** Binds the port. Does nothing if it is already bound. */
-    synchronized void start() throws InterruptedException {
+    public synchronized void start() throws InterruptedException {
         if (server != null) {
             return;
         }
@@ -82,7 +84,7 @@ final class WebService implements IHasForgeLog {
     }
 
     /** Closes the port and drops every seat. Does nothing if it is already stopped. */
-    synchronized void stop() {
+    public synchronized void stop() {
         if (server == null) {
             return;
         }
@@ -96,7 +98,7 @@ final class WebService implements IHasForgeLog {
         NetworkLogConfig.deactivateNetworkLogging();
     }
 
-    synchronized void quitWhenEmpty(final boolean value) {
+    public synchronized void quitWhenEmpty(final boolean value) {
         quitWhenEmpty = value;
         if (sessions != null) {
             sessions.quitWhenEmpty(value);
@@ -104,11 +106,11 @@ final class WebService implements IHasForgeLog {
     }
 
     /** Whether the router is asked to forward the port whenever the server starts. Kept between runs. */
-    boolean forwardPort() {
+    public boolean forwardPort() {
         return Boolean.parseBoolean(FModel.getNetPreferences().getPref(FNetPref.WEB_PORT_FORWARD));
     }
 
-    synchronized void forwardPort(final boolean value) {
+    public synchronized void forwardPort(final boolean value) {
         FModel.getNetPreferences().setPref(FNetPref.WEB_PORT_FORWARD, String.valueOf(value));
         FModel.getNetPreferences().save();
         if (!value) {
@@ -121,12 +123,12 @@ final class WebService implements IHasForgeLog {
     }
 
     /** Told of every change in where forwarding stands, on whatever thread the router's answer arrives. */
-    synchronized void onForwarding(final Consumer<Forwarding> listener) {
+    public synchronized void onForwarding(final Consumer<Forwarding> listener) {
         onForwarding = listener;
         listener.accept(forwarding);
     }
 
-    Forwarding forwarding() {
+    public Forwarding forwarding() {
         return forwarding;
     }
 
@@ -160,12 +162,12 @@ final class WebService implements IHasForgeLog {
     }
 
     /** Whether players on the internet come in through Cloudflare, with the router left alone. Kept between runs. */
-    boolean throughCloudflare() {
+    public boolean throughCloudflare() {
         return Boolean.parseBoolean(FModel.getNetPreferences().getPref(FNetPref.WEB_CLOUDFLARE));
     }
 
     /** Only one way in is open at a time, so choosing one closes the other; the port forwarding choice is kept for the way back. */
-    synchronized void throughCloudflare(final boolean value) {
+    public synchronized void throughCloudflare(final boolean value) {
         FModel.getNetPreferences().setPref(FNetPref.WEB_CLOUDFLARE, String.valueOf(value));
         FModel.getNetPreferences().save();
         if (value) {
@@ -182,13 +184,13 @@ final class WebService implements IHasForgeLog {
     }
 
     /** Told of every change in where the connection through Cloudflare stands, on the thread that runs it. */
-    synchronized void onTunnel(final Consumer<CloudflareTunnel.State> listener) {
+    public synchronized void onTunnel(final Consumer<CloudflareTunnel.State> listener) {
         onTunnel = listener;
         listener.accept(tunnelling);
     }
 
     /** The host has said where Cloudflare's program is, which a wait for it to be installed then finds. Kept between runs. */
-    void cloudflaredAt(final File program) {
+    public void cloudflaredAt(final File program) {
         FModel.getNetPreferences().setPref(FNetPref.WEB_CLOUDFLARED_PATH, program.getAbsolutePath());
         FModel.getNetPreferences().save();
         final CloudflareTunnel waiting = tunnel;
@@ -198,7 +200,7 @@ final class WebService implements IHasForgeLog {
     }
 
     /** A link for another player through Cloudflare, or null until it is connected. */
-    synchronized String tunnelUrl() {
+    public synchronized String tunnelUrl() {
         final CloudflareTunnel open = tunnel;
         final String address = open == null ? null : open.address();
         return server == null || address == null ? null : server.inviteUrlThrough(address);
@@ -247,28 +249,28 @@ final class WebService implements IHasForgeLog {
     }
 
     /** The host's own link, or null while stopped. */
-    synchronized String url() {
+    public synchronized String url() {
         return server == null ? null : server.url();
     }
 
     /** A link for another player at one of this machine's addresses, or null while stopped. */
-    synchronized String inviteUrl(final String address) {
+    public synchronized String inviteUrl(final String address) {
         return server == null ? null : server.inviteUrl(address);
     }
 
     /** The bytes through the port since it was last started, or null while stopped. */
-    synchronized ServerTraffic traffic() {
+    public synchronized ServerTraffic traffic() {
         return server == null ? null : server.traffic();
     }
 
     /** Takes no lock, so the console can ask on the event thread while a stop is under way. */
-    int playersHere() {
+    public int playersHere() {
         final WebSessions now = sessions;
         return now == null ? 0 : now.playersHere();
     }
 
     /** The port the browser connects on, or the one that will be asked for while stopped. */
-    synchronized int port() {
+    public synchronized int port() {
         return server == null ? WebServer.configuredPort() : server.port();
     }
 }

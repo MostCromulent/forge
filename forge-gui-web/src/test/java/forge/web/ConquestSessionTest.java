@@ -36,6 +36,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import forge.web.campaign.ConquestGame;
+import forge.web.deck.Check;
+import forge.web.deck.DeckImport;
+import forge.web.match.LocalGame;
+import forge.web.match.WebGuiGame;
+import forge.web.protocol.JsonCodec;
 
 /** A conquest as a browser drives it, and its battles as netplay plays them. */
 public class ConquestSessionTest extends SessionsTest {

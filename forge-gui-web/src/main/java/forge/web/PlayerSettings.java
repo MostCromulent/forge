@@ -7,7 +7,7 @@ import java.util.EnumMap;
 import java.util.Map;
 
 /** Anything a player can set is read through here, never straight from the preferences, so one player's choice cannot become another's. */
-final class PlayerSettings {
+public final class PlayerSettings {
     /** Null for the host, whose settings are the preferences themselves. */
     private final Map<FPref, String> own;
 
@@ -16,7 +16,7 @@ final class PlayerSettings {
     }
 
     /** The host's: Forge's preferences, which the desktop client shares. */
-    static PlayerSettings saved() {
+    public static PlayerSettings saved() {
         return new PlayerSettings(null);
     }
 
@@ -25,7 +25,7 @@ final class PlayerSettings {
         return new PlayerSettings(new EnumMap<>(FPref.class));
     }
 
-    synchronized String get(final FPref pref) {
+    public synchronized String get(final FPref pref) {
         if (own == null) {
             return FModel.getPreferences().getPref(pref);
         }
@@ -38,11 +38,11 @@ final class PlayerSettings {
         return own == null;
     }
 
-    boolean getBoolean(final FPref pref) {
+    public boolean getBoolean(final FPref pref) {
         return Boolean.parseBoolean(get(pref));
     }
 
-    int getInt(final FPref pref) {
+    public int getInt(final FPref pref) {
         try {
             return Integer.parseInt(get(pref));
         } catch (final NumberFormatException e) {
@@ -50,7 +50,7 @@ final class PlayerSettings {
         }
     }
 
-    synchronized void set(final FPref pref, final String value) {
+    public synchronized void set(final FPref pref, final String value) {
         if (own == null) {
             FModel.getPreferences().setPref(pref, value);
         } else {
@@ -58,12 +58,12 @@ final class PlayerSettings {
         }
     }
 
-    void set(final FPref pref, final boolean value) {
+    public void set(final FPref pref, final boolean value) {
         set(pref, String.valueOf(value));
     }
 
     /** Keeps what was set. Only the host's settings outlive the process; a guest's browser remembers its own. */
-    void save() {
+    public void save() {
         if (own == null) {
             FModel.getPreferences().save();
         }

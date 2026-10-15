@@ -16,6 +16,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
+import forge.web.console.ServerConsole;
 
 /** Each launch makes two fresh tokens, one for the host's link and one for guests, so a link from an earlier launch no longer works. */
 public final class WebMain implements IHasForgeLog {
@@ -82,7 +83,7 @@ public final class WebMain implements IHasForgeLog {
         return HexFormat.of().formatHex(bytes);
     }
 
-    static void openBrowser(final String url, final WebGuiBase ui) {
+    public static void openBrowser(final String url, final WebGuiBase ui) {
         for (final String exe : appModeBrowsers()) {
             if (new File(exe).isFile()) {
                 try {

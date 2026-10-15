@@ -47,6 +47,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import forge.web.match.WebGuiGame;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.JsonCodec;
 
 /** Desktop or mobile Forge joining a web host: a netplay client that comes in through the web port by the invite link. */
 public class NetplayTunnelTest extends SessionsTest {

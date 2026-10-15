@@ -21,6 +21,9 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.JsonCodec;
+import forge.web.images.Foil;
 
 public class WebServerTest {
     private final HttpClient http = HttpClient.newHttpClient();

@@ -12,6 +12,7 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import forge.web.protocol.JsonCodec;
 
 /** Offline sealed as a browser drives it: a pool made, kept, opened, played and removed through the session's messages. */
 public class OfflineSealedTest extends SessionsTest {

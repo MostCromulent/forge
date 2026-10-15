@@ -9,7 +9,7 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.gamemodes.match.DeclineScope;
 import forge.gamemodes.match.YieldController;
 import forge.localinstance.properties.ForgePreferences.FPref;
-import forge.web.ToBrowser.ServerSettings;
+import forge.web.protocol.ToBrowser.ServerSettings;
 import org.tinylog.Logger;
 
 import java.util.ArrayList;
@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /** What the options dialog reads and writes: a player's own settings (see {@link PlayerSettings}) and the phase stops. */
-final class WebSettings {
+public final class WebSettings {
     private WebSettings() {
     }
 
@@ -40,7 +40,7 @@ final class WebSettings {
             "suggestStackYield", FPref.YIELD_DECLINE_SCOPE_STACK_YIELD,
             "suggestNoActions", FPref.YIELD_DECLINE_SCOPE_NO_ACTIONS);
 
-    static ServerSettings values(final PlayerSettings player) {
+    public static ServerSettings values(final PlayerSettings player) {
         return new ServerSettings(
                 player.getBoolean(FPref.YIELD_INTERRUPT_ON_ATTACKERS),
                 player.getBoolean(FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL),
@@ -66,7 +66,7 @@ final class WebSettings {
     }
 
     /** Saves a setting, dropping an illegal value because it could reach the file the desktop client shares. */
-    static void set(final PlayerSettings player, final IGameController controller, final String key, final String value) {
+    public static void set(final PlayerSettings player, final IGameController controller, final String key, final String value) {
         final FPref pref = BOOLEAN_PREFS.get(key);
         if (pref != null) {
             // The host decides from its own copy of these, seeded when the game opened, so a change mid-game has to reach it as well
@@ -119,7 +119,7 @@ final class WebSettings {
     }
 
     /** Gives a game this player's settings, except auto-pass always respects the interrupts and playable cards are always highlighted. */
-    static void applyAll(final PlayerSettings player, final IGameController controller) {
+    public static void applyAll(final PlayerSettings player, final IGameController controller) {
         // Every one is pushed after the engine's own seed, which read the shared preferences, so a guest plays by its own
         for (final FPref pref : YieldController.SYNCED_PREFS) {
             final boolean always = pref == FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS || pref == FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS;
@@ -139,7 +139,7 @@ final class WebSettings {
     }
 
     /** The phases one row of the stop grid has a stop on; untap takes no stop, as on desktop. */
-    static List<PhaseType> stops(final PlayerSettings player, final FPref[] keys) {
+    public static List<PhaseType> stops(final PlayerSettings player, final FPref[] keys) {
         final List<PhaseType> out = new ArrayList<>();
         final PhaseType[] phases = PhaseType.values();
         for (int i = 1; i < phases.length; i++) {
@@ -151,7 +151,7 @@ final class WebSettings {
     }
 
     /** Sets every stop of one row, those listed on and the rest off, and answers the phases that changed. */
-    static List<PhaseType> setStops(final PlayerSettings player, final boolean mine, final List<PhaseType> phases) {
+    public static List<PhaseType> setStops(final PlayerSettings player, final boolean mine, final List<PhaseType> phases) {
         final List<PhaseType> changed = new ArrayList<>();
         for (final PhaseType phase : PhaseType.values()) {
             final boolean stop = phases.contains(phase);
@@ -166,7 +166,7 @@ final class WebSettings {
         return changed;
     }
 
-    static FPref stopKey(final PhaseType phase, final boolean mine) {
+    public static FPref stopKey(final PhaseType phase, final boolean mine) {
         return (mine ? FPref.PHASES_HUMAN : FPref.PHASES_AI)[phase.ordinal() - 1];
     }
 }

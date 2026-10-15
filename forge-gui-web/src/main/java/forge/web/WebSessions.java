@@ -8,10 +8,10 @@ import forge.gamemodes.net.event.MessageEvent;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.HostingServer;
 import forge.util.Localizer;
-import forge.web.ToBrowser.Address;
-import forge.web.ToBrowser.ChatLine;
-import forge.web.ToBrowser.Person;
-import forge.web.ToBrowser.Presence;
+import forge.web.protocol.ToBrowser.Address;
+import forge.web.protocol.ToBrowser.ChatLine;
+import forge.web.protocol.ToBrowser.Person;
+import forge.web.protocol.ToBrowser.Presence;
 import forge.util.IHasForgeLog;
 
 import java.util.ArrayDeque;
@@ -25,6 +25,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import forge.web.protocol.BrowserChannel;
 
 /** Every browser attached to this process, each with a session of its own, so only the web port has to be reachable from outside. */
 final class WebSessions implements WebServer.Endpoint, IHasForgeLog {

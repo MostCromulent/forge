@@ -14,6 +14,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import forge.web.match.BrowserModel;
+import forge.web.match.LocalGame;
+import forge.web.match.WebGuiGame;
 
 /** A whole game on the web client's real path: loopback host, netplay client, dispatch executor, JSON forwarding. */
 public class LoopbackGameTest {

@@ -10,13 +10,15 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.player.PlayerControllerHuman;
 import forge.util.Localizer;
-import forge.web.FromBrowser.Dev;
-import forge.web.ToBrowser.DevDump;
-import forge.web.ToBrowser.DevState;
-import forge.web.ToBrowser.Notice;
+import forge.web.protocol.FromBrowser.Dev;
+import forge.web.protocol.ToBrowser.DevDump;
+import forge.web.protocol.ToBrowser.DevState;
+import forge.web.protocol.ToBrowser.Notice;
 import org.tinylog.Logger;
 
 import java.util.Arrays;
+import forge.web.match.LocalGame;
+import forge.web.protocol.BrowserChannel;
 
 /** Forge gives a netplay client no cheats, but the host shares its process with the server, so only the host's own seat can cheat. */
 final class DevMode {

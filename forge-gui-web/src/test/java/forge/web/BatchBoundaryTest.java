@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import forge.web.match.BrowserModel;
 
 /** What one message to a client may hold, read from every message of ten turns the computer plays against itself. */
 public class BatchBoundaryTest {

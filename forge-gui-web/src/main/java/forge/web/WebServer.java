@@ -78,6 +78,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
+import forge.web.console.ServerTraffic;
+import forge.web.images.CardThumbnails;
+import forge.web.images.Foil;
+import forge.web.images.SkinSprites;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.JsonCodec;
+import forge.web.protocol.PageText;
 
 /** Listens on every interface so a player elsewhere can open a link, and the per-launch tokens in the links keep everyone else out. */
 public final class WebServer implements AutoCloseable, IHasForgeLog {

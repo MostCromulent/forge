@@ -10,6 +10,8 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import forge.web.deck.DeckCatalog;
+import forge.web.protocol.JsonCodec;
 
 /** A second browser taking a seat in the host's game, with both in this process and reaching the same loopback server. */
 public class GuestSeatTest extends SessionsTest {

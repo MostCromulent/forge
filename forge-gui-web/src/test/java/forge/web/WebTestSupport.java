@@ -11,11 +11,11 @@ import forge.model.FModel;
 import forge.player.PlayerControllerHuman;
 import org.testng.SkipException;
 
-final class WebTestSupport {
+public final class WebTestSupport {
     private WebTestSupport() {}
 
     /** GuiBase must be set before ForgeConstants loads, because its static init reads the assets dir. */
-    static synchronized void initModel() {
+    public static synchronized void initModel() {
         if (GuiBase.getInterface() == null) {
             GuiBase.setInterface(new WebGuiBase());
         }

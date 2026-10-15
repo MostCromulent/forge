@@ -14,6 +14,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import forge.web.match.WebGuiGame;
 
 public class WebGuiGameTest {
     private WebGuiGame gui;
