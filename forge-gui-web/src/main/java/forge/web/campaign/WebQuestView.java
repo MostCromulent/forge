@@ -87,8 +87,13 @@ final class WebQuestView implements IWinLoseView<WebQuestView.Button> {
 
     @Override
     public void showCards(final String title, final List<PaperCard> cards) {
-        // Cards lost to ante are shown with the rest, marked so the browser can set them apart
-        steps.add(cardsStep(title, cards, title.equals(Localizer.getInstance().getMessage("lblLootedLostAnteCard"))));
+        steps.add(cardsStep(title, cards, false));
+    }
+
+    @Override
+    public void showLostCards(final String title, final List<PaperCard> cards) {
+        // Shown with the rest, marked so the browser can set them apart
+        steps.add(cardsStep(title, cards, true));
     }
 
     /** Cards shown face up under a title, as a reveal draws them. */
