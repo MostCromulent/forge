@@ -12,7 +12,7 @@ import { deref, stateOf, type Model } from './model';
 import { isAiming } from './match/overlay';
 import { drawStickers } from './match/stickers';
 import { hovers, longPress } from './press';
-import { sheet, swipeAcross, swipeDown } from './sheet';
+import { openedOver, sheet, swipeAcross, swipeDown } from './sheet';
 import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from './protocol';
 import { t, type TextKey } from './text';
 
@@ -176,11 +176,11 @@ export function renderDetail(model: Model): void {
   }
   // A question that picks from the board needs the board, so a pinned sheet gives way to it
   const p = model.prompt;
-  if (ui.inspect && p && p !== askedWhenPinned && !p.paying && ((p.selectableMin > 0 && p.selectable.length > 0) || p.selectablePlayers.length > 0)) {
+  if (ui.inspect && p && p !== pinnedOver.seen && !p.paying && ((p.selectableMin > 0 && p.selectable.length > 0) || p.selectablePlayers.length > 0)) {
     ui.hover = null;
   }
   if (!ui.hover) ui.inspect = false;
-  askedWhenPinned = ui.inspect ? askedWhenPinned ?? p ?? NO_PROMPT : null;
+  pinnedOver.note(ui.inspect, p);
   drawDetail(model);
   const hover = ui.hover;
   const zoom = byId('zoom');
@@ -201,9 +201,7 @@ export function renderDetail(model: Model): void {
   }
 }
 
-/** The prompt that was open when the sheet was pinned, so only a new question closes it. */
-let askedWhenPinned: object | null = null;
-const NO_PROMPT = {};
+const pinnedOver = openedOver();
 
 /** What a mouse does with a click, a right-click and its keys, as buttons under the card. */
 function drawSheetActions(zoom: HTMLElement, model: Model): void {

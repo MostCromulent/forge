@@ -5,7 +5,7 @@ import { reconcile } from './render';
 import { createCard, frameColour, updateCard, type CardClick } from './cards';
 import { deref, derefAll, game, isLocal, players, stateOf, zone, type Model } from '../model';
 import { isPortrait } from '../form';
-import { sheet, swipeDown } from '../sheet';
+import { openedOver, sheet, swipeDown } from '../sheet';
 import { changeUi, ui } from '../ui';
 import { logTints } from './log';
 import { setting } from '../settings';
@@ -52,12 +52,11 @@ function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number
 }
 
 /** The question open when the drawer was opened, so only a new one closes it. */
-let askedWhenOpen: object | null = null;
+const openOver = openedOver();
 /** The card last tapped in the drawer, which is opened again if that card's play is called off. */
 let played: number | null = null;
 /** The question the drawer opened itself for. */
 let openedFor: object | null = null;
-const NO_PROMPT = {};
 
 const closeDrawer = () => {
   played = null;
@@ -101,21 +100,22 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
     if (asked !== openedFor) {
       openedFor = asked;
       ui.handOpen = true;
-      askedWhenOpen = asked;
+      // Opened for this question, which is then the one it opened over
+      openOver.note(false, null);
       played = null;
     }
   } else if (openedFor) {
     // Opened for a question, it goes with the question
     openedFor = null;
     ui.handOpen = false;
-  } else if (ui.handOpen && (model.requests.size > 0 || (askedWhenOpen && asked !== askedWhenOpen && asked && !asked.priority))) {
+  } else if (ui.handOpen && (model.requests.size > 0 || (openOver.seen && asked !== openOver.seen && asked && !asked.priority))) {
     // What was tapped asks its next question on the board, in a menu or in a dialog, so the drawer gets out of the way
     ui.handOpen = false;
   } else if (!ui.handOpen && played !== null && asked?.priority) {
     ui.handOpen = portrait && held.some(c => c.$key === played);
     played = null;
   }
-  askedWhenOpen = ui.handOpen ? askedWhenOpen ?? asked ?? NO_PROMPT : null;
+  openOver.note(ui.handOpen, asked);
   const open = portrait && ui.handOpen;
   root.classList.toggle('sheet', open);
   root.classList.toggle('strip', portrait && !open);

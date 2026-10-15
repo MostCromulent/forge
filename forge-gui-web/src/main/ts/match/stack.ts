@@ -12,6 +12,7 @@ import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
 import { t } from '../text';
 import type { CardView, GameEvent, StackItemView } from '../protocol';
+import { oncePer } from '../sheet';
 
 // What resolves next is the card at the top of the pile, and the rest cascade down behind it
 const STEP_MAX = 42;
@@ -29,9 +30,9 @@ const SETTLE_MS = 900;
 let current: Model | null = null;
 let countSeen = 0;
 let foldedFor: object | null = null;
-let foldedForPick: object | null = null;
-let openedForPick: number | null = null;
-let openedForTargets: object | null = null;
+const foldsForPick = oncePer<object>();
+const opensForPick = oncePer<number>();
+const opensForTargets = oncePer<object>();
 
 function fold(folded: boolean): void {
   foldedFor = folded ? current?.prompt ?? null : null;
@@ -75,8 +76,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     if (count > countSeen && model.prompt?.priority && foldedFor !== model.prompt) ui.stackCollapsed = false;
     // A question answered on the board or from the hand needs the room the list would lie over
     const asked = model.prompt;
-    if (asked && asked !== foldedForPick && !asked.priority && !asked.paying && (asked.selectable.length > 0 || asked.selectablePlayers.length > 0)) {
-      foldedForPick = asked;
+    if (asked && !asked.priority && !asked.paying && (asked.selectable.length > 0 || asked.selectablePlayers.length > 0) && foldsForPick(asked)) {
       ui.stackCollapsed = true;
     }
     const top = items[0];
@@ -99,12 +99,10 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   countSeen = count;
   const pick = stackPick(model);
   // A spell is picked on the list, so a folded list opens once for the question
-  if (pick && pick.id !== openedForPick) ui.stackCollapsed = false;
-  openedForPick = pick?.id ?? null;
+  if (opensForPick(pick?.id ?? null)) ui.stackCollapsed = false;
   // A target on the stack is clicked on the list too, while the prompt asks for it
   const offered = model.prompt?.selectableStack ?? [];
-  if (offered.length > 0 && model.prompt !== openedForTargets) ui.stackCollapsed = false;
-  openedForTargets = offered.length > 0 ? model.prompt : null;
+  if (opensForTargets(offered.length > 0 ? model.prompt : null)) ui.stackCollapsed = false;
   const collapsed = ui.stackCollapsed;
   showPanel(root, items.length + awaiting.size > 0);
   root.classList.toggle('collapsed', collapsed);

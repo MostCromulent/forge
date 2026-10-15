@@ -109,3 +109,24 @@ export function swipeAcross(el: HTMLElement, inside: string, swiped: (way: 'left
   });
   el.addEventListener('touchcancel', () => { from = null; });
 }
+
+/** The prompt a sheet opened over, so that a question asked since, and not that one, can make it give way. note is called once a draw. */
+export function openedOver(): { readonly seen: object | null; note(open: boolean, prompt: object | null | undefined): void } {
+  // Opened with no prompt at all, the next prompt is a new one too
+  const none = {};
+  let seen: object | null = null;
+  return {
+    get seen() { return seen; },
+    note(open, prompt) { seen = open ? seen ?? prompt ?? none : null; },
+  };
+}
+
+/** True the first time it is given each key in a row, so a sheet acts once on a question rather than on every draw. null is no key. */
+export function oncePer<T>(): (key: T | null) => boolean {
+  let last: T | null = null;
+  return key => {
+    const fresh = key !== null && key !== last;
+    last = key;
+    return fresh;
+  };
+}
