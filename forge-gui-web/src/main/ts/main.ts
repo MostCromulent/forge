@@ -11,7 +11,7 @@ import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName } from './identity';
 import { renderScreens, pageUnder, screenOf } from './screens';
 import { readySplit } from './match/dialogs';
-import { announceComing, renderMatch, resetTable } from './match/board';
+import { renderMatch, resetTable } from './match/board';
 import { renderPrompt, flash, pressPromptButton } from './match/prompt';
 import { appendLog, initLog, logTints } from './match/log';
 import { initSide, renderSide, renderSky } from './match/side';
@@ -19,17 +19,20 @@ import { initDetail, nextFace, renderDetail } from './preview';
 import { initStack } from './match/stack';
 import { initOverlay, drawOverlay } from './match/overlay';
 import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './match/blockdrag';
-import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest, setting } from './settings';
-import { asksPlayer, behindItsBoard, passingFor, setBoardBehind, worthSeeing } from './match/pace';
+import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest } from './settings';
+import { behindItsBoard, passingFor } from './match/pace';
+import { createPacer } from './match/pacer';
 import { setVersion } from './links';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { rememberStops, restoreStops } from './match/stopmemory';
 import { byId, saveText } from './dom';
-import { initNotices } from './notices';
+import { initNotices, showNotice } from './notices';
+import { forgetWakeLock, keepAwake } from './wakelock';
 import { deleteDeviceDeck, listDeviceDecks, putDeviceDeck } from './deck/devicedecks';
-import type { Notice, ServerMessage } from './protocol';
+import type { ServerMessage } from './protocol';
 
 const model = createModel();
+const pacer = createPacer(model, apply);
 let scheduled = false;
 // Asked once, so a slow answer is not asked for again on every message that arrives meanwhile
 let askedAddresses = false;
@@ -39,7 +42,7 @@ let restored = false;
 let sentDeviceDecks = false;
 // Queries are numbered, so an answer to one the player has since changed is dropped
 // A sound or a log line is sent ahead of the board it belongs to, and is taken after it (pace.ts)
-const send = connect(behindItsBoard(receive, 300), online => {
+const send = connect(behindItsBoard(msg => pacer.receive(msg), 300), online => {
   byId('banner').hidden = online;
   // The server replays the conversation for every connection, so the browser starts each one empty
   if (!online) {
@@ -60,15 +63,13 @@ window.addEventListener('unhandledrejection', e => report(String((e.reason as Er
 // While messages are held the prompt on screen is an earlier board's, so an answer to it would land on a question not yet seen
 const HELD_INPUT = new Set(['selectCard', 'selectPlayer', 'selectStackItem', 'useMana', 'ok', 'cancel', 'endTurn', 'undo']);
 const wire = createActions(msg => {
-  if (!held || !HELD_INPUT.has(msg.t)) send(msg);
+  if (!pacer.holding() || !HELD_INPUT.has(msg.t)) send(msg);
   else console.warn(`Not sent while the page catches up: ${msg.t}`);
 });
-/** What is held back for the player to see in its turn: the game as it goes. Anything else, such as chat or a card's details, is shown as it comes. */
-const HELD_MESSAGES = new Set(['state', 'prompt', 'controls', 'request', 'zones', 'playable', 'sound', 'log', 'gameOver', 'drawOffer', 'flash']);
 const actions: Actions = {
   ...wire,
   // Cancel on a pass stops the pass, which the host takes at any time, even while the page catches up
-  cancel: () => (held && passingFor(model.controls) ? wire.stopYield() : wire.cancel()),
+  cancel: () => (pacer.holding() && passingFor(model.controls) ? wire.stopYield() : wire.cancel()),
   ok: () => afterBlockDrags(() => wire.ok()),
   // An answered question leaves the model at once, so its dialog closes without waiting for the server
   answer: (id, value) => {
@@ -148,10 +149,7 @@ initForm(() => {
   window.dispatchEvent(new Event('resize'));
   schedule();
 });
-initNotices((notice, view, label) => {
-  notify(notice, view, NOTICE_MS, label);
-  schedule();
-});
+initNotices(model, schedule);
 initPress();
 initSheets();
 initDetail(actions);
@@ -228,69 +226,6 @@ function runKey(command: KeyCommand): void {
       if (menu && command.startsWith('pickCardMenu')) actions.answer(menu.id, [Number(command.slice(-1)) - 1]);
     }
   }
-}
-
-/** What has arrived since a new turn began, while its banner shows, or behind a board that is still being shown. */
-let held: ServerMessage[] | null = null;
-/** Until when the board on screen stays up, because it shows another player's play. */
-let showUntil = 0;
-/** Longer than any banner, so it only matters if the banner's own release is lost. */
-const HOLD_LIMIT_MS = 4000;
-/** Whether what is held waits behind a turn's banner, and not behind a board still being shown. */
-let announcing = false;
-/** The sound of a turn ending, which the host sends with the next turn's first state. */
-const TURN_SOUND = 'end_of_turn';
-
-function receive(msg: ServerMessage): void {
-  if (!held) {
-    // Each release is for this turn's hold only, so an earlier banner ending late cannot free a later turn early
-    const releaseThis = () => { if (held?.[0] === msg) release(); };
-    // A sound or a log line comes behind its own board, so it waits with that board when the board does, and not for it
-    if (msg.t === 'state' && !msg.full && Date.now() < showUntil) {
-      held = [msg];
-      setBoardBehind(true);
-      setTimeout(releaseThis, showUntil - Date.now());
-    } else if (msg.t === 'state' && announceComing(model, msg, releaseThis)) {
-      held = [msg];
-      setBoardBehind(true);
-      announcing = true;
-      // The banner's end releases the turn; this only guards the page against a release that never comes
-      setTimeout(releaseThis, HOLD_LIMIT_MS);
-    } else {
-      apply(msg);
-      if (msg.t === 'state' && worthSeeing(msg.events, msg.localPlayers)) {
-        showUntil = Date.now() + Number(setting('pace'));
-      } else if (msg.t === 'request' || (msg.t === 'prompt' && asksPlayer(msg, passingFor(model.controls)))) {
-        // Asked something, the player is looking at the board as it stands, and what they do next is shown at once
-        showUntil = 0;
-      }
-    }
-  } else if (msg.t === 'hello') {
-    // A new table or a reconnection starts over: what waited is taken as it stands, with none of it holding the rest back
-    const waiting = held;
-    held = null;
-    setBoardBehind(false);
-    announcing = false;
-    showUntil = 0;
-    waiting.filter(m => m.t !== 'sound').forEach(apply);
-    apply(msg);
-  } else if (!HELD_MESSAGES.has(msg.t)) {
-    apply(msg);
-  } else if (msg.t === 'sound' && msg.name === TURN_SOUND && announcing && !held.slice(1).some(m => m.t === 'state')) {
-    // The turn's sound is heard as its banner goes up, and not after it with the turn's first draw. A later turn's
-    // sound comes behind that turn's own state, and waits for its own banner
-    apply(msg);
-  } else {
-    held.push(msg);
-  }
-}
-
-function release(): void {
-  const waiting = held ?? [];
-  held = null;
-  setBoardBehind(false);
-  announcing = false;
-  waiting.forEach(receive);
 }
 
 function apply(msg: ServerMessage): void {
@@ -524,7 +459,7 @@ function apply(msg: ServerMessage): void {
     case 'detail': model.cardDetails.set(msg.key, msg); break;
     case 'playerDetail': model.playerDetails.set(msg.key, msg); break;
     case 'stackMenu': model.stackMenu = msg; break;
-    case 'notice': notify(msg); break;
+    case 'notice': showNotice(msg); break;
     case 'devState': model.devState = msg; break;
     case 'devDump': saveText(msg.text, 'game-state.txt', 'text/plain'); return;
     case 'deckFileText': saveText(msg.text, `${msg.name}.dck`, 'text/plain'); return;
@@ -543,55 +478,13 @@ function offerRememberedName(): void {
   }
 }
 
-let noticeId = 0;
-const NOTICE_MS = 6000;
-/** As long as a notice's way out (theme.css). */
-const NOTICE_OUT_MS = 180;
-
-// An error stays until the player dismisses it; anything else goes by itself
-function notify(notice: Notice, view?: () => void, ms = NOTICE_MS, label?: string): void {
-  const id = ++noticeId;
-  model.notices = [...model.notices, { id, notice, view, label }];
-  if (!notice.error) setTimeout(() => dismissNotice(id), ms);
-}
-
-// A notice slides out before it goes (theme.css); dismissed again on its way out, it goes at once
-function dismissNotice(id: number): void {
-  const going = model.notices.find(n => n.id === id);
-  if (going && !going.leaving && document.documentElement.dataset.motion !== 'reduced') {
-    model.notices = model.notices.map(n => (n.id === id ? { ...n, leaving: true } : n));
-    setTimeout(() => dismissNotice(id), NOTICE_OUT_MS);
-  } else {
-    model.notices = model.notices.filter(n => n.id !== id);
-  }
-  schedule();
-}
-
-// A phone that locks while the others take their turns drops its connection, so the screen is kept on during a match
-type WakeLock = { release(): Promise<void> };
-let lock: WakeLock | null = null;
-let locking = false;
-
-async function keepAwake(on: boolean): Promise<void> {
-  const wake = (navigator as Navigator & { wakeLock?: { request(type: 'screen'): Promise<WakeLock> } }).wakeLock;
-  if (!wake || locking || on === !!lock) return;
-  locking = true;
-  if (on && document.visibilityState === 'visible') {
-    // Refused, as a browser saving power may, it is not asked for again until the page is next shown
-    lock = await wake.request('screen').catch(() => ({ release: async () => {} }));
-  } else if (!on && lock) {
-    await lock.release().catch(() => {});
-    lock = null;
-  }
-  locking = false;
-}
 // A file let go over the page would otherwise be opened in its place, ending the session
 for (const kind of ['dragover', 'drop']) {
   addEventListener(kind, e => { if ((e as DragEvent).dataTransfer?.types.includes('Files')) e.preventDefault(); });
 }
-// The browser gives the lock up when the page is hidden, so it is asked for again on the way back
+// The browser gives the wake lock up when the page is hidden, so the next draw asks for it again
 document.addEventListener('visibilitychange', () => {
-  lock = null;
+  forgetWakeLock();
   schedule();
 });
 
@@ -617,7 +510,7 @@ function render(): void {
   }
   matchHistory(page === 'match');
   void keepAwake(page === 'match' && !model.gameOver);
-  renderScreens(model, actions, dismissNotice);
+  renderScreens(model, actions);
   // The name page comes before the player's volumes are known
   playMusic(page === 'name' ? null : page !== 'match' ? 'menu' : model.gameOver ? null : 'match');
   if (!model.inMatch) {
