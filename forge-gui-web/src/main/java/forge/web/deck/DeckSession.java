@@ -23,7 +23,6 @@ import forge.web.deck.DeckCatalog.OnDevice;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser.*;
 import org.apache.commons.lang3.EnumUtils;
-import org.tinylog.Logger;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -60,9 +59,10 @@ import forge.web.protocol.FromBrowser.ImportRead;
 import forge.web.protocol.ToBrowser.DeckFileText;
 import forge.web.protocol.ToBrowser.EditorMessage;
 import forge.web.protocol.ToBrowser.NameTaken;
+import forge.util.IHasForgeLog;
 
 /** One browser's deck editor and importer, which also keeps the decks a guest's browser stores. */
-public final class DeckSession {
+public final class DeckSession implements IHasForgeLog {
     private final Lobby lobby;
     private final WebGuiBase ui;
     private final BooleanSupplier host;
@@ -441,7 +441,7 @@ public final class DeckSession {
                     new Fetched(f.providerName(), f.sourceUrl(), text, check.format().name()));
             return new ImportResult(result.request(), result.lines(), result.problems(), result.summary(), f.name(), result.fetched());
         } catch (final IOException | RuntimeException e) {
-            Logger.warn(e, "Could not fetch a deck from " + fetch.url());
+            netLog.warn(e, "Could not fetch a deck from " + fetch.url());
             return new ImportResult(fetch.request(), List.of(),
                     List.of(new ImportProblem(-1, Localizer.getInstance().getMessage("lblWebEditorFetchFailed"),
                             e.getMessage() == null ? Localizer.getInstance().getMessage("lblWebEditorSiteSilent") : e.getMessage(), List.of())),
@@ -477,7 +477,7 @@ public final class DeckSession {
         try {
             read = readFile(f.text());
         } catch (final RuntimeException e) {
-            Logger.warn(e, "A deck file could not be read");
+            netLog.warn(e, "A deck file could not be read");
             channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDeckFileUnreadable"), null, true));
             return;
         }
@@ -643,7 +643,7 @@ public final class DeckSession {
             try {
                 device.put(d.id(), new OnDevice(parse(d.text()), gameType(d.format())));
             } catch (final RuntimeException e) {
-                Logger.warn(e, "A deck kept in a guest's browser could not be read");
+                netLog.warn(e, "A deck kept in a guest's browser could not be read");
             }
         }
     }

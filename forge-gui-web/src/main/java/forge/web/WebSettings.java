@@ -13,7 +13,7 @@ import forge.gamemodes.match.DeclineScope;
 import forge.gamemodes.match.YieldController;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.web.protocol.ToBrowser.ServerSettings;
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 /** What the options dialog reads and writes: a player's own settings (see {@link PlayerSettings}) and the phase stops. */
-public final class WebSettings {
+public final class WebSettings implements IHasForgeLog {
     private WebSettings() {
     }
 
@@ -101,14 +101,14 @@ public final class WebSettings {
         } else if ("arrows".equals(key)) {
             final Integer mode = Ints.tryParse(value);
             if (mode == null || mode < 0 || mode > 2) {
-                Logger.warn("Web client: bad arrows setting {}", value);
+                netLog.warn("Web client: bad arrows setting {}", value);
                 return;
             }
             player.set(FPref.UI_TARGETING_OVERLAY, value);
         } else if ("soundVolume".equals(key) || "musicVolume".equals(key)) {
             final Integer volume = Ints.tryParse(value);
             if (volume == null || volume < 0 || volume > 100) {
-                Logger.warn("Web client: bad volume {}", value);
+                netLog.warn("Web client: bad volume {}", value);
                 return;
             }
             final boolean effects = "soundVolume".equals(key);
@@ -116,7 +116,7 @@ public final class WebSettings {
             // Silence is off: the desktop client reads the switch, not the volume
             player.set(effects ? FPref.UI_ENABLE_SOUNDS : FPref.UI_ENABLE_MUSIC, volume > 0);
         } else {
-            Logger.warn("Web client: unknown setting {}", key);
+            netLog.warn("Web client: unknown setting {}", key);
             return;
         }
         player.save();
@@ -137,7 +137,7 @@ public final class WebSettings {
                 final MulliganDefs.MulliganRule rule = Arrays.stream(MulliganDefs.MulliganRule.values())
                         .filter(r -> r.name().equals(value)).findFirst().orElse(null);
                 if (rule == null) {
-                    Logger.warn("Web client: bad mulligan rule {}", value);
+                    netLog.warn("Web client: bad mulligan rule {}", value);
                     return false;
                 }
                 player.set(FPref.MULLIGAN_RULE, rule.name());
@@ -145,7 +145,7 @@ public final class WebSettings {
             }
             case "aiProfile" -> {
                 if (!AiProfileUtil.getProfilesDisplayList().contains(value)) {
-                    Logger.warn("Web client: bad AI profile {}", value);
+                    netLog.warn("Web client: bad AI profile {}", value);
                     return false;
                 }
                 player.set(FPref.UI_CURRENT_AI_PROFILE, value);

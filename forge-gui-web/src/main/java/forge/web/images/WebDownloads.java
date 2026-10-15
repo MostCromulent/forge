@@ -8,14 +8,14 @@ import forge.gui.interfaces.ITextField;
 import forge.localinstance.skin.FSkinProp;
 import forge.gui.UiCommand;
 import forge.util.Localizer;
-import org.tinylog.Logger;
 
 import java.util.function.Consumer;
 import forge.web.protocol.ToBrowser;
 import forge.web.protocol.Wire;
+import forge.util.IHasForgeLog;
 
 /** Runs a download through the shared service, with the browser in place of the progress dialog desktop and mobile show. */
-public final class WebDownloads {
+public final class WebDownloads implements IHasForgeLog {
     private WebDownloads() {
     }
 
@@ -27,7 +27,7 @@ public final class WebDownloads {
             service.initialize(new Text(""), new Text(""), progress, new StartButton(), () -> { }, null, () -> { });
             service.run();
         } catch (final RuntimeException e) {
-            Logger.error(e, "Download failed");
+            netLog.error(e, "Download failed");
             progress.say(Localizer.getInstance().getMessage("lblWebDownloadFailed"));
             callback.accept(false);
             return;

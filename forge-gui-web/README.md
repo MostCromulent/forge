@@ -73,6 +73,10 @@ Game state needs no protocol work. It travels as Forge's own `TrackableProperty`
 
 All text a player sees comes from Forge's language files. The page's own keys sit at the end of `en-US.properties` under `#forge-gui-web`, and new keys go into `en-US.properties` only, because Forge falls back to English. The build fails if the page uses a key the file lacks. The texts follow `java.text.MessageFormat`. Write whole sentences with arguments in them, so a translation can change the word order.
 
+## Logging
+
+The module logs through `netLog` from Forge's `IHasForgeLog`, whatever the subject, so every line it writes reaches the network log file as well as the console.
+
 ## Generated files
 
 Git ignores the page bundle (`src/main/resources/web/js/`) and the two generated TypeScript files (`*.gen.ts`). Maven writes them during the build. After changing a message record or adding a language key, `mvn -Pweb -pl forge-gui-web -am process-classes` writes the generated files again. The bundle is written into `src/` so that a server run from the source folder serves it.

@@ -5,7 +5,6 @@ import forge.gamemodes.net.server.PortForward;
 import forge.localinstance.properties.ForgeNetPreferences.FNetPref;
 import forge.model.FModel;
 import forge.util.IHasForgeLog;
-import org.tinylog.Logger;
 
 import java.io.File;
 import java.util.function.Consumer;
@@ -74,7 +73,7 @@ public final class WebService implements IHasForgeLog {
         sessions = fresh;
         server = bound;
         // The address carries the host's token, so it stays out of the log that players send on
-        Logger.info("Forge web UI: {}", bound.url());
+        netLog.info("Forge web UI: {}", bound.url());
         netLog.info("The web server has started on port {}.", bound.port());
         if (throughCloudflare()) {
             openTunnel();

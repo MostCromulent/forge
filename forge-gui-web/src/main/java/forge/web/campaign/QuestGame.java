@@ -49,7 +49,6 @@ import forge.util.storage.IStorage;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
 import forge.web.protocol.FromBrowser.TradePick;
 import forge.web.protocol.ToBrowser.*;
-import org.tinylog.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -70,9 +69,10 @@ import forge.web.protocol.ToBrowser.QuestDuels;
 import forge.web.protocol.ToBrowser.QuestOptions;
 import forge.web.protocol.ToBrowser.QuestSave;
 import forge.web.protocol.ToBrowser.QuestSaves;
+import forge.util.IHasForgeLog;
 
 /** Quest mode as one session plays it: the saves, the duels and challenges, the decks, the tournaments, travel and the shops. The quest itself is Forge's, one for the whole process, so this holds only what the session knows that the save does not. */
-public final class QuestGame implements Campaign {
+public final class QuestGame implements Campaign, IHasForgeLog {
     private static final String[] DIFFICULTIES = {"questDifficultyEasy", "questDifficultyMedium", "questDifficultyHard", "questDifficultyExpert"};
     private List<QuestEventDuel> duels;
     /** The match being played: its view keeps every game's steps, and the latest game's controller records the match. */
@@ -109,7 +109,7 @@ public final class QuestGame implements Campaign {
         try {
             return QuestDataIO.loadData(file);
         } catch (final IOException | RuntimeException e) {
-            Logger.warn("Could not read the quest {}: {}", file, e.getMessage());
+            netLog.warn("Could not read the quest {}: {}", file, e.getMessage());
             return null;
         }
     }

@@ -6,7 +6,6 @@ import forge.gui.interfaces.IProgressBar;
 import forge.localinstance.properties.ForgeProfileProperties;
 import forge.util.Localizer;
 import forge.util.LogExporter;
-import org.tinylog.Logger;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -82,9 +81,10 @@ import forge.web.WebGuiBase;
 import forge.web.WebMain;
 import forge.web.WebService;
 import forge.web.images.ImageIndex;
+import forge.util.IHasForgeLog;
 
 /** The desktop window that starts and stops the server, without which a player who closes their tab has no sign Forge still runs. */
-public final class ServerConsole implements IProgressBar {
+public final class ServerConsole implements IProgressBar, IHasForgeLog {
     private static final Localizer TEXT = Localizer.getInstance();
     /** Card loading prints tens of thousands of lines, so the text is fed on a timer rather than per line. */
     private static final int FLUSH_MILLIS = 250;
@@ -183,13 +183,13 @@ public final class ServerConsole implements IProgressBar {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (final ReflectiveOperationException | UnsupportedLookAndFeelException e) {
-            Logger.warn(e, "Could not use the system's look for the console");
+            netLog.warn(e, "Could not use the system's look for the console");
         }
         final ServerConsole console = new ServerConsole(ui, onQuit);
         try {
             SwingUtilities.invokeAndWait(console::build);
         } catch (final Exception e) {
-            Logger.warn(e, "Could not open the console");
+            netLog.warn(e, "Could not open the console");
             return null;
         }
         console.capture.captureOutput();
@@ -461,7 +461,7 @@ public final class ServerConsole implements IProgressBar {
                 Thread.currentThread().interrupt();
             } catch (final Exception e) {
                 // Netty rethrows a failed bind's checked exception without declaring it
-                Logger.error(e, "Could not {} the server", stopping ? "stop" : "start");
+                netLog.error(e, "Could not {} the server", stopping ? "stop" : "start");
                 failure = stopping ? null : e;
             }
             if (service.running()) {
@@ -777,7 +777,7 @@ public final class ServerConsole implements IProgressBar {
         try {
             ui.browseToUrl(address);
         } catch (final IOException | URISyntaxException e) {
-            Logger.warn(e, "Open {} in a browser", address);
+            netLog.warn(e, "Open {} in a browser", address);
         }
     }
 

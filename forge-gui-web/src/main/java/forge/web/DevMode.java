@@ -14,14 +14,14 @@ import forge.web.protocol.FromBrowser.Dev;
 import forge.web.protocol.ToBrowser.DevDump;
 import forge.web.protocol.ToBrowser.DevState;
 import forge.web.protocol.ToBrowser.Notice;
-import org.tinylog.Logger;
 
 import java.util.Arrays;
 import forge.web.match.LocalGame;
 import forge.web.protocol.BrowserChannel;
+import forge.util.IHasForgeLog;
 
 /** Carries out the host's dev mode actions on the running game, such as making mana or setting up a board. Forge gives a netplay client no cheats, but the host shares its process with the server, so only the host's own seat can cheat. */
-final class DevMode {
+final class DevMode implements IHasForgeLog {
     private DevMode() {
     }
 
@@ -84,7 +84,7 @@ final class DevMode {
         try {
             state.parse(Arrays.asList((text == null ? "" : text).split("\\R")));
         } catch (final RuntimeException e) {
-            Logger.warn(e, "Could not read a game state");
+            netLog.warn(e, "Could not read a game state");
             channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDevStateNotSetUp"), Localizer.getInstance().getMessage("lblWebDevUnreadableState"), true));
             return;
         }
@@ -92,7 +92,7 @@ final class DevMode {
             try {
                 state.applyToGame(game);
             } catch (final RuntimeException e) {
-                Logger.warn(e, "Could not apply a game state");
+                netLog.warn(e, "Could not apply a game state");
                 channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDevStateNotSetUp"), String.valueOf(e.getMessage()), true));
                 return;
             }

@@ -4,7 +4,7 @@ import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -19,7 +19,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Cuts avatars, sleeves, mana symbols and other icons out of the skin's sprite sheets as PNGs for the page. It repeats desktop FSkin's cell scan because this module cannot depend on the desktop one, and follows it exactly, so an index in the shared preferences picks the same picture in both clients. */
-public final class SkinSprites {
+public final class SkinSprites implements IHasForgeLog {
     private static List<BufferedImage> avatars;
     private static BufferedImage manaIcons;
     private static BufferedImage abilityIcons;
@@ -147,7 +147,7 @@ public final class SkinSprites {
         try {
             ImageIO.write(image, "png", out);
         } catch (final IOException e) {
-            Logger.warn("Could not encode sprite {}: {}", name, e.getMessage());
+            netLog.warn("Could not encode sprite {}: {}", name, e.getMessage());
             return null;
         }
         return out.toByteArray();
@@ -165,7 +165,7 @@ public final class SkinSprites {
         try {
             return file.exists() ? ImageIO.read(file) : null;
         } catch (final IOException e) {
-            Logger.warn("Could not read {}: {}", file, e.getMessage());
+            netLog.warn("Could not read {}: {}", file, e.getMessage());
             return null;
         }
     }

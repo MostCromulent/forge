@@ -6,7 +6,7 @@ import forge.util.BuildInfo;
 import forge.util.ImageFetcher;
 import forge.util.ScryfallRateLimiter;
 import forge.util.TextUtil;
-import org.tinylog.Logger;
+import forge.util.IHasForgeLog;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,7 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 /** Downloads missing card images into the shared image cache, like the desktop and mobile fetchers. */
-public final class WebImageFetcher extends ImageFetcher {
+public final class WebImageFetcher extends ImageFetcher implements IHasForgeLog {
     @Override
     protected Runnable getDownloadTask(final String[] downloadUrls, final String destPath, final Runnable notifyObservers) {
         return () -> {
@@ -28,7 +28,7 @@ public final class WebImageFetcher extends ImageFetcher {
                         return;
                     }
                 } catch (final IOException e) {
-                    Logger.warn("Card image download failed for {}: {}", url, e.getMessage());
+                    netLog.warn("Card image download failed for {}: {}", url, e.getMessage());
                 }
             }
         };
