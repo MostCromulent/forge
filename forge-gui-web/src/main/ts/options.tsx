@@ -80,10 +80,8 @@ export function Options({ close }: { close: () => void }) {
         ))}
         <ForgeLinks />
       </>}
-      footer={<>
-        <span class="hint">{t('lblWebOptionsFooter')}</span>
-        {!searching && shown[0]?.type === 'key' && <button class="section-action" onClick={() => setKeys(defaultKeys())}>{t('lblWebOptionsResetKeys')}</button>}
-      </>}>
+      footer={!searching && shown[0]?.type === 'key'
+        ? <button class="section-action" onClick={() => setKeys(defaultKeys())}>{t('lblWebOptionsResetKeys')}</button> : null}>
       {shown.flatMap((def, i) => [
         // A tab's first section goes by the tab's own name, so it has no heading
         ...(def.section !== shown[i - 1]?.section && (searching || def.section !== tab.name)
@@ -133,7 +131,7 @@ export const CloseIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path
 
 /** The frame the options dialog and the game menu's dialogs share, where label names the dialog when the title is a phrase. */
 export function OptionsDialog({ title, label, kind, head, rail, footer, close, children }: {
-  title: string; label?: string; kind?: string; head?: ComponentChildren; rail?: ComponentChildren; footer: ComponentChildren; close: () => void;
+  title: string; label?: string; kind?: string; head?: ComponentChildren; rail?: ComponentChildren; footer?: ComponentChildren; close: () => void;
   children: ComponentChildren;
 }) {
   const { closing, shut, gone } = useClosing(close);
@@ -146,7 +144,7 @@ export function OptionsDialog({ title, label, kind, head, rail, footer, close, c
           <button class="close" title={t('lblWebOptionsCloseEsc')} onClick={shut}><CloseIcon /></button>
         </header>
         {rail ? <div class="split"><nav class="rail" role="tablist">{rail}</nav><div class="rows">{children}</div></div> : <div class="rows">{children}</div>}
-        <footer>{footer}</footer>
+        {footer && <footer>{footer}</footer>}
       </div>
     </Backdrop>
   );
