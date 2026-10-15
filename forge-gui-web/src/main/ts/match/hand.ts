@@ -181,3 +181,10 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     el.style.setProperty('--drop', `${radius * (1 - Math.cos(tilt * Math.PI / 180))}px`);
   });
 }
+
+/** Forgets the last game's drawer: the card last tapped and the questions it opened for or over. */
+export function resetHand(): void {
+  played = null;
+  openedFor = null;
+  openOver.note(false, null);
+}

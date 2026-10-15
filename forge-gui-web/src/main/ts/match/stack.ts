@@ -441,3 +441,10 @@ function layout(pile: HTMLElement, n: number): void {
   });
 }
 
+/** Forgets the last game's stack: its spells awaiting payment, the count the phone's chip had, and the question it was folded during. */
+export function resetStack(): void {
+  awaiting.clear();
+  countSeen = 0;
+  foldedFor = null;
+  current = null;
+}

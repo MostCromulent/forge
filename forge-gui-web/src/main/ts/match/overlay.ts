@@ -677,3 +677,8 @@ function shade(hex: string, amount: number): string {
   const move = (v: number) => Math.round(amount < 0 ? v * (1 + amount) : v + (255 - v) * amount);
   return `rgb(${move((n >> 16) & 255)},${move((n >> 8) & 255)},${move(n & 255)})`;
 }
+
+/** Forgets the last game's aim, since a new game numbers its cards afresh and could repeat the old key. */
+export function resetOverlay(): void {
+  lastAim = null;
+}
