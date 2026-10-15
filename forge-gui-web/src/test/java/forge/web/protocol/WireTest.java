@@ -1,6 +1,5 @@
 package forge.web.protocol;
 
-import forge.web.protocol.FromBrowser.SelectCard;
 import forge.web.protocol.ToBrowser.ErrorMessage;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -14,9 +13,16 @@ public class WireTest {
         Assert.expectThrows(AssertionError.class, () -> Wire.encode(new ErrorMessage(null)));
     }
 
+    // Fails if two records read one name, as the second would take every message meant for the first
     @Test
-    public void aCommandReadIntoTheWrongRecordIsCaught() {
-        Assert.expectThrows(AssertionError.class, () -> Wire.decode(JsonCodec.message("ok"), SelectCard.class));
+    public void eachNameIsReadByItsOwnRecord() {
+        for (final Class<? extends Record> c : FromBrowser.COMMANDS) {
+            for (final String name : Wire.commandNames(c)) {
+                final Record decoded = Wire.decode(JsonCodec.message(name));
+                Assert.assertEquals(decoded.getClass(), c, name);
+                Assert.assertEquals(Wire.commandName(decoded), name);
+            }
+        }
     }
 
     @Test

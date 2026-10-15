@@ -17,6 +17,7 @@ import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -161,11 +162,31 @@ public final class Wire {
         throw new IllegalArgumentException("No JSON form for " + value.getClass().getName());
     }
 
-    /** A message from the browser as the record its {@code t} names. */
-    public static <T extends Record> T decode(final JsonObject message, final Class<T> type) {
-        assert commandNames(type).contains(message.get("t").getAsString())
-                : type.getSimpleName() + " does not read " + message.get("t");
-        return GSON.fromJson(message, type);
+    /** The command records by each name they read, built on first use since FromBrowser's list is made through this class. */
+    private static final class ByName {
+        static final Map<String, Class<? extends Record>> COMMANDS = new HashMap<>();
+
+        static {
+            for (final Class<? extends Record> type : FromBrowser.COMMANDS) {
+                commandNames(type).forEach(name -> COMMANDS.put(name, type));
+            }
+        }
+    }
+
+    /** A message from the browser as the record its {@code t} names, or null when no record reads that name. */
+    public static Record decode(final JsonObject message) {
+        final JsonElement t = message.get("t");
+        final Class<? extends Record> type = t == null || !t.isJsonPrimitive() ? null : ByName.COMMANDS.get(t.getAsString());
+        return type == null ? null : GSON.fromJson(message, type);
+    }
+
+    /** The {@code t} a command was sent under. */
+    public static String commandName(final Record command) {
+        final Command c = command.getClass().getAnnotation(Command.class);
+        if (!c.value().isEmpty()) {
+            return c.value();
+        }
+        return ((Enum<?>) read(components(command.getClass())[0], command)).name();
     }
 
     /** Every {@code t} a command record reads: its own, or each constant of its {@code t} component. */

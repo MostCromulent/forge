@@ -1,6 +1,5 @@
 package forge.web.deck;
 
-import com.google.gson.JsonObject;
 import forge.card.ColorSet;
 import forge.deck.CardPool;
 import forge.deck.Deck;
@@ -24,11 +23,12 @@ import forge.web.WebGuiBase;
 import forge.web.deck.DeckCatalog.OnDevice;
 import forge.web.lobby.Lobby;
 import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.Commands;
+import forge.web.protocol.Commands.Handler;
 import forge.web.protocol.FromBrowser;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.*;
-import forge.web.protocol.Wire;
 import org.apache.commons.lang3.EnumUtils;
 
 import java.io.IOException;
@@ -89,87 +89,89 @@ public final class DeckSession implements IHasForgeLog {
         }
     }
 
-    public void onMessage(final BrowserChannel channel, final JsonObject msg) {
-        final String type = msg.get("t").getAsString();
-        switch (type) {
-            case "browseFormat" -> {
-                if (host.getAsBoolean() && !atTable.getAsBoolean()) {
-                    lobby.setBrowseFormat(gameType(Wire.decode(msg, BrowseFormat.class).format()));
-                    lobby.sendDecks(channel);
+    public static final Commands<DeckSession> COMMANDS = new Commands<DeckSession>()
+            .on(BrowseFormat.class, (d, ch, b) -> {
+                if (d.host.getAsBoolean() && !d.atTable.getAsBoolean()) {
+                    d.lobby.setBrowseFormat(gameType(b.format()));
+                    d.lobby.sendDecks(ch);
                 }
-            }
-            case "deviceDecks" -> {
-                if (!host.getAsBoolean()) {
-                    keepDeviceDecks(Wire.decode(msg, DeviceDecks.class).decks());
-                    lobby.sendDecks(channel);
+            })
+            .on(DeviceDecks.class, (d, ch, dd) -> {
+                if (!d.host.getAsBoolean()) {
+                    d.keepDeviceDecks(dd.decks());
+                    d.lobby.sendDecks(ch);
                 }
-            }
+            })
             // Building the catalogue reads every card once, which is far too slow for the socket thread
-            case "catalogue" -> {
-                final CatalogueQuery q = Wire.decode(msg, CatalogueQuery.class);
-                slow("Catalogue", () -> channel.send(catalogue(q)));
-            }
-            // Reading a list looks up misspelt names across every card, which is too slow for the socket thread
-            case "importRead" -> {
-                final ImportRead read = Wire.decode(msg, ImportRead.class);
-                final DeckEditor onCollection = collectionEditor();
-                final DeckEditor.Collection collection = onCollection == null ? null : onCollection.collection();
-                // A collection's deck is of one format, whatever the importer's control says
-                final Check check = onCollection != null ? onCollection.check() : check(read.format(), read.cardPool(), read.unrestricted());
-                slow("Import", () -> channel.send(DeckImport.result(read.request(), DeckImport.read(read.text(), check, collection), check, null)));
-            }
+            .on(CatalogueQuery.class, (d, ch, q) -> d.slow("Catalogue", () -> ch.send(d.catalogue(q))))
+            .on(ImportRead.class, DeckSession::read)
             // Fetching waits on a web site
-            case "importFetch" -> {
-                final ImportFetch fetch = Wire.decode(msg, ImportFetch.class);
-                ui.runBackgroundTask("Import", () -> channel.send(fetched(fetch)));
-            }
-            case "importCommit" -> commit(channel, Wire.decode(msg, ImportCommit.class));
-            case "deckFile" -> addFile(channel, Wire.decode(msg, DeckFile.class));
-            case "deckDelete" -> deleteDeck(channel, Wire.decode(msg, DeckDelete.class).key());
-            case "deckFavourite" -> {
-                // The stars are the host's own, kept where desktop keeps them
-                if (host.getAsBoolean()) {
-                    final DeckFavourite star = Wire.decode(msg, DeckFavourite.class);
-                    lobby.setFavourite(star.key(), star.on());
-                    lobby.sendDecks(channel);
+            .on(ImportFetch.class, (d, ch, f) -> d.ui.runBackgroundTask("Import", () -> ch.send(d.fetched(f))))
+            .on(ImportCommit.class, DeckSession::commit)
+            .on(DeckFile.class, DeckSession::addFile)
+            .on(DeckDelete.class, (d, ch, del) -> d.deleteDeck(ch, del.key()))
+            // The stars are the host's own, kept where desktop keeps them
+            .on(DeckFavourite.class, (d, ch, star) -> {
+                if (d.host.getAsBoolean()) {
+                    d.lobby.setFavourite(star.key(), star.on());
+                    d.lobby.sendDecks(ch);
                 }
-            }
-            default -> edit(channel, type, msg);
-        }
+            })
+            .on(EditorOpen.class, DeckSession::openFromBrowser)
+            .on(EditorEdit.class, edit((d, ch, e) -> d.change(e)))
+            .on(EditorRename.class, edit((d, ch, r) -> d.editor.rename(r.name())))
+            .on(EditorCheck.class, edit((d, ch, c) -> d.editor.setCheck(check(c.format(), c.cardPool(), c.unrestricted()))))
+            .on(Plain.editorUndo, edit((d, ch, c) -> d.editor.undo()))
+            .on(EditorDeck.class, edit((d, ch, e) -> {
+                if (e.op() == DeckOp.file) {
+                    ch.send(new DeckFileText(d.editor.deck().getName(), text(d.editor.deck())));
+                    return null;
+                }
+                return e.op() == DeckOp.delete ? d.delete(ch) : d.editor.duplicate();
+            }))
+            .on(Plain.editorClose, edit((d, ch, c) -> d.close(ch)));
+
+    public void onCommand(final BrowserChannel channel, final Record command) {
+        COMMANDS.run(this, channel, command);
     }
 
-    private synchronized void edit(final BrowserChannel channel, final String type, final JsonObject msg) {
-        if ("editorOpen".equals(type)) {
-            open(Wire.decode(msg, EditorOpen.class), null, channel);
-        }
-        if (editor == null) {
-            return;
-        }
-        final String refused = switch (type) {
-            case "editorEdit" -> change(Wire.decode(msg, EditorEdit.class));
-            case "editorRename" -> editor.rename(Wire.decode(msg, EditorRename.class).name());
-            case "editorCheck" -> {
-                final EditorCheck c = Wire.decode(msg, EditorCheck.class);
-                yield editor.setCheck(check(c.format(), c.cardPool(), c.unrestricted()));
-            }
-            case "editorUndo" -> editor.undo();
-            case "editorDeck" -> {
-                final FromBrowser.DeckOp op = Wire.decode(msg, EditorDeck.class).op();
-                if (op == FromBrowser.DeckOp.file) {
-                    channel.send(new DeckFileText(editor.deck().getName(), text(editor.deck())));
-                    yield null;
+    /** A change to the open deck, which answers why it was refused or null. */
+    private interface Change<T> {
+        String run(DeckSession decks, BrowserChannel channel, T command);
+    }
+
+    /** Makes a change to the open deck, if there is one, and shows the editor as it then stands. */
+    private static <T extends Record> Handler<DeckSession, T> edit(final Change<T> change) {
+        return (d, ch, command) -> {
+            synchronized (d) {
+                if (d.editor == null) {
+                    return;
                 }
-                yield op == FromBrowser.DeckOp.delete ? delete(channel) : editor.duplicate();
+                final String refused = change.run(d, ch, command);
+                if (refused != null) {
+                    ch.send(new Notice(refused, null, false));
+                }
+                if (d.editor != null) {
+                    ch.send(new EditorMessage(d.editor.state()));
+                }
             }
-            case "editorClose" -> close(channel);
-            default -> null;
         };
-        if (refused != null) {
-            channel.send(new Notice(refused, null, false));
-        }
+    }
+
+    private synchronized void openFromBrowser(final BrowserChannel channel, final EditorOpen o) {
+        open(o, null, channel);
         if (editor != null) {
             channel.send(new EditorMessage(editor.state()));
         }
+    }
+
+    // Reading a list looks up misspelt names across every card, which is too slow for the socket thread
+    private void read(final BrowserChannel channel, final ImportRead read) {
+        final DeckEditor onCollection = collectionEditor();
+        final DeckEditor.Collection collection = onCollection == null ? null : onCollection.collection();
+        // A collection's deck is of one format, whatever the importer's control says
+        final Check check = onCollection != null ? onCollection.check() : check(read.format(), read.cardPool(), read.unrestricted());
+        slow("Import", () -> channel.send(DeckImport.result(read.request(), DeckImport.read(read.text(), check, collection), check, null)));
     }
 
     /** Opens the editor. checkedAgainst is the check to open with, or null for the table's, or the finder's when there is no table. */

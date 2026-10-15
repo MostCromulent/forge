@@ -36,7 +36,8 @@ import forge.web.lobby.Lobby;
 import forge.web.match.LocalGame;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.FromBrowser;
+import forge.web.protocol.Commands;
+import forge.web.protocol.Commands.Handler;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.*;
@@ -51,6 +52,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /** One browser's session, whose place is held in one {@link Stage} that changes only through {@link #move}. */
@@ -101,7 +103,7 @@ public final class WebSession implements IHasForgeLog {
     private final LocalGame local = new LocalGame();
     private final Runnable onQuit;
     private volatile BrowserChannel browser;
-    public volatile Stage stage = new Menu();
+    private volatile Stage stage = new Menu();
     /** This player's settings: a guest's own, or the host's, which are Forge's preferences. */
     public volatile PlayerSettings settings = PlayerSettings.fresh();
     /** The name this browser chose to play under; null until it has chosen one. */
@@ -109,8 +111,6 @@ public final class WebSession implements IHasForgeLog {
     /** The face chosen beside the name, before any seat exists to carry it; null until it has chosen one. */
     private volatile Integer avatar;
     private final OfflineLimited limited;
-    /** The offline draft being played, while there is one. */
-    public volatile OfflineDraft offlineDraft;
     /** This seat's part in the table's draft or sealed event; a new one comes with each table. */
     private volatile OnlineDraft onlineDraft;
     /** Whether the draft host was told this seat's player left, so it is told when the browser is back. */
@@ -207,16 +207,9 @@ public final class WebSession implements IHasForgeLog {
 
         @Override
         public void startDraft(final BoosterDraft draft) {
-            synchronized (WebSession.this) {
-                if (offlineDraft != null) {
-                    return;
-                }
-                offlineDraft = new OfflineDraft(() -> draft, true, playerName(), WebSession.this::tell, problem -> {
-                    limited.endDraft();
-                    tell(error(problem));
-                });
+            if (limited.beginDraft(() -> draft, true)) {
+                tell(hello());
             }
-            tell(hello());
         }
     };
 
@@ -228,6 +221,11 @@ public final class WebSession implements IHasForgeLog {
                 netLog.error(e, "Campaign work failed");
             }
         });
+    }
+
+    /** Where the browser is. Only {@link #move} changes it, apart from the session closing. */
+    public Stage stage() {
+        return stage;
     }
 
     /** Whether this session is holding a game open, which is what keeps the host's seat reserved. */
@@ -399,12 +397,12 @@ public final class WebSession implements IHasForgeLog {
             }
         } else if (now instanceof Event) {
             limited.sendLimited(channel);
-            final OfflineDraft draft = offlineDraft;
+            final OfflineDraft draft = limited.draft();
             if (draft != null && draft.latest() != null) {
                 channel.send(draft.latest());
             }
         } else if (now instanceof InCampaign) {
-            final OfflineDraft draft = offlineDraft;
+            final OfflineDraft draft = limited.draft();
             if (draft != null && draft.latest() != null) {
                 channel.send(draft.latest());
             }
@@ -427,433 +425,375 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    void onMessage(final BrowserChannel channel, final JsonObject msg) {
-        switch (msg.get("t").getAsString()) {
-            case "decks" -> lobby.sendDecks(channel);
-            case "pageError" -> netLog.warn("Page error for {}: {}", label(), LogSafe.forLog(Wire.decode(msg, PageError.class).text(), 1500));
-            case "setName" -> {
-                final SetName chosen = Wire.decode(msg, SetName.class);
-                rename(channel, chosen.name(), chosen.avatar());
-            }
+    /** The commands the session handles itself. The rest belong to the deck editor, the Limited pages, the match or a campaign. */
+    public static final Commands<WebSession> COMMANDS = new Commands<WebSession>()
+            .on(Plain.decks, (s, ch, c) -> s.lobby.sendDecks(ch))
+            .on(PageError.class, (s, ch, e) -> netLog.warn("Page error for {}: {}", s.label(), LogSafe.forLog(e.text(), 1500)))
+            .on(SetName.class, (s, ch, n) -> s.rename(ch, n.name(), n.avatar()))
             // A join that found no seat leaves the browser on the waiting page, which offers to try again
-            case "join" -> joinHostGame();
-            case "claimHost" -> {
-                if (!sessions.claimHost(this)) {
-                    channel.send(error(Localizer.getInstance().getMessage("lblWebSessionAlreadyHosting")));
-                }
-                channel.send(hello());
-            }
+            .on(Plain.join, (s, ch, c) -> s.joinHostGame())
+            .on(Plain.claimHost, (s, ch, c) -> s.claimHost(ch))
             // Opening a game connects a client to a server, which the host UI thread owns
-            case "lobby" -> ui.invokeInEdtLater(() -> openLobby(channel, false));
-            case "invite" -> ui.invokeInEdtLater(() -> openLobby(channel, true));
-            case "leaveLobby" -> ui.invokeInEdtLater(() -> {
-                final Stage now = stage;
-                if (now instanceof Setup && move(now, new Menu())) {
-                    local.endMatch();
-                    if (isHost) {
-                        sessions.hostGameClosed();
-                    }
+            .on(Plain.lobby, (s, ch, c) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, false)))
+            .on(Plain.invite, (s, ch, c) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, true)))
+            .on(Plain.leaveLobby, (s, ch, c) -> s.ui.invokeInEdtLater(s::leaveLobby))
+            .on(Ready.class, atSetup((s, ch, r) -> s.lobby.setReady(r.ready())))
+            .on(SeatCommand.class, atSetup(WebSession::seatCommand))
+            .on(SetFormat.class, atSetup((s, ch, f) -> {
+                s.lobby.setFormat(f.format());
+                s.relistDecks(ch);
+            }))
+            .on(SetCardPool.class, atSetup((s, ch, p) -> {
+                s.lobby.setCardPool(p.cardPool());
+                s.relistDecks(ch);
+            }))
+            .on(SetVariant.class, atSetup((s, ch, v) -> {
+                s.lobby.setVariant(v.variant(), v.on());
+                s.relistDecks(ch);
+            }))
+            .on(SetArchenemy.class, atSetup((s, ch, a) -> s.lobby.setArchenemy(a.index())))
+            .on(SetTeams.class, atSetup((s, ch, t) -> s.lobby.setTeams(t.count())))
+            .on(SetTeam.class, atSetup((s, ch, t) -> s.lobby.setTeam(t.index(), t.team())))
+            .on(SetSeatExtra.class, atSetup((s, ch, e) -> s.lobby.setSeatExtra(e.index(), e.section(), e.choice())))
+            .on(SetPlayerCount.class, atSetup((s, ch, p) -> s.lobby.setPlayerCount(p.count(), invited(s.stage))))
+            .on(SetMatchLength.class, atSetup((s, ch, m) -> {
+                if (s.lobby.setMatchLength(m.games())) {
+                    s.sessions.lobbyChanged();
                 }
-            });
-            // The table can be changed only while it is set up: not while it is being built, and not once it is played
-            case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "setCardPool", "setVariant", "setArchenemy", "setTeams", "setTeam", "setSeatExtra",
-                    "setPlayerCount", "setMatchLength", "setMaxBracket", "setSeat", "sleeveArt", "forgetSleeveArt" -> {
-                if (stage instanceof Setup) {
-                    onSetup(channel, msg);
+            }))
+            .on(SetMaxBracket.class, atSetup((s, ch, b) -> {
+                if (s.lobby.setMaxBracket(b.bracket())) {
+                    s.sessions.lobbyChanged();
                 }
-            }
-            case "setLimited", "eventSetup", "eventStart", "eventNew", "sitOut", "eventDecksOnly", "eventHostAgain", "eventForget" -> {
-                if (stage instanceof Setup) {
-                    onEvent(channel, msg);
+            }))
+            .on(SetSeat.class, atSetup(WebSession::applySeat))
+            .on(SleeveArt.class, atSetup((s, ch, a) -> s.lobby.setSleeveArt(a.index(), a.key(), a.offset())))
+            // The saved sleeves are the host's own Forge profile, and the list of them travels in the hello
+            .on(ForgetSleeveArt.class, atSetup(host((s, ch, f) -> {
+                DeckCatalog.forgetSleeveArt(f.key());
+                ch.send(s.hello());
+            })))
+            .on(EventDecksOnly.class, atEvent((s, ch, d) -> {
+                s.lobby.setEventDecksOnly(d.on());
+                s.relistDecks(ch);
+            }))
+            .on(EventHostAgain.class, atEvent((s, ch, e) -> {
+                reportProblem(ch, s.lobby.hostAgain(e.eventId()));
+                s.relistDecks(ch);
+            }))
+            .on(EventForget.class, atEvent((s, ch, e) -> {
+                reportProblem(ch, s.lobby.forgetEvent(e.eventId()));
+                s.relistDecks(ch);
+            }))
+            .on(Plain.eventNew, atEvent((s, ch, c) -> {
+                final String problem = s.lobby.newEvent();
+                if (problem != null) {
+                    ch.send(error(problem));
+                } else {
+                    s.sendEventOptions(ch);
                 }
-            }
-            case "giveSeat" -> {
-                if (isHost) {
-                    final FromBrowser.GiveSeat give = Wire.decode(msg, FromBrowser.GiveSeat.class);
-                    sessions.giveSeat(give.from(), give.to());
+                s.relistDecks(ch);
+            }))
+            .on(SetLimited.class, atEvent((s, ch, l) -> {
+                final String kind = l.kind();
+                final String problem = s.lobby.setLimited(kind == null ? null : "sealed".equals(kind) ? "sealed" : "draft");
+                if (problem != null) {
+                    ch.send(error(problem));
+                } else if (kind != null) {
+                    s.sendEventOptions(ch);
                 }
-            }
-            case "dropPlayer" -> {
-                if (isHost) {
-                    sessions.dropPlayer(Wire.decode(msg, FromBrowser.DropPlayer.class).name());
+                s.relistDecks(ch);
+            }))
+            .on(SitOut.class, atEvent((s, ch, o) -> s.lobby.sitOut(o.index(), o.sittingOut())))
+            // Building a product can wait on a web site, and dealing packs opens every pool, so neither runs here
+            .on(EventSetup.class, atEvent((s, ch, e) -> s.ui.runBackgroundTask("Event", () -> reportProblem(ch, s.lobby.setUpEvent(e)))))
+            .on(Plain.eventStart, atEvent((s, ch, c) -> {
+                if (s.limited.draft() != null) {
+                    ch.send(error(Localizer.getInstance().getMessage("lblWebSessionFinishDraft")));
+                } else {
+                    s.ui.runBackgroundTask("Event", () -> reportProblem(ch, s.lobby.startEvent()));
                 }
-            }
-            case "chat" -> {
-                final String text = Wire.decode(msg, Say.class).text();
+            }))
+            .on(GiveSeat.class, host((s, ch, g) -> s.sessions.giveSeat(g.from(), g.to())))
+            .on(DropPlayer.class, host((s, ch, d) -> s.sessions.dropPlayer(d.name())))
+            .on(Say.class, (s, ch, say) -> {
+                final String text = say.text();
                 if (text != null && !text.isBlank()) {
-                    sessions.say(this, text.length() > MOST_CHAT_CHARS ? text.substring(0, MOST_CHAT_CHARS) : text);
+                    s.sessions.say(s, text.length() > MOST_CHAT_CHARS ? text.substring(0, MOST_CHAT_CHARS) : text);
                 }
-            }
-            case "extraChoices" -> {
-                final AskExtraChoices ask = Wire.decode(msg, AskExtraChoices.class);
-                final ToBrowser.ExtraChoices choices = lobby.extraChoices(ask.index(), ask.section());
+            })
+            .on(AskExtraChoices.class, (s, ch, a) -> {
+                final ToBrowser.ExtraChoices choices = s.lobby.extraChoices(a.index(), a.section());
                 if (choices != null) {
-                    channel.send(choices);
+                    ch.send(choices);
                 }
-            }
-            case "deckQuery" -> {
-                final DeckQuery query = Wire.decode(msg, DeckQuery.class);
-                channel.send(lobby.deckMatches(query.kind(), query.value()));
-            }
-            case "deckDetails" -> {
-                final ToBrowser.DeckDetailsMessage details = lobby.deckDetails(Wire.decode(msg, AskDeckDetails.class).key());
+            })
+            .on(DeckQuery.class, (s, ch, q) -> ch.send(s.lobby.deckMatches(q.kind(), q.value())))
+            .on(AskDeckDetails.class, (s, ch, a) -> {
+                final ToBrowser.DeckDetailsMessage details = s.lobby.deckDetails(a.key());
                 if (details != null) {
-                    channel.send(details);
+                    ch.send(details);
                 }
-            }
+            })
             // One set of host questions serves the process, so only the host's browser may answer them
-            case "hostChoice" -> {
-                if (isHost) {
-                    final HostChoiceAnswer answer = Wire.decode(msg, HostChoiceAnswer.class);
-                    ui.hostRequests().answer(answer.id(), answer.value());
-                }
-            }
+            .on(HostChoiceAnswer.class, host((s, ch, a) -> s.ui.hostRequests().answer(a.id(), a.value())))
             // Core asks which category through a host question, and blocks on it, so not on the socket thread
-            case "netDecks" -> {
-                if (isHost) {
-                    ui.runBackgroundTask("Net decks", () -> lobby.loadNetDecks(channel));
-                }
-            }
+            .on(Plain.netDecks, host((s, ch, c) -> s.ui.runBackgroundTask("Net decks", () -> s.lobby.loadNetDecks(ch))))
             // Finding the external address is a web request, so it cannot run on the socket thread
-            case "addresses" -> {
-                if (isHost) {
-                    ui.runBackgroundTask("Addresses", () -> channel.send(new Addresses(sessions.inviteUrls())));
-                }
-            }
-            case "cardPoolDetails" -> channel.send(Lobby.cardPoolDetails());
-            case "cardSets" -> channel.send(CardCatalog.sets());
-            case "setDeckGen" -> {
-                if (isHost) {
-                    final FromBrowser.SetDeckGen gen = Wire.decode(msg, FromBrowser.SetDeckGen.class);
-                    final var prefs = FModel.getPreferences();
-                    prefs.setPref(FPref.DECKGEN_SINGLETONS, gen.singletons());
-                    prefs.setPref(FPref.DECKGEN_ARTIFACTS, gen.noArtifacts());
-                    prefs.save();
-                    lobby.sendDecks(channel);
-                }
-            }
-            case "cardSearch" -> channel.send(new CardSearch(
-                    DeckCatalog.searchCardNames(Wire.decode(msg, SearchCards.class).query(), CARD_SEARCH_LIMIT)));
-            case "printings" -> {
-                final AskPrintings ask = Wire.decode(msg, AskPrintings.class);
-                channel.send(new Printings(ask.name(), DeckCatalog.printings(ask.name(),
-                        ask.cardPool() == null ? null : FModel.getFormats().getFormat(ask.cardPool()))));
-            }
-            // A match takes the whole page, so nothing about decks is done during one
-            case "browseFormat", "editorOpen", "editorClose", "editorUndo", "editorEdit", "editorRename", "editorCheck",
-                    "editorDeck", "deckDelete", "deckFavourite", "catalogue", "importRead", "importFetch", "importCommit", "deckFile", "deviceDecks" -> {
-                if ("catalogue".equals(msg.get("t").getAsString()) && msg.has("source") && !msg.get("source").isJsonNull()) {
-                    // A campaign's own cards, which need no deck open
-                    final FromBrowser.CatalogueQuery q = Wire.decode(msg, FromBrowser.CatalogueQuery.class);
-                    onCampaign(() -> {
-                        if (stage instanceof InCampaign c && c.save() != null) {
-                            channel.send(campaign(c.mode()).cards(q));
-                        }
-                    });
-                } else if (!(stage instanceof Playing)) {
-                    // The pools go first, since closing the editor lists every deck again before the page changes
-                    if ("editorClose".equals(msg.get("t").getAsString()) && stage instanceof Event) {
-                        channel.send(OfflineEvents.pools());
-                    }
-                    // A campaign's collection editor reads and saves the campaign's cards, which only its thread may touch
-                    if (stage instanceof InCampaign) {
-                        onCampaign(() -> decks.onMessage(channel, msg));
-                    } else {
-                        decks.onMessage(channel, msg);
-                    }
-                    // A deck may have changed size or become playable, which the campaign's pages show
-                    if ("editorClose".equals(msg.get("t").getAsString())) {
-                        onCampaign(() -> {
-                            if (stage instanceof InCampaign c && c.save() != null) {
-                                campaign(c.mode()).page().forEach(m -> channel.send(m));
-                            }
-                        });
-                    }
-                }
-            }
+            .on(Plain.addresses, host((s, ch, c) -> s.ui.runBackgroundTask("Addresses", () -> ch.send(new Addresses(s.sessions.inviteUrls())))))
+            .on(Plain.cardPoolDetails, (s, ch, c) -> ch.send(Lobby.cardPoolDetails()))
+            .on(Plain.cardSets, (s, ch, c) -> ch.send(CardCatalog.sets()))
+            .on(SetDeckGen.class, host((s, ch, gen) -> {
+                final var prefs = FModel.getPreferences();
+                prefs.setPref(FPref.DECKGEN_SINGLETONS, gen.singletons());
+                prefs.setPref(FPref.DECKGEN_ARTIFACTS, gen.noArtifacts());
+                prefs.save();
+                s.lobby.sendDecks(ch);
+            }))
+            .on(SearchCards.class, (s, ch, q) -> ch.send(new CardSearch(DeckCatalog.searchCardNames(q.query(), CARD_SEARCH_LIMIT))))
+            .on(AskPrintings.class, (s, ch, a) -> ch.send(new Printings(a.name(), DeckCatalog.printings(a.name(),
+                    a.cardPool() == null ? null : FModel.getFormats().getFormat(a.cardPool())))))
             // LocalGame runs on the host UI thread, so host-side dialogs during setup never block a web server thread
-            case "start" -> {
-                final Start start = Wire.decode(msg, Start.class);
-                ui.invokeInEdtLater(() -> start(channel, start));
-            }
-            case "leave" -> ui.invokeInEdtLater(this::leave);
-            case "limitedOpen" -> {
-                final LimitedOpen open = Wire.decode(msg, LimitedOpen.class);
-                final String kind = "draft".equals(open.kind()) ? "draft" : "sealed";
-                final Stage now = stage;
-                if (isHost && ((now instanceof Event e && e.kind().equals(kind) && !open.resume())
-                        || ((now instanceof Menu || now instanceof Event)
-                            && move(now, new Event(kind, open.resume() ? OfflineEvents.latest(kind) : null))))) {
-                    limited.sendLimited(channel);
-                }
-            }
-            case "limitedLeave", "poolClose", "poolOpen" -> {
-                final Stage now = stage;
-                if (now instanceof Event e) {
-                    final String type = msg.get("t").getAsString();
-                    move(now, "limitedLeave".equals(type) ? new Menu()
-                            : new Event(e.kind(), "poolOpen".equals(type) ? Wire.decode(msg, PoolOpen.class).name() : null));
-                }
-            }
-            case "poolEdit", "poolDelete", "sealedCreate", "draftStart", "draftSave", "draftDiscard", "gauntletNext", "gauntletRestart", "poolPlay" ->
-                    limited.onMessage(channel, msg);
-            case "draftMove" -> {
-                final DraftMove move = Wire.decode(msg, DraftMove.class);
-                final Draft draft = draft();
+            .on(Start.class, (s, ch, st) -> s.ui.invokeInEdtLater(() -> s.start(ch, st)))
+            .on(Plain.leave, (s, ch, c) -> s.ui.invokeInEdtLater(s::leave))
+            .on(LimitedOpen.class, WebSession::openLimited)
+            .on(Plain.limitedLeave, (s, ch, c) -> s.atPool(e -> new Menu()))
+            .on(Plain.poolClose, (s, ch, c) -> s.atPool(e -> new Event(e.kind(), null)))
+            .on(PoolOpen.class, (s, ch, o) -> s.atPool(e -> new Event(e.kind(), o.name())))
+            .on(DraftMove.class, (s, ch, m) -> {
+                final Draft draft = s.draft();
                 if (draft != null) {
-                    draft.move(move.index(), move.sideboard());
+                    draft.move(m.index(), m.sideboard());
                 }
-            }
-            case "draftPick" -> {
-                final DraftPick pick = Wire.decode(msg, DraftPick.class);
-                final Draft draft = draft();
+            })
+            .on(DraftPick.class, (s, ch, p) -> {
+                final Draft draft = s.draft();
                 if (draft != null) {
-                    draft.pick(pick.step(), pick.index(), pick.sideboard());
+                    draft.pick(p.step(), p.index(), p.sideboard());
                 }
-            }
+            })
             // A campaign is Forge's own, one for the whole process, so it is the host's
-            case "campaignOpen" -> {
-                final FromBrowser.CampaignOpen open = Wire.decode(msg, FromBrowser.CampaignOpen.class);
-                final Campaign campaign = campaign(open.mode());
-                if (isHost && campaign != null) {
-                    onCampaign(() -> openCampaign(open.mode(), open.resume() ? campaign.current() : null));
+            .on(CampaignOpen.class, (s, ch, o) -> {
+                final Campaign campaign = s.campaign(o.mode());
+                if (s.isHost && campaign != null) {
+                    s.onCampaign(() -> s.openCampaign(o.mode(), o.resume() ? campaign.current() : null));
                 }
-            }
-            case "campaignLoad" -> {
-                final String save = Wire.decode(msg, FromBrowser.CampaignLoad.class).name();
-                onCampaign(() -> {
-                    if (stage instanceof InCampaign c) {
-                        openCampaign(c.mode(), save);
-                    }
-                });
-            }
-            case "campaignLeave" -> onCampaign(() -> {
-                final Stage now = stage;
+            })
+            .on(CampaignLoad.class, (s, ch, l) -> s.onCampaign(() -> {
+                if (s.stage instanceof InCampaign c) {
+                    s.openCampaign(c.mode(), l.name());
+                }
+            }))
+            .on(Plain.campaignLeave, (s, ch, l) -> s.onCampaign(() -> {
+                final Stage now = s.stage;
                 if (now instanceof InCampaign c) {
                     if (c.save() == null) {
-                        move(now, new Menu());
+                        s.move(now, new Menu());
                     } else {
-                        openCampaign(c.mode(), null);
+                        s.openCampaign(c.mode(), null);
                     }
                 }
-            });
-            case "campaignRename", "campaignDelete" -> onCampaign(() -> campaignShelf(channel, msg));
-            case "rewardClaim" -> onCampaign(() -> {
-                if (stage instanceof InCampaign c && c.save() != null) {
-                    campaign(c.mode()).claim(campaignHost);
+            }))
+            .on(CampaignRename.class, (s, ch, r) -> s.onCampaign(() -> s.campaignShelf(ch, campaign -> campaign.rename(r.name(), r.to()))))
+            .on(CampaignDelete.class, (s, ch, d) -> s.onCampaign(() -> s.campaignShelf(ch, campaign -> {
+                campaign.delete(d.name());
+                return null;
+            })))
+            .on(Plain.rewardClaim, inOpenCampaign((s, ch, campaign, c) -> campaign.claim(s.campaignHost)))
+            .on(CampaignStatsQuery.class, inOpenCampaign((s, ch, campaign, q) -> ch.send(campaign.stats(q.scope()))))
+            .on(Plain.campaignPrefs, inOpenCampaign((s, ch, campaign, c) -> ch.send(campaign.prefs(null))))
+            .on(CampaignPref.class, inOpenCampaign((s, ch, campaign, p) -> ch.send(campaign.prefs(campaign.setPref(p.key(), p.value())))))
+            .on(Plain.campaignPrefsReset, inOpenCampaign((s, ch, campaign, c) -> {
+                campaign.resetPrefs();
+                ch.send(campaign.prefs(null));
+            }))
+            .on(Plain.trading, inOpenCampaign((s, ch, campaign, c) -> ch.send(campaign.trading())))
+            .on(Trade.class, inOpenCampaign((s, ch, campaign, trade) -> {
+                final String problem = campaign.trade(trade.source(), trade.picks());
+                if (problem != null) {
+                    ch.send(new Notice(problem, null, false));
                 }
-            });
-            case "campaignStats", "campaignPrefs", "campaignPref", "campaignPrefsReset" -> onCampaign(() -> {
-                if (stage instanceof InCampaign c && c.save() != null) {
-                    final Campaign campaign = campaign(c.mode());
-                    switch (msg.get("t").getAsString()) {
-                        case "campaignStats" -> channel.send(campaign.stats(Wire.decode(msg, FromBrowser.CampaignStatsQuery.class).scope()));
-                        case "campaignPref" -> {
-                            final FromBrowser.CampaignPref pref = Wire.decode(msg, FromBrowser.CampaignPref.class);
-                            channel.send(campaign.prefs(campaign.setPref(pref.key(), pref.value())));
-                        }
-                        case "campaignPrefsReset" -> {
-                            campaign.resetPrefs();
-                            channel.send(campaign.prefs(null));
-                        }
-                        default -> channel.send(campaign.prefs(null));
-                    }
+                // What was traded away may have been on any of the campaign's pages
+                campaign.page().forEach(m -> ch.send(m));
+                final ToBrowser.Reward opened = campaign.reward();
+                if (opened != null) {
+                    ch.send(opened);
                 }
-            });
-            case "trading", "trade" -> onCampaign(() -> {
-                if (stage instanceof InCampaign c && c.save() != null) {
-                    final Campaign campaign = campaign(c.mode());
-                    if ("trade".equals(msg.get("t").getAsString())) {
-                        final FromBrowser.Trade trade = Wire.decode(msg, FromBrowser.Trade.class);
-                        final String problem = campaign.trade(trade.source(), trade.picks());
-                        if (problem != null) {
-                            channel.send(new Notice(problem, null, false));
-                        }
-                        // What was traded away may have been on any of the campaign's pages
-                        campaign.page().forEach(m -> channel.send(m));
-                        final ToBrowser.Reward opened = campaign.reward();
-                        if (opened != null) {
-                            channel.send(opened);
-                        }
-                    }
-                    channel.send(campaign.trading());
-                }
-            });
+                ch.send(campaign.trading());
+            }))
             // The wheel is the conquest's and not a game's, so this cheat is not one of DevMode's
-            case "devConquestWheel" -> {
-                if (isHost && FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {
+            .on(DevConquestWheel.class, host((s, ch, w) -> {
+                if (FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {
                     try {
-                        final String outcome = Wire.decode(msg, FromBrowser.DevConquestWheel.class).outcome();
-                        conquest.setNextWheel(outcome == null || outcome.isEmpty() ? null : ChaosWheelOutcome.valueOf(outcome));
+                        s.conquest.setNextWheel(w.outcome() == null || w.outcome().isEmpty() ? null : ChaosWheelOutcome.valueOf(w.outcome()));
                     } catch (final IllegalArgumentException e) {
-                        netLog.warn("Not a wheel outcome: {}", msg);
+                        netLog.warn("Not a wheel outcome: {}", w.outcome());
                     }
                 }
-            }
+            }))
             // A cheat asks its questions as the game does and waits for the answers, so it runs on a thread of its own
-            case "dev" -> {
-                if (isHost && stage instanceof Playing) {
-                    final FromBrowser.Dev dev = Wire.decode(msg, FromBrowser.Dev.class);
-                    ui.runBackgroundTask("Dev mode", () -> DevMode.run(local, dev, channel));
+            .on(Dev.class, host((s, ch, d) -> {
+                if (s.stage instanceof Playing) {
+                    s.ui.runBackgroundTask("Dev mode", () -> DevMode.run(s.local, d, ch));
                 }
-            }
+            }))
             // Quitting stops the process every browser is served from, so it is the host's to do
-            case "quit" -> {
-                if (isHost) {
-                    ui.invokeInEdtLater(this::quit);
-                }
-            }
+            .on(Plain.quit, host((s, ch, c) -> s.ui.invokeInEdtLater(s::quit)))
             // A setting changed before a match is what the match is seeded with, and during one the game is told as well
-            case "setSetting", "setStops" -> {
-                if (stage instanceof Playing p) {
-                    p.gui().onBrowserMessage(msg);
-                } else if ("setSetting".equals(msg.get("t").getAsString())) {
-                    final SetSetting setting = Wire.decode(msg, SetSetting.class);
-                    WebSettings.set(settings, null, setting.key(), setting.value());
+            .on(SetSetting.class, (s, ch, set) -> {
+                if (s.stage instanceof Playing p) {
+                    p.gui().setSetting(set);
                 } else {
-                    final SetStops stops = Wire.decode(msg, SetStops.class);
-                    WebSettings.setStops(settings, stops.mine(), stops.phases());
+                    WebSettings.set(s.settings, null, set.key(), set.value());
                 }
-            }
-            default -> {
-                if (stage instanceof Playing p) {
-                    p.gui().onBrowserMessage(msg);
-                } else if (stage instanceof InCampaign) {
-                    // Whatever else a campaign's pages say is the mode's own
-                    onCampaign(() -> {
-                        if (stage instanceof InCampaign c) {
-                            campaign(c.mode()).handle(channel, msg, c.save(), campaignHost);
-                        }
-                    });
+            })
+            .on(SetStops.class, (s, ch, stops) -> {
+                if (s.stage instanceof Playing p) {
+                    p.gui().setStops(stops);
+                } else {
+                    WebSettings.setStops(s.settings, stops.mine(), stops.phases());
                 }
-            }
-        }
-    }
+            });
 
-    /** A change to the table, made while it is being set up. */
-    private void onSetup(final BrowserChannel channel, final JsonObject msg) {
-        switch (msg.get("t").getAsString()) {
-            case "ready" -> lobby.setReady(Wire.decode(msg, Ready.class).ready());
-            case "openSeat", "aiSeat", "removeSeat" -> {
-                final SeatCommand seat = Wire.decode(msg, SeatCommand.class);
-                // A guest's seat is emptied by sending the guest away, which opens it; the seat itself goes only once it is empty
-                if (!isHost || seat.t() == FromBrowser.SeatAction.aiSeat || !sessions.releaseGuestAt(seat.index())) {
-                    switch (seat.t()) {
-                        case openSeat -> lobby.openSeat(seat.index());
-                        case aiSeat -> lobby.aiSeat(seat.index());
-                        case removeSeat -> lobby.removeSeat(seat.index());
-                    }
-                }
+    /** The table can be changed only while it is set up: not while it is being built, and not once it is played. */
+    private static <T extends Record> Handler<WebSession, T> atSetup(final Handler<WebSession, T> change) {
+        return (s, ch, c) -> {
+            if (s.stage instanceof Setup) {
+                change.run(s, ch, c);
+                s.lobby.sendState(ch);
             }
-            case "setFormat" -> {
-                lobby.setFormat(Wire.decode(msg, SetFormat.class).format());
-                relistDecks(channel);
-            }
-            case "setCardPool" -> {
-                lobby.setCardPool(Wire.decode(msg, SetCardPool.class).cardPool());
-                relistDecks(channel);
-            }
-            case "setVariant" -> {
-                final SetVariant variant = Wire.decode(msg, SetVariant.class);
-                lobby.setVariant(variant.variant(), variant.on());
-                relistDecks(channel);
-            }
-            case "setArchenemy" -> lobby.setArchenemy(Wire.decode(msg, SetArchenemy.class).index());
-            case "setTeams" -> lobby.setTeams(Wire.decode(msg, FromBrowser.SetTeams.class).count());
-            case "setTeam" -> {
-                final FromBrowser.SetTeam move = Wire.decode(msg, FromBrowser.SetTeam.class);
-                lobby.setTeam(move.index(), move.team());
-            }
-            case "setSeatExtra" -> {
-                final SetSeatExtra extra = Wire.decode(msg, SetSeatExtra.class);
-                lobby.setSeatExtra(extra.index(), extra.section(), extra.choice());
-            }
-            case "setPlayerCount" -> lobby.setPlayerCount(Wire.decode(msg, FromBrowser.SetPlayerCount.class).count(), invited(stage));
-            case "setMatchLength" -> {
-                if (lobby.setMatchLength(Wire.decode(msg, FromBrowser.SetMatchLength.class).games())) {
-                    sessions.lobbyChanged();
-                }
-            }
-            case "setMaxBracket" -> {
-                if (lobby.setMaxBracket(Wire.decode(msg, FromBrowser.SetMaxBracket.class).bracket())) {
-                    sessions.lobbyChanged();
-                }
-            }
-            case "setSeat" -> applySeat(channel, Wire.decode(msg, SetSeat.class));
-            case "sleeveArt" -> {
-                final SleeveArt art = Wire.decode(msg, SleeveArt.class);
-                lobby.setSleeveArt(art.index(), art.key(), art.offset());
-            }
-            case "forgetSleeveArt" -> {
-                // The saved sleeves are the host's own Forge profile, and the list of them travels in the hello
-                if (isHost) {
-                    DeckCatalog.forgetSleeveArt(Wire.decode(msg, ForgetSleeveArt.class).key());
-                    channel.send(hello());
-                }
-            }
-        }
-        lobby.sendState(channel);
+        };
     }
 
     /** A change to the table's draft or sealed event, which is the host's to make. */
-    private void onEvent(final BrowserChannel channel, final JsonObject msg) {
-        final String type = msg.get("t").getAsString();
-        if (!isHost) {
-            return;
-        }
-        switch (type) {
-            case "eventDecksOnly" -> {
-                lobby.setEventDecksOnly(Wire.decode(msg, EventDecksOnly.class).on());
-                relistDecks(channel);
-            }
-            case "eventHostAgain" -> {
-                reportProblem(channel, lobby.hostAgain(Wire.decode(msg, EventHostAgain.class).eventId()));
-                relistDecks(channel);
-            }
-            case "eventForget" -> {
-                reportProblem(channel, lobby.forgetEvent(Wire.decode(msg, EventForget.class).eventId()));
-                relistDecks(channel);
-            }
-            case "eventNew" -> {
-                final String problem = lobby.newEvent();
-                if (problem != null) {
-                    channel.send(error(problem));
-                } else {
-                    sendEventOptions(channel);
-                }
-                relistDecks(channel);
-            }
-            case "setLimited" -> {
-                final String kind = Wire.decode(msg, SetLimited.class).kind();
-                final String problem = lobby.setLimited(kind == null ? null : "sealed".equals(kind) ? "sealed" : "draft");
-                if (problem != null) {
-                    channel.send(error(problem));
-                } else if (kind != null) {
-                    sendEventOptions(channel);
-                }
-                relistDecks(channel);
-            }
-            case "sitOut" -> {
-                final SitOut sitOut = Wire.decode(msg, SitOut.class);
-                lobby.sitOut(sitOut.index(), sitOut.sittingOut());
-            }
-            // Building a product can wait on a web site, and dealing packs opens every pool, so neither runs here
-            case "eventSetup" -> {
-                final EventSetup setup = Wire.decode(msg, EventSetup.class);
-                ui.runBackgroundTask("Event", () -> reportProblem(channel, lobby.setUpEvent(setup)));
-            }
-            case "eventStart" -> {
-                if (offlineDraft != null) {
-                    channel.send(error(Localizer.getInstance().getMessage("lblWebSessionFinishDraft")));
-                    return;
-                }
-                ui.runBackgroundTask("Event", () -> reportProblem(channel, lobby.startEvent()));
-            }
-        }
-        lobby.sendState(channel);
+    private static <T extends Record> Handler<WebSession, T> atEvent(final Handler<WebSession, T> change) {
+        return atSetup(host(change));
     }
 
-    private void reportProblem(final BrowserChannel channel, final String problem) {
+    private static <T extends Record> Handler<WebSession, T> host(final Handler<WebSession, T> handler) {
+        return (s, ch, c) -> {
+            if (s.isHost) {
+                handler.run(s, ch, c);
+            }
+        };
+    }
+
+    /** Work on the open save of a campaign. */
+    private interface CampaignHandler<T> {
+        void run(WebSession session, BrowserChannel channel, Campaign campaign, T command);
+    }
+
+    /** Runs on the campaign's thread, and only while one of its saves is open. */
+    private static <T extends Record> Handler<WebSession, T> inOpenCampaign(final CampaignHandler<T> handler) {
+        return (s, ch, command) -> s.onCampaign(() -> {
+            if (s.stage instanceof InCampaign c && c.save() != null) {
+                handler.run(s, ch, s.campaign(c.mode()), command);
+            }
+        });
+    }
+
+    void onMessage(final BrowserChannel channel, final JsonObject msg) {
+        final Record command = Wire.decode(msg);
+        if (command == null) {
+            netLog.warn("Unknown browser message {}", LogSafe.forLog(msg.toString(), 200));
+        } else if (COMMANDS.run(this, channel, command)) {
+            return;
+        } else if (DeckSession.COMMANDS.handles(command)) {
+            deckCommand(channel, command);
+        } else if (OfflineLimited.COMMANDS.handles(command)) {
+            limited.onCommand(channel, command);
+        } else if (WebGuiGame.COMMANDS.handles(command)) {
+            if (stage instanceof Playing p) {
+                p.gui().onCommand(channel, command);
+            }
+        } else if (stage instanceof InCampaign) {
+            // Whatever else a campaign's pages say is the mode's own
+            onCampaign(() -> {
+                if (stage instanceof InCampaign c) {
+                    campaign(c.mode()).handle(channel, command, c.save(), campaignHost);
+                }
+            });
+        }
+    }
+
+    /** A deck editor or importer command. A match takes the whole page, so nothing about decks is done during one. */
+    private void deckCommand(final BrowserChannel channel, final Record command) {
+        if (command instanceof CatalogueQuery q && q.source() != null) {
+            // A campaign's own cards, which need no deck open
+            onCampaign(() -> {
+                if (stage instanceof InCampaign c && c.save() != null) {
+                    channel.send(campaign(c.mode()).cards(q));
+                }
+            });
+            return;
+        }
+        if (stage instanceof Playing) {
+            return;
+        }
+        final boolean closing = command instanceof Bare b && b.t() == Plain.editorClose;
+        // The pools go first, since closing the editor lists every deck again before the page changes
+        if (closing && stage instanceof Event) {
+            channel.send(OfflineEvents.pools());
+        }
+        // A campaign's collection editor reads and saves the campaign's cards, which only its thread may touch
+        if (stage instanceof InCampaign) {
+            onCampaign(() -> decks.onCommand(channel, command));
+        } else {
+            decks.onCommand(channel, command);
+        }
+        // A deck may have changed size or become playable, which the campaign's pages show
+        if (closing) {
+            inOpenCampaign((s, ch, campaign, c) -> campaign.page().forEach(m -> ch.send(m))).run(this, channel, command);
+        }
+    }
+
+    private void claimHost(final BrowserChannel channel) {
+        if (!sessions.claimHost(this)) {
+            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionAlreadyHosting")));
+        }
+        channel.send(hello());
+    }
+
+    private void leaveLobby() {
+        final Stage now = stage;
+        if (now instanceof Setup && move(now, new Menu())) {
+            local.endMatch();
+            if (isHost) {
+                sessions.hostGameClosed();
+            }
+        }
+    }
+
+    private void seatCommand(final BrowserChannel channel, final SeatCommand seat) {
+        // A guest's seat is emptied by sending the guest away, which opens it; the seat itself goes only once it is empty
+        if (!isHost || seat.t() == SeatAction.aiSeat || !sessions.releaseGuestAt(seat.index())) {
+            switch (seat.t()) {
+                case openSeat -> lobby.openSeat(seat.index());
+                case aiSeat -> lobby.aiSeat(seat.index());
+                case removeSeat -> lobby.removeSeat(seat.index());
+            }
+        }
+    }
+
+    private void openLimited(final BrowserChannel channel, final LimitedOpen open) {
+        final String kind = "draft".equals(open.kind()) ? "draft" : "sealed";
+        final Stage now = stage;
+        if (isHost && ((now instanceof Event e && e.kind().equals(kind) && !open.resume())
+                || ((now instanceof Menu || now instanceof Event)
+                    && move(now, new Event(kind, open.resume() ? OfflineEvents.latest(kind) : null))))) {
+            limited.sendLimited(channel);
+        }
+    }
+
+    /** Moves between the Limited pages, while the browser is on one. */
+    private void atPool(final Function<Event, Stage> next) {
+        final Stage now = stage;
+        if (now instanceof Event e) {
+            move(now, next.apply(e));
+        }
+    }
+
+    private static void reportProblem(final BrowserChannel channel, final String problem) {
         if (problem != null) {
             channel.send(error(problem));
         }
@@ -1190,7 +1130,7 @@ public final class WebSession implements IHasForgeLog {
                 seatIndices(FPref.UI_AVATARS), seatIndices(FPref.UI_SLEEVES),
                 SkinSprites.avatarCount(), SkinSprites.sleeveCount(), DeckCatalog.savedSleeveArt(),
                 now instanceof Event, now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
-                now instanceof Event e ? e.kind() : null, offlineDraft != null || (now instanceof Setup && onlineDrafting()),
+                now instanceof Event e ? e.kind() : null, limited.draft() != null || (now instanceof Setup && onlineDrafting()),
                 isHost ? OfflineEvents.storage("draft").size() : 0,
                 now instanceof InCampaign m ? m.mode() : null,
                 // The open save is named in its matches too, so the result screen knows whose ending it shows
@@ -1205,7 +1145,7 @@ public final class WebSession implements IHasForgeLog {
 
     /** The draft this browser picks in: its own against the computer, or its seat's while the table drafts. */
     private Draft draft() {
-        final OfflineDraft offline = offlineDraft;
+        final OfflineDraft offline = limited.draft();
         return offline != null ? offline : stage instanceof Setup ? onlineDraft : null;
     }
 
@@ -1227,19 +1167,13 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    /** The menu of a saved game on the list of them. */
-    private void campaignShelf(final BrowserChannel channel, final JsonObject msg) {
+    /** The menu of a saved game on the list of them. change answers why it could not be made, or null. */
+    private void campaignShelf(final BrowserChannel channel, final Function<Campaign, String> change) {
         if (!isHost || !(stage instanceof InCampaign c) || c.save() != null) {
             return;
         }
         final Campaign campaign = campaign(c.mode());
-        String problem = null;
-        if ("campaignRename".equals(msg.get("t").getAsString())) {
-            final FromBrowser.CampaignRename rename = Wire.decode(msg, FromBrowser.CampaignRename.class);
-            problem = campaign.rename(rename.name(), rename.to());
-        } else {
-            campaign.delete(Wire.decode(msg, FromBrowser.CampaignDelete.class).name());
-        }
+        final String problem = change.apply(campaign);
         channel.send(campaign.saves());
         // The start page's Resume names the save played last
         channel.send(hello());

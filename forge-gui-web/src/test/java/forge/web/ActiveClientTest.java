@@ -85,7 +85,7 @@ public class ActiveClientTest {
             Assert.assertTrue(shown(browser, "Library"), "no library search reached the browser");
             Assert.assertTrue(browser.reloaded, "no reload happened mid-request");
             Assert.assertEquals(gui.skippedProperties(), 0);
-            gui.onBrowserMessage(TestBrowser.action("concede"));
+            TestBrowser.command(gui, TestBrowser.action("concede"));
         });
     }
 
@@ -119,7 +119,7 @@ public class ActiveClientTest {
             if (turn(browser) == 0 && okEnabled(browser)) {
                 // A press that lands before the host has registered the input is dropped, so press again if no new prompt follows
                 final int prompts = browser.all("prompt").size();
-                gui.onBrowserMessage(TestBrowser.action("ok"));
+                TestBrowser.command(gui, TestBrowser.action("ok"));
                 for (int j = 0; j < 30 && browser.all("prompt").size() == prompts; j++) {
                     Thread.sleep(100);
                 }
@@ -149,7 +149,7 @@ public class ActiveClientTest {
     private static JsonArray faces(final WebGuiGame gui, final TestBrowser browser, final int key) throws InterruptedException {
         final JsonObject request = TestBrowser.action("detail");
         request.addProperty("key", key);
-        gui.onBrowserMessage(request);
+        TestBrowser.command(gui, request);
         for (int i = 0; i < 100; i++) {
             for (final JsonObject m : browser.all("detail")) {
                 if (m.get("key").getAsInt() == key) {
@@ -184,7 +184,7 @@ public class ActiveClientTest {
             final JsonArray hidden = faces(gui, browser, theirFaceDown);
             Assert.assertEquals(hidden.size(), 1, "an opponent's face-down card offers another face");
             Assert.assertFalse(hidden.toString().contains("Grizzly"), "an opponent's face-down card revealed its name: " + hidden);
-            gui.onBrowserMessage(TestBrowser.action("concede"));
+            TestBrowser.command(gui, TestBrowser.action("concede"));
         });
     }
 
@@ -231,7 +231,7 @@ public class ActiveClientTest {
             }
             Assert.assertTrue(gruntSurvived, "the cumulative upkeep went unpaid and the Grunt was sacrificed");
             Assert.assertEquals(seat.getCardsIn(ZoneType.Graveyard).size(), 1, "two cards should have left the graveyard");
-            gui.onBrowserMessage(TestBrowser.action("concede"));
+            TestBrowser.command(gui, TestBrowser.action("concede"));
         });
     }
 }

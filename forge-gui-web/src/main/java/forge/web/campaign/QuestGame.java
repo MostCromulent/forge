@@ -2,7 +2,6 @@ package forge.web.campaign;
 
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
-import com.google.gson.JsonObject;
 import forge.card.CardType;
 import forge.card.MagicColor;
 import forge.deck.CardPool;
@@ -51,11 +50,11 @@ import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckEditor;
 import forge.web.deck.DeckStore;
 import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.Commands;
+import forge.web.protocol.Commands.Handler;
 import forge.web.protocol.FromBrowser;
-import forge.web.protocol.FromBrowser.CatalogueQuery;
-import forge.web.protocol.FromBrowser.TradePick;
+import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser.*;
-import forge.web.protocol.Wire;
 
 import java.io.File;
 import java.io.IOException;
@@ -266,26 +265,6 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         }
     }
 
-    /** The shelf's own messages: the form's options, and a new quest from them. */
-    private void shelf(final BrowserChannel channel, final JsonObject msg, final Host host) {
-        switch (msg.get("t").getAsString()) {
-            case "questOptions" -> channel.send(options());
-            case "questCreate" -> {
-                final NewQuestRules.Choices choices = choices(Wire.decode(msg, FromBrowser.QuestCreate.class));
-                final String problem = choices == null ? Localizer.getInstance().getMessage("lbldckStartPool") : NewQuestRules.problem(choices);
-                if (problem != null) {
-                    channel.send(host.error(problem));
-                    return;
-                }
-                NewQuestRules.start(choices);
-                duels = null;
-                reward = null;
-                host.opened(quest().getName());
-            }
-            default -> { }
-        }
-    }
-
     @Override
     public List<Record> page() {
         return List.of(bar(), duelsPage(), decksPage(), challengesPage(), QuestDraftTournaments.tournamentsPage());
@@ -325,78 +304,6 @@ public final class QuestGame implements Campaign, IHasForgeLog {
             return problem;
         }
         return quest().getMyDecks().contains(name.trim()) ? Localizer.getInstance().getMessage("lblWebEditorNameTaken", name.trim()) : null;
-    }
-
-    /** A deck's own commands, from the Decks page. Answers false for a message that is not one. */
-    private boolean deckCommand(final BrowserChannel channel, final JsonObject msg, final Host host) {
-        final IStorage<Deck> decks = quest().getMyDecks();
-        switch (msg.get("t").getAsString()) {
-            case "questDeckNew" -> {
-                final String name = Wire.decode(msg, FromBrowser.QuestDeckNew.class).name();
-                final String problem = name == null ? DeckStore.nameProblem("") : deckNameProblem(name);
-                if (problem != null) {
-                    channel.send(host.error(problem));
-                    return true;
-                }
-                // Stored at once, so the deck is on the Decks page whether or not a card is added
-                final Deck deck = new Deck(name.trim());
-                decks.add(deck);
-                quest().save();
-                host.decks().openCollectionDeck(deck, decks, deckType(), collection(), true, channel);
-            }
-            case "questDeckRename" -> {
-                final FromBrowser.QuestDeckRename rename = Wire.decode(msg, FromBrowser.QuestDeckRename.class);
-                final Deck deck = rename.deck() == null ? null : decks.get(rename.deck());
-                final String problem = deck == null || rename.to() == null ? DeckStore.nameProblem("") : deckNameProblem(rename.to());
-                if (problem != null) {
-                    channel.send(host.error(problem));
-                    return true;
-                }
-                final boolean wasCurrent = deck.getName().equals(quest().getCurrentDeck());
-                decks.delete(deck.getName());
-                deck.setName(rename.to().trim());
-                decks.add(deck);
-                if (wasCurrent) {
-                    quest().setCurrentDeck(deck.getName());
-                }
-                quest().save();
-            }
-            case "questDeckCurrent", "questDeckView", "questDeckEdit", "questDeckDelete" -> {
-                final FromBrowser.QuestDeckCommand command = Wire.decode(msg, FromBrowser.QuestDeckCommand.class);
-                final Deck deck = command.deck() == null ? null : decks.get(command.deck());
-                if (deck == null) {
-                    return true;
-                }
-                switch (command.t()) {
-                    case questDeckCurrent -> quest().setCurrentDeck(deck.getName());
-                    case questDeckView -> {
-                        channel.send(new DeckDetailsMessage(new DeckDetails("quest:" + deck.getName(), deck.getName(),
-                                QuestUtil.getDeckConformanceProblemsBeforeGame(deck), DeckCatalog.colors(deck), DeckCatalog.stats(deck),
-                                DeckEditor.groups(deck.getMain(), DeckCatalog.NO_FLAGS), DeckEditor.cards(deck.get(DeckSection.Sideboard), DeckCatalog.NO_FLAGS),
-                                null, 0, null)));
-                        return true;
-                    }
-                    case questDeckEdit -> {
-                        host.decks().openCollectionDeck(deck, decks, deckType(), collection(), true, channel);
-                        return true;
-                    }
-                    case questDeckDelete -> {
-                        decks.delete(deck.getName());
-                        if (deck.getName().equals(quest().getCurrentDeck())) {
-                            quest().setCurrentDeck(QPref.CURRENT_DECK.getDefault());
-                        }
-                    }
-                }
-                quest().save();
-            }
-            default -> {
-                return false;
-            }
-        }
-        // The Duels page names the deck duels use
-        channel.send(duelsPage());
-        channel.send(decksPage());
-        return true;
     }
 
     /** The duels on offer, kept so that an index the browser sends back names the duel it was shown. */
@@ -915,101 +822,162 @@ public final class QuestGame implements Campaign, IHasForgeLog {
     public void resetPrefs() {
     }
 
-    @Override
-    public void handle(final BrowserChannel channel, final JsonObject msg, final String save, final Host host) {
-        if (save == null) {
-            shelf(channel, msg, host);
-            return;
-        }
-        if (quest().getAssets() == null || deckCommand(channel, msg, host)) {
-            return;
-        }
-        switch (msg.get("t").getAsString()) {
-            case "questDuel" -> {
-                duel(Wire.decode(msg, FromBrowser.QuestDuel.class).index(), host);
-                return;
+    /** A command to this quest, from the save that is open, or from the list of saves while save is null. */
+    private record Call(QuestGame game, String save, Host host) {
+    }
+
+    /** The shelf's own commands: the form's options, and a new quest from them. */
+    private static <T extends Record> Handler<Call, T> onShelf(final Handler<Call, T> handler) {
+        return (c, ch, command) -> {
+            if (c.save() == null) {
+                handler.run(c, ch, command);
             }
-            case "questChallenge" -> {
-                final String id = Wire.decode(msg, FromBrowser.QuestChallenge.class).id();
-                if (id != null && quest().getAchievements().getCurrentChallenges().contains(id)) {
-                    fight(quest().getChallenges().get(id), host);
-                }
-                return;
+        };
+    }
+
+    private static <T extends Record> Handler<Call, T> inSave(final Handler<Call, T> handler) {
+        return (c, ch, command) -> {
+            if (c.save() != null && quest().getAssets() != null) {
+                handler.run(c, ch, command);
             }
-            case "questEnter", "questToken", "questTournamentStart", "questTournamentNext", "questTournamentLeave" -> {
-                final String problem = switch (msg.get("t").getAsString()) {
-                    case "questEnter" -> QuestDraftTournaments.enter(Wire.decode(msg, FromBrowser.QuestEnter.class).title(), host);
-                    case "questTournamentStart" -> QuestDraftTournaments.startTournament();
-                    case "questTournamentNext" -> nextMatch(host);
-                    default -> {
-                        if ("questToken".equals(msg.get("t").getAsString())) {
-                            QuestDraftTournaments.spendToken();
-                        } else {
-                            endTournament();
-                        }
-                        yield null;
-                    }
-                };
+        };
+    }
+
+    /** A tournament step, after which the bar and the tournaments page are sent again. The step answers why it failed, or null. */
+    private interface Step<T> {
+        String run(Call call, T command);
+    }
+
+    private static <T extends Record> Handler<Call, T> tournament(final Step<T> step) {
+        return inSave((c, ch, command) -> {
+            final String problem = step.run(c, command);
+            if (problem != null) {
+                ch.send(new Notice(problem, null, true));
+            }
+            ch.send(c.game().bar());
+            ch.send(QuestDraftTournaments.tournamentsPage());
+        });
+    }
+
+    /** A change to the world, which has new opponents, and may change the shop, the bar and every list. */
+    private static <T extends Record> Handler<Call, T> newWorld(final Runnable change) {
+        return inSave((c, ch, command) -> {
+            change.run();
+            c.game().duels = null;
+            c.game().page().forEach(ch::send);
+            // An unlocked set's bonus boosters are shown as Forge shows them, which adds them to the reveal
+            if (c.game().reward != null) {
+                ch.send(c.game().reward);
+            }
+        });
+    }
+
+    public static final Commands<Call> COMMANDS = new Commands<Call>()
+            .on(QuestOptionsQuery.class, onShelf((c, ch, q) -> ch.send(options())))
+            .on(QuestCreate.class, onShelf((c, ch, create) -> {
+                final NewQuestRules.Choices choices = choices(create);
+                final String problem = choices == null ? Localizer.getInstance().getMessage("lbldckStartPool") : NewQuestRules.problem(choices);
                 if (problem != null) {
-                    channel.send(new Notice(problem, null, true));
+                    ch.send(c.host().error(problem));
+                    return;
                 }
-                channel.send(bar());
-                channel.send(QuestDraftTournaments.tournamentsPage());
-                if (reward != null && "questTournamentLeave".equals(msg.get("t").getAsString())) {
-                    channel.send(reward);
+                NewQuestRules.start(choices);
+                c.game().duels = null;
+                c.game().reward = null;
+                c.host().opened(quest().getName());
+            }))
+            .on(QuestDeckNew.class, inSave((c, ch, n) -> {
+                final String name = n.name();
+                final String problem = name == null ? DeckStore.nameProblem("") : deckNameProblem(name);
+                if (problem != null) {
+                    ch.send(c.host().error(problem));
+                    return;
                 }
-                return;
-            }
-            case "questTravel", "questUnlock" -> {
-                if ("questTravel".equals(msg.get("t").getAsString())) {
-                    QuestUtil.travelWorld();
-                } else if (canUnlock()) {
+                // Stored at once, so the deck is on the Decks page whether or not a card is added
+                final Deck deck = new Deck(name.trim());
+                quest().getMyDecks().add(deck);
+                quest().save();
+                c.host().decks().openCollectionDeck(deck, quest().getMyDecks(), deckType(), collection(), true, ch);
+                ch.send(c.game().duelsPage());
+                ch.send(c.game().decksPage());
+            }))
+            .on(QuestDeckRename.class, inSave((c, ch, rename) -> {
+                final IStorage<Deck> decks = quest().getMyDecks();
+                final Deck deck = rename.deck() == null ? null : decks.get(rename.deck());
+                final String problem = deck == null || rename.to() == null ? DeckStore.nameProblem("") : deckNameProblem(rename.to());
+                if (problem != null) {
+                    ch.send(c.host().error(problem));
+                    return;
+                }
+                final boolean wasCurrent = deck.getName().equals(quest().getCurrentDeck());
+                decks.delete(deck.getName());
+                deck.setName(rename.to().trim());
+                decks.add(deck);
+                if (wasCurrent) {
+                    quest().setCurrentDeck(deck.getName());
+                }
+                quest().save();
+                ch.send(c.game().duelsPage());
+                ch.send(c.game().decksPage());
+            }))
+            .on(QuestDeckCommand.class, inSave(QuestGame::deckCommand))
+            .on(QuestDuel.class, inSave((c, ch, d) -> c.game().duel(d.index(), c.host())))
+            .on(QuestChallenge.class, inSave((c, ch, challenge) -> {
+                final String id = challenge.id();
+                if (id != null && quest().getAchievements().getCurrentChallenges().contains(id)) {
+                    c.game().fight(quest().getChallenges().get(id), c.host());
+                }
+            }))
+            .on(QuestEnter.class, tournament((c, e) -> QuestDraftTournaments.enter(e.title(), c.host())))
+            .on(QuestTournamentStart.class, tournament((c, s) -> QuestDraftTournaments.startTournament()))
+            .on(QuestTournamentNext.class, tournament((c, n) -> c.game().nextMatch(c.host())))
+            .on(QuestToken.class, tournament((c, t) -> {
+                QuestDraftTournaments.spendToken();
+                return null;
+            }))
+            .on(QuestTournamentLeave.class, inSave((c, ch, l) -> {
+                tournament((call, leave) -> {
+                    call.game().endTournament();
+                    return null;
+                }).run(c, ch, l);
+                if (c.game().reward != null) {
+                    ch.send(c.game().reward);
+                }
+            }))
+            .on(QuestTravel.class, newWorld(QuestUtil::travelWorld))
+            .on(QuestUnlock.class, newWorld(() -> {
+                if (canUnlock()) {
                     QuestUtil.chooseAndUnlockEdition();
                 }
-                // A new world has new opponents, and either may change the shop, the bar and every list
-                duels = null;
-                page().forEach(channel::send);
-                // An unlocked set's bonus boosters are shown as Forge shows them, which adds them to the reveal
-                if (reward != null) {
-                    channel.send(reward);
-                }
-                return;
-            }
-            case "questTournamentDeck" -> {
+            }))
+            .on(QuestTournamentDeck.class, inSave((c, ch, d) -> {
                 final DeckGroup decks = quest().getDraftDecks().get(QuestEventDraft.DECK_NAME);
                 if (decks != null) {
-                    host.decks().openPool(decks.getHumanDeck(), quest().getDraftDecks(), GameType.QuestDraft, channel);
+                    c.host().decks().openPool(decks.getHumanDeck(), quest().getDraftDecks(), GameType.QuestDraft, ch);
                 }
-                return;
-            }
-            case "questStall" -> {
-                channel.send(QuestShop.bazaar(Wire.decode(msg, FromBrowser.QuestStall.class).name()));
-                return;
-            }
-            case "questBuy" -> {
-                final FromBrowser.QuestBuy buy = Wire.decode(msg, FromBrowser.QuestBuy.class);
+            }))
+            .on(QuestStall.class, inSave((c, ch, stall) -> ch.send(QuestShop.bazaar(stall.name()))))
+            .on(QuestBuy.class, inSave((c, ch, buy) -> {
                 final String problem = QuestShop.buy(buy.stall(), buy.item());
                 if (problem != null) {
-                    channel.send(new Notice(problem, null, false));
+                    ch.send(new Notice(problem, null, false));
                 }
                 // A pet, a charm or the zeppelin changes what the other pages offer
-                channel.send(bar());
-                channel.send(duelsPage());
-                channel.send(challengesPage());
-                channel.send(QuestShop.bazaar(buy.stall()));
-                return;
-            }
-            case "questZeppelin" -> {
+                ch.send(c.game().bar());
+                ch.send(c.game().duelsPage());
+                ch.send(c.game().challengesPage());
+                ch.send(QuestShop.bazaar(buy.stall()));
+            }))
+            .on(QuestZeppelin.class, inSave((c, ch, z) -> {
                 // Level 2 is the zeppelin flown since the last match, which the end of a match sets back to 1
                 if (quest().getAssets().hasItem(QuestItemType.ZEPPELIN) && quest().getAssets().getItemLevel(QuestItemType.ZEPPELIN) != 2) {
                     quest().getAchievements().setCurrentChallenges(null);
                     quest().getAssets().setItemLevel(QuestItemType.ZEPPELIN, 2);
                 }
-                channel.send(challengesPage());
-                return;
-            }
-            case "questPet" -> {
-                final FromBrowser.QuestPet pet = Wire.decode(msg, FromBrowser.QuestPet.class);
+                ch.send(c.game().challengesPage());
+            }))
+            // The Duels page is sent after a refusal too, so the page's control shows the choice that stands
+            .on(QuestPet.class, inSave((c, ch, pet) -> {
                 // The plant's slot takes only the plant, as desktop's switch sets it; a pet must be one the quest owns
                 final boolean owned = pet.name() == null || quest().getPetsStorage().getAvaliablePets(pet.slot(), quest().getAssets())
                         .stream().anyMatch(p -> p.getName().equals(pet.name()));
@@ -1017,19 +985,51 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                     quest().selectPet(pet.slot(), pet.name());
                     quest().save();
                 }
-            }
-            case "questMatchLength" -> {
-                final int games = Wire.decode(msg, FromBrowser.QuestMatchLength.class).games();
-                if (quest().getMode() == QuestMode.Fantasy && matchLengths().contains(games)) {
-                    quest().setMatchLength(String.valueOf(games));
+                ch.send(c.game().duelsPage());
+            }))
+            .on(QuestMatchLength.class, inSave((c, ch, length) -> {
+                if (quest().getMode() == QuestMode.Fantasy && matchLengths().contains(length.games())) {
+                    quest().setMatchLength(String.valueOf(length.games()));
                     quest().save();
                 }
-            }
-            default -> {
+                ch.send(c.game().duelsPage());
+            }));
+
+    /** A deck's own commands, from the Decks page. */
+    private static void deckCommand(final Call c, final BrowserChannel channel, final QuestDeckCommand command) {
+        final IStorage<Deck> decks = quest().getMyDecks();
+        final Deck deck = command.deck() == null ? null : decks.get(command.deck());
+        if (deck == null) {
+            return;
+        }
+        switch (command.t()) {
+            case questDeckCurrent -> quest().setCurrentDeck(deck.getName());
+            case questDeckView -> {
+                channel.send(new DeckDetailsMessage(new DeckDetails("quest:" + deck.getName(), deck.getName(),
+                        QuestUtil.getDeckConformanceProblemsBeforeGame(deck), DeckCatalog.colors(deck), DeckCatalog.stats(deck),
+                        DeckEditor.groups(deck.getMain(), DeckCatalog.NO_FLAGS), DeckEditor.cards(deck.get(DeckSection.Sideboard), DeckCatalog.NO_FLAGS),
+                        null, 0, null)));
                 return;
             }
+            case questDeckEdit -> {
+                c.host().decks().openCollectionDeck(deck, decks, deckType(), collection(), true, channel);
+                return;
+            }
+            case questDeckDelete -> {
+                decks.delete(deck.getName());
+                if (deck.getName().equals(quest().getCurrentDeck())) {
+                    quest().setCurrentDeck(QPref.CURRENT_DECK.getDefault());
+                }
+            }
         }
-        // Sent after a refusal too, so the page's control shows the choice that stands
-        channel.send(duelsPage());
+        quest().save();
+        // The Duels page names the deck duels use
+        channel.send(c.game().duelsPage());
+        channel.send(c.game().decksPage());
+    }
+
+    @Override
+    public void handle(final BrowserChannel channel, final Record command, final String save, final Host host) {
+        COMMANDS.run(new Call(this, save, host), channel, command);
     }
 }

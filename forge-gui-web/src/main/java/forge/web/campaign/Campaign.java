@@ -1,6 +1,5 @@
 package forge.web.campaign;
 
-import com.google.gson.JsonObject;
 import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.PreparedMatch;
@@ -99,8 +98,8 @@ public interface Campaign {
 
     void resetPrefs();
 
-    /** A message of the mode's own. save is null on the list of saved games. */
-    void handle(BrowserChannel channel, JsonObject msg, String save, Host host);
+    /** A command of the mode's own. save is null on the list of saved games. */
+    void handle(BrowserChannel channel, Record command, String save, Host host);
 
     /** Whether file is the saves folder's own child of exactly that name, however its path was written. Save names come from the browser, so one with a path in it must not reach a file to open, rename or delete outside the saves. */
     static boolean isSaveNamed(final String savesDir, final File file, final String child) {

@@ -7,6 +7,7 @@ import forge.web.match.BrowserModel;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.JsonCodec;
+import forge.web.protocol.Wire;
 import org.testng.Assert;
 
 import java.util.Deque;
@@ -130,6 +131,11 @@ final class TestBrowser implements BrowserChannel {
 
     static JsonObject action(final String type) {
         return JsonCodec.message(type);
+    }
+
+    /** Hands a match the command a browser sent. */
+    static void command(final WebGuiGame gui, final JsonObject message) {
+        gui.onCommand(null, Wire.decode(message));
     }
 
     static JsonObject reply(final int id, final JsonElement value) {
@@ -262,7 +268,7 @@ final class TestBrowser implements BrowserChannel {
         }
         final JsonElement value = answerFor(m);
         actions.schedule(() -> {
-            gui.onBrowserMessage(reply(id, value));
+            command(gui, reply(id, value));
             // A declined request leaves the same input open without a new prompt
             if (plays) {
                 actOnLatestPrompt();
@@ -317,7 +323,7 @@ final class TestBrowser implements BrowserChannel {
             select(card);
         } else if (cardsToUse.isEmpty() || !canUse) {
             // Passing with something on the stack lets it resolve
-            gui.onBrowserMessage(action("ok"));
+            command(gui, action("ok"));
         }
     }
 
@@ -337,16 +343,16 @@ final class TestBrowser implements BrowserChannel {
         if (players != null && !players.isEmpty()) {
             final JsonObject msg = action("selectPlayer");
             msg.addProperty("key", players.get(0).getAsJsonObject().get("ref").getAsInt());
-            gui.onBrowserMessage(msg);
+            command(gui, msg);
         } else if (prompt.getAsJsonObject("cancel").get("enabled").getAsBoolean()) {
-            gui.onBrowserMessage(action("cancel"));
+            command(gui, action("cancel"));
         }
     }
 
     private void select(final int key) {
         final JsonObject msg = action("selectCard");
         msg.addProperty("key", key);
-        gui.onBrowserMessage(msg);
+        command(gui, msg);
     }
 
     private boolean inOwnFirstMain() {

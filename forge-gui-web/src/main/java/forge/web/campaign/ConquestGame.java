@@ -1,6 +1,5 @@
 package forge.web.campaign;
 
-import com.google.gson.JsonObject;
 import forge.card.CardRarity;
 import forge.card.ColorSet;
 import forge.deck.Deck;
@@ -36,10 +35,11 @@ import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckEditor;
 import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.Commands;
+import forge.web.protocol.Commands.Handler;
 import forge.web.protocol.FromBrowser;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser.*;
-import forge.web.protocol.Wire;
 import org.apache.commons.lang3.EnumUtils;
 
 import java.io.File;
@@ -800,95 +800,105 @@ public final class ConquestGame implements Campaign {
         host.startMatch(() -> FModel.getConquest().prepareBattle(battle, null), () -> FModel.getConquest().cancelBattle());
     }
 
-    @Override
-    public void handle(final BrowserChannel channel, final JsonObject msg, final String save, final Host host) {
-        final String type = msg.get("t").getAsString();
-        if (save == null) {
+    /** A command to this conquest, from the save that is open, or from the list of saves while save is null. */
+    private record Call(ConquestGame game, String save, Host host) {
+    }
+
+    private static <T extends Record> Handler<Call, T> onShelf(final Handler<Call, T> handler) {
+        return (c, ch, command) -> {
+            if (c.save() == null) {
+                handler.run(c, ch, command);
+            }
+        };
+    }
+
+    private static <T extends Record> Handler<Call, T> inSave(final Handler<Call, T> handler) {
+        return (c, ch, command) -> {
+            if (c.save() != null) {
+                handler.run(c, ch, command);
+            }
+        };
+    }
+
+    public static final Commands<Call> COMMANDS = new Commands<Call>()
             // The form that starts a conquest is all of the list of saves that is Conquest's own
-            if ("conquestOptions".equals(type)) {
-                final ConquestOptionsQuery q = Wire.decode(msg, ConquestOptionsQuery.class);
-                channel.send(options(q.plane(), q.commander()));
-            } else if ("conquestCreate".equals(type)) {
-                final ConquestCreate create = Wire.decode(msg, ConquestCreate.class);
+            .on(ConquestOptionsQuery.class, onShelf((c, ch, q) -> ch.send(options(q.plane(), q.commander()))))
+            .on(ConquestCreate.class, onShelf((c, ch, create) -> {
                 final String problem = create(create.name(), create.plane(), create.commander(), create.planeswalker());
                 if (problem != null) {
-                    channel.send(host.error(problem));
+                    ch.send(c.host().error(problem));
                     return;
                 }
-                opened();
-                host.opened(model().getName());
-            }
-            return;
-        }
-        switch (type) {
-            case "conquestSelect" -> {
-                final ConquestSelect at = Wire.decode(msg, ConquestSelect.class);
-                select(at.region(), at.row(), at.col());
-                channel.send(state(List.of()));
-            }
-            case "conquestMove" -> {
+                c.game().opened();
+                c.host().opened(model().getName());
+            }))
+            .on(ConquestSelect.class, inSave((c, ch, at) -> {
+                c.game().select(at.region(), at.row(), at.col());
+                ch.send(c.game().state(List.of()));
+            }))
+            .on(Plain.conquestMove, inSave((c, ch, m) -> {
                 // A move with nowhere to go is not answered: a map with no path would end a walk under way
-                final List<ConquestLocation> walked = move();
+                final List<ConquestLocation> walked = c.game().move();
                 if (walked != null) {
-                    channel.send(state(walked));
+                    ch.send(c.game().state(walked));
                 }
-            }
-            case "conquestBattle" -> {
+            }))
+            .on(Plain.conquestBattle, inSave((c, ch, b) -> {
                 // A reward still to be shown may end in a chaos battle, which comes before any other
-                if (reward != null) {
+                if (c.game().reward != null) {
                     return;
                 }
-                final String problem = battleProblem();
+                final String problem = c.game().battleProblem();
                 if (problem != null) {
-                    channel.send(host.error(problem));
+                    ch.send(c.host().error(problem));
                     return;
                 }
-                startBattle(battle(), host);
-            }
-            case "conquestParty" -> channel.send(party());
-            case "conquestAether" -> {
-                final ConquestAetherQuery q = Wire.decode(msg, ConquestAetherQuery.class);
-                channel.send(aether(q));
+                startBattle(c.game().battle(), c.host());
+            }))
+            .on(Plain.conquestParty, inSave((c, ch, p) -> ch.send(c.game().party())))
+            .on(ConquestAetherQuery.class, inSave((c, ch, q) -> {
+                ch.send(c.game().aether(q));
                 if (q.pull()) {
-                    channel.send(bar());
+                    ch.send(c.game().bar());
                 }
-            }
-            case "conquestPlanes" -> channel.send(planes());
-            case "conquestPlaneswalk" -> {
-                final ConquestPlaneswalk go = Wire.decode(msg, ConquestPlaneswalk.class);
-                final String problem = planeswalk(go.plane(), go.unlock());
+            }))
+            .on(Plain.conquestPlanes, inSave((c, ch, p) -> ch.send(c.game().planes())))
+            .on(ConquestPlaneswalk.class, inSave((c, ch, go) -> {
+                final String problem = c.game().planeswalk(go.plane(), go.unlock());
                 if (problem != null) {
-                    channel.send(host.error(problem));
+                    ch.send(c.host().error(problem));
                     return;
                 }
-                channel.send(bar());
-                channel.send(state(List.of()));
-                channel.send(planes());
-            }
-            case "conquestWalker" -> {
-                if (setPlaneswalker(Wire.decode(msg, ConquestWalker.class).planeswalker())) {
-                    channel.send(party());
-                    channel.send(state(List.of()));
+                ch.send(c.game().bar());
+                ch.send(c.game().state(List.of()));
+                ch.send(c.game().planes());
+            }))
+            .on(ConquestWalker.class, inSave((c, ch, w) -> {
+                if (setPlaneswalker(w.planeswalker())) {
+                    ch.send(c.game().party());
+                    ch.send(c.game().state(List.of()));
                 }
-            }
-            case "conquestLead", "conquestViewDeck", "conquestEditDeck" -> {
-                final ConquestCommander commander = commander(Wire.decode(msg, ConquestCommanderCommand.class).commander());
+            }))
+            .on(ConquestCommanderCommand.class, inSave((c, ch, command) -> {
+                final ConquestCommander commander = commander(command.commander());
                 if (commander == null) {
                     return;
                 }
-                if ("conquestLead".equals(type)) {
-                    model().setSelectedCommander(commander);
-                    model().saveData();
-                    channel.send(party());
-                    channel.send(state(List.of()));
-                } else if ("conquestViewDeck".equals(type)) {
-                    channel.send(new DeckDetailsMessage(deckDetails(commander)));
-                } else {
-                    host.decks().openCollectionDeck(commander.getDeck(), FModel.getConquest().getDecks(), GameType.PlanarConquest,
-                            collection(commander), true, channel);
+                switch (command.t()) {
+                    case conquestLead -> {
+                        model().setSelectedCommander(commander);
+                        model().saveData();
+                        ch.send(c.game().party());
+                        ch.send(c.game().state(List.of()));
+                    }
+                    case conquestViewDeck -> ch.send(new DeckDetailsMessage(deckDetails(commander)));
+                    case conquestEditDeck -> c.host().decks().openCollectionDeck(commander.getDeck(), FModel.getConquest().getDecks(),
+                            GameType.PlanarConquest, collection(commander), true, ch);
                 }
-            }
-            default -> { }
-        }
+            }));
+
+    @Override
+    public void handle(final BrowserChannel channel, final Record command, final String save, final Host host) {
+        COMMANDS.run(new Call(this, save, host), channel, command);
     }
 }

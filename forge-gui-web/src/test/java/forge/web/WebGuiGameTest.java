@@ -41,7 +41,7 @@ public class WebGuiGameTest {
         Assert.assertEquals(request.getAsJsonArray("options").get(2).getAsJsonObject().get("label").getAsString(), "c");
         final JsonArray choice = new JsonArray();
         choice.add(2);
-        gui.onBrowserMessage(TestBrowser.reply(request.get("id").getAsInt(), choice));
+        TestBrowser.command(gui, TestBrowser.reply(request.get("id").getAsInt(), choice));
         Assert.assertEquals(picked.get(2, TimeUnit.SECONDS), List.of("c"));
     }
 
@@ -50,7 +50,7 @@ public class WebGuiGameTest {
         final CompletableFuture<List<String>> picked = CompletableFuture.supplyAsync(
                 () -> gui.getChoices("Pick one", 1, 1, List.of("a", "b"), null, null));
         browser.awaitNewest("request", "no request reached the browser");
-        gui.onBrowserMessage(TestBrowser.action("concede"));
+        TestBrowser.command(gui, TestBrowser.action("concede"));
         Assert.assertEquals(picked.get(2, TimeUnit.SECONDS), List.of("a"));
     }
 
@@ -62,7 +62,7 @@ public class WebGuiGameTest {
         final TestBrowser reloaded = new TestBrowser();
         gui.attach(reloaded);
         Assert.assertEquals(reloaded.last("request").get("id"), request.get("id"));
-        gui.onBrowserMessage(TestBrowser.reply(request.get("id").getAsInt(), new JsonPrimitive(1)));
+        TestBrowser.command(gui, TestBrowser.reply(request.get("id").getAsInt(), new JsonPrimitive(1)));
         Assert.assertFalse(answer.get(2, TimeUnit.SECONDS));
     }
 

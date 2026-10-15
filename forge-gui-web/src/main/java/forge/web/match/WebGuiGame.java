@@ -56,6 +56,8 @@ import forge.web.PlayerSettings;
 import forge.web.WebSettings;
 import forge.web.images.Foil;
 import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.Commands;
+import forge.web.protocol.Commands.Handler;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.JsonCodec;
 import forge.web.protocol.ToBrowser;
@@ -1138,129 +1140,147 @@ public class WebGuiGame extends NetworkGuiGame {
         return newMain;
     }
 
-    public void onBrowserMessage(final JsonObject msg) {
-        final String type = msg.get("t").getAsString();
-        if ("reply".equals(type)) {
-            final Reply reply = Wire.decode(msg, Reply.class);
-            requests.complete(reply.id(), reply.value());
+    /** A command the game acts on through the player's controller, which it does only once there is one. */
+    private interface Play<T> {
+        void run(WebGuiGame gui, IGameController controller, T command);
+    }
+
+    private static <T extends Record> Handler<WebGuiGame, T> play(final Play<T> action) {
+        return (g, ch, command) -> {
+            final IGameController controller = g.getGameController();
+            if (controller != null) {
+                action.run(g, controller, command);
+            }
+        };
+    }
+
+    public static final Commands<WebGuiGame> COMMANDS = new Commands<WebGuiGame>()
+            .on(Reply.class, (g, ch, r) -> g.requests.complete(r.id(), r.value()))
+            .on(KeyCommand.class, WebGuiGame::keyCommand)
+            .on(SelectCard.class, play((g, controller, click) -> {
+                final CardView card = g.lookup(click.key(), TrackableTypes.CardViewType);
+                if (card != null) {
+                    // A right-click asks for the list of what the card can do; a left-click takes the first
+                    final BrowserClick at = new BrowserClick(click.menu(), click.x(), click.y());
+                    g.lastClick.set(at);
+                    controller.selectCard(card, null, at);
+                }
+            }))
+            .on(Plain.ok, play((g, controller, c) -> controller.selectButtonOk()))
+            .on(Plain.cancel, play((g, controller, c) -> controller.selectButtonCancel()))
+            .on(Plain.concede, play((g, controller, c) -> controller.concede()))
+            .on(DrawOfferCommand.class, play((g, controller, d) -> controller.drawOfferAction(d.action())))
+            .on(AutoDecisionCommand.class, play((g, controller, a) -> g.autoDecisions(controller, a)))
+            .on(Plain.endTurn, play((g, controller, c) -> {
+                YieldController.endTurn(controller, g.getCurrentPlayer());
+                // The yield is set on this side at once, so the chip beside the phase pill names it straight away
+                g.send(g.controlsMessage());
+            }))
+            .on(Plain.stopYield, play((g, controller, c) -> {
+                // Ends whichever pass is running: a second press of End Turn, or a click on the chip naming it
+                YieldController.stopYielding(controller, g.getCurrentPlayer(), g);
+                g.send(g.controlsMessage());
+            }))
+            .on(Plain.undo, play((g, controller, c) -> controller.undoLastAction()))
+            // The host records the player's actions and asks how many times to repeat them, as desktop's dock buttons do
+            .on(Plain.macroRecord, play((g, controller, c) -> controller.setRememberedActions()))
+            .on(Plain.macroRepeat, play((g, controller, c) -> controller.repeatRememberedActions()))
+            .on(Plain.autoPass, play((g, controller, c) -> {
+                WebSettings.set(g.settings, controller, "autoPassNoActions", String.valueOf(!g.settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)));
+                g.send(g.controlsMessage());
+            }))
+            .on(PhaseCommand.class, play((g, controller, p) -> {
+                if (p.t() == PhaseAction.toggleStop) {
+                    g.toggleStop(p.phase(), p.mine());
+                    g.send(g.controlsMessage());
+                } else {
+                    g.toggleMarker(p.phase(), p.mine());
+                }
+            }))
+            .on(UseMana.class, play((g, controller, m) -> controller.useMana(m.color())))
+            .on(StackYield.class, play((g, controller, yield) -> {
+                final StackItemView item = g.lookup(yield.key(), TrackableTypes.StackItemViewType);
+                if (item != null && yield.action() != null) {
+                    g.stackYield(controller, item, yield.action());
+                    g.send(g.stackMenuMessage(controller, item));
+                }
+            }))
+            .on(NextGame.class, play((g, controller, n) -> controller.nextGameDecision(n.decision())));
+
+    public void onCommand(final BrowserChannel channel, final Record command) {
+        if (command instanceof Reply) {
+            COMMANDS.run(this, channel, command);
             return;
         }
-        final boolean leaving = "concede".equals(type)
-                || ("nextGame".equals(type) && Wire.decode(msg, NextGame.class).decision() == NextGameDecision.QUIT);
+        final boolean leaving = command instanceof Bare b && b.t() == Plain.concede
+                || command instanceof NextGame n && n.decision() == NextGameDecision.QUIT;
         if (leaving) {
             // The host's engine thread waits on an open request with no timeout, so answer it before leaving
             requests.cancelAll();
         }
         mirrorLock.lock();
         try {
-            if ("detail".equals(type)) {
-                final CardView card = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.CardViewType);
+            COMMANDS.run(this, channel, command);
+        } finally {
+            mirrorLock.unlock();
+        }
+    }
+
+    private void keyCommand(final BrowserChannel channel, final KeyCommand command) {
+        final IGameController controller = getGameController();
+        switch (command.t()) {
+            case detail -> {
+                final CardView card = lookup(command.key(), TrackableTypes.CardViewType);
                 if (card != null) {
                     send(CardDetails.card(card, getGameView(), mayView(card), mayFlip(card)));
                 }
-                return;
             }
-            if ("setSetting".equals(type)) {
-                // A setting belongs to the player, not the game, so one sent before the game has a controller still counts
-                final SetSetting setting = Wire.decode(msg, SetSetting.class);
-                WebSettings.set(settings, getGameController(), setting.key(), setting.value());
-                send(controlsMessage());
-                return;
-            }
-            if ("setStops".equals(type)) {
-                // Stops are the player's too; the game, once it has players, is told of each one that changed
-                final SetStops stops = Wire.decode(msg, SetStops.class);
-                for (final PhaseType phase : WebSettings.setStops(settings, stops.mine(), stops.phases())) {
-                    pushStop(phase, stops.mine());
-                }
-                send(controlsMessage());
-                return;
-            }
-            if ("playerDetail".equals(type)) {
-                final PlayerView player = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.PlayerViewType);
+            case playerDetail -> {
+                final PlayerView player = lookup(command.key(), TrackableTypes.PlayerViewType);
                 if (player != null) {
                     send(CardDetails.player(player));
                 }
-                return;
             }
-            final IGameController controller = getGameController();
-            if (controller == null) {
-                return;
+            case selectPlayer -> {
+                final PlayerView player = lookup(command.key(), TrackableTypes.PlayerViewType);
+                if (player != null && controller != null) {
+                    controller.selectPlayer(player, null);
+                }
             }
-            switch (type) {
-                case "selectCard" -> {
-                    final SelectCard click = Wire.decode(msg, SelectCard.class);
-                    final CardView card = lookup(click.key(), TrackableTypes.CardViewType);
-                    if (card != null) {
-                        // A right-click asks for the list of what the card can do; a left-click takes the first
-                        final BrowserClick at = new BrowserClick(click.menu(), click.x(), click.y());
-                        lastClick.set(at);
-                        controller.selectCard(card, null, at);
-                    }
+            case selectStackItem -> {
+                final StackItemView item = lookup(command.key(), TrackableTypes.StackItemViewType);
+                if (item != null && controller != null) {
+                    controller.selectStackItem(item);
                 }
-                case "selectPlayer" -> {
-                    final PlayerView player = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.PlayerViewType);
-                    if (player != null) {
-                        controller.selectPlayer(player, null);
-                    }
-                }
-                case "ok" -> controller.selectButtonOk();
-                case "cancel" -> controller.selectButtonCancel();
-                case "concede" -> controller.concede();
-                case "drawOffer" -> controller.drawOfferAction(Wire.decode(msg, DrawOfferCommand.class).action());
-                case "autoDecisions" -> autoDecisions(controller, Wire.decode(msg, AutoDecisionCommand.class));
-                case "endTurn" -> {
-                    YieldController.endTurn(controller, getCurrentPlayer());
-                    // The yield is set on this side at once, so the chip beside the phase pill names it straight away
-                    send(controlsMessage());
-                }
-                case "stopYield" -> {
-                    // Ends whichever pass is running: a second press of End Turn, or a click on the chip naming it
-                    YieldController.stopYielding(controller, getCurrentPlayer(), this);
-                    send(controlsMessage());
-                }
-                case "undo" -> controller.undoLastAction();
-                // The host records the player's actions and asks how many times to repeat them, as desktop's dock buttons do
-                case "macroRecord" -> controller.setRememberedActions();
-                case "macroRepeat" -> controller.repeatRememberedActions();
-                case "autoPass" -> {
-                    WebSettings.set(settings, controller, "autoPassNoActions",
-                            String.valueOf(!settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)));
-                    send(controlsMessage());
-                }
-                case "toggleStop" -> {
-                    final PhaseCommand stop = Wire.decode(msg, PhaseCommand.class);
-                    toggleStop(stop.phase(), stop.mine());
-                    send(controlsMessage());
-                }
-                case "toggleMarker" -> {
-                    final PhaseCommand marker = Wire.decode(msg, PhaseCommand.class);
-                    toggleMarker(marker.phase(), marker.mine());
-                }
-                case "useMana" -> controller.useMana(Wire.decode(msg, UseMana.class).color());
-                case "selectStackItem" -> {
-                    final StackItemView item = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.StackItemViewType);
-                    if (item != null) {
-                        controller.selectStackItem(item);
-                    }
-                }
-                case "stackMenu" -> {
-                    final StackItemView item = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.StackItemViewType);
-                    if (item != null) {
-                        send(stackMenuMessage(controller, item));
-                    }
-                }
-                case "stackYield" -> {
-                    final StackYield yield = Wire.decode(msg, StackYield.class);
-                    final StackItemView item = lookup(yield.key(), TrackableTypes.StackItemViewType);
-                    if (item != null && yield.action() != null) {
-                        stackYield(controller, item, yield.action());
-                        send(stackMenuMessage(controller, item));
-                    }
-                }
-                case "nextGame" -> controller.nextGameDecision(Wire.decode(msg, NextGame.class).decision());
-                default -> netLog.warn("Web client: unknown browser message {}", type);
             }
+            case stackMenu -> {
+                final StackItemView item = lookup(command.key(), TrackableTypes.StackItemViewType);
+                if (item != null && controller != null) {
+                    send(stackMenuMessage(controller, item));
+                }
+            }
+        }
+    }
+
+    /** A setting belongs to the player, not the game, so one sent before the game has a controller still counts. */
+    public void setSetting(final SetSetting setting) {
+        mirrorLock.lock();
+        try {
+            WebSettings.set(settings, getGameController(), setting.key(), setting.value());
+            send(controlsMessage());
+        } finally {
+            mirrorLock.unlock();
+        }
+    }
+
+    /** Stops are the player's too. The game, once it has players, is told of each one that changed. */
+    public void setStops(final SetStops stops) {
+        mirrorLock.lock();
+        try {
+            for (final PhaseType phase : WebSettings.setStops(settings, stops.mine(), stops.phases())) {
+                pushStop(phase, stops.mine());
+            }
+            send(controlsMessage());
         } finally {
             mirrorLock.unlock();
         }
