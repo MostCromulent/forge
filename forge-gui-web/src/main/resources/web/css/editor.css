@@ -135,16 +135,15 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .breakdown h4 { margin: 0 0 4px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
 .breakdown h4 span { letter-spacing: 0; color: var(--text); font-weight: 600; }
 .share-bar { display: flex; gap: 1px; height: 8px; border-radius: 3px; overflow: hidden; }
-.share-bar i, .share-key i { background: var(--mtg-c); }
-:is(.share-bar, .share-key) i[data-colour="W"] { background: var(--mtg-w); }
-:is(.share-bar, .share-key) i[data-colour="U"] { background: var(--mtg-u); }
-:is(.share-bar, .share-key) i[data-colour="B"] { background: var(--mtg-b); }
-:is(.share-bar, .share-key) i[data-colour="R"] { background: var(--mtg-r); }
-:is(.share-bar, .share-key) i[data-colour="G"] { background: var(--mtg-g); }
-:is(.share-bar, .share-key) i[data-colour="M"] { background: var(--accent-2); }
+.share-bar i { background: var(--mtg-c); }
+.share-bar i[data-colour="W"] { background: var(--mtg-w); }
+.share-bar i[data-colour="U"] { background: var(--mtg-u); }
+.share-bar i[data-colour="B"] { background: var(--mtg-b); }
+.share-bar i[data-colour="R"] { background: var(--mtg-r); }
+.share-bar i[data-colour="G"] { background: var(--mtg-g); }
 .share-key { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 4px; font-size: 11px; font-variant-numeric: tabular-nums; }
 .share-key span { display: inline-flex; align-items: center; gap: 4px; }
-.share-key i { width: 14px; height: 14px; border-radius: 50%; display: grid; place-items: center; font: 700 9px/1 inherit; font-style: normal; color: #1b1a17; }
+.share-key .pip { width: 14px; height: 14px; }
 .share-key small { color: var(--muted); }
 .deck-head .bars { height: 44px; }
 .deck-head .bar { width: 18px; }

@@ -290,7 +290,7 @@ function Breakdown({ title, counts }: { title: string; counts: number[] }) {
       <h4>{title} <span>{total}</span></h4>
       <div class="share-bar">{parts.map(p => <i key={p.letter} data-colour={p.letter} style={{ flexGrow: p.n }} />)}</div>
       <div class="share-key">
-        {parts.map(p => <span key={p.letter}><i data-colour={p.letter}>{p.letter}</i>{p.n} <small>{Math.round((p.n / total) * 100)}%</small></span>)}
+        {parts.map(p => <span key={p.letter}><Pip letter={p.letter} />{p.n} <small>{Math.round((p.n / total) * 100)}%</small></span>)}
       </div>
     </div>
   );
