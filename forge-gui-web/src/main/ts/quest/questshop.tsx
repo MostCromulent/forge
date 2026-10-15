@@ -6,7 +6,7 @@ import { imageUrl, skinIconUrl } from '../images';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { Product } from '../protocol';
-import { t } from '../text';
+import { t, formatNumber } from '../text';
 
 /** Where a sentence puts the credits' coin. */
 const COIN = '{CR}';
@@ -24,7 +24,7 @@ function Products({ products, picked, toggle }: { products: Product[]; picked: M
           <span class="qu-product-pic"><img loading="lazy" alt="" src={imageUrl(p.image)} onError={e => { e.currentTarget.hidden = true; }} /></span>
           <span class="qu-product-kind">{p.kind}</span>
           <b>{p.name}</b>
-          <span class="qu-price"><img alt={t('lblCredits')} src={skinIconUrl(CREDITS)} />{p.price.toLocaleString('en-GB')}</span>
+          <span class="qu-price"><img alt={t('lblCredits')} src={skinIconUrl(CREDITS)} />{formatNumber(p.price)}</span>
         </button>
       ))}
     </div>

@@ -4,12 +4,12 @@ import { useEffect, useState } from 'preact/hooks';
 import { Shelf } from '../shelf';
 import { StepForm, draftCombo, draftSteps, draftTicket, sealedAction, sealedSteps, sealedTicket, type DraftValue, type SealedValue } from '../setup';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from '../header';
-import { Pips } from '../symbols';
+import { COLOUR_NAMES, Pips } from '../symbols';
 import { changeUi } from '../ui';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { PoolRow } from '../protocol';
-import { t, tNodes, type TextKey } from '../text';
+import { t, tNodes, shortDay, type TextKey } from '../text';
 
 /** Desktop's limited deck is at least forty cards. */
 const DECK_SIZE = 40;
@@ -52,12 +52,6 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
           : <Events pools={pools} draft={draft} actions={actions} create={() => setCreating(true)} />}
     </div>
   );
-}
-
-/** A day as the cards say it: 28 Sept. */
-export function shortDay(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 /** The saved pools on the shelf: one with a deck is played, one without is built first. */
@@ -132,8 +126,6 @@ function DraftSetup({ model, actions }: { model: Model; actions: Actions }) {
 export function severalCap(opponents: number): number {
   return Math.min(7, opponents);
 }
-
-const COLOUR_NAMES: Record<string, TextKey> = { W: 'lblWhite', U: 'lblBlue', B: 'lblBlack', R: 'lblRed', G: 'lblGreen' };
 
 /** A deck's colours in words: White–Green, or the count past three, or Colourless. */
 export function colourName(colors: string): string {

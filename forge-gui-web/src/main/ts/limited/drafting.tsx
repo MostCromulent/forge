@@ -8,10 +8,11 @@ import { cancelFlight, land, lift } from '../flight';
 import { avatarUrl } from '../looks';
 import { rememberedAvatar } from '../menu';
 import { SymbolText } from '../symbols';
+import { CARD_TYPES, colourHeading, mvGroup } from '../deck/decklist';
 import { changeUi } from '../ui';
 import { HeadControls, PageHeader } from '../header';
 import { hoverCard, inspectCard, isPinned } from '../preview';
-import { t, tNodes, type TextKey } from '../text';
+import { t, tNodes, shortDay, type TextKey } from '../text';
 import type { ComponentChildren } from 'preact';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -461,8 +462,6 @@ function DraftLog({ lines }: { lines: string[] }) {
   );
 }
 
-const COLOURS: Record<string, TextKey> = { W: 'lblWhite', U: 'lblBlue', B: 'lblBlack', R: 'lblRed', G: 'lblGreen' };
-
 function grouped(held: Held[], by: GroupBy): [string, Held[]][] {
   if (by === 'pick') return held.length ? [[t('lblWebDraftInPickOrder'), held]] : [];
   const groups = new Map<string, Held[]>();
@@ -470,25 +469,16 @@ function grouped(held: Held[], by: GroupBy): [string, Held[]][] {
   const ordered = by === 'mv' ? [...held].sort((a, b) => a.card.mv - b.card.mv) : held;
   for (const h of ordered) {
     const c = h.card;
-    const key = by === 'type' ? typeHeading(c.type)
-      : by === 'mv' ? (c.mv >= 6 ? '6+' : String(c.mv))
-      : c.colors.length === 0 || c.colors === 'C' ? t('lblColorless') : c.colors.length > 1 ? t('lblMulticolor')
-      : COLOURS[c.colors] ? t(COLOURS[c.colors]) : c.colors;
+    const key = by === 'type' ? typeHeading(c.type) : by === 'mv' ? mvGroup(c.mv) : colourHeading(c.colors);
     groups.set(key, [...(groups.get(key) ?? []), h]);
   }
   return [...groups.entries()];
 }
 
-/** The card types the picks are grouped under, matched in the type line the server sends, with each group's heading. */
-const TYPE_HEADINGS: [string, TextKey][] = [['Creature', 'lblCreatures'], ['Planeswalker', 'lblPlaneswalkers'],
-  ['Instant', 'lblInstants'], ['Sorcery', 'lblSorceries'], ['Artifact', 'lblArtifacts'], ['Enchantment', 'lblEnchantments'],
-  ['Land', 'lblLands']];
-
+/** The heading of the first of CARD_TYPES in a type line. */
 function typeHeading(type: string): string {
-  for (const [name, heading] of TYPE_HEADINGS) {
-    if (type.includes(name)) return t(heading);
-  }
-  return t('lblOther');
+  const found = CARD_TYPES.find(([name]) => type.includes(name));
+  return t(found ? found[2] : 'lblOther');
 }
 
 /** The end of a quest tournament's draft, whose picks are kept under the name Quest gives them and built into its deck next. */
@@ -509,7 +499,7 @@ function TournamentDrafted({ state, actions }: { state: DraftState; actions: Act
 
 /** The end of the draft, as desktop ends it: a name to save it under, or leaving without saving. */
 function SaveDraft({ model, state, actions }: { model: Model; state: DraftState; actions: Actions }) {
-  const [name, setName] = useState(() => `${state.product} ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`);
+  const [name, setName] = useState(() => `${state.product} ${shortDay()}`);
   const [discarding, setDiscarding] = useState(false);
   const taken = model.nameTaken !== null && model.nameTaken === name.trim();
   return (

@@ -8,7 +8,7 @@ import { StepForm, type Step, type Ticket } from '../setup';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ConquestCardOption, ConquestOptions, ConquestPlaneOption } from '../protocol';
-import { t } from '../text';
+import { t, formatNumber } from '../text';
 
 interface NewValue { plane?: string; commander?: string; planeswalker?: string }
 
@@ -65,7 +65,7 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
     title: v => name.trim() || v.plane || t('lblPlanarConquest'),
     picture: v => <Picture value={v} options={options} />,
     rows: v => [[t('lblPlane'), v.plane ?? null], [t('lblCommander'), v.commander ?? null], [t('lblPlaneswalker'), v.planeswalker ?? null],
-      [t('lblStartingShards'), options.startShards.toLocaleString('en-GB')]],
+      [t('lblStartingShards'), formatNumber(options.startShards)]],
     note: '',
   };
   return (

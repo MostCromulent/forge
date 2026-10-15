@@ -8,7 +8,7 @@ import { ColourToggles, Pip, Pips } from '../symbols';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ConquestAetherState, ConquestOption, PackCard } from '../protocol';
-import { t, type TextKey } from '../text';
+import { t, formatNumber, type TextKey } from '../text';
 
 const RARITIES: TextKey[] = ['lblCommon', 'lblUncommon', 'lblRare', 'lblMythic'];
 /** How many of the cards pulled this visit stay in view. */
@@ -60,7 +60,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
             </div>
           )}
         {(a.problem || (short && a.cost > 0)) && <p class="cq-warn">{a.problem ?? t('lblWebConquestTooFewShards')}</p>}
-        <div class="cq-ae-count">{a.matching.toLocaleString('en-GB')} / {a.locked.toLocaleString('en-GB')}</div>
+        <div class="cq-ae-count">{formatNumber(a.matching)} / {formatNumber(a.locked)}</div>
         <div class="cq-ae-recent">
           {recent.map((c, i) => <button key={`${c.image}:${recent.length - i}`} title={c.name} onClick={() => setZoom(c.image)}><img alt={c.name} src={imageUrl(c.image)} /></button>)}
         </div>
@@ -79,7 +79,7 @@ function Options({ title, options, chosen, pick, two }: { title: string; options
         {options.map(o => (
           <button key={o.key} class="cq-opt" role="radio" aria-checked={o.key === chosen} onClick={() => pick(o.key)}>
             <b>{o.label}</b>
-            {o.cost != null && <span class="r">{shard(13)}{o.cost.toLocaleString('en-GB')}</span>}
+            {o.cost != null && <span class="r">{shard(13)}{formatNumber(o.cost)}</span>}
           </button>
         ))}
       </div>

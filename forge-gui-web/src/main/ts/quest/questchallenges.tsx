@@ -7,12 +7,12 @@ import { artUrl } from '../sleeves';
 import { skinIconUrl } from '../images';
 import type { Actions } from '../actions';
 import type { QuestChallengeRow, QuestChallenges, QuestDuels } from '../protocol';
-import { t } from '../text';
+import { t, formatNumber } from '../text';
 
 const CREDITS = 'ICO_QUEST_COINSTACK';
 
 function Credits({ n }: { n: number }) {
-  return <span class="qu-price"><img alt={t('lblCredits')} src={skinIconUrl(CREDITS)} />{n.toLocaleString('en-GB')}</span>;
+  return <span class="qu-price"><img alt={t('lblCredits')} src={skinIconUrl(CREDITS)} />{formatNumber(n)}</span>;
 }
 
 function Tile({ challenge, chosen, choose }: { challenge: QuestChallengeRow; chosen: boolean; choose: () => void }) {

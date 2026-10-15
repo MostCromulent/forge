@@ -6,7 +6,6 @@ import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from '../header';
 import { changeUi, eased, ui, type ConquestTab } from '../ui';
 import { skinIconUrl } from '../images';
 import { CampaignBar, Prefs, Purse, Stats } from '../campaign/campaign';
-import { shortDay } from '../limited/limited';
 import { ConquestMap } from './conquestmap';
 import { Party } from './conquestparty';
 import { Collection } from './conquestcollection';
@@ -19,7 +18,7 @@ import { setting } from '../settings';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ConquestSave } from '../protocol';
-import { t, type TextKey } from '../text';
+import { t, shortDay, type TextKey } from '../text';
 
 /** The two balances' icons, asked for as the mode opens: on a first visit they would wait behind every picture of the map. */
 const BALANCE_ICONS = ['IMG_AETHER_SHARD', 'IMG_PW_BADGE_COMMON'];

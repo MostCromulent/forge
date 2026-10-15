@@ -7,8 +7,7 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { LobbyTable, PastEvent } from '../protocol';
 import { GameMenu, PlayerCount } from './matchbar';
-import { shortDay } from '../limited/limited';
-import { t } from '../text';
+import { t, shortDay } from '../text';
 
 /** What the setup dialog shows: the choice between a new event and an earlier one, or either of those. */
 type SetupView = 'choose' | 'new' | 'earlier';

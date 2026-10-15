@@ -241,9 +241,13 @@ final class ToBrowser {
     record EditorMessage(@Nullable EditorState state) {
     }
 
-    /** target is storage (the host's decks) or device (a guest's browser), and copyOf names a read-only deck the first change will copy. */
+    /**
+     * target is storage (the host's decks) or device (a guest's browser), and copyOf names a read-only deck the first change will copy.
+     * commanderZone says the format has a commander, and copyLimit is its most copies of a card other than a basic land, null for no limit.
+     */
     record EditorState(String name, String check, String format, @Nullable String cardPool, boolean unrestricted,
-            String target, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderWanted, String identity,
+            String target, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderZone, boolean commanderWanted,
+            @Nullable Integer copyLimit, String identity,
             List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
             @Nullable String verdict, boolean canUndo, @Nullable String landed,
             boolean limited, @Nullable String landSet, List<LandSet> landSets, @Nullable String collection, boolean mainOnly,

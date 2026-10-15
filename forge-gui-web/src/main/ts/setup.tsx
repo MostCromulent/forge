@@ -3,7 +3,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import type { LimitedOptions, SealedBlock } from './protocol';
-import { t, type TextKey } from './text';
+import { t, shortDay, type TextKey } from './text';
 
 export interface Step<V> {
   id: string;
@@ -245,7 +245,7 @@ export function sealedSteps(options: LimitedOptions): Step<SealedValue>[] {
 
 function defaultName(v: SealedValue): string {
   const what = v.product === 'Prerelease' ? t('lblLimitedPrerelease') : isBlock(v) ? v.block ?? '' : productName(v.product);
-  return t('lblWebSetupDefaultName', what, new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }));
+  return t('lblWebSetupDefaultName', what, shortDay());
 }
 
 export function sealedSentence(options: LimitedOptions, v: SealedValue): string {

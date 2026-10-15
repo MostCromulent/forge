@@ -12,11 +12,10 @@ import type { Model } from '../model';
 import type { CatalogueRow, DeckSection, EditorState, LimitedEdition } from '../protocol';
 import { store, stored } from '../storage';
 import { addCard, choosesPrintings, preferredPrinting } from './preferred';
+import { CARD_TYPES } from './decklist';
 import { t, type TextKey } from '../text';
 
-export const TYPES: [string, TextKey][] = [['any', 'lblWebCatalogueAnyType'], ['creature', 'lblCreatures'], ['planeswalker', 'lblPlaneswalkers'],
-  ['instant', 'lblInstants'], ['sorcery', 'lblSorceries'], ['artifact', 'lblArtifacts'], ['enchantment', 'lblEnchantments'],
-  ['battle', 'lblBattles'], ['land', 'lblLands']];
+export const TYPES: [string, TextKey][] = [['any', 'lblWebCatalogueAnyType'], ...CARD_TYPES.map(([type, , heading]): [string, TextKey] => [type.toLowerCase(), heading])];
 const SORTS: [string, TextKey][] = [['name', 'lblWebEditorSortName'], ['mv', 'lblWebCatalogueSortManaValue'], ['colour', 'lblWebEditorSortColour'],
   ['type', 'lblWebCatalogueSortType']];
 const VIEW_KEY = 'forge.catalogueView';
@@ -36,7 +35,6 @@ const SEARCH_TIPS: [string, TextKey][] = [
   ['Enter', 'lblWebCatalogueTipEnter'],
 ];
 const BASICS = new Set(['Plains', 'Island', 'Swamp', 'Mountain', 'Forest', 'Wastes']);
-const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders']);
 
 /** How many copies of each card the deck holds, by name, across every section. A limited deck's sideboard is its pool, not the deck. */
 export function countsInDeck(state: EditorState): Map<string, number> {
@@ -51,7 +49,7 @@ export function countsInDeck(state: EditorState): Map<string, number> {
 export function copyLimit(state: EditorState, name: string, owned?: number | null): number {
   if (BASICS.has(name)) return Infinity;
   if (state.mainOnly) return 1;
-  const rule = !state.unrestricted && COMMANDER_FORMATS.has(state.format) ? 1 : 4;
+  const rule = state.copyLimit ?? Infinity;
   return owned == null ? rule : Math.min(rule, owned);
 }
 
@@ -319,11 +317,7 @@ function SetsPanel({ sets, value, apply }: { sets: readonly LimitedEdition[] | n
       <input type="search" autoFocus placeholder={t('lblWebFilterSetFind')} value={find} onInput={e => setFind(e.currentTarget.value)} />
       <div class="fopts">
         {shown.map(s => (
-          <button key={s.code} role="checkbox" aria-checked={ticked.has(s.code)} class={ticked.has(s.code) ? 'fopt box on' : 'fopt box'} onClick={() => {
-            const next = new Set(ticked);
-            if (!next.delete(s.code)) next.add(s.code);
-            setTicked(next);
-          }}><i class="dot" /><span class="fset">{s.name}</span><span class="fcode">{s.code}</span></button>
+          <button key={s.code} role="checkbox" aria-checked={ticked.has(s.code)} class={ticked.has(s.code) ? 'fopt box on' : 'fopt box'} onClick={() => setTicked(toggled(ticked, s.code))}><i class="dot" /><span class="fset">{s.name}</span><span class="fcode">{s.code}</span></button>
         ))}
       </div>
       <div class="fapply"><button class="primary" onClick={() => apply([...ticked])}>{t('lblWebFilterApply')}</button></div>

@@ -23,7 +23,6 @@ export interface Verdict {
 }
 
 const THRESHOLD_PX = 4;
-const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders', 'CommanderDraft']);
 // A refusal's words follow this mark, which also tells the zone to show it as refusing
 const REFUSED = '⊘';
 const ADD: Record<'Main' | 'Sideboard', TextKey> = { Main: 'lblWebEditorDragAddMain', Sideboard: 'lblWebEditorDragAddSideboard' };
@@ -43,7 +42,7 @@ export function verdictFor(carried: Carried, zone: Zone, state: EditorState, com
     return { zone, accepts: true, verb: carried.from === 'catalogue' ? '' : t(REMOVE[carried.from], n) };
   }
   if (zone === 'Commander') {
-    if (state.unrestricted || !COMMANDER_FORMATS.has(state.format)) {
+    if (!state.commanderZone) {
       return { zone, accepts: false, verb: refused('lblWebEditorDragOnlyCommanderFormats') };
     }
     if (!commanderAllowed) {

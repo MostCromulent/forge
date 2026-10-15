@@ -1,20 +1,21 @@
 // The editor's deck, read in ways the server does not send it: regrouped, written out as a list, and dealt as a sample hand
 
 import type { EditorCard, EditorGroup, EditorState } from '../protocol';
+import { COLOUR_NAMES } from '../symbols';
 import { t, type TextKey } from '../text';
 
 export type GroupBy = 'type' | 'mv' | 'colour';
 
 // Headings by colour, in this order; the letters stand for themselves, M for more than one colour and C for none
 const COLOUR_ORDER = ['W', 'U', 'B', 'R', 'G', 'M', 'C'];
-const COLOUR_HEADINGS: Record<string, TextKey> = {
-  W: 'lblWhite', U: 'lblBlue', B: 'lblBlack', R: 'lblRed', G: 'lblGreen', M: 'lblMulticolor', C: 'lblColorless',
-};
+const COLOUR_HEADINGS: Record<string, TextKey> = { ...COLOUR_NAMES, M: 'lblMulticolor' };
 
-const TYPE_HEADINGS: Record<string, TextKey> = {
-  Creatures: 'lblCreatures', Planeswalkers: 'lblPlaneswalkers', Instants: 'lblInstants', Sorceries: 'lblSorceries',
-  Artifacts: 'lblArtifacts', Enchantments: 'lblEnchantments', Battles: 'lblBattles', Lands: 'lblLands',
-};
+/** The card types cards are grouped and filtered by, in the order a card of two types is placed: its type-line word, the server's group id, and the heading's key. */
+export const CARD_TYPES: [type: string, group: string, heading: TextKey][] = [['Creature', 'Creatures', 'lblCreatures'],
+  ['Planeswalker', 'Planeswalkers', 'lblPlaneswalkers'], ['Instant', 'Instants', 'lblInstants'], ['Sorcery', 'Sorceries', 'lblSorceries'],
+  ['Artifact', 'Artifacts', 'lblArtifacts'], ['Enchantment', 'Enchantments', 'lblEnchantments'], ['Battle', 'Battles', 'lblBattles'],
+  ['Land', 'Lands', 'lblLands']];
+const TYPE_HEADINGS: Record<string, TextKey> = Object.fromEntries(CARD_TYPES.map(([, group, heading]) => [group, heading]));
 
 /** A group's heading as shown: the server names the card types in English, as ids. */
 export const headingText = (heading: string): string => (TYPE_HEADINGS[heading] ? t(TYPE_HEADINGS[heading]) : heading);
@@ -26,7 +27,7 @@ export function regroup(state: EditorState, by: GroupBy): EditorGroup[] {
   const spells = state.main.filter(g => g !== lands).flatMap(g => g.cards);
   const groups = new Map<string, EditorCard[]>();
   for (const card of spells) {
-    const heading = by === 'mv' ? (card.mv >= 7 ? '7+' : String(card.mv)) : colourHeading(card.colors);
+    const heading = by === 'mv' ? mvGroup(card.mv) : colourLetter(card.colors);
     groups.set(heading, [...(groups.get(heading) ?? []), card]);
   }
   const order = by === 'mv'
@@ -36,10 +37,16 @@ export function regroup(state: EditorState, by: GroupBy): EditorGroup[] {
   return lands ? [...out, lands] : out;
 }
 
-function colourHeading(colors: string): string {
+/** The heading of a mana value's group: the value itself, with everything from seven up together. */
+export const mvGroup = (mv: number): string => (mv >= 7 ? '7+' : String(mv));
+
+function colourLetter(colors: string): string {
   if (colors.length > 1) return 'M';
   return colors.length === 1 && 'WUBRG'.includes(colors) ? colors : 'C';
 }
+
+/** The heading of a card's colour group: its colour, Multicolor or Colorless. */
+export const colourHeading = (colors: string): string => t(COLOUR_HEADINGS[colourLetter(colors)]);
 
 /** The deck as a list other sites and desktop Forge read: a heading per section, then a count and a name per line. */
 export function deckText(state: EditorState): string {

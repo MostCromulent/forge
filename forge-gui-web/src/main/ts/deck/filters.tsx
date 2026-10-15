@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { t } from '../text';
+import { toggled } from '../symbols';
 
 export interface FilterKind<F> {
   id: string;
@@ -123,11 +124,7 @@ export function AnyOf<V extends string>({ options, value, apply }: {
     <>
       <div class="fopts">
         {options.map(([v, name]) => (
-          <button key={v} role="checkbox" aria-checked={ticked.has(v)} class={ticked.has(v) ? 'fopt box on' : 'fopt box'} onClick={() => {
-            const next = new Set(ticked);
-            if (!next.delete(v)) next.add(v);
-            setTicked(next);
-          }}><i class="dot" />{name}</button>
+          <button key={v} role="checkbox" aria-checked={ticked.has(v)} class={ticked.has(v) ? 'fopt box on' : 'fopt box'} onClick={() => setTicked(toggled(ticked, v))}><i class="dot" />{name}</button>
         ))}
       </div>
       <div class="fapply"><button class="primary" onClick={() => apply([...ticked])}>{t('lblWebFilterApply')}</button></div>

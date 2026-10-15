@@ -7,11 +7,11 @@ import { artUrl } from '../sleeves';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { CampaignBar as Bar, PrefRow } from '../protocol';
-import { t, type TextKey } from '../text';
+import { t, formatNumber, type TextKey } from '../text';
 
 /** A balance: its icon, its number, and its name for a reader that cannot see the icon. */
 export function Purse({ icon, n, label }: { icon: string; n: number; label: string }) {
-  return <span class="cq-coin" title={label}><img alt={label} src={skinIconUrl(icon)} /><b>{n.toLocaleString('en-GB')}</b></span>;
+  return <span class="cq-coin" title={label}><img alt={label} src={skinIconUrl(icon)} /><b>{formatNumber(n)}</b></span>;
 }
 
 /** How much of a currency the bar says the player has, by the currency's icon. */
@@ -81,8 +81,6 @@ export function DeckRow({ image, name, line, problem, zoom, change }: {
   );
 }
 
-const amount = (n: number): string => n.toLocaleString('en-GB');
-
 /** A campaign's statistics: figures, and whatever tables the mode sends. first is the scope asked for as the page opens. */
 export function Stats({ model, actions, first }: { model: Model; actions: Actions; first?: string }) {
   const s = model.campaignStats;
@@ -103,7 +101,7 @@ export function Stats({ model, actions, first }: { model: Model; actions: Action
         {s.figures.map(f => (
           <div key={f.label} class="cq-figure">
             <span class="cq-kicker">{f.label}</span>
-            <p><b>{amount(f.amount)}</b>{f.of != null && <span> / {amount(f.of)} ({f.of ? Math.round(100 * f.amount / f.of) : 0}%)</span>}</p>
+            <p><b>{formatNumber(f.amount)}</b>{f.of != null && <span> / {formatNumber(f.of)} ({f.of ? Math.round(100 * f.amount / f.of) : 0}%)</span>}</p>
             {f.of != null && <div class="cq-pbar"><i style={{ width: `${f.of ? 100 * f.amount / f.of : 0}%` }} /></div>}
           </div>
         ))}

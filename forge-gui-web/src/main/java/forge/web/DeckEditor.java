@@ -576,7 +576,8 @@ final class DeckEditor {
         return new EditorState(deck.getName(), check.label(), check.format().name(),
                 check.pool() == null ? null : check.pool().getName(), check.unrestricted(),
                 target instanceof Device ? "device" : "storage", copyOf,
-                cards(deck.get(DeckSection.Commander), legality), wanted, Legality.identityLetters(leaders),
+                cards(deck.get(DeckSection.Commander), legality), df.hasCommander(), wanted, df.getMaxCardCopies() == Integer.MAX_VALUE ? null : df.getMaxCardCopies(),
+                Legality.identityLetters(leaders),
                 groups(deck.getMain(), legality), cards(deck.get(DeckSection.Sideboard), legality), lands(),
                 DeckCatalog.stats(deck), legality.verdict(), !undo.isEmpty(), landed,
                 limited(), landSet, limited() ? LandSets.ALL : collection == null ? List.of()

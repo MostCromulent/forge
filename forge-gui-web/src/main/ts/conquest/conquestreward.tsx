@@ -6,7 +6,7 @@ import { mountPack, type Pack } from './conquestpack';
 import { mountWheel, spotFor, type Wheel, type WheelOutcome } from './conquestwheel';
 import { pendingAmounts } from './conquestpending';
 import type { Reward, RewardStep } from '../protocol';
-import { t } from '../text';
+import { t, formatNumber } from '../text';
 import { make, reducedMotion } from '../dom';
 
 /** What the reveal has yet to show, by the icon of the balance it was paid into. */
@@ -82,7 +82,7 @@ function Gift({ icon, amount, title, text, lines, button, next }: {
   return (
     <div class="dialog cq-gift">
       <h3>{title}</h3>
-      {icon && <div class="cq-gift-what"><img alt="" src={skinIconUrl(icon)} />{amount !== undefined && <b>{amount.toLocaleString('en-GB')}</b>}</div>}
+      {icon && <div class="cq-gift-what"><img alt="" src={skinIconUrl(icon)} />{amount !== undefined && <b>{formatNumber(amount)}</b>}</div>}
       {text && <p>{text}</p>}
       {lines && (
         <ul class="cq-gift-lines">
@@ -181,7 +181,7 @@ function PackStop({ step, release, zoom, next }: { step: RewardStep; release: (s
       <div class="cq-pack-host" ref={host} />
       <div class="cq-reveal-foot">
         {phase === 'shown' && duplicates > 0 && (
-          <span class="cq-dup-line">{t('lblReceivedAetherShardsForDuplicateCards')}<img alt="" src={skinIconUrl('IMG_AETHER_SHARD')} /><b>{duplicates.toLocaleString('en-GB')}</b></span>
+          <span class="cq-dup-line">{t('lblReceivedAetherShardsForDuplicateCards')}<img alt="" src={skinIconUrl('IMG_AETHER_SHARD')} /><b>{formatNumber(duplicates)}</b></span>
         )}
         {phase === 'shown'
           ? <button class="primary cq-big" onClick={e => { e.stopPropagation(); next(); }}>{t('lblGreat')}</button>

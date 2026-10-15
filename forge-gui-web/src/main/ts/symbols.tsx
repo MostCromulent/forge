@@ -25,6 +25,8 @@ export const Pip = ({ letter }: { letter: string }) => <img class="pip" alt={let
 export const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen'],
   ['C', 'lblColorless']];
 export const FIVE_COLOURS = COLOURS.slice(0, 5);
+/** The key of each colour's name, by its letter. */
+export const COLOUR_NAMES: Record<string, TextKey> = Object.fromEntries(COLOURS);
 
 /** A set with one item put in, or taken out if it was there. */
 export function toggled<T>(set: ReadonlySet<T>, item: T): Set<T> {

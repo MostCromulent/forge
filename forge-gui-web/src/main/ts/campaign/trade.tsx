@@ -9,7 +9,7 @@ import { showNotice } from '../notices';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { CatalogueRow } from '../protocol';
-import { t, type TextKey } from '../text';
+import { t, formatNumber, type TextKey } from '../text';
 
 /** What a mode calls one of its lists, and what it says of trading from it. */
 export interface TradeWords {
@@ -27,8 +27,6 @@ export interface TradeWords {
 /** Something picked: a card's printing or a product, by the key a trade names it by, and how many of it. */
 export interface Pick { key: string; name: string; value: number; count: number; most: number }
 
-const amount = (n: number): string => n.toLocaleString('en-GB');
-
 /** A row as a pick of one, up to as many as its list holds. */
 export const pickOf = (row: CatalogueRow, count = 1): Pick => ({ key: keyOf(row), name: row.name, value: row.value ?? 0, count, most: row.count ?? 1 });
 
@@ -41,7 +39,7 @@ export function PricedButton({ label, icon, iconLabel, size, cost, have, disable
 }) {
   return (
     <button class={cls ? `primary ${cls}` : 'primary'} disabled={disabled || cost > have} onClick={onClick}>
-      {label}<span class="cq-sep">·</span><img class="cq-shard" alt={iconLabel} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl(icon)} />{cost.toLocaleString('en-GB')}
+      {label}<span class="cq-sep">·</span><img class="cq-shard" alt={iconLabel} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl(icon)} />{formatNumber(cost)}
     </button>
   );
 }
@@ -129,7 +127,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
         <span class="seg" role="group">
           {Object.entries(words).map(([id, w]) => {
             const size = info?.lists.find(l => l.source === id)?.count;
-            return <button key={id} aria-pressed={id === source} onClick={() => setSource(id)}>{w.label}{size !== undefined && ` (${amount(size)})`}</button>;
+            return <button key={id} aria-pressed={id === source} onClick={() => setSource(id)}>{w.label}{size !== undefined && ` (${formatNumber(size)})`}</button>;
           })}
         </span>
         <input class="find" type="search" placeholder={t('lblSearch')} autocomplete="off" value={typed} onInput={e => setTyped(e.currentTarget.value)} />
@@ -158,7 +156,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
                 {row.isNew && <span class="new-card">{t('lblNew')}</span>}
                 {row.problem && <span class="inuse">{blocked}</span>}
                 {said.count && row.count != null && <span class="cq-stock">{said.count(row.count)}</span>}
-                <span class="val">{priced(said.row(amount(row.value ?? 0)))}{row.owned != null && <Owned n={row.owned} />}{row.note && <span class="cq-cc-note">{row.note}</span>}</span>
+                <span class="val">{priced(said.row(formatNumber(row.value ?? 0)))}{row.owned != null && <Owned n={row.owned} />}{row.note && <span class="cq-cc-note">{row.note}</span>}</span>
               </button>
           );
           // A list that counts copies takes a count for a pick, under the card; any other is the card alone
@@ -181,7 +179,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
         <div class="cq-sel-bar">
           <button onClick={() => setPicked(new Map())}>{t('lblCancel')}</button>
           <button class="primary" onClick={() => setAsking(true)}>
-            {title}<img class="cq-shard" alt={iconLabel} src={skinIconUrl(icon)} />{amount(total)}
+            {title}<img class="cq-shard" alt={iconLabel} src={skinIconUrl(icon)} />{formatNumber(total)}
           </button>
         </div>
       )}
@@ -189,9 +187,9 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
         <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setAsking(false); }}>
           <div class="dialog cq-exile">
             <h3>{title}</h3>
-            <p class="cq-exile-total">{priced(said.confirm(n, amount(total)))}</p>
+            <p class="cq-exile-total">{priced(said.confirm(n, formatNumber(total)))}</p>
             <ul class="cq-cards-list">
-              {chosen.map(c => <li key={c.key}>{c.count > 1 ? `${c.name} ×${c.count}` : c.name}<span>{priced(`${token} ${amount(c.value * c.count)}`)}</span></li>)}
+              {chosen.map(c => <li key={c.key}>{c.count > 1 ? `${c.name} ×${c.count}` : c.name}<span>{priced(`${token} ${formatNumber(c.value * c.count)}`)}</span></li>)}
             </ul>
             <div class="actions">
               <button onClick={() => setAsking(false)}>{t('lblCancel')}</button>

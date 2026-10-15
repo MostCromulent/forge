@@ -6,7 +6,7 @@ import { ColourToggles, toggled } from '../symbols';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { QuestOptions } from '../protocol';
-import { t, type TextKey } from '../text';
+import { t, formatNumber, type TextKey } from '../text';
 
 /** How the starting pool's cards are chosen, as mobile's four buttons offer it. */
 interface Distribution { poolType: string; colors: string; artifacts: boolean; completeSet: boolean; duplicates: boolean; boosters: number }
@@ -212,7 +212,7 @@ export function NewQuest({ model, actions }: { model: Model; actions: Actions })
       [t('lblStartingWorld'), worldOf(v) ?? null],
       [t('lblStartingPool'), ownSets(v) ? worldOf(v) ?? null : v.choice ?? nameOf(POOLS, v.pool)],
       [t('lblPrizedCards'), v.prizeFormat ?? nameOf(PRIZES, v.prizes)],
-      [t('lblStartingCredits'), difficulty ? difficulty.credits.toLocaleString('en-GB') : null],
+      [t('lblStartingCredits'), difficulty ? formatNumber(difficulty.credits) : null],
     ],
     note: t('lblWebQuestTicketNote'),
   };

@@ -34,6 +34,17 @@ export function textLanguage(): string {
   return language;
 }
 
+/** A number as Forge's language writes it, as t() writes its arguments. */
+export function formatNumber(n: number): string {
+  return numbers.format(n);
+}
+
+/** A day as Forge's language writes it shortly ("15 Oct"): iso's (yyyy-mm-dd, as the server sends a save's date), or today's. */
+export function shortDay(iso?: string): string {
+  const [y, m, d] = iso ? iso.split('-').map(Number) : [];
+  return (iso ? new Date(y, m - 1, d) : new Date()).toLocaleDateString(language, { day: 'numeric', month: 'short' });
+}
+
 /** The text for a key, with {0}, {1}… filled from the arguments as Forge's Localizer fills them. */
 export function t(key: TextKey, ...args: Arg[]): string {
   return pieces(key, args).join('');

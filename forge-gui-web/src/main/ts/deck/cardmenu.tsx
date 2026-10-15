@@ -23,8 +23,6 @@ const IN_SECTION: Record<DeckSection, TextKey> = {
   Contraptions: 'lblWebCardMenuInContraptions', Stickers: 'lblWebCardMenuInStickers',
 };
 
-const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders', 'CommanderDraft']);
-
 export interface MenuAt {
   name: string;
   from: Zone;
@@ -47,7 +45,6 @@ export function CardMenu({ at, state, actions, close, printings }: {
     document.addEventListener('pointerdown', away);
     return () => document.removeEventListener('pointerdown', away);
   }, []);
-  const commanderFormat = !state.unrestricted && COMMANDER_FORMATS.has(state.format);
   const act = (run: () => void) => () => {
     run();
     close();
@@ -81,7 +78,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
             </button>
           )}
         </>}
-        {commanderFormat && zone !== 'Commander' && (
+        {state.commanderZone && zone !== 'Commander' && (
           <button role="menuitem" onClick={act(() => actions.edit({ op: 'commander', name: at.name, from: zone ?? undefined, count: 1 }))}>
             {t('lblWebCardMenuMakeCommander')}
           </button>
@@ -109,7 +106,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
       </>}
       <hr />
       {zone !== 'Commander' && (
-        <button role="menuitem" disabled={!commanderFormat} title={commanderFormat ? undefined : t('lblWebCardMenuOnlyCommanderFormats')}
+        <button role="menuitem" disabled={!state.commanderZone} title={state.commanderZone ? undefined : t('lblWebCardMenuOnlyCommanderFormats')}
           onClick={act(() => actions.edit({ op: 'commander', name: at.name, from: zone ?? undefined, count: 1 }))}>
           {t('lblWebCardMenuMakeCommander')}
         </button>
