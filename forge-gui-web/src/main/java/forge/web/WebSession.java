@@ -642,14 +642,17 @@ public final class WebSession implements IHasForgeLog {
                 }
             });
 
-    /** The table can be changed only while it is set up: not while it is being built, and not once it is played. */
+    /**
+     * The table can be changed only while it is set up: not while it is being built, and not once it is played.
+     * Every change to it is made on the host UI thread, which also opens, starts and leaves it.
+     */
     private static <T extends Record> Handler<WebSession, T> atSetup(final Handler<WebSession, T> change) {
-        return (s, ch, c) -> {
+        return (s, ch, c) -> s.ui.invokeInEdtLater(() -> {
             if (s.stage instanceof Setup) {
                 change.run(s, ch, c);
                 s.lobby.sendState(ch);
             }
-        };
+        });
     }
 
     /** A change to the table's draft or sealed event, which is the host's to make. */
@@ -860,7 +863,7 @@ public final class WebSession implements IHasForgeLog {
             return;
         }
         ui.runBackgroundTask("Joining", () -> {
-            lobby.forget();
+            ui.invokeInEdtAndWait(lobby::forget);
             final WebGuiGame gui = new WebGuiGame(settings);
             gui.whenOpened(() -> guestMatchOpened(gui));
             newOnlineDraft(gui);
@@ -880,12 +883,14 @@ public final class WebSession implements IHasForgeLog {
                 local.endMatch();
                 return;
             }
-            applyChosenAvatar();
-            final BrowserChannel b = browser;
-            if (b != null) {
-                lobby.sendDecks(b);
-                lobby.sendState(b);
-            }
+            ui.invokeInEdtLater(() -> {
+                applyChosenAvatar();
+                final BrowserChannel b = browser;
+                if (b != null) {
+                    lobby.sendDecks(b);
+                    lobby.sendState(b);
+                }
+            });
         });
     }
 
@@ -900,11 +905,11 @@ public final class WebSession implements IHasForgeLog {
                     if (onlineDraft == self[0]) {
                         showDraft(state);
                     }
-                }, (eventId, pool) -> {
+                }, (eventId, pool) -> ui.invokeInEdtLater(() -> {
                     if (onlineDraft == self[0]) {
                         poolArrived(eventId, pool);
                     }
-                });
+                }));
         self[0] = draft;
         onlineDraft = draft;
         local.setDraftHandler(draft);
@@ -1023,15 +1028,17 @@ public final class WebSession implements IHasForgeLog {
 
     /** The table changed. The browser sees it only once it is set up; until then it is still being built. */
     void lobbyChanged() {
-        if (isHost) {
-            sessions.seatsMayHaveChanged();
-        }
-        final BrowserChannel b = browser;
-        if (b != null && stage instanceof Setup) {
-            // A guest learns of the host's format or card pool only here, so its deck list is rebuilt here too
-            relistDecks(b);
-            lobby.sendState(b);
-        }
+        ui.invokeInEdtLater(() -> {
+            if (isHost) {
+                sessions.seatsMayHaveChanged();
+            }
+            final BrowserChannel b = browser;
+            if (b != null && stage instanceof Setup) {
+                // A guest learns of the host's format or card pool only here, so its deck list is rebuilt here too
+                relistDecks(b);
+                lobby.sendState(b);
+            }
+        });
     }
 
     private void chatted(final String from, final String text) {
@@ -1055,7 +1062,7 @@ public final class WebSession implements IHasForgeLog {
         if (face != null) {
             avatar = face;
         }
-        applyChosenAvatar();
+        ui.invokeInEdtLater(this::applyChosenAvatar);
         channel.send(hello());
         sessions.announcePresence();
         joinHostGame();

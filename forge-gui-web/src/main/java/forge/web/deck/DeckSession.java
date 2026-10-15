@@ -352,8 +352,12 @@ public final class DeckSession implements IHasForgeLog {
         if (DeckStore.family(done.check().format()) != DeckStore.family(lobby.format())) {
             return Localizer.getInstance().getMessage("lblWebEditorWrongFormat", done.check().format());
         }
-        lobby.setDeck(seat, adopt(done));
-        lobby.sendState(channel);
+        final String key = adopt(done);
+        // The table's seats are changed only on the host UI thread
+        ui.invokeInEdtLater(() -> {
+            lobby.setDeck(seat, key);
+            lobby.sendState(channel);
+        });
         return null;
     }
 
@@ -530,8 +534,11 @@ public final class DeckSession implements IHasForgeLog {
                     channel.send(new Notice(Localizer.getInstance().getMessage("lblWebEditorNotSeated"), Localizer.getInstance().getMessage("lblWebEditorFormatMismatch", check.format(), lobby.format()), false));
                     return true;
                 }
-                lobby.setDeck(c.seat(), relisted(key, deck));
-                lobby.sendState(channel);
+                final String listed = relisted(key, deck);
+                ui.invokeInEdtLater(() -> {
+                    lobby.setDeck(c.seat(), listed);
+                    lobby.sendState(channel);
+                });
             }
             case edit -> {
                 lobby.sendDecks(channel);
