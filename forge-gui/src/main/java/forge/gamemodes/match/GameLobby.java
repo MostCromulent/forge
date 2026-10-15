@@ -206,7 +206,8 @@ public abstract class GameLobby implements IHasGameType {
         applyArchenemyTeams();
         updateView(true);
     }
-    private String randomName() {
+    /** A random name for a computer seat, not one already at the table. */
+    public String randomName() {
         final List<String> names = Lists.newArrayListWithCapacity(MAX_PLAYERS);
         for (final LobbySlot slot : data.slots) {
             names.add(slot.getName());
