@@ -350,9 +350,9 @@ public abstract class GameLobby implements IHasGameType {
         return data.appliedVariants;
     }
 
-    private boolean isEnoughTeams() {
+    private static boolean isEnoughTeams(final List<LobbySlot> slots) {
         int lastTeam = -1;
-        for (final LobbySlot slot : data.slots) {
+        for (final LobbySlot slot : slots) {
             final int team = slot.getTeam();
             if (lastTeam == -1) {
                 lastTeam = team;
@@ -410,7 +410,7 @@ public abstract class GameLobby implements IHasGameType {
             return null;
         }
 
-        if (!isEnoughTeams()) {
+        if (!isEnoughTeams(activeSlots)) {
             SOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblNotEnoughTeams"));
             return null;
         }
