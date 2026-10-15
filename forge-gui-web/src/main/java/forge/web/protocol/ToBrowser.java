@@ -479,7 +479,8 @@ public final class ToBrowser {
             String suggestStackYield, String suggestNoActions, boolean suppressAfterYield, boolean suppressOwnTurn,
             boolean skipPhaseDelay, boolean skipResolveDelay, boolean autoTapPreview,
             String autoYieldMode, GameLogVerbosity logDetail, String arrows, boolean devMode,
-            String highlightColor, int soundVolume, int musicVolume) {
+            String highlightColor, int soundVolume, int musicVolume, boolean filteredHands, String mulliganRule,
+            String aiProfile, boolean ante) {
     }
 
     @Message("log")

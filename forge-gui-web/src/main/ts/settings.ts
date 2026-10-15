@@ -147,6 +147,22 @@ export const SETTINGS: SettingDef[] = [
   { section: t('lblWebOptionsSectionKeys'), key: 'keyNextFace', label: t('lblWebOptionsKeyNextFace'), hint: t('lblWebOptionsUnderPointer'), action: 'nextFace', type: 'key', def: 'f' },
   { section: t('lblWebOptionsSectionKeys'), key: 'keyCardText', label: t('lblWebOptionsKeyCardText'), hint: t('lblWebOptionsUnderPointer'), action: 'cardText', type: 'key', def: 't' },
   {
+    section: t('lblWebOptionsSectionTable'), key: 'mulliganRule', label: t('lblWebOptionsMulliganRule'), type: 'choice', server: true, hostOnly: true,
+    options: ['London', 'Vancouver', 'Paris', 'Original', 'Houston'].map(r => [r, r]), def: 'London',
+  },
+  {
+    section: t('lblWebOptionsSectionTable'), key: 'filteredHands', label: t('lblWebOptionsFilteredHands'), hint: t('lblWebOptionsFilteredHandsHint'),
+    type: 'toggle', server: true, hostOnly: true, def: false,
+  },
+  {
+    section: t('lblWebOptionsSectionTable'), key: 'aiProfile', label: t('lblWebOptionsAiProfile'), hint: t('lblWebOptionsAiProfileHint'),
+    type: 'choice', server: true, hostOnly: true,
+    options: ['Default', 'Cautious', 'Reckless', 'Experimental', 'Random (Every Match)', 'Random (Every Game)'].map(p => [p, p]), def: 'Default',
+  },
+  {
+    section: t('lblWebOptionsSectionTable'), key: 'ante', label: t('lblWebOptionsAnte'), type: 'toggle', server: true, hostOnly: true, def: false,
+  },
+  {
     section: t('lblAdvanced'), key: 'devMode', label: t('lblDevMode'), type: 'toggle', server: true, hostOnly: true, def: false,
     hint: t('lblWebOptionsDevModeHint'),
   },

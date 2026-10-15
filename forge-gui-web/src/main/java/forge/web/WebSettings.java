@@ -1,6 +1,9 @@
 package forge.web;
 
 import com.google.common.primitives.Ints;
+import forge.MulliganDefs;
+import forge.StaticData;
+import forge.ai.AiProfileUtil;
 import forge.game.GameLogVerbosity;
 import forge.game.phase.PhaseType;
 import forge.interfaces.IGameController;
@@ -13,6 +16,7 @@ import forge.web.protocol.ToBrowser.ServerSettings;
 import org.tinylog.Logger;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -62,7 +66,11 @@ public final class WebSettings {
                 "#" + player.get(FPref.UI_ACTIONABLE_HIGHLIGHT_COLOR),
                 // A volume of zero is the off switch, so the two preferences are reported as one number
                 player.getBoolean(FPref.UI_ENABLE_SOUNDS) ? player.getInt(FPref.UI_VOL_SOUNDS) : 0,
-                player.getBoolean(FPref.UI_ENABLE_MUSIC) ? player.getInt(FPref.UI_VOL_MUSIC) : 0);
+                player.getBoolean(FPref.UI_ENABLE_MUSIC) ? player.getInt(FPref.UI_VOL_MUSIC) : 0,
+                player.getBoolean(FPref.FILTERED_HANDS),
+                MulliganDefs.GetRuleByName(player.get(FPref.MULLIGAN_RULE)).name(),
+                player.get(FPref.UI_CURRENT_AI_PROFILE),
+                player.getBoolean(FPref.UI_ANTE));
     }
 
     /** Saves a setting, dropping an illegal value because it could reach the file the desktop client shares. */
@@ -79,6 +87,11 @@ public final class WebSettings {
             // Desktop keeps the switch in a static as well, which the draft code and debug output read
             if (player.shared()) {
                 ForgePreferences.DEV_MODE = on;
+            }
+        } else if (TABLE_SETTINGS.contains(key)) {
+            // These are the rules of the host's table, so a guest's browser has no say in them
+            if (!player.shared() || !setTableRule(player, key, value)) {
+                return;
             }
         } else if ("autoYieldMode".equals(key)) {
             setEverywhere(player, controller, FPref.UI_AUTO_DECISION_MODE,
@@ -107,6 +120,39 @@ public final class WebSettings {
             return;
         }
         player.save();
+    }
+
+    private static final List<String> TABLE_SETTINGS = List.of("filteredHands", "mulliganRule", "aiProfile", "ante");
+
+    /** Sets one of the host's table rules, and answers false for a value Forge does not know. */
+    private static boolean setTableRule(final PlayerSettings player, final String key, final String value) {
+        switch (key) {
+            case "filteredHands" -> {
+                final boolean on = Boolean.parseBoolean(value);
+                player.set(FPref.FILTERED_HANDS, on);
+                // Forge copies this into StaticData only when it starts, which is why desktop asks for a restart
+                StaticData.instance().setFilteredHandsEnabled(on);
+            }
+            case "mulliganRule" -> {
+                final MulliganDefs.MulliganRule rule = Arrays.stream(MulliganDefs.MulliganRule.values())
+                        .filter(r -> r.name().equals(value)).findFirst().orElse(null);
+                if (rule == null) {
+                    Logger.warn("Web client: bad mulligan rule {}", value);
+                    return false;
+                }
+                player.set(FPref.MULLIGAN_RULE, rule.name());
+                StaticData.instance().setMulliganRule(rule);
+            }
+            case "aiProfile" -> {
+                if (!AiProfileUtil.getProfilesDisplayList().contains(value)) {
+                    Logger.warn("Web client: bad AI profile {}", value);
+                    return false;
+                }
+                player.set(FPref.UI_CURRENT_AI_PROFILE, value);
+            }
+            default -> player.set(FPref.UI_ANTE, Boolean.parseBoolean(value));
+        }
+        return true;
     }
 
     /** A setting the game reads as well as the player: the player's own copy, and the game's copy of it, if any. */

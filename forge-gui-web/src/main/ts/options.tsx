@@ -31,7 +31,7 @@ function matching(defs: SettingDef[], typed: string): SettingDef[] {
 const TABS: { name: string; sections: string[]; icon: string }[] = [
   {
     name: t('lblWebOptionsSectionGameplay'),
-    sections: [t('lblWebOptionsSectionGameplay'), t('lblWebGameMenuStopsTitle'), t('lblWebOptionsYieldOffers'), t('lblSpeedSettings'), t('lblAutoYieldsAndTriggers')],
+    sections: [t('lblWebOptionsSectionGameplay'), t('lblWebOptionsSectionTable'), t('lblWebGameMenuStopsTitle'), t('lblWebOptionsYieldOffers'), t('lblSpeedSettings'), t('lblAutoYieldsAndTriggers')],
     icon: ICONS.gamepad,
   },
   { name: t('lblDisplay'), sections: [t('lblDisplay')], icon: ICONS.monitor },
