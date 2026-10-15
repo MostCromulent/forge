@@ -1,16 +1,24 @@
 name: Test web GUI
 
 # The web module is outside the default reactor (its build downloads Node), so test-build.yaml never builds it.
-# This runs its Java and browser-client tests beside that workflow on changes that could break it.
+# This runs its Java and browser-client tests beside that workflow on changes that could break it, here or in the code it builds on.
 
 on:
   push:
     paths:
       - 'forge-gui-web/**'
+      # The module builds on the rest of Forge, and its page reads the English language file
+      - '**/*.java'
+      - '**/pom.xml'
+      - 'forge-gui/res/languages/en-US.properties'
       - '.github/workflows/test-web.yml'
   pull_request:
     paths:
       - 'forge-gui-web/**'
+      # The module builds on the rest of Forge, and its page reads the English language file
+      - '**/*.java'
+      - '**/pom.xml'
+      - 'forge-gui/res/languages/en-US.properties'
       - '.github/workflows/test-web.yml'
   workflow_dispatch:
 
