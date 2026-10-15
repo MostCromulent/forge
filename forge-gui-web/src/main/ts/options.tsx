@@ -82,15 +82,43 @@ export function Options({ close }: { close: () => void }) {
       </>}
       footer={!searching && shown[0]?.type === 'key'
         ? <button class="section-action" onClick={() => setKeys(defaultKeys())}>{t('lblWebOptionsResetKeys')}</button> : null}>
-      {shown.flatMap((def, i) => [
-        // A tab's first section goes by the tab's own name, so it has no heading
-        ...(def.section !== shown[i - 1]?.section && (searching || def.section !== tab.name)
-          ? [<SectionHeading key={`section ${def.section}`} name={def.section} keys={searching && def.type === 'key'} />] : []),
-        <Row key={def.key} def={def} />,
-      ])}
+      {blocks(shown, searching, tab.name)}
       {!searching && tab.name === t('lblAdvanced') && <BackupRow />}
       {!shown.length && <p class="hint">{t('lblWebOptionsNoMatch')}</p>}
     </OptionsDialog>
+  );
+}
+
+/** The rows in order under their section headings, with the host's own settings framed together. */
+function blocks(shown: SettingDef[], searching: boolean, tabName: string): ComponentChildren[] {
+  const out: ComponentChildren[] = [];
+  for (let i = 0; i < shown.length;) {
+    const def = shown[i];
+    // A tab's first section goes by the tab's own name, so it has no heading
+    const named = def.section !== shown[i - 1]?.section && (searching || def.section !== tabName);
+    if (def.hostOnly) {
+      let end = i;
+      while (end < shown.length && shown[end].hostOnly && shown[end].section === def.section) end++;
+      out.push(<HostGroup key={`host ${def.key}`} name={named ? def.section : null} defs={shown.slice(i, end)} />);
+      i = end;
+    } else {
+      if (named) out.push(<SectionHeading key={`section ${def.section}`} name={def.section} keys={searching && def.type === 'key'} />);
+      out.push(<Row key={def.key} def={def} />);
+      i++;
+    }
+  }
+  return out;
+}
+
+/** Settings only the host has, which cover everyone at the table, framed so it is plain where they begin and end. */
+function HostGroup({ name, defs }: { name: string | null; defs: SettingDef[] }) {
+  return (
+    <section class="host-group" aria-label={name ?? t('lblWebOptionsHostOnly')}>
+      <h4>{name}<span class="host-only"><Icon d={ICONS.crown} />{t('lblWebOptionsHostOnly')}</span></h4>
+      {/* A lone setting, such as dev mode, says enough with the mark alone */}
+      {name && <p class="hint">{t('lblWebOptionsHostOnlyHint')}</p>}
+      {defs.map(def => <Row key={def.key} def={def} />)}
+    </section>
   );
 }
 

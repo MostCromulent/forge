@@ -111,6 +111,16 @@ html:not([data-form="portrait"]) #prompt.strike .cancel::before {
 #options .section-action:hover { color: var(--text); text-decoration: underline; }
 #options .setting { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 24px; min-height: 30px; padding: 9px 0; border-top: 1px solid var(--line); }
 #options h4 + .setting, #options .rows > .setting:first-child { border-top: 0; }
+/* The host's own settings sit in one frame in the accent, so where they begin and end is plain */
+#options .host-group { margin: 14px 0 8px; padding: 2px 12px 4px; border: 1px solid color-mix(in srgb, var(--accent-2) 45%, var(--line)); border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-2) 4%, transparent); }
+#options .rows > .host-group:first-child { margin-top: 8px; }
+#options .host-group h4 { justify-content: flex-start; gap: 8px; margin: 10px 0 0; }
+#options .host-group > .hint { margin: 2px 0 2px; }
+#options .host-group > .hint + .setting { border-top: 0; }
+#options .host-only { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 1px 5px; border: 1px solid var(--accent-2); border-radius: 999px;
+  color: var(--accent-2); font-size: 10.5px; font-weight: 600; letter-spacing: .02em; text-transform: none; }
+#options .host-only svg { width: 11px; height: 11px; }
 /* A choice shown as pictures takes the row under its name */
 #options .setting.wide { grid-template-columns: minmax(0, 1fr); }
 #options .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
