@@ -9,8 +9,8 @@ import { avatarUrl } from './looks';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES, Wordmark } from './header';
 import type { Actions } from './actions';
 import type { Model } from './model';
-import { store, stored } from './storage';
 import { t } from './text';
+import { rememberAvatar, rememberedAvatar } from './identity';
 
 /** Kept to the server's limit (WebSession.MAX_NAME_LENGTH), so the field stops where the server would refuse. */
 const MAX_NAME_LENGTH = 24;
@@ -239,28 +239,6 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
       )}
     </div>
   );
-}
-
-const NAME_KEY = 'forge.playerName';
-const AVATAR_KEY = 'forge.avatar';
-
-/** The name this browser last played under, offered for it when it arrives on a server that does not know it. */
-export function rememberedName(): string | null {
-  return stored(NAME_KEY);
-}
-
-export function rememberName(name: string | null): void {
-  store(NAME_KEY, name || null);
-}
-
-/** The face this browser last played under. The first avatar is as good a default as any. */
-export function rememberedAvatar(): number {
-  const saved = Number(stored(AVATAR_KEY));
-  return Number.isInteger(saved) && saved >= 0 ? saved : 0;
-}
-
-export function rememberAvatar(index: number): void {
-  store(AVATAR_KEY, String(index));
 }
 
 /** A browser with no seat: one is being taken, the last attempt at one failed, or nobody has opened a table yet. */

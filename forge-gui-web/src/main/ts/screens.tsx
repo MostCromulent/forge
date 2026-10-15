@@ -1,7 +1,8 @@
 // Everything outside the board is drawn with Preact, and the board by hand (board.ts) because it is placed by measuring
 
 import { render } from 'preact';
-import { Menu, NamePrompt, rememberedName } from './menu';
+import { Menu, NamePrompt } from './menu';
+import { rememberedName } from './identity';
 import { Lobby } from './lobby/lobby';
 import { Editor } from './deck/editor';
 import { Limited } from './limited/limited';

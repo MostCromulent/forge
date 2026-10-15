@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
-import { rememberAvatar } from './menu';
+import { rememberAvatar } from './identity';
 import { logTints } from './match/log';
 import { players, type ChatEntry, type Model } from './model';
 import type { Actions } from './actions';

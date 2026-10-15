@@ -6,7 +6,7 @@ import { nextFrom } from './dial';
 import { imageUrl } from '../images';
 import { cancelFlight, land, lift } from '../flight';
 import { avatarUrl } from '../looks';
-import { rememberedAvatar } from '../menu';
+import { rememberedAvatar } from '../identity';
 import { SymbolText } from '../symbols';
 import { CARD_TYPES, colourHeading, mvGroup } from '../deck/decklist';
 import { changeUi } from '../ui';

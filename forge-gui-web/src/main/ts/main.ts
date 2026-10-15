@@ -8,7 +8,7 @@ import { initForm, isPortrait } from './form';
 import { initPress } from './press';
 import { initSheets, matchHistory } from './sheet';
 import { keyCommand, type KeyCommand } from './keys';
-import { rememberName, rememberedAvatar, rememberedName } from './menu';
+import { rememberName, rememberedAvatar, rememberedName } from './identity';
 import { renderScreens, pageUnder, screenOf } from './screens';
 import { readySplit } from './match/dialogs';
 import { announceComing, renderMatch, resetTable } from './match/board';

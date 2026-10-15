@@ -4,7 +4,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from '../ui';
 import { sleeveUrl, avatarUrl } from '../looks';
 import { LookPicker } from '../lookpicker';
-import { rememberAvatar } from '../menu';
+import { rememberAvatar } from '../identity';
 import { BracketMark, DeckFinder } from '../deck/deckfinder';
 import { imageUrl, smallImage } from '../images';
 import { ExtraPicker } from './extrapicker';
