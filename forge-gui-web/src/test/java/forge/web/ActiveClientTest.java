@@ -12,13 +12,13 @@ import forge.game.player.Player;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.net.DeltaPacket;
 import forge.player.PlayerControllerHuman;
+import forge.web.match.WebGuiGame;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import forge.web.match.WebGuiGame;
 
 public class ActiveClientTest {
     @BeforeClass

@@ -5,11 +5,11 @@ import forge.gamemodes.net.server.PortForward;
 import forge.localinstance.properties.ForgeNetPreferences.FNetPref;
 import forge.model.FModel;
 import forge.util.IHasForgeLog;
+import forge.web.console.CloudflareTunnel;
+import forge.web.console.ServerTraffic;
 
 import java.io.File;
 import java.util.function.Consumer;
-import forge.web.console.CloudflareTunnel;
-import forge.web.console.ServerTraffic;
 
 /** The web server as something the console can stop and start again, with tokens that outlive a restart so old links still work. */
 public final class WebService implements IHasForgeLog {

@@ -18,12 +18,12 @@ import forge.game.player.RegisteredPlayer;
 import forge.game.zone.ZoneType;
 import forge.gui.card.CardDetailUtil;
 import forge.model.FModel;
+import forge.web.WebTestSupport;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import forge.web.WebTestSupport;
 
 /** The page turns some of CardDetailUtil's English lines into chips (match/rulestext.ts), so their shapes are pinned here. */
 public class CardDetailTextTest {

@@ -4,8 +4,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.gamemodes.net.DeltaPacket;
 import forge.trackable.TrackableProperty;
-import forge.trackable.TrackableTypes.TrackableType;
 import forge.trackable.TrackableTypes;
+import forge.trackable.TrackableTypes.TrackableType;
+import forge.web.WebTestSupport;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -15,7 +16,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import forge.web.WebTestSupport;
 
 public class JsonCodecTest {
     @BeforeClass

@@ -2,12 +2,12 @@ package forge.web.console;
 
 import forge.util.Localizer;
 
-import javax.swing.JComponent;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.util.Locale;
+import javax.swing.JComponent;
 
 /** The server window's totals, under the traffic graph and in its colours: how long the server has been up, who is on it, and every byte so far. */
 final class StatsBox extends JComponent {

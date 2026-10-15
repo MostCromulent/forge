@@ -15,11 +15,11 @@ import forge.game.card.CounterType;
 import forge.game.keyword.KeywordCollectionView;
 import forge.game.keyword.KeywordView;
 import forge.gamemodes.net.DeltaPacket;
-import forge.localinstance.skin.FSkinProp;
 import forge.item.IPaperCard;
+import forge.localinstance.skin.FSkinProp;
 import forge.trackable.TrackableProperty;
-import forge.trackable.TrackableTypes.TrackableType;
 import forge.trackable.TrackableTypes;
+import forge.trackable.TrackableTypes.TrackableType;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;

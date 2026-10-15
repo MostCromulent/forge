@@ -11,13 +11,13 @@ import forge.game.player.PlayerView;
 import forge.game.zone.ZoneType;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.web.WebTestSupport;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.HashMap;
 import java.util.Map;
-import forge.web.WebTestSupport;
 
 public class BrowserSoundsTest {
     @BeforeClass

@@ -17,11 +17,18 @@ import forge.item.PaperCard;
 import forge.itemmanager.SFilterUtil;
 import forge.model.FModel;
 import forge.util.FileSection;
+import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.util.storage.IStorage;
+import forge.web.WebGuiBase;
 import forge.web.deck.DeckCatalog.OnDevice;
+import forge.web.lobby.Lobby;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.FromBrowser;
 import forge.web.protocol.FromBrowser.*;
+import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.*;
+import forge.web.protocol.Wire;
 import org.apache.commons.lang3.EnumUtils;
 
 import java.io.IOException;
@@ -34,32 +41,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import forge.web.WebGuiBase;
-import forge.web.lobby.Lobby;
-import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.Wire;
-import forge.web.protocol.FromBrowser.CountedName;
-import forge.web.protocol.FromBrowser.DeckFile;
-import forge.web.protocol.FromBrowser.DeviceDeckText;
-import forge.web.protocol.FromBrowser.EditorEdit;
-import forge.web.protocol.FromBrowser.EditorOpen;
-import forge.web.protocol.FromBrowser.ImportCommit;
-import forge.web.protocol.FromBrowser.ImportFetch;
-import forge.web.protocol.ToBrowser;
-import forge.web.protocol.ToBrowser.DeviceDeck;
-import forge.web.protocol.FromBrowser;
-import forge.web.protocol.FromBrowser.BrowseFormat;
-import forge.web.protocol.FromBrowser.DeckDelete;
-import forge.web.protocol.FromBrowser.DeckFavourite;
-import forge.web.protocol.FromBrowser.DeviceDecks;
-import forge.web.protocol.FromBrowser.EditorCheck;
-import forge.web.protocol.FromBrowser.EditorDeck;
-import forge.web.protocol.FromBrowser.EditorRename;
-import forge.web.protocol.FromBrowser.ImportRead;
-import forge.web.protocol.ToBrowser.DeckFileText;
-import forge.web.protocol.ToBrowser.EditorMessage;
-import forge.web.protocol.ToBrowser.NameTaken;
-import forge.util.IHasForgeLog;
 
 /** One browser's deck editor and importer, which also keeps the decks a guest's browser stores. */
 public final class DeckSession implements IHasForgeLog {
@@ -79,6 +60,10 @@ public final class DeckSession implements IHasForgeLog {
     private String editorPath = "";
     /** The open deck is an event's pool, which goes on its player's seat when the editor closes, built or not. */
     private boolean eventPool;
+    /** A guest's event pool its browser has not yet said it keeps. */
+    private volatile EventPool pendingPool;
+    /** Where to send a guest's deck, which the session sets as its browser comes and goes. */
+    private final AtomicReference<BrowserChannel> channelFor = new AtomicReference<>();
 
     public DeckSession(final Lobby lobby, final WebGuiBase ui, final BooleanSupplier host, final BooleanSupplier atTable,
             final Map<String, OnDevice> device) {
@@ -171,9 +156,7 @@ public final class DeckSession implements IHasForgeLog {
             case "editorDeck" -> {
                 final FromBrowser.DeckOp op = Wire.decode(msg, EditorDeck.class).op();
                 if (op == FromBrowser.DeckOp.file) {
-                    // The serializer ends some lines for Windows and some plainly, and a file wants one or the other
-                    channel.send(new DeckFileText(editor.deck().getName(),
-                            String.join("\n", DeckSerializer.serializeDeck(editor.deck())).replace("\r\n", "\n")));
+                    channel.send(new DeckFileText(editor.deck().getName(), text(editor.deck())));
                     yield null;
                 }
                 yield op == FromBrowser.DeckOp.delete ? delete(channel) : editor.duplicate();
@@ -273,7 +256,7 @@ public final class DeckSession implements IHasForgeLog {
         final DeckEditor.Target target;
         if (eventDecks == null) {
             pendingPool = new EventPool(deviceId, pool, type);
-            sendDeviceDeck(deviceId, String.join("\n", DeckSerializer.serializeDeck(pool)), type);
+            sendDeviceDeck(deviceId, text(pool), type);
             target = new DeckEditor.Device(deviceId);
         } else {
             target = new DeckEditor.Stored(eventDecks);
@@ -314,9 +297,6 @@ public final class DeckSession implements IHasForgeLog {
             channel.send(new EditorMessage(null));
         }
     }
-
-    /** A guest's event pool its browser has not yet said it keeps. */
-    private volatile EventPool pendingPool;
 
     private record EventPool(String id, Deck deck, GameType format) {
     }
@@ -599,7 +579,7 @@ public final class DeckSession implements IHasForgeLog {
             id = null;
         }
         final String kept = id == null ? UUID.randomUUID().toString() : id;
-        sendDeviceDeck(kept, String.join("\n", DeckSerializer.serializeDeck(deck)), check.format());
+        sendDeviceDeck(kept, text(deck), check.format());
         return lobby.adopt(DeckCatalog.DEVICE, kept, deck);
     }
 
@@ -621,15 +601,12 @@ public final class DeckSession implements IHasForgeLog {
         }
     }
 
-    /** Where to send a guest's deck, which the session sets as its browser comes and goes. */
-    private final AtomicReference<BrowserChannel> channelFor = new AtomicReference<>();
-
     public void attach(final BrowserChannel channel) {
         channelFor.set(channel);
     }
 
     private static DeviceDeck deviceDeck(final String id, final Deck deck, final GameType format) {
-        return new DeviceDeck(id, String.join("\n", DeckSerializer.serializeDeck(deck)), format.name());
+        return new DeviceDeck(id, text(deck), format.name());
     }
 
     private void keepDeviceDecks(final List<DeviceDeckText> decks) {
@@ -637,7 +614,7 @@ public final class DeckSession implements IHasForgeLog {
         if (p != null && decks.stream().anyMatch(d -> p.id().equals(d.id()))) {
             pendingPool = null;
         } else if (p != null) {
-            sendDeviceDeck(p.id(), String.join("\n", DeckSerializer.serializeDeck(p.deck())), p.format());
+            sendDeviceDeck(p.id(), text(p.deck()), p.format());
         }
         for (final DeviceDeckText d : decks) {
             try {
@@ -646,6 +623,11 @@ public final class DeckSession implements IHasForgeLog {
                 netLog.warn(e, "A deck kept in a guest's browser could not be read");
             }
         }
+    }
+
+    /** A deck as a .dck file's text. The serializer ends some lines for Windows and some plainly, so all are made plain. */
+    private static String text(final Deck deck) {
+        return String.join("\n", DeckSerializer.serializeDeck(deck)).replace("\r\n", "\n");
     }
 
     private static Deck parse(final String text) {

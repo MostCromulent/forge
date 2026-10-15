@@ -2,7 +2,6 @@ package forge.web.console;
 
 import forge.util.Localizer;
 
-import javax.swing.JComponent;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -10,6 +9,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.util.Locale;
+import javax.swing.JComponent;
 
 /** The last five minutes of bytes through the port, with what was sent stacked by kind and what was received as a dashed line. */
 final class TrafficGraph extends JComponent {

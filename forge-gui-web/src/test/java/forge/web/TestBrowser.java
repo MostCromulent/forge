@@ -3,6 +3,10 @@ package forge.web;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import forge.web.match.BrowserModel;
+import forge.web.match.WebGuiGame;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 
 import java.util.Deque;
@@ -21,10 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import forge.web.match.BrowserModel;
-import forge.web.match.WebGuiGame;
-import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.JsonCodec;
 
 /** A browser that keeps everything the server sends it and the game it describes, and can answer for the web seat. */
 final class TestBrowser implements BrowserChannel {

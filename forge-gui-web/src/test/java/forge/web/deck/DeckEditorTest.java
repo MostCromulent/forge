@@ -9,6 +9,8 @@ import forge.game.GameType;
 import forge.item.PaperCard;
 import forge.util.storage.IStorage;
 import forge.util.storage.StorageImmediatelySerialized;
+import forge.web.WebTestSupport;
+import forge.web.protocol.ToBrowser;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -21,8 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import forge.web.WebTestSupport;
-import forge.web.protocol.ToBrowser;
 
 public class DeckEditorTest {
     private File dir;

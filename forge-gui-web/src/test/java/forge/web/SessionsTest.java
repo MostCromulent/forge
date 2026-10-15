@@ -8,6 +8,7 @@ import forge.gamemodes.match.input.InputPassPriority;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.gui.GuiBase;
 import forge.player.PlayerControllerHuman;
+import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -21,7 +22,6 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
-import forge.web.protocol.JsonCodec;
 
 /** One server serves the whole class, because stopping and restarting it between tests races with its own shutdown. */
 abstract class SessionsTest {

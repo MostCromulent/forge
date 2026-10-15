@@ -1,7 +1,7 @@
 package forge.web.match;
 
-import com.google.common.primitives.Ints;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -10,6 +10,7 @@ import forge.ImageKeys;
 import forge.LobbyPlayer;
 import forge.card.MagicColor;
 import forge.deck.CardPool;
+import forge.game.DrawOffer;
 import forge.game.GameEntityView;
 import forge.game.GameLog;
 import forge.game.GameState;
@@ -24,7 +25,6 @@ import forge.game.player.DelayedReveal;
 import forge.game.player.IHasIcon;
 import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbilityView;
-import forge.item.PaperCard;
 import forge.game.spellability.StackItemView;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.match.DrawOfferMessage;
@@ -36,6 +36,7 @@ import forge.gamemodes.net.DeltaPacket;
 import forge.gamemodes.net.NetworkGuiGame;
 import forge.gamemodes.net.server.DeltaSyncManager;
 import forge.interfaces.IGameController;
+import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
 import forge.player.AutoYieldStore.TriggerDecision;
@@ -51,10 +52,18 @@ import forge.util.ITriggerEvent;
 import forge.util.Lang;
 import forge.util.Localizer;
 import forge.util.MessageUtil;
+import forge.web.PlayerSettings;
+import forge.web.WebSettings;
+import forge.web.images.Foil;
+import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.FromBrowser.*;
+import forge.web.protocol.JsonCodec;
+import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.*;
+import forge.web.protocol.Wire;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -68,44 +77,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
-import forge.web.PlayerSettings;
-import forge.web.WebSettings;
-import forge.web.images.Foil;
-import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.JsonCodec;
-import forge.web.protocol.Wire;
-import forge.web.protocol.FromBrowser.AutoDecisionCommand;
-import forge.web.protocol.FromBrowser.YieldAction;
-import forge.web.protocol.ToBrowser.ChoiceKind;
-import forge.web.protocol.ToBrowser.ChoicesRequest;
-import forge.web.protocol.ToBrowser.Controls;
-import forge.web.protocol.ToBrowser.MatchScore;
-import forge.web.protocol.ToBrowser.RequestOption;
-import forge.web.protocol.ToBrowser.ShownZone;
-import forge.web.protocol.ToBrowser.StackMenu;
-import forge.web.protocol.ToBrowser.Zones;
-import forge.web.protocol.ToBrowser;
-import forge.web.protocol.ToBrowser.GameOver;
-import forge.web.protocol.ToBrowser.Playable;
-import forge.web.protocol.ToBrowser.TurnMarker;
-import forge.web.protocol.ToBrowser.Flash;
-import forge.web.protocol.ToBrowser.ManipulateRequest;
-import forge.web.protocol.ToBrowser.NumberRequest;
-import forge.web.protocol.ToBrowser.OrderAnswer;
-import forge.web.protocol.ToBrowser.OrderRequest;
-import forge.web.protocol.FromBrowser.DrawOfferCommand;
-import forge.web.protocol.FromBrowser.KeyCommand;
-import forge.web.protocol.FromBrowser.NextGame;
-import forge.web.protocol.FromBrowser.PhaseCommand;
-import forge.web.protocol.FromBrowser.Reply;
-import forge.web.protocol.FromBrowser.SelectCard;
-import forge.web.protocol.FromBrowser.StackYield;
-import forge.web.protocol.FromBrowser.UseMana;
-import forge.web.protocol.ToBrowser.DistributeRequest;
-import forge.web.protocol.ToBrowser.OptionRequest;
-import forge.web.protocol.ToBrowser.SideboardEntry;
-import forge.web.protocol.ToBrowser.SideboardRequest;
-import forge.web.protocol.ToBrowser.TextRequest;
 
 /** One player's view of a match for the browser: game calls run on one dispatch thread, and browser replies arrive on the socket's thread. */
 public class WebGuiGame extends NetworkGuiGame {
@@ -212,10 +183,12 @@ public class WebGuiGame extends NetworkGuiGame {
         send(Wire.encode(message));
     }
 
+    /** Properties dropped for want of a JSON form, which tests check stays at none. */
     public int skippedProperties() {
         return skippedProperties.get();
     }
 
+    /** The model a browser would hold if it were sent the whole game now, for tests that check the deltas sent kept it in step. Call on the dispatch thread. */
     public BrowserModel freshSnapshot() {
         final GameView gv = getGameView();
         final BrowserModel fresh = new BrowserModel();
@@ -1006,7 +979,7 @@ public class WebGuiGame extends NetworkGuiGame {
         yields.getAutoYields().forEach(key -> entries.add(new ToBrowser.AutoDecision(key, ToBrowser.AutoDecisionKind.yield)));
         yields.getAutoTriggers().forEach(e -> entries.add(new ToBrowser.AutoDecision(e.getKey(),
                 e.getValue() == TriggerDecision.ACCEPT ? ToBrowser.AutoDecisionKind.accept : ToBrowser.AutoDecisionKind.decline)));
-        entries.sort(java.util.Comparator.comparing(ToBrowser.AutoDecision::key, String.CASE_INSENSITIVE_ORDER));
+        entries.sort(Comparator.comparing(ToBrowser.AutoDecision::key, String.CASE_INSENSITIVE_ORDER));
         send(new ToBrowser.AutoDecisions(entries, yields.getDisableAutoYields(), yields.getDisableAutoTriggers()));
     }
 
@@ -1033,7 +1006,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final boolean open = update.result() == null;
         final boolean mine = offerer != null && isLocalPlayer(offerer);
         final boolean waitingOnMe = open && update.entries().stream()
-                .anyMatch(e -> isLocalPlayer(e.player()) && e.vote() == forge.game.DrawOffer.Vote.PENDING);
+                .anyMatch(e -> isLocalPlayer(e.player()) && e.vote() == DrawOffer.Vote.PENDING);
         send(new ToBrowser.DrawOffer(offerer == null ? null : Ref.player(offerer.getId()), open, mine, waitingOnMe));
         if (open) {
             return;
@@ -1043,7 +1016,7 @@ public class WebGuiGame extends NetworkGuiGame {
             return;
         }
         final List<String> declined = update.entries().stream()
-                .filter(e -> e.vote() == forge.game.DrawOffer.Vote.DECLINED && e.player() != null)
+                .filter(e -> e.vote() == DrawOffer.Vote.DECLINED && e.player() != null)
                 .map(e -> isLocalPlayer(e.player()) ? Localizer.getInstance().getMessage("lblWebLobbyKindYou") : e.player().getName()).toList();
         send(new Notice(Localizer.getInstance().getMessage("lblWebGameDrawDeclined"), declined.isEmpty() ? Localizer.getInstance().getMessage("lblWebGameGoesOn")
                 : Localizer.getInstance().getMessage("lblWebGameDeclined", String.join(", ", declined)), false));

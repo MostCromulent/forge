@@ -6,14 +6,14 @@ import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.item.PaperCard;
 import forge.model.FModel;
+import forge.web.WebTestSupport;
+import forge.web.lobby.Lobby;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import forge.web.WebTestSupport;
-import forge.web.lobby.Lobby;
 
 public class LegalityTest {
     @BeforeClass
@@ -51,7 +51,7 @@ public class LegalityTest {
         Assert.assertEquals(r.flags().get("Mana Crypt"), "banned in Commander");
     }
 
-    // Fails if No restriction still applies a format's rules
+    // Fails if No restriction applies a format's rules
     @Test
     public void noRestrictionOnlyCountsCopies() {
         final Deck d = commanderDeck("Meren of Clan Nel Toth");

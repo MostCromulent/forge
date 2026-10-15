@@ -32,41 +32,21 @@ import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.model.FModel;
 import forge.util.Localizer;
+import forge.web.deck.CardCatalog;
+import forge.web.deck.DeckCatalog;
+import forge.web.deck.DeckEditor;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.FromBrowser;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser.*;
+import forge.web.protocol.Wire;
+import org.apache.commons.lang3.EnumUtils;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
-
-import org.apache.commons.lang3.EnumUtils;
-import forge.web.deck.CardCatalog;
-import forge.web.deck.DeckCatalog;
-import forge.web.deck.DeckEditor;
-import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.Wire;
-import forge.web.protocol.FromBrowser;
-import forge.web.protocol.ToBrowser.CampaignBar;
-import forge.web.protocol.ToBrowser.ConquestAetherState;
-import forge.web.protocol.ToBrowser.ConquestCardOption;
-import forge.web.protocol.ToBrowser.ConquestCell;
-import forge.web.protocol.ToBrowser.ConquestOptions;
-import forge.web.protocol.ToBrowser.ConquestParty;
-import forge.web.protocol.ToBrowser.ConquestPlace;
-import forge.web.protocol.ToBrowser.ConquestPlanes;
-import forge.web.protocol.ToBrowser.ConquestSaves;
-import forge.web.protocol.ToBrowser.ConquestState;
-import forge.web.protocol.ToBrowser.ConquestPlaneOption;
-import forge.web.protocol.ToBrowser.ConquestSave;
-import forge.web.protocol.ToBrowser.ResultButton;
-import forge.web.protocol.ToBrowser.Balance;
-import forge.web.protocol.ToBrowser.ConquestCommanderRow;
-import forge.web.protocol.ToBrowser.ConquestWalkerRow;
-import forge.web.protocol.ToBrowser.TradeList;
-import forge.web.protocol.ToBrowser.ConquestOption;
-import forge.web.protocol.ToBrowser.ConquestPlaneRow;
 
 /** Planar Conquest as one session plays it: the saves, the map, the party and its decks, aether, planeswalking and the battles. The conquest itself is Forge's, one for the whole process, so this holds only what the session knows that the save does not. */
 public final class ConquestGame implements Campaign {
@@ -892,7 +872,7 @@ public final class ConquestGame implements Campaign {
                 }
             }
             case "conquestLead", "conquestViewDeck", "conquestEditDeck" -> {
-                final ConquestCommander commander = commander(msg.get("commander").getAsString());
+                final ConquestCommander commander = commander(Wire.decode(msg, ConquestCommanderCommand.class).commander());
                 if (commander == null) {
                     return;
                 }

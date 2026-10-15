@@ -1,5 +1,7 @@
 package forge.web.protocol;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import forge.trackable.TrackableProperty;
 import forge.trackable.TrackableTypes;
 import forge.trackable.TrackableTypes.TrackableType;
@@ -147,10 +149,10 @@ public final class ProtocolTypes {
         if (c == String.class) {
             return "string";
         }
-        if (c == com.google.gson.JsonObject.class) {
+        if (c == JsonObject.class) {
             return "Record<string, unknown>";
         }
-        if (com.google.gson.JsonElement.class.isAssignableFrom(c)) {
+        if (JsonElement.class.isAssignableFrom(c)) {
             return "unknown";
         }
         if (c.isEnum() || c.isRecord()) {
@@ -162,8 +164,6 @@ public final class ProtocolTypes {
     private static String array(final String element) {
         return element.contains(" ") ? "(" + element + ")[]" : element + "[]";
     }
-
-    // ---- Game objects ----------------------------------------------------------------------------------------
 
     private void trackedProps() {
         // The enum table fills as TrackableProperty's constants are made, so they are made first

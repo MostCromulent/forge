@@ -1,21 +1,21 @@
 package forge.web.deck;
 
-import com.google.common.primitives.Ints;
 import com.google.common.collect.MapMaker;
+import com.google.common.primitives.Ints;
 import forge.StaticData;
-import forge.deck.CardPool;
-import forge.deck.CommanderDeckGenerator;
-import forge.deck.CommanderBracketCalculator;
-import forge.deck.Deck;
+import forge.card.CardEdition;
+import forge.card.ColorSet;
 import forge.deck.ArchetypeDeckGenerator;
+import forge.deck.CardPool;
+import forge.deck.CommanderBracketCalculator;
+import forge.deck.CommanderDeckGenerator;
+import forge.deck.Deck;
 import forge.deck.DeckProxy;
+import forge.deck.DeckSection;
 import forge.deck.DeckUrlLoader;
 import forge.deck.DeckgenUtil;
 import forge.deck.NetDeckCategory;
-import forge.deck.DeckSection;
 import forge.deck.io.DeckPreferences;
-import forge.card.ColorSet;
-import forge.card.CardEdition;
 import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.gamemodes.quest.QuestController;
@@ -35,6 +35,7 @@ import forge.web.protocol.ToBrowser.DeckSummary;
 import forge.web.protocol.ToBrowser.Printing;
 import forge.web.protocol.ToBrowser.SavedSleeveArt;
 import forge.web.protocol.ToBrowser.TypeCount;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -43,9 +44,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiPredicate;
 

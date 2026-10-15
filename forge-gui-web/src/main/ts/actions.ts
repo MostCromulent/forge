@@ -51,7 +51,6 @@ export interface Actions {
   dropPlayer(name: string): void;
   setSetting(key: string, value: string): void;
 
-  // The start page
   /** The name and face this browser plays under. The server refuses a name another player already has. */
   setName(name: string, avatar: number): void;
   /** Opens a table against the computer, or one others can join by link. */
@@ -61,7 +60,6 @@ export interface Actions {
   join(): void;
   quit(): void;
 
-  // Limited
   /** Opens the Limited pages for a kind of event. */
   limitedOpen(kind: 'sealed' | 'draft', resume: boolean): void;
   draftStart(d: Omit<DraftStart, 't'>): void;
@@ -82,7 +80,6 @@ export interface Actions {
   gauntletNext(): void;
   gauntletRestart(): void;
 
-  // A campaign mode: Planar Conquest
   /** Opens a mode's saved games, or with resume, the one played last. */
   campaignOpen(mode: string, resume: boolean): void;
   campaignLoad(name: string): void;
@@ -127,7 +124,6 @@ export interface Actions {
   /** Starts a finished match again from its first game. */
   restartGame(): void;
 
-  // A campaign mode: Quest
   /** Fights a duel of the Duels page, by its place in the list. */
   questDuel(index: number): void;
   /** Chooses the pet for a slot, the plant's being 0; null summons none. */
@@ -166,7 +162,6 @@ export interface Actions {
   questUnlock(): void;
   questCreate(c: Omit<QuestCreate, 't'>): void;
 
-  // Online draft and sealed, at a table
   /** Opens a table others can join by link and makes it a draft or sealed table once it is open. */
   openLimitedTable(kind: 'sealed' | 'draft'): void;
   /** The table's Limited switch: a kind of event, or null for Constructed. */
@@ -180,7 +175,6 @@ export interface Actions {
   sitOut(index: number, sittingOut: boolean): void;
   ready(on: boolean): void;
 
-  // Match setup
   leaveLobby(): void;
   setFormat(format: string): void;
   setCardPool(cardPool: string | null): void;
@@ -222,7 +216,6 @@ export interface Actions {
   /** Answers a question the host asked outside a match. An empty choice is a cancel. */
   answerHostChoice(id: number, value: number[]): void;
 
-  // Decks: the editor and the importer
   /** The format the start page's deck finder lists. */
   browseFormat(format: string): void;
   openEditor(o: { key?: string; newFormat?: string; seat?: number; copy?: boolean }): void;

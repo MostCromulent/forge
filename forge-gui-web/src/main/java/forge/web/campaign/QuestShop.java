@@ -17,9 +17,12 @@ import forge.item.PaperCard;
 import forge.itemmanager.SItemManagerUtil;
 import forge.util.ItemPool;
 import forge.util.Localizer;
+import forge.web.WebGuiBase;
+import forge.web.deck.CardCatalog;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
 import forge.web.protocol.FromBrowser.TradePick;
 import forge.web.protocol.ToBrowser.*;
+
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -28,10 +31,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import forge.web.WebGuiBase;
-import forge.web.deck.CardCatalog;
-import forge.web.protocol.ToBrowser.QuestBazaar;
-import forge.web.protocol.ToBrowser.QuestItemRow;
 
 /** Quest's two shops, as QuestGame offers them: the spell shop, which buys and sells cards, and the bazaar's stalls. */
 final class QuestShop {

@@ -5,6 +5,9 @@ import forge.deck.Deck;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gui.GuiBase;
+import forge.web.match.BrowserModel;
+import forge.web.match.LocalGame;
+import forge.web.match.WebGuiGame;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -14,9 +17,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import forge.web.match.BrowserModel;
-import forge.web.match.LocalGame;
-import forge.web.match.WebGuiGame;
 
 /** A whole game on the web client's real path: loopback host, netplay client, dispatch executor, JSON forwarding. */
 public class LoopbackGameTest {

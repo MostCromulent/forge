@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import forge.gamemodes.net.ProtocolMethod;
 import forge.gui.interfaces.IGuiGame;
+import forge.web.match.WebGuiGame;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -14,7 +15,6 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import forge.web.match.WebGuiGame;
 
 public class WebGuiGameTest {
     private WebGuiGame gui;

@@ -1,11 +1,11 @@
 package forge.web;
 
+import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import forge.web.protocol.JsonCodec;
 
 
 public class WebSessionTest {

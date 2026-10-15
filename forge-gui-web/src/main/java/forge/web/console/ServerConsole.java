@@ -4,37 +4,14 @@ import forge.gamemodes.net.server.FServerManager;
 import forge.gui.download.CdnUuidCache;
 import forge.gui.interfaces.IProgressBar;
 import forge.localinstance.properties.ForgeProfileProperties;
+import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.util.LogExporter;
+import forge.web.WebGuiBase;
+import forge.web.WebMain;
+import forge.web.WebService;
+import forge.web.images.ImageIndex;
 
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.ButtonGroup;
-import javax.swing.JCheckBox;
-import javax.swing.JComponent;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JProgressBar;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextPane;
-import javax.swing.JToggleButton;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.Timer;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.WindowConstants;
-import javax.swing.plaf.basic.BasicArrowButton;
-import javax.swing.plaf.basic.BasicHTML;
-import javax.swing.text.View;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -59,6 +36,34 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComponent;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextPane;
+import javax.swing.JToggleButton;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.WindowConstants;
+import javax.swing.plaf.basic.BasicArrowButton;
+import javax.swing.plaf.basic.BasicHTML;
+import javax.swing.text.View;
 
 import static forge.web.console.ConsoleWidgets.NOTE;
 import static forge.web.console.ConsoleWidgets.WARN;
@@ -77,11 +82,6 @@ import static forge.web.console.ConsoleWidgets.section;
 import static forge.web.console.ConsoleWidgets.stack;
 import static forge.web.console.ConsoleWidgets.warning;
 import static forge.web.console.ConsoleWidgets.wrapped;
-import forge.web.WebGuiBase;
-import forge.web.WebMain;
-import forge.web.WebService;
-import forge.web.images.ImageIndex;
-import forge.util.IHasForgeLog;
 
 /** The desktop window that starts and stops the server, without which a player who closes their tab has no sign Forge still runs. */
 public final class ServerConsole implements IProgressBar, IHasForgeLog {
@@ -827,7 +827,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         onQuit.run();
     }
 
-    // --- the card reader's progress, shown on the bar -------------------------------------------------
+    // The card reader's progress shows on the bar
 
     @Override
     public void setDescription(final String s0) {

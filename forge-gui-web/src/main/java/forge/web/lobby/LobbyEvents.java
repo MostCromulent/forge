@@ -17,18 +17,17 @@ import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.model.FModel;
 import forge.util.Localizer;
-import forge.web.protocol.FromBrowser.*;
-import forge.web.protocol.ToBrowser.*;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import forge.web.deck.DeckCatalog;
 import forge.web.limited.OfflineEvents;
 import forge.web.match.LocalGame;
-import forge.web.protocol.FromBrowser.EventSetup;
-import forge.web.protocol.ToBrowser.LimitedTable;
-import forge.web.protocol.ToBrowser.PastEvent;
+import forge.web.protocol.FromBrowser.*;
+import forge.web.protocol.ToBrowser.*;
+
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 /** The Limited half of a table: the draft and sealed events hosted through the lobby. */
 final class LobbyEvents {
@@ -84,7 +83,7 @@ final class LobbyEvents {
 
     /** The events whose pools the host keeps, newest first, as desktop's past events list orders them. */
     private static List<PastEvent> pastEvents() {
-        final Map<String, PastEvent> events = new java.util.LinkedHashMap<>();
+        final Map<String, PastEvent> events = new LinkedHashMap<>();
         synchronized (DeckCatalog.DECKS) {
             for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
                 final String id = DeckProxy.getEventTag(d, "eventId");
@@ -94,7 +93,7 @@ final class LobbyEvents {
             }
         }
         // The date is "yyyy-MM-dd HH:mm", so reverse order of the text is newest first
-        return events.values().stream().sorted(java.util.Comparator.comparing(PastEvent::date).reversed()).toList();
+        return events.values().stream().sorted(Comparator.comparing(PastEvent::date).reversed()).toList();
     }
 
     /** The product of a past event, read from its pools; a pool saved without one still names an event rather than none. */

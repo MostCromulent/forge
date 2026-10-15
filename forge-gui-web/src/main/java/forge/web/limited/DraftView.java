@@ -3,15 +3,15 @@ package forge.web.limited;
 import forge.card.CardRules;
 import forge.gamemodes.limited.CardRanker;
 import forge.item.PaperCard;
+import forge.web.deck.CardCatalog;
+import forge.web.images.Foil;
+import forge.web.protocol.JsonCodec;
 import forge.web.protocol.ToBrowser.DraftCard;
 import forge.web.protocol.ToBrowser.DraftState;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntFunction;
-import forge.web.deck.CardCatalog;
-import forge.web.images.Foil;
-import forge.web.protocol.JsonCodec;
 
 /** The draft as the browser sees it, with a step that numbers the pack in hand so a pick names exactly the pack it was made from. */
 final class DraftView {

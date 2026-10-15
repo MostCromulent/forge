@@ -6,14 +6,14 @@ import forge.StaticData;
 import forge.ai.AiProfileUtil;
 import forge.game.GameLogVerbosity;
 import forge.game.phase.PhaseType;
+import forge.gamemodes.match.DeclineScope;
+import forge.gamemodes.match.YieldController;
 import forge.interfaces.IGameController;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
-import forge.gamemodes.match.DeclineScope;
-import forge.gamemodes.match.YieldController;
 import forge.localinstance.properties.ForgePreferences.FPref;
-import forge.web.protocol.ToBrowser.ServerSettings;
 import forge.util.IHasForgeLog;
+import forge.web.protocol.ToBrowser.ServerSettings;
 
 import java.util.ArrayList;
 import java.util.Arrays;

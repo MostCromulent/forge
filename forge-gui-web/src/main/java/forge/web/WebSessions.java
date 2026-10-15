@@ -1,18 +1,19 @@
 package forge.web;
 
-import forge.gamemodes.match.LobbySlot;
-import forge.gamemodes.net.server.ServerGameLobby;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonObject;
+import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.net.event.MessageEvent;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.HostingServer;
+import forge.gamemodes.net.server.ServerGameLobby;
+import forge.util.IHasForgeLog;
 import forge.util.Localizer;
+import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.ToBrowser.Address;
 import forge.web.protocol.ToBrowser.ChatLine;
 import forge.web.protocol.ToBrowser.Person;
 import forge.web.protocol.ToBrowser.Presence;
-import forge.util.IHasForgeLog;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -25,7 +26,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import forge.web.protocol.BrowserChannel;
 
 /** Every browser attached to this process, each with a session of its own, so only the web port has to be reachable from outside. */
 final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
@@ -176,7 +176,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
                 return null;
             }
         }
-        // Nobody hosts by arriving. A browser asks for the seat, and the first to ask while it is free gets it.
+        // Nobody hosts by arriving. A browser asks for the seat, and the first to ask while it is free gets it
         final WebSession session = new WebSession(ui, this, onQuit, mayHost);
         byId.put(key, session);
         return session;

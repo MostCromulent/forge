@@ -3,10 +3,10 @@ package forge.web.images;
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgeConstants;
 import forge.util.BuildInfo;
+import forge.util.IHasForgeLog;
 import forge.util.ImageFetcher;
 import forge.util.ScryfallRateLimiter;
 import forge.util.TextUtil;
-import forge.util.IHasForgeLog;
 
 import java.io.IOException;
 import java.io.InputStream;

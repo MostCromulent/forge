@@ -24,11 +24,17 @@ import forge.util.ImageUtil;
 import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.NameGenerator;
+import forge.web.deck.DeckCatalog;
+import forge.web.deck.ExtraSections;
+import forge.web.deck.ExtraSections.Extra;
+import forge.web.images.SkinSprites;
+import forge.web.match.LocalGame;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.FromBrowser.*;
+import forge.web.protocol.ToBrowser;
+import forge.web.protocol.ToBrowser.*;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.StringUtils;
-import forge.web.protocol.FromBrowser.*;
-import forge.web.protocol.ToBrowser.*;
-import forge.web.deck.ExtraSections.Extra;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,27 +42,11 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.function.BooleanSupplier;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import forge.web.deck.DeckCatalog;
-import forge.web.deck.ExtraSections;
-import forge.web.images.SkinSprites;
-import forge.web.match.LocalGame;
-import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.FromBrowser.EventSetup;
-import forge.web.protocol.ToBrowser;
-import forge.web.protocol.ToBrowser.CardPools;
-import forge.web.protocol.ToBrowser.CommanderChoice;
-import forge.web.protocol.ToBrowser.DeckDetailsMessage;
-import forge.web.protocol.ToBrowser.Decks;
-import forge.web.protocol.ToBrowser.Format;
-import forge.web.protocol.ToBrowser.LobbyMessage;
-import forge.web.protocol.ToBrowser.SeatExtra;
-import forge.web.protocol.ToBrowser.CardPoolGroup;
-import forge.web.protocol.ToBrowser.LobbyTable;
+import java.util.function.BooleanSupplier;
 
 /** Match setup read from the engine's lobby: a browser changes its own seat as a client, and the host sets the rest of the table. */
 public final class Lobby {
@@ -727,7 +717,7 @@ public final class Lobby {
     private Seat seat(final GameLobby lobby, final int index) {
         final LobbySlot slot = lobby.getSlot(index);
         final Deck deck = deckAt(index);
-        // Your own seat wherever you are, and the computer's seats if you run the game. Another player's is theirs.
+        // Your own seat wherever you are, and the computer's seats if you run the game. Another player's is theirs
         final boolean mayEdit = index == local.webSeat() || (local.isHost() && slot.getType() == LobbySlotType.AI);
         return new Seat(slot.getName(), slot.getType().name(), index == local.webSeat(), mayEdit,
                 slot.isReady(), slot.getAvatarIndex(), slot.getSleeveIndex(), key(index),

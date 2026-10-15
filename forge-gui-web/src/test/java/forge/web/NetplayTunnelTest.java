@@ -6,12 +6,15 @@ import forge.StaticData;
 import forge.deck.Deck;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.net.ChatMessage;
-import forge.gamemodes.net.client.ClientGameLobby;
 import forge.gamemodes.net.WebSocketTunnel;
+import forge.gamemodes.net.client.ClientGameLobby;
 import forge.gamemodes.net.client.FGameClient;
 import forge.gamemodes.net.event.MessageEvent;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.interfaces.ILobbyListener;
+import forge.web.match.WebGuiGame;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.JsonCodec;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -30,8 +33,6 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.TrustManagerFactory;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -47,9 +48,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import forge.web.match.WebGuiGame;
-import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.JsonCodec;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 /** Desktop or mobile Forge joining a web host: a netplay client that comes in through the web port by the invite link. */
 public class NetplayTunnelTest extends SessionsTest {

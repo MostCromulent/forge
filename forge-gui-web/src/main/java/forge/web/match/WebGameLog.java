@@ -8,6 +8,8 @@ import forge.game.card.CardView;
 import forge.gamemodes.net.DeltaPacket;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.web.PlayerSettings;
+import forge.web.images.Foil;
 import forge.web.protocol.ToBrowser.LogEntry;
 import forge.web.protocol.ToBrowser.LogMessage;
 
@@ -15,8 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
-import forge.web.PlayerSettings;
-import forge.web.images.Foil;
 
 /** The game log as the browser sees it: the entries this seat may read, sent as they arrive and replayed on connect. */
 final class WebGameLog {

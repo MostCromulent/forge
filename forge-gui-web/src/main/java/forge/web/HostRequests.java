@@ -1,8 +1,9 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
-import forge.web.protocol.ToBrowser.HostChoice;
 import forge.util.IHasForgeLog;
+import forge.web.protocol.ToBrowser.HostChoice;
+import forge.web.protocol.Wire;
 
 import java.util.List;
 import java.util.Map;
@@ -13,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-import forge.web.protocol.Wire;
 
 /**
  * Questions the host asks outside a match, where the calling thread waits for the browser's answer as desktop waits for its dialog.

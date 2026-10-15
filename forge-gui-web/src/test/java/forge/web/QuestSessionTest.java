@@ -10,18 +10,20 @@ import forge.gamemodes.quest.QuestController;
 import forge.gamemodes.quest.QuestEventDraft;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestUtil;
-import forge.item.PaperCard;
 import forge.gamemodes.quest.data.GameFormatQuest;
 import forge.gamemodes.quest.data.QuestData;
 import forge.gamemodes.quest.data.QuestPreferences;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
 import forge.gamemodes.quest.io.QuestDataIO;
 import forge.gui.GuiBase;
+import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.ImageUtil;
 import forge.util.Localizer;
+import forge.web.campaign.QuestGame;
+import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -38,8 +40,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import forge.web.campaign.QuestGame;
-import forge.web.protocol.JsonCodec;
 
 /** A quest as a browser drives it, and its duels as netplay plays them. */
 public class QuestSessionTest extends SessionsTest {

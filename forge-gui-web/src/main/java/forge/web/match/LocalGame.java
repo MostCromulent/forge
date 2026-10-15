@@ -8,9 +8,9 @@ import forge.game.GameType;
 import forge.game.player.Player;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
-import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
+import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.NetworkLogConfig;
 import forge.gamemodes.net.client.ClientGameLobby;
@@ -26,10 +26,11 @@ import forge.gui.interfaces.IDraftEventHandler;
 import forge.interfaces.ILobbyListener;
 import forge.interfaces.IUpdateable;
 import forge.localinstance.properties.ForgePreferences.FPref;
-import forge.player.PlayerControllerHuman;
 import forge.model.FModel;
-import forge.util.Localizer;
+import forge.player.PlayerControllerHuman;
 import forge.util.IHasForgeLog;
+import forge.util.Localizer;
+import forge.web.lobby.Lobby;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +38,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
-import forge.web.lobby.Lobby;
 
 /** The netplay seat one browser plays from, as a client of a server inside this process that opens no socket of its own. */
 public final class LocalGame implements IHasForgeLog {
@@ -46,7 +46,6 @@ public final class LocalGame implements IHasForgeLog {
     private static final long FREE_SEATS_TIMEOUT_MILLIS = 5_000;
     /** More seats than any table has, so every connection a table can hold is checked. */
     private static final int MOST_SEATS = 16;
-    private static final int SPECTATE_WAIT_MILLIS = 5000;
 
     private final FServerManager server = FServerManager.getInstance();
     /** The lobby this session owns, or null when another browser is hosting the game. */
@@ -295,15 +294,6 @@ public final class LocalGame implements IHasForgeLog {
         if (hosted == null) {
             netLog.warn("Only the host can hand its seat to the AI");
             return;
-        }
-        final HostedMatch match = hostedMatch();
-        for (int i = 0; i < SPECTATE_WAIT_MILLIS / 50 && (match == null || match.getGame() == null); i++) {
-            try {
-                Thread.sleep(50);
-            } catch (final InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
         }
         final RemoteClient seat = server.getClientBySlotIndex(webSeat);
         if (seat == null) {

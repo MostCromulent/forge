@@ -37,8 +37,6 @@ public final class ToBrowser {
         }
     }
 
-    // ---- Start page and lobby ----------------------------------------------------------------------------------
-
     @Message("hello")
     public record Hello(boolean inMatch, boolean inLobby, boolean joining, boolean spectating, boolean host,
             boolean canClaimHost, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
@@ -345,8 +343,6 @@ public final class ToBrowser {
             @Nullable List<String> images, @Nullable String pictured) {
     }
 
-    // ---- Match -------------------------------------------------------------------------------------------------
-
     /** A property set to null in a delta has gone back to its default, and events are in the order the game fired them. */
     @Message("state")
     public record StateMessage(boolean full, long seq, int root,
@@ -355,7 +351,7 @@ public final class ToBrowser {
             List<Integer> visible, List<Integer> localPlayers, @Ts("GameEvent[]") List<Record> events) {
     }
 
-    // ---- Game events: what happened, never how to show it ------------------------------------------------------
+    // Game events say what happened, never how to show it
 
     /** A zone of one player's, or of nobody's (the stack). */
     public record Place(ZoneType zone, @Nullable Ref player) {
@@ -524,7 +520,7 @@ public final class ToBrowser {
     public record MatchScore(Ref player, int won) {
     }
 
-    // ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} -------------------------
+    // Requests are questions the game waits on, answered with {t: 'reply', id, value}
 
     /**
      * Which fields are set depends on what it is: a card on the table, one that is not (a split pile, a card face), or a player.
@@ -655,8 +651,6 @@ public final class ToBrowser {
     public record LimitedResult(int round, int rounds, int wins, int losses, boolean matchOver, boolean nextRound) {
     }
 
-    // ---- Campaigns: what Planar Conquest and any mode like it share ---------------------------------------------
-
     /** One of a campaign's currencies: its skin icon's name, how much the player has, and its name for a reader who cannot see the icon. */
     public record Balance(String icon, int amount, String label) {
     }
@@ -711,8 +705,6 @@ public final class ToBrowser {
     /** Something for sale that is not a card: a booster, a box, a deck. Its key is "p:" and its name, which a trade's pick names it by. */
     public record Product(String key, String kind, String name, String image, int price) {
     }
-
-    // ---- Planar Conquest ---------------------------------------------------------------------------------------
 
     /** The saved conquests, and the one played last. */
     @Message("conquestSaves")
@@ -806,8 +798,6 @@ public final class ToBrowser {
     @Message("reward")
     public record Reward(List<RewardStep> steps) {
     }
-
-    // ---- Quest -------------------------------------------------------------------------------------------------
 
     /** A quest on the shelf: its mode, difficulty and rank, its record, cards and credits, the world it is in, and when it was saved. */
     public record QuestSave(String name, String mode, String difficulty, String rank, int wins, int losses, int cards, long credits,

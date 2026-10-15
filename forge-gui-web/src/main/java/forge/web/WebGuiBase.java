@@ -1,12 +1,12 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
+import forge.ImageKeys;
+import forge.card.CardEdition;
 import forge.gamemodes.match.HostedMatch;
 import forge.gui.download.GuiDownloadService;
 import forge.gui.interfaces.IGuiBase;
 import forge.gui.interfaces.IGuiGame;
-import forge.ImageKeys;
-import forge.card.CardEdition;
 import forge.item.PaperCard;
 import forge.localinstance.skin.FSkinProp;
 import forge.localinstance.skin.ISkinImage;
@@ -14,30 +14,30 @@ import forge.sound.IAudioClip;
 import forge.sound.IAudioMusic;
 import forge.util.BuildInfo;
 import forge.util.FSerializableFunction;
+import forge.util.IHasForgeLog;
 import forge.util.ImageFetcher;
+import forge.web.images.Foil;
+import forge.web.images.WebDownloads;
+import forge.web.images.WebImageFetcher;
 import forge.web.protocol.ToBrowser.Notice;
+import forge.web.protocol.Wire;
 import org.jupnp.DefaultUpnpServiceConfiguration;
 import org.jupnp.UpnpServiceConfiguration;
-import forge.util.IHasForgeLog;
 
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Locale;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import forge.web.images.Foil;
-import forge.web.images.WebDownloads;
-import forge.web.images.WebImageFetcher;
-import forge.web.protocol.Wire;
 
 /** What Forge asks of the program it runs in, answered for the web, with one "WebUI" thread in place of Swing's event thread. */
 public final class WebGuiBase implements IGuiBase, IHasForgeLog {
@@ -88,7 +88,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
                 return fromCodeSource;
             }
         } catch (final Exception ignored) {
-            // An explicit forge.assets.dir remains available for unusual launchers.
+            // An explicit forge.assets.dir remains available for unusual launchers
         }
         return "";
     }

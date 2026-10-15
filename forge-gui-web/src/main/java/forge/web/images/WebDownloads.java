@@ -1,18 +1,18 @@
 package forge.web.images;
 
 import com.google.gson.JsonObject;
+import forge.gui.UiCommand;
 import forge.gui.download.GuiDownloadService;
 import forge.gui.interfaces.IButton;
 import forge.gui.interfaces.IProgressBar;
 import forge.gui.interfaces.ITextField;
 import forge.localinstance.skin.FSkinProp;
-import forge.gui.UiCommand;
+import forge.util.IHasForgeLog;
 import forge.util.Localizer;
-
-import java.util.function.Consumer;
 import forge.web.protocol.ToBrowser;
 import forge.web.protocol.Wire;
-import forge.util.IHasForgeLog;
+
+import java.util.function.Consumer;
 
 /** Runs a download through the shared service, with the browser in place of the progress dialog desktop and mobile show. */
 public final class WebDownloads implements IHasForgeLog {

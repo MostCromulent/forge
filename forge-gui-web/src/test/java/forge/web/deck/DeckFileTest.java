@@ -3,10 +3,10 @@ package forge.web.deck;
 import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.item.PaperCard;
+import forge.web.WebTestSupport;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-import forge.web.WebTestSupport;
 
 public class DeckFileTest {
     @BeforeClass

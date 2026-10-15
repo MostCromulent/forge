@@ -15,12 +15,12 @@ import forge.web.protocol.ToBrowser.DraftState;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.IntStream;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 /** One player's booster draft against the computer. BoosterDraft has no locks, so everything touching it runs on this draft's own thread. */
 public final class OfflineDraft implements Draft {

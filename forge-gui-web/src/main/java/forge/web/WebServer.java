@@ -1,9 +1,9 @@
 package forge.web;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import forge.ImageKeys;
 import forge.StaticData;
 import forge.gamemodes.net.WebSocketBytes;
@@ -11,12 +11,22 @@ import forge.gamemodes.net.WebSocketTunnel;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.HostingServer;
 import forge.gui.GuiBase;
-import forge.util.SleeveArt;
-import forge.localinstance.properties.ForgeConstants;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.sound.MusicPlaylist;
+import forge.sound.SoundSystem;
+import forge.util.IHasForgeLog;
 import forge.util.ImageUtil;
+import forge.util.SleeveArt;
+import forge.web.console.ServerTraffic;
+import forge.web.images.CardThumbnails;
+import forge.web.images.Foil;
+import forge.web.images.SkinSprites;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.JsonCodec;
+import forge.web.protocol.PageText;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -54,16 +64,13 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultThreadFactory;
-import forge.sound.MusicPlaylist;
-import forge.sound.SoundSystem;
-import forge.util.IHasForgeLog;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.net.URLEncoder;
 import java.net.InetSocketAddress;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -78,13 +85,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
-import forge.web.console.ServerTraffic;
-import forge.web.images.CardThumbnails;
-import forge.web.images.Foil;
-import forge.web.images.SkinSprites;
-import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.JsonCodec;
-import forge.web.protocol.PageText;
 
 /** The HTTP and WebSocket server on the web port: the page, card images, sounds, the browsers' sockets and the app tunnel. It listens on every interface so a player elsewhere can open a link, and the per-launch tokens in the links keep everyone else out. */
 public final class WebServer implements AutoCloseable, IHasForgeLog {

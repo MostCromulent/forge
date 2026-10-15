@@ -2,14 +2,16 @@ package forge.web.deck;
 
 import forge.deck.CardPool;
 import forge.deck.Deck;
+import forge.deck.DeckFormat;
 import forge.deck.DeckProxy;
-import forge.deck.DeckgenUtil;
 import forge.deck.DeckSection;
+import forge.deck.DeckgenUtil;
 import forge.item.PaperCard;
 import forge.model.FModel;
 import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.web.protocol.ToBrowser.ExtraChoice;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -105,8 +107,8 @@ public final class ExtraSections {
     /** Why a planar or scheme deck cannot be played, or null. An avatar section has no size rule. */
     public static String sectionProblem(final DeckSection section, final CardPool cards) {
         return switch (section) {
-            case Planes -> forge.deck.DeckFormat.getPlaneSectionConformanceProblem(cards);
-            case Schemes -> forge.deck.DeckFormat.getSchemeSectionConformanceProblem(cards);
+            case Planes -> DeckFormat.getPlaneSectionConformanceProblem(cards);
+            case Schemes -> DeckFormat.getSchemeSectionConformanceProblem(cards);
             default -> null;
         };
     }

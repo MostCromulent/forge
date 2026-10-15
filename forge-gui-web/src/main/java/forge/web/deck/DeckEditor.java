@@ -8,8 +8,8 @@ import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
 import forge.deck.DeckGroup;
-import forge.deck.DeckgenUtil;
 import forge.deck.DeckSection;
+import forge.deck.DeckgenUtil;
 import forge.deck.io.DeckSerializer;
 import forge.game.GameType;
 import forge.gamemodes.limited.CommanderDraftUtil;
@@ -19,6 +19,8 @@ import forge.util.ImageUtil;
 import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.storage.IStorage;
+import forge.web.images.Foil;
+import forge.web.protocol.JsonCodec;
 import forge.web.protocol.ToBrowser.EditorCard;
 import forge.web.protocol.ToBrowser.EditorGroup;
 import forge.web.protocol.ToBrowser.EditorLand;
@@ -29,7 +31,6 @@ import forge.web.protocol.ToBrowser.LandSet;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.LinkedHashMap;
@@ -39,8 +40,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import forge.web.images.Foil;
-import forge.web.protocol.JsonCodec;
 
 /** One deck open in the browser's editor, where every change is checked against the engine's limits, applied and saved at once. */
 public final class DeckEditor {
@@ -841,8 +840,7 @@ public final class DeckEditor {
                     editions.add(e);
                 }
             }
-            Collections.sort(editions);
-            Collections.reverse(editions);
+            editions.sort(Comparator.reverseOrder());
             return editions.stream().map(e -> new LandSet(e.getCode(), e.getName())).toList();
         }
     }

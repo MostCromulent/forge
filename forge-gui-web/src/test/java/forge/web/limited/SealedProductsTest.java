@@ -5,6 +5,7 @@ import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.item.PaperCard;
 import forge.model.CardBlock;
 import forge.model.FModel;
+import forge.web.WebTestSupport;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -14,7 +15,6 @@ import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
-import forge.web.WebTestSupport;
 
 public class SealedProductsTest {
     @BeforeClass
@@ -42,7 +42,7 @@ public class SealedProductsTest {
             final String[] pieces = part.trim().split(" ");
             codes.add(pieces[pieces.length - 1]);
         }
-        final CardPool pool = DraftProducts.blockSealed(innistrad, combo).getCardPool(false);
+        final CardPool pool = SealedCardPoolGenerator.createBlock(innistrad, combo).getCardPool(false);
         assertTrue(pool.countAll() > 0);
         for (final Map.Entry<PaperCard, Integer> e : pool) {
             if (!e.getKey().getRules().getType().isBasicLand()) {

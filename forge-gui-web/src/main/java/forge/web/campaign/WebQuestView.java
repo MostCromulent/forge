@@ -6,13 +6,13 @@ import forge.gui.interfaces.IWinLoseView;
 import forge.item.PaperCard;
 import forge.localinstance.skin.FSkinProp;
 import forge.util.Localizer;
+import forge.web.images.Foil;
 import forge.web.protocol.ToBrowser.PackCard;
 import forge.web.protocol.ToBrowser.RewardStep;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import forge.web.images.Foil;
 
 /** Quest's result view, recording what QuestWinLoseController shows as reward steps and the button text it sets as the result's buttons. */
 final class WebQuestView implements IWinLoseView<WebQuestView.Button> {

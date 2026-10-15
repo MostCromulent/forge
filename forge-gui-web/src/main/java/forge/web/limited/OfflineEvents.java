@@ -17,6 +17,8 @@ import forge.model.CardBlock;
 import forge.model.FModel;
 import forge.util.Localizer;
 import forge.util.storage.IStorage;
+import forge.web.deck.CardCatalog;
+import forge.web.deck.DeckCatalog;
 import forge.web.protocol.FromBrowser.DraftStart;
 import forge.web.protocol.FromBrowser.SealedCreate;
 import forge.web.protocol.ToBrowser.DraftBlockOption;
@@ -35,8 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
-import forge.web.deck.CardCatalog;
-import forge.web.deck.DeckCatalog;
 
 /** The host's offline sealed pools, kept where desktop keeps them: what the setup form offers, making a pool, and listing them. */
 public final class OfflineEvents {
@@ -125,7 +125,7 @@ public final class OfflineEvents {
     public static Supplier<BoosterDraft> draft(final DraftStart d) {
         final LimitedPoolType type = poolType(d.product());
         return switch (type) {
-            case Full -> DraftProducts::fullDraft;
+            case Full -> BoosterDraft::createFullDraft;
             case Block, FantasyBlock -> {
                 final CardBlock block = d.block() == null ? null : DraftProducts.block(d.block(), type == LimitedPoolType.FantasyBlock);
                 if (block == null || !DraftProducts.isDraftableBlock(block)) {
@@ -136,14 +136,14 @@ public final class OfflineEvents {
                 if (combo == null || (sets.size() > 1 && !validCombo(combo, sets, block.getCntBoostersDraft()))) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsSetPerPack"));
                 }
-                yield () -> DraftProducts.blockDraft(block, combo, type);
+                yield () -> BoosterDraft.createBlockDraft(type, block, combo);
             }
             case Custom -> {
                 final CustomLimited cube = d.cube() == null ? null : DraftProducts.cube(d.cube());
                 if (cube == null) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoCube", String.valueOf(d.cube())));
                 }
-                yield () -> DraftProducts.cubeDraft(cube);
+                yield () -> BoosterDraft.createCubeDraft(LimitedPoolType.Custom, cube);
             }
             case Chaos -> {
                 final ThemedChaosDraft theme = d.theme() == null ? null : DraftProducts.theme(d.theme());
@@ -189,27 +189,27 @@ public final class OfflineEvents {
     public static SealedCardPoolGenerator generator(final SealedCreate c) {
         final LimitedPoolType type = poolType(c.product());
         return switch (type) {
-            case Full -> DraftProducts.fullSealed(packs(c.packs()));
+            case Full -> SealedCardPoolGenerator.createFull(packs(c.packs()));
             case Prerelease -> {
                 final CardEdition edition = c.edition() == null ? null : StaticData.instance().getEditions().get(c.edition());
                 if (edition == null || edition.getPrerelease() == null) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoPrerelease", String.valueOf(c.edition())));
                 }
-                yield DraftProducts.prereleaseSealed(edition);
+                yield SealedCardPoolGenerator.createPrerelease(edition);
             }
             case Block, FantasyBlock -> {
                 final CardBlock block = c.block() == null ? null : DraftProducts.block(c.block(), type == LimitedPoolType.FantasyBlock);
                 if (block == null || c.combo() == null || !SealedCardPoolGenerator.blockCombos(block).contains(c.combo())) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsBadCombo"));
                 }
-                yield DraftProducts.blockSealed(block, c.combo());
+                yield SealedCardPoolGenerator.createBlock(block, c.combo());
             }
             case Custom -> {
                 final CustomLimited template = c.template() == null ? null : DraftProducts.sealedTemplate(c.template());
                 if (template == null) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoTemplate", String.valueOf(c.template())));
                 }
-                yield DraftProducts.customSealed(template, packs(c.packs()));
+                yield SealedCardPoolGenerator.createCustom(template, packs(c.packs()));
             }
             case Import -> {
                 if (c.cubeId() == null || c.cubeId().isBlank()) {

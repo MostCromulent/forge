@@ -1,11 +1,12 @@
 package forge.web;
 
 import forge.gui.GuiBase;
-import forge.util.Localizer;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.IHasForgeLog;
+import forge.util.Localizer;
+import forge.web.console.ServerConsole;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,7 +17,6 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
-import forge.web.console.ServerConsole;
 
 /** The program's entry point: loads Forge, opens the server window, starts the web service with this launch's two link tokens and opens the host's link. The tokens are new each launch, so a link from an earlier launch no longer works. */
 public final class WebMain implements IHasForgeLog {

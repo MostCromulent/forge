@@ -18,15 +18,13 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import forge.util.Localizer;
+import forge.web.WebGuiBase;
 import forge.web.protocol.ToBrowser.*;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
-import forge.web.WebGuiBase;
-import forge.web.protocol.ToBrowser.QuestBracket;
-import forge.web.protocol.ToBrowser.QuestSeat;
-import forge.web.protocol.ToBrowser.QuestTournaments;
 
 /** Quest's draft tournaments: the page that lists them, entering one, its bracket, starting it and its prizes. The match played in one is QuestGame's. */
 final class QuestDraftTournaments {

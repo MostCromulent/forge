@@ -8,6 +8,7 @@ import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.match.HostedMatch;
 import forge.model.FModel;
 import forge.util.storage.IStorage;
+import forge.web.WebTestSupport;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -18,7 +19,6 @@ import java.util.UUID;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertSame;
-import forge.web.WebTestSupport;
 
 /** A limited gauntlet whose rounds a frontend other than desktop's starts. */
 public class GauntletTest {
@@ -40,11 +40,11 @@ public class GauntletTest {
         storage = null;
     }
 
-    // Fails if any gauntlet path still starts a round through getNewGuiGame, which a web seat cannot give
+    // Fails if any gauntlet path starts a round through getNewGuiGame, which a web seat cannot give
     @Test
     public void aSetStarterRunsEveryRound() {
         pool = "Gauntlet test " + UUID.randomUUID().toString().substring(0, 8);
-        final SealedCardPoolGenerator gen = DraftProducts.fullSealed(6);
+        final SealedCardPoolGenerator gen = SealedCardPoolGenerator.createFull(6);
         final DeckGroup group = gen.buildDeckGroup(pool, gen.getCardPool(false), false);
         FModel.getDecks().getSealed().add(group);
 

@@ -1,5 +1,6 @@
 package forge.web.limited;
 
+import forge.StaticData;
 import forge.deck.Deck;
 import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.limited.SealedCardPoolGenerator;
@@ -7,14 +8,13 @@ import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.EventFormat;
 import forge.gamemodes.net.server.ServerGameLobby;
-import forge.StaticData;
+import forge.web.WebTestSupport;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
-import forge.web.WebTestSupport;
 
 /** The core entry points online web events use, which desktop leaves at their defaults. */
 public class OnlineCoreTest {
@@ -28,7 +28,7 @@ public class OnlineCoreTest {
     public void configureWithABuiltGenerator() {
         final ServerGameLobby lobby = new ServerGameLobby();
         lobby.createEvent(EventFormat.SEALED);
-        final SealedCardPoolGenerator gen = DraftProducts.fullSealed(6);
+        final SealedCardPoolGenerator gen = SealedCardPoolGenerator.createFull(6);
         assertTrue(lobby.configureEvent(LimitedPoolType.Full, gen, 0, 0));
         assertSame(lobby.getCurrentEvent().getSealedGenerator(), gen);
     }

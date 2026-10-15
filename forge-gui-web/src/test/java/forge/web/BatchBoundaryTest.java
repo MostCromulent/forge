@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.deck.Deck;
 import forge.gamemodes.match.HostedMatch;
+import forge.web.match.BrowserModel;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -14,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import forge.web.match.BrowserModel;
 
 /** What one message to a client may hold, read from every message of ten turns the computer plays against itself. */
 public class BatchBoundaryTest {

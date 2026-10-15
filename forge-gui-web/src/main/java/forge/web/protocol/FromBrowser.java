@@ -16,8 +16,6 @@ public final class FromBrowser {
     private FromBrowser() {
     }
 
-    // ---- Start page and lobby ----------------------------------------------------------------------------------
-
     /** Messages that are only their name. */
     public enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, cardSets, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede, macroRecord, macroRepeat,
@@ -156,8 +154,6 @@ public final class FromBrowser {
     public record Start(boolean spectate) {
     }
 
-    // ---- Decks: the editor and the importer --------------------------------------------------------------------
-
     /** The format the start page's deck finder lists, while no table is open. */
     @Command("browseFormat")
     public record BrowseFormat(String format) {
@@ -244,8 +240,6 @@ public final class FromBrowser {
     public record DeviceDecks(List<DeviceDeckText> decks) {
     }
 
-    // ---- Match -------------------------------------------------------------------------------------------------
-
     @Command("reply")
     public record Reply(int id, @Ts("unknown") JsonElement value) {
     }
@@ -321,8 +315,6 @@ public final class FromBrowser {
     @Command("autoDecisions")
     public record AutoDecisionCommand(AutoDecisionAction action, @Nullable String key, boolean on) {
     }
-
-    // ---- Limited ---------------------------------------------------------------------------------------------
 
     /** Opens the Limited pages for a kind of event, or with resume, straight to the pool saved last. */
     @Command("limitedOpen")
@@ -406,8 +398,6 @@ public final class FromBrowser {
     public record EventDecksOnly(boolean on) {
     }
 
-    // ---- Campaigns: what Planar Conquest and any mode like it share ---------------------------------------------
-
     /** Opens a campaign mode's saved games, or with resume, straight into the one played last. mode is "conquest". */
     @Command("campaignOpen")
     public record CampaignOpen(String mode, boolean resume) {
@@ -443,8 +433,6 @@ public final class FromBrowser {
     @Command("trade")
     public record Trade(String source, List<TradePick> picks) {
     }
-
-    // ---- Planar Conquest ---------------------------------------------------------------------------------------
 
     /** Selects a place on the map. The player does not move. */
     @Command("conquestSelect")

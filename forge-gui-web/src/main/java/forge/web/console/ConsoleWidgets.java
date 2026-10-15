@@ -2,17 +2,6 @@ package forge.web.console;
 
 import forge.util.Localizer;
 
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JSeparator;
-import javax.swing.JTextArea;
-import javax.swing.Timer;
-import javax.swing.UIManager;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -24,6 +13,17 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.function.Supplier;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSeparator;
+import javax.swing.JTextArea;
+import javax.swing.Timer;
+import javax.swing.UIManager;
 
 /** The rows, boxes, buttons and wrapped text the console's windows are laid out from. */
 final class ConsoleWidgets {

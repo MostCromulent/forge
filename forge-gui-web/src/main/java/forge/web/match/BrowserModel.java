@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.gamemodes.net.DeltaPacket;
 import forge.web.protocol.ToBrowser.StateMessage;
+import forge.web.protocol.Wire;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -15,7 +16,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import forge.web.protocol.Wire;
 
 /** The game's objects as the browser holds them, changed by the same rules as src/main/ts/model.ts so the two copies stay equal. */
 public final class BrowserModel {

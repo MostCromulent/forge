@@ -6,6 +6,9 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.ImageUtil;
+import forge.web.images.Foil;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -21,9 +24,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.JsonCodec;
-import forge.web.images.Foil;
 
 public class WebServerTest {
     private final HttpClient http = HttpClient.newHttpClient();

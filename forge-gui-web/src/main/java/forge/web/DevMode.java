@@ -9,16 +9,16 @@ import forge.interfaces.IDevModeCheats;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.player.PlayerControllerHuman;
+import forge.util.IHasForgeLog;
 import forge.util.Localizer;
+import forge.web.match.LocalGame;
+import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.FromBrowser.Dev;
 import forge.web.protocol.ToBrowser.DevDump;
 import forge.web.protocol.ToBrowser.DevState;
 import forge.web.protocol.ToBrowser.Notice;
 
 import java.util.Arrays;
-import forge.web.match.LocalGame;
-import forge.web.protocol.BrowserChannel;
-import forge.util.IHasForgeLog;
 
 /** Carries out the host's dev mode actions on the running game, such as making mana or setting up a board. Forge gives a netplay client no cheats, but the host shares its process with the server, so only the host's own seat can cheat. */
 final class DevMode implements IHasForgeLog {

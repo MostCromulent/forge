@@ -6,18 +6,17 @@ import forge.game.card.CardView.CardStateView;
 import forge.game.player.PlayerView;
 import forge.gamemodes.net.DeltaPacket;
 import forge.gui.card.CardDetailUtil;
+import forge.web.images.Foil;
+import forge.web.protocol.JsonCodec;
 import forge.web.protocol.ToBrowser.CardFace;
 import forge.web.protocol.ToBrowser.Detail;
 import forge.web.protocol.ToBrowser.PlayerDetail;
-
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import forge.web.images.Foil;
-import forge.web.protocol.JsonCodec;
 
 /** What the zoom panel shows for a card or a player: the text the desktop client composes (CardDetailUtil). */
 final class CardDetails {

@@ -1,34 +1,26 @@
 package forge.web.limited;
 
 import com.google.gson.JsonObject;
-import forge.web.protocol.FromBrowser.*;
-import forge.web.protocol.ToBrowser.*;
-import forge.web.WebSession.Event;
-import forge.web.WebSession.InCampaign;
-import forge.web.WebSession.Playing;
-import forge.web.WebSession.Stage;
 import forge.deck.Deck;
 import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
-import forge.gamemodes.quest.QuestEventDraft;
 import forge.gamemodes.limited.GauntletMini;
 import forge.gamemodes.match.HostedMatch;
-import forge.util.storage.IStorage;
-import forge.util.Localizer;
+import forge.gamemodes.quest.QuestEventDraft;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.IHasForgeLog;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
+import forge.util.Localizer;
+import forge.util.storage.IStorage;
 import forge.web.WebGuiBase;
 import forge.web.WebSession;
+import forge.web.WebSession.Event;
+import forge.web.WebSession.InCampaign;
+import forge.web.WebSession.Playing;
+import forge.web.WebSession.Stage;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckSession;
 import forge.web.deck.DeckStore;
@@ -36,12 +28,15 @@ import forge.web.lobby.Lobby;
 import forge.web.match.LocalGame;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.FromBrowser.*;
+import forge.web.protocol.ToBrowser.*;
 import forge.web.protocol.Wire;
-import forge.web.protocol.FromBrowser.DraftSave;
-import forge.web.protocol.FromBrowser.PoolPlay;
-import forge.web.protocol.ToBrowser.LimitedResult;
-import forge.web.protocol.FromBrowser.PoolDelete;
-import forge.web.protocol.FromBrowser.PoolEdit;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /** One session's Limited play against the computer: its sealed pools, its draft and its gauntlet. */
 public final class OfflineLimited implements IHasForgeLog {

@@ -4,6 +4,8 @@ import com.google.gson.JsonObject;
 import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.PreparedMatch;
+import forge.web.deck.DeckSession;
+import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
 import forge.web.protocol.FromBrowser.TradePick;
 import forge.web.protocol.ToBrowser.CampaignPrefs;
@@ -20,8 +22,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.function.Supplier;
-import forge.web.deck.DeckSession;
-import forge.web.protocol.BrowserChannel;
 
 /**
  * A campaign mode as a session sees it. One per session and mode, over Forge's one model of that mode.

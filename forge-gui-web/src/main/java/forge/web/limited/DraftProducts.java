@@ -8,14 +8,15 @@ import forge.gamemodes.limited.CustomLimited;
 import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.limited.ThemedChaosDraft;
-import forge.model.CardBlock;
 import forge.localinstance.properties.ForgePreferences;
+import forge.model.CardBlock;
 import forge.model.FModel;
 import forge.util.Localizer;
 import forge.util.storage.IStorage;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /** What a limited event can be built from, read without prompting, for a frontend that asks for every choice at once. */
@@ -34,24 +35,11 @@ final class DraftProducts {
         return block.getCntBoostersDraft() == 3 && sets.size() > 1 && sets.size() < 4 ? BoosterDraft.getSetCombos(sets) : new ArrayList<>();
     }
 
-    static BoosterDraft fullDraft() {
-        return BoosterDraft.createFullDraft();
-    }
-
-    /** combo is one set code per pack, joined with "/", or the block's only set's code. */
-    static BoosterDraft blockDraft(final CardBlock block, final String combo, final LimitedPoolType type) {
-        return BoosterDraft.createBlockDraft(type, block, combo);
-    }
-
-    static BoosterDraft cubeDraft(final CustomLimited cube) {
-        return BoosterDraft.createCubeDraft(LimitedPoolType.Custom, cube);
-    }
-
     /** Throws IllegalArgumentException when no set fits the theme. */
     static BoosterDraft chaosDraft(final ThemedChaosDraft theme) {
         final BoosterDraft draft = BoosterDraft.createChaosDraft(theme);
         if (draft == null) {
-            throw new IllegalArgumentException("No set fits the theme " + theme.getLabel() + ".");
+            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoSetForTheme", theme.getLabel()));
         }
         return draft;
     }
@@ -72,23 +60,6 @@ final class DraftProducts {
             throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + cubeId);
         }
         return imported;
-    }
-
-    static SealedCardPoolGenerator fullSealed(final int packs) {
-        return SealedCardPoolGenerator.createFull(packs);
-    }
-
-    static SealedCardPoolGenerator prereleaseSealed(final CardEdition edition) {
-        return SealedCardPoolGenerator.createPrerelease(edition);
-    }
-
-    /** combo is one entry of SealedCardPoolGenerator.blockCombos. */
-    static SealedCardPoolGenerator blockSealed(final CardBlock block, final String combo) {
-        return SealedCardPoolGenerator.createBlock(block, combo);
-    }
-
-    static SealedCardPoolGenerator customSealed(final CustomLimited template, final int packs) {
-        return SealedCardPoolGenerator.createCustom(template, packs);
     }
 
     /** Throws IllegalArgumentException, with a message a player can read, when the cube can't be imported. */
@@ -149,8 +120,7 @@ final class DraftProducts {
     public static SealedLists sealed() {
         final List<CardEdition> editions = new ArrayList<>();
         StaticData.instance().getEditions().getPrereleaseEditions().forEach(editions::add);
-        Collections.sort(editions);
-        Collections.reverse(editions);
+        editions.sort(Comparator.reverseOrder());
         final List<Edition> prereleases = editions.stream().map(e -> new Edition(e.getCode(), e.getName())).toList();
         final List<String> templates = SealedCardPoolGenerator.loadCustomSealed().stream().map(CustomLimited::getName).toList();
         return new SealedLists(sealedBlocks(FModel.getBlocks()), sealedBlocks(FModel.getFantasyBlocks()), prereleases, templates);

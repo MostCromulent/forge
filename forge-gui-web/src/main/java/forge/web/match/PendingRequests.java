@@ -4,6 +4,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.util.IHasForgeLog;
 import forge.util.LogSafe;
+import forge.web.protocol.ToBrowser;
+import forge.web.protocol.Wire;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -14,8 +16,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import forge.web.protocol.ToBrowser;
-import forge.web.protocol.Wire;
 
 /** Blocking prompts waiting on the browser. A request survives a browser reload because only its thread waits on it. */
 public final class PendingRequests implements IHasForgeLog {

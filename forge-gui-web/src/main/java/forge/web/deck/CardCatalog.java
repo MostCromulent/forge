@@ -11,12 +11,14 @@ import forge.item.PaperCard;
 import forge.itemmanager.AdvancedSearchParser;
 import forge.itemmanager.SFilterUtil;
 import forge.model.FModel;
+import forge.web.images.Foil;
+import forge.web.protocol.JsonCodec;
+import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.CataloguePage;
 import forge.web.protocol.ToBrowser.CatalogueRow;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -24,9 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
-import forge.web.images.Foil;
-import forge.web.protocol.JsonCodec;
-import forge.web.protocol.ToBrowser;
 
 /** Every card a deck can be built from, built once and shared by every browser. */
 public final class CardCatalog {
@@ -96,8 +95,7 @@ public final class CardCatalog {
                     editions.add(e);
                 }
             }
-            Collections.sort(editions);
-            Collections.reverse(editions);
+            editions.sort(Comparator.reverseOrder());
             return new ToBrowser.CardSets(editions.stream().map(e -> new ToBrowser.LimitedEdition(e.getCode(), e.getName())).toList());
         }
     }

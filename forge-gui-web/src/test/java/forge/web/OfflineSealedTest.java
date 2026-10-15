@@ -6,13 +6,13 @@ import forge.deck.DeckGroup;
 import forge.gui.GuiBase;
 import forge.model.FModel;
 import forge.util.storage.IStorage;
+import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import forge.web.protocol.JsonCodec;
 
 /** Offline sealed as a browser drives it: a pool made, kept, opened, played and removed through the session's messages. */
 public class OfflineSealedTest extends SessionsTest {
@@ -76,7 +76,7 @@ public class OfflineSealedTest extends SessionsTest {
         Assert.assertNotNull(editorOn(host, name));
         Assert.assertNotSame(FModel.getDecks().getSealed().get(name).getHumanDeck(), first, "a confirmed replace did not replace");
     }
-    // Fails if a draft pool's free-for-all still stops at three opponents
+    // Fails if a draft pool's free-for-all stops at three opponents
     @Test(timeOut = 120_000)
     public void aDraftFreeForAllSeatsEveryOpponent() throws Exception {
         WebTestSupport.skipUnlessStress();

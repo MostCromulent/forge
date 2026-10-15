@@ -4,9 +4,9 @@ import com.google.gson.JsonObject;
 import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.net.draft.BoosterDraftHost;
 import forge.gamemodes.net.server.ServerGameLobby;
+import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-import forge.web.protocol.JsonCodec;
 
 /** Draft and sealed events at a web table, set up and started by the host with guests seated, as desktop's lobby runs them. */
 public class OnlineEventTest extends SessionsTest {

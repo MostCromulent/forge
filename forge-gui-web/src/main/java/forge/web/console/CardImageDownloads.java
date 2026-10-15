@@ -2,19 +2,31 @@ package forge.web.console;
 
 import com.google.common.collect.Iterables;
 import forge.deck.Deck;
+import forge.game.GameFormat;
 import forge.gui.FThreads;
 import forge.gui.UiCommand;
 import forge.gui.download.GuiDownloadFilteredCardImages;
 import forge.gui.download.GuiDownloadService;
 import forge.gui.interfaces.IButton;
 import forge.gui.interfaces.IProgressBar;
-import forge.game.GameFormat;
 import forge.item.PaperCard;
 import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import forge.util.Localizer;
 import forge.util.storage.IStorage;
+import forge.web.images.WebDownloads;
 
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.text.NumberFormat;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -27,20 +39,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.text.NumberFormat;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 import static forge.web.console.ConsoleWidgets.heading;
-import forge.web.images.WebDownloads;
 
 /** The console's window for saving card pictures to this computer ahead of time. */
 final class CardImageDownloads {
@@ -226,8 +226,6 @@ final class CardImageDownloads {
         label.setFont(label.getFont().deriveFont(Font.PLAIN));
         return label;
     }
-
-    // ---- The download ---------------------------------------------------------------------------------------------
 
     private Predicate<PaperCard> chosenCards() {
         final Choice choice = (Choice) choices.getSelectedItem();

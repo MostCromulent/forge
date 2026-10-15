@@ -6,7 +6,6 @@ import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import forge.util.IHasForgeLog;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -17,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.imageio.ImageIO;
 
 /** Cuts avatars, sleeves, mana symbols and other icons out of the skin's sprite sheets as PNGs for the page. It repeats desktop FSkin's cell scan because this module cannot depend on the desktop one, and follows it exactly, so an index in the shared preferences picks the same picture in both clients. */
 public final class SkinSprites implements IHasForgeLog {
