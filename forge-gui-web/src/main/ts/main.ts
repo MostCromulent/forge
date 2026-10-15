@@ -60,7 +60,7 @@ const report = (text: string): void => {
 window.addEventListener('error', e => report(String((e.error as Error | undefined)?.stack ?? e.message)));
 window.addEventListener('unhandledrejection', e => report(String((e.reason as Error | undefined)?.stack ?? e.reason)));
 
-// While messages are held the prompt on screen is an earlier board's, so an answer to it would land on a question not yet seen
+// While messages are held the prompt on screen is an earlier board's, so an answer to it would land on a prompt not yet seen
 const HELD_INPUT = new Set(['selectCard', 'selectPlayer', 'selectStackItem', 'useMana', 'ok', 'cancel', 'endTurn', 'undo']);
 const wire = createActions(msg => {
   if (!pacer.holding() || !HELD_INPUT.has(msg.t)) send(msg);

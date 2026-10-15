@@ -177,7 +177,7 @@ export function renderDetail(model: Model): void {
     ui.hover = null;
     byId('zoom').classList.remove('settling');
   }
-  // A question that picks from the board needs the board, so a pinned sheet gives way to it
+  // A prompt that picks from the board needs the board, so a pinned sheet gives way to it
   const p = model.prompt;
   if (ui.inspect && p && p !== pinnedOver.seen && !p.paying && ((p.selectableMin > 0 && p.selectable.length > 0) || p.selectablePlayers.length > 0)) {
     ui.hover = null;

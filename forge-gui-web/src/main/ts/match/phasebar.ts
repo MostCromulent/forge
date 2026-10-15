@@ -117,7 +117,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
     portrait.src = avatar;
   }
   swapOwner(q(pill, '.owner'), myTurn ? t('lblWebPhaseYourTurn') : active?.Name ?? '');
-  // The host names the time of day as the engine does, in English
+  // The server names the time of day as the engine does, in English
   const dayTime = model.controls?.dayTime;
   const time = dayTime === 'Day' ? t('lblDay') : dayTime === 'Night' ? t('lblNight') : dayTime;
   q(pill, '.owner .turn').textContent = time ? t('lblWebPhaseTurnAndTime', g.Turn ?? 0, time) : t('lblWebPhaseTurnNumber', g.Turn ?? 0);

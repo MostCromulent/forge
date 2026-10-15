@@ -76,7 +76,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   q(el, '.combat-tag').textContent = blockThis ? t('lblWebPortraitBlockingThis') : '';
   el.classList.toggle('blocking', !!card.Blocking);
   el.classList.toggle('phased', !!card.PhasedOut);
-  // The zoom shows the card large, so it keeps the full image
+  // The board shows a shrunk copy, while the preview (data-zoom) keeps the full image
   const src = cardImageSrc(model, card);
   const small = visible ? smallImage(src) : '';
   if (setImage(q<HTMLImageElement>(el, 'img'), small)) {
@@ -122,7 +122,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   p.dataset.shift = creature ? ptShift(state.Power ?? 0, state.BasePower) : '';
   const hurt = q(el, '.pt-t');
   hurt.textContent = toughness;
-  // Damage counts as below
+  // Marked damage lowers the toughness's shift as it lowers the number above
   hurt.dataset.shift = creature ? ptShift((state.Toughness ?? 0) - damage, state.BaseToughness) : '';
   hurt.classList.toggle('hurt', creature && damage > 0);
   pt.classList.toggle('on', !!(power + toughness));
@@ -152,7 +152,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
 /** Forge has no icon for a soulbond pair, so the page brings its own and lists it with the keywords. */
 const PAIRED = 'paired.svg';
 
-/** Only keywords the host names an icon for appear, so neither client keeps its own table of them. */
+/** Only keywords the server names an icon for appear, so the page keeps no table of its own. */
 function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined, shields: number | undefined, paired?: string): void {
   const shown = (keywords ?? []).filter(k => k.icon);
   if (paired) shown.push({ icon: PAIRED, title: paired, reminder: '' });
@@ -228,7 +228,7 @@ function mechanic(card: CardView, type: string): Node[] {
     }
     return [pips, label(card.AttractionLights.join(' '))];
   }
-  // Intensity has no ceiling, so there is no track to draw — the number says it on its own
+  // Intensity has no ceiling, so there is no track to draw and the number says it on its own
   if (card.Intensity) return [label(t('lblWebCardIntensity', card.Intensity))];
   return [];
 }

@@ -45,11 +45,11 @@ function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number
   return found;
 }
 
-/** The question open when the drawer was opened, so only a new one closes it. */
+/** The prompt open when the drawer was opened, so only a new prompt closes it. */
 const openOver = openedOver();
 /** The card last tapped in the drawer, which is opened again if that card's play is called off. */
 let played: number | null = null;
-/** The question the drawer opened itself for. */
+/** The prompt the drawer opened itself for. */
 let openedFor: object | null = null;
 
 const closeDrawer = () => {
@@ -82,28 +82,28 @@ function drawerHead(root: HTMLElement): HTMLElement {
   return head;
 }
 
-/** Whether the hand shows as the open drawer this frame, having closed it for a new question or opened it again for one called off. */
+/** Whether the hand shows as the open drawer this frame, having closed it for a new prompt or opened it again for a play called off. */
 function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: number): boolean {
   const head = drawerHead(root);
   const portrait = isPortrait();
   const asked = model.prompt;
-  // A question answered with cards from the hand, a discard say, needs them at a size that can be told apart and tapped
+  // A prompt answered with cards from the hand, a discard say, needs them at a size that can be told apart and tapped
   const fromHand = portrait && !!asked && !asked.priority && !asked.paying && asked.selectableMin > 0
     && asked.selectable.some(r => held.some(c => c.$key === r.ref));
   if (fromHand) {
     if (asked !== openedFor) {
       openedFor = asked;
       ui.handOpen = true;
-      // Opened for this question, which is then the one it opened over
+      // Opened for this prompt, which openOver then counts as the prompt it opened over
       openOver.note(false, null);
       played = null;
     }
   } else if (openedFor) {
-    // Opened for a question, it goes with the question
+    // Opened for a prompt, the drawer closes when that prompt goes
     openedFor = null;
     ui.handOpen = false;
   } else if (ui.handOpen && (model.requests.size > 0 || (openOver.seen && asked !== openOver.seen && asked && !asked.priority))) {
-    // What was tapped asks its next question on the board, in a menu or in a dialog, so the drawer gets out of the way
+    // The tapped card's next prompt is answered on the board, in a menu or in a dialog, so the drawer gets out of the way
     ui.handOpen = false;
   } else if (!ui.handOpen && played !== null && asked?.priority) {
     ui.handOpen = portrait && held.some(c => c.$key === played);
@@ -144,7 +144,7 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     updateCard(el, model, c);
     const source = elsewhere.get(c.$key);
     el.classList.toggle('elsewhere', source !== undefined);
-    // The zone picks the glow's colour in CSS, and names itself in the detail panel when the card is hovered
+    // The zone picks the glow's colour in CSS, and names itself in the preview when the card is hovered
     if (source) {
       el.dataset.from = source;
     } else {
@@ -182,7 +182,7 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
   });
 }
 
-/** Forgets the last game's drawer: the card last tapped and the questions it opened for or over. */
+/** Forgets the last game's drawer: the card last tapped and the prompts it opened for or over. */
 export function resetHand(): void {
   played = null;
   openedFor = null;

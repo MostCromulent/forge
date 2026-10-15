@@ -73,7 +73,7 @@ const SMALLEST_SLACK = 0.06;
 interface GroupStats {
   el: HTMLElement;
   slots: number;
-  /** Cards fanned behind the group's hosts and pile tops, all told. */
+  /** Cards fanned behind the group's slots, attachments and pile copies together. */
   steps: number;
   /** The most cards behind any one slot. */
   depth: number;
@@ -81,7 +81,7 @@ interface GroupStats {
   battles: number;
 }
 
-/** The groups sized as one, sharing a card size and a line count; each is its own zone today. */
+/** Groups sized as one, sharing a card size and a line count. fitCards gives each group a zone of its own. */
 type Zone = GroupStats[];
 /** The zones side by side in one of a battlefield's two rows. */
 type RowZones = Zone[];
@@ -131,7 +131,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   // So does a phone's seat, whose player is a bar across it
   const header = root.classList.contains('compact') ? player.offsetHeight + 8 : minWidth ? player.offsetHeight : 0;
   const seatPad = px(style, 'padding-top') + px(style, 'padding-bottom');
-  // The room by the pill for an attacker's step grows with the cards (board.css), so it is worked out for each size tried
+  // The room by the phase pill for an attacker's step grows with the cards (board.css), so it is worked out for each size tried
   const mine = root.id === 'me';
   const fieldPad = (fit: number) => {
     // A phone gives the field's padding in its own styles, tighter than the room worked out below
@@ -162,7 +162,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     const gap = rowGap(r);
     const zones = row.filter(z => live(z).length);
     const need = zones.map(z => zoneWidth(z, { fit: cap, lines: 1 }, gap));
-    // The other permanents stand in from the row's end (board.css), clear of the stack panel's edge
+    // The support group (permanents that are neither lands nor creatures) stands in from the row's end (board.css), clear of the stack panel's edge
     const indent = r === 0 && live(rows[0][1]).length ? supportIndent : 0;
     const gaps = gap * Math.max(0, zones.length - 1) + indent;
     // A zone at the smallest size keeps that width whatever its share, so the zones beside it give up the difference
@@ -316,7 +316,7 @@ export function slotsFor(model: Model, cards: CardView[], onField: CardView[]): 
   return slots.sort((a, b) => rank(a) - rank(b) || tapped(a) - tapped(b) || order.get(a)! - order.get(b)!);
 }
 
-// Everything a player can see or act on must match, and a property never set must read the same as one set back
+// Cards with the same signature pile together, so it holds everything a player can see or act on, and a property never set reads the same as one set back
 export function signature(model: Model, card: CardView, marks: Set<number>[]): string | null {
   if (!model.visible.has(card.$key)) return null;
   const s = stateOf(model, card);
@@ -332,7 +332,7 @@ function counters(all: Record<string, number> | null | undefined): string {
     .map(([name, n]) => `${name}:${n}`).join(',');
 }
 
-// The engine's flag means only "came under your control this turn", so creature type and haste are checked here
+// The engine's Sickness flag means only "came under your control this turn", so creature type and haste are checked here
 function isSick(model: Model, card: CardView): boolean {
   const state = stateOf(model, card);
   return !!card.Sickness && /Creature/.test(state.Type ?? '') && !state.Keywords?.some(k => k.icon === 'IMG_ABILITY_HASTE');
@@ -344,7 +344,7 @@ function createSlot(): HTMLElement {
 }
 
 function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick, charging: Set<number>): void {
-  // The host comes last so it paints over what is attached to it
+  // The card the others are attached to comes last, so it paints over them
   const cards = [...slot.attached, slot.top];
   reconcile(el, cards, c => c.$key, () => createCard(select), (c, card) => {
     // Marked first, since a ghost lying face down is drawn as its sleeve

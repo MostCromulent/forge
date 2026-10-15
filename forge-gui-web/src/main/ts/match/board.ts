@@ -53,7 +53,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
     }
   }
   const choice = model.prompt?.starterChoice;
-  // The winner is asked who starts as the toss is made, and the question can reach the page before the toss's own event
+  // The winner is asked who starts as the toss is made, and that prompt can reach the page before the toss's own event
   if (choice === 'toss') toss(model, true);
   // Who goes first is said or asked once the coin has come down
   if (!coinInAir()) {
@@ -79,7 +79,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
     const key = Number(el.dataset.key);
     if (isTouch(e) && !menu) {
       if (repeatTap(key, performance.now())) return;
-      // Read as the tap lands: a card keeps the handler it was made with, long after the question of that moment
+      // Read as the tap lands: a card keeps the handler it was made with, long after the prompt it was made under
       const card = model.objects.get(key) as CardView | undefined;
       const tapped = { playable: el.classList.contains('playable'), selectable: el.classList.contains('selectable'),
         mine: card?.Controller?.ref === me(model)?.$key, attacking: !!card?.Attacking };
@@ -87,7 +87,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
         inspectCard(el);
         return;
       }
-      // Shown at once, since the host's answer can be a moment away; not while newer boards wait, when the click is not sent
+      // Shown at once, since the server's answer can be a moment away. Not while newer boards wait, as the click is not sent then
       if (!boardBehind()) replay(el, 'pressed');
     }
     notePick(key);
@@ -647,7 +647,7 @@ let choseStarter = false;
 /** The first game's toss has been shown. */
 let tossed = false;
 
-/** Shows the toss once, to a player at the table, whichever of its event and the winner's question arrives first. */
+/** Shows the toss once, to a player at the table, whichever of its event and the winner's prompt arrives first. */
 function toss(model: Model, heads: boolean): void {
   const name = me(model)?.Name;
   if (tossed || name === undefined) return;
@@ -819,7 +819,7 @@ const HOURGLASS_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="
 /** What a command zone effect is called on its plaque: an emblem or a lasting designation by name, else an effect. */
 function effectKind(state: Partial<CardStateView>): { label: string; lasting: boolean } {
   if (/\bEmblem\b/.test(state.Type ?? '')) return { label: t('lblEmblem'), lasting: true };
-  // The designation's name is the card's, as the host sends it
+  // The designation's name is the card's, as the server sends it
   const named = /^The (Monarch|Initiative|Ring)$/.exec(state.Name ?? '');
   return named ? { label: named[1], lasting: true } : { label: t('lblEffect'), lasting: false };
 }
@@ -984,7 +984,7 @@ function breakPortraits(model: Model, losers: PlayerView[], actions: Actions): v
       match.style.setProperty('--end-x', centre.x + 'px');
       match.style.setProperty('--end-y', centre.y + 'px');
       match.classList.add('ending');
-      // Without WebGL nothing has shown yet, so the title is simply not held back
+      // Without WebGL nothing has shown yet, so the result is not held back
       run.catch(release);
       window.setTimeout(release, TITLE_LIMIT_MS);
     } else {

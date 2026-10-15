@@ -26,7 +26,7 @@ let actions: Actions | null = null;
 /** Your spells being cast, by card key, with a kept picture because the card is missing from the browser's game until its cost is paid. motion.ts flies each to the place drawn for it here. */
 const awaiting = new Map<string, { src: string; zoom: string; since: number; name: string }>();
 
-/** The model last drawn, and what the phone's chip remembers between draws: how many items it held, and the question it was folded during. */
+/** The model last drawn, and what the phone's chip remembers between draws: how many items it held, and the prompt it was folded during. */
 let current: Model | null = null;
 let countSeen = 0;
 let foldedFor: object | null = null;
@@ -72,9 +72,9 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   root.classList.toggle('chip', portrait);
   const count = items.length + awaiting.size;
   if (portrait) {
-    // The list opens for a new arrival while you may answer it, unless you folded it during this same question
+    // The list opens for a new arrival while you may answer it, unless you folded it during this same prompt
     if (count > countSeen && model.prompt?.priority && foldedFor !== model.prompt) ui.stackCollapsed = false;
-    // A question answered on the board or from the hand needs the room the list would lie over
+    // A prompt answered on the board or from the hand needs the room the list would lie over
     const asked = model.prompt;
     if (asked && !asked.priority && !asked.paying && (asked.selectable.length > 0 || asked.selectablePlayers.length > 0) && foldsForPick(asked)) {
       ui.stackCollapsed = true;
@@ -98,7 +98,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   }
   countSeen = count;
   const pick = stackPick(model);
-  // A spell is picked on the list, so a folded list opens once for the question
+  // A spell is picked on the list, so a folded list opens once for the prompt
   if (opensForPick(pick?.id ?? null)) ui.stackCollapsed = false;
   // A target on the stack is clicked on the list too, while the prompt asks for it
   const offered = model.prompt?.selectableStack ?? [];
@@ -443,7 +443,7 @@ function layout(pile: HTMLElement, n: number): void {
   });
 }
 
-/** Forgets the last game's stack: its spells awaiting payment, the count the phone's chip had, and the question it was folded during. */
+/** Forgets the last game's stack: its spells awaiting payment, the count the phone's chip had, and the prompt it was folded during. */
 export function resetStack(): void {
   awaiting.clear();
   countSeen = 0;
