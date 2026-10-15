@@ -5,6 +5,7 @@ import forge.deck.Deck;
 import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.item.PaperCard;
+import forge.model.FModel;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -54,5 +55,17 @@ public class LegalityTest {
         final Deck d = commanderDeck("Meren of Clan Nel Toth");
         d.getMain().add(card("Mana Crypt"), 1);
         Assert.assertNull(Legality.check(d, Check.none()).verdict());
+    }
+
+    // Fails if a card pool's sentence stops naming the cards it rejects, or names a restricted card as illegal
+    @Test
+    public void cardPoolNamesWhatItRejects() {
+        final Deck d = new Deck("t");
+        d.getMain().add(card("Black Lotus"), 2);
+        d.getMain().add(card("Forest"), 20);
+        Assert.assertEquals(DeckCatalog.poolProblem(FModel.getFormats().get("Modern"), d), "Not legal in Modern: 1 card. Black Lotus.");
+        Assert.assertEquals(DeckCatalog.poolProblem(FModel.getFormats().get("Vintage"), d), "Vintage allows one copy of Black Lotus.");
+        d.getMain().remove(card("Black Lotus"), 1);
+        Assert.assertNull(DeckCatalog.poolProblem(FModel.getFormats().get("Vintage"), d));
     }
 }

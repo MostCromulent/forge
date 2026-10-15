@@ -49,6 +49,7 @@ import java.util.Set;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiPredicate;
 
 /** The decks a seat may choose from, and what the browser shows about each one. */
 final class DeckCatalog {
@@ -606,25 +607,32 @@ final class DeckCatalog {
     /** Most cards a problem sentence names before counting the rest. */
     private static final int NAMED_CARDS = 3;
 
-    /** The pool's verdict on a deck as one sentence. GameFormat answers with a header line and a card per line. */
+    /** The pool's verdict on a deck as one sentence, naming the cards it objects to by GameFormat's two checks, in its order. */
     static String poolProblem(final GameFormat pool, final Deck deck) {
-        final String raw = pool.getDeckConformanceProblem(deck);
-        if (raw == null) {
+        if (pool.getDeckConformanceProblem(deck) == null) {
             return null;
         }
-        final String[] lines = raw.split("\n");
-        // GameFormat lists each printing, so one card in two sets would be named twice
-        final Set<String> unique = new LinkedHashSet<>();
-        for (int i = 1; i < lines.length; i++) {
-            if (!lines[i].isBlank()) {
-                unique.add(lines[i].trim());
+        final CardPool cards = deck.getAllCardsInASinglePool();
+        final List<String> illegal = namesIn(cards, (card, count) -> !pool.getFilterRules().test(card));
+        if (!illegal.isEmpty()) {
+            return Localizer.getInstance().getMessage(illegal.size() == 1 ? "lblWebDeckCatalogNotLegalOne" : "lblWebDeckCatalogNotLegal",
+                    pool.getName(), illegal.size(), listOf(illegal));
+        }
+        final boolean legendsRestricted = Boolean.TRUE.equals(pool.isRestrictedLegendary());
+        final List<String> restricted = namesIn(cards, (card, count) -> count > 1 && (pool.getRestrictedCards().contains(card.getName())
+                || legendsRestricted && card.getRules().getType().isLegendary() && !card.getRules().getType().isPlaneswalker()));
+        return Localizer.getInstance().getMessage("lblWebDeckCatalogAllowsOneOf", pool.getName(), listOf(restricted));
+    }
+
+    /** The names of the cards that match, each once though the pool holds it in several printings. */
+    private static List<String> namesIn(final CardPool cards, final BiPredicate<PaperCard, Integer> matches) {
+        final Set<String> names = new LinkedHashSet<>();
+        for (final Map.Entry<PaperCard, Integer> entry : cards) {
+            if (matches.test(entry.getKey(), entry.getValue())) {
+                names.add(entry.getKey().getDisplayName());
             }
         }
-        final List<String> names = new ArrayList<>(unique);
-        final String listed = listOf(names);
-        return lines[0].contains("restricted")
-                ? Localizer.getInstance().getMessage("lblWebDeckCatalogAllowsOneOf", pool.getName(), listed)
-                : Localizer.getInstance().getMessage(names.size() == 1 ? "lblWebDeckCatalogNotLegalOne" : "lblWebDeckCatalogNotLegal", pool.getName(), names.size(), listed);
+        return new ArrayList<>(names);
     }
 
     /** "A", "A and B", "A, B and C", or "A, B, C and 4 more". */
