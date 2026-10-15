@@ -9,7 +9,7 @@ This file describes the module's architecture and the rules it is built on. Clas
     mvn -Pweb -pl forge-gui-web -am install -DskipTests
     java -jar forge-gui-web/target/forge-gui-web.jar
 
-Forge's default build leaves this module out, so `-Pweb` is needed. Maven downloads its own Node and runs npm. The jar needs `target/lib/` beside it and looks for Forge's `res` folder in the folders above where it runs. It takes options as `-Dforge.web.*` system properties, such as `forge.web.port`.
+Forge's default build leaves this module out, so `-Pweb` is needed. Maven downloads its own Node and runs npm. The jar needs the `lib/` folder Maven writes beside it, and looks for Forge's `res` folder in the folders above where it runs. It takes options as `-Dforge.web.*` system properties, such as `forge.web.port`.
 
 To work on the page, start the jar with `-Dforge.web.pageDir=forge-gui-web/src/main/resources/web`, so the page is served from the source folder, and run `npm run watch` in this folder. A change to the page then needs only a reload.
 
@@ -36,6 +36,16 @@ desktop / mobile Forge ──WebSocket tunnel──▶ WebServer ─────
 Each browser has one `WebSession`, which survives reloads. A session is always at one stage (the menu, a table, a match, an event, a campaign), and it routes the browser's messages to the class that owns that stage. During a match the browser's seat is a `WebGuiGame`, the web's `IGuiGame`, which turns game state, events and questions into messages.
 
 The game's questions block. When the engine asks a seat something, the netplay client's call waits in `WebGuiGame` until the browser answers. A browser that reloads is sent the whole table again with every question still open, so a reload never loses a game.
+
+### Who can reach it
+
+The server listens on every network interface, over plain HTTP, on Forge's netplay port 36743 by default. Hosting from desktop Forge at the same time needs another `forge.web.port`. Each launch makes two random link tokens, one for the host and one for guests. A request without one is refused, the tokens are compared in constant time, the cookie that holds one is `HttpOnly` and `SameSite=Strict`, and a WebSocket must come from the page's own origin. Desktop and mobile Forge join with the guests' token, through the same port, so the netplay tunnel is open to no one a guest link does not already admit.
+
+A small Swing window shows the links, who is connected and the server's traffic. From it the host can forward the port by UPnP or open a Cloudflare tunnel, for players outside the network. Both are off until the host turns them on.
+
+### The host's profile
+
+The web host is Forge itself, so it reads and writes the same user profile as desktop Forge: preferences, decks, saved games and the card image cache. A deck saved in the browser is there in desktop Forge, and the other way round.
 
 ### Threads
 

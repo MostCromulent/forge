@@ -1,4 +1,4 @@
-// Every icon the page draws from Lucide (ISC, see web/licenses/lucide-license.txt), as the shapes inside a 24-unit svg
+// Every icon the page draws from Lucide (ISC, see forge-gui/res/licenses/lucide-license.txt), as the shapes inside a 24-unit svg
 
 export const ICONS = {
   check: '<path d="M20 6 9 17l-5-5"/>',
