@@ -4,7 +4,9 @@ import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.net.server.ServerGameLobby;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonObject;
+import forge.gamemodes.net.event.MessageEvent;
 import forge.gamemodes.net.server.FServerManager;
+import forge.gamemodes.net.server.HostingServer;
 import forge.util.Localizer;
 import forge.web.ToBrowser.Address;
 import forge.web.ToBrowser.ChatLine;
@@ -353,13 +355,27 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
 
     private final Deque<ChatLine> said = new ArrayDeque<>();
 
-    /** Gives a typed line to every browser here, kept by the server so chat outlasts any one table. */
-    synchronized void say(final WebSession from, final String text) {
+    /** Gives a typed line to every browser here, kept by the server so chat outlasts any one table, and to the host's table's netplay chat. */
+    void say(final WebSession from, final String text) {
         final String who = from.playerName();
         if (who == null) {
             return;
         }
-        final ChatLine line = new ChatLine(who, text, false);
+        spread(new ChatLine(who, text, false));
+        // Desktop and mobile players at the table read netplay's chat; each browser there drops the line again, having had it here
+        if (HostingServer.isHosting()) {
+            FServerManager.getInstance().broadcast(new MessageEvent(who, text));
+        }
+    }
+
+    /** Gives every browser here a line said in netplay's chat by a desktop or mobile player, who has no session here. */
+    void relay(final String from, final String text) {
+        if (byId.values().stream().noneMatch(s -> from.equalsIgnoreCase(s.playerName()))) {
+            spread(new ChatLine(from, text, false));
+        }
+    }
+
+    private synchronized void spread(final ChatLine line) {
         said.addLast(line);
         while (said.size() > CHAT_KEPT) {
             said.removeFirst();

@@ -9,6 +9,7 @@ import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.client.ClientGameLobby;
 import forge.gamemodes.net.WebSocketTunnel;
 import forge.gamemodes.net.client.FGameClient;
+import forge.gamemodes.net.event.MessageEvent;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.interfaces.ILobbyListener;
 import io.netty.bootstrap.Bootstrap;
@@ -42,7 +43,9 @@ import java.nio.file.Path;
 import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /** Desktop or mobile Forge joining a web host: a netplay client that comes in through the web port by the invite link. */
@@ -79,10 +82,14 @@ public class NetplayTunnelTest extends SessionsTest {
         final WebGuiGame gui = new WebGuiGame();
         final TestBrowser screen = new TestBrowser();
         final CountDownLatch seated = new CountDownLatch(1);
+        /** The chat lines this app has read, as "source: message". */
+        final BlockingQueue<String> heard = new LinkedBlockingQueue<>();
         volatile int seat = -1;
         FGameClient client;
 
-        @Override public void message(final String source, final String message, final ChatMessage.MessageType type) { }
+        @Override public void message(final String source, final String message, final ChatMessage.MessageType type) {
+            heard.add(source + ": " + message);
+        }
         @Override public void update(final GameLobbyData state, final int slot) {
             lobby.setLocalPlayer(slot);
             lobby.setData(state);
@@ -181,6 +188,31 @@ public class NetplayTunnelTest extends SessionsTest {
 
         sessions.onMessage(host, message("start", "spectate", false));
         app.screen.awaitMatching("state", m -> m.get("full").getAsBoolean(), "the app was never shown the table of the match");
+    }
+
+    /**
+     * Fails if a browser's chat and an app's chat at the same table do not reach each other, or a browser is shown its own line twice.
+     * Runs last: after an app has sat at a table, the next table sends the host its decks before {@link #hostAt} forgets what came,
+     * and the server, holding that list as sent, sends it to the same browser no more.
+     */
+    @Test(timeOut = 120_000, priority = 1)
+    public void aBrowserAndAnAppReadEachOthersChat() throws Exception {
+        final TestBrowser host = hostAt("invite");
+        final App app = join("Desk", server.inviteUrl("127.0.0.1"), null);
+        Assert.assertTrue(app.seated.await(20, TimeUnit.SECONDS), "the app never took a seat through the web port");
+
+        sessions.onMessage(host, message("chat", "text", "hello from the browser"));
+        String line;
+        do {
+            line = app.heard.poll(20, TimeUnit.SECONDS);
+        } while (line != null && !line.endsWith("hello from the browser"));
+        Assert.assertEquals(line, "Host: hello from the browser", "the app never read the browser's line");
+
+        app.client.send(new MessageEvent("Desk", "hello from the app"));
+        host.awaitMatching("chat", c -> "hello from the app".equals(c.get("text").getAsString()) && "Desk".equals(c.get("from").getAsString()),
+                "the browser never read the app's line");
+        Assert.assertEquals(host.all("chat").stream().filter(c -> "hello from the browser".equals(c.get("text").getAsString())).count(), 1,
+                "the browser was shown its own line again from netplay");
     }
 
     /** Fails if the netplay route lets in a client whose link carries the wrong token, or none. */

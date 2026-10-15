@@ -1071,9 +1071,11 @@ public final class WebSession implements IHasForgeLog {
     }
 
     private void chatted(final String from, final String text) {
-        // A player's line reaches every browser through the server's own chat, so only netplay's own announcements are passed on
         if (from == null) {
             tell(new ChatLine(null, text, false));
+        } else if (isHost) {
+            // Every browser has its players' lines from the server's own chat (WebSessions.say), so the host passes on only the others'
+            sessions.relay(from, text);
         }
     }
 
