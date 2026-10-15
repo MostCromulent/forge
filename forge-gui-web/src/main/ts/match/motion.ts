@@ -36,7 +36,7 @@ interface Waiting {
 
 /** Every card drawn just before this frame (hand, board, stack, open zones, the tops of zone tiles), by its key. */
 const lastSeen = new Map<string, Snapshot>();
-/** Spells that have gone onto the stack and are waiting for their cost, by card key. */
+/** Spells that have gone onto the stack and are waiting for their cost, by card key: where each flies to. Any player's; stack.ts draws your own in their place. */
 const waiting = new Map<string, Waiting>();
 const fromHint = new Map<string, DOMRect>();
 const intoHint = new Map<string, DOMRect>();
@@ -70,8 +70,8 @@ const STAGGER_MS = 110;
 /** A hand swapped for another (a mulligan) is two runs of cards, so each card's trip and the gap between them are shorter. */
 const SWAP_MS = 350;
 const SWAP_STAGGER_MS = 70;
-/** How long a spell may wait once no cost is being paid for it; past this its stack item is not coming. */
-const SETTLE_MS = 900;
+/** How long a spell may wait once no cost is being paid for it; past this its stack item is not coming. The stack's placeholder for it goes by the same. */
+export const SETTLE_MS = 900;
 const POP_MS = 220;
 const EASE = 'cubic-bezier(.2,.7,.3,1)';
 /** Names a card's own trip among its animations, so a second trip replaces the first rather than stacking on it. */

@@ -5,6 +5,7 @@ import { imageUrl } from '../images';
 import type { EditorState } from '../protocol';
 import { t, type TextKey } from '../text';
 import { make } from '../dom';
+import { trackDrag } from '../press';
 
 export type Zone = 'Main' | 'Sideboard' | 'Commander' | 'catalogue';
 
@@ -71,20 +72,18 @@ export function startDrag(e: PointerEvent, carried: Carried, image: string, judg
   if (e.button !== 0 || e.pointerType === 'touch') {
     return;
   }
-  const x0 = e.clientX;
-  const y0 = e.clientY;
   let chip: HTMLElement | null = null;
   let over: Verdict | null = null;
   const zones = [...document.querySelectorAll<HTMLElement>('[data-zone]')];
   const source = e.currentTarget instanceof HTMLElement ? e.currentTarget : null;
 
+  const start = () => {
+    chip = makeChip(carried, image);
+    source?.classList.add('dragging');
+    for (const z of zones) mark(z, judge(z.dataset.zone as Zone), false);
+  };
   const move = (ev: PointerEvent) => {
-    if (!chip) {
-      if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < THRESHOLD_PX) return;
-      chip = makeChip(carried, image);
-      source?.classList.add('dragging');
-      for (const z of zones) mark(z, judge(z.dataset.zone as Zone), false);
-    }
+    if (!chip) return;
     chip.style.left = `${ev.clientX + 12}px`;
     chip.style.top = `${ev.clientY + 12}px`;
     const target = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>('[data-zone]') ?? null;
@@ -97,20 +96,13 @@ export function startDrag(e: PointerEvent, carried: Carried, image: string, judg
     scrollNearEdge(target, ev.clientY);
   };
   const end = () => {
-    document.removeEventListener('pointermove', move);
-    document.removeEventListener('pointerup', end);
-    document.removeEventListener('pointercancel', end);
     if (!chip) return;
     chip.remove();
     source?.classList.remove('dragging');
     for (const z of zones) unmark(z);
-    // Swallow the click that ends the drag, so releasing over a card does not also add it
-    document.addEventListener('click', ev => ev.stopPropagation(), { capture: true, once: true });
     if (over?.accepts) drop(over);
   };
-  document.addEventListener('pointermove', move);
-  document.addEventListener('pointerup', end);
-  document.addEventListener('pointercancel', end);
+  trackDrag(e, THRESHOLD_PX, { start, move, end });
 }
 
 /** Pointer handlers for a card that can be dragged, and whose menu opens on right-click or from its preview's More button. */

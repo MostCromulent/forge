@@ -4,7 +4,7 @@ import { cardImageSrc, noImageOnError, setImage } from '../images';
 import { game, deref, derefAll, me, players, stackPick, stateOf, zone, type Model } from '../model';
 import { isPortrait } from '../form';
 import { hoverCard, hoverable, inspectCard } from '../preview';
-import { FIZZLE_MS, journeys, noteFizzled } from './motion';
+import { FIZZLE_MS, SETTLE_MS, journeys, noteFizzled } from './motion';
 import { notePick, stackTargets } from './overlay';
 import { hovers, longPress } from '../press';
 import { byId, q, make, reducedMotion } from '../dom';
@@ -21,10 +21,8 @@ const PUSH_Y = 26;
 
 let actions: Actions | null = null;
 
-/** Spells being cast, by card key, with a kept picture because the card is missing from the browser's game until its cost is paid. */
+/** Your spells being cast, by card key, with a kept picture because the card is missing from the browser's game until its cost is paid. motion.ts flies each to the place drawn for it here. */
 const awaiting = new Map<string, { src: string; zoom: string; since: number; name: string }>();
-/** How long a spell may go on awaiting once its caster has priority again; past this its item is not coming. */
-const SETTLE_MS = 900;
 
 /** The model last drawn, and what the phone's chip remembers between draws: how many items it held, and the question it was folded during. */
 let current: Model | null = null;

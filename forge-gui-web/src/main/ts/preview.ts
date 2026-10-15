@@ -3,7 +3,7 @@ import { COMMANDER_LETHAL, COMMANDER_WARNING } from './match/board';
 import { frameColour } from './match/cards';
 import { showFoil, tiltFoil } from './match/foil';
 import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './match/rulestext';
-import { byId, lean, pointerOn, q, replay, make } from './dom';
+import { byId, lean, pointerOn, q, replay, make, placeBeside } from './dom';
 import { changeUi, ui } from './ui';
 import { keyName } from './keys';
 import { boundKeys } from './settings';
@@ -301,12 +301,8 @@ const ZOOM_GAP = 16;
 /** Below and to the right of the pointer, turned back inside the window near its edges. */
 function placeAtPointer(zoom: HTMLElement): void {
   if (zoom.hidden) return;
-  const w = zoom.offsetWidth, h = zoom.offsetHeight;
-  const x = pointer.x + ZOOM_GAP + w > window.innerWidth - 8 ? pointer.x - ZOOM_GAP - w : pointer.x + ZOOM_GAP;
-  const y = Math.min(pointer.y + ZOOM_GAP, window.innerHeight - h - 8);
   zoom.classList.add('placed');
-  zoom.style.left = `${Math.round(Math.max(8, x))}px`;
-  zoom.style.top = `${Math.round(Math.max(8, y))}px`;
+  placeBeside(zoom, pointer.x, pointer.y, ZOOM_GAP);
 }
 
 /** Puts the preview beside its card, never over it, and inside the board clear of the side column. */

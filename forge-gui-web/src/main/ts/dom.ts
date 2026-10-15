@@ -48,6 +48,13 @@ export function replay(el: HTMLElement, add: string, ...remove: string[]): void 
   el.classList.add(add);
 }
 
+/** Places el gap away from a point, down and to the right, turned back where it would leave the window. */
+export function placeBeside(el: HTMLElement, x: number, y: number, gap: number): void {
+  const left = x + gap + el.offsetWidth > innerWidth - 8 ? x - gap - el.offsetWidth : x + gap;
+  el.style.left = `${Math.round(Math.max(8, left))}px`;
+  el.style.top = `${Math.round(Math.max(8, Math.min(y + gap, innerHeight - el.offsetHeight - 8)))}px`;
+}
+
 /** Hands the player a file to save, holding text. */
 export function saveText(text: string, fileName: string, type: string): void {
   const link = document.createElement('a');

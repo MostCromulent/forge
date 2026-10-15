@@ -24,6 +24,7 @@ import { make, reducedMotion } from '../dom';
 import { isPortrait } from '../form';
 import { cutFor } from './stickers';
 import { Backdrop } from '../dialog';
+import { trackDrag } from '../press';
 
 type Answer = (value: unknown) => void;
 
@@ -543,7 +544,6 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   /** Where each card stood before the order changed, so it slides from there to its new place. */
   const stood = useRef<Map<Element, DOMRect> | null>(null);
   const ghost = useRef<HTMLElement | null>(null);
-  const dragged = useRef(false);
   // Options that are only words, such as abilities, are listed down the dialog; cards keep their row
   const listed = req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player);
   const words = req.options.map(o => {
@@ -581,25 +581,25 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
     let slots: DOMRect[] = [];
     let last = e.clientX;
     let lean = 0;
+    const lift = () => {
+      if (!row.current) return false;
+      from = el.getBoundingClientRect();
+      slots = [...row.current.children].map(c => c.getBoundingClientRect());
+      // The copy sits under the same classes as the row, so the card in it is drawn as the row draws it
+      const lifted = make('div', `options ordered order-ghost${listed ? ' listed' : ''}`);
+      lifted.style.cssText = `left: ${from.left}px; top: ${from.top}px;${listed ? ` width: ${from.width}px; min-width: 0;` : ''}`;
+      lifted.append(el.cloneNode(true));
+      row.current.after(lifted);
+      ghost.current = lifted;
+      setHeld(null);
+      setCarried(i);
+      return true;
+    };
     const onMove = (m: PointerEvent) => {
       const dx = m.clientX - start.x;
       const dy = m.clientY - start.y;
-      if (!from) {
-        if (Math.hypot(dx, dy) < 5 || !row.current) return;
-        from = el.getBoundingClientRect();
-        slots = [...row.current.children].map(c => c.getBoundingClientRect());
-        // The copy sits under the same classes as the row, so the card in it is drawn as the row draws it
-        const lifted = make('div', `options ordered order-ghost${listed ? ' listed' : ''}`);
-        lifted.style.cssText = `left: ${from.left}px; top: ${from.top}px;${listed ? ` width: ${from.width}px; min-width: 0;` : ''}`;
-        lifted.append(el.cloneNode(true));
-        row.current.after(lifted);
-        ghost.current = lifted;
-        dragged.current = true;
-        setHeld(null);
-        setCarried(i);
-      }
       const lifted = ghost.current;
-      if (!lifted) return;
+      if (!lifted || !from) return;
       // The card leans the way it is moving, and settles upright when it stops
       lean += (Math.max(-9, Math.min(9, (m.clientX - last) * 0.9)) - lean) * 0.35;
       last = m.clientX;
@@ -616,13 +616,8 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
       if (at >= 0 && best !== at) move(at, best);
     };
     const onUp = () => {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      document.removeEventListener('pointercancel', onUp);
       const lifted = ghost.current;
       if (!lifted || !from) return;
-      // The click that ends a carry is not a tap on the card
-      setTimeout(() => { dragged.current = false; }, 0);
       const done = () => {
         lifted.remove();
         ghost.current = null;
@@ -637,9 +632,8 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
         { translate: `${to.left - from.left}px ${to.top - from.top}px`, rotate: '0deg', scale: '1' }],
       { duration: CARRY_MS, easing: CARRY_EASE, fill: 'forwards' }).finished.then(done, done);
     };
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
-    document.addEventListener('pointercancel', onUp);
+    // The click that ends a carry is not a tap on the card, which trackDrag sees to
+    trackDrag(e, 5, { start: lift, move: onMove, end: onUp });
   };
   const at = held === null ? -1 : chosen.indexOf(held);
   const step = (by: number) => {
@@ -689,7 +683,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
       <div class={listed ? 'options ordered listed' : 'options ordered'} ref={row}>
         {chosen.map((i, pos) => {
           const hold = () => {
-            if (!dragged.current) setHeld(h => (h === i ? null : i));
+            setHeld(h => (h === i ? null : i));
           };
           return (
             <div key={i} class={`ordered-item${carried === i ? ' carried' : ''}${held === i ? ' selected' : ''}`} onPointerDown={e => carry(e, i)}>

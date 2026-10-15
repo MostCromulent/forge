@@ -1,11 +1,12 @@
 // A dragged block or attack sends the clicks the engine already takes, each waiting for the one before to show on the board
 
-import { byId, q, make } from '../dom';
+import { byId, q, make, placeBeside } from '../dom';
 import { game, me, opponents, stateOf, type Model } from '../model';
 import { setDragArrow } from './overlay';
 import type { Actions } from '../actions';
 import type { CardView, KeywordText, PlayerView, Ref } from '../protocol';
 import { t } from '../text';
+import { trackDrag } from '../press';
 
 /** How far the pointer moves before a press on a creature is a drag rather than a click. */
 const DRAG_PX = 8;
@@ -15,8 +16,6 @@ const STEP_MS = 2000;
 type Point = { x: number; y: number };
 
 let current: Model | null = null;
-/** A drag has just ended: the click the browser fires straight after it is not a click on a card. */
-let justDragged = false;
 /** The drags not yet on the board, one after another, so a quick second drag waits for the first. */
 let queued: Promise<void> = Promise.resolve();
 
@@ -89,59 +88,40 @@ export function afterBlockDrags(then: () => void): void {
 
 export function initBlockDrag(actions: Actions): void {
   act = actions;
-  let from: { el: HTMLElement; key: number; x: number; y: number; attack: boolean } | null = null;
-  let dragging = false;
-  const stop = () => {
-    from = null;
-    if (dragging) setDragArrow(null, null);
-    dragging = false;
-    document.body.classList.remove('dragging-block');
-  };
   document.addEventListener('pointerdown', e => {
     const el = e.button === 0 ? (e.target as Element).closest<HTMLElement>('#me .battlefield .card') : null;
     const model = current;
     if (!el || !model) return;
     const attack = declaringAttacks(model);
     if (!attack && !declaringBlocks(model)) return;
-    from = { el, key: Number(el.dataset.key), x: e.clientX, y: e.clientY, attack };
+    const creature = Number(el.dataset.key);
+    trackDrag(e, DRAG_PX, {
+      start: () => { document.body.classList.add('dragging-block'); },
+      move: ev => {
+        if (!current) return;
+        // Over an attacker, or an opponent to attack, the arrow lands on it; anywhere else it follows the pointer
+        const over = attack ? defenderAt(current, ev.clientX, ev.clientY)?.face : attackerAt(current, ev.clientX, ev.clientY);
+        setDragArrow(el, over ?? { x: ev.clientX, y: ev.clientY }, attack ? 'attack' : 'block');
+      },
+      end: (ev, dragged) => {
+        if (!dragged) return;
+        setDragArrow(null, null);
+        document.body.classList.remove('dragging-block');
+        if (!current || ev.type === 'pointercancel') return;
+        const at = { x: ev.clientX, y: ev.clientY };
+        let step: (() => Promise<void>) | null = null;
+        if (attack) {
+          const defender = defenderAt(current, at.x, at.y);
+          if (defender) step = () => declare(actions, creature, defender.key);
+        } else {
+          const attacker = attackerAt(current, at.x, at.y);
+          if (attacker) step = () => block(actions, creature, Number(attacker.dataset.key), at);
+        }
+        // A failed block or attack must not stop every later one, or the OK that waits for them
+        if (step) queued = queued.then(step).catch(e => console.error(e));
+      },
+    });
   });
-  document.addEventListener('pointermove', e => {
-    if (!from || !current) return;
-    if (!dragging && Math.hypot(e.clientX - from.x, e.clientY - from.y) < DRAG_PX) return;
-    dragging = true;
-    document.body.classList.add('dragging-block');
-    // Over an attacker, or an opponent to attack, the arrow lands on it; anywhere else it follows the pointer
-    const over = from.attack ? defenderAt(current, e.clientX, e.clientY)?.face : attackerAt(current, e.clientX, e.clientY);
-    setDragArrow(from.el, over ?? { x: e.clientX, y: e.clientY }, from.attack ? 'attack' : 'block');
-  });
-  document.addEventListener('pointerup', e => {
-    if (!from || !current) return;
-    const creature = from.key;
-    const attack = from.attack;
-    const wasDrag = dragging;
-    stop();
-    if (!wasDrag) return;
-    justDragged = true;
-    setTimeout(() => { justDragged = false; });
-    const at = { x: e.clientX, y: e.clientY };
-    let step: (() => Promise<void>) | null = null;
-    if (attack) {
-      const defender = defenderAt(current, at.x, at.y);
-      if (defender) step = () => declare(actions, creature, defender.key);
-    } else {
-      const attacker = attackerAt(current, at.x, at.y);
-      if (attacker) step = () => block(actions, creature, Number(attacker.dataset.key), at);
-    }
-    // A failed block or attack must not stop every later one, or the OK that waits for them
-    if (step) queued = queued.then(step).catch(e => console.error(e));
-  });
-  document.addEventListener('pointercancel', stop);
-  document.addEventListener('click', e => {
-    if (justDragged) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-  }, true);
 }
 
 /** The attacking card under the pointer, if there is one. */
@@ -247,12 +227,7 @@ function showTip(at: Point, title: string, reason: string): void {
   tip.append(Object.assign(document.createElement('b'), { textContent: title }));
   if (reason) tip.append(Object.assign(document.createElement('span'), { textContent: reason }));
   document.body.append(tip);
-  // Beside the pointer, turned back inside the window near its edges
-  const gap = 14;
-  const x = at.x + gap + tip.offsetWidth > innerWidth - 8 ? at.x - gap - tip.offsetWidth : at.x + gap;
-  const y = Math.min(at.y + gap, innerHeight - tip.offsetHeight - 8);
-  tip.style.left = `${Math.max(8, x)}px`;
-  tip.style.top = `${Math.max(8, y)}px`;
+  placeBeside(tip, at.x, at.y, 14);
   const gone = () => {
     tip.classList.add('leaving');
     tip.addEventListener('animationend', () => tip.remove());

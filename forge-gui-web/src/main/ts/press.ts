@@ -81,3 +81,38 @@ export function longPress(e: PointerEvent, open: (x: number, y: number) => void)
   document.addEventListener('pointerup', cancel);
   document.addEventListener('pointercancel', cancel);
 }
+
+/**
+ * Follows a press that becomes a drag only once the pointer has moved threshold pixels: start is called then, and may answer
+ * false to wait for the next move, move on each move from then on, and end when the press lifts or is cancelled. The click that
+ * ends a drag is swallowed, so letting go over something does not also press it.
+ */
+export function trackDrag(e: PointerEvent, threshold: number, on: {
+  start: (ev: PointerEvent) => boolean | void; move: (ev: PointerEvent) => void; end: (ev: PointerEvent, dragged: boolean) => void;
+}): void {
+  const x0 = e.clientX;
+  const y0 = e.clientY;
+  let dragging = false;
+  const moved = (ev: PointerEvent) => {
+    if (!dragging) {
+      if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < threshold || on.start(ev) === false) return;
+      dragging = true;
+    }
+    on.move(ev);
+  };
+  const lifted = (ev: PointerEvent) => {
+    document.removeEventListener('pointermove', moved);
+    document.removeEventListener('pointerup', lifted);
+    document.removeEventListener('pointercancel', lifted);
+    if (dragging) {
+      // A click comes in the same task as the lift, or not at all, so the next one is not eaten later
+      const swallow = (c: Event) => { c.stopPropagation(); c.preventDefault(); };
+      document.addEventListener('click', swallow, true);
+      setTimeout(() => document.removeEventListener('click', swallow, true));
+    }
+    on.end(ev, dragging);
+  };
+  document.addEventListener('pointermove', moved);
+  document.addEventListener('pointerup', lifted);
+  document.addEventListener('pointercancel', lifted);
+}
