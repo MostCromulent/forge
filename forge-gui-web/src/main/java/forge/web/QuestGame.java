@@ -3,7 +3,6 @@ package forge.web;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.google.gson.JsonObject;
-import forge.card.CardEdition;
 import forge.card.CardType;
 import forge.card.MagicColor;
 import forge.deck.CardPool;
@@ -12,7 +11,6 @@ import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.game.GameView;
-import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.quest.NewQuestRules;
 import forge.gamemodes.quest.QuestController;
@@ -20,22 +18,17 @@ import forge.gamemodes.quest.QuestDraftUtils;
 import forge.gamemodes.quest.QuestEvent;
 import forge.gamemodes.quest.QuestEventChallenge;
 import forge.gamemodes.quest.QuestEventDraft;
-import forge.gamemodes.quest.QuestEventDraft.QuestDraftFormat;
-import forge.gamemodes.quest.QuestEventDraft.QuestDraftPrizes;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestMode;
-import forge.gamemodes.quest.QuestSpellShop;
 import forge.gamemodes.quest.QuestUtil;
 import forge.gamemodes.quest.QuestWinLoseController;
 import forge.gamemodes.quest.StartingPoolPreferences.PoolType;
 import forge.gamemodes.quest.StartingPoolPreferences;
 import forge.gamemodes.quest.StartingPoolType;
 import forge.gamemodes.quest.bazaar.IQuestBazaarItem;
-import forge.gamemodes.quest.bazaar.QuestBazaarManager;
 import forge.gamemodes.quest.bazaar.QuestItemBasic;
 import forge.gamemodes.quest.bazaar.QuestItemType;
 import forge.gamemodes.quest.bazaar.QuestPetController;
-import forge.gamemodes.quest.bazaar.QuestStallDefinition;
 import forge.gamemodes.quest.data.DeckConstructionRules;
 import forge.gamemodes.quest.data.QuestAchievements;
 import forge.gamemodes.quest.data.QuestAssets;
@@ -44,38 +37,26 @@ import forge.gamemodes.quest.data.QuestPreferences.DifficultyPrefs;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
 import forge.gamemodes.quest.data.QuestPreferences;
 import forge.gamemodes.quest.io.QuestDataIO;
-import forge.gui.GuiBase;
-import forge.gui.util.SGuiChoose;
 import forge.gui.util.SOptionPane;
-import forge.item.BoosterPack;
 import forge.item.InventoryItem;
 import forge.item.PaperCard;
-import forge.itemmanager.SItemManagerUtil;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
-import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import forge.player.GamePlayerUtil;
-import forge.util.ItemPool;
 import forge.util.Localizer;
 import forge.util.storage.IStorage;
 import forge.web.FromBrowser.CatalogueQuery;
 import forge.web.FromBrowser.TradePick;
 import forge.web.ToBrowser.*;
 import org.tinylog.Logger;
-
 import java.io.File;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.IntStream;
 
 /** Holds only what one session knows that the save does not, as the quest itself is Forge's, one for the whole process. */
 final class QuestGame implements Campaign {
@@ -302,7 +283,7 @@ final class QuestGame implements Campaign {
 
     @Override
     public List<Record> page() {
-        return List.of(bar(), duelsPage(), decksPage(), challengesPage(), tournamentsPage());
+        return List.of(bar(), duelsPage(), decksPage(), challengesPage(), QuestDraftTournaments.tournamentsPage());
     }
 
     /** The quest's decks, by name. */
@@ -554,80 +535,6 @@ final class QuestGame implements Campaign {
                 quest.getAssets().getItemLevel(QuestItemType.ZEPPELIN) == 2);
     }
 
-    /** The tournaments on offer, drawn again where old ones have aged out as desktop's screen does, or the one entered with its bracket. */
-    private static QuestTournaments tournamentsPage() {
-        final QuestAchievements record = quest().getAchievements();
-        if (record.getCurrentDraft() == null) {
-            record.generateDrafts();
-        }
-        final QuestEventDraft entered = record.getCurrentDraft();
-        final List<QuestTournamentRow> offered = new ArrayList<>();
-        if (entered == null) {
-            for (final QuestEventDraft d : record.getDraftEvents()) {
-                // canEnter is true when the credits are short of the fee
-                final List<CardEdition> sets = Arrays.stream(d.getBoosterConfiguration()).map(FModel.getMagicDb().getEditions()::get).toList();
-                offered.add(new QuestTournamentRow(d.getTitle(), sets.stream().map(CardEdition::getName).toList(),
-                        sets.stream().map(WebGuiBase::boosterImage).toList(), d.getEntryFee(), !d.canEnter()));
-            }
-        }
-        final List<Integer> placings = IntStream.rangeClosed(1, 4).map(record::getWinsForPlace).boxed().toList();
-        return new QuestTournaments(offered, record.getDraftTokens(), placings, entered == null ? null : bracket(entered));
-    }
-
-    /** The standings as rounds: places 0-7 are the first round's seats, 8-11 the second's, 12-13 the final's and 14 the winner's, and place p's winner goes to place 8 + p / 2. */
-    private static QuestBracket bracket(final QuestEventDraft draft) {
-        final String[] standings = draft.getStandings();
-        final List<List<QuestSeat>> rounds = new ArrayList<>();
-        for (final int[] round : new int[][] {{0, 8}, {8, 12}, {12, 14}, {14, 15}}) {
-            final List<QuestSeat> seats = new ArrayList<>();
-            for (int p = round[0]; p < round[1]; p++) {
-                seats.add(seat(draft, standings, p));
-            }
-            rounds.add(seats);
-        }
-        String next = null;
-        final int you = Arrays.asList(standings).lastIndexOf(QuestEventDraft.HUMAN);
-        if (draft.isStarted() && draft.playerHasMatchesLeft() && you >= 0) {
-            // The seat paired with the player's, whose holder may still be decided by a computer match
-            final String opponent = standings[you ^ 1];
-            next = QuestEventDraft.UNDETERMINED.equals(opponent) ? "" : seat(draft, standings, you ^ 1).name();
-        }
-        return new QuestBracket(draft.getTitle(), rounds, next, draft.getPlacementString(), draft.isStarted(),
-                quest().getDraftDecks().get(QuestEventDraft.DECK_NAME) != null);
-    }
-
-    private static QuestSeat seat(final QuestEventDraft draft, final String[] standings, final int place) {
-        final String held = standings[place];
-        if (QuestEventDraft.UNDETERMINED.equals(held)) {
-            return new QuestSeat(null, false, "open");
-        }
-        final boolean you = QuestEventDraft.HUMAN.equals(held);
-        // The player is named by the browser, which knows the name its matches are played under
-        final String name = you ? "" : draft.getAINames()[Integer.parseInt(held) - 1];
-        final String after = place == 14 ? held : standings[8 + place / 2];
-        return new QuestSeat(name, you, QuestEventDraft.UNDETERMINED.equals(after) ? "open" : after.equals(held) ? "won" : "out");
-    }
-
-    /** Enters a tournament on offer, as desktop's Enter does: its fee is paid, its packs dealt, and its draft opened. Answers why it cannot, or null. */
-    private static String enter(final String title, final Host host) {
-        final QuestAchievements record = quest().getAchievements();
-        if (title == null || record.getCurrentDraft() != null || record.getDraftEvents() == null) {
-            return null;
-        }
-        for (final QuestEventDraft offered : record.getDraftEvents()) {
-            if (title.equals(offered.getTitle())) {
-                if (offered.canEnter()) {
-                    return Localizer.getInstance().getMessage("lblWebQuestCreditsShort", offered.getEntryFee() - quest().getAssets().getCredits());
-                }
-                final BoosterDraft draft = offered.enter();
-                quest().save();
-                host.startDraft(draft);
-                return null;
-            }
-        }
-        return null;
-    }
-
     /** Leaves a tournament whose draft was not finished: its fee comes back and it is no longer offered, as desktop's leaving the draft does. */
     void cancelDraft() {
         final QuestEventDraft draft = quest().getAchievements().getCurrentDraft();
@@ -643,48 +550,6 @@ final class QuestGame implements Campaign {
     IStorage<DeckGroup> drafted(final DeckGroup group) {
         QuestDraftUtils.completeDraft(group);
         return quest().getDraftDecks();
-    }
-
-    /** Spends a token on a tournament of a format the player chooses, as desktop's Spend Token asks it. */
-    private static void spendToken() {
-        final QuestAchievements record = quest().getAchievements();
-        if (record.getDraftTokens() <= 0) {
-            return;
-        }
-        final Localizer text = Localizer.getInstance();
-        final List<QuestDraftFormat> formats = QuestEventDraft.getAvailableFormats(quest());
-        if (formats.isEmpty()) {
-            SOptionPane.showErrorDialog(text.getMessage("lblNoAvailableDraftsMessage"), text.getMessage("lblNoAvailableDrafts"));
-            return;
-        }
-        final QuestDraftFormat format = SGuiChoose.oneOrNone(text.getMessage("lblChooseDraftFormat"), formats);
-        if (format == null) {
-            return;
-        }
-        // Made only to show its fee, as desktop does; the token makes the tournament itself
-        final QuestEventDraft shown = QuestEventDraft.getDraftOrNull(quest(), format);
-        if (shown != null && SOptionPane.showConfirmDialog(text.getMessage("lblEntryFeeOfDraftTournament") + shown.getEntryFee()
-                + text.getMessage("lblWouldLikeCreateTournament"), text.getMessage("lblCreatingDraftTournament"))) {
-            record.spendDraftToken(format);
-        }
-    }
-
-    /** Starts the tournament entered once its deck is legal, as desktop's Start Tournament does. Answers why it cannot, or null. */
-    private static String startTournament() {
-        final QuestEventDraft draft = quest().getAchievements().getCurrentDraft();
-        final DeckGroup decks = quest().getDraftDecks().get(QuestEventDraft.DECK_NAME);
-        if (draft == null || draft.isStarted()) {
-            return null;
-        }
-        if (decks == null) {
-            return Localizer.getInstance().getMessage("lblWebQuestDraftLost");
-        }
-        final String problem = GameType.QuestDraft.getDeckFormat().getDeckConformanceProblem(decks.getHumanDeck());
-        if (problem != null && FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
-            return Localizer.getInstance().getMessage("lblDeck") + " " + problem;
-        }
-        draft.start();
-        return null;
     }
 
     /** Decides the computer's matches up to the player's without a game, as mobile does, and starts the player's. Answers why it cannot, or null. */
@@ -750,7 +615,7 @@ final class QuestGame implements Campaign {
         }
         final WebQuestView shown = new WebQuestView();
         if (draft.isStarted()) {
-            prizes(draft, shown);
+            QuestDraftTournaments.prizes(draft, shown);
         }
         final Localizer text = Localizer.getInstance();
         if (SOptionPane.showOptionDialog(text.getMessage("lblWouldLikeSaveDraft"), text.getMessage("lblSaveDraft") + "?", SOptionPane.QUESTION_ICON,
@@ -763,116 +628,6 @@ final class QuestGame implements Campaign {
             steps.addAll(shown.steps);
             reward = new Reward(steps);
         }
-    }
-
-    /** The prizes for the player's placing, as desktop's endTournamentAndAwardPrizes gives them, shown as reward steps. */
-    private static void prizes(final QuestEventDraft draft, final WebQuestView shown) {
-        final Localizer text = Localizer.getInstance();
-        final String placing = text.getMessage("lblForPlacing") + draft.getPlacementString();
-        final QuestDraftPrizes prizes = draft.collectPrizes();
-        // Only the first four places win anything
-        if (prizes == null) {
-            return;
-        }
-        if (prizes.hasCredits()) {
-            shown.showMessage(placing + text.getMessage("lblHaveBeAward") + QuestUtil.formatCredits(prizes.credits) + " " + text.getMessage("lblCredits") + "!",
-                    text.getMessage("lblCreditsAwarded"), FSkinProp.ICO_QUEST_GOLD);
-        }
-        if (prizes.hasIndividualCards()) {
-            shown.showCards(text.getMessage("lblTournamentReward"), prizes.individualCards);
-        }
-        if (prizes.hasBoosterPacks()) {
-            final String plural = prizes.boosterPacks.size() == 1 ? "" : "s";
-            shown.showMessage(placing + text.getMessage("lblHaveBeAward") + prizes.boosterPacks.size() + " " + text.getMessage("lblBoosterPack") + plural + "!",
-                    text.getMessage("lblBoosterPack") + plural + " " + text.getMessage("lblAwarded"), FSkinProp.ICO_QUEST_BOX);
-            final List<PaperCard> cards = new ArrayList<>();
-            for (final BoosterPack pack : prizes.boosterPacks) {
-                cards.addAll(pack.getCards());
-            }
-            shown.showCards(text.getMessage("lblTournamentReward"), cards);
-        }
-        if (prizes.selectRareFromSets()) {
-            final PaperCard card = GuiBase.getInterface().chooseCard(text.getMessage("lblSelectACard"), text.getMessage("lblSelectKeepCard"), prizes.selectRareCards);
-            if (card != null) {
-                prizes.addSelectedCard(card);
-                shown.showMessage("'" + card.getDisplayName() + "' " + text.getMessage("lblAddToCollection"), text.getMessage("lblCardAdded"), FSkinProp.ICO_QUEST_STAKES);
-            }
-        }
-        if (draft.getPlayerPlacement() == 1) {
-            shown.showMessage(placing + text.getMessage("lblHaveBeAwardToken"), text.getMessage("lblBonusToken"), FSkinProp.ICO_QUEST_NOTES);
-            quest().getAchievements().addDraftToken();
-        }
-        quest().save();
-    }
-
-    /** The bazaar with one stall open: Fantasy mode's only, as desktop and mobile offer it. */
-    private static QuestBazaar bazaar(final String wanted) {
-        final QuestController quest = quest();
-        if (quest.getMode() != QuestMode.Fantasy) {
-            return new QuestBazaar(List.of(), null, List.of());
-        }
-        final QuestBazaarManager bazaar = quest.getBazaar();
-        final List<QuestStallRow> stalls = new ArrayList<>();
-        for (final String name : bazaar.getStallNames()) {
-            final QuestStallDefinition stall = bazaar.getStall(name);
-            stalls.add(new QuestStallRow(stall.getName(), stall.getDisplayName(), stall.getFluff(), stall.getIcon().name()));
-        }
-        final String open = stalls.stream().anyMatch(s -> s.name().equals(wanted)) ? wanted : stalls.isEmpty() ? null : stalls.get(0).name();
-        final List<QuestItemRow> items = new ArrayList<>();
-        if (open != null) {
-            final QuestAssets assets = quest.getAssets();
-            for (final IQuestBazaarItem item : bazaar.getItems(quest, open)) {
-                items.add(itemRow(item, assets));
-            }
-        }
-        return new QuestBazaar(stalls, open, items);
-    }
-
-    private static QuestItemRow itemRow(final IQuestBazaarItem item, final QuestAssets assets) {
-        String icon = null;
-        String card = null;
-        if (item.getIcon(assets) instanceof WebGuiBase.WebSkinImage image) {
-            if (image.prop() != null) {
-                icon = image.prop().name();
-            } else if (image.path() != null) {
-                // A pet's picture is its token's, which the image route serves by the token's key
-                final String file = new File(image.path()).getName();
-                card = "t:" + (file.contains(".") ? file.substring(0, file.lastIndexOf('.')) : file);
-            }
-        }
-        // The description is written for desktop's label, with line breaks as markup
-        final String description = item.getPurchaseDescription(assets).replaceAll("(?i)<br\\s*/?>", "\n").replaceAll("<[^>]+>", "").trim();
-        if (item instanceof QuestPetController pet) {
-            // A pet's purchase description repeats its stats, which the row carries as now and next
-            return new QuestItemRow(item.getPurchaseName(), pet.getDescription(), icon, card, item.getBuyingPrice(assets), assets.getPetLevel(pet.getSaveFileKey()),
-                    pet.getMaxLevel(), pet.getStats(assets), pet.getUpgradedStats(assets));
-        }
-        final QuestItemBasic basic = (QuestItemBasic) item;
-        return new QuestItemRow(item.getPurchaseName(), description, icon, card, item.getBuyingPrice(assets), assets.getItemLevel(basic.getItemType()),
-                basic.getMaxLevel(), null, null);
-    }
-
-    /** Buys an item of a stall, refusing first when the credits are short, since Quest's own purchase then does nothing. */
-    private static String buy(final String stall, final String name) {
-        final QuestController quest = quest();
-        if (quest.getMode() != QuestMode.Fantasy || stall == null || !quest.getBazaar().getStallNames().contains(stall)) {
-            return null;
-        }
-        for (final IQuestBazaarItem item : quest.getBazaar().getItems(quest, stall)) {
-            if (item.getPurchaseName().equals(name)) {
-                final int price = item.getBuyingPrice(quest.getAssets());
-                if (price < 0) {
-                    return null;
-                }
-                final long short_ = price - quest.getAssets().getCredits();
-                if (short_ > 0) {
-                    return Localizer.getInstance().getMessage("lblWebQuestCreditsShort", short_);
-                }
-                QuestUtil.buyQuestItem(item);
-                return null;
-            }
-        }
-        return null;
     }
 
     /** Starts a duel or a challenge, as desktop's Start does. */
@@ -982,147 +737,22 @@ final class QuestGame implements Campaign {
         reward = new Reward(steps);
     }
 
-    /** What a card sells for, as the shop's own sale works it out. */
-    private static int salePrice(final PaperCard card, final double multiplier) {
-        return Math.max(Math.min((int) (multiplier * QuestSpellShop.getCardValue(card)), quest().getCards().getSellPriceLimit()), 1);
-    }
-
-    /** How many of the quest's decks hold a card, in either section. */
-    private static Map<PaperCard, Integer> decksUsing() {
-        final Map<PaperCard, Integer> using = new HashMap<>();
-        for (final Deck deck : quest().getMyDecks()) {
-            final Set<PaperCard> cards = new HashSet<>();
-            deck.getMain().forEach(e -> cards.add(e.getKey()));
-            if (deck.has(DeckSection.Sideboard)) {
-                deck.get(DeckSection.Sideboard).forEach(e -> cards.add(e.getKey()));
-            }
-            cards.forEach(c -> using.merge(c, 1, Integer::sum));
-        }
-        return using;
-    }
-
-    /** A card's key in a trade: its printing, and whether it is foil, which the image key does not say and the price does. */
-    private static String key(final PaperCard card) {
-        return card.getImageKey(false) + (card.isFoil() ? "|foil" : "");
-    }
-
-    private static int copies(final ItemPool<? extends InventoryItem> pool) {
-        int n = 0;
-        for (final Map.Entry<? extends InventoryItem, Integer> e : pool) {
-            if (e.getKey() instanceof PaperCard) {
-                n += e.getValue();
-            }
-        }
-        return n;
-    }
-
-    private static List<PaperCard> cardsIn(final ItemPool<? extends InventoryItem> pool) {
-        final List<PaperCard> cards = new ArrayList<>();
-        pool.forEach(e -> {
-            if (e.getKey() instanceof PaperCard card) {
-                cards.add(card);
-            }
-        });
-        return cards;
-    }
-
-    /** A page of the shop's cards for sale, each with its price, stock and copies owned, or of the player's cards, each with its sale price, copies and decks. */
+    /** The quest's record, purse and collection, its tournament placings, and in Fantasy mode what it owns of the bazaar. */
     @Override
     public CataloguePage cards(final CatalogueQuery q) {
-        final boolean shop = "shop".equals(q.source());
-        final ItemPool<InventoryItem> stock = quest().getCards().getShopList();
-        final ItemPool<PaperCard> owned = quest().getCards().getCardpool();
-        // Without these the shop's statics are unset, and every card would sell for 1 credit
-        final double multiplier = QuestSpellShop.updateMultiplier();
-        final Map<PaperCard, Integer> using = shop ? Map.of() : decksUsing();
-        final CataloguePage page = CardCatalog.of(shop ? cardsIn(stock) : cardsIn(owned)).query(q.request(), new CardCatalog.Query(q.text(),
-                q.colours(), q.type(), q.filters(), q.sort(), q.offset(), true), c -> null, null, name -> 0, c -> shop
-                ? new CardCatalog.Extra(null, QuestSpellShop.getCardValue(c), stock.count(c), owned.count(c), null, key(c))
-                : new CardCatalog.Extra(quest().getCards().isNew(c) ? Boolean.TRUE : null, salePrice(c, multiplier), owned.count(c), null,
-                        !using.containsKey(c) ? null : using.get(c) == 1 ? Localizer.getInstance().getMessage("lblWebQuestInOneDeck")
-                        : Localizer.getInstance().getMessage("lblWebQuestInDecks", using.get(c)), key(c)));
-        return page.from(q.source());
+        return QuestShop.cards(q);
     }
 
-    /** The shop's two lists, what selling pays, the products for sale, and the copies Sell All Extras would sell. */
     @Override
     public Trading trading() {
-        final Localizer text = Localizer.getInstance();
-        final ItemPool<InventoryItem> stock = quest().getCards().getShopList();
-        final ItemPool<PaperCard> owned = quest().getCards().getCardpool();
-        final double multiplier = QuestSpellShop.updateMultiplier();
-        final int limit = quest().getCards().getSellPriceLimit();
-        // Mobile's line, on one line
-        final String note = (text.getMessage("lblSellCardsAt") + " " + new DecimalFormat("#.##").format(multiplier * 100) + text.getMessage("lblTheirValue")
-                + (limit < Integer.MAX_VALUE ? String.format(text.getMessage("lblMaximumSellingCredits"), limit) : "")).replace('\n', ' ').trim();
-        final List<Product> products = new ArrayList<>();
-        stock.forEach(e -> {
-            if (!(e.getKey() instanceof PaperCard)) {
-                products.add(new Product("p:" + e.getKey().getName(), e.getKey().getItemType(), e.getKey().getName(), e.getKey().getImageKey(false),
-                        QuestSpellShop.getCardValue(e.getKey())));
-            }
-        });
-        final ItemPool<InventoryItem> ownedItems = new ItemPool<>(InventoryItem.class);
-        ownedItems.addAllOfType(owned);
-        final ItemPool<InventoryItem> extras = QuestSpellShop.extras(ownedItems);
-        final List<CatalogueRow> extraRows = CardCatalog.rows(cardsIn(extras),
-                c -> new CardCatalog.Extra(null, salePrice(c, multiplier), extras.count(c), null, null, key(c)));
-        // Copies, not cards, so that a trade of part of a stack changes them, which is what tells the page its lists changed
-        return new Trading(List.of(new TradeList("shop", copies(stock)), new TradeList("inventory", copies(owned))), note, null,
-                products, extraRows);
+        return QuestShop.trading();
     }
 
-    /** Buys picks from the shop, or sells picks of the player's cards, each up to what its list holds. Answers why a purchase cannot be made, or null. */
     @Override
     public String trade(final String source, final List<TradePick> picks) {
-        final boolean buying = "shop".equals(source);
-        final ItemPool<InventoryItem> stock = quest().getCards().getShopList();
-        final ItemPool<InventoryItem> chosen = new ItemPool<>(InventoryItem.class);
-        for (final TradePick pick : picks == null ? List.<TradePick>of() : picks) {
-            final InventoryItem item = buying ? find(stock, pick.key()) : find(quest().getCards().getCardpool(), pick.key());
-            final int held = item == null ? 0 : buying ? stock.count(item) : quest().getCards().getCardpool().count((PaperCard) item);
-            if (held > 0 && pick.count() > 0) {
-                chosen.add(item, Math.min(pick.count(), held));
-            }
-        }
-        if (chosen.isEmpty()) {
-            return null;
-        }
-        if (buying) {
-            final long short_ = QuestSpellShop.getTotalBuyCost(chosen) - quest().getAssets().getCredits();
-            if (short_ > 0) {
-                // Quest's own sentence
-                return "You need " + short_ + " more credits to purchase the following "
-                        + SItemManagerUtil.getItemDisplayString(chosen.toFlatList(), 1, true).toLowerCase() + ".\n" + SItemManagerUtil.buildDisplayList(chosen);
-            }
-            QuestSpellShop.buyItems(chosen);
-            // The shop's list widget takes what was bought out of the stock on desktop and mobile
-            stock.removeAll(chosen);
-        } else {
-            QuestSpellShop.updateMultiplier();
-            QuestSpellShop.sellItems(chosen);
-            // As the shop's list widget puts what was sold back on sale
-            stock.addAll(chosen);
-        }
-        quest().save();
-        return null;
+        return QuestShop.trade(source, picks);
     }
 
-    /** A card of a list by its key, or a product by "p:" and its name. */
-    private static InventoryItem find(final ItemPool<? extends InventoryItem> pool, final String key) {
-        if (key == null) {
-            return null;
-        }
-        for (final Map.Entry<? extends InventoryItem, Integer> e : pool) {
-            final InventoryItem item = e.getKey();
-            if (item instanceof PaperCard card ? key(card).equals(key) : ("p:" + item.getName()).equals(key)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
-    /** The quest's record, purse and collection, its tournament placings, and in Fantasy mode what it owns of the bazaar. */
     @Override
     public CampaignStats stats(final String scope) {
         final QuestController quest = quest();
@@ -1303,12 +933,12 @@ final class QuestGame implements Campaign {
             }
             case "questEnter", "questToken", "questTournamentStart", "questTournamentNext", "questTournamentLeave" -> {
                 final String problem = switch (msg.get("t").getAsString()) {
-                    case "questEnter" -> enter(Wire.decode(msg, FromBrowser.QuestEnter.class).title(), host);
-                    case "questTournamentStart" -> startTournament();
+                    case "questEnter" -> QuestDraftTournaments.enter(Wire.decode(msg, FromBrowser.QuestEnter.class).title(), host);
+                    case "questTournamentStart" -> QuestDraftTournaments.startTournament();
                     case "questTournamentNext" -> nextMatch(host);
                     default -> {
                         if ("questToken".equals(msg.get("t").getAsString())) {
-                            spendToken();
+                            QuestDraftTournaments.spendToken();
                         } else {
                             endTournament();
                         }
@@ -1319,7 +949,7 @@ final class QuestGame implements Campaign {
                     channel.send(new Notice(problem, null, true));
                 }
                 channel.send(bar());
-                channel.send(tournamentsPage());
+                channel.send(QuestDraftTournaments.tournamentsPage());
                 if (reward != null && "questTournamentLeave".equals(msg.get("t").getAsString())) {
                     channel.send(reward);
                 }
@@ -1348,12 +978,12 @@ final class QuestGame implements Campaign {
                 return;
             }
             case "questStall" -> {
-                channel.send(bazaar(Wire.decode(msg, FromBrowser.QuestStall.class).name()));
+                channel.send(QuestShop.bazaar(Wire.decode(msg, FromBrowser.QuestStall.class).name()));
                 return;
             }
             case "questBuy" -> {
                 final FromBrowser.QuestBuy buy = Wire.decode(msg, FromBrowser.QuestBuy.class);
-                final String problem = buy(buy.stall(), buy.item());
+                final String problem = QuestShop.buy(buy.stall(), buy.item());
                 if (problem != null) {
                     channel.send(new Notice(problem, null, false));
                 }
@@ -1361,7 +991,7 @@ final class QuestGame implements Campaign {
                 channel.send(bar());
                 channel.send(duelsPage());
                 channel.send(challengesPage());
-                channel.send(bazaar(buy.stall()));
+                channel.send(QuestShop.bazaar(buy.stall()));
                 return;
             }
             case "questZeppelin" -> {
