@@ -90,7 +90,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
               <span class="cq-chip"><DeckLine commander={commander} /></span>
             </>}
             details={<>
-              {details && commander.deckSize > 0 && <Curve curve={details.stats.curve} creatures={details.stats.creatures} px={44} />}
+              {details && commander.deckSize > 0 && <Curve curve={details.stats.curve} spells={details.stats.spells} px={44} />}
               {reading && details && <div class="dk-cards" data-list>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>}
             </>}>
               <div class="cq-two">

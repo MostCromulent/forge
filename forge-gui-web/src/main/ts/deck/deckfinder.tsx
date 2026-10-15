@@ -634,7 +634,7 @@ function Chosen({ details, formats, forComputer }: { details: DeckDetails; forma
         )}
         {details.bracket && <BracketPanel bracket={details.bracket} />}
         <div class="stats">
-          <Curve curve={s.curve} creatures={s.creatures} px={42} />
+          <Curve curve={s.curve} spells={s.spells} px={42} />
           <div class="types">
             {s.types.map(ty => <div key={ty.name} class="type"><span>{ty.name}</span><b>{ty.count}</b></div>)}
             <div class="type avg"><span>{t('lblAverageCMC')}</span><b>{s.averageMana}</b></div>

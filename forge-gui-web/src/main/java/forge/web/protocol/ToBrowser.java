@@ -129,10 +129,13 @@ public final class ToBrowser {
     public record BracketReason(String kind, String title, String brief, List<String> cards, int raises, @Nullable String why) {
     }
 
-    /** total counts the commanders with the main deck, and the last curve entry holds its mana value and above. */
-    /** colours counts the main deck's spells as W, U, B, R, G, several colours and none; symbols counts the coloured mana symbols in their costs as W, U, B, R, G. */
-    public record DeckStats(int total, int main, int sideboard, int lands, float averageMana, List<Integer> curve, List<Integer> creatures,
-            List<TypeCount> types, List<Integer> colours, List<Integer> symbols) {
+    /**
+     * Forge's DeckStatistics for the main deck and commanders, as mobile shows them. total counts the commanders with the main deck.
+     * curve counts the nonland cards by mana value, the last entry holding that value and above, and spells is the part of each that is
+     * instants and sorceries. symbols counts the mana symbols in their costs as W, U, B, R, G and C.
+     */
+    public record DeckStats(int total, int main, int sideboard, int lands, float averageMana, List<Integer> curve, List<Integer> spells,
+            List<TypeCount> types, List<Integer> symbols) {
     }
 
     public record TypeCount(String name, int count) {

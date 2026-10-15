@@ -4,7 +4,6 @@ import com.google.common.collect.MapMaker;
 import com.google.common.primitives.Ints;
 import forge.StaticData;
 import forge.card.CardEdition;
-import forge.card.ColorSet;
 import forge.deck.ArchetypeDeckGenerator;
 import forge.deck.CardPool;
 import forge.deck.CommanderBracketCalculator;
@@ -12,6 +11,7 @@ import forge.deck.CommanderDeckGenerator;
 import forge.deck.Deck;
 import forge.deck.DeckProxy;
 import forge.deck.DeckSection;
+import forge.deck.DeckStatistics;
 import forge.deck.DeckUrlLoader;
 import forge.deck.DeckgenUtil;
 import forge.deck.NetDeckCategory;
@@ -69,7 +69,6 @@ public final class DeckCatalog {
     /** The finder lists a deck's cards as they are: its problems are the verdict line's to state. */
     public static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), Map.of(), List.of());
     /** Mana values 0 to 5, then everything 6 and above in the last one. */
-    private static final int CURVE_BUCKETS = 7;
 
     private final Map<String, Entry> byKey = new ConcurrentHashMap<>();
 
@@ -416,47 +415,21 @@ public final class DeckCatalog {
         DeckPreferences.getPrefs(e.proxy()).setStarCount(on ? 1 : 0);
     }
 
-    /** What the panel reports about a deck beside its card list. */
+    /** What the panel reports about a deck beside its card list. The types follow the editor's own headings, so the two agree. */
     public static DeckStats stats(final Deck deck) {
         final CardPool main = deck.get(DeckSection.Main);
-        final int[] curve = new int[CURVE_BUCKETS];
-        final int[] creatures = new int[CURVE_BUCKETS];
-        final Map<String, Integer> types = new LinkedHashMap<>();
-        final int[] colours = new int[7];
-        final int[] symbols = new int[5];
-        int lands = 0;
-        int spells = 0;
-        int totalMana = 0;
-        if (main != null) {
-            for (final Map.Entry<PaperCard, Integer> e : main) {
-                final PaperCard card = e.getKey();
-                final int n = e.getValue();
-                types.merge(CardCatalog.heading(card), n, Integer::sum);
-                if (card.getRules().getType().isLand()) {
-                    lands += n;
-                    continue;
-                }
-                // A land has no mana value worth curving, so the curve and the average are spells only
-                final int cmc = card.getRules().getManaCost().getCMC();
-                curve[Math.min(cmc, CURVE_BUCKETS - 1)] += n;
-                if (card.getRules().getType().isCreature()) {
-                    creatures[Math.min(cmc, CURVE_BUCKETS - 1)] += n;
-                }
-                spells += n;
-                totalMana += cmc * n;
-                final ColorSet colour = card.getRules().getColor();
-                colours[colour.isColorless() ? 6 : colour.isMulticolor() ? 5 : Integer.numberOfTrailingZeros(colour.getColor())] += n;
-                // A hybrid symbol counts for each of its colours, as desktop's statistics count it
-                final int[] shards = card.getRules().getManaCost().getColorShardCounts();
-                for (int i = 0; i < symbols.length; i++) {
-                    symbols[i] += shards[i] * n;
-                }
-            }
+        final DeckStatistics shared = DeckStatistics.fromDeck(deck);
+        final int[] curve = new int[DeckStatistics.CURVE_BUCKETS];
+        for (int i = 0; i < curve.length; i++) {
+            curve[i] = shared.permanentCurve[i] + shared.spellCurve[i];
         }
-        return new DeckStats(played(deck), count(main), count(deck.get(DeckSection.Sideboard)), lands,
-                spells == 0 ? 0 : Math.round((totalMana * 100f) / spells) / 100f, Ints.asList(curve), Ints.asList(creatures),
-                types.entrySet().stream().map(e -> new TypeCount(e.getKey(), e.getValue())).toList(),
-                Ints.asList(colours), Ints.asList(symbols));
+        final Map<String, Integer> types = new LinkedHashMap<>();
+        if (main != null) {
+            main.forEach(e -> types.merge(CardCatalog.heading(e.getKey()), e.getValue(), Integer::sum));
+        }
+        return new DeckStats(played(deck), count(main), count(deck.get(DeckSection.Sideboard)), shared.landCount,
+                Math.round(shared.averageCmc * 100) / 100f, Ints.asList(curve), Ints.asList(shared.spellCurve),
+                types.entrySet().stream().map(e -> new TypeCount(e.getKey(), e.getValue())).toList(), Ints.asList(shared.pips));
     }
 
     /** Generators are listed by name only, because asking each for a deck to fill a row would build hundreds of them. */

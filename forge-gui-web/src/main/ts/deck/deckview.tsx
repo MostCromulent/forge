@@ -7,7 +7,7 @@ import { headingText } from './decklist';
 
 /** A deck's mana curve as bars px tall at most, with the average beside the heading when it is given. */
 // Bar heights are pixels because a percentage would resolve against an auto-sized row and collapse
-export function Curve({ curve, creatures, average, px }: { curve: number[]; creatures: number[]; average?: number; px: number }) {
+export function Curve({ curve, spells, average, px }: { curve: number[]; spells: number[]; average?: number; px: number }) {
   const tallest = Math.max(1, ...curve);
   return (
     <div class="curve">
@@ -16,19 +16,19 @@ export function Curve({ curve, creatures, average, px }: { curve: number[]; crea
         {curve.map((n, i) => {
           // The last bucket holds everything at that mana value and above
           const label = i === curve.length - 1 ? `${i}+` : `${i}`;
-          const beasts = creatures[i] ?? 0;
+          const instants = spells[i] ?? 0;
           return (
-            <span key={i} class="bar" title={t(beasts === 1 ? 'lblWebEditorCurveBarOne' : 'lblWebEditorCurveBar', label, beasts, n - beasts)}>
+            <span key={i} class="bar" title={t('lblWebEditorCurveBar', label, n - instants, instants)}>
               <span class={n ? 'stack' : 'stack empty'} style={{ height: `${n ? Math.max(3, Math.round((n / tallest) * px)) : 2}px` }}>
-                {n > beasts && <i class="other" style={{ flexGrow: n - beasts }} />}
-                {beasts > 0 && <i class="creature" style={{ flexGrow: beasts }} />}
+                {instants > 0 && <i class="spell" style={{ flexGrow: instants }} />}
+                {n > instants && <i class="permanent" style={{ flexGrow: n - instants }} />}
               </span>
               <em>{label}</em>
             </span>
           );
         })}
       </div>
-      <div class="curve-key"><span><i class="creature" />{t('lblCreatures')}</span><span><i class="other" />{t('lblWebEditorOtherSpells')}</span></div>
+      <div class="curve-key"><span><i class="permanent" />{t('lblPermanents')}</span><span><i class="spell" />{t('lblSpells')}</span></div>
     </div>
   );
 }

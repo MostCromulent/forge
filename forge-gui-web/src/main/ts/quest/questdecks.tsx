@@ -47,7 +47,7 @@ export function Decks({ page, model, actions }: { page: QuestDecks; model: Model
             {deck.sideboard > 0 && <span class="cq-chip">{t('lblSideboard')}: {deck.sideboard}</span>}
           </>}
           details={details && deck.size > 0 && <>
-            <Curve curve={details.stats.curve} creatures={details.stats.creatures} px={44} />
+            <Curve curve={details.stats.curve} spells={details.stats.spells} px={44} />
             <div class="dk-cards" data-list>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
           </>}>
           {asking === 'rename'

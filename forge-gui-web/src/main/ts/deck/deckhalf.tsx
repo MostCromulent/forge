@@ -59,8 +59,7 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
           <button class="small" disabled={!state.stats.main} onClick={() => setHand(drawHand(state, HAND))}>{t('lblWebEditorSampleHand')}</button>
         </div>
         <div class="deck-numbers">
-          <Curve curve={state.stats.curve} creatures={state.stats.creatures} average={state.stats.averageMana} px={34} />
-          <Breakdown title={t('lblWebEditorCardsByColour')} counts={state.stats.colours} />
+          <Curve curve={state.stats.curve} spells={state.stats.spells} average={state.stats.averageMana} px={34} />
           <Breakdown title={t('lblWebEditorManaSymbols')} counts={state.stats.symbols} />
         </div>
       </div>
@@ -279,7 +278,7 @@ function Line({ card, zone, landed, actions, handlers, mainOnly, takeOut }: {
   );
 }
 
-const SHARES = ['W', 'U', 'B', 'R', 'G', 'M', 'C'];
+const SHARES = ['W', 'U', 'B', 'R', 'G', 'C'];
 
 /** How a count divides among the colours, as one bar and a key of the colours that have any. Each key carries its letter, so no colour is told by hue alone. */
 function Breakdown({ title, counts }: { title: string; counts: number[] }) {
