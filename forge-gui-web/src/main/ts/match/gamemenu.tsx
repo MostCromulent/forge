@@ -25,8 +25,8 @@ export const ICONS = {
   macro: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor"/>',
 };
 
-function Icon({ d, end }: { d: string; end?: boolean }) {
-  return <svg class={end ? 'menu-icon end' : 'menu-icon'} viewBox="0 0 24 24" aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />;
+export function Icon({ d, end, cls }: { d: string; end?: boolean; cls?: string }) {
+  return <svg class={['menu-icon', end ? 'end' : '', cls ?? ''].filter(Boolean).join(' ')} viewBox="0 0 24 24" aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />;
 }
 
 export function GameMenu({ model, actions, close, open }: {

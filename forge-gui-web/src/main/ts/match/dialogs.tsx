@@ -12,10 +12,12 @@ import type { Actions } from '../actions';
 import { keyName } from '../keys';
 import { boundKeys } from '../settings';
 import { playerAvatarUrl } from '../looks';
-import { cardMenu, isLocal, oldestRequest, stackPick, stateOf, type Model } from '../model';
+import { cardMenu, deref, derefAll, game, isLocal, oldestRequest, stackPick, stateOf, type Model } from '../model';
+import { changeUi, ui } from '../ui';
+import { ICONS, Icon } from './gamemenu';
 import type {
   ChoicesRequest, DistributeRequest, ManipulateRequest, NumberRequest, OptionRequest, OrderRequest, Request, RequestOption,
-  CardView, PlayerView, SideboardRequest, TextRequest, TrackedObject,
+  CardView, PlayerView, SideboardRequest, StackItemView, TextRequest, TrackedObject, YieldAction,
 } from '../protocol';
 import { t } from '../text';
 import { make, reducedMotion } from '../dom';
@@ -43,31 +45,68 @@ export function Requests({ model, actions }: { model: Model; actions: Actions })
   return <RequestDialog key={req.id} req={req} model={model} answer={value => actions.answer(req.id, value)} />;
 }
 
-/** A menu at the pointer of what one clicked card can do, which a click anywhere else closes having chosen nothing. */
-function CardMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
+/** A menu at the pointer, which a press or a right-click anywhere else closes having chosen nothing. A phone draws it along the bottom edge (portrait.css). */
+function PointMenu({ x, y, id, cls, label, title, dismiss, children }: {
+  x: number; y: number; id?: string; cls: string; label: string; title?: string | null; dismiss: () => void; children: ComponentChildren;
+}) {
   const menu = useRef<HTMLDivElement>(null);
-  const [at, setAt] = useState({ x: req.atX ?? 0, y: req.atY ?? 0 });
+  const [at, setAt] = useState({ x, y });
   // Opens down and right from the pointer, turning back where that would leave the window
   useLayoutEffect(() => {
     const el = menu.current;
     if (!el) return;
-    const x = Math.min(req.atX ?? 0, window.innerWidth - el.offsetWidth - 8);
-    const y = Math.min(req.atY ?? 0, window.innerHeight - el.offsetHeight - 8);
-    setAt({ x: Math.max(8, x), y: Math.max(8, y) });
-  }, [req]);
+    setAt({ x: Math.max(8, Math.min(x, window.innerWidth - el.offsetWidth - 8)), y: Math.max(8, Math.min(y, window.innerHeight - el.offsetHeight - 8)) });
+  }, [x, y]);
   return (
-    <Backdrop cls="anchored" dismiss={() => answer([])}
-      onContextMenu={e => { e.preventDefault(); answer([]); }}>
-      <div ref={menu} class="card-menu" role="menu" aria-label={req.message ?? t('lblAbilities')} style={{ left: `${at.x}px`, top: `${at.y}px` }}>
-        {req.message && <p class="card-menu-title">{req.message}</p>}
-        {req.options.map((o, i) => (
-          <button key={i} type="button" role="menuitem" class="card-menu-item" onClick={() => answer([i])}>
-            {i < 9 ? <kbd>{i + 1}</kbd> : <span class="card-menu-gap" />}
-            <span><SymbolText text={o.label} /></span>
-          </button>
-        ))}
+    <Backdrop cls="anchored" dismiss={dismiss} onContextMenu={e => { e.preventDefault(); dismiss(); }}>
+      <div ref={menu} id={id} class={cls} role="menu" aria-label={label} style={{ left: `${at.x}px`, top: `${at.y}px` }}>
+        {title && <p class="card-menu-title">{title}</p>}
+        {children}
       </div>
     </Backdrop>
+  );
+}
+
+/** What one right-clicked card can do, as the host lists it. */
+function CardMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
+  return (
+    <PointMenu x={req.atX ?? 0} y={req.atY ?? 0} cls="card-menu" label={req.message ?? t('lblAbilities')} title={req.message} dismiss={() => answer([])}>
+      {req.options.map((o, i) => (
+        <button key={i} type="button" role="menuitem" class="card-menu-item" onClick={() => answer([i])}>
+          {i < 9 ? <kbd>{i + 1}</kbd> : <span class="card-menu-gap" />}
+          <span><SymbolText text={o.label} /></span>
+        </button>
+      ))}
+    </PointMenu>
+  );
+}
+
+/** Desktop's stack menu for a right-clicked item, once the host has said what applies to it: auto-yield, always accept or decline an optional trigger, and the yields. */
+export function StackMenu({ model, actions }: { model: Model; actions: Actions }) {
+  const at = ui.stackMenuAt;
+  const answer = model.stackMenu;
+  if (!at || !answer || answer.key !== at.key) return null;
+  const close = () => changeUi(u => { u.stackMenuAt = null; });
+  const items: StackItemView[] = derefAll(model, game(model)?.Stack);
+  const source = deref(model, items.find(i => i.$key === at.key)?.SourceCard);
+  // A choice the game remembers carries a tick, shown or not, so every label starts at the same place as a pass's
+  const item = (label: string, action: YieldAction, checked?: boolean) => (
+    <button type="button" class="card-menu-item" role={checked === undefined ? 'menuitem' : 'menuitemcheckbox'} aria-checked={checked}
+      onClick={() => { actions.stackYield(answer.key, action); close(); }}>
+      <Icon d={checked === undefined ? ICONS.yields : ICONS.check} cls={checked === undefined ? undefined : 'tick'} />{label}
+    </button>
+  );
+  const remembered = answer.autoYield !== undefined || answer.trigger !== undefined;
+  return (
+    <PointMenu x={at.x} y={at.y} id="stack-menu" cls="card-menu game-menu" label={t('lblWebPortraitStackOptions')}
+      title={source && stateOf(model, source).Name} dismiss={close}>
+      {answer.autoYield !== undefined && item(t('lblWebStackAutoYield'), 'autoYield', answer.autoYield)}
+      {answer.trigger !== undefined && item(t('lblWebStackAlwaysAccept'), 'alwaysYes', answer.trigger === 'ACCEPT')}
+      {answer.trigger !== undefined && item(t('lblWebStackAlwaysDecline'), 'alwaysNo', answer.trigger === 'DECLINE')}
+      {remembered && <div class="card-menu-sep" role="separator" />}
+      {item(t('lblWebStackYieldUntilResolves'), 'yieldToStack')}
+      {item(t('lblWebStackYieldUntilEmpty'), 'yieldToEntireStack')}
+    </PointMenu>
   );
 }
 

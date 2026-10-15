@@ -10,7 +10,7 @@ import { Conquest } from './conquest/conquest';
 import { Quest } from './quest/quest';
 import { Importer } from './deck/importer';
 import { DeckFinder } from './deck/deckfinder';
-import { Requests } from './match/dialogs';
+import { Requests, StackMenu } from './match/dialogs';
 import { HostChoice } from './hostchoice';
 import { Options } from './options';
 import { AutoDecisionsDialog, AutoPassStops, DrawOfferQuestion, GameMenu } from './match/gamemenu';
@@ -59,6 +59,7 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
     rename={page === 'menu' ? () => changeUi(u => { u.renaming = true; }) : undefined} /> : null, byId('dock'));
   render(<>
     {page === 'match' && <Requests model={model} actions={actions} />}
+    {page === 'match' && <StackMenu model={model} actions={actions} />}
     {page === 'match' && ui.volumeOpen && <Volume close={() => changeUi(u => { u.volumeOpen = false; })} />}
     {page !== 'match' && ui.volumeOpen && <Volume anchor=".page-head .volume" close={() => changeUi(u => { u.volumeOpen = false; })} />}
     {page !== 'name' && ui.optionsOpen && <Options close={() => changeUi(u => { u.optionsOpen = false; })} />}

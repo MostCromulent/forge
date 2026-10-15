@@ -7,13 +7,11 @@ import { hoverCard, hoverable, inspectCard } from '../preview';
 import { FIZZLE_MS, journeys, noteFizzled } from './motion';
 import { notePick, stackTargets } from './overlay';
 import { hovers, longPress } from '../press';
-import { byId, q, make, onPressOutside, reducedMotion } from '../dom';
+import { byId, q, make, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
-import { ICONS } from './gamemenu';
-import { leave } from '../closing';
 import { t } from '../text';
-import type { CardView, GameEvent, StackItemView, YieldAction } from '../protocol';
+import type { CardView, GameEvent, StackItemView } from '../protocol';
 
 // What resolves next is the card at the top of the pile, and the rest cascade down behind it
 const STEP_MAX = 42;
@@ -47,7 +45,6 @@ export function foldStack(): void {
 
 export function initStack(actionsFor: Actions): void {
   actions = actionsFor;
-  onPressOutside('#stack-menu', () => { if (ui.stackMenuAt) changeUi(u => { u.stackMenuAt = null; }); });
 }
 
 export function renderStack(model: Model, events: readonly GameEvent[]): void {
@@ -140,7 +137,6 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   layout(pile, entries.length);
   // Measured now that every item has its place in the pile
   for (const { el, source } of arriving) arrive(el, source, collapsed);
-  renderMenu(model);
   renderStorm(root, game(model)?.StormCount ?? 0, entries.length > 0);
 }
 
@@ -449,62 +445,3 @@ function layout(pile: HTMLElement, n: number): void {
   });
 }
 
-/** What the menu open on the page was drawn for, so it is rebuilt only when that changes. */
-let menuDrawn = '';
-
-// The server answers a right-click with what applies to that item, and the menu opens once that answer is in
-function renderMenu(model: Model): void {
-  const at = ui.stackMenuAt;
-  const answer = model.stackMenu;
-  const wanted = at && answer && answer.key === at.key ? JSON.stringify([at, answer]) : '';
-  if (wanted === menuDrawn) {
-    return;
-  }
-  menuDrawn = wanted;
-  leave(document.querySelector('#stack-menu:not(.closing)'));
-  if (!at || !answer || !wanted) {
-    return;
-  }
-  const menu = document.createElement('div');
-  menu.id = 'stack-menu';
-  menu.className = 'card-menu game-menu';
-  menu.setAttribute('role', 'menu');
-  menu.style.left = `${at.x}px`;
-  menu.style.top = `${at.y}px`;
-  const items: StackItemView[] = derefAll(model, game(model)?.Stack);
-  const source = deref(model, items.find(i => i.$key === at.key)?.SourceCard);
-  const name = source && stateOf(model, source).Name;
-  if (name) {
-    const title = make('p', 'card-menu-title');
-    title.textContent = name;
-    menu.append(title);
-  }
-  // A choice the game remembers carries a tick, shown or not, so every label starts at the same place as a pass's
-  const item = (label: string, action: YieldAction, checked?: boolean) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'card-menu-item';
-    b.setAttribute('role', checked === undefined ? 'menuitem' : 'menuitemcheckbox');
-    if (checked !== undefined) b.setAttribute('aria-checked', String(checked));
-    b.innerHTML = `<svg class="menu-icon${checked === undefined ? '' : ' tick'}" viewBox="0 0 24 24" aria-hidden="true">${checked === undefined ? ICONS.yields : ICONS.check}</svg>`;
-    b.append(label);
-    b.onclick = () => {
-      actions?.stackYield(answer.key, action);
-      changeUi(u => { u.stackMenuAt = null; });
-    };
-    menu.append(b);
-  };
-  if (answer.autoYield !== undefined) item(t('lblWebStackAutoYield'), 'autoYield', answer.autoYield);
-  if (answer.trigger !== undefined) {
-    item(t('lblWebStackAlwaysAccept'), 'alwaysYes', answer.trigger === 'ACCEPT');
-    item(t('lblWebStackAlwaysDecline'), 'alwaysNo', answer.trigger === 'DECLINE');
-  }
-  if (answer.autoYield !== undefined || answer.trigger !== undefined) {
-    const sep = make('div', 'card-menu-sep');
-    sep.setAttribute('role', 'separator');
-    menu.append(sep);
-  }
-  item(t('lblWebStackYieldUntilResolves'), 'yieldToStack');
-  item(t('lblWebStackYieldUntilEmpty'), 'yieldToEntireStack');
-  document.body.append(menu);
-}
