@@ -338,7 +338,7 @@ public class WebGuiGame extends NetworkGuiGame {
     public void handleGameEvent(final GameEvent event) {
         // FControlGameEventHandler would post to the host UI thread, so the log, the sound and the animations are sent from here
         if (event instanceof GameEventGameOutcome outcome) {
-            score = matchScore(outcome.matchSummary());
+            score = matchScore(outcome.winsByPlayerId());
             // The outcome can come after the game is seen to be over, so the ending is told again with the score
             if (gameOver) {
                 send(new GameOver(score));
@@ -375,28 +375,8 @@ public class WebGuiGame extends NetworkGuiGame {
         return known == null ? event : new GameEventZone(zone.zoneType(), zone.player(), zone.mode(), known, zone.sa());
     }
 
-    /** Finds each seated player's name in the engine's match summary ("Alice: 1 Bob: 0 "), so a name holding a colon or space is read whole. */
-    private List<MatchScore> matchScore(final String summary) {
-        final GameView gv = getGameView();
-        if (gv == null || summary == null) {
-            return List.of();
-        }
-        final List<MatchScore> out = new ArrayList<>();
-        for (final PlayerView p : gv.getPlayers()) {
-            final String name = p.getName() + ": ";
-            final int at = (" " + summary).indexOf(" " + name);
-            if (at < 0) {
-                continue;
-            }
-            int end = at + name.length();
-            while (end < summary.length() && Character.isDigit(summary.charAt(end))) {
-                end++;
-            }
-            if (end > at + name.length()) {
-                out.add(new MatchScore(Ref.player(p.getId()), Integer.parseInt(summary.substring(at + name.length(), end))));
-            }
-        }
-        return out;
+    private static List<MatchScore> matchScore(final Map<Integer, Integer> wins) {
+        return wins.entrySet().stream().map(e -> new MatchScore(Ref.player(e.getKey()), e.getValue())).toList();
     }
 
     // Phase stops are the desktop preferences: one row for the local player's turns, one for everyone else's

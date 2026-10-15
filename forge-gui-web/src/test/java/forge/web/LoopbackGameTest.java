@@ -69,6 +69,10 @@ public class LoopbackGameTest {
             Assert.assertTrue(probe.get(20, TimeUnit.SECONDS));
 
             Assert.assertTrue(browser.gameOver.await(300, TimeUnit.SECONDS), "game did not finish");
+            // The score names both players by reference, with the one game won by its winner
+            final JsonObject scored = browser.awaitMatching("gameOver", m -> !m.getAsJsonArray("score").isEmpty(), "the game ended with no score");
+            Assert.assertEquals(scored.getAsJsonArray("score").size(), 2);
+            Assert.assertEquals(scored.getAsJsonArray("score").asList().stream().mapToInt(e -> e.getAsJsonObject().get("won").getAsInt()).sum(), 1);
             final int root = browser.last("state").get("root").getAsInt();
             final int turns = browser.model.objectsCopy().get(root).get("Turn").getAsInt();
             System.out.println("Loopback game: " + turns + " turns, " + browser.all("state").size() + " state messages");
