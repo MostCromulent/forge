@@ -33,6 +33,7 @@ import java.io.ObjectStreamException;
 import java.io.Serial;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 /**
@@ -158,6 +159,35 @@ public class Deck extends DeckBase implements Iterable<Entry<DeckSection, CardPo
             result.sort(Comparator.comparing(c -> c.getRules().canBeSignatureSpell()));
         }
         return result;
+    }
+
+    /**
+     * Puts a card in the command zone as the deck editors do. In Oathbreaker it takes the place of the card in its slot.
+     * Otherwise it joins a lone commander it can partner, or that alsoPairs (nullable) allows, and replaces the commanders there if not.
+     * Returns what it displaced, for the caller to put back where its editor keeps cards.
+     */
+    public CardPool placeCommander(final PaperCard card, final boolean oathbreaker, final BiPredicate<PaperCard, PaperCard> alsoPairs) {
+        final CardPool commanders = getOrCreate(DeckSection.Commander);
+        final CardPool displaced = new CardPool();
+        if (oathbreaker) {
+            final boolean isOathbreaker = card.getRules().canBeOathbreaker();
+            final PaperCard sameSlot = commanders.find(c -> c.getRules().canBeOathbreaker() == isOathbreaker);
+            if (sameSlot != null) {
+                displaced.add(sameSlot, commanders.count(sameSlot));
+                commanders.remove(sameSlot, commanders.count(sameSlot));
+            }
+        } else if (commanders.countAll() > 0) {
+            final List<PaperCard> existing = commanders.toFlatList();
+            final boolean pairs = existing.size() == 1 && (card.getRules().canBePartnerCommander()
+                    && existing.get(0).getRules().canBePartnerCommanders(card.getRules())
+                    || alsoPairs != null && alsoPairs.test(existing.get(0), card));
+            if (!pairs) {
+                displaced.addAll(commanders);
+                commanders.clear();
+            }
+        }
+        commanders.add(card, 1);
+        return displaced;
     }
 
     //at least for now, Oathbreaker will only support one oathbreaker and one signature spell
