@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { act, board, lobby, passUntil, probe, setState, PHONE, SMALL_PHONE, type Probe, type Table } from './probe';
 import { enterName, hold } from './steps';
 
@@ -11,10 +11,10 @@ async function settledBoard(p: Probe, state: string, table?: Table): Promise<voi
   await p.page.waitForTimeout(1500);
 }
 
-/** Plays the first card in hand, as a tap on it would, again if the page was still showing a new turn's banner and held the tap back. */
-async function castFirstInHand(p: Probe): Promise<void> {
+/** Plays the first card in hand, or the first with a name, as a tap on it would, again if the page was still showing a new turn's banner and held the tap back. */
+async function castFromHand(p: Probe, name = ''): Promise<void> {
   for (let tries = 0; tries < 6; tries++) {
-    const key = await p.page.evaluate(() => Number(document.querySelector<HTMLElement>('#hand .card')?.dataset.key));
+    const key = await p.page.evaluate(name => Number([...document.querySelectorAll<HTMLElement>('#hand .card')].find(c => c.textContent?.includes(name))?.dataset.key), name);
     await act(p.page, 'selectCard', key, false, 0, 0);
     const asked = await p.page.waitForFunction(() => {
       const prompt = window.forge.model.prompt;
@@ -22,6 +22,21 @@ async function castFirstInHand(p: Probe): Promise<void> {
     }, undefined, { timeout: 1500 }).then(() => true, () => false);
     if (asked) return;
   }
+}
+
+/** Where a panel sits once it has slid into place; it is visible from the first frame of its opening. */
+async function settledBox(panel: Locator) {
+  await panel.evaluate(el => Promise.all(el.getAnimations().map(a => a.finished.catch(() => {}))));
+  return (await panel.boundingBox())!;
+}
+
+/** Taps a creature into the attack, again if the page was still showing a new turn's banner and held the tap back. */
+async function declareAttacker(card: Locator): Promise<void> {
+  await expect(async () => {
+    // A second tap on an attacker would take it out of the attack
+    if (!await card.evaluate(el => el.classList.contains('attacking'))) await card.tap({ force: true });
+    await expect(card).toHaveClass(/\battacking\b/, { timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
 }
 
 const form = (page: Page) => page.evaluate(() => document.documentElement.dataset.form ?? '');
@@ -179,7 +194,7 @@ probe('a prompt that picks cards closes the sheet', async p => {
   await settledBoard(p, 'humanhand=Lightning Bolt\nhumanbattlefield=Mountain\naibattlefield=Grizzly Bears');
   await p.page.locator('#opponent .card').first().tap();
   await expect(p.page.locator('#zoom.sheet')).toBeVisible();
-  await castFirstInHand(p);
+  await castFromHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
   await expect(p.page.locator('#zoom.sheet')).toBeHidden();
   await expect(p.page.locator('#prompt .cancel')).toBeVisible();
@@ -261,7 +276,7 @@ probe('a bar keeps its zones as counts, and a tap opens them', async p => {
 
 probe('a spell on the stack shows as a chip under the strip, and its target wears its number', async p => {
   await settledBoard(p, 'humanhand=Lightning Bolt\nhumanbattlefield=Mountain\naibattlefield=Grizzly Bears');
-  await castFirstInHand(p);
+  await castFromHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
   await p.page.locator('#opponent .card.selectable').first().tap();
   await p.until('the bolt is paid for or on the stack', () => !!window.forge.model.prompt?.paying || document.querySelectorAll('#stack .stack-item:not(.awaiting)').length > 0);
@@ -312,7 +327,7 @@ probe('three opponents are behind a players button, and a change marks a hidden 
 
 probe('a hidden opponent can be chosen from the dock', async p => {
   await settledBoard(p, 'p0hand=Lightning Bolt\np0battlefield=Mountain\np1battlefield=Mountain\np2battlefield=Island\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
-  await castFirstInHand(p);
+  await castFromHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectablePlayers.length ?? 0) > 0);
   // Two of the three opponents are out of sight, and each has a button in the dock
   await expect(p.page.locator('#prompt .choose-players button')).toHaveCount(2);
@@ -325,7 +340,7 @@ probe('a question about a hidden opponent\'s cards marks the players button and 
   const tabs = p.page.locator('#seat-tabs .seat-tab');
   // Looking away from the only player with a creature
   await showSeat(p.page, 0);
-  await castFirstInHand(p);
+  await castFromHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
   await expect(tabs.nth(0)).toHaveClass(/\bon\b/);
   await expect(p.page.locator('#seat-switch')).toHaveClass(/\basked\b/);
@@ -359,7 +374,7 @@ probe('a graveyard opens as a sheet above the dock, and Back closes it', async p
   await p.page.locator('#me .zone-tile[data-zone="Graveyard"]').tap();
   const panel = p.page.locator('#zones .zone-panel');
   await expect(panel).toBeVisible();
-  const at = (await panel.boundingBox())!;
+  const at = await settledBox(panel);
   const dock = await box(p.page, '#prompt');
   expect(at.width).toBe(390);
   expect(at.y + at.height).toBeLessThanOrEqual(dock.y + 2);
@@ -433,8 +448,7 @@ probe('a turn is played by touch: a land from the drawer, then an attack', async
     const m = window.forge.model;
     return (m.objects.get(m.root) as { Phase?: string } | undefined)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && !!m.prompt?.ok?.enabled;
   });
-  await p.page.locator('#me .battlefield .card', { hasText: 'Grizzly Bears' }).tap();
-  await expect(p.page.locator('#me .card.attacking')).toHaveCount(1);
+  await declareAttacker(p.page.locator('#me .battlefield .card', { hasText: 'Grizzly Bears' }));
   await p.page.locator('#prompt .ok').tap();
   await passUntil(p, 'the attack lands', () => [...window.forge.model.objects.values()].some(o => (o as { IsAI?: boolean }).IsAI && (o as { Life?: number }).Life === 18));
   expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
@@ -517,12 +531,17 @@ probe('a deck is chosen in the finder by taps, with nothing off the screen', asy
 
 probe('a choice of cards from your hand opens the hand by itself', async p => {
   await settledBoard(p, 'humanhand=Faithless Looting;Giant Growth;Shock\nhumanbattlefield=Mountain\naibattlefield=Mountain');
-  // By name and once: the hand is sorted, and a second tap would land on the discard this is about
-  const looting = await p.page.evaluate(() => Number([...document.querySelectorAll<HTMLElement>('#hand .card')].find(c => c.textContent?.includes('Faithless'))?.dataset.key));
-  await act(p.page, 'selectCard', looting, false, 0, 0);
+  // By name: the hand is sorted
+  await castFromHand(p, 'Faithless');
   await p.until('a card from hand is asked for', () => {
     const prompt = window.forge.model.prompt;
     if (prompt?.paying && prompt.ok?.enabled) window.forge.actions.ok();
+    // Some runs give the priority back with the spell on the stack, and it waits there to be let through
+    const once = window as { passedLooting?: boolean };
+    if (prompt?.priority && prompt.ok?.enabled && !document.getElementById('stack')?.hidden && !once.passedLooting) {
+      once.passedLooting = true;
+      window.forge.actions.ok();
+    }
     return !!prompt && !prompt.priority && !prompt.paying && prompt.selectable.length > 0;
   }, undefined, p.page, 30_000);
   await expect(p.page.locator('#hand.sheet')).toBeVisible();
@@ -540,7 +559,7 @@ probe('the result of a game fits the screen', async p => {
     const m = window.forge.model;
     return (m.objects.get(m.root) as { Phase?: string } | undefined)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && !!m.prompt?.ok?.enabled;
   });
-  await p.page.locator('#me .battlefield .card').first().tap({ force: true });
+  await declareAttacker(p.page.locator('#me .battlefield .card').first());
   await passUntil(p, 'the game ends', () => window.forge.model.gameOver);
   const word = p.page.locator('#game-over .word');
   await expect(word).toBeVisible();
@@ -580,7 +599,7 @@ probe('after viewing the final battlefield, the way back to the result can be ta
   });
   // A long step name does not cut short whose turn it is
   expect(await p.page.evaluate(() => { const b = document.querySelector<HTMLElement>('#phase-strip .owner b')!; return b.scrollWidth <= b.clientWidth; })).toBe(true);
-  await p.page.locator('#me .battlefield .card').first().tap({ force: true });
+  await declareAttacker(p.page.locator('#me .battlefield .card').first());
   await passUntil(p, 'the game ends', () => window.forge.model.gameOver);
   const view = p.page.locator('#game-over .actions button', { hasText: 'View battlefield' });
   await expect(view).toBeVisible();
@@ -614,7 +633,7 @@ probe('an opponent\'s open zones do not cover their portrait, and their spell\'s
 
 probe('the stack chip names a spell while its target is chosen', async p => {
   await settledBoard(p, 'humanhand=Lightning Bolt\nhumanbattlefield=Mountain\naibattlefield=Grizzly Bears');
-  await castFirstInHand(p);
+  await castFromHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
   await expect(p.page.locator('#stack .head b')).toContainText('Lightning Bolt');
 }, PHONE);
@@ -639,7 +658,7 @@ probe('a block is declared by taps: the attacker, then your creature', async p =
 
 probe('a zone the game opens for a choice, with a spell on the stack, is a whole sheet whose cards can be tapped', async p => {
   await settledBoard(p, 'humanhand=Diabolic Vision\nhumanbattlefield=Island;Swamp\nhumanlibrary=Forest;Mountain;Plains;Island;Swamp;Hill Giant;Grizzly Bears\naibattlefield=Mountain');
-  await castFirstInHand(p);
+  await castFromHand(p);
   // Paid for, then let resolve: one answer at a time, since a second sent early would land on the choice itself
   const shown = () => p.page.evaluate(() => document.querySelectorAll('#zones .card.selectable').length > 0);
   for (let i = 0; i < 20 && !await shown(); i++) {
@@ -671,7 +690,7 @@ probe('a zone the game opens for a choice, with a spell on the stack, is a whole
 for (const [name, device] of [['a phone', PHONE], ['a desktop', undefined]] as const) {
   probe(`cards are put in order along a row on ${name}`, async p => {
     await settledBoard(p, 'humanhand=Diabolic Vision\nhumanbattlefield=Island;Swamp\nhumanlibrary=Forest;Mountain;Plains;Island;Swamp;Hill Giant;Grizzly Bears\naibattlefield=Mountain');
-    await castFirstInHand(p);
+    await castFromHand(p);
     const asked = () => p.page.evaluate(() => document.querySelectorAll('#zones .card.selectable').length > 0);
     for (let i = 0; i < 20 && !await asked(); i++) {
       if (await p.page.evaluate(() => { const q = window.forge.model.prompt; return !!q && (q.paying || q.priority) && !!q.ok?.enabled; })) await act(p.page, 'ok');
@@ -743,6 +762,8 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
 probe('the question of who goes first leaves the dock, which can also answer it, within reach', async p => {
   await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
   await p.page.evaluate(() => {
+    // The game's own saying of who goes first can still be up, and is put away as a question would put it away
+    document.getElementById('first-reveal')?.remove();
     const ask = Object.assign(document.createElement('div'), { id: 'first-reveal', className: 'choosing' });
     document.getElementById('match')!.append(ask);
   });

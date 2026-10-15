@@ -33,7 +33,7 @@ async function buildAndSit(page: Page): Promise<void> {
 test('online sealed with a guest', async ({ page, browser }) => {
   test.setTimeout(480_000);
   await hostEvent(page, 'sealed');
-  await page.click('.tile-choice:has-text("Full card pool")');
+  await page.click('.tile-choice:has-text("Full Cardpool")');
   await page.click('.stp-open button:has-text("Continue")');
   await page.click('.wfoot button:has-text("Save")');
   await expect(page.locator('.event-head .event-product')).toContainText('Full');

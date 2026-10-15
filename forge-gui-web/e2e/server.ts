@@ -119,7 +119,8 @@ export async function startServer(onPort?: number, seed: Seed = {}): Promise<Ser
         killTree(java.pid!);
         await exited;
       }
-      rmSync(home, { recursive: true, force: true });
+      // Windows can keep a file of the ended JVM locked for a moment after it exits
+      rmSync(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
     },
   };
 }
