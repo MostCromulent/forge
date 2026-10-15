@@ -37,7 +37,7 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
-/** Conquest's rules as the shared package states them, with no screen involved. */
+/** Conquest's rules as the shared package states them, with no screen involved. They are tested here because forge-gui's tests have no IGuiBase or FModel set-up to load the cards. */
 public class ConquestRulesTest {
     @BeforeClass
     public void setUp() {

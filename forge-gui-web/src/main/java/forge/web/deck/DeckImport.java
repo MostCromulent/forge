@@ -28,7 +28,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Reads a deck list for the browser, taking whether each card is allowed from Legality so its marks and the editor's verdict agree. */
+/**
+ * Reads a deck list for the browser, taking whether each card is allowed from Legality so its marks and the editor's verdict agree.
+ * It reads line by line rather than through DeckImportController, because the page marks and fixes each source line and the
+ * recognizer's tokens do not keep their line positions.
+ */
 public final class DeckImport {
     private static final String READ = "read";
     private static final String PROBLEM = "problem";

@@ -737,7 +737,11 @@ public class WebGuiGame extends NetworkGuiGame {
         return Answers.pick(choices, ask(request, Answers.indexList(choices.size(), need, max)));
     }
 
-    /** Whose deck a reveal warns the computer will not play all of, told by the host's own words for it; null for any other reveal. */
+    /**
+     * Whose deck a reveal warns the computer will not play all of, or null for any other reveal. The host sends the warning as a
+     * plain reveal with no owner, so the owner is found by building the host's title for each player, which matches because the
+     * host and this client share one locale.
+     */
     private PlayerView aiSkipsOwner(final String message) {
         final GameView gv = getGameView();
         final Localizer loc = Localizer.getInstance();

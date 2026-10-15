@@ -16,7 +16,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
-/** Downloads missing card images into the shared image cache, like the desktop and mobile fetchers. */
+/**
+ * Downloads missing card images into the shared image cache, like the desktop and mobile fetchers. It saves the bytes as they
+ * arrive, since the browser decodes the picture itself, so neither desktop's ImageIO re-encoding nor mobile's FileHandle writing fits.
+ */
 public final class WebImageFetcher extends ImageFetcher implements IHasForgeLog {
     @Override
     protected Runnable getDownloadTask(final String[] downloadUrls, final String destPath, final Runnable notifyObservers) {

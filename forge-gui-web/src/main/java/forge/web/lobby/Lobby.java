@@ -825,7 +825,10 @@ public final class Lobby {
         return lobby != null && index < lobby.getNumberOfSlots() ? lobby.getSlot(index).getDeck() : null;
     }
 
-    /** What stops the match starting, in the order the seats appear. */
+    /**
+     * What stops the match starting, in the order the seats appear. The page lists every reason at once, including open seats and
+     * decks outside the card pool, which GameLobby.startGame does not check. startGame still runs as the final gate.
+     */
     public List<String> problems() {
         return problems(new ArrayList<>());
     }
