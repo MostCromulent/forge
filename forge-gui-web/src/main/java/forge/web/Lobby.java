@@ -26,7 +26,7 @@ import forge.util.NameGenerator;
 import org.apache.commons.lang3.Range;
 import forge.web.FromBrowser.*;
 import forge.web.ToBrowser.*;
-import forge.web.DeckCatalog.Extra;
+import forge.web.ExtraSections.Extra;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -438,8 +438,8 @@ final class Lobby {
     private void fillDefaults(final GameLobby lobby, final int index) {
         for (final DeckSection section : sectionsFor(lobby, index)) {
             if (!extrasAt(index).containsKey(section)) {
-                final Extra fallback = DeckCatalog.resolveExtra(section,
-                        section == DeckSection.Avatar ? DeckCatalog.RANDOM : DeckCatalog.GENERATE, forComputer(lobby, index));
+                final Extra fallback = ExtraSections.resolveExtra(section,
+                        section == DeckSection.Avatar ? ExtraSections.RANDOM : ExtraSections.GENERATE, forComputer(lobby, index));
                 if (fallback != null) {
                     extrasAt(index).put(section, fallback);
                 }
@@ -510,7 +510,7 @@ final class Lobby {
         if (lobby == null || section == null || !dealsFor(lobby, index)) {
             return;
         }
-        final Extra extra = DeckCatalog.resolveExtra(section, choice, forComputer(lobby, index));
+        final Extra extra = ExtraSections.resolveExtra(section, choice, forComputer(lobby, index));
         if (extra != null) {
             extrasAt(index).put(section, extra);
             compose(index);
@@ -524,7 +524,7 @@ final class Lobby {
             return null;
         }
         return new ToBrowser.ExtraChoices(section.name(), index,
-                DeckCatalog.extraChoices(section, forComputer(lobby, index), catalog.deck(key(index))));
+                ExtraSections.extraChoices(section, forComputer(lobby, index), catalog.deck(key(index))));
     }
 
     private static DeckSection extraSection(final String name) {
@@ -779,13 +779,13 @@ final class Lobby {
         final CardPool cards = deck == null ? null : deck.get(section);
         final int count = cards == null ? 0 : cards.countAll();
         String detail = null;
-        if (section == DeckSection.Avatar && count > 0 && !DeckCatalog.randomLabel().equals(label)) {
+        if (section == DeckSection.Avatar && count > 0 && !ExtraSections.randomLabel().equals(label)) {
             final var rules = cards.iterator().next().getKey().getRules();
             detail = Localizer.getInstance().getMessage("lblWebLobbyAvatarMods", signed(rules.getHand()), signed(rules.getLife()));
         }
         // Before a seat has a deck nothing has been dealt to it, so an empty section is not yet a fault
         final String problem = deck == null ? null : section == DeckSection.Avatar ? (count == 0 ? Localizer.getInstance().getMessage("lblWebLobbyNoAvatar") : null)
-                : DeckCatalog.sectionProblem(section, cards);
+                : ExtraSections.sectionProblem(section, cards);
         return new SeatExtra(label == null ? Localizer.getInstance().getMessage("lblNone") : label, count, detail, problem);
     }
 
@@ -859,7 +859,7 @@ final class Lobby {
                 if (FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
                     for (final DeckSection section : sectionsFor(lobby, i)) {
                         final String fault = section == DeckSection.Avatar ? null
-                                : DeckCatalog.sectionProblem(section, deck == null ? null : deck.get(section));
+                                : ExtraSections.sectionProblem(section, deck == null ? null : deck.get(section));
                         if (fault != null) {
                             illegal.add(Localizer.getInstance().getMessage(section == DeckSection.Planes ? "lblWebLobbyPlanarDeckFault" : "lblWebLobbySchemeDeckFault", String.valueOf(slot.getName()), fault));
                         }
