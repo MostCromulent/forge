@@ -1,8 +1,7 @@
 // The editor's right half: the deck as the deck finder shows it, made editable
 
 import type { ComponentChildren } from 'preact';
-import { useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { useDismiss } from '../hooks';
+import { useLayoutEffect, useState } from 'preact/hooks';
 import { isPortrait } from '../form';
 import { flyingFor, land } from '../flight';
 import { drawHand, headingText, regroup, type GroupBy } from './decklist';
@@ -13,6 +12,7 @@ import type { CardHandlers } from './drag';
 import type { DeckSection, EditorCard, EditorSection, EditorState } from '../protocol';
 import { store, stored } from '../storage';
 import { t } from '../text';
+import { Backdrop, Dropdown } from '../dialog';
 
 const GROUP_KEY = 'forge.groupBy';
 const VIEW_KEY = 'forge.deckView';
@@ -188,24 +188,22 @@ function ExtraZone({ section, cards, adding, landed, addTo, actions }: {
 
 /** The sections a deck does not carry yet; choosing one shows it, empty, and turns the catalogue to its cards. */
 function AddSection({ sections, addTo }: { sections: EditorSection[]; addTo: (section: DeckSection) => void }) {
-  const [open, setOpen] = useState(false);
-  const anchor = useRef<HTMLDivElement>(null);
-  useDismiss(open, anchor, () => setOpen(false));
   if (!sections.length) return null;
   return (
-    <div ref={anchor} class="menu-anchor add-section">
-      <button class="small" aria-expanded={open} onClick={() => setOpen(!open)}>{t('lblWebEditorAddSection')}</button>
-      {open && (
+    <Dropdown cls="menu-anchor add-section" block button={(open, toggle) => (
+      <button class="small" aria-expanded={open} onClick={toggle}>{t('lblWebEditorAddSection')}</button>
+    )}>
+      {close => (
         <div class="deck-menu" role="menu">
           {sections.map(s => (
             <button key={s.section} role="menuitem" onClick={() => {
-              setOpen(false);
+              close();
               addTo(s.section);
             }}><span>{s.name}</span></button>
           ))}
         </div>
       )}
-    </div>
+    </Dropdown>
   );
 }
 
@@ -328,7 +326,7 @@ export function Curve({ curve, creatures, average, px }: { curve: number[]; crea
 
 function SampleHand({ hand, again, more, close }: { hand: EditorCard[]; again: () => void; more: () => void; close: () => void }) {
   return (
-    <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+    <Backdrop dismiss={close}>
       <div class="dialog sample-hand">
         <h3>{t('lblWebEditorSampleHand')}</h3>
         <p class="hint">{t('lblWebEditorSampleHandHint')}</p>
@@ -339,7 +337,7 @@ function SampleHand({ hand, again, more, close }: { hand: EditorCard[]; again: (
           <button class="primary" onClick={close}>{t('lblClose')}</button>
         </div>
       </div>
-    </div>
+    </Backdrop>
   );
 }
 

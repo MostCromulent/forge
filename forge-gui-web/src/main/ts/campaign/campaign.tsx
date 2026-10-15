@@ -8,6 +8,7 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { CampaignBar as Bar, PrefRow } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
+import { Backdrop } from '../dialog';
 
 /** A balance: its icon, its number, and its name for a reader that cannot see the icon. */
 export function Purse({ icon, n, label }: { icon: string; n: number; label: string }) {
@@ -152,7 +153,7 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
   );
   const bad = (r: PrefRow) => !!p.problem && last === r.key;
   return (
-    <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+    <Backdrop dismiss={close}>
       <div class="dialog cq-prefs">
         <header><h3>{p.title}</h3><button aria-label={t('lblClose')} onClick={close}>×</button></header>
         <div class="cq-prefs-body">
@@ -196,6 +197,6 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
           <button class="primary" onClick={close}>{t('lblOK')}</button>
         </footer>
       </div>
-    </div>
+    </Backdrop>
   );
 }

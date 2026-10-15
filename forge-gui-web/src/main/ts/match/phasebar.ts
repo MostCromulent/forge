@@ -1,7 +1,7 @@
 import { reconcile } from './render';
 import { deref, game, isLocal, me, opponents, players, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
-import { byId, q, replay, make, reducedMotion } from '../dom';
+import { byId, q, replay, make, onPressOutside, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import { t, tNodes, type TextKey } from '../text';
 import type { Actions } from '../actions';
@@ -168,11 +168,7 @@ function build(root: HTMLElement): void {
     e.stopPropagation();
     stopYield?.();
   };
-  document.addEventListener('mousedown', e => {
-    if (ui.stopsOpen && !(e.target instanceof Element && e.target.closest('#phase-strip'))) {
-      changeUi(u => { u.stopsOpen = false; });
-    }
-  });
+  onPressOutside('#phase-strip', () => { if (ui.stopsOpen) changeUi(u => { u.stopsOpen = false; }); });
   swipeDown(q(root, '.stops'), () => changeUi(u => { u.stopsOpen = false; }));
 }
 

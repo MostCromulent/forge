@@ -8,6 +8,7 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ConquestPlaneRow } from '../protocol';
 import { t } from '../text';
+import { Backdrop } from '../dialog';
 
 const emblem = (size: number) => <img class="cq-shard" alt={t('lblPlaneswalkEmblems')} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl('IMG_PW_BADGE_COMMON')} />;
 const share = (n: number, of: number): string => `${n} / ${of} (${of ? Math.round(100 * n / of) : 0}%)`;
@@ -69,7 +70,7 @@ export function Planes({ model, actions }: { model: Model; actions: Actions }) {
         </div>
       </aside>
       {asking && (
-        <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setAsking(false); }}>
+        <Backdrop dismiss={() => setAsking(false)}>
           <div class="dialog">
             <h3>{t('lblWebConquestUnlock')} {plane.name}</h3>
             <p class="cq-exile-total">{t('lblWebConquestUnlockAsk', p.unlockCost, plane.name)}</p>
@@ -78,7 +79,7 @@ export function Planes({ model, actions }: { model: Model; actions: Actions }) {
               <button class="primary" onClick={() => go(true)}>{t('lblOK')}</button>
             </div>
           </div>
-        </div>
+        </Backdrop>
       )}
     </div>
   );

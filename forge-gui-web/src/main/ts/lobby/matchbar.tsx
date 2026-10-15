@@ -1,29 +1,25 @@
 // The bar above the seats: what is played and by how many, as labelled fields that each open their own control
 
 import type { ComponentChildren } from 'preact';
-import { useRef, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { HeadControls, PageHeader } from '../header';
 import { t, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import { useDismiss } from '../hooks';
+import { Dropdown } from '../dialog';
 import type { Address, Format, LobbyTable } from '../protocol';
 
 /** A field's popup: opened by its button, closed by Escape or a press anywhere outside it. */
 function Popup({ label, disabled, children, wide, onOpen }: {
   label: ComponentChildren; disabled?: boolean; children: (close: () => void) => ComponentChildren; wide?: boolean; onOpen?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLSpanElement>(null);
-  useDismiss(open, root, () => setOpen(false));
   return (
-    <span ref={root} class="popup-anchor">
+    <Dropdown cls="popup-anchor" button={(open, toggle) => (
       <button class="field-value menu-button" aria-expanded={open} disabled={disabled} onClick={() => {
         if (!open) onOpen?.();
-        setOpen(!open);
+        toggle();
       }}>{label}</button>
-      {open && <div class={wide ? 'popup wide' : 'popup'} role="dialog">{children(() => setOpen(false))}</div>}
-    </span>
+    )}>{close => <div class={wide ? 'popup wide' : 'popup'} role="dialog">{children(close)}</div>}</Dropdown>
   );
 }
 

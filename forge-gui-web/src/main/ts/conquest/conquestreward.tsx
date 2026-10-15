@@ -8,6 +8,7 @@ import { pendingAmounts } from './conquestpending';
 import type { Reward, RewardStep } from '../protocol';
 import { t, formatNumber } from '../text';
 import { make, reducedMotion } from '../dom';
+import { Backdrop } from '../dialog';
 
 /** What the reveal has yet to show, by the icon of the balance it was paid into. */
 export type Owed = Record<string, number>;
@@ -57,7 +58,7 @@ export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed
 
   if (!step) return null;
   return (
-    <div class="backdrop cq-reveal">
+    <Backdrop cls="cq-reveal">
       {step.kind === 'WHEEL' && <WheelStop key={at} step={step} emblem={first === 1 && at === 1 ? steps[0].amount : 0} next={next} />}
       {step.kind === 'BOOSTER' && <PackStop key={at} step={step} release={n => setReleased(r => r + n)} zoom={setZoom} next={next} />}
       {step.kind === 'CONQUER_EMBLEMS' && <Gift icon="IMG_PW_BADGE_COMMON" amount={step.amount} title={t('lblWebConquestFirstConquest')} button={t('lblGreat')} next={next} />}
@@ -68,7 +69,7 @@ export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed
       {step.kind === 'MESSAGE' && <Gift icon={step.icon} title={step.title ?? ''} text={step.text} lines={step.lines} button={t('lblOK')} next={next} />}
       {step.kind === 'CARDS' && <CardsStop key={at} step={step} zoom={setZoom} next={next} />}
       {zoom && <div class="backdrop cq-zoom-layer" onClick={e => { e.stopPropagation(); setZoom(null); }}><img class="cq-zoom" alt="" src={imageUrl(zoom)} /></div>}
-    </div>
+    </Backdrop>
   );
 }
 

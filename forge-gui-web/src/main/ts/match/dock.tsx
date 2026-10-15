@@ -9,6 +9,7 @@ import { players, type ChatEntry, type Model } from '../model';
 import type { Actions } from '../actions';
 import type { Person } from '../protocol';
 import { t, type TextKey } from '../text';
+import { Dropdown } from '../dialog';
 
 /** What each person is doing, in the words the roster shows. A seat at a table is worth naming; waiting is not. */
 const DOING: Record<string, TextKey> = {
@@ -175,17 +176,11 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
 function SeatMenu({ name, waiting, inMatch, mayDrop, actions }: {
   name: string; waiting: readonly Person[]; inMatch: boolean; mayDrop: boolean; actions: Actions;
 }) {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (!open) return;
-    const away = () => setOpen(false);
-    document.addEventListener('pointerdown', away);
-    return () => document.removeEventListener('pointerdown', away);
-  }, [open]);
   return (
-    <div class="menu-anchor" onPointerDown={e => e.stopPropagation()}>
-      <button class="seat-gone" aria-expanded={open} onClick={() => setOpen(!open)}>{t('lblWebDockDisconnected')}<Chevron up={open} /></button>
-      {open && (
+    <Dropdown cls="menu-anchor" block button={(open, toggle) => (
+      <button class="seat-gone" aria-expanded={open} onClick={toggle}>{t('lblWebDockDisconnected')}<Chevron up={open} /></button>
+    )}>
+      {() => (
         <div class="deck-menu" role="menu">
           <span class="menu-cap">{name}</span>
           {waiting.map(w => (
@@ -195,7 +190,7 @@ function SeatMenu({ name, waiting, inMatch, mayDrop, actions }: {
           {mayDrop && <button role="menuitem" onClick={() => actions.dropPlayer(name)}>{t(inMatch ? 'lblWebDockSeatToAi' : 'lblWebDockOpenSeat')}</button>}
         </div>
       )}
-    </div>
+    </Dropdown>
   );
 }
 

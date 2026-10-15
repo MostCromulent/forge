@@ -10,6 +10,7 @@ import { deref, type Model } from '../model';
 import { t, type TextKey } from '../text';
 import { useClosing } from '../closing';
 import { changeUi, ui } from '../ui';
+import { Backdrop } from '../dialog';
 
 // Icons from Lucide (ISC, see web/licenses/lucide-license.txt)
 export const ICONS = {
@@ -46,8 +47,7 @@ export function GameMenu({ model, actions, close, open }: {
   }, []);
   const offer = model.drawOffer;
   return (
-    <div class={closing ? 'backdrop anchored closing' : 'backdrop anchored'} onAnimationEnd={gone}
-      onMouseDown={e => { if (e.target === e.currentTarget) shut(); }}>
+    <Backdrop cls={closing ? 'anchored closing' : 'anchored'} onAnimationEnd={gone} dismiss={shut}>
       <div ref={menu} class={dev ? 'card-menu game-menu dev' : 'card-menu game-menu'} role="menu" aria-label={dev ? t('lblDevMode') : t('lblGame')}>
         {dev ? <DevItems model={model} actions={actions} back={() => setDev(false)} close={close} setUp={() => open('devSetup')} /> : <>
         <button type="button" role="menuitem" class={mats ? 'card-menu-item on' : 'card-menu-item'} aria-expanded={mats}
@@ -91,7 +91,7 @@ export function GameMenu({ model, actions, close, open }: {
         </>}
       </div>
       {mats && !dev && <PlaymatPicker beside={menu} />}
-    </div>
+    </Backdrop>
   );
 }
 
@@ -217,7 +217,7 @@ export function DrawOfferQuestion({ model, actions }: { model: Model; actions: A
   if (!offer?.waitingOnMe) return null;
   const who = deref(model, offer.offerer)?.Name;
   return (
-    <div class="backdrop">
+    <Backdrop>
       <div class="dialog" role="dialog" aria-label={t('lblOfferDrawTitle')}>
         <h3>{who != null ? t('lblWebGameMenuOffersDraw', who) : t('lblWebGameMenuOpponentOffersDraw')}</h3>
         <p class="hint">{t('lblWebGameMenuDrawOnlyIfAll')}</p>
@@ -226,6 +226,6 @@ export function DrawOfferQuestion({ model, actions }: { model: Model; actions: A
           <button class="primary" onClick={() => actions.drawOffer('ACCEPT')}>{t('lblAccept')}</button>
         </div>
       </div>
-    </div>
+    </Backdrop>
   );
 }

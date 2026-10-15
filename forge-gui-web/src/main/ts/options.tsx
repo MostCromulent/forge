@@ -11,6 +11,7 @@ import { normalize, rankByName } from './search';
 import { t, textLanguage } from './text';
 import { easedLocal } from './ui';
 import { useClosing } from './closing';
+import { Backdrop } from './dialog';
 
 // A setting found only through its section or its hint ranks after label matches, and each section stays together in its usual place
 function matching(defs: SettingDef[], typed: string): SettingDef[] {
@@ -137,7 +138,7 @@ export function OptionsDialog({ title, label, kind, head, rail, footer, close, c
 }) {
   const { closing, shut, gone } = useClosing(close);
   return (
-    <div id="options" class={closing ? 'backdrop closing' : 'backdrop'} onAnimationEnd={gone} onMouseDown={e => { if (e.target === e.currentTarget) shut(); }}>
+    <Backdrop id="options" cls={closing ? 'closing' : undefined} onAnimationEnd={gone} dismiss={shut}>
       <div class={kind ? `options-dialog ${kind}` : 'options-dialog'} role="dialog" aria-label={label ?? title}>
         <header>
           <b>{title}</b>
@@ -147,7 +148,7 @@ export function OptionsDialog({ title, label, kind, head, rail, footer, close, c
         {rail ? <div class="split"><nav class="rail" role="tablist">{rail}</nav><div class="rows">{children}</div></div> : <div class="rows">{children}</div>}
         <footer>{footer}</footer>
       </div>
-    </div>
+    </Backdrop>
   );
 }
 

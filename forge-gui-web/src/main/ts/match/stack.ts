@@ -7,7 +7,7 @@ import { hoverCard, hoverable, inspectCard } from '../preview';
 import { FIZZLE_MS, journeys, noteFizzled } from './motion';
 import { notePick, stackTargets } from './overlay';
 import { hovers, longPress } from '../press';
-import { byId, q, make, reducedMotion } from '../dom';
+import { byId, q, make, onPressOutside, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
 import { ICONS } from './gamemenu';
@@ -47,11 +47,7 @@ export function foldStack(): void {
 
 export function initStack(actionsFor: Actions): void {
   actions = actionsFor;
-  document.addEventListener('click', e => {
-    if (ui.stackMenuAt && !(e.target instanceof Element && e.target.closest('#stack-menu'))) {
-      changeUi(u => { u.stackMenuAt = null; });
-    }
-  });
+  onPressOutside('#stack-menu', () => { if (ui.stackMenuAt) changeUi(u => { u.stackMenuAt = null; }); });
 }
 
 export function renderStack(model: Model, events: readonly GameEvent[]): void {

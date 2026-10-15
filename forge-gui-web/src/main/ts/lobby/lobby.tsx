@@ -1,6 +1,6 @@
 // The browser reaches the game through a client even when it hosts, so your own seat arrives as REMOTE and is known by its "mine" flag
 
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from '../ui';
 import { sleeveUrl, avatarUrl } from '../looks';
 import { LookPicker } from '../lookpicker';
@@ -14,10 +14,10 @@ import { EventHead } from './event';
 import { MatchBar, TableHeader, seatsLeaving } from './matchbar';
 import { SetupHead, WAY_NAMES } from '../header';
 import { t, type TextKey } from '../text';
-import { useDismiss } from '../hooks';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { DeckSummary, LobbyTable, Seat, SeatExtra } from '../protocol';
+import { Backdrop, Dropdown } from '../dialog';
 
 export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const picker = ui.picker;
@@ -97,50 +97,46 @@ const PLAYER_ICON = <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v
 
 /** Who plays a seat the host may hand over: a chip that opens the two choices, each with a line saying what it means. */
 function SeatKind({ type, toAi, toOpen }: { type: string; toAi: () => void; toOpen: () => void }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLSpanElement>(null);
-  useDismiss(open, root, () => setOpen(false));
   const ai = type === 'AI';
   // Choosing what the seat already is only closes the menu, since asking again would deal the AI a new name
-  const choose = (change: boolean, act: () => void) => () => {
-    setOpen(false);
+  const choose = (close: () => void, change: boolean, act: () => void) => () => {
+    close();
     if (change) act();
   };
   return (
-    <span ref={root} class="popup-anchor">
-      <button class="kind chip" title={t('lblWebLobbyWhoPlaysSeat')} aria-expanded={open} onClick={() => setOpen(!open)}>
+    <Dropdown cls="popup-anchor" button={(open, toggle) => (
+      <button class="kind chip" title={t('lblWebLobbyWhoPlaysSeat')} aria-expanded={open} onClick={toggle}>
         {ai ? AI_ICON : PLAYER_ICON}{kindName(type)}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
       </button>
-      {open && (
+    )}>
+      {close => (
         <div class="popup kind-menu" role="menu">
-          <button role="menuitemradio" aria-checked={ai} onClick={choose(!ai, toAi)}>{AI_ICON}<span>{t('lblAI')}</span><small>{t('lblWebLobbyAiPlaysSeat')}</small></button>
-          <button role="menuitemradio" aria-checked={!ai} onClick={choose(ai, toOpen)}>{PLAYER_ICON}<span>{t('lblWebLobbyOpenForPlayer')}</span><small>{t('lblWebLobbyOpenForPlayerHint')}</small></button>
+          <button role="menuitemradio" aria-checked={ai} onClick={choose(close, !ai, toAi)}>{AI_ICON}<span>{t('lblAI')}</span><small>{t('lblWebLobbyAiPlaysSeat')}</small></button>
+          <button role="menuitemradio" aria-checked={!ai} onClick={choose(close, ai, toOpen)}>{PLAYER_ICON}<span>{t('lblWebLobbyOpenForPlayer')}</span><small>{t('lblWebLobbyOpenForPlayerHint')}</small></button>
         </div>
       )}
-    </span>
+    </Dropdown>
   );
 }
 
 /** A seat's team, on the plate's top edge over the sleeve. It opens the table's teams for whoever may move the seat. */
 function TeamTab({ team, teams, change }: { team: number; teams: number; change: ((team: number) => void) | null }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLSpanElement>(null);
-  useDismiss(open, root, () => setOpen(false));
   const name = (n: number) => t('lblWebLobbyTeamN', n + 1);
   if (!change) return <span class="team-tab-slot"><span class="team-tab">{name(team)}</span></span>;
   return (
-    <span ref={root} class="team-tab-slot">
-      <button class="team-tab" title={t('lblWebLobbyChangeTeam')} aria-expanded={open} onClick={() => setOpen(!open)}>
+    <Dropdown cls="team-tab-slot" button={(open, toggle) => (
+      <button class="team-tab" title={t('lblWebLobbyChangeTeam')} aria-expanded={open} onClick={toggle}>
         {name(team)}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
       </button>
-      {open && (
+    )}>
+      {close => (
         <div class="popup menu-list" role="menu">
           {Array.from({ length: teams }, (_, n) => (
-            <button key={n} role="menuitemradio" aria-checked={n === team} onClick={() => { setOpen(false); if (n !== team) change(n); }}>{name(n)}</button>
+            <button key={n} role="menuitemradio" aria-checked={n === team} onClick={() => { close(); if (n !== team) change(n); }}>{name(n)}</button>
           ))}
         </div>
       )}
-    </span>
+    </Dropdown>
   );
 }
 
@@ -394,7 +390,7 @@ const CHOICE_KIND: Record<string, TextKey> = {
 /** Who leads a seat's deck at this table, chosen from the cards that can, as desktop's lobby offers. */
 function CommanderPicker({ actions, index, seat, close }: { actions: Actions; index: number; seat: Seat; close: () => void }) {
   return (
-    <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+    <Backdrop dismiss={close}>
       <div class="dialog commander-picker" role="dialog" aria-label={t('lblWebLobbySwapCommander')}>
         <h3>{t('lblWebLobbySwapCommander')}</h3>
         <div class="commander-options">
@@ -409,6 +405,6 @@ function CommanderPicker({ actions, index, seat, close }: { actions: Actions; in
         </div>
         <div class="actions"><button onClick={close}>{t('lblCancel')}</button></div>
       </div>
-    </div>
+    </Backdrop>
   );
 }

@@ -16,6 +16,7 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { DeckSection, EditorState } from '../protocol';
 import { t, type TextKey } from '../text';
+import { Backdrop } from '../dialog';
 
 // Lucide's plus, folder, copy, pencil-line, download, upload and trash-2 (ISC, see web/licenses/lucide-license.txt)
 const ICONS = {
@@ -174,7 +175,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
       </div>
       {dialog === 'text' && <TextDialog state={state} close={() => setDialog(null)} />}
       {dialog === 'delete' && (
-        <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setDialog(null); }}>
+        <Backdrop dismiss={() => setDialog(null)}>
           <div class="dialog">
             <h3>{t('lblWebEditorDeleteDeck', state.name)}</h3>
             <p class="hint">{t('lblWebEditorCannotUndo')}</p>
@@ -183,7 +184,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
               <button class="primary" onClick={() => { setDialog(null); actions.deckOp('delete'); }}>{t('lblDelete')}</button>
             </div>
           </div>
-        </div>
+        </Backdrop>
       )}
       {cardMenu && <CardMenu at={cardMenu} state={state} actions={actions} close={() => setCardMenu(null)}
         printings={zone => setPicking({ name: cardMenu.name, zone })} />}
@@ -257,7 +258,7 @@ function TextDialog({ state, close }: { state: EditorState; close: () => void })
   }, []);
   const download = () => saveText(text, `${state.name}.txt`, 'text/plain');
   return (
-    <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+    <Backdrop dismiss={close}>
       <div class="dialog deck-text">
         <h3>{state.name}</h3>
         <textarea ref={area} readOnly value={text} rows={16} />
@@ -269,6 +270,6 @@ function TextDialog({ state, close }: { state: EditorState; close: () => void })
           <button class="primary" onClick={close}>{t('lblClose')}</button>
         </div>
       </div>
-    </div>
+    </Backdrop>
   );
 }

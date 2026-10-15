@@ -2,6 +2,7 @@
 
 import { SETTINGS, set, setting } from './settings';
 import { t } from './text';
+import { Backdrop } from './dialog';
 
 const VOLUMES = SETTINGS.filter(def => def.volume);
 
@@ -15,7 +16,7 @@ export function Volume({ close, anchor = '#side-tools .volume' }: { close: () =>
   const at = !button ? {} : below ? { right: `${window.innerWidth - button.right}px`, top: `${button.bottom + 6}px` }
     : { right: `${window.innerWidth - button.right}px`, bottom: `${window.innerHeight - button.top + 6}px` };
   return (
-    <div id="volume" class="backdrop anchored" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+    <Backdrop id="volume" cls="anchored" dismiss={close}>
       <div class="volume-panel" role="dialog" aria-label={t('lblWebHeadVolume')} style={at}>
         {VOLUMES.map(def => {
           const value = Number(setting(def.key));
@@ -29,6 +30,6 @@ export function Volume({ close, anchor = '#side-tools .volume' }: { close: () =>
           );
         })}
       </div>
-    </div>
+    </Backdrop>
   );
 }

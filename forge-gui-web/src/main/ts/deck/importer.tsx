@@ -12,6 +12,7 @@ import type { Model } from '../model';
 import type { EditorCard, ImportAction, ImportFix, ImportProblem } from '../protocol';
 import { t } from '../text';
 import { headingText } from './decklist';
+import { Backdrop } from '../dialog';
 
 const READ_DELAY_MS = 300;
 const LINE_PX = 22;
@@ -118,7 +119,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
     ? [['replace', t('lblWebImportReplaceDeck')], ['add', t('lblWebImportAddToDeck')]]
     : [['edit', t('lblWebImportAndEdit')], from === 'seat' ? ['use', t('lblWebImportAndUse')] : ['save', t('lblImport')]];
   return (
-    <div class="backdrop importer-back" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+    <Backdrop cls="importer-back" dismiss={close}>
       <div class="importer">
         <header class="imp-head">
           <h2>{t('lblWebImportTitle')}</h2>
@@ -220,7 +221,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
           <button class="primary" disabled={!cards || fetching} onClick={() => commit(primary[0])}>{primary[1]}</button>
         </footer>
         {model.nameTaken && sent && (
-          <div class="backdrop">
+          <Backdrop>
             <div class="dialog">
               <h3>{t('lblWebImportNameTaken', model.nameTaken)}</h3>
               <div class="actions">
@@ -229,10 +230,10 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
                 <button class="primary" onClick={() => commit(sent.action, 'keep')}>{t('lblWebImportKeepBoth')}</button>
               </div>
             </div>
-          </div>
+          </Backdrop>
         )}
       </div>
-    </div>
+    </Backdrop>
   );
 }
 

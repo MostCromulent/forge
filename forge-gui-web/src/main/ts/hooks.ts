@@ -27,13 +27,3 @@ export function useDismiss(open: boolean, root: RefObject<HTMLElement>, close: (
     };
   }, [open]);
 }
-
-/** Closes a menu on any press outside the element that holds it, as the table's menus close. */
-export function usePressOutside(open: boolean, inside: string, close: () => void): void {
-  useEffect(() => {
-    if (!open) return;
-    const outside = (e: PointerEvent) => { if (!(e.target as Element).closest?.(inside)) close(); };
-    document.addEventListener('pointerdown', outside);
-    return () => document.removeEventListener('pointerdown', outside);
-  }, [open]);
-}

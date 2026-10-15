@@ -13,6 +13,7 @@ import type { Model } from '../model';
 import type { Bracket, DeckDetails, DeckMatches, DeckSummary, Seat } from '../protocol';
 import { Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } from './filters';
 import { t, type TextKey } from '../text';
+import { Backdrop } from '../dialog';
 
 const SEARCH_DEBOUNCE_MS = 200;
 /** Every net-deck category is its own source, so they answer to one facet and list their categories under it. */
@@ -376,7 +377,7 @@ export function DeckFinder({ model, actions, seat, close }: {
             : <button class="primary" disabled={!chosen} onClick={edit}>{summary?.readOnly ? t('lblWebFinderEditCopy') : t('lblEdit')}</button>}
         </footer>
         {adding && (
-          <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setAdding(false); }}
+          <Backdrop dismiss={() => setAdding(false)}
             onKeyDown={e => {
               if (e.key !== 'Escape') return;
               e.stopPropagation();
@@ -414,10 +415,10 @@ export function DeckFinder({ model, actions, seat, close }: {
                 </button>
               </section>
             </div>
-          </div>
+          </Backdrop>
         )}
         {file && model.nameTaken && (
-          <div class="backdrop">
+          <Backdrop>
             <div class="dialog">
               <h3>{t('lblWebImportNameTaken', model.nameTaken)}</h3>
               <div class="actions">
@@ -426,7 +427,7 @@ export function DeckFinder({ model, actions, seat, close }: {
                 <button class="primary" onClick={() => actions.addDeckFile(file, format, 'keep')}>{t('lblWebImportKeepBoth')}</button>
               </div>
             </div>
-          </div>
+          </Backdrop>
         )}
       </div>
     </div>

@@ -21,6 +21,7 @@ import { t } from '../text';
 import { make, reducedMotion } from '../dom';
 import { isPortrait } from '../form';
 import { cutFor } from './stickers';
+import { Backdrop } from '../dialog';
 
 type Answer = (value: unknown) => void;
 
@@ -55,7 +56,7 @@ function CardMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
     setAt({ x: Math.max(8, x), y: Math.max(8, y) });
   }, [req]);
   return (
-    <div class="backdrop anchored" onMouseDown={e => { if (e.target === e.currentTarget) answer([]); }}
+    <Backdrop cls="anchored" dismiss={() => answer([])}
       onContextMenu={e => { e.preventDefault(); answer([]); }}>
       <div ref={menu} class="card-menu" role="menu" aria-label={req.message ?? t('lblAbilities')} style={{ left: `${at.x}px`, top: `${at.y}px` }}>
         {req.message && <p class="card-menu-title">{req.message}</p>}
@@ -66,7 +67,7 @@ function CardMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
           </button>
         ))}
       </div>
-    </div>
+    </Backdrop>
   );
 }
 
@@ -167,7 +168,7 @@ export function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: 
     const headed = cards.filter(isSection).length > 1;
     let dealt = 0;
     return (
-      <div class="reveal-back" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+      <Backdrop layer="reveal-back" dismiss={close}>
         {/* Many cards are dealt faster, so the last still lands within half a second of the first */}
         <section class="zone-panel reveal-panel ai-skips" role="dialog" aria-label={title} style={`--deal-step: ${Math.min(60, Math.round(500 / Math.max(1, count)))}ms`}>
           <header>
@@ -185,19 +186,19 @@ export function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: 
           </div>
           <footer><span class="zone-hint" /><button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><kbd>{keyName(boundKeys().ok)}</kbd></button></footer>
         </section>
-      </div>
+      </Backdrop>
     );
   }
   const few = count === 1 ? 2.6 : count <= 3 ? 2.15 : count <= 5 ? 1.7 : 1.45;
   return (
-    <div class="reveal-back" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+    <Backdrop layer="reveal-back" dismiss={close}>
       <section class="zone-panel reveal-panel bare" role="dialog" aria-label={title} style={`--few: ${few}`}>
         <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{counted}</span></header>
         <div class="cards">{cards.map((o, i) => <OptionView key={i} model={model} opt={o} />)}</div>
         <footer><button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>
           <button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><kbd>{keyName(boundKeys().ok)}</kbd></button></footer>
       </section>
-    </div>
+    </Backdrop>
   );
 }
 

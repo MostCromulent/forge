@@ -16,10 +16,10 @@ import { t, tNodes, shortDay, type TextKey } from '../text';
 import type { ComponentChildren } from 'preact';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import { useDismiss } from '../hooks';
 import type { DraftCard, DraftSeat, DraftState } from '../protocol';
 import { make, reducedMotion } from '../dom';
 import { isPortrait } from '../form';
+import { Backdrop, Confirm, Dropdown } from '../dialog';
 
 type GroupBy = 'colour' | 'type' | 'mv' | 'pick';
 type Drag = { from: 'pack' | 'pick'; index: number };
@@ -130,19 +130,10 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
       )}
       {picksOpen && isPortrait() && <div class="picks-scrim" onClick={() => setPicksOpen(false)} />}
       {state?.done && (model.campaign === 'quest' ? <TournamentDrafted state={state} actions={actions} /> : <SaveDraft model={model} state={state} actions={actions} />)}
-      {leaving && (
-        <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) setLeaving(false); }}>
-          <div class="dialog" role="alertdialog" aria-label={t('lblLeaveDraft')}>
-            <h3>{t('lblWebDraftLeaveTheDraftQ')}</h3>
-            {/* A tournament's draft gives its fee back when left, which desktop says before it does */}
-            <p class="hint qu-lines-text">{t(model.campaign === 'quest' ? 'lblLeaveDraftConfirm' : 'lblWebDraftPicksNotSaved')}</p>
-            <div class="actions">
-              <button onClick={() => setLeaving(false)}>{t('lblWebDraftKeepDrafting')}</button>
-              <button class="danger" onClick={() => actions.draftDiscard()}>{t('lblLeave')}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* A tournament's draft gives its fee back when left, which desktop says before it does */}
+      {leaving && <Confirm title={t('lblWebDraftLeaveTheDraftQ')} label={t('lblLeaveDraft')}
+        text={t(model.campaign === 'quest' ? 'lblLeaveDraftConfirm' : 'lblWebDraftPicksNotSaved')}
+        back={() => setLeaving(false)} backLabel={t('lblWebDraftKeepDrafting')} go={() => actions.draftDiscard()} goLabel={t('lblLeave')} danger />}
     </div>
   );
 }
@@ -169,26 +160,22 @@ function TableMenu({ state, faces }: { state: DraftState; faces: string[] }) {
   const direction = state.direction < 0 ? -1 : 1;
   const shown = [(n - direction) % n, 0, (n + direction) % n];
   return (
-    <Dropdown class="table-btn" label={<>
+    <HeadMenu class="table-btn" label={<>
       <span class="faces">{shown.map(i => faces[i] ? <img key={i} alt="" src={faces[i]} /> : null)}</span>{t('lblWebDraftShowTable')}
     </>}>
       {() => <Dial state={state} faces={faces} />}
-    </Dropdown>
+    </HeadMenu>
   );
 }
 
-/** A button in the pack's head that opens a panel under it, closed again by Escape or a click elsewhere. */
-function Dropdown({ label, children, class: cls }: { label: ComponentChildren; children: (close: () => void) => ComponentChildren; class?: string }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLSpanElement>(null);
-  useDismiss(open, root, () => setOpen(false));
+/** A button in the pack's head that opens a panel under it. */
+function HeadMenu({ label, children, class: cls }: { label: ComponentChildren; children: (close: () => void) => ComponentChildren; class?: string }) {
   return (
-    <span class="table-menu" ref={root}>
-      <button class={[cls ?? '', 'drop-btn', open ? 'open' : ''].join(' ')} aria-expanded={open} onClick={() => setOpen(!open)}>
+    <Dropdown cls="table-menu" button={(open, toggle) => (
+      <button class={[cls ?? '', 'drop-btn', open ? 'open' : ''].join(' ')} aria-expanded={open} onClick={toggle}>
         {label} <span class="caret" aria-hidden="true">{open ? '▴' : '▾'}</span>
       </button>
-      {open && <div class="table-pop">{children(() => setOpen(false))}</div>}
-    </span>
+    )}>{close => <div class="table-pop">{children(close)}</div>}</Dropdown>
   );
 }
 
@@ -254,7 +241,7 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
         {next !== null && <span class="chip more">{tNodes('lblWebDraftNextFrom', seat(next))}</span>}
         {depths[busiest] > 2 && <span class="chip more">{busiest === 0 ? t('lblWebDraftYouHoldingPacks', depths[busiest]) : t('lblWebDraftSeatHoldingPacks', state.seats[busiest].name, depths[busiest])}</span>}
         <span class="head-end">
-          {log && <Dropdown label={t('lblWebDraftLog')}>{() => <DraftLog lines={state.log} />}</Dropdown>}
+          {log && <HeadMenu label={t('lblWebDraftLog')}>{() => <DraftLog lines={state.log} />}</HeadMenu>}
           <TableMenu state={state} faces={faces} />
         </span>
       </div>
@@ -484,7 +471,7 @@ function typeHeading(type: string): string {
 /** The end of a quest tournament's draft, whose picks are kept under the name Quest gives them and built into its deck next. */
 function TournamentDrafted({ state, actions }: { state: DraftState; actions: Actions }) {
   return (
-    <div class="backdrop">
+    <Backdrop>
       <div class="dialog draft-save">
         <h3>{t('lblWebDraftComplete')}</h3>
         <p class="hint">{t('lblWebDraftCardsDrafted', state.picks.length)}</p>
@@ -493,7 +480,7 @@ function TournamentDrafted({ state, actions }: { state: DraftState; actions: Act
           <button class="primary" onClick={() => actions.draftSave('', false)}>{t('btnContinue')}</button>
         </div>
       </div>
-    </div>
+    </Backdrop>
   );
 }
 
@@ -503,7 +490,7 @@ function SaveDraft({ model, state, actions }: { model: Model; state: DraftState;
   const [discarding, setDiscarding] = useState(false);
   const taken = model.nameTaken !== null && model.nameTaken === name.trim();
   return (
-    <div class="backdrop">
+    <Backdrop>
       <div class="dialog draft-save">
         <h3>{t('lblWebDraftComplete')}</h3>
         <p class="hint">{t('lblWebDraftCardsDrafted', state.picks.length)}</p>
@@ -526,6 +513,6 @@ function SaveDraft({ model, state, actions }: { model: Model; state: DraftState;
               </>}
         </div>
       </div>
-    </div>
+    </Backdrop>
   );
 }

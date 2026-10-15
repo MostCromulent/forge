@@ -8,6 +8,7 @@ import type { Model } from '../model';
 import type { LobbyTable, PastEvent } from '../protocol';
 import { GameMenu, PlayerCount } from './matchbar';
 import { t, shortDay } from '../text';
+import { Backdrop, Confirm } from '../dialog';
 
 /** What the setup dialog shows: the choice between a new event and an earlier one, or either of those. */
 type SetupView = 'choose' | 'new' | 'earlier';
@@ -56,7 +57,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
   return (
     <section class={slim ? 'event-head slim' : 'event-head'} aria-label={draft ? t('lblWebEventTheDraft') : t('lblWebEventTheSealedEvent')}>
       {lobby.host && !lim.started && setting && (
-        <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) close(); }}>
+        <Backdrop dismiss={close}>
           <div class="dialog event-setup" role="dialog" aria-label={draft ? t('lblWebEventSetUpTheDraft') : t('lblWebEventSetUpSealedEvent')}>
             <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
             {view === 'choose' && lim.pastEvents.length > 0
@@ -70,20 +71,11 @@ export function EventHead({ model, lobby, actions, preview, start }: {
                       : <SealedForm model={model} actions={actions} done={close} />}
                   </>}
           </div>
-        </div>
+        </Backdrop>
       )}
-      {leaving && (
-        <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) setLeaving(false); }}>
-          <div class="dialog" role="alertdialog" aria-label={t('lblWebEventStartNewEvent')}>
-            <h3>{t('lblWebEventStartNewEventQ')}</h3>
-            <p class="hint">{t('lblWebEventNewEventHint')}</p>
-            <div class="actions">
-              <button onClick={() => setLeaving(false)}>{t('lblWebEventKeepThisEvent')}</button>
-              <button class="primary" onClick={() => { setLeaving(false); actions.eventNew(); setView('choose'); setSetting(true); }}>{t('lblWebEventNewEvent')}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {leaving && <Confirm title={t('lblWebEventStartNewEventQ')} label={t('lblWebEventStartNewEvent')} text={t('lblWebEventNewEventHint')}
+        back={() => setLeaving(false)} backLabel={t('lblWebEventKeepThisEvent')}
+        go={() => { setLeaving(false); actions.eventNew(); setView('choose'); setSetting(true); }} goLabel={t('lblWebEventNewEvent')} />}
       <div class="eh-main">
         <div class="eh-mode"><GameMenu lobby={lobby} actions={actions} /></div>
         <div class="eh-title">

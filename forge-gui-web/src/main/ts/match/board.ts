@@ -17,7 +17,7 @@ import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from '../looks';
 import { animateCardMoves, noteBoard, resetMotion, showCount } from './motion';
 import { boardBehind } from './pace';
 import { canShatter, shatter } from './shatter';
-import { byId, q, replay, make } from '../dom';
+import { byId, q, replay, make, onPressOutside } from '../dom';
 import { setting } from '../settings';
 import { logTints } from './log';
 import type { CardClick } from './cards';
@@ -513,10 +513,8 @@ let pillWired = false;
 function renderZonesPill(root: HTMLElement, model: Model, player: PlayerView): void {
   if (!pillWired) {
     pillWired = true;
-    // Put away by a tap anywhere else, and by the tap that chooses a tile
-    document.addEventListener('click', e => {
-      if (ui.zonesFor !== null && !(e.target instanceof Element && e.target.closest('.zones-pill'))) changeUi(u => { u.zonesFor = null; });
-    });
+    // Put away by a tap anywhere else, and by the tap that chooses a tile, which a click lets reach the tile first
+    onPressOutside('.zones-pill', () => { if (ui.zonesFor !== null) changeUi(u => { u.zonesFor = null; }); }, 'click');
   }
   const pill = q(root, '.zones-pill');
   for (const span of pill.querySelectorAll<HTMLElement>('span')) {

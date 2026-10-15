@@ -8,6 +8,7 @@ import type { DeckSection, EditorCard, EditorState } from '../protocol';
 import type { Zone } from './drag';
 import { t, type TextKey } from '../text';
 import { addCard, preferPrinting, preferredPrinting } from './preferred';
+import { Backdrop } from '../dialog';
 
 /** The parts of a set the printing picker filters by, as desktop's does: the section's name in the edition file, and its label. */
 const ART_STYLES: [string, TextKey][] = [
@@ -164,7 +165,7 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
   const shown = ordered.filter(p => (!wanted || p.edition.toLowerCase().includes(wanted) || p.setName.toLowerCase().includes(wanted))
     && (!style || p.style === style));
   return (
-    <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+    <Backdrop dismiss={close}>
       <div class="dialog picker">
         <h3>{t(zone ? 'lblChangePrintingDialogTitle' : 'lblWebCardMenuPreferredOf', name)}</h3>
         <div class="print-bar">
@@ -206,6 +207,6 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
           <button class="primary" onClick={close}>{t('lblDone')}</button>
         </div>
       </div>
-    </div>
+    </Backdrop>
   );
 }

@@ -11,6 +11,7 @@ import { useCataloguePages } from '../deck/catalogue';
 import type { Model } from '../model';
 import type { CatalogueRow } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
+import { Backdrop } from '../dialog';
 
 /** What a mode calls one of its lists, and what it says of trading from it. */
 export interface TradeWords {
@@ -173,7 +174,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
         </div>
       )}
       {asking && (
-        <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setAsking(false); }}>
+        <Backdrop dismiss={() => setAsking(false)}>
           <div class="dialog cq-exile">
             <h3>{title}</h3>
             <p class="cq-exile-total">{priced(said.confirm(n, formatNumber(total)))}</p>
@@ -185,7 +186,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
               <button class="primary" onClick={() => { setAsking(false); actions.trade(source, chosen.map(c => ({ key: c.key, count: c.count }))); }}>{t('lblOK')}</button>
             </div>
           </div>
-        </div>
+        </Backdrop>
       )}
     </div>
   );

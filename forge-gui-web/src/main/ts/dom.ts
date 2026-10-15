@@ -1,4 +1,4 @@
-// Lookups for markup a module built itself, where a looked-up element is always there, so a miss is a bug and says which
+// Helpers for markup drawn by hand: lookups that treat a miss as a bug and say which, building, pointer and motion helpers, and a file to save
 
 export function q<T extends HTMLElement = HTMLElement>(root: ParentNode, selector: string): T {
   const el = root.querySelector<T>(selector);
@@ -55,4 +55,14 @@ export function saveText(text: string, fileName: string, type: string): void {
   link.download = fileName;
   link.click();
   URL.revokeObjectURL(link.href);
+}
+
+/**
+ * Calls away for every press outside the elements matching inside, for a panel drawn by hand to close itself (hooks.ts's
+ * useDismiss is the same for a component). On pointerdown, unless the press may choose something outside inside first, as a click.
+ */
+export function onPressOutside(inside: string, away: () => void, on: 'pointerdown' | 'click' = 'pointerdown'): void {
+  document.addEventListener(on, e => {
+    if (!(e.target instanceof Element && e.target.closest(inside))) away();
+  });
 }

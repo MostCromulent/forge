@@ -7,6 +7,7 @@ import { t, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ExtraChoice, Seat } from '../protocol';
+import { Backdrop } from '../dialog';
 
 export type ExtraKind = 'planes' | 'schemes' | 'vanguard';
 
@@ -29,7 +30,7 @@ export function ExtraPicker({ model, actions, index, seat, kind, close }: {
   };
   const shown = (listed ?? []).filter(c => !query || normalize(c.label).includes(normalize(query)));
   return (
-    <div class="finder-back" onClick={e => { if (e.target === e.currentTarget) close(); }}>
+    <Backdrop layer="finder-back" dismiss={close}>
       <div class={`finder extra-picker ${kind}`}>
         <header class="finder-head">
           <h2>{t(TITLE[kind])}</h2>
@@ -49,7 +50,7 @@ export function ExtraPicker({ model, actions, index, seat, kind, close }: {
               ))}</div>}
         </div>
       </div>
-    </div>
+    </Backdrop>
   );
 }
 

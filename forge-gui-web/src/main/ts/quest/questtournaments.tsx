@@ -8,6 +8,7 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { QuestBracket, QuestSeat, QuestTournamentRow, QuestTournaments } from '../protocol';
 import { t, type TextKey } from '../text';
+import { Confirm } from '../dialog';
 
 const CREDITS = 'ICO_QUEST_COINSTACK';
 const PLACES: TextKey[] = ['lblWebQuestFirstPlace', 'lblWebQuestSecondPlace', 'lblWebQuestThirdPlace', 'lblWebQuestFourthPlace'];
@@ -146,18 +147,9 @@ function Panel({ bracket, actions }: { bracket: QuestBracket; actions: Actions }
           : <button class="primary cq-big" onClick={() => actions.questTournamentLeave()}>{t('lblCollectPrizes')}</button>}
         {!over && <button onClick={() => setLeaving(true)}>{t('btnLeaveTournament')}</button>}
       </div>
-      {leaving && (
-        <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) setLeaving(false); }}>
-          <div class="dialog" role="alertdialog" aria-label={t('btnLeaveTournament')}>
-            <h3>{t('btnLeaveTournament')}</h3>
-            <p class="hint qu-lines-text">{t(bracket.started ? 'lblLeaveTournamentDraftWarning2' : 'lblLeaveTournamentDraftWarning1')}</p>
-            <div class="actions">
-              <button onClick={() => setLeaving(false)}>{t('lblCancel')}</button>
-              <button class="danger" onClick={() => { setLeaving(false); actions.questTournamentLeave(); }}>{t('lblLeave')}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {leaving && <Confirm title={t('btnLeaveTournament')} text={t(bracket.started ? 'lblLeaveTournamentDraftWarning2' : 'lblLeaveTournamentDraftWarning1')}
+        back={() => setLeaving(false)} backLabel={t('lblCancel')} go={() => { setLeaving(false); actions.questTournamentLeave(); }} goLabel={t('lblLeave')}
+        danger />}
     </aside>
   );
 }
