@@ -107,7 +107,7 @@ public final class DeckSession implements IHasForgeLog {
             // Building the catalogue reads every card once, which is far too slow for the socket thread
             case "catalogue" -> {
                 final CatalogueQuery q = Wire.decode(msg, CatalogueQuery.class);
-                ui.runBackgroundTask("Catalogue", () -> channel.send(catalogue(q)));
+                slow("Catalogue", () -> channel.send(catalogue(q)));
             }
             // Reading a list looks up misspelt names across every card, which is too slow for the socket thread
             case "importRead" -> {
@@ -116,7 +116,7 @@ public final class DeckSession implements IHasForgeLog {
                 final DeckEditor.Collection collection = onCollection == null ? null : onCollection.collection();
                 // A collection's deck is of one format, whatever the importer's control says
                 final Check check = onCollection != null ? onCollection.check() : check(read.format(), read.cardPool(), read.unrestricted());
-                ui.runBackgroundTask("Import", () -> channel.send(DeckImport.result(read.request(), DeckImport.read(read.text(), check, collection), check, null)));
+                slow("Import", () -> channel.send(DeckImport.result(read.request(), DeckImport.read(read.text(), check, collection), check, null)));
             }
             // Fetching waits on a web site
             case "importFetch" -> {
@@ -283,6 +283,15 @@ public final class DeckSession implements IHasForgeLog {
     }
 
     /** The editor, when the deck open in it is built from a collection, or null. */
+    /** Runs slow work on a background thread, except over a campaign's collection, which only the campaign thread this runs on may read. */
+    private void slow(final String name, final Runnable work) {
+        if (collectionEditor() != null) {
+            work.run();
+        } else {
+            ui.runBackgroundTask(name, work);
+        }
+    }
+
     private synchronized DeckEditor collectionEditor() {
         return editor != null && editor.collection() != null ? editor : null;
     }

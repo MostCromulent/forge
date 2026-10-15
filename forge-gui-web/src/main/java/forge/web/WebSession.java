@@ -364,7 +364,6 @@ public final class WebSession implements IHasForgeLog {
         channel.send(hello());
         // The same for the whole run, so a browser is sent them once rather than with every change to the table
         channel.send(Lobby.cardPools());
-        sessions.greet(this);
         if (isHost) {
             ui.hostRequests().replay(channel::send);
         }
@@ -556,7 +555,12 @@ public final class WebSession implements IHasForgeLog {
                     if ("editorClose".equals(msg.get("t").getAsString()) && stage instanceof Event) {
                         channel.send(OfflineEvents.pools());
                     }
-                    decks.onMessage(channel, msg);
+                    // A campaign's collection editor reads and saves the campaign's cards, which only its thread may touch
+                    if (stage instanceof InCampaign) {
+                        onCampaign(() -> decks.onMessage(channel, msg));
+                    } else {
+                        decks.onMessage(channel, msg);
+                    }
                     // A deck may have changed size or become playable, which the campaign's pages show
                     if ("editorClose".equals(msg.get("t").getAsString())) {
                         onCampaign(() -> {
@@ -1267,11 +1271,6 @@ public final class WebSession implements IHasForgeLog {
         final Stage from = stage;
         if (!(from instanceof InCampaign back)) {
             return;
-        }
-        // Saved before the match so HostedMatch never reaches the first-run name prompt
-        if (StringUtils.isBlank(FModel.getPreferences().getPref(FPref.PLAYER_NAME))) {
-            FModel.getPreferences().setPref(FPref.PLAYER_NAME, playerName());
-            FModel.getPreferences().save();
         }
         final Playing playing = new Playing(new WebGuiGame(settings), false, false, back);
         if (!move(from, playing)) {

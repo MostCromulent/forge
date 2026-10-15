@@ -323,8 +323,6 @@ public final class OfflineLimited implements IHasForgeLog {
             FModel.getPreferences().setPref(FPref.UI_MATCHES_PER_GAME, String.valueOf(play.games()));
             FModel.getPreferences().save();
         }
-        // Saved before the match so HostedMatch never reaches the first-run name prompt
-        lobby.saveLooks();
         final Event back = new Event(event.kind(), play.name());
         switch (play.mode() == null ? "one" : play.mode()) {
             case "gauntlet" -> {

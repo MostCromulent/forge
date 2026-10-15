@@ -72,9 +72,9 @@ public final class Lobby {
     private final LocalGame local;
     private final LobbyEvents events;
     /** Which deck each seat was given, by catalogue key: the lobby slot holds the deck, this holds the choice. */
-    private final List<String> deckKeys = new ArrayList<>();
+    private final Map<Integer, String> deckKeys = new ConcurrentHashMap<>();
     /** True once the game was opened for others to join, which is when a link is worth showing. */
-    private boolean shareable;
+    private volatile boolean shareable;
 
     public Lobby(final LocalGame local, final BooleanSupplier guest, final Map<String, DeckCatalog.OnDevice> device) {
         this.local = local;
@@ -363,11 +363,14 @@ public final class Lobby {
     /** A slot keeps the generated deck built from the old card pool, so a new pool deals this browser's seats the same generator again. */
     private void dealGeneratorsAgain() {
         final GameLobby lobby = view();
-        for (int i = 0; lobby != null && i < deckKeys.size() && i < lobby.getNumberOfSlots(); i++) {
-            final String key = deckKeys.get(i);
-            final boolean mine = i == local.webSeat() || (host() != null && lobby.getSlot(i).getType() == LobbySlotType.AI);
-            if (key != null && key.startsWith("gen:") && mine) {
-                setDeck(i, key);
+        if (lobby == null) {
+            return;
+        }
+        for (final Map.Entry<Integer, String> e : Map.copyOf(deckKeys).entrySet()) {
+            final int i = e.getKey();
+            final boolean mine = i == local.webSeat() || (host() != null && i < lobby.getNumberOfSlots() && lobby.getSlot(i).getType() == LobbySlotType.AI);
+            if (i < lobby.getNumberOfSlots() && e.getValue().startsWith("gen:") && mine) {
+                setDeck(i, e.getValue());
             }
         }
     }
@@ -809,7 +812,7 @@ public final class Lobby {
     }
 
     private String key(final int index) {
-        return index >= 0 && index < deckKeys.size() ? deckKeys.get(index) : null;
+        return deckKeys.get(index);
     }
 
     /** A seat this browser chose for is found by its key, while another player's deck arrives with their seat. */
@@ -907,10 +910,13 @@ public final class Lobby {
         extras.clear();
         composed.clear();
         commanderPicks.clear();
-        seenFormat = null;
-        seenCardPool = null;
-        seenRules = null;
-        othersSeated = false;
+        // decks() reads these under the same lock, from whichever thread asked for the list
+        synchronized (DeckCatalog.DECKS) {
+            seenFormat = null;
+            seenCardPool = null;
+            seenRules = null;
+            othersSeated = false;
+        }
     }
 
     /** The format and card pool this browser's deck list was last built for, recorded by {@link #decks()}. */
@@ -918,7 +924,7 @@ public final class Lobby {
     private String seenCardPool;
     private String seenRules;
     /** Whether another player had a seat when the deck list was last built, so their arrival is seen once. */
-    private boolean othersSeated;
+    private volatile boolean othersSeated;
 
     /** True when the format or card pool differs from the one the last deck list was built for. */
     public boolean restrictionsChanged() {
@@ -1092,9 +1098,7 @@ public final class Lobby {
             slot.setIsReady(false);
             slot.setDeck(null);
             // Whoever sits here brings their own choices, so this browser's for the seat are dropped
-            if (index < deckKeys.size()) {
-                deckKeys.set(index, null);
-            }
+            deckKeys.remove(index);
             extras.remove(index);
             composed.remove(index);
             commanderPicks.remove(index);
@@ -1133,9 +1137,7 @@ public final class Lobby {
         final ServerGameLobby lobby = host();
         if (lobby != null && !drafting(lobby) && index != local.webSeat() && lobby.getNumberOfSlots() > 2) {
             lobby.removeSlot(index);
-            if (index < deckKeys.size()) {
-                deckKeys.remove(index);
-            }
+            shiftDown(deckKeys, index);
             shiftDown(extras, index);
             shiftDown(composed, index);
             shiftDown(commanderPicks, index);
@@ -1206,13 +1208,14 @@ public final class Lobby {
         if (lobby == null || index < 0 || index >= lobby.getNumberOfSlots()) {
             return;
         }
-        while (deckKeys.size() <= index) {
-            deckKeys.add(null);
-        }
         if (!Objects.equals(key(index), key)) {
             commanderPicks.remove(index);
         }
-        deckKeys.set(index, key);
+        if (key == null) {
+            deckKeys.remove(index);
+        } else {
+            deckKeys.put(index, key);
+        }
         compose(index);
     }
 

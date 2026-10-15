@@ -97,6 +97,8 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             netLog.info("{} came back after {} s.", session.label(), away);
         }
         session.connected(channel);
+        // Greeted after the session lets go of its own lock, since shutdown takes this lock and then each session's
+        greet(session);
         // The others were told this browser had gone, if it holds a seat
         announcePresence();
     }
@@ -240,6 +242,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         taker.disconnected(channel);
         taker.shutdown();
         seat.connected(channel);
+        greet(seat);
         announcePresence();
     }
 
@@ -387,7 +390,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     }
 
     /** A browser that has just arrived is given who is here and what has been said. */
-    synchronized void greet(final WebSession session) {
+    private synchronized void greet(final WebSession session) {
         session.tell(presence());
         for (final ChatLine line : said) {
             session.tell(new ChatLine(line.from(), line.text(), true));

@@ -31,6 +31,7 @@ import forge.player.PlayerControllerHuman;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.web.lobby.Lobby;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,15 +49,16 @@ public final class LocalGame implements IHasForgeLog {
     private static final int MOST_SEATS = 16;
 
     private final FServerManager server = FServerManager.getInstance();
+    // Set on the UI thread or a joining task, and read from the web server's and the netplay client's threads
     /** The lobby this session owns, or null when another browser is hosting the game. */
-    private ServerGameLobby hosted;
+    private volatile ServerGameLobby hosted;
     /** Whether this session started the server. It outlives any one game, so the open lobby cannot say. */
-    private boolean startedServer;
-    private ClientGameLobby joined;
-    private FGameClient client;
-    private int webSeat = -1;
+    private volatile boolean startedServer;
+    private volatile ClientGameLobby joined;
+    private volatile FGameClient client;
+    private volatile int webSeat = -1;
     /** Hears the draft and pool events the host sends this seat; set before a table is opened or joined. */
-    private IDraftEventHandler draftHandler;
+    private volatile IDraftEventHandler draftHandler;
 
     /** One seat of a game set up in a single call. */
     public record Seat(String name, boolean ai, int avatar, int sleeve, Deck deck) {
@@ -231,6 +233,7 @@ public final class LocalGame implements IHasForgeLog {
     public void startLimitedMatch(final List<Seat> seats, final GameType limitedType, final WebGuiGame gui) {
         final Seat mine = seats.stream().filter(s -> !s.ai()).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("No seat for the browser"));
+        nameProfile(mine.name());
         openHost(mine.name(), gui, () -> { }, (from, text) -> { });
         hosted.setLimitedMode(true);
         hosted.setLimitedType(limitedType);
@@ -243,8 +246,17 @@ public final class LocalGame implements IHasForgeLog {
 
     /** A match a game mode prepared itself, played from the browser's seat as every other web match is. */
     public void startPrepared(final String playerName, final PreparedMatch match, final WebGuiGame gui) {
+        nameProfile(playerName);
         openHost(playerName, gui, () -> { }, (from, text) -> { });
         hosted.startPrepared(match, webSeat);
+    }
+
+    /** Saves the player's name where the profile has none, since HostedMatch would otherwise ask for one on the host's screen. */
+    private static void nameProfile(final String name) {
+        if (StringUtils.isBlank(FModel.getPreferences().getPref(FPref.PLAYER_NAME))) {
+            FModel.getPreferences().setPref(FPref.PLAYER_NAME, name);
+            FModel.getPreferences().save();
+        }
     }
 
     private void seatAndStart(final List<Seat> seats) {
