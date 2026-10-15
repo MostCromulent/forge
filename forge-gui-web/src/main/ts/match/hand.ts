@@ -2,7 +2,7 @@
 
 import { commandKind } from './command';
 import { reconcile } from './reconcile';
-import { createCard, frameColour, updateCard, type CardClick } from './cards';
+import { createCard, updateCard, type CardClick } from './cards';
 import { deref, derefAll, game, isLocal, players, stateOf, zone, type Model } from '../model';
 import { isPortrait } from '../form';
 import { openedOver, sheet, swipeDown } from '../sheet';
@@ -12,14 +12,8 @@ import { setting } from '../settings';
 import { byId, q } from '../dom';
 import type { CardView, PlayerView, StackItemView, ZoneType } from '../protocol';
 import { t } from '../text';
+import { frameColour, manaValue } from './rules';
 
-// {2}{W} counts as three; a hybrid shard counts as one and X as nothing
-export function manaValue(cost: string | undefined): number {
-  return [...String(cost ?? '').matchAll(/\{([^}]+)\}/g)].reduce((sum, [, shard]) => {
-    const digits = shard.split('/').find(part => /^\d+$/.test(part));
-    return sum + (digits !== undefined ? Number(digits) : /^[xyz]$/i.test(shard) ? 0 : 1);
-  }, 0);
-}
 
 // As Arena sorts by colour: each single colour in WUBRG order, then multicoloured, colourless, and lands last
 function colourRank(colours: number, type: string): number {

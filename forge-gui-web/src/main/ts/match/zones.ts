@@ -4,7 +4,6 @@ import { stateOf, zone, type Model } from '../model';
 import { byId, q, make, reducedMotion } from '../dom';
 import { changeUi, ui, type ZoneSort } from '../ui';
 import { normalize, rankByName } from '../search';
-import { manaValue } from './hand';
 import { isPortrait } from '../form';
 import { sheet } from '../sheet';
 import type { Actions } from '../actions';
@@ -12,6 +11,7 @@ import { keyName } from '../keys';
 import { boundKeys } from '../settings';
 import type { CardView, PromptButton, ZoneType } from '../protocol';
 import { t, type TextKey } from '../text';
+import { manaValue } from './rules';
 
 // The zone dialog folds to a bar instead of closing, so the board can be read beside a prompt without losing your place
 

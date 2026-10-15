@@ -1,6 +1,4 @@
 import { appendSymbolText, cardImageSrc, imageUrl, setImage, setSymbolText } from './images';
-import { COMMANDER_LETHAL, COMMANDER_WARNING } from './match/board';
-import { frameColour, ptShift } from './match/cards';
 import { showFoil, tiltFoil } from './match/foil';
 import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './match/rulestext';
 import { byId, lean, pointerOn, q, replay, make, placeBeside } from './dom';
@@ -15,6 +13,7 @@ import { hovers, longPress } from './press';
 import { openedOver, sheet, swipeAcross, swipeDown } from './sheet';
 import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from './protocol';
 import { t, type TextKey } from './text';
+import { COMMANDER_LETHAL, COMMANDER_WARNING, frameColour, ptShift } from './match/rules';
 
 // The host composes a hovered card's text (CardDetailUtil, as on desktop), and it arrives in the model a moment after the pointer does
 

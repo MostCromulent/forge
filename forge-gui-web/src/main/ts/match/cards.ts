@@ -11,6 +11,7 @@ import type { CardView, KeywordText, PlayerView, Ref } from '../protocol';
 import { t } from '../text';
 import { drawStickers } from './stickers';
 import { ICONS, iconSvg } from '../icons';
+import { frameColour, ptShift } from './rules';
 
 /** What a card does when clicked: the board selects it, a dialog toggles an option. menu is a right-click. */
 export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void;
@@ -37,19 +38,6 @@ export function createCard(onClick: CardClick): HTMLDivElement {
 
 const has = (refs: Ref[] | undefined, key: number) => (refs ?? []).some(r => r.ref === key);
 
-/** The five colours by their bit in Forge's MagicColor mask. */
-export const COLOUR_BITS: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G']];
-
-/** Whether a power or toughness is above or below what the card is on its own, as a pump, a counter or a shrink leaves it. */
-export const ptShift = (now: number, base: number | undefined): string => (base === undefined || now === base ? '' : now > base ? 'up' : 'down');
-
-/** The frame of a card drawn without its image, from a MagicColor mask: its one colour, M for several, and L or C for none. */
-export function frameColour(colours: number, type: string): string {
-  const one = COLOUR_BITS.filter(([bit]) => colours & bit);
-  if (one.length > 1) return 'M';
-  if (one.length === 1) return one[0][1];
-  return /Land/.test(type) ? 'L' : 'C';
-}
 
 /** The last picture each card was shown with, for a spell whose card is hidden by the time its cast is seen. */
 const pictures = new Map<number, { src: string; zoom: string; name: string }>();
