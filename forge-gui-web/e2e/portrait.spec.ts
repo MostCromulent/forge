@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { act, board, lobby, passUntil, probe, setState, PHONE, SMALL_PHONE, type Probe, type Table } from './probe';
+import { act, board, lobby, passUntil, probe, setState, settled, PHONE, SMALL_PHONE, WIDE_TOUCH, type Probe, type Table } from './probe';
 import { enterName, hold } from './steps';
 
 // A board set up through dev mode sometimes lands a moment late on a busy machine, and a tap or hold made meanwhile goes nowhere
@@ -51,8 +51,6 @@ probe('a desktop window does not', async p => {
   expect(await form(p.page)).toBe('');
 });
 
-// A tablet on its side keeps the desktop layout, and is still touched, not pointed at
-const WIDE_TOUCH = { viewport: { width: 1280, height: 800 }, hasTouch: true };
 
 probe('a tap on a card opens no hover preview', async p => {
   await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Grizzly Bears');
@@ -360,7 +358,7 @@ probe('the menu sheet holds the log, and conceding asks twice', async p => {
   expect(Math.round(at.y + at.height)).toBeLessThanOrEqual(Math.round(dock.y) + 1);
   // The sheet is only as tall as what its tab holds
   await sheet.locator('.menu-tabs button').nth(1).tap();
-  await p.page.waitForTimeout(300);
+  await settled(p.page);
   expect((await box(p.page, '.menu-sheet')).height).toBeLessThan(300);
   await sheet.locator('.concede').tap();
   await expect(p.page.locator('#game-over')).toBeHidden();
@@ -415,6 +413,7 @@ probe('the page can be installed to the home screen', async p => {
 for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
   probe(`match setup fits a phone at ${name}`, async p => {
     await lobby(p);
+    await settled(p.page);
     const { width, height } = phone.viewport!;
     expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     const play = await box(p.page, '#play');
@@ -513,7 +512,7 @@ probe('a deck is chosen in the finder by taps, with nothing off the screen', asy
   const finder = p.page.locator('.finder');
   await expect(finder).toBeVisible();
   // It rises into place over a moment
-  await p.page.waitForTimeout(500);
+  await settled(p.page);
   expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   for (const part of ['.finder', '.finder .results', '.finder .dk-hits', '.finder-foot .use']) {
     const at = await box(p.page, part);
@@ -621,7 +620,7 @@ probe('an opponent\'s open zones do not cover their portrait, and their spell\'s
   expect(tiles.y).toBeGreaterThanOrEqual(face.y + face.height - 1);
   await p.page.locator('#opponent .zones-pill').tap();
   await passUntil(p, 'the opponent casts', () => document.querySelectorAll('#stack .stack-item:not(.awaiting)').length > 0);
-  await p.page.waitForTimeout(600);
+  await settled(p.page);
   const list = await box(p.page, '#stack');
   const mine = await box(p.page, '#me .battlefield .group.creatures .card');
   expect(list.y + list.height).toBeLessThanOrEqual(mine.y + 1);
@@ -666,7 +665,7 @@ probe('a zone the game opens for a choice, with a spell on the stack, is a whole
     await p.page.waitForTimeout(700);
   }
   expect(await shown()).toBe(true);
-  await p.page.waitForTimeout(500);
+  await settled(p.page);
   // The dock's two buttons can do nothing while the choice is open, so they give their room to it
   await expect(p.page.locator('#prompt .ok')).toBeHidden();
   await expect(p.page.locator('#prompt .cancel')).toBeHidden();
@@ -699,7 +698,7 @@ for (const [name, device] of [['a phone', PHONE], ['a desktop', undefined]] as c
     await p.page.locator('#zones .card.selectable').first().click();
     const items = p.page.locator('#dialog-layer .dialog .ordered-item');
     await expect(items).toHaveCount(4);
-    await p.page.waitForTimeout(400);
+    await settled(p.page);
     // One row, read left to right
     const boxes = await Promise.all((await items.all()).map(async i => (await i.boundingBox())!));
     for (const b of boxes) expect(Math.abs(b.y - boxes[0].y)).toBeLessThan(2);
@@ -713,6 +712,16 @@ for (const [name, device] of [['a phone', PHONE], ['a desktop', undefined]] as c
     await items.nth(2).locator('.order-nudge .earlier').click();
     await expect(items.nth(1).locator('.card')).toHaveAttribute('data-key', third!);
     await expect(items.nth(1).locator('.order-number')).toHaveText('2');
+    // A card a tap left hovered still shows its number over it
+    await items.nth(1).locator('.card').hover();
+    const badge = (await items.nth(1).locator('.order-number').boundingBox())!;
+    // The number takes no presses, so it is made to for the moment it is looked for
+    expect(await items.nth(1).locator('.order-number').evaluate((n, [x, y]) => {
+      (n as HTMLElement).style.pointerEvents = 'auto';
+      const top = document.elementFromPoint(x, y);
+      (n as HTMLElement).style.pointerEvents = '';
+      return n.contains(top);
+    }, [badge.x + badge.width / 2, badge.y + badge.height / 2])).toBe(true);
     await p.page.locator('#dialog-layer .dialog .actions button').last().click();
     await expect(p.page.locator('#dialog-layer .dialog')).toHaveCount(0);
   }, device);
@@ -722,12 +731,13 @@ probe('a drawer scrolled to its end leaves the strip showing the tops of the car
   await settledBoard(p, 'humanhand=Counterspell;Death Stroke;Giant Growth;Hill Giant;Shock;Island;Swamp;Forest;Mountain;Plains;Grizzly Bears;Lightning Bolt;Craw Wurm\nhumanbattlefield=Island\naibattlefield=Mountain');
   await p.page.locator('#hand').tap();
   await expect(p.page.locator('#hand.sheet')).toBeVisible();
+  await settled(p.page);
   // Every card of a large hand is on show at once or within a scroll
   expect((await p.page.locator('#hand.sheet .card').first().boundingBox())!.width).toBeLessThan(95);
   await p.page.evaluate(() => { document.getElementById('hand')!.scrollTop = 9999; });
   await p.page.locator('#hand-head .close').tap();
   await expect(p.page.locator('#hand.strip')).toBeVisible();
-  await p.page.waitForTimeout(300);
+  await settled(p.page);
   const hand = await box(p.page, '#hand');
   const top = (await p.page.locator('#hand .card').first().boundingBox())!;
   expect(top.y).toBeGreaterThanOrEqual(hand.y);
@@ -777,7 +787,7 @@ probe('a start tile\'s icon stands clear of its name', async p => {
   await p.page.locator('#player-name').fill('Alice');
   await p.page.keyboard.press('Enter');
   await expect(p.page.locator('.modes .mode.plaque').first()).toBeVisible();
-  await p.page.waitForTimeout(600);
+  await settled(p.page);
   for (const tile of await p.page.locator('.modes .mode.plaque').all()) {
     const icon = (await tile.locator('.mode-art').boundingBox())!;
     const name = (await tile.locator('.mode-name').boundingBox())!;
@@ -790,11 +800,11 @@ probe('the board holds still behind the hand\'s drawer, and its cards keep to th
   const strip = await box(p.page, '#phase-strip');
   await p.page.locator('#hand').tap();
   await expect(p.page.locator('#hand.sheet')).toBeVisible();
-  await p.page.waitForTimeout(500);
+  await settled(p.page);
   expect((await box(p.page, '#phase-strip')).y).toBe(strip.y);
   await p.page.locator('#hand .card').first().tap();
   await expect(p.page.locator('#dialog-layer .card-menu')).toBeVisible();
-  await p.page.waitForTimeout(500);
+  await settled(p.page);
   const creature = await box(p.page, '#me .group.creatures .card');
   expect(creature.y).toBeGreaterThanOrEqual(strip.y + strip.height);
 }, PHONE);

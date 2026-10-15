@@ -1,4 +1,5 @@
-// Starting points for a probe: a throwaway spec that looks at one thing in the real page. A probe gets a server with
+// Starting points for a probe: a spec that looks at one thing in the real page, as the phone and preview specs do,
+// or a throwaway one written to check something while working. A probe gets a server with
 // dev mode on and a saved deck of the player's own, and each starting point returns with the page where the looking
 // starts, so a probe holds only what it looks at:
 //
@@ -51,6 +52,8 @@ const VIEWPORT = { width: 1440, height: 900 };
 /** A phone in its browser, toolbars showing, which is the height a portrait layout has to fit. */
 export const PHONE: BrowserContextOptions = { viewport: { width: 390, height: 664 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 };
 export const SMALL_PHONE: BrowserContextOptions = { viewport: { width: 360, height: 640 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 };
+/** A tablet held sideways: a touch screen that keeps the desktop layout. */
+export const WIDE_TOUCH: BrowserContextOptions = { viewport: { width: 1280, height: 800 }, hasTouch: true };
 const SHOTS = join(import.meta.dirname, '..', 'target', 'probe');
 function listen(page: Page, who: string): void {
   page.on('pageerror', e => console.log(`[${who} page error] ${e.message}`));
@@ -61,6 +64,15 @@ function listen(page: Page, who: string): void {
 }
 
 /** What the page shows and asks, in one line, for a wait that ran out. */
+/** Waits until everything moving on the page has stopped, from the next frame on. Endless animations, such as a pulse, are left out. */
+export async function settled(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const moving = () => document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity);
+    for (let running = moving(); running.length; running = moving()) await Promise.all(running.map(a => a.finished.catch(() => {})));
+  });
+}
+
 export function explain(page: Page): Promise<string> {
   return page.evaluate(() => {
     const m = window.forge?.model;

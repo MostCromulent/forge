@@ -1,9 +1,6 @@
 import { expect, type Page } from '@playwright/test';
-import { drafting, finderWithOwnDeck, lobby, probe, PHONE, type Probe } from './probe';
+import { drafting, finderWithOwnDeck, lobby, probe, settled, PHONE, WIDE_TOUCH, type Probe } from './probe';
 import { hold } from './steps';
-
-/** A tablet held sideways: a touch screen that is not laid out as a phone. */
-const WIDE_TOUCH = { viewport: { width: 1280, height: 800 }, hasTouch: true };
 
 // Every page's cards share the match's preview: a mouse rests on a card for it, a finger holds one for it as a sheet
 
@@ -77,7 +74,7 @@ probe('on a phone a tap on a draft card opens its sheet, whose Pick picks it', a
   const slot = page.locator('.draft-pack .draft-slot').first();
   await slot.waitFor();
   // The pack slides in first, and a card still moving opens no preview
-  await page.waitForTimeout(1500);
+  await settled(page);
   await slot.tap();
   const zoom = page.locator('#zoom');
   await expect(zoom).toHaveClass(/sheet/);
@@ -92,7 +89,7 @@ probe('on a landscape touch screen a held draft card opens its sheet, whose Pick
   await drafting(p);
   const slot = page.locator('.draft-pack .draft-slot').first();
   await slot.waitFor();
-  await page.waitForTimeout(1500);
+  await settled(page);
   await hold(page, slot);
   const zoom = page.locator('#zoom');
   await expect(zoom.locator('.sheet-act')).toHaveText('Pick');

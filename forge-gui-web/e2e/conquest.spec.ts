@@ -21,6 +21,11 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server.stop(); });
 
+/** Opens the fixture's conquest from the shelf. */
+async function playFixture(page: Page): Promise<void> {
+  await page.locator('.cq-save', { hasText: 'Fixture conquest' }).getByRole('button', { name: 'Play' }).click();
+}
+
 /** Plays up to the player's first priority: the opening hand is kept, and anything else asked is given its first answer. */
 async function toPriority(page: Page): Promise<void> {
   await expect(async () => {
@@ -37,7 +42,7 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await enterName(page, 'Alice');
   await page.click('[data-mode=play]');
   await page.click('.chooser [data-kind=conquest]');
-  await page.locator('.cq-save', { hasText: 'Fixture conquest' }).getByRole('button', { name: 'Play' }).click();
+  await playFixture(page);
 
   // The fixture has its first event won, so its two neighbours are open
   await expect(page.locator('.cq-tile.won')).toHaveCount(1);
@@ -105,7 +110,7 @@ test('a deck is edited and a card is exiled', async ({ page }) => {
   await enterName(page, 'Alice');
   await page.click('[data-mode=play]');
   await page.click('.chooser [data-kind=conquest]');
-  await page.locator('.cq-save', { hasText: 'Fixture conquest' }).getByRole('button', { name: 'Play' }).click();
+  await playFixture(page);
   await page.locator('.cq-tab', { hasText: 'Commanders' }).click();
   await expect(page.locator('.cq-cmd[aria-pressed=true]')).toContainText('40 cards');
   await page.getByRole('button', { name: 'Edit Deck' }).click();
@@ -166,7 +171,7 @@ test('the Aether, the planes, the statistics and the preferences open', async ({
   await enterName(page, 'Alice');
   await page.click('[data-mode=play]');
   await page.click('.chooser [data-kind=conquest]');
-  await page.locator('.cq-save', { hasText: 'Fixture conquest' }).getByRole('button', { name: 'Play' }).click();
+  await playFixture(page);
 
   await page.locator('.cq-tab', { hasText: 'The Aether' }).click();
   const pull = page.locator('.cq-ae-pull');

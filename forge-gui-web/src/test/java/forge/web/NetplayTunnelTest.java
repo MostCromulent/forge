@@ -171,7 +171,9 @@ public class NetplayTunnelTest extends SessionsTest {
         sessions.disconnected(guest);
 
         sessions.onMessage(host, JsonCodec.message("decks"));
-        final JsonObject decks = host.awaitNewest("decks", "no deck list arrived");
+        // The list can come before hostAt forgets what was said, and the server does not send the same list to the same browser twice
+        final JsonObject decks = host.awaitDecks();
+        Assert.assertNotNull(decks, "no deck list arrived");
         String deck = null;
         for (final JsonElement d : decks.getAsJsonArray("decks")) {
             final JsonObject o = d.getAsJsonObject();
@@ -193,12 +195,8 @@ public class NetplayTunnelTest extends SessionsTest {
         app.screen.awaitMatching("state", m -> m.get("full").getAsBoolean(), "the app was never shown the table of the match");
     }
 
-    /**
-     * Fails if a browser's chat and an app's chat at the same table do not reach each other, or a browser is shown its own line twice.
-     * Runs last: after an app has sat at a table, the next table sends the host its decks before {@link #hostAt} forgets what came,
-     * and the server, holding that list as sent, sends it to the same browser no more.
-     */
-    @Test(timeOut = 120_000, priority = 1)
+    /** Fails if a browser's chat and an app's chat at the same table do not reach each other, or a browser is shown its own line twice. */
+    @Test(timeOut = 120_000)
     public void aBrowserAndAnAppReadEachOthersChat() throws Exception {
         final TestBrowser host = hostAt("invite");
         final App app = join("Desk", server.inviteUrl("127.0.0.1"), null);
