@@ -50,9 +50,9 @@ import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckEditor;
 import forge.web.deck.DeckStore;
 import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.Commands;
 import forge.web.protocol.Commands.Handler;
-import forge.web.protocol.FromBrowser;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser.*;
 
@@ -233,7 +233,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
     }
 
     /** The form's answers as the shared rules take them; null for a pool or prize type the form does not offer. */
-    private static NewQuestRules.Choices choices(final FromBrowser.QuestCreate c) {
+    private static NewQuestRules.Choices choices(final QuestCreate c) {
         final StartingPoolType pool = poolType(c.pool());
         if (pool == null || pool == StartingPoolType.CustomFormat) {
             return null;

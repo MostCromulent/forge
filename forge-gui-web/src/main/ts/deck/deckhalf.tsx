@@ -208,7 +208,7 @@ function AddSection({ sections, addTo }: { sections: EditorSection[]; addTo: (se
 }
 
 function CommanderZone({ actions, state, handlers }: { actions: Actions; state: EditorState; handlers: CardHandlers }) {
-  // Conquest's deck keeps the commander it was made for: nothing is dropped here, and nothing is taken away
+  // A main-only collection deck keeps the commander it was made for: nothing is dropped here, and nothing is taken away
   const kept = state.mainOnly;
   return (
     <div class="zone commander-zone" data-zone={kept ? undefined : 'Commander'}>

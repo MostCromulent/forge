@@ -11,6 +11,7 @@ import type { Actions } from './actions';
 import type { Model } from './model';
 import { t } from './text';
 import { rememberAvatar, rememberedAvatar } from './identity';
+import { CampaignMenu } from './campaigns';
 
 /** Kept to the server's limit (WebSession.MAX_NAME_LENGTH), so the field stops where the server would refuse. */
 const MAX_NAME_LENGTH = 24;
@@ -82,17 +83,7 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
           blurb={t(computer ? 'lblWebMenuSealedVsAi' : 'lblWebMenuSealedFriends')}
           resume={computer && model.sealedPools > 0 ? () => actions.limitedOpen('sealed', true) : undefined} />
       </div>
-      {computer && <>
-        <h3 class="chooser-more">{t('lblWebConquestCampaigns')}</h3>
-        <div class="chooser-kinds">
-          <Kind id="conquest" name={t('lblPlanarConquest')} blurb={t('lblWebConquestBlurb')} onClick={() => actions.campaignOpen('conquest', false)}
-            resume={model.currentConquest ? () => actions.campaignOpen('conquest', true) : undefined}
-            resumeLabel={model.currentConquest ? t('lblWebConquestResume', model.currentConquest) : undefined} />
-          <Kind id="quest" name={t('lblQuestMode')} note={t('lblWebMenuUnderConstruction')} blurb={t('lblWebQuestBlurb')} onClick={() => actions.campaignOpen('quest', false)}
-            resume={model.currentQuest ? () => actions.campaignOpen('quest', true) : undefined}
-            resumeLabel={model.currentQuest ? t('lblWebConquestResume', model.currentQuest) : undefined} />
-        </div>
-      </>}
+      {computer && <CampaignMenu model={model} actions={actions} />}
     </div>
   );
 }
@@ -103,19 +94,16 @@ const KIND_ICONS: Record<string, ComponentChildren> = {
   draft: <><rect x="7" y="16" width="14" height="22" rx="2" /><rect x="27" y="16" width="14" height="22" rx="2" /><path d="M17 9h13l-3-3M31 45H18l3 3" /></>,
   sealed: <><path d="M13 22v19h22V22" /><path d="M13 22l2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5" />
     <rect x="16" y="6" width="10" height="15" rx="1.5" transform="rotate(-12 21 13.5)" /><rect x="23" y="5" width="10" height="15" rx="1.5" transform="rotate(10 28 12.5)" /></>,
-  // A ringed world for Conquest; a pennant on its staff for Quest
-  conquest: <><circle cx="24" cy="24" r="11" /><ellipse cx="24" cy="24" rx="20" ry="6.5" transform="rotate(-18 24 24)" /></>,
-  quest: <><path d="M13 42V7" /><path d="M13 9h22l-6 7 6 7H13" /></>,
 };
 
-/** A kind of game, drawn as two buttons in one frame because a button cannot hold another, and greyed when it opens nothing. */
-function Kind({ id, name, note, blurb, resume, resumeLabel, onClick }: {
-  id: string; name: string; note?: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
+/** A kind of game, drawn as two buttons in one frame because a button cannot hold another, and greyed when it opens nothing. icon replaces the kind's own. */
+export function Kind({ id, icon, name, note, blurb, resume, resumeLabel, onClick }: {
+  id: string; icon?: ComponentChildren; name: string; note?: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
 }) {
   return (
     <div class="mode kind-card">
       <button class="kind-main" data-kind={id} disabled={!onClick} onClick={onClick}>
-        <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{KIND_ICONS[id]}</svg></span>
+        <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{icon ?? KIND_ICONS[id]}</svg></span>
         <span class="mode-text">
           <span class="mode-name">{name}</span>
           {note && <span class="mode-note">{note}</span>}

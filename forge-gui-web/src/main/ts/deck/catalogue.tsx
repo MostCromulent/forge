@@ -63,7 +63,7 @@ export function countsInDeck(state: EditorState): Map<string, number> {
   return counts;
 }
 
-/** The copy limit the editor shows; the server enforces the exact one, which a few cards raise. Conquest's collection holds one of each, and a collection that counts copies no more than owned. */
+/** The copy limit the editor shows; the server enforces the exact one, which a few cards raise. A main-only collection holds one of each, and a collection that counts copies no more than owned. */
 export function copyLimit(state: EditorState, name: string, owned?: number | null): number {
   if (BASICS.has(name)) return Infinity;
   if (state.mainOnly) return 1;
@@ -98,7 +98,7 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
   const extra = adding ? state.sections.find(s => s.section === adding) : undefined;
   const wanted = state.commanderWanted && !extra;
 
-  // A page of a conquest's collection, left from that page, is not this deck's catalogue
+  // A page of a collection's own list, left from that page, is not this deck's catalogue
   const page = model.catalogue && !model.catalogue.source ? model.catalogue : null;
   // The deck's rules decide which cards show, so a new commander or check asks again
   const more = useCataloguePages(actions, query, page, [text, query.colours, type, query.filters, sort, filter.showAll, query.identity,
@@ -286,7 +286,7 @@ function catalogueKinds(state: EditorState, model: Model, actions: Actions): Fil
       fixed: () => !state.collection,
       clear: f => ({ ...f, identity: null }),
       panel: (f, set, done) => (state.collection
-        ? <OneOf options={[['within', (state.identity || 'C').split('').join(' ')], ['any', t('lblWebConquestAnyColours')]] as const}
+        ? <OneOf options={[['within', (state.identity || 'C').split('').join(' ')], ['any', t('lblWebCollectionAnyColours')]] as const}
             value={f.identity ? 'within' : 'any'} pick={v => { set({ ...f, identity: v === 'within' ? state.identity || 'C' : null }); done(); }} />
         : <p class="fnote">{t('lblWebFilterSetByCommander')}</p>),
     },
@@ -296,7 +296,7 @@ function catalogueKinds(state: EditorState, model: Model, actions: Actions): Fil
       from: () => '',
       fixed: () => true,
       clear: f => f,
-      panel: () => <p class="fnote">{t('lblWebConquestOwnedNote')}</p>,
+      panel: () => <p class="fnote">{t('lblWebCollectionOwnedNote')}</p>,
     },
     {
       id: 'unusable', group: deck, label: t('lblWebFilterUnusable'),

@@ -1,4 +1,4 @@
-// A deck shown outside the editor, as the deck finder, the importer, Quest and Conquest show one: its curve and its cards by heading
+// A deck shown outside the editor, as the deck finder, the importer and the campaigns show one: its curve and its cards by heading
 
 import { imageUrl } from '../images';
 import type { EditorCard } from '../protocol';

@@ -1,7 +1,5 @@
 /* Planar Conquest, and the pieces every campaign shares (the bar, the side panel, the reveal). The shelves reuse the Limited shelf (limited.css). */
 
-.chooser-more { margin: 14px 0 0; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.kind-main:disabled { opacity: .45; cursor: default; }
 
 .cq-shell { height: 100vh; display: flex; flex-direction: column; }
 .cq-shell > .limited-error { margin: 8px 20px 0; }
@@ -339,9 +337,6 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-pbar { height: 5px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
 .cq-pbar i { display: block; height: 100%; min-width: 4px; border-radius: 3px; background: var(--accent-2); }
 .cq-save .ev-menu button.plain { color: var(--text); }
-.cq-rename { display: flex; gap: 6px; }
-.cq-rename input { flex: 1; min-width: 0; background: var(--surface-2); border: 1px solid var(--line-bright); border-radius: 6px; padding: 6px 9px; color: var(--text); font: inherit; font-weight: 650; }
-.cq-rename button { padding: 6px 10px; font-size: 12.5px; }
 
 /* Starting a conquest: planes as tiles, commanders and planeswalkers as rows, and the ticket's picture */
 .cq-plane-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: max-content; gap: 8px; max-height: 372px; overflow-y: auto; padding: 2px; }

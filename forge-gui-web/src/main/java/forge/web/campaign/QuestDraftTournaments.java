@@ -19,6 +19,7 @@ import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import forge.util.Localizer;
 import forge.web.WebGuiBase;
+import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.ToBrowser.*;
 
 import java.util.ArrayList;

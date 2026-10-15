@@ -76,10 +76,13 @@ public final class Wire {
         String value();
     }
 
-    /** A holder's records that carry a mark, by name, which is the order the browser's types are written in. */
+    /** The classes whose nested records are the protocol. The campaign modes' are their own, so a build can leave them out. */
+    private static final List<Class<?>> HOLDERS = List.of(FromBrowser.class, ToBrowser.class, CampaignProtocol.class);
+
+    /** The protocol's records that carry a mark, by name, which is the order the browser's types are written in. */
     @SuppressWarnings("unchecked")
-    static List<Class<? extends Record>> marked(final Class<?> holder, final Class<? extends Annotation> mark) {
-        return Stream.of(holder.getDeclaredClasses()).filter(c -> c.isAnnotationPresent(mark))
+    static List<Class<? extends Record>> marked(final Class<? extends Annotation> mark) {
+        return HOLDERS.stream().flatMap(h -> Stream.of(h.getDeclaredClasses())).filter(c -> c.isAnnotationPresent(mark))
                 .sorted(Comparator.comparing(Class::getSimpleName)).<Class<? extends Record>>map(c -> (Class<? extends Record>) c).toList();
     }
 

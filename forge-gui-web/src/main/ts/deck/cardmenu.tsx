@@ -53,7 +53,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
   const inDeck = at.from === 'catalogue' ? undefined : cardIn(state, at.from, at.name);
   const zone = at.from === 'catalogue' ? null : at.from;
   const other: DeckSection = zone === 'Main' ? 'Sideboard' : 'Main';
-  // Conquest's deck is its main deck alone, each card in the printing owned
+  // A main-only collection deck is its main deck alone, each card in the printing owned
   if (state.mainOnly) {
     return (
       <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>

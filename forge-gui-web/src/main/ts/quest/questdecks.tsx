@@ -1,7 +1,7 @@
 // Quest's Decks page: every deck of the quest as a plate, and beside them the one being looked at with its curve, its list and what can be done with it
 
 import { useEffect, useState } from 'preact/hooks';
-import { DeckPanel, Plate } from '../deck/deckplate';
+import { DeckPanel, Plate } from '../campaign/deckplate';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { QuestDecks } from '../protocol';

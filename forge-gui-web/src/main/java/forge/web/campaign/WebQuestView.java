@@ -7,8 +7,7 @@ import forge.item.PaperCard;
 import forge.localinstance.skin.FSkinProp;
 import forge.util.Localizer;
 import forge.web.images.Foil;
-import forge.web.protocol.ToBrowser.PackCard;
-import forge.web.protocol.ToBrowser.RewardStep;
+import forge.web.protocol.CampaignProtocol.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;

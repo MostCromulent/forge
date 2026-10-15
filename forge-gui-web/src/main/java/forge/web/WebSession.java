@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import forge.deck.Deck;
 import forge.deck.DeckGroup;
 import forge.game.GameType;
+import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
@@ -13,21 +14,19 @@ import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.net.EventFormat;
 import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.server.ServerGameLobby;
-import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.util.LogSafe;
 import forge.util.storage.IStorage;
-import forge.web.campaign.Campaign;
-import forge.web.campaign.ConquestGame;
-import forge.web.campaign.QuestGame;
+import forge.web.campaign.CampaignSession;
 import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckSession;
 import forge.web.images.SkinSprites;
 import forge.web.limited.Draft;
+import forge.web.limited.DraftOwner;
 import forge.web.limited.OfflineDraft;
 import forge.web.limited.OfflineEvents;
 import forge.web.limited.OfflineLimited;
@@ -47,12 +46,9 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /** One browser's session, whose place is held in one {@link Stage} that changes only through {@link #move}. */
@@ -61,7 +57,7 @@ public final class WebSession implements IHasForgeLog {
     public sealed interface Stage permits Menu, Opening, Setup, Event, InCampaign, Playing { }
 
     /** The start page; for a guest, waiting for the host to open a game. */
-    record Menu() implements Stage { }
+    public record Menu() implements Stage { }
 
     /** Taking a seat: the table is built while the browser waits, and nothing may change it until the seat is taken. */
     record Opening() implements Stage { }
@@ -81,7 +77,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** A campaign mode's pages: its saved games while save is null, otherwise the one that is open. */
-    public record InCampaign(CampaignMode mode, String save) implements Stage { }
+    public record InCampaign(String mode, String save) implements Stage { }
 
     /** In a match, playing it or watching the computer play it. back is where leaving it returns to: a pool, a campaign, or null for the table. */
     public record Playing(WebGuiGame gui, boolean invited, boolean spectating, Stage back) implements Stage { }
@@ -115,15 +111,8 @@ public final class WebSession implements IHasForgeLog {
     private volatile OnlineDraft onlineDraft;
     /** Whether the draft host was told this seat's player left, so it is told when the browser is back. */
     private volatile boolean seatReportedGone;
-    /** What this session alone knows of the open conquest: its selection and the last move. */
-    private final ConquestGame conquest = new ConquestGame();
-    public final QuestGame quest = new QuestGame();
-    /** One thread for everything a campaign does, as its model is Forge's own and nothing guards it; it ends when idle, so a finished session holds none. */
-    private final ExecutorService campaignWork = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
-        final Thread t = new Thread(r, "WebCampaign");
-        t.setDaemon(true);
-        return t;
-    });
+    /** The campaign modes, which a build without them replaces with Campaigns.NONE. */
+    private final Campaigns campaigns;
 
     private static final AtomicInteger SESSIONS = new AtomicInteger();
     /** Tells this session's lines in the log from another's, whose player may have no name yet or the same one. */
@@ -151,6 +140,7 @@ public final class WebSession implements IHasForgeLog {
         this.lobby = new Lobby(local, () -> !isHost, device);
         this.decks = new DeckSession(lobby, ui, () -> isHost, () -> stage instanceof Setup, device);
         this.limited = new OfflineLimited(this, ui, lobby, decks, local);
+        this.campaigns = new CampaignSession(new CampaignHost());
         this.onQuit = onQuit;
     }
 
@@ -158,8 +148,7 @@ public final class WebSession implements IHasForgeLog {
     void becomeHost() {
         isHost = true;
         settings = PlayerSettings.saved();
-        // Cards Forge shows the host outside a match are what a quest's purchase or prize opened
-        ui.setCardsSink(quest::shown);
+        campaigns.becameHost();
         ui.setNoticeSink(notice -> {
             final BrowserChannel b = browser;
             if (b != null) {
@@ -170,53 +159,6 @@ public final class WebSession implements IHasForgeLog {
 
     boolean mayHost() {
         return mayHost;
-    }
-
-    private Campaign campaign(final CampaignMode mode) {
-        return mode == CampaignMode.quest ? quest : mode == CampaignMode.conquest ? conquest : null;
-    }
-
-    private final Campaign.Host campaignHost = new Campaign.Host() {
-        @Override
-        public Record error(final String text) {
-            return WebSession.error(text);
-        }
-
-        @Override
-        public DeckSession decks() {
-            return decks;
-        }
-
-        @Override
-        public void opened(final String save) {
-            final Stage from = stage;
-            if (from instanceof InCampaign c && c.save() == null && move(from, new InCampaign(c.mode(), save))) {
-                sendCampaign();
-            }
-        }
-
-        @Override
-        public void startMatch(final Supplier<PreparedMatch> prepare, final Runnable failed) {
-            // A match is started on the host UI thread, as a table's is, and the campaign's work waits for it
-            ui.invokeInEdtAndWait(() -> startCampaignMatch(prepare, failed));
-        }
-
-        @Override
-        public void startDraft(final BoosterDraft draft) {
-            if (limited.beginDraft(() -> draft, true)) {
-                tell(hello());
-            }
-        }
-    };
-
-    public void onCampaign(final Runnable work) {
-        campaignWork.execute(() -> {
-            try {
-                work.run();
-            } catch (final RuntimeException e) {
-                netLog.error(e, "Campaign work failed");
-            }
-        });
     }
 
     /** Where the browser is. Only {@link #move} changes it, apart from the session closing. */
@@ -368,10 +310,7 @@ public final class WebSession implements IHasForgeLog {
             if (result != null) {
                 channel.send(result);
             }
-            final Record campaignResult = p.back() instanceof InCampaign c ? campaign(c.mode()).result() : null;
-            if (campaignResult != null) {
-                channel.send(campaignResult);
-            }
+            campaigns.reconnected(channel, now);
         } else if (now instanceof Setup) {
             // Match setup is drawn from the table, which only these messages describe
             lobby.sendDecks(channel);
@@ -402,7 +341,7 @@ public final class WebSession implements IHasForgeLog {
             if (draft != null && draft.latest() != null) {
                 channel.send(draft.latest());
             }
-            onCampaign(this::sendCampaign);
+            campaigns.reconnected(channel, now);
         } else if (now instanceof Menu) {
             // A guest that arrives while a game is already open takes a seat without being asked, once it has a name
             joinHostGame();
@@ -559,65 +498,6 @@ public final class WebSession implements IHasForgeLog {
                     draft.pick(p.step(), p.index(), p.sideboard());
                 }
             })
-            // A campaign is Forge's own, one for the whole process, so it is the host's
-            .on(CampaignOpen.class, (s, ch, o) -> {
-                final Campaign campaign = s.campaign(o.mode());
-                if (s.isHost && campaign != null) {
-                    s.onCampaign(() -> s.openCampaign(o.mode(), o.resume() ? campaign.current() : null));
-                }
-            })
-            .on(CampaignLoad.class, (s, ch, l) -> s.onCampaign(() -> {
-                if (s.stage instanceof InCampaign c) {
-                    s.openCampaign(c.mode(), l.name());
-                }
-            }))
-            .on(Plain.campaignLeave, (s, ch, l) -> s.onCampaign(() -> {
-                final Stage now = s.stage;
-                if (now instanceof InCampaign c) {
-                    if (c.save() == null) {
-                        s.move(now, new Menu());
-                    } else {
-                        s.openCampaign(c.mode(), null);
-                    }
-                }
-            }))
-            .on(CampaignRename.class, (s, ch, r) -> s.onCampaign(() -> s.campaignShelf(ch, campaign -> campaign.rename(r.name(), r.to()))))
-            .on(CampaignDelete.class, (s, ch, d) -> s.onCampaign(() -> s.campaignShelf(ch, campaign -> {
-                campaign.delete(d.name());
-                return null;
-            })))
-            .on(Plain.rewardClaim, inOpenCampaign((s, ch, campaign, c) -> campaign.claim(s.campaignHost)))
-            .on(CampaignStatsQuery.class, inOpenCampaign((s, ch, campaign, q) -> ch.send(campaign.stats(q.scope()))))
-            .on(Plain.campaignPrefs, inOpenCampaign((s, ch, campaign, c) -> ch.send(campaign.prefs(null))))
-            .on(CampaignPref.class, inOpenCampaign((s, ch, campaign, p) -> ch.send(campaign.prefs(campaign.setPref(p.key(), p.value())))))
-            .on(Plain.campaignPrefsReset, inOpenCampaign((s, ch, campaign, c) -> {
-                campaign.resetPrefs();
-                ch.send(campaign.prefs(null));
-            }))
-            .on(Plain.trading, inOpenCampaign((s, ch, campaign, c) -> ch.send(campaign.trading())))
-            .on(Trade.class, inOpenCampaign((s, ch, campaign, trade) -> {
-                final String problem = campaign.trade(trade.source(), trade.picks());
-                if (problem != null) {
-                    ch.send(new Notice(problem, null, false));
-                }
-                // What was traded away may have been on any of the campaign's pages
-                campaign.page().forEach(m -> ch.send(m));
-                final ToBrowser.Reward opened = campaign.reward();
-                if (opened != null) {
-                    ch.send(opened);
-                }
-                ch.send(campaign.trading());
-            }))
-            // The wheel is the conquest's and not a game's, so this cheat is not one of DevMode's
-            .on(DevConquestWheel.class, host((s, ch, w) -> {
-                if (FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {
-                    try {
-                        s.conquest.setNextWheel(w.outcome() == null || w.outcome().isEmpty() ? null : ChaosWheelOutcome.valueOf(w.outcome()));
-                    } catch (final IllegalArgumentException e) {
-                        netLog.warn("Not a wheel outcome: {}", w.outcome());
-                    }
-                }
-            }))
             // A cheat asks its questions as the game does and waits for the answers, so it runs on a thread of its own
             .on(Dev.class, host((s, ch, d) -> {
                 if (s.stage instanceof Playing) {
@@ -668,20 +548,6 @@ public final class WebSession implements IHasForgeLog {
         };
     }
 
-    /** Work on the open save of a campaign. */
-    private interface CampaignHandler<T> {
-        void run(WebSession session, BrowserChannel channel, Campaign campaign, T command);
-    }
-
-    /** Runs on the campaign's thread, and only while one of its saves is open. */
-    private static <T extends Record> Handler<WebSession, T> inOpenCampaign(final CampaignHandler<T> handler) {
-        return (s, ch, command) -> s.onCampaign(() -> {
-            if (s.stage instanceof InCampaign c && c.save() != null) {
-                handler.run(s, ch, s.campaign(c.mode()), command);
-            }
-        });
-    }
-
     void onMessage(final BrowserChannel channel, final JsonObject msg) {
         final Record command = Wire.decode(msg);
         if (command == null) {
@@ -696,28 +562,14 @@ public final class WebSession implements IHasForgeLog {
             if (stage instanceof Playing p) {
                 p.gui().onCommand(channel, command);
             }
-        } else if (stage instanceof InCampaign) {
-            // Whatever else a campaign's pages say is the mode's own
-            onCampaign(() -> {
-                if (stage instanceof InCampaign c) {
-                    campaign(c.mode()).handle(channel, command, c.save(), campaignHost);
-                }
-            });
+        } else if (campaigns.handles(command)) {
+            campaigns.run(channel, command);
         }
     }
 
     /** A deck editor or importer command. A match takes the whole page, so nothing about decks is done during one. */
     private void deckCommand(final BrowserChannel channel, final Record command) {
-        if (command instanceof CatalogueQuery q && q.source() != null) {
-            // A campaign's own cards, which need no deck open
-            onCampaign(() -> {
-                if (stage instanceof InCampaign c && c.save() != null) {
-                    channel.send(campaign(c.mode()).cards(q));
-                }
-            });
-            return;
-        }
-        if (stage instanceof Playing) {
+        if (campaigns.deckCommand(channel, command) || stage instanceof Playing) {
             return;
         }
         final boolean closing = command instanceof Bare b && b.t() == Plain.editorClose;
@@ -725,16 +577,7 @@ public final class WebSession implements IHasForgeLog {
         if (closing && stage instanceof Event) {
             channel.send(OfflineEvents.pools());
         }
-        // A campaign's collection editor reads and saves the campaign's cards, which only its thread may touch
-        if (stage instanceof InCampaign) {
-            onCampaign(() -> decks.onCommand(channel, command));
-        } else {
-            decks.onCommand(channel, command);
-        }
-        // A deck may have changed size or become playable, which the campaign's pages show
-        if (closing) {
-            inOpenCampaign((s, ch, campaign, c) -> campaign.page().forEach(m -> ch.send(m))).run(this, channel, command);
-        }
+        decks.onCommand(channel, command);
     }
 
     private void claimHost(final BrowserChannel channel) {
@@ -1142,8 +985,7 @@ public final class WebSession implements IHasForgeLog {
                 now instanceof InCampaign m ? m.mode() : null,
                 // The open save is named in its matches too, so the result screen knows whose ending it shows
                 now instanceof InCampaign c ? c.save() : now instanceof Playing p && p.back() instanceof InCampaign c ? c.save() : null,
-                isHost ? conquest.current() : null,
-                isHost ? quest.current() : null,
+                isHost ? campaigns.resume() : Map.of(),
                 // The jar's manifest holds it, so a server run from classes has none
                 WebSession.class.getPackage().getImplementationVersion(),
                 // The menu's volume slider and music need them before any match sends them with its controls
@@ -1177,74 +1019,18 @@ public final class WebSession implements IHasForgeLog {
         return draft != null && draft.drafting();
     }
 
-    /** Opens a campaign's saved games, or one of them. Reading a save is slow, so this is campaign work. */
-    private void openCampaign(final CampaignMode mode, final String save) {
-        final Stage from = stage;
-        if (!isHost || !(from instanceof Menu || from instanceof InCampaign)) {
-            return;
-        }
-        // A deck of the campaign being left has nothing to be built from any more
-        decks.closeCollectionDeck(browser);
-        if (move(from, new InCampaign(mode, save == null ? null : campaign(mode).open(save)))) {
-            sendCampaign();
-        }
-    }
-
-    /** The menu of a saved game on the list of them. change answers why it could not be made, or null. */
-    private void campaignShelf(final BrowserChannel channel, final Function<Campaign, String> change) {
-        if (!isHost || !(stage instanceof InCampaign c) || c.save() != null) {
-            return;
-        }
-        final Campaign campaign = campaign(c.mode());
-        final String problem = change.apply(campaign);
-        channel.send(campaign.saves());
-        // The start page's Resume names the save played last
-        channel.send(hello());
-        // Last, since the browser forgets an error at every hello
-        if (problem != null) {
-            channel.send(error(problem));
-        }
-    }
-
-    /** What the campaign stage draws from: the saved games, or the open one's pages and any reward yet to be shown. */
-    public void sendCampaign() {
-        if (!(stage instanceof InCampaign c)) {
-            return;
-        }
-        final Campaign campaign = campaign(c.mode());
-        if (c.save() == null) {
-            tell(campaign.saves());
-        } else {
-            campaign.page().forEach(this::tell);
-            final ToBrowser.Reward pending = campaign.reward();
-            if (pending != null) {
-                tell(pending);
-            }
-        }
-    }
-
     /** Starts a match a campaign built, over netplay. Leaving it returns to the campaign's page. failed undoes what preparing it did. */
-    private void startCampaignMatch(final Supplier<PreparedMatch> prepare, final Runnable failed) {
-        final Stage from = stage;
-        if (!(from instanceof InCampaign back)) {
-            return;
-        }
+    private void startCampaignMatch(final InCampaign back, final Supplier<PreparedMatch> prepare, final Runnable failed, final Consumer<GameView> gameOver) {
         final Playing playing = new Playing(new WebGuiGame(settings), false, false, back);
-        if (!move(from, playing)) {
+        if (!move(back, playing)) {
             playing.gui().close();
             return;
         }
         attach(playing.gui());
-        // A game's result belongs to the campaign that started it, wherever the browser has gone by the time it is recorded
-        final Campaign campaign = campaign(back.mode());
-        playing.gui().onGameOver(() -> onCampaign(() -> {
+        playing.gui().onGameOver(() -> {
             final HostedMatch match = local.hostedMatch();
-            final Record result = campaign.gameOver(match == null ? null : match.getGameView());
-            if (result != null) {
-                tell(result);
-                campaign.resultSent();
-            }
-        }));
+            gameOver.accept(match == null ? null : match.getGameView());
+        });
         try {
             final PreparedMatch prepared = prepare.get();
             if (prepared == null) {
@@ -1262,7 +1048,7 @@ public final class WebSession implements IHasForgeLog {
             local.endMatch();
             move(playing, back);
             tell(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
-            sendCampaign();
+            campaigns.show();
         }
     }
 
@@ -1341,16 +1127,7 @@ public final class WebSession implements IHasForgeLog {
             limited.stopGauntlet();
             local.endMatch();
             if (playing.back() instanceof InCampaign c) {
-                // Queued behind the last game's result, so the campaign records the game before it is told the match is left
-                final Campaign campaign = campaign(c.mode());
-                onCampaign(() -> {
-                    if (stage == from) {
-                        campaign.left();
-                        if (move(from, c) && b != null) {
-                            sendCampaign();
-                        }
-                    }
-                });
+                campaigns.left(playing, c);
             } else if (move(from, playing.back()) && b != null) {
                 limited.sendLimited(b);
             }
@@ -1395,6 +1172,62 @@ public final class WebSession implements IHasForgeLog {
         stage = new Menu();
         if (gui != null) {
             gui.close();
+        }
+    }
+
+    /** What the campaign modes reach of this session. */
+    private final class CampaignHost implements Campaigns.Host {
+        @Override
+        public boolean hosting() {
+            return isHost;
+        }
+
+        @Override
+        public Stage stage() {
+            return stage;
+        }
+
+        @Override
+        public boolean move(final Stage from, final Stage next) {
+            return WebSession.this.move(from, next);
+        }
+
+        @Override
+        public void tell(final Record message) {
+            WebSession.this.tell(message);
+        }
+
+        @Override
+        public Record hello() {
+            return WebSession.this.hello();
+        }
+
+        @Override
+        public BrowserChannel browser() {
+            return browser;
+        }
+
+        @Override
+        public DeckSession decks() {
+            return decks;
+        }
+
+        @Override
+        public WebGuiBase ui() {
+            return ui;
+        }
+
+        @Override
+        public void startMatch(final InCampaign back, final Supplier<PreparedMatch> prepare, final Runnable failed, final Consumer<GameView> gameOver) {
+            // A match is started on the host UI thread, as a table's is, and the campaign's work waits for it
+            ui.invokeInEdtAndWait(() -> startCampaignMatch(back, prepare, failed, gameOver));
+        }
+
+        @Override
+        public void startDraft(final BoosterDraft draft, final DraftOwner owner) {
+            if (limited.beginDraft(() -> draft, true, owner)) {
+                WebSession.this.tell(WebSession.this.hello());
+            }
         }
     }
 }

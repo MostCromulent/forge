@@ -7,8 +7,6 @@ import { Lobby } from './lobby/lobby';
 import { Editor } from './deck/editor';
 import { Limited } from './limited/limited';
 import { Drafting } from './limited/drafting';
-import { Conquest } from './conquest/conquest';
-import { Quest } from './quest/quest';
 import { Importer } from './deck/importer';
 import { DeckFinder } from './deck/deckfinder';
 import { Requests, StackMenu } from './match/dialogs';
@@ -23,6 +21,7 @@ import { MenuSheet } from './match/menusheet';
 import { isPortrait } from './form';
 import { byId } from './dom';
 import { changeUi, ui } from './ui';
+import { campaigns } from './campaigns';
 import type { Actions } from './actions';
 import type { Model } from './model';
 
@@ -31,7 +30,7 @@ let editing = false;
 let edits = 0;
 
 /** How far in each page is from the first one, so a move to a lower number is a move back. */
-const DEPTH = { name: 0, menu: 1, lobby: 2, limited: 2, drafting: 2, conquest: 2, quest: 2, editor: 3, match: 4 };
+const DEPTH = { name: 0, menu: 1, lobby: 2, limited: 2, drafting: 2, campaign: 2, editor: 3, match: 4 };
 let shown: keyof typeof DEPTH | null = null;
 
 export function renderScreens(model: Model, actions: Actions): void {
@@ -52,8 +51,8 @@ export function renderScreens(model: Model, actions: Actions): void {
   render(page === 'editor' ? <Editor model={model} actions={actions} /> : null, byId('editor'));
   render(under === 'limited' ? <Limited key={edits} model={model} actions={actions} /> : null, byId('limited'));
   render(under === 'drafting' ? <Drafting key={edits} model={model} actions={actions} /> : null, byId('drafting'));
-  render(under === 'conquest' ? <Conquest key={edits} model={model} actions={actions} /> : null, byId('conquest'));
-  render(under === 'quest' ? <Quest key={edits} model={model} actions={actions} /> : null, byId('quest'));
+  const Campaign = campaigns()?.Page;
+  render(under === 'campaign' && Campaign ? <Campaign key={edits} model={model} actions={actions} /> : null, byId('campaign'));
   // The dock has two homes: the bottom edge before a match, the side column under the log during one
   render(page === 'match' && model.networked ? <Dock model={model} actions={actions} /> : null, byId('match-chat'));
   render(page !== 'match' ? <Dock model={model} actions={actions}
@@ -87,20 +86,20 @@ export function renderScreens(model: Model, actions: Actions): void {
 }
 
 /** Which page is showing. A browser without a name is asked for one before it goes anywhere. */
-export function screenOf(model: Model): 'name' | 'menu' | 'lobby' | 'editor' | 'drafting' | 'limited' | 'conquest' | 'quest' | 'match' {
+export function screenOf(model: Model): 'name' | 'menu' | 'lobby' | 'editor' | 'drafting' | 'limited' | 'campaign' | 'match' {
   // The editor sits over the page it was opened from without leaving it, so closing it returns there
   return model.editor && model.screen !== 'playing' && model.playerName ? 'editor' : pageUnder(model);
 }
 
 /** The page the deck editor lies over as a panel, which is the page showing when it is shut. */
-export function pageUnder(model: Model): 'name' | 'menu' | 'lobby' | 'drafting' | 'limited' | 'conquest' | 'quest' | 'match' {
+export function pageUnder(model: Model): 'name' | 'menu' | 'lobby' | 'drafting' | 'limited' | 'campaign' | 'match' {
   if (model.screen === 'playing') return 'match';
   if (!model.playerName) return 'name';
   // An online draft runs at a table, which the player may look at while it goes on
   if (model.drafting && !(model.screen === 'setup' && ui.draftHidden)) return 'drafting';
   switch (model.screen) {
     case 'event': return 'limited';
-    case 'campaign': return model.campaign ?? 'menu';
+    case 'campaign': return model.campaign && campaigns() ? 'campaign' : 'menu';
     case 'setup': return 'lobby';
     default: return 'menu';
   }

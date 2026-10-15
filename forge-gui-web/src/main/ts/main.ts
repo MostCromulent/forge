@@ -1,7 +1,10 @@
 // The controller, which is the only place that talks to the server and draws the model once per frame
 
 import { connect } from './net';
-import { createModel, applyState, cardMenu, isLocal, oldestRequest, players, stackPick, NO_CAMPAIGN, NO_CONQUEST, NO_QUEST } from './model';
+import { createModel, applyState, cardMenu, isLocal, oldestRequest, players, stackPick } from './model';
+// The campaign modes, which a build without them leaves out with this line
+import './campaign/register';
+import { campaigns } from './campaigns';
 import { asked, createActions, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { initForm, isPortrait } from './form';
@@ -29,7 +32,7 @@ import { byId, relayout, saveText } from './dom';
 import { initNotices, showNotice } from './notices';
 import { forgetWakeLock, keepAwake } from './wakelock';
 import { deleteDeviceDeck, listDeviceDecks, putDeviceDeck } from './deck/devicedecks';
-import type { ServerMessage } from './protocol';
+import type { Send, ServerMessage } from './protocol';
 
 const model = createModel();
 const pacer = createPacer(model, apply);
@@ -62,11 +65,12 @@ window.addEventListener('unhandledrejection', e => report(String((e.reason as Er
 
 // While messages are held the prompt on screen is an earlier board's, so an answer to it would land on a prompt not yet seen
 const HELD_INPUT = new Set(['selectCard', 'selectPlayer', 'selectStackItem', 'useMana', 'ok', 'cancel', 'endTurn', 'undo']);
-const wire = createActions(msg => {
+const sendNow: Send = msg => {
   if (!pacer.holding() || !HELD_INPUT.has(msg.t)) send(msg);
   else console.warn(`Not sent while the page catches up: ${msg.t}`);
-});
-const actions: Actions = {
+};
+const wire = createActions(sendNow);
+const actions = {
   ...wire,
   // Cancel on a pass stops the pass, which the host takes at any time, even while the page catches up
   cancel: () => (pacer.holding() && passingFor(model.controls) ? wire.stopYield() : wire.cancel()),
@@ -101,39 +105,8 @@ const actions: Actions = {
     model.error = null;
     wire.sealedCreate(c);
   },
-  // A visit to the Aether starts from its own filters, and the card the last visit pulled is not this one's
-  conquestAether: q => {
-    if (!q.type) model.conquestAether = null;
-    wire.conquestAether(q);
-  },
-  conquestPlaneswalk: (plane, unlock) => {
-    model.error = null;
-    wire.conquestPlaneswalk(plane, unlock);
-  },
-  // What the last one was refused for is no longer what the page should say
-  conquestCreate: c => {
-    model.error = null;
-    wire.conquestCreate(c);
-  },
-  questCreate: c => {
-    model.error = null;
-    wire.questCreate(c);
-  },
-  campaignRename: (name, to) => {
-    model.error = null;
-    wire.campaignRename(name, to);
-  },
-  campaignDelete: name => {
-    model.error = null;
-    wire.campaignDelete(name);
-  },
-  // A reward that has been shown leaves the model at once, so its dialog closes without waiting for the server
-  rewardClaim: () => {
-    model.reward = null;
-    wire.rewardClaim();
-    schedule();
-  },
-};
+  ...campaigns()?.actions(sendNow, model, schedule),
+} as Actions;
 
 // The page's own actions and model, for the browser console and for e2e probes
 Object.assign(window, { forge: { actions, model } });
@@ -252,20 +225,8 @@ function apply(msg: ServerMessage): void {
       model.eventKind = msg.eventKind ?? null;
       model.campaign = msg.campaign ?? null;
       model.campaignSave = msg.campaignSave ?? null;
-      model.currentConquest = msg.currentConquest ?? null;
-      model.currentQuest = msg.currentQuest ?? null;
-      // A match's result belongs to its match, and a campaign's pages to the campaign
-      if (msg.screen !== 'playing') model.campaignResult = null;
-      if (!msg.campaign) Object.assign(model, NO_CAMPAIGN);
-      if (msg.campaign !== 'conquest') {
-        Object.assign(model, NO_CONQUEST);
-        ui.conquestTab = 'map';
-      }
-      if (msg.campaign !== 'quest') {
-        Object.assign(model, NO_QUEST);
-        // A match is played from the quest's page, so the tab it was started from is the one returned to
-        if (msg.screen !== 'playing') ui.questTab = 'duels';
-      }
+      model.campaignResume = msg.campaignResume;
+      campaigns()?.hello(model, msg);
       model.drafting = msg.drafting;
       if (!msg.drafting) {
         model.draft = null;
@@ -327,25 +288,6 @@ function apply(msg: ServerMessage): void {
     case 'cardSets': model.cardSets = msg.sets; break;
     case 'limitedPools': model.limitedPools = msg; break;
     case 'limitedResult': model.limitedResult = msg; break;
-    case 'conquestSaves': model.conquestSaves = msg; break;
-    case 'questSaves': model.questSaves = msg; break;
-    case 'questDuels': model.questDuels = msg; break;
-    case 'questDecks': model.questDecks = msg; break;
-    case 'questOptions': model.questOptions = msg; break;
-    case 'questChallenges': model.questChallenges = msg; break;
-    case 'questBazaar': model.questBazaar = msg; break;
-    case 'questTournaments': model.questTournaments = msg; break;
-    case 'campaignBar': model.campaignBar = msg; break;
-    case 'conquestState': model.conquestState = msg; break;
-    case 'campaignResult': model.campaignResult = msg; break;
-    case 'reward': model.reward = msg; break;
-    case 'conquestParty': model.conquestParty = msg; break;
-    case 'trading': model.trading = msg; break;
-    case 'conquestOptions': model.conquestOptions = msg; break;
-    case 'conquestAether': model.conquestAether = msg; break;
-    case 'conquestPlanes': model.conquestPlanes = msg; break;
-    case 'campaignStats': model.campaignStats = msg; break;
-    case 'campaignPrefs': model.campaignPrefs = msg; break;
     case 'draft':
       model.draft = msg;
       model.error = null;
@@ -443,7 +385,7 @@ function apply(msg: ServerMessage): void {
     case 'devDump': saveText(msg.text, 'game-state.txt', 'text/plain'); return;
     case 'deckFileText': saveText(msg.text, `${msg.name}.dck`, 'text/plain'); return;
     case 'flash': flash(); return;
-    default: break;
+    default: campaigns()?.message(model, msg); break;
   }
   schedule();
 }
@@ -480,7 +422,7 @@ function render(): void {
   const page = screenOf(model);
   const under = pageUnder(model);
   byId('editor').hidden = page !== 'editor';
-  for (const id of ['menu', 'lobby', 'limited', 'drafting', 'conquest', 'quest', 'match']) {
+  for (const id of ['menu', 'lobby', 'limited', 'drafting', 'campaign', 'match']) {
     const el = byId(id);
     // A phone has no room for a panel, so there the editor takes the screen and the page under it is put away
     el.hidden = id !== (under === 'name' ? 'menu' : under) || (page === 'editor' && isPortrait());

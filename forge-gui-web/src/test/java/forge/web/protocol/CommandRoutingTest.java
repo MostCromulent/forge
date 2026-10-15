@@ -1,6 +1,7 @@
 package forge.web.protocol;
 
 import forge.web.WebSession;
+import forge.web.campaign.CampaignSession;
 import forge.web.campaign.ConquestGame;
 import forge.web.campaign.QuestGame;
 import forge.web.deck.DeckSession;
@@ -15,7 +16,7 @@ import java.util.List;
 /** The session hands each command to whichever of these owns it, so each must be owned once. */
 public class CommandRoutingTest {
     private static final List<Commands<?>> OWNERS = List.of(WebSession.COMMANDS, DeckSession.COMMANDS, OfflineLimited.COMMANDS,
-            WebGuiGame.COMMANDS, ConquestGame.COMMANDS, QuestGame.COMMANDS);
+            WebGuiGame.COMMANDS, CampaignSession.COMMANDS, ConquestGame.COMMANDS, QuestGame.COMMANDS);
 
     // Fails if a command the browser can send is handled nowhere, so it would be dropped without a word, or by two owners, of which only the first is asked
     @Test

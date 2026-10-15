@@ -34,7 +34,7 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
           <div class="ev-top">
             {rename && renaming === r.name
               ? (
-                <NameForm cls="cq-rename" initial={r.name} label={rename.field} submit={t('lblRename')} cancel={() => setRenaming(null)}
+                <NameForm cls="shelf-rename" initial={r.name} label={rename.field} submit={t('lblRename')} cancel={() => setRenaming(null)}
                   done={to => {
                     setRenaming(null);
                     if (to !== r.name) rename.go(r, to);

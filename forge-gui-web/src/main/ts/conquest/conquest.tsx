@@ -2,7 +2,8 @@
 
 import { useState } from 'preact/hooks';
 import { Shelf as Cards } from '../shelf';
-import { ui, type ConquestTab } from '../ui';
+import { ui } from '../ui';
+import type { ConquestTab } from '../campaign/register';
 import { CampaignPages, CampaignShelf, CampaignShell, Purse, Stats, slideTab } from '../campaign/campaign';
 import { ConquestMap } from './conquestmap';
 import { Party } from './conquestparty';

@@ -20,6 +20,7 @@ import type { DraftCard, DraftSeat, DraftState } from '../protocol';
 import { make, reducedMotion } from '../dom';
 import { isPortrait } from '../form';
 import { Backdrop, Confirm, Dropdown } from '../dialog';
+import { campaigns } from '../campaigns';
 
 type GroupBy = 'colour' | 'type' | 'mv' | 'pick';
 type Drag = { from: 'pack' | 'pick'; index: number };
@@ -106,6 +107,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
   const [picksOpen, setPicksOpen] = useState(false);
   // An online draft belongs to the table and goes on without this browser, so leaving only goes back to the table
   const online = model.screen === 'setup';
+  const owned = campaigns()?.draft(model) ?? null;
   const faces = state ? seatFaces(model, state.seats) : [];
   return (
     <div class="drafting-page">
@@ -129,10 +131,10 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
         </div>
       )}
       {picksOpen && isPortrait() && <div class="picks-scrim" onClick={() => setPicksOpen(false)} />}
-      {state?.done && (model.campaign === 'quest' ? <TournamentDrafted state={state} actions={actions} /> : <SaveDraft model={model} state={state} actions={actions} />)}
-      {/* A tournament's draft gives its fee back when left, which desktop says before it does */}
+      {state?.done && (owned ? <owned.Done state={state} actions={actions} /> : <SaveDraft model={model} state={state} actions={actions} />)}
+      {/* A draft played for a campaign says what leaving it costs, as desktop says before it does */}
       {leaving && <Confirm title={t('lblWebDraftLeaveTheDraftQ')} label={t('lblLeaveDraft')}
-        text={t(model.campaign === 'quest' ? 'lblLeaveDraftConfirm' : 'lblWebDraftPicksNotSaved')}
+        text={t(owned ? owned.leaveText : 'lblWebDraftPicksNotSaved')}
         back={() => setLeaving(false)} backLabel={t('lblWebDraftKeepDrafting')} go={() => actions.draftDiscard()} goLabel={t('lblLeave')} danger />}
     </div>
   );
@@ -467,22 +469,6 @@ function grouped(held: Held[], by: GroupBy): [string, Held[]][] {
 function typeHeading(type: string): string {
   const found = CARD_TYPES.find(([name]) => type.includes(name));
   return t(found ? found[2] : 'lblOther');
-}
-
-/** The end of a quest tournament's draft, whose picks are kept under the name Quest gives them and built into its deck next. */
-function TournamentDrafted({ state, actions }: { state: DraftState; actions: Actions }) {
-  return (
-    <Backdrop>
-      <div class="dialog draft-save">
-        <h3>{t('lblWebDraftComplete')}</h3>
-        <p class="hint">{t('lblWebDraftCardsDrafted', state.picks.length)}</p>
-        <p class="hint">{t('lblWebQuestDraftBuild')}</p>
-        <div class="actions">
-          <button class="primary" onClick={() => actions.draftSave('', false)}>{t('btnContinue')}</button>
-        </div>
-      </div>
-    </Backdrop>
-  );
 }
 
 /** The end of the draft, as desktop ends it: a name to save it under, or leaving without saving. */

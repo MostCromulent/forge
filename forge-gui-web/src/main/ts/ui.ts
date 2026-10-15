@@ -16,9 +16,6 @@ export interface Picker {
 /** How an open zone is ordered: as the zone holds them, by name, or by card type. */
 export type ZoneSort = 'order' | 'name' | 'type' | 'mana';
 
-export type ConquestTab = 'map' | 'aether' | 'party' | 'collection' | 'planes' | 'stats';
-export type QuestTab = 'duels' | 'challenges' | 'tournaments' | 'decks' | 'shop' | 'bazaar' | 'stats';
-
 export interface UiState {
   /** Battlefield piles the player has laid out card by card, by the pile's signature. */
   openPiles: Set<string>;
@@ -63,13 +60,6 @@ export interface UiState {
   cardText: boolean;
   /** The side column's panels. Kept in the browser across sessions. */
   sidePanels: { log: boolean; chat: boolean };
-  /** Which page of the open conquest is showing. It outlives the deck editor, which takes the page's place for a while. */
-  conquestTab: ConquestTab;
-  /** Which page of the open quest is showing. */
-  questTab: QuestTab;
-  /** The map's regions the player has opened or closed by hand, as `plane:region`. */
-  conquestOpened: Record<string, boolean>;
-  /** An online draft was left for the table on this browser; the draft goes on, and Return to draft comes back to it. */
   draftHidden: boolean;
   /** The hovered card or player is pinned open as a sheet, as a rested finger asks on a phone. */
   inspect: boolean;
@@ -113,9 +103,6 @@ export const ui: UiState = {
   faceIndex: 0,
   cardText: false,
   sidePanels: { log: true, chat: true, ...storedSidePanels() },
-  conquestTab: 'map',
-  questTab: 'duels',
-  conquestOpened: {},
   draftHidden: false,
   inspect: false,
   handOpen: false,
@@ -125,7 +112,8 @@ export const ui: UiState = {
   seatsOpen: false,
   seenOnField: new Map(),
   menuSheet: null,
-};
+  // The campaigns add their own fields as they load (campaign/register.tsx)
+} as UiState;
 
 let redraw: () => void = () => {};
 let drawNow: () => void = () => {};

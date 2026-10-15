@@ -2,6 +2,8 @@
 
 .chooser { max-width: 920px; margin: 0 auto; display: grid; gap: 14px; }
 .chooser-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.chooser-more { margin: 14px 0 0; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.kind-main:disabled { opacity: .45; cursor: default; }
 /* A chooser card is two buttons in the mode card's frame: the card itself, and a resume strip along its foot */
 .kind-card { height: 100%; }
 .kind-card:has(button:hover) { border-color: var(--accent-2); }
@@ -129,3 +131,6 @@ button.outline { background: none; border-color: color-mix(in srgb, var(--accent
 button.outline:hover { background: var(--accent-soft); }
 .your-deck { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .your-deck b { font-weight: 600; }
+.shelf-rename { display: flex; gap: 6px; }
+.shelf-rename input { flex: 1; min-width: 0; background: var(--surface-2); border: 1px solid var(--line-bright); border-radius: 6px; padding: 6px 9px; color: var(--text); font: inherit; font-weight: 650; }
+.shelf-rename button { padding: 6px 10px; font-size: 12.5px; }

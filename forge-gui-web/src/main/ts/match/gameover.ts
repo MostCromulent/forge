@@ -6,6 +6,7 @@ import { canShatter, shatter } from './shatter';
 import { byId, make, q } from '../dom';
 import { t } from '../text';
 import type { Actions } from '../actions';
+import { campaigns } from '../campaigns';
 import type { GameView, PlayerView } from '../protocol';
 
 /** Players whose portrait has broken this game, so each breaks once. Null until the table is first drawn. */
@@ -123,10 +124,10 @@ export function renderGameOver(model: Model, g: GameView, actions: Actions): voi
   }
   // A gauntlet's result and the match's score follow the game's end, so a panel drawn before they arrive is drawn again
   const limited = model.limitedResult;
-  // A campaign's result says which buttons the ending offers, so the panel waits for it
-  const campaign = model.campaignResult;
-  if (model.campaignSave && !campaign) return;
-  const drawnFor = `${!!limited}/${campaign ? `${campaign.won}:${campaign.matchOver}` : ''}/${model.matchScore.map(s => `${s.player.ref}:${s.won}`).join(',')}`;
+  // A campaign's match ends as its mode says, which the panel waits to hear
+  const ending = campaigns()?.ending(model, actions) ?? null;
+  if (ending && ending.key === null) return;
+  const drawnFor = `${!!limited}/${ending?.key ?? ''}/${model.matchScore.map(s => `${s.player.ref}:${s.won}`).join(',')}`;
   if (!root.hidden && root.dataset.drawnFor === drawnFor) return;
   root.dataset.drawnFor = drawnFor;
   root.hidden = false;
@@ -189,7 +190,7 @@ export function renderGameOver(model: Model, g: GameView, actions: Actions): voi
   q(root, '.word').textContent = word;
   q(root, '.sub').textContent = limited
     ? t('lblWebBoardGauntletResult', sub, limited.round, limited.rounds, limited.wins, limited.losses)
-    : campaign?.line ?? sub;
+    : ending?.line ?? sub;
   const buttons = q(root, '.actions');
   const add = (label: string, primary: boolean, onClick: () => void) => {
     const b = document.createElement('button');
@@ -198,29 +199,18 @@ export function renderGameOver(model: Model, g: GameView, actions: Actions): voi
     b.onclick = onClick;
     buttons.append(b);
   };
-  // A campaign's match ends as its mode says, and the battlefield can be looked at whatever the mode offers
-  if (campaign) {
-    const quit = () => { actions.quitMatch(); actions.leave(); };
-    const draw = () => {
-      buttons.replaceChildren();
-      const does: Record<string, () => void> = {
-        nextGame: () => actions.nextGame(), leave: () => actions.leave(), restart: () => actions.restartGame(), quit,
-        // A forfeit loses what was paid to enter, so it is asked first, as desktop asks
-        forfeit: () => {
-          buttons.replaceChildren();
-          const ask = make('p', 'ask');
-          ask.textContent = t('lblWebQuestForfeitAsk');
-          buttons.append(ask);
-          add(t('lblCancel'), true, draw);
-          add(t('lblWebQuestForfeitTournament'), false, quit);
-        },
-      };
-      campaign.buttons.forEach((b, i) => {
-        add(b.label, b.primary, does[b.action]);
-        if (i === 0) add(t('lblReconnectViewBattlefield'), false, () => view(true));
-      });
-    };
-    draw();
+  // The battlefield can be looked at whatever the campaign offers
+  if (ending) {
+    ending.buttons({
+      add,
+      say: text => {
+        const ask = make('p', 'ask');
+        ask.textContent = text;
+        buttons.append(ask);
+      },
+      clear: () => buttons.replaceChildren(),
+      view: () => view(true),
+    });
     return;
   }
   if (limited?.nextRound) add(t('lblWebBoardNextRound', limited.round + 1, limited.rounds), true, () => actions.gauntletNext());

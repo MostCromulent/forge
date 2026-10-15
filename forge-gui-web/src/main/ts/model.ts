@@ -1,6 +1,7 @@
 // The browser's copy of the game, which server messages change here and everything on the page is drawn from
 
-import type { CampaignMode, EventKind, Screen, CardPoolDetails, CardPoolGroup, DeckGenOptions, LimitedEdition, ConquestAetherState, CampaignBar, ConquestPlanes, CampaignPrefs, CampaignStats, Trading, ConquestOptions, ConquestParty, CampaignResult, Reward, ConquestSaves, ConquestState, QuestBazaar, QuestChallenges, QuestDecks, QuestDuels, QuestOptions, QuestSaves, QuestTournaments, DeckMatches, DevState, MatchScore } from './protocol';
+import type { EventKind, Screen, CardPoolDetails, CardPoolGroup, DeckGenOptions, LimitedEdition, DeckMatches, DevState, MatchScore } from './protocol';
+import { campaigns } from './campaigns';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -107,47 +108,12 @@ export interface Model {
   /** Every edition, newest first, asked for the first time the catalogue's set filter opens. */
   cardSets: LimitedEdition[] | null;
   limitedPools: LimitedPools | null;
-  /** The campaign mode whose pages are showing, and the save open in it, which its matches name too. currentConquest and currentQuest are what a Resume opens. */
-  campaign: CampaignMode | null;
+  /** The campaign mode whose pages are showing, and the save open in it, which its matches name too. */
+  campaign: string | null;
   campaignSave: string | null;
-  currentConquest: string | null;
-  currentQuest: string | null;
-  conquestSaves: ConquestSaves | null;
-  questSaves: QuestSaves | null;
-  questDuels: QuestDuels | null;
-  questDecks: QuestDecks | null;
-  questChallenges: QuestChallenges | null;
-  /** The bazaar with one stall open, once its tab has asked. */
-  questBazaar: QuestBazaar | null;
-  /** What the new-quest form offers, once it has asked. */
-  questOptions: QuestOptions | null;
-  questTournaments: QuestTournaments | null;
-  campaignBar: CampaignBar | null;
-  conquestState: ConquestState | null;
-  /** The result of a battle's game, while its match is open; and what a won battle gave, until it has been shown. */
-  campaignResult: CampaignResult | null;
-  reward: Reward | null;
-  /** The commanders and planeswalkers found, once the Commanders page has asked. */
-  conquestParty: ConquestParty | null;
-  /** The lists a campaign trades between, by size, once its trade page has asked. */
-  trading: Trading | null;
-  /** What a new conquest may start with, as far as the form has asked. */
-  conquestOptions: ConquestOptions | null;
-  /** The four pages that are Conquest's own, each as its page last asked for it. */
-  conquestAether: ConquestAetherState | null;
-  conquestPlanes: ConquestPlanes | null;
-  campaignStats: CampaignStats | null;
-  campaignPrefs: CampaignPrefs | null;
+  /** The save each campaign mode resumes, by mode, which the start page offers. */
+  campaignResume: Record<string, string>;
 }
-
-/** An open campaign's pages, as they stand with none open; hello resets them to this when the campaign is left. */
-export const NO_CAMPAIGN = { campaignBar: null, reward: null, trading: null, campaignStats: null } satisfies Partial<Model>;
-/** The same for an open conquest's own pages. */
-export const NO_CONQUEST = { conquestState: null, conquestParty: null, conquestAether: null, conquestPlanes: null } satisfies Partial<Model>;
-/** The same for an open quest's own pages. */
-export const NO_QUEST = {
-  questSaves: null, questDuels: null, questDecks: null, questChallenges: null, questBazaar: null, questTournaments: null,
-} satisfies Partial<Model>;
 
 export function createModel(): Model {
   return {
@@ -161,9 +127,9 @@ export function createModel(): Model {
     drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
     eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, cardSets: null, limitedPools: null,
-    campaign: null, campaignSave: null, currentConquest: null, currentQuest: null, conquestSaves: null, questOptions: null,
-    campaignResult: null, conquestOptions: null, campaignPrefs: null, ...NO_CAMPAIGN, ...NO_CONQUEST, ...NO_QUEST,
-  };
+    campaign: null, campaignSave: null, campaignResume: {},
+    ...campaigns()?.fields(),
+  } as Model;
 }
 
 export function applyState(model: Model, msg: StateMessage): void {

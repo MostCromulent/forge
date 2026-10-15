@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { imageUrl } from '../images';
 import { FIVE_COLOURS } from '../symbols';
-import { DeckPanel, Plate } from '../deck/deckplate';
+import { DeckPanel, Plate } from '../campaign/deckplate';
 import { AnyOf, FilterBar, type FilterKind, OneOf } from '../deck/filters';
 import type { Actions } from '../actions';
 import type { Model } from '../model';

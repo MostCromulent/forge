@@ -1,14 +1,15 @@
 // Everything a player can do, which the controller alone turns into messages, so renderers and screens never see the protocol
 
 import type {
-  AutoDecisionAction, CampaignMode, CatalogueQuery, DeckOp, DeckQuery, DevAction, DeviceDeckText, EditorEdit, EventSetup, QuestCreate, ImportCommit, PhaseType, SealedCreate, DraftStart, Send, SetSeat,
+  AutoDecisionAction, CatalogueQuery, DeckOp, DeckQuery, DevAction, DeviceDeckText, EditorEdit, EventSetup, ImportCommit, PhaseType, SealedCreate, DraftStart, Send, SetSeat,
   EventKind, PoolPlayMode, YieldAction,
 } from './protocol';
 
 /** What a seat's owner can change about it. */
 type SeatChange = Omit<SetSeat, 't' | 'index'>;
 
-export interface Actions {
+/** What the shared pages can do. A build with campaigns adds theirs to Actions (campaign/register.tsx). */
+export interface PageActions {
   /** A click on a card. menu is the right button, which asks for everything the card can do; x and y place that list. */
   selectCard(key: number, menu: boolean, x: number, y: number): void;
   selectPlayer(key: number): void;
@@ -80,87 +81,8 @@ export interface Actions {
   gauntletNext(): void;
   gauntletRestart(): void;
 
-  /** Opens a mode's saved games, or with resume, the one played last. */
-  campaignOpen(mode: CampaignMode, resume: boolean): void;
-  campaignLoad(name: string): void;
-  /** Back from an open game to the saved ones, or from those to the start page. */
-  campaignLeave(): void;
-  campaignRename(name: string, to: string): void;
-  campaignDelete(name: string): void;
-  /** Selects a place on the map; the player does not move. */
-  conquestSelect(region: number, row: number, col: number): void;
-  /** Walks to the selected place. */
-  conquestMove(): void;
-  /** Fights the event the player stands on. */
-  conquestBattle(): void;
-  /** Says a won battle's reward has been shown. */
-  rewardClaim(): void;
-  /** Dev mode: where the next Chaos Wheel stops. */
-  devConquestWheel(outcome: string): void;
-  /** Asks what a new conquest may start with: the planes, a plane's commanders, a commander's planeswalkers. */
-  conquestOptions(plane?: string, commander?: string): void;
-  conquestCreate(c: { name: string; plane: string; commander: string; planeswalker: string }): void;
-  /** Asks what the Aether holds under these filters, or with pull spends the shards for a card. An empty type asks for the filters a visit starts with. */
-  conquestAether(q: { colors: string; type: string; rarity: string; cmc: string; pull: boolean }): void;
-  conquestPlanes(): void;
-  /** Travels to a plane, with unlock spending the emblems to unlock it first. */
-  conquestPlaneswalk(plane: string, unlock: boolean): void;
-  /** Asks for the statistics of a plane, or of every plane. */
-  campaignStats(scope?: string): void;
-  campaignPrefs(): void;
-  campaignPref(key: string, value: string): void;
-  campaignPrefsReset(): void;
-  /** Asks for the commanders and planeswalkers found. */
-  conquestParty(): void;
-  conquestLead(commander: string): void;
-  conquestWalker(planeswalker: string): void;
-  /** Asks for a commander's deck, which arrives as a deck's details do. */
-  conquestViewDeck(commander: string): void;
-  conquestEditDeck(commander: string): void;
-  /** Asks for the sizes of the lists a campaign trades between. */
-  trading(): void;
-  /** Trades the picks out of the list of that source: for Conquest, exiles them or brings them back. */
-  trade(source: string, picks: { key: string; count: number }[]): void;
   /** Starts a finished match again from its first game. */
   restartGame(): void;
-
-  /** Fights a duel of the Duels page, by its place in the list. */
-  questDuel(index: number): void;
-  /** Chooses the pet for a slot, the plant's being 0; null summons none. */
-  questPet(slot: number, name: string | null): void;
-  questMatchLength(games: number): void;
-  /** Makes an empty deck of a name and opens it in the editor. */
-  questDeckNew(name: string): void;
-  questDeckRename(deck: string, to: string): void;
-  /** Makes a deck the one duels are fought with. */
-  questDeckCurrent(deck: string): void;
-  /** Asks for a deck's list, which arrives as a deck's details do. */
-  questDeckView(deck: string): void;
-  questDeckEdit(deck: string): void;
-  questDeckDelete(deck: string): void;
-  /** Asks what the new-quest form offers. */
-  questOptions(): void;
-  questChallenge(id: string): void;
-  /** Flies the zeppelin, which draws the challenges again once between two matches. */
-  questZeppelin(): void;
-  /** Opens a stall of the bazaar, or with null the first. */
-  questStall(name: string | null): void;
-  questBuy(stall: string, item: string): void;
-  /** Enters a tournament on offer, which pays its fee and opens its draft. */
-  questEnter(title: string): void;
-  /** Spends a draft token; the host asks for the format. */
-  questToken(): void;
-  questTournamentStart(): void;
-  questTournamentNext(): void;
-  /** Leaves the tournament, collecting its prizes once it has started. */
-  questTournamentLeave(): void;
-  /** Opens the tournament's deck in the editor. */
-  questTournamentDeck(): void;
-  /** Travels to another world; the host asks which. */
-  questTravel(): void;
-  /** Unlocks a set; the host asks which. */
-  questUnlock(): void;
-  questCreate(c: Omit<QuestCreate, 't'>): void;
 
   /** Opens a table others can join by link and makes it a draft or sealed table once it is open. */
   openLimitedTable(kind: EventKind): void;
@@ -241,7 +163,9 @@ export interface Actions {
 /** The newest catalogue and import queries, numbered as sent, so an answer to an older one is told apart and dropped. */
 export const asked = { catalogue: 0, import: 0 };
 
-export function createActions(send: Send): Actions {
+export interface Actions extends PageActions {}
+
+export function createActions(send: Send): PageActions {
   return {
     selectCard: (key, menu, x, y) => send({ t: 'selectCard', key, menu, x: Math.round(x), y: Math.round(y) }),
     selectPlayer: key => send({ t: 'selectPlayer', key }),
@@ -305,55 +229,6 @@ export function createActions(send: Send): Actions {
     poolPlay: (name, mode, opponent, count, games) => send({ t: 'poolPlay', name, mode, opponent, count, games }),
     gauntletNext: () => send({ t: 'gauntletNext' }),
     gauntletRestart: () => send({ t: 'gauntletRestart' }),
-    campaignOpen: (mode, resume) => send({ t: 'campaignOpen', mode, resume }),
-    campaignLoad: name => send({ t: 'campaignLoad', name }),
-    campaignLeave: () => send({ t: 'campaignLeave' }),
-    campaignRename: (name, to) => send({ t: 'campaignRename', name, to }),
-    campaignDelete: name => send({ t: 'campaignDelete', name }),
-    conquestSelect: (region, row, col) => send({ t: 'conquestSelect', region, row, col }),
-    conquestMove: () => send({ t: 'conquestMove' }),
-    conquestBattle: () => send({ t: 'conquestBattle' }),
-    rewardClaim: () => send({ t: 'rewardClaim' }),
-    devConquestWheel: outcome => send({ t: 'devConquestWheel', outcome }),
-    questDuel: index => send({ t: 'questDuel', index }),
-    questPet: (slot, name) => send({ t: 'questPet', slot, name: name ?? undefined }),
-    questMatchLength: games => send({ t: 'questMatchLength', games }),
-    questDeckNew: name => send({ t: 'questDeckNew', name }),
-    questDeckRename: (deck, to) => send({ t: 'questDeckRename', deck, to }),
-    questDeckCurrent: deck => send({ t: 'questDeckCurrent', deck }),
-    questDeckView: deck => send({ t: 'questDeckView', deck }),
-    questDeckEdit: deck => send({ t: 'questDeckEdit', deck }),
-    questDeckDelete: deck => send({ t: 'questDeckDelete', deck }),
-    questOptions: () => send({ t: 'questOptions' }),
-    questChallenge: id => send({ t: 'questChallenge', id }),
-    questZeppelin: () => send({ t: 'questZeppelin' }),
-    questStall: name => send({ t: 'questStall', name: name ?? undefined }),
-    questBuy: (stall, item) => send({ t: 'questBuy', stall, item }),
-    questEnter: title => send({ t: 'questEnter', title }),
-    questToken: () => send({ t: 'questToken' }),
-    questTournamentStart: () => send({ t: 'questTournamentStart' }),
-    questTournamentNext: () => send({ t: 'questTournamentNext' }),
-    questTournamentLeave: () => send({ t: 'questTournamentLeave' }),
-    questTournamentDeck: () => send({ t: 'questTournamentDeck' }),
-    questTravel: () => send({ t: 'questTravel' }),
-    questUnlock: () => send({ t: 'questUnlock' }),
-    questCreate: c => send({ t: 'questCreate', ...c }),
-    conquestOptions: (plane, commander) => send({ t: 'conquestOptions', plane, commander }),
-    conquestCreate: c => send({ t: 'conquestCreate', ...c }),
-    conquestAether: q => send({ t: 'conquestAether', ...q }),
-    conquestPlanes: () => send({ t: 'conquestPlanes' }),
-    conquestPlaneswalk: (plane, unlock) => send({ t: 'conquestPlaneswalk', plane, unlock }),
-    campaignStats: scope => send({ t: 'campaignStats', scope }),
-    campaignPrefs: () => send({ t: 'campaignPrefs' }),
-    campaignPref: (key, value) => send({ t: 'campaignPref', key, value }),
-    campaignPrefsReset: () => send({ t: 'campaignPrefsReset' }),
-    conquestParty: () => send({ t: 'conquestParty' }),
-    conquestLead: commander => send({ t: 'conquestLead', commander }),
-    conquestWalker: planeswalker => send({ t: 'conquestWalker', planeswalker }),
-    conquestViewDeck: commander => send({ t: 'conquestViewDeck', commander }),
-    conquestEditDeck: commander => send({ t: 'conquestEditDeck', commander }),
-    trading: () => send({ t: 'trading' }),
-    trade: (source, picks) => send({ t: 'trade', source, picks }),
     restartGame: () => send({ t: 'nextGame', decision: 'NEW' }),
     setFormat: format => send({ t: 'setFormat', format }),
     setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),

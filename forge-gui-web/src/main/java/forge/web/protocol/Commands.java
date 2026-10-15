@@ -1,8 +1,5 @@
 package forge.web.protocol;
 
-import forge.web.protocol.FromBrowser.Bare;
-import forge.web.protocol.FromBrowser.Plain;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -25,8 +22,8 @@ public final class Commands<O> {
         return this;
     }
 
-    /** Handles one of the commands that are only their name. */
-    public Commands<O> on(final Plain name, final Handler<O, Bare> handler) {
+    /** Handles one of the commands that are only their name, such as a {@link FromBrowser.Plain} constant. */
+    public Commands<O> on(final Enum<?> name, final Handler<O, Record> handler) {
         add(name.name(), handler);
         return this;
     }

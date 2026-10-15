@@ -1,7 +1,8 @@
 // Quest: the saved quests as a shelf, and inside one, the bar every page shares over the page itself.
 
 import { Shelf as Cards } from '../shelf';
-import { ui, type QuestTab } from '../ui';
+import { ui } from '../ui';
+import type { QuestTab } from '../campaign/register';
 import { CampaignPages, CampaignShelf, CampaignShell, Purse, Stats, slideTab } from '../campaign/campaign';
 import { Duels } from './questduels';
 import { Decks } from './questdecks';

@@ -19,8 +19,6 @@ public final class FromBrowser {
     /** Messages that are only their name. */
     public enum Plain { decks, claimHost, join, lobby, leaveLobby, addresses, cardPoolDetails, cardSets, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede, macroRecord, macroRepeat,
-        campaignLeave, conquestMove, conquestBattle, rewardClaim, conquestParty, trading,
-        conquestPlanes, campaignPrefs, campaignPrefsReset,
         editorClose, editorUndo }
 
     @Command
@@ -28,8 +26,6 @@ public final class FromBrowser {
     }
 
     public enum EventKind { sealed, draft }
-
-    public enum CampaignMode { conquest, quest }
 
     /** Opens a table others can join, set from the start for a draft or sealed event when limited is not null. */
     @Command("invite")
@@ -412,183 +408,6 @@ public final class FromBrowser {
     public record EventDecksOnly(boolean on) {
     }
 
-    /** Opens a campaign mode's saved games, or with resume, straight into the one played last. */
-    @Command("campaignOpen")
-    public record CampaignOpen(CampaignMode mode, boolean resume) {
-    }
-
-    @Command("campaignLoad")
-    public record CampaignLoad(String name) {
-    }
-
-    @Command("campaignRename")
-    public record CampaignRename(String name, String to) {
-    }
-
-    @Command("campaignDelete")
-    public record CampaignDelete(String name) {
-    }
-
-    /** Asks for a campaign's statistics, narrowed to a scope the mode offers, or all of them. */
-    @Command("campaignStats")
-    public record CampaignStatsQuery(@Nullable String scope) {
-    }
-
-    /** Sets one of a mode's preferences, by the key its row was sent with. */
-    @Command("campaignPref")
-    public record CampaignPref(String key, String value) {
-    }
-
-    /** A card picked from one of a campaign's lists, by its image key, which names a printing. */
-    public record TradePick(String key, int count) {
-    }
-
-    /** Trades the picks out of a list: source is the list's name, as a catalogue query's is. */
-    @Command("trade")
-    public record Trade(String source, List<TradePick> picks) {
-    }
-
-    /** Selects a place on the map. The player does not move. */
-    @Command("conquestSelect")
-    public record ConquestSelect(int region, int row, int col) {
-    }
-
-    /** The Aether's filters, where an empty type asks for a visit's starting filters and pull spends the shards to take a card. */
-    @Command("conquestAether")
-    public record ConquestAetherQuery(String colors, String type, String rarity, String cmc, boolean pull) {
-    }
-
-    /** Travels to an unlocked plane, or with unlock spends the emblems to unlock it first. */
-    @Command("conquestPlaneswalk")
-    public record ConquestPlaneswalk(String plane, boolean unlock) {
-    }
-
-    /** Asks what a new conquest may start with: the planes, with a plane its commanders, and with a commander its planeswalkers. */
-    @Command("conquestOptions")
-    public record ConquestOptionsQuery(@Nullable String plane, @Nullable String commander) {
-    }
-
-    @Command("conquestCreate")
-    public record ConquestCreate(String name, String plane, String commander, String planeswalker) {
-    }
-
-    public enum CommanderAction { conquestLead, conquestViewDeck, conquestEditDeck }
-
-    /** Something done with a commander: made the battle leader, its deck asked for, or its deck opened in the editor. */
-    @Command
-    public record ConquestCommanderCommand(CommanderAction t, String commander) {
-    }
-
-    /** Makes an owned planeswalker the one the player travels as. */
-    @Command("conquestWalker")
-    public record ConquestWalker(String planeswalker) {
-    }
-
-    /** Dev mode: the outcome the next wheel stops on, a ChaosWheelOutcome name, or empty to leave it to chance. */
-    @Command("devConquestWheel")
-    public record DevConquestWheel(String outcome) {
-    }
-
-    /** Chooses a quest's pet for a slot, the plant's being slot 0; null summons none. */
-    @Command("questPet")
-    public record QuestPet(int slot, @Nullable String name) {
-    }
-
-    @Command("questMatchLength")
-    public record QuestMatchLength(int games) {
-    }
-
-    public enum QuestDeckAction { questDeckCurrent, questDeckView, questDeckEdit, questDeckDelete }
-
-    /** Something done with a quest deck, by name: made the one duels use, its list asked for, opened in the editor, or deleted. */
-    @Command
-    public record QuestDeckCommand(QuestDeckAction t, String deck) {
-    }
-
-    /** Makes an empty quest deck of a name and opens it in the editor. */
-    @Command("questDeckNew")
-    public record QuestDeckNew(String name) {
-    }
-
-    @Command("questDeckRename")
-    public record QuestDeckRename(String deck, String to) {
-    }
-
-    @Command("questOptions")
-    public record QuestOptionsQuery() {
-    }
-
-    /** A new quest, as NewQuestRules.Choices with its enums by name and the distribution's colours as WUBRGC letters. */
-    @Command("questCreate")
-    public record QuestCreate(String name, int difficulty, boolean fantasy, boolean commander, String world, String pool, @Nullable String format,
-            @Nullable String precon, @Nullable String savedDeck, String poolType, String colors, boolean artifacts, boolean completeSet,
-            boolean duplicates, int boosters, @Nullable String prizes, @Nullable String prizeFormat, boolean allowUnlocks) {
-    }
-
-    /** Opens a stall of the bazaar, or with no name the first. */
-    @Command("questStall")
-    public record QuestStall(@Nullable String name) {
-    }
-
-    @Command("questBuy")
-    public record QuestBuy(String stall, String item) {
-    }
-
-    /** Fights a challenge, by its id. */
-    @Command("questChallenge")
-    public record QuestChallenge(String id) {
-    }
-
-    /** Flies the zeppelin: the challenges are drawn again, once between two matches. */
-    @Command("questZeppelin")
-    public record QuestZeppelin() {
-    }
-
-    /** Enters a tournament on offer, by its title, which pays its fee and opens its draft. */
-    @Command("questEnter")
-    public record QuestEnter(String title) {
-    }
-
-    /** Spends a draft token on a tournament of a format the host asks for. */
-    @Command("questToken")
-    public record QuestToken() {
-    }
-
-    /** Starts the tournament entered, once its deck is built. */
-    @Command("questTournamentStart")
-    public record QuestTournamentStart() {
-    }
-
-    /** Plays the player's next tournament match, deciding the computer's matches before it. */
-    @Command("questTournamentNext")
-    public record QuestTournamentNext() {
-    }
-
-    /** Opens the tournament's deck in the editor. */
-    @Command("questTournamentDeck")
-    public record QuestTournamentDeck() {
-    }
-
-    /** Leaves the tournament entered, collecting its prizes once it has started. */
-    @Command("questTournamentLeave")
-    public record QuestTournamentLeave() {
-    }
-
-    /** Travels to another world, which the host asks for. */
-    @Command("questTravel")
-    public record QuestTravel() {
-    }
-
-    /** Unlocks a set for the quest's format, which the host asks for. */
-    @Command("questUnlock")
-    public record QuestUnlock() {
-    }
-
-    /** Fights a duel of the Duels page, by its place in the list that page was sent. */
-    @Command("questDuel")
-    public record QuestDuel(int index) {
-    }
-
     /** Every command record, which is what the TypeScript is generated from. */
-    static final List<Class<? extends Record>> COMMANDS = Wire.marked(FromBrowser.class, Command.class);
+    static final List<Class<? extends Record>> COMMANDS = Wire.marked(Command.class);
 }

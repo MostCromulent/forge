@@ -736,7 +736,7 @@ public class ConquestSessionTest extends SessionsTest {
         final JsonObject saves = host.awaitMatching("conquestSaves", s -> to.equals(str(s, "current")), "the shelf does not mark the new name as current");
         Assert.assertTrue(names(saves, "saves").contains(to));
         Assert.assertFalse(names(saves, "saves").contains(data.getName()));
-        host.awaitMatching("hello", h -> to.equals(str(h, "currentConquest")), "the start page was not told the new name");
+        host.awaitMatching("hello", h -> h.has("campaignResume") && to.equals(str(h.getAsJsonObject("campaignResume"), "conquest")), "the start page was not told the new name");
         Assert.assertFalse(data.getDirectory().exists(), "the old folder is still there");
 
         // A name another conquest has is refused, and nothing is renamed

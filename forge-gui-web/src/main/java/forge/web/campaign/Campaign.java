@@ -5,14 +5,9 @@ import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.PreparedMatch;
 import forge.web.deck.DeckSession;
 import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
-import forge.web.protocol.FromBrowser.TradePick;
-import forge.web.protocol.ToBrowser.CampaignPrefs;
-import forge.web.protocol.ToBrowser.CampaignResult;
-import forge.web.protocol.ToBrowser.CampaignStats;
 import forge.web.protocol.ToBrowser.CataloguePage;
-import forge.web.protocol.ToBrowser.Reward;
-import forge.web.protocol.ToBrowser.Trading;
 
 import java.io.File;
 import java.io.IOException;

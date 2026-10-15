@@ -45,7 +45,7 @@ public final class OfflineDraft implements Draft {
     private final DraftView view = new DraftView();
     static final String COMMANDER_DRAFT = "CommanderDraft";
 
-    /** make builds the draft, on the draft's thread, since importing a cube waits on a web site; dealt says it has its packs already, as a quest tournament's has; fail hears why it could not. */
+    /** make builds the draft, on the draft's thread, since importing a cube waits on a web site; dealt says its packs are already opened; fail hears why it could not. */
     public OfflineDraft(final Supplier<BoosterDraft> make, final boolean dealt, final String playerName, final Consumer<DraftState> publish,
             final Consumer<String> fail) {
         this.playerName = playerName;

@@ -8,7 +8,6 @@ import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.GauntletMini;
 import forge.gamemodes.match.HostedMatch;
-import forge.gamemodes.quest.QuestEventDraft;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.IHasForgeLog;
@@ -17,7 +16,6 @@ import forge.util.storage.IStorage;
 import forge.web.WebGuiBase;
 import forge.web.WebSession;
 import forge.web.WebSession.Event;
-import forge.web.WebSession.InCampaign;
 import forge.web.WebSession.Playing;
 import forge.web.WebSession.Stage;
 import forge.web.deck.DeckCatalog;
@@ -53,6 +51,8 @@ public final class OfflineLimited implements IHasForgeLog {
     public volatile LimitedResult lastResult;
     /** The draft against the computer, while one is being played. */
     private volatile OfflineDraft draft;
+    /** What the draft is played for when it is not the Limited pages', or null. */
+    private volatile DraftOwner owner;
 
     public OfflineLimited(final WebSession session, final WebGuiBase ui, final Lobby lobby, final DeckSession decks, final LocalGame local) {
         this.session = session;
@@ -196,17 +196,18 @@ public final class OfflineLimited implements IHasForgeLog {
                 channel.send(WebSession.error(ex.getMessage()));
                 return;
             }
-            beginDraft(make, false);
+            beginDraft(make, false, null);
             session.move(now, new Event(EventKind.draft, null));
         }
     }
 
-    /** Starts a draft against the computer unless one is running. dealt is true for packs already opened, as a quest tournament's are. */
-    public boolean beginDraft(final Supplier<BoosterDraft> make, final boolean dealt) {
+    /** Starts a draft against the computer unless one is running. dealt is true for packs already opened; owner, when not null, keeps the decks. */
+    public boolean beginDraft(final Supplier<BoosterDraft> make, final boolean dealt, final DraftOwner owner) {
         synchronized (session) {
             if (draft != null) {
                 return false;
             }
+            this.owner = owner;
             draft = new OfflineDraft(make, dealt, session.playerName(), session::tell, problem -> {
                 endDraft();
                 session.tell(WebSession.error(problem));
@@ -226,6 +227,7 @@ public final class OfflineLimited implements IHasForgeLog {
         synchronized (session) {
             ended = draft;
             draft = null;
+            owner = null;
         }
         if (ended == null) {
             return;
@@ -239,20 +241,12 @@ public final class OfflineLimited implements IHasForgeLog {
         }
     }
 
-    /** Whether the draft running is a quest tournament's, which the quest's page holds instead of the Limited page. */
-    private boolean tournamentDrafting() {
-        return draft != null && session.stage() instanceof InCampaign c && c.mode() == CampaignMode.quest;
-    }
-
-    /** Stops the draft unsaved; a tournament's is left as desktop leaves it, with its fee given back. */
+    /** Stops the draft unsaved, and tells its owner. */
     private void discardDraft() {
-        final boolean tournament = tournamentDrafting();
+        final DraftOwner was = owner;
         endDraft();
-        if (tournament) {
-            session.onCampaign(() -> {
-                session.quest.cancelDraft();
-                session.sendCampaign();
-            });
+        if (was != null) {
+            was.discarded();
         }
     }
 
@@ -262,19 +256,16 @@ public final class OfflineLimited implements IHasForgeLog {
         if (!session.hosting() || draft == null || draft.latest() == null || !draft.latest().done()) {
             return;
         }
-        if (tournamentDrafting()) {
-            // A tournament's draft is kept under the one name Quest gives it, so the browser's name is not used
-            draft.save(QuestEventDraft.DECK_NAME).whenCompleteAsync((group, ex) -> {
+        final DraftOwner keeper = owner;
+        if (keeper != null) {
+            // An owner keeps its drafts under the one name it gives them, so the browser's name is not used
+            draft.save(keeper.deckName()).whenCompleteAsync((group, ex) -> {
                 if (ex != null) {
                     session.tell(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionDraftSaveFailed", String.valueOf(ex.getMessage()))));
                     return;
                 }
                 endDraft();
-                session.onCampaign(() -> {
-                    final IStorage<DeckGroup> pools = session.quest.drafted(group);
-                    session.sendCampaign();
-                    decks.openPool(group.getHumanDeck(), pools, GameType.QuestDraft, session.browser());
-                });
+                keeper.saved(group);
             });
             return;
         }

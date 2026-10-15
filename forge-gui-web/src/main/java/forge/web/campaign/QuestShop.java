@@ -19,8 +19,8 @@ import forge.util.ItemPool;
 import forge.util.Localizer;
 import forge.web.WebGuiBase;
 import forge.web.deck.CardCatalog;
+import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
-import forge.web.protocol.FromBrowser.TradePick;
 import forge.web.protocol.ToBrowser.*;
 
 import java.io.File;

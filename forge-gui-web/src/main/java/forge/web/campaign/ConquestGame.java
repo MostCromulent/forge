@@ -35,9 +35,9 @@ import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckEditor;
 import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.Commands;
 import forge.web.protocol.Commands.Handler;
-import forge.web.protocol.FromBrowser;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser.*;
 import org.apache.commons.lang3.EnumUtils;
@@ -475,7 +475,7 @@ public final class ConquestGame implements Campaign {
     }
 
     /** The Aether under these filters, after a pull if one is asked for. */
-    ConquestAetherState aether(final FromBrowser.ConquestAetherQuery q) {
+    ConquestAetherState aether(final ConquestAetherQuery q) {
         final ConquestData data = model();
         final ConquestAether.Filter start = ConquestAether.Filter.startingFor(data.getSelectedCommander());
         // A query that names no type is the visit's first, and takes the filters mobile starts with
@@ -836,14 +836,14 @@ public final class ConquestGame implements Campaign {
                 c.game().select(at.region(), at.row(), at.col());
                 ch.send(c.game().state(List.of()));
             }))
-            .on(Plain.conquestMove, inSave((c, ch, m) -> {
+            .on(CampaignPlain.conquestMove, inSave((c, ch, m) -> {
                 // A move with nowhere to go is not answered: a map with no path would end a walk under way
                 final List<ConquestLocation> walked = c.game().move();
                 if (walked != null) {
                     ch.send(c.game().state(walked));
                 }
             }))
-            .on(Plain.conquestBattle, inSave((c, ch, b) -> {
+            .on(CampaignPlain.conquestBattle, inSave((c, ch, b) -> {
                 // A reward still to be shown may end in a chaos battle, which comes before any other
                 if (c.game().reward != null) {
                     return;
@@ -855,14 +855,14 @@ public final class ConquestGame implements Campaign {
                 }
                 startBattle(c.game().battle(), c.host());
             }))
-            .on(Plain.conquestParty, inSave((c, ch, p) -> ch.send(c.game().party())))
+            .on(CampaignPlain.conquestParty, inSave((c, ch, p) -> ch.send(c.game().party())))
             .on(ConquestAetherQuery.class, inSave((c, ch, q) -> {
                 ch.send(c.game().aether(q));
                 if (q.pull()) {
                     ch.send(c.game().bar());
                 }
             }))
-            .on(Plain.conquestPlanes, inSave((c, ch, p) -> ch.send(c.game().planes())))
+            .on(CampaignPlain.conquestPlanes, inSave((c, ch, p) -> ch.send(c.game().planes())))
             .on(ConquestPlaneswalk.class, inSave((c, ch, go) -> {
                 final String problem = c.game().planeswalk(go.plane(), go.unlock());
                 if (problem != null) {
