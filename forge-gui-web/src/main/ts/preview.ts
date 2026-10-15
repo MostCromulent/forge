@@ -1,3 +1,7 @@
+// The card preview every page shares: a large picture beside the pointer, or on a phone a sheet after a long press.
+// An element joins it by data attributes. data-image holds its picture's key. data-act labels the sheet's button, which clicks it.
+// data-menu says it has a right-click menu for the sheet to offer. data-list marks a container whose cards the sheet's arrows step through.
+
 import { appendSymbolText, cardImageSrc, imageUrl, setImage, setSymbolText } from './images';
 import { showFoil, tiltFoil } from './match/foil';
 import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './match/rulestext';
