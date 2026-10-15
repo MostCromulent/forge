@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { artUrl } from '../sleeves';
-import { imageUrl } from '../images';
+import { imageUrl, hideBroken } from '../images';
 import { Pip, Pips } from '../symbols';
 import { StepForm, type Step, type Ticket } from '../setup';
 import type { Actions } from '../actions';
@@ -97,7 +97,7 @@ function TicketCard({ card }: { card: ConquestCardOption }) {
   return (
     <span class="cq-pic" key={card.name}>
       <span class="nm">{card.name}</span>
-      <img alt="" src={imageUrl(card.image)} onError={e => { e.currentTarget.hidden = true; }} />
+      <img alt="" src={imageUrl(card.image)} onError={hideBroken} />
     </span>
   );
 }

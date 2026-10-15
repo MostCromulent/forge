@@ -39,20 +39,7 @@ export function renderPlanes(model: Model, actions: Actions): void {
   match.classList.toggle('planar', planes.length > 0);
   if (!planes.length) return;
 
-  reconcile(q(dock, '.planes'), planes, c => c.$key,
-    () => {
-      const el = make('div', 'plane');
-      el.innerHTML = '<img alt="" draggable="false"><span class="plane-name"></span>';
-      hoverable(el);
-      return el;
-    },
-    (el, card) => {
-      const src = cardImageSrc(model, card);
-      setImage(q<HTMLImageElement>(el, 'img'), src);
-      el.dataset.key = String(card.$key);
-      el.dataset.zoom = src;
-      q(el, '.plane-name').textContent = stateOf(model, card).Name ?? '';
-    });
+  drawNamedTiles(q(dock, '.planes'), model, planes, 'plane');
   // The plane's art tints the table, as the mobile client does
   match.style.setProperty('--plane-art', cssUrl(cardImageSrc(model, planes[0])));
   const owner = deref(model, planes[0].Owner) as PlayerView | undefined;
@@ -71,4 +58,23 @@ export function renderPlanes(model: Model, actions: Actions): void {
   // The dock hangs just above the divider between the two halves of the table
   const strip = byId('phase-strip');
   dock.style.top = `${Math.max(8, strip.offsetTop - dock.offsetHeight - 6)}px`;
+}
+
+/** A card shown landscape beside the board, as a plane or a scheme is: its picture, which previews it, and its name. cls names the tile, and cls-name its name. */
+export function drawNamedTiles(root: HTMLElement, model: Model, cards: CardView[], cls: string): void {
+  reconcile(root, cards, c => c.$key,
+    () => {
+      const el = make('div', cls);
+      el.innerHTML = `<img alt="" draggable="false"><span class="${cls}-name"></span>`;
+      hoverable(el);
+      return el;
+    },
+    (el, card) => {
+      const src = cardImageSrc(model, card);
+      setImage(q<HTMLImageElement>(el, 'img'), src);
+      el.dataset.zoom = src;
+      const name = stateOf(model, card).Name ?? '';
+      q(el, `.${cls}-name`).textContent = name;
+      el.title = name;
+    });
 }

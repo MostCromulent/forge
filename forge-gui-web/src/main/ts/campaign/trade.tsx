@@ -2,7 +2,7 @@
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { imageUrl, skinIconUrl } from '../images';
+import { imageUrl, skinIconUrl, hideBroken } from '../images';
 import { ColourToggles, toggled } from '../symbols';
 import { useDebounced } from '../hooks';
 import { showNotice } from '../notices';
@@ -142,7 +142,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
               <button key={keyOf(row)} class={`cq-cc${pick ? ' sel' : ''}${row.problem ? ' used' : ''}`} title={row.problem ?? row.name}
                 aria-pressed={!!pick} aria-disabled={!!row.problem}
                 onClick={() => (row.problem ? showNotice({ t: 'notice', title: row.problem, error: false }) : toggle(pickOf(row)))}>
-                <span class="cq-pic"><span class="nm">{row.name}</span><img loading="lazy" alt="" src={imageUrl(row.image)} onError={e => { e.currentTarget.hidden = true; }} /></span>
+                <span class="cq-pic"><span class="nm">{row.name}</span><img loading="lazy" alt="" src={imageUrl(row.image)} onError={hideBroken} /></span>
                 {row.isNew && <span class="new-card">{t('lblNew')}</span>}
                 {row.problem && <span class="inuse">{blocked}</span>}
                 {said.count && row.count != null && <span class="cq-stock">{said.count(row.count)}</span>}

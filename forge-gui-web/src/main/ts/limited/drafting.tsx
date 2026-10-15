@@ -296,6 +296,7 @@ function clockText(ms: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+/** The browser's own drag and drop carries a pick: nothing is judged on the way, which the deck editor's pointer drag (deck/drag.ts) is for. */
 function startDrag(e: DragEvent, drag: Drag): void {
   e.dataTransfer?.setData(DRAG_TYPE, JSON.stringify(drag));
   if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';

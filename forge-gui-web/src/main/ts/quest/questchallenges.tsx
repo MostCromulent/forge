@@ -4,16 +4,10 @@ import { useState } from 'preact/hooks';
 import { SidePanel } from '../campaign/campaign';
 import { Brings, Difficulty, WorldButtons } from './questduels';
 import { artUrl } from '../sleeves';
-import { skinIconUrl } from '../images';
 import type { Actions } from '../actions';
 import type { QuestChallengeRow, QuestChallenges, QuestDuels } from '../protocol';
-import { t, formatNumber } from '../text';
-
-const CREDITS = 'ICO_QUEST_COINSTACK';
-
-function Credits({ n }: { n: number }) {
-  return <span class="qu-price"><img alt={t('lblCredits')} src={skinIconUrl(CREDITS)} />{formatNumber(n)}</span>;
-}
+import { t } from '../text';
+import { Price } from './credits';
 
 function Tile({ challenge, chosen, choose }: { challenge: QuestChallengeRow; chosen: boolean; choose: () => void }) {
   return (
@@ -26,7 +20,7 @@ function Tile({ challenge, chosen, choose }: { challenge: QuestChallengeRow; cho
           {challenge.repeatable && <span class="cq-chip">{t('lblWebQuestRepeatable')}</span>}
         </span>
         <p>{challenge.description}</p>
-        <span class="f"><Credits n={challenge.credits} />{challenge.cardReward.length > 0 && <span>{t('lblWebNCards', challenge.cardReward.length)}</span>}</span>
+        <span class="f"><Price n={challenge.credits} />{challenge.cardReward.length > 0 && <span>{t('lblWebNCards', challenge.cardReward.length)}</span>}</span>
       </span>
     </button>
   );
@@ -73,7 +67,7 @@ export function Challenges({ page, duels, actions }: { page: QuestChallenges; du
           <dl class="qu-facts">
             <dt>{t('lblWebQuestOpponentLife')}</dt><dd>{challenge.aiLife}</dd>
             {challenge.humanLife != null && <><dt>{t('lblWebQuestYourLife')}</dt><dd>{challenge.humanLife}</dd></>}
-            <dt>{t('lblWebQuestBounty')}</dt><dd><Credits n={challenge.credits} /></dd>
+            <dt>{t('lblWebQuestBounty')}</dt><dd><Price n={challenge.credits} /></dd>
           </dl>
           <Starting title={t('lblWebQuestYouStartWith')} cards={challenge.humanCards} />
           <Starting title={t('lblWebQuestOpponentStartsWith')} cards={challenge.aiCards} />

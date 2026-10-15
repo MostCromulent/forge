@@ -27,3 +27,16 @@ export function useDismiss(open: boolean, root: RefObject<HTMLElement>, close: (
     };
   }, [open]);
 }
+
+/** A button that asks twice, for what cannot be undone: the first press arms it, which its label then says, and the second runs act. */
+export function useTwoPress(): [armed: boolean, press: (act: () => void) => () => void] {
+  const [armed, setArmed] = useState(false);
+  return [armed, act => () => {
+    if (!armed) {
+      setArmed(true);
+      return;
+    }
+    act();
+    setArmed(false);
+  }];
+}

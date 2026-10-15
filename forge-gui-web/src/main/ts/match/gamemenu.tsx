@@ -12,6 +12,7 @@ import { useClosing } from '../closing';
 import { changeUi, ui } from '../ui';
 import { Backdrop } from '../dialog';
 import { ICONS, Icon } from '../icons';
+import { useTwoPress } from '../hooks';
 
 /** A menu item's icon, at its start or, with end, at its end. */
 export const MenuIcon = ({ d, end, cls }: { d: string; end?: boolean; cls?: string }) => <Icon d={d} cls={['menu-icon', end ? 'end' : '', cls ?? ''].filter(Boolean).join(' ')} />;
@@ -19,7 +20,7 @@ export const MenuIcon = ({ d, end, cls }: { d: string; end?: boolean; cls?: stri
 export function GameMenu({ model, actions, close, open }: {
   model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'devSetup') => void;
 }) {
-  const [armed, setArmed] = useState(false);
+  const [armed, press] = useTwoPress();
   const [dev, setDev] = useState(false);
   const [mats, setMats] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
@@ -58,14 +59,10 @@ export function GameMenu({ model, actions, close, open }: {
           <MenuIcon d={ICONS.draw} />{offer?.mine ? t('lblWebGameMenuDrawOffered') : t('lblWebGameMenuOfferDraw')}
         </button>
         <button type="button" role="menuitem" class={armed ? 'card-menu-item concede armed' : 'card-menu-item concede'}
-          disabled={model.spectating} onClick={() => {
-            if (!armed) {
-              setArmed(true);
-              return;
-            }
+          disabled={model.spectating} onClick={press(() => {
             actions.concede();
             close();
-          }}>
+          })}>
           {!armed && <MenuIcon d={ICONS.concede} />}{armed ? t('lblWebGameMenuConcedeAgain') : t('lblConcede')}
         </button>
         {/* The host's alone: its seat shares a process with the server, and a guest's does not */}
@@ -144,21 +141,14 @@ const KIND_LABEL: Record<AutoDecision['kind'], TextKey> = {
 
 /** The auto-yields and trigger answers set during play, each of which can be forgotten, as desktop's dialog lists them. */
 export function AutoDecisionsDialog({ model, actions, close }: { model: Model; actions: Actions; close: () => void }) {
-  const [armed, setArmed] = useState(false);
+  const [forgetting, forgetAll] = useTwoPress();
   const [ordersReset, setOrdersReset] = useState(false);
   const all = model.autoDecisions;
   const entries = all?.entries ?? [];
   return (
     <OptionsDialog title={t('lblAutoYieldsAndTriggers')} kind="decisions-dialog" close={close} footer={<>
       <span class="hint">{t('lblWebGameMenuDecisionsHint')}</span>
-      <button class={armed ? 'clear-all armed' : 'clear-all'} disabled={!entries.length} onClick={() => {
-        if (!armed) {
-          setArmed(true);
-          return;
-        }
-        setArmed(false);
-        actions.autoDecisions('clear');
-      }}>{armed ? t('lblWebGameMenuForgetAllAgain') : t('lblWebGameMenuForgetAll')}</button>
+      <button class={forgetting ? 'clear-all armed' : 'clear-all'} disabled={!entries.length} onClick={forgetAll(() => actions.autoDecisions('clear'))}>{forgetting ? t('lblWebGameMenuForgetAllAgain') : t('lblWebGameMenuForgetAll')}</button>
     </>}>
       {/* Each mode keeps its own list, so the list is read again after a change */}
       <Row def={YIELD_MODE} onChange={() => actions.autoDecisions('list')} />

@@ -74,5 +74,8 @@ export const abilityUrl = (icon: string): string => `ability?k=${encodeURICompon
 export const skinIconUrl = (icon: string): string => `skinicon?k=${encodeURIComponent(icon)}`;
 
 export function hideOnError(img: HTMLImageElement): void {
-  img.addEventListener('error', () => { img.hidden = true; });
+  img.addEventListener('error', hideBroken);
 }
+
+/** An image's error handler that hides it, so a missing picture leaves its place rather than a broken-image mark. */
+export const hideBroken = (e: Event): void => { (e.currentTarget as HTMLImageElement).hidden = true; };

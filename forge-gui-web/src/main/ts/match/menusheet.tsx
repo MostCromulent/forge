@@ -1,6 +1,6 @@
 // The phone's menu: what the side column holds on a desktop, behind one button.
 
-import { useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 import { byId } from '../dom';
 import { changeUi, ui } from '../ui';
 import { sheet, swipeDown } from '../sheet';
@@ -9,6 +9,7 @@ import { players, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
 import type { Actions } from '../actions';
 import { t } from '../text';
+import { useTwoPress } from '../hooks';
 
 const TABS = ['log', 'chat', 'players'] as const;
 type Tab = typeof TABS[number];
@@ -16,7 +17,7 @@ type Tab = typeof TABS[number];
 export function MenuSheet({ model, actions }: { model: Model; actions: Actions }) {
   const root = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLDivElement>(null);
-  const [armed, setArmed] = useState(false);
+  const [armed, press] = useTwoPress();
   const shown = TABS.filter(x => x !== 'chat' || model.networked);
   const tab: Tab = shown.find(x => x === ui.menuSheet) ?? 'log';
   const close = () => changeUi(u => { u.menuSheet = null; });
@@ -70,14 +71,10 @@ export function MenuSheet({ model, actions }: { model: Model; actions: Actions }
       <div class="menu-foot">
         <button type="button" onClick={() => changeUi(u => { u.menuSheet = null; u.optionsOpen = true; })}>{t('lblWebHeadOptions')}</button>
         {/* Asked twice, as the game menu asks */}
-        <button type="button" class={armed ? 'concede armed' : 'concede'} disabled={model.spectating} onClick={() => {
-          if (!armed) {
-            setArmed(true);
-            return;
-          }
+        <button type="button" class={armed ? 'concede armed' : 'concede'} disabled={model.spectating} onClick={press(() => {
           actions.concede();
           close();
-        }}>{armed ? t('lblWebGameMenuConcedeAgain') : t('lblConcede')}</button>
+        })}>{armed ? t('lblWebGameMenuConcedeAgain') : t('lblConcede')}</button>
       </div>
     </div>
   );

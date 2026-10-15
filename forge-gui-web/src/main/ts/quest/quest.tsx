@@ -10,6 +10,7 @@ import { Challenges } from './questchallenges';
 import { Bazaar } from './questbazaar';
 import { Tournaments } from './questtournaments';
 import { NewQuest } from './questnew';
+import { CREDITS } from './credits';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { QuestSave } from '../protocol';
@@ -23,7 +24,7 @@ const FANTASY_ONLY: QuestTab[] = ['bazaar'];
 export function Quest({ model, actions }: { model: Model; actions: Actions }) {
   const saves = model.questSaves;
   return (
-    <CampaignShell model={model} actions={actions} icons={['ICO_QUEST_COINSTACK', 'ICO_QUEST_LIFE']}
+    <CampaignShell model={model} actions={actions} icons={[CREDITS, 'ICO_QUEST_LIFE']}
       shelf={(creating, setCreating) => (
         <CampaignShelf model={model} actions={actions} creating={creating} setCreating={setCreating}
           words={{ mode: t('lblQuestMode'), new: t('lblWebQuestNew'), yours: t('lblWebQuestYours'), reading: t('lblWebQuestReading') }}
@@ -47,7 +48,7 @@ function Saves({ saves, current, actions, create }: { saves: QuestSave[]; curren
           <b class="pct">{t('lblWebQuestRecord', s.wins, s.losses)}</b>
           <span class="sp" />
           {t('lblWebNCards', s.cards)}
-          <Purse icon="ICO_QUEST_COINSTACK" n={s.credits} label={t('lblCredits')} />
+          <Purse icon={CREDITS} n={s.credits} label={t('lblCredits')} />
         </span>
         <span class="ev-line dim">{s.world}</span>
       </>}

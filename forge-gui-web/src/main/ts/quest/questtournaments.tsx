@@ -3,14 +3,14 @@
 import { useState } from 'preact/hooks';
 import { balance } from '../campaign/campaign';
 import { PricedButton } from '../campaign/trade';
-import { imageUrl } from '../images';
+import { imageUrl, hideBroken } from '../images';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { QuestBracket, QuestSeat, QuestTournamentRow, QuestTournaments } from '../protocol';
 import { t, type TextKey } from '../text';
 import { Confirm } from '../dialog';
+import { CREDITS } from './credits';
 
-const CREDITS = 'ICO_QUEST_COINSTACK';
 const PLACES: TextKey[] = ['lblWebQuestFirstPlace', 'lblWebQuestSecondPlace', 'lblWebQuestThirdPlace', 'lblWebQuestFourthPlace'];
 const ROUNDS: TextKey[] = ['lblQuarterfinals', 'lblSemifinals', 'lblFinalMatch', 'lblWinner'];
 const terms = (): string => [t('lblWebQuestEightPlayers'), t('lblWebQuestSingleElimination'), t('lblWebLimitedBestOf', 3)].join(' · ');
@@ -19,7 +19,7 @@ function Tile({ row, credits, actions }: { row: QuestTournamentRow; credits: num
   return (
     <article class="qu-tourney">
       <div class="qu-tourney-packs">
-        {row.packImages.map((key, i) => <img key={i} alt={row.packs[i]} src={imageUrl(key)} onError={e => { e.currentTarget.hidden = true; }} />)}
+        {row.packImages.map((key, i) => <img key={i} alt={row.packs[i]} src={imageUrl(key)} onError={hideBroken} />)}
       </div>
       <div class="qu-tourney-t">
         <b>{row.title}</b>

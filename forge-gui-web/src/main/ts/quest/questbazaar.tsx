@@ -3,13 +3,13 @@
 import { useEffect } from 'preact/hooks';
 import { balance } from '../campaign/campaign';
 import { PricedButton } from '../campaign/trade';
-import { imageUrl, skinIconUrl } from '../images';
+import { imageUrl, skinIconUrl, hideBroken } from '../images';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { QuestItemRow } from '../protocol';
 import { t } from '../text';
+import { CREDITS } from './credits';
 
-const CREDITS = 'ICO_QUEST_COINSTACK';
 /** Levels drawn as squares; an item that goes higher shows its level as words alone. */
 const MOST_SQUARES = 6;
 
@@ -17,7 +17,7 @@ function Item({ item, stall, credits, actions }: { item: QuestItemRow; stall: st
   return (
     <article class="qu-item">
       <span class="qu-item-pic">
-        {item.card ? <img alt="" src={imageUrl(item.card)} onError={e => { e.currentTarget.hidden = true; }} />
+        {item.card ? <img alt="" src={imageUrl(item.card)} onError={hideBroken} />
           : item.icon ? <img alt="" src={skinIconUrl(item.icon)} /> : null}
       </span>
       <div class="qu-item-t">

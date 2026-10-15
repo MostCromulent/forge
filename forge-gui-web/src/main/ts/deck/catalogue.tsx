@@ -1,7 +1,7 @@
 // The editor's left half, where cards the deck can't use are left out until a filter asks for them
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { imageUrl } from '../images';
+import { imageUrl, hideBroken } from '../images';
 import { lift, liftFromLine } from '../flight';
 import { ColourToggles, SymbolText, toggled } from '../symbols';
 import { useDebounced } from '../hooks';
@@ -351,7 +351,7 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
       <button class="tile" data-image={row.image} data-act={commanderWanted ? t('lblWebCardMenuMakeCommander') : t('lblAdd')}
         {...handlers(row.name, 'catalogue', row.image, 1)} onClick={() => (commanderWanted ? makeCommander(row.name) : add(row.name))}>
         <span class="tile-name">{row.name}</span>
-        <img loading="lazy" alt="" draggable={false} src={imageUrl(row.image)} onError={e => { e.currentTarget.hidden = true; }} />
+        <img loading="lazy" alt="" draggable={false} src={imageUrl(row.image)} onError={hideBroken} />
         {count > 0 && <span class="badge">{count}</span>}
         {row.isNew && <span class="new-card">{t('lblNew')}</span>}
       </button>

@@ -37,11 +37,17 @@ export function createCard(onClick: CardClick): HTMLDivElement {
 
 const has = (refs: Ref[] | undefined, key: number) => (refs ?? []).some(r => r.ref === key);
 
+/** The five colours by their bit in Forge's MagicColor mask. */
+export const COLOUR_BITS: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G']];
+
+/** Whether a power or toughness is above or below what the card is on its own, as a pump, a counter or a shrink leaves it. */
+export const ptShift = (now: number, base: number | undefined): string => (base === undefined || now === base ? '' : now > base ? 'up' : 'down');
+
 /** The frame of a card drawn without its image, from a MagicColor mask: its one colour, M for several, and L or C for none. */
 export function frameColour(colours: number, type: string): string {
-  const one = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G']].filter(([bit]) => colours & (bit as number));
+  const one = COLOUR_BITS.filter(([bit]) => colours & bit);
   if (one.length > 1) return 'M';
-  if (one.length === 1) return one[0][1] as string;
+  if (one.length === 1) return one[0][1];
   return /Land/.test(type) ? 'L' : 'C';
 }
 
@@ -123,14 +129,13 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   if (pt.textContent && power + toughness && pt.textContent !== power + toughness) {
     replay(pt, 'changed');
   }
-  // Above or below what the card is on its own, as a pump, a counter or a shrink leaves it; damage counts as below
-  const shift = (now: number, base: number | undefined) => (base === undefined || now === base ? '' : now > base ? 'up' : 'down');
   const p = q(el, '.pt-p');
   p.textContent = power;
-  p.dataset.shift = creature ? shift(state.Power ?? 0, state.BasePower) : '';
+  p.dataset.shift = creature ? ptShift(state.Power ?? 0, state.BasePower) : '';
   const hurt = q(el, '.pt-t');
   hurt.textContent = toughness;
-  hurt.dataset.shift = creature ? shift((state.Toughness ?? 0) - damage, state.BaseToughness) : '';
+  // Damage counts as below
+  hurt.dataset.shift = creature ? ptShift((state.Toughness ?? 0) - damage, state.BaseToughness) : '';
   hurt.classList.toggle('hurt', creature && damage > 0);
   pt.classList.toggle('on', !!(power + toughness));
   showDamage(el, damage);

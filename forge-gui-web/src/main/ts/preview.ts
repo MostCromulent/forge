@@ -1,6 +1,6 @@
 import { appendSymbolText, cardImageSrc, imageUrl, setImage, setSymbolText } from './images';
 import { COMMANDER_LETHAL, COMMANDER_WARNING } from './match/board';
-import { frameColour } from './match/cards';
+import { frameColour, ptShift } from './match/cards';
 import { showFoil, tiltFoil } from './match/foil';
 import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './match/rulestext';
 import { byId, lean, pointerOn, q, replay, make, placeBeside } from './dom';
@@ -537,13 +537,12 @@ function drawPt(el: HTMLElement, model: Model, key: number | null, face: CardFac
   }
   const power = state.Power ?? 0;
   const toughness = (state.Toughness ?? 0) - (card.Damage ?? 0);
-  const shift = (now: number, base: number | undefined) => (base === undefined || now === base ? '' : now > base ? 'up' : 'down');
   const p = document.createElement('i');
   p.textContent = String(power);
-  p.dataset.shift = shift(power, state.BasePower);
+  p.dataset.shift = ptShift(power, state.BasePower);
   const tough = document.createElement('i');
   tough.textContent = String(toughness);
-  tough.dataset.shift = card.Damage ? 'down' : shift(toughness, state.BaseToughness);
+  tough.dataset.shift = card.Damage ? 'down' : ptShift(toughness, state.BaseToughness);
   el.replaceChildren(p, '/', tough);
 }
 

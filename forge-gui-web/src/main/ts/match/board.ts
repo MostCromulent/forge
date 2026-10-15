@@ -11,7 +11,7 @@ import { foldStack, renderStack } from './stack';
 import { renderPlanes } from './planes';
 import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';
 import { renderPhaseBar, stopWaiting } from './phasebar';
-import { forgetPictures } from './cards';
+import { COLOUR_BITS, forgetPictures } from './cards';
 import { artUrl } from '../sleeves';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from '../looks';
 import { animateCardMoves, noteBoard, resetMotion, showCount } from './motion';
@@ -35,7 +35,7 @@ import { t, type TextKey } from '../text';
 import { ICONS, iconSvg } from '../icons';
 
 // The Mana property counts the pool by Forge's mana bit (ManaAtom): the five colours as MagicColor has them, and colourless its own bit
-const MANA: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
+const MANA: [number, string][] = [...COLOUR_BITS, [32, 'C']];
 
 /** Commander damage that loses the game, and the point from which the portrait warns of it. */
 export const COMMANDER_LETHAL = 21;

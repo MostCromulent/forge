@@ -18,6 +18,7 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ConquestSave } from '../protocol';
 import { t, shortDay, type TextKey } from '../text';
+import { hideBroken } from '../images';
 
 export function Conquest({ model, actions }: { model: Model; actions: Actions }) {
   const saves = model.conquestSaves;
@@ -39,7 +40,7 @@ function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; cur
       create={{ title: t('lblWebConquestNew'), go: create }}
       art={s => (
         <div class="cq-save-art" style={{ backgroundImage: `url("${artUrl(s.art)}")` }}>
-          <img class="cq-medal" alt="" src={artUrl(s.walkerImage)} onError={e => { e.currentTarget.hidden = true; }} />
+          <img class="cq-medal" alt="" src={artUrl(s.walkerImage)} onError={hideBroken} />
         </div>
       )}
       sub={s => <span class="sub">{s.planeswalker} - {s.plane}</span>}

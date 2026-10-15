@@ -2,15 +2,15 @@
 
 import { TYPES } from '../deck/catalogue';
 import { TradePage, pickOf, type Pick, type TradeWords } from '../campaign/trade';
-import { imageUrl, skinIconUrl } from '../images';
+import { imageUrl, hideBroken } from '../images';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { Product } from '../protocol';
-import { t, formatNumber } from '../text';
+import { t } from '../text';
+import { CREDITS, Price } from './credits';
 
 /** Where a sentence puts the credits' coin. */
 const COIN = '{CR}';
-const CREDITS = 'ICO_QUEST_COINSTACK';
 
 /** The shop's packs, boxes and decks, each picked whole as a card is. */
 function Products({ products, picked, toggle }: { products: Product[]; picked: Map<string, Pick>; toggle: (pick: Pick) => void }) {
@@ -21,10 +21,10 @@ function Products({ products, picked, toggle }: { products: Product[]; picked: M
       {products.map(p => (
         <button key={p.key} class="qu-product" aria-pressed={picked.has(p.key)}
           onClick={() => toggle({ key: p.key, name: p.name, value: p.price, count: 1, most: 1 })}>
-          <span class="qu-product-pic"><img loading="lazy" alt="" src={imageUrl(p.image)} onError={e => { e.currentTarget.hidden = true; }} /></span>
+          <span class="qu-product-pic"><img loading="lazy" alt="" src={imageUrl(p.image)} onError={hideBroken} /></span>
           <span class="qu-product-kind">{p.kind}</span>
           <b>{p.name}</b>
-          <span class="qu-price"><img alt={t('lblCredits')} src={skinIconUrl(CREDITS)} />{formatNumber(p.price)}</span>
+          <Price n={p.price} />
         </button>
       ))}
     </div>

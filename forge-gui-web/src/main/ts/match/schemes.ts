@@ -1,9 +1,8 @@
 // A scheme set in motion is shown to the whole table for a moment, then the ongoing ones sit in a row under their archenemy's seat
 
-import { reconcile } from './render';
+import { drawNamedTiles } from './planes';
 import { cardImageSrc, setImage } from '../images';
 import { players, stateOf, zone, type Model } from '../model';
-import { hoverable } from '../preview';
 import { byId, q, make, reducedMotion } from '../dom';
 import { commandKind } from './command';
 import type { CardView, PlayerView } from '../protocol';
@@ -26,22 +25,7 @@ export function isArchenemy(model: Model, player: PlayerView): boolean {
 
 /** The ongoing schemes under a seat, drawn landscape as they are printed. */
 export function renderOngoing(root: HTMLElement, model: Model, player: PlayerView): void {
-  reconcile(root, schemesOf(model, player), c => c.$key,
-    () => {
-      const el = make('div', 'scheme');
-      el.innerHTML = '<img alt="" draggable="false"><span class="scheme-name"></span>';
-      hoverable(el);
-      return el;
-    },
-    (el, card) => {
-      const src = cardImageSrc(model, card);
-      setImage(q<HTMLImageElement>(el, 'img'), src);
-      el.dataset.key = String(card.$key);
-      el.dataset.zoom = src;
-      const name = stateOf(model, card).Name ?? '';
-      q(el, '.scheme-name').textContent = name;
-      el.title = name;
-    });
+  drawNamedTiles(root, model, schemesOf(model, player), 'scheme');
 }
 
 let seen: Set<number> | null = null;

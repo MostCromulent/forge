@@ -1,7 +1,7 @@
 // The engine thread waits for the answer to a question the host is asked, so cancelling sends an empty choice instead of nothing
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { imageUrl } from './images';
+import { imageUrl, hideBroken } from './images';
 import { t } from './text';
 import type { Actions } from './actions';
 import type { HostChoice as Question } from './protocol';
@@ -21,7 +21,7 @@ function Pictured({ question, answer }: { question: Question; answer: (value: nu
         <div class="host-pictures">
           {question.options.map((name, i) => (
             <button key={i} class="host-picture" aria-pressed={i === chosen} title={name} onClick={() => setChosen(i)} onDblClick={() => answer([i])}>
-              <img alt="" loading="lazy" src={imageUrl(question.images![i])} onError={e => { e.currentTarget.hidden = true; }} />
+              <img alt="" loading="lazy" src={imageUrl(question.images![i])} onError={hideBroken} />
               <span>{name}</span>
             </button>
           ))}
