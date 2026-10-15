@@ -174,11 +174,13 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
   const [picking, setPicking] = useState(false);
   const [takeHost, setTakeHost] = useState(true);
   const input = useRef<HTMLInputElement>(null);
+  // A name this browser used before is being offered already, so asking again would only flash past.
+  // Before the server's first hello nobody knows whether the host seat is free, and a name sent then would take a guest's place
+  const asking = !model.nameSent && !!model.looks;
   useEffect(() => {
     input.current?.focus();
-  }, []);
-  // A name this browser used before is being offered already, so asking again would only flash past
-  if (model.nameSent) {
+  }, [asking]);
+  if (!asking) {
     return <div class="menu-page start"><Wordmark /></div>;
   }
   // Changing your name later is not the moment to be offered a seat you may already hold

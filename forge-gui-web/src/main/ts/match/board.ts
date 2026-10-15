@@ -935,6 +935,8 @@ let broken: Set<number> | null = null;
 /** False while a portrait breaking at the end of the game has not reached the moment its title follows. */
 let titleReady = true;
 let finalRunning = false;
+/** The longest the result waits on a breaking portrait: a slow machine draws its frames too far apart to keep the break's pace. */
+const TITLE_LIMIT_MS = 6000;
 
 /** Breaks the portrait of each player who has just lost, taking the losses a table already had when first seen as broken. */
 function noticeLosses(model: Model, actions: Actions): void {
@@ -954,7 +956,10 @@ function noticeLosses(model: Model, actions: Actions): void {
 function breakPortraits(model: Model, losers: PlayerView[], actions: Actions): void {
   const g = game(model);
   const final = !!g?.GameOver;
+  let released = false;
   const release = () => {
+    if (released) return;
+    released = true;
     titleReady = true;
     const now = game(model);
     if (now) renderGameOver(model, now, actions);
@@ -981,6 +986,7 @@ function breakPortraits(model: Model, losers: PlayerView[], actions: Actions): v
       match.classList.add('ending');
       // Without WebGL nothing has shown yet, so the title is simply not held back
       run.catch(release);
+      window.setTimeout(release, TITLE_LIMIT_MS);
     } else {
       run.catch(() => {});
     }
