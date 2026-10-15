@@ -3,14 +3,13 @@
 import { useEffect, useState } from 'preact/hooks';
 import { imageUrl } from '../images';
 import { FIVE_COLOURS } from '../symbols';
-import { Curve } from '../deck/deckhalf';
 import { DeckPanel, Plate } from '../deck/deckplate';
-import { CardGroup } from '../deck/importer';
 import { AnyOf, FilterBar, type FilterKind, OneOf } from '../deck/filters';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ConquestCommanderRow, ConquestWalkerRow } from '../protocol';
 import { t } from '../text';
+import { CardGroup, Curve } from '../deck/deckview';
 
 
 /** What both lists are narrowed by: any of these colours, and for a commander the plane it comes from. A planeswalker has no origin. */

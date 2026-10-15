@@ -3,15 +3,14 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CheckSelect } from './editor';
 import { leaveOut, makeCommander, useName } from './importfix';
-import { imageUrl } from '../images';
 import { store, stored } from '../storage';
 import { Pips } from '../symbols';
 import { ui } from '../ui';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { EditorCard, ImportAction, ImportFix, ImportProblem } from '../protocol';
+import type { ImportAction, ImportFix, ImportProblem } from '../protocol';
 import { t } from '../text';
-import { headingText } from './decklist';
+import { CardGroup } from './deckview';
 import { Backdrop } from '../dialog';
 
 const READ_DELAY_MS = 300;
@@ -234,29 +233,6 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
         )}
       </div>
     </Backdrop>
-  );
-}
-
-/** One heading of a deck list and its cards, which the deck finder uses too, marking the Commander game changers. */
-export function CardGroup({ heading, cards, marked, stacked }: {
-  heading: string; cards: EditorCard[]; marked?: ReadonlySet<string>; stacked?: boolean;
-}) {
-  return (
-    <div class="group">
-      <h4>{headingText(heading)}<span>{cards.reduce((n, c) => n + c.count, 0)}</span></h4>
-      {cards.map(c => stacked ? (
-        <div key={c.name} class={`deck-stack${c.problem ? ' bad' : ''}`} data-image={c.image} title={c.problem ? `${c.name}: ${c.problem}` : c.name}>
-          <img alt={c.name} src={imageUrl(c.image)} draggable={false} />
-          {c.count > 1 && <span class="deck-count">×{c.count}</span>}
-          {marked?.has(c.name) && <span class="gc" title={t('lblWebBracketGameChanger')}>GC</span>}
-        </div>
-      ) : (
-        <div key={c.name} class={`dk-line ed-line${c.problem ? ' bad' : ''}${marked?.has(c.name) ? ' changer' : ''}`} data-image={c.image}>
-          <span class="n">{c.count}</span><span class="nm">{c.name}</span>{c.problem && <span class="flag">! {c.problem}</span>}
-          {marked?.has(c.name) && <span class="gc" title={t('lblWebBracketGameChanger')}>GC</span>}
-        </div>
-      ))}
-    </div>
   );
 }
 

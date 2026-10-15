@@ -1,7 +1,8 @@
 // A table's draft or sealed event, as desktop's lobby runs one: the host sets it up and deals the packs once every seat is ready
 
 import { useState } from 'preact/hooks';
-import { StepForm, draftCombo, draftSentence, draftSteps, pickRuleName, sealedSentence, sealedSteps, type DraftValue, type SealedValue } from '../setup';
+import { StepForm } from '../stepform';
+import { draftCombo, draftSentence, draftSteps, pickRuleName, sealedSentence, sealedSteps, type DraftValue, type SealedValue } from '../limited/setup';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
 import type { Model } from '../model';

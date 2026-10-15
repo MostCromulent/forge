@@ -4,7 +4,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { artUrl } from '../sleeves';
 import { imageUrl, hideBroken } from '../images';
 import { Pip, Pips } from '../symbols';
-import { StepForm, type Step, type Ticket } from '../setup';
+import { StepForm, type Step, type Ticket } from '../stepform';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ConquestCardOption, ConquestOptions, ConquestPlaneOption } from '../protocol';

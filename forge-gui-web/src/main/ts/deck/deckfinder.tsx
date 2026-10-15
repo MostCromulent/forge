@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { store, stored, storeJson, storedJson } from '../storage';
-import { Curve, useDeckView } from './deckhalf';
-import { CardGroup, SITES } from './importer';
+import { useDeckView } from './deckhalf';
+import { SITES } from './importer';
 import { AI_ICON, ColourToggles, Pips, toggled } from '../symbols';
 import { changeUi, ui } from '../ui';
 import { DECK_FORMATS } from './editor';
@@ -14,6 +14,7 @@ import type { Bracket, DeckDetails, DeckMatches, DeckSummary, Seat } from '../pr
 import { Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } from './filters';
 import { t, type TextKey } from '../text';
 import { Backdrop } from '../dialog';
+import { CardGroup, Curve } from './deckview';
 
 const SEARCH_DEBOUNCE_MS = 200;
 /** Every net-deck category is its own source, so they answer to one facet and list their categories under it. */

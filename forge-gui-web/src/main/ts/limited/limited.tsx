@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { Shelf } from '../shelf';
-import { StepForm, draftCombo, draftSteps, draftTicket, sealedAction, sealedSteps, sealedTicket, type DraftValue, type SealedValue } from '../setup';
+import { StepForm } from '../stepform';
+import { draftCombo, draftSteps, draftTicket, sealedAction, sealedSteps, sealedTicket, type DraftValue, type SealedValue } from './setup';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from '../header';
 import { COLOUR_NAMES, Pips } from '../symbols';
 import { changeUi } from '../ui';

@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { DeckPanel, Plate } from '../deck/deckplate';
-import { Curve } from '../deck/deckhalf';
-import { CardGroup } from '../deck/importer';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { QuestDecks } from '../protocol';
 import { NameForm } from '../shelf';
 import { t } from '../text';
+import { CardGroup, Curve } from '../deck/deckview';
 
 export function Decks({ page, model, actions }: { page: QuestDecks; model: Model; actions: Actions }) {
   const [chosen, setChosen] = useState<string | null>(null);

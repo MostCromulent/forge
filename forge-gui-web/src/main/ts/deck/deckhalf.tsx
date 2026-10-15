@@ -6,6 +6,7 @@ import { isPortrait } from '../form';
 import { flyingFor, land } from '../flight';
 import { drawHand, headingText, regroup, type GroupBy } from './decklist';
 import { imageUrl } from '../images';
+import { Curve } from './deckview';
 import { Pip, Pips, SymbolText } from '../symbols';
 import type { Actions } from '../actions';
 import type { CardHandlers } from './drag';
@@ -292,34 +293,6 @@ function Breakdown({ title, counts }: { title: string; counts: number[] }) {
       <div class="share-key">
         {parts.map(p => <span key={p.letter}><i data-colour={p.letter}>{p.letter}</i>{p.n} <small>{Math.round((p.n / total) * 100)}%</small></span>)}
       </div>
-    </div>
-  );
-}
-
-/** A deck's mana curve as bars px tall at most, with the average beside the heading when it is given. */
-// Bar heights are pixels because a percentage would resolve against an auto-sized row and collapse
-export function Curve({ curve, creatures, average, px }: { curve: number[]; creatures: number[]; average?: number; px: number }) {
-  const tallest = Math.max(1, ...curve);
-  return (
-    <div class="curve">
-      <h4>{t('lblManaCurve')}{average !== undefined && <> <span>{t('lblWebEditorAverage', average)}</span></>}</h4>
-      <div class="bars">
-        {curve.map((n, i) => {
-          // The last bucket holds everything at that mana value and above
-          const label = i === curve.length - 1 ? `${i}+` : `${i}`;
-          const beasts = creatures[i] ?? 0;
-          return (
-            <span key={i} class="bar" title={t(beasts === 1 ? 'lblWebEditorCurveBarOne' : 'lblWebEditorCurveBar', label, beasts, n - beasts)}>
-              <span class={n ? 'stack' : 'stack empty'} style={{ height: `${n ? Math.max(3, Math.round((n / tallest) * px)) : 2}px` }}>
-                {n > beasts && <i class="other" style={{ flexGrow: n - beasts }} />}
-                {beasts > 0 && <i class="creature" style={{ flexGrow: beasts }} />}
-              </span>
-              <em>{label}</em>
-            </span>
-          );
-        })}
-      </div>
-      <div class="curve-key"><span><i class="creature" />{t('lblCreatures')}</span><span><i class="other" />{t('lblWebEditorOtherSpells')}</span></div>
     </div>
   );
 }

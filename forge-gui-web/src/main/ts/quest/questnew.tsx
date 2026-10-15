@@ -1,7 +1,7 @@
 // Starting a quest: mobile's questions, asked one at a time, with the quest as it will be on the ticket beside them
 
 import { useEffect, useState } from 'preact/hooks';
-import { Pick, StepForm, type Step, type Ticket } from '../setup';
+import { Pick, StepForm, type Step, type Ticket } from '../stepform';
 import { ColourToggles, toggled } from '../symbols';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
