@@ -691,7 +691,7 @@ for (const [name, device] of [['a phone', PHONE], ['a desktop', undefined]] as c
     const third = await items.nth(2).locator('.card').getAttribute('data-key');
     await items.nth(2).locator('.card').click();
     await expect(items.nth(2)).toHaveClass(/selected/);
-    await p.page.locator('#dialog-layer .order-move .earlier').click();
+    await items.nth(2).locator('.order-nudge .earlier').click();
     await expect(items.nth(1).locator('.card')).toHaveAttribute('data-key', third!);
     await expect(items.nth(1).locator('.order-number')).toHaveText('2');
     await p.page.locator('#dialog-layer .dialog .actions button').last().click();
