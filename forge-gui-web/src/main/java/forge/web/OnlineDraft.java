@@ -26,7 +26,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 /** One seat's view of a draft the host's lobby runs, with events handled one at a time so the browser gets whole states in order. */
-final class OnlineDraft implements IDraftEventHandler {
+final class OnlineDraft implements IDraftEventHandler, Draft {
     private final Executor serial;
     private final Supplier<NetworkEventView> event;
     private final IntSupplier lobbySeat;
@@ -61,8 +61,8 @@ final class OnlineDraft implements IDraftEventHandler {
         this.onPool = onPool;
     }
 
-    /** The state last sent, for a browser that arrives again; null before the first pack. */
-    DraftState latest() {
+    @Override
+    public DraftState latest() {
         return view.latest();
     }
 
@@ -94,7 +94,7 @@ final class OnlineDraft implements IDraftEventHandler {
     public void draftSeatPicked(final int seatIndex, final int[] seatQueueDepths) {
         serial.execute(() -> {
             final int seat = seat();
-            final List<Integer> moved = DraftView.moved(depths, seatQueueDepths, seatIndex, direction());
+            final List<Integer> moved = DraftView.moved(depths, seatQueueDepths, seatIndex, DraftView.passDirection(packNumber));
             depths = seatQueueDepths.clone();
             final boolean mine = seatIndex == seat;
             if (mine) {
@@ -133,8 +133,8 @@ final class OnlineDraft implements IDraftEventHandler {
         });
     }
 
-    /** Picks the card at index of the pack shown in state step. A click on a pack that has moved on is ignored. */
-    void pick(final int step, final int index, final boolean sideboard) {
+    @Override
+    public void pick(final int step, final int index, final boolean sideboard) {
         serial.execute(() -> {
             final DraftState now = view.latest();
             if (pooled || now == null || now.step() != step || pending != null || index < 0 || index >= pack.size()) {
@@ -146,8 +146,9 @@ final class OnlineDraft implements IDraftEventHandler {
         });
     }
 
-    /** Moves the pick at index into the sideboard or back into the main deck; the host's pool is sorted by it at the end. */
-    void move(final int index, final boolean sideboard) {
+    /** The host's pool is sorted by these moves at the end. */
+    @Override
+    public void move(final int index, final boolean sideboard) {
         serial.execute(() -> {
             if (pooled || view.latest() == null || index < 0 || index >= picks.size()) {
                 return;
@@ -200,11 +201,6 @@ final class OnlineDraft implements IDraftEventHandler {
         return mySeat;
     }
 
-    /** Packs go to the next seat in odd packs and the previous seat in even ones, as the draft host passes them. */
-    private int direction() {
-        return packNumber % 2 == 0 && packNumber > 0 ? -1 : 1;
-    }
-
     private List<EventParticipant> participants() {
         final NetworkEventView e = event.get();
         return e == null ? List.of() : e.getParticipants();
@@ -239,7 +235,7 @@ final class OnlineDraft implements IDraftEventHandler {
         final List<DraftCard> cards = pack.stream().map(c -> DraftView.card(c, packNumber, pick)).toList();
         final int left = clockEnd == 0 ? 0 : (int) Math.max(0, clockEnd - System.currentTimeMillis());
         publish.accept(view.state(newPack, step -> new DraftState(step, e == null || e.getProductDescription() == null ? "" : e.getProductDescription(), packNumber,
-                e == null ? 0 : e.getNumRounds(), pick, packSize, direction(), seats, cards, List.copyOf(picks), movedHere,
+                e == null ? 0 : e.getNumRounds(), pick, packSize, DraftView.passDirection(packNumber), seats, cards, List.copyOf(picks), movedHere,
                 clockSeconds, left, view.lines(), false)));
     }
 }

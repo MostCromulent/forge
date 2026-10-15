@@ -576,22 +576,16 @@ public final class WebSession implements IHasForgeLog {
                     limited.onMessage(channel, msg);
             case "draftMove" -> {
                 final DraftMove move = Wire.decode(msg, DraftMove.class);
-                final OfflineDraft draft = offlineDraft;
-                final OnlineDraft online = onlineDraft;
+                final Draft draft = draft();
                 if (draft != null) {
                     draft.move(move.index(), move.sideboard());
-                } else if (online != null && stage instanceof Setup) {
-                    online.move(move.index(), move.sideboard());
                 }
             }
             case "draftPick" -> {
                 final DraftPick pick = Wire.decode(msg, DraftPick.class);
-                final OfflineDraft draft = offlineDraft;
-                final OnlineDraft online = onlineDraft;
+                final Draft draft = draft();
                 if (draft != null) {
                     draft.pick(pick.step(), pick.index(), pick.sideboard());
-                } else if (online != null && stage instanceof Setup) {
-                    online.pick(pick.step(), pick.index(), pick.sideboard());
                 }
             }
             // A campaign is Forge's own, one for the whole process, so it is the host's
@@ -1179,6 +1173,12 @@ public final class WebSession implements IHasForgeLog {
                 WebSession.class.getPackage().getImplementationVersion(),
                 // The menu's volume slider and music need them before any match sends them with its controls
                 WebSettings.values(settings));
+    }
+
+    /** The draft this browser picks in: its own against the computer, or its seat's while the table drafts. */
+    private Draft draft() {
+        final OfflineDraft offline = offlineDraft;
+        return offline != null ? offline : stage instanceof Setup ? onlineDraft : null;
     }
 
     private boolean onlineDrafting() {

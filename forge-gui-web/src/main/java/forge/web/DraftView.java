@@ -16,6 +16,11 @@ final class DraftView {
     private volatile DraftState latest;
     private final List<String> log = new ArrayList<>();
 
+    /** Packs go to the next seat (1) in odd rounds and the previous seat (-1) in even ones, as BoosterDraft.passPacks alternates. round counts from 1, and 0 is before the first. */
+    static int passDirection(final int round) {
+        return round % 2 == 0 && round > 0 ? -1 : 1;
+    }
+
     /** The seat whose pack passed on, or none when the counts show anything but one pass, so the dial redraws rather than slides. */
     static List<Integer> moved(final int[] before, final int[] after, final int pickingSeat, final int direction) {
         if (before == null || after == null || before.length != after.length || pickingSeat < 0 || pickingSeat >= after.length) {

@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /** BoosterDraft has no locks, so everything touching it runs on this draft's own thread. */
-final class OfflineDraft {
+final class OfflineDraft implements Draft {
     private final ExecutorService thread = Executors.newSingleThreadExecutor(r -> {
         final Thread t = new Thread(r, "Draft");
         t.setDaemon(true);
@@ -65,13 +65,13 @@ final class OfflineDraft {
         });
     }
 
-    /** The state last sent, for a browser that arrives again; null before the first pack. */
-    DraftState latest() {
+    @Override
+    public DraftState latest() {
         return view.latest();
     }
 
-    /** Picks the card at index of the pack shown in state step. A click on a state that has moved on since is ignored. */
-    void pick(final int stepShown, final int index, final boolean sideboard) {
+    @Override
+    public void pick(final int stepShown, final int index, final boolean sideboard) {
         thread.execute(() -> {
             try {
                 pickOn(stepShown, index, sideboard);
@@ -81,8 +81,8 @@ final class OfflineDraft {
         });
     }
 
-    /** Moves the pick at index into the sideboard or back into the main deck, as desktop lets a drafter sort picks as they go. */
-    void move(final int index, final boolean sideboard) {
+    @Override
+    public void move(final int index, final boolean sideboard) {
         thread.execute(() -> {
             final DraftState now = view.latest();
             if (now == null || now.done() || index < 0 || index >= picks.size() || picks.get(index).sideboard() == sideboard) {
@@ -184,8 +184,7 @@ final class OfflineDraft {
         final List<DraftCard> cards = pack.stream().map(c -> DraftView.card(c, round, pick)).toList();
         // Offline every pack moves in lock step, so a pass moves every seat's pack
         final List<Integer> moved = passed ? IntStream.range(0, seats.size()).boxed().toList() : List.of();
-        // Packs go to the next seat in odd rounds and the previous seat in even ones, as BoosterDraft.passPacks alternates
         publish.accept(view.state(newPack, step -> new DraftState(step, product, round, draft.getNumRounds(), pick, packSize,
-                round % 2 == 1 ? 1 : -1, seats, cards, List.copyOf(picks), moved, 0, 0, List.of(), done)));
+                DraftView.passDirection(round), seats, cards, List.copyOf(picks), moved, 0, 0, List.of(), done)));
     }
 }
