@@ -168,4 +168,16 @@ public class DeckEditorTest {
         Assert.assertNull(e.makeCommander("Isamaru, Hound of Konda", null));
         Assert.assertEquals(e.deck().getCommanders().get(0).getEdition(), "CHK");
     }
+
+    // Fails if a Commander Draft deck replaces a one-colour commander with another, where desktop's draft editor pairs them
+    @Test
+    public void aCommanderDraftPairsTwoOneColourLegends() {
+        final Deck pool = new Deck("Draft");
+        pool.getOrCreate(DeckSection.Sideboard).add(StaticData.instance().getCommonCards().getCard("Isamaru, Hound of Konda"), 1);
+        pool.getOrCreate(DeckSection.Sideboard).add(StaticData.instance().getCommonCards().getCard("Krenko, Mob Boss"), 1);
+        final DeckEditor e = editor(pool, GameType.CommanderDraft);
+        Assert.assertNull(e.makeCommander("Isamaru, Hound of Konda", null));
+        Assert.assertNull(e.makeCommander("Krenko, Mob Boss", null));
+        Assert.assertEquals(e.deck().getCommanders().size(), 2);
+    }
 }

@@ -178,7 +178,7 @@ public final class ProtocolTypes {
                 .append("  plannedBlockers: (Ref | null)[] | null;\n")
                 .append("}\n\n")
                 .append("export interface CommanderValue {\n  card: Ref;\n  value: number;\n}\n\n")
-                .append("export interface KeywordText {\n  title: string;\n  reminder: string;\n  icon?: string;\n}\n\n")
+                .append("export interface KeywordText {\n  title: string;\n  reminder: string;\n  /** The engine's Keyword constant, absent on a mark the page adds itself. */\n  keyword?: string;\n  icon?: string;\n}\n\n")
                 .append("/** Every property any game object can carry. A property still at its default is left out. */\n")
                 .append("export interface TrackedProps {\n");
         final StringBuilder enumAliases = new StringBuilder();

@@ -177,6 +177,7 @@ public final class JsonCodec {
                 final JsonObject o = new JsonObject();
                 o.addProperty("title", kv.title());
                 o.addProperty("reminder", kv.reminderText());
+                o.addProperty("keyword", kv.keyword().name());
                 // The icon is picked here rather than in the browser so both clients read the same table
                 final FSkinProp icon = FSkinProp.iconFromKeyword(kv);
                 if (icon != null) {

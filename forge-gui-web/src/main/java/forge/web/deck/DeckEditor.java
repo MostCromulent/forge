@@ -715,7 +715,7 @@ public final class DeckEditor {
         }
     }
 
-    /** Puts a card in the command zone as desktop's editor does: a partner joins, anything else replaces, and in Oathbreaker each slot holds one. */
+    /** Puts a card in the command zone as desktop's editors do: a partner joins, anything else replaces, and in Oathbreaker each slot holds one. */
     private void placeCommander(final PaperCard card, final CardPool commanders) {
         if (check.format() == GameType.Oathbreaker) {
             final boolean oathbreaker = card.getRules().canBeOathbreaker();
@@ -726,8 +726,10 @@ public final class DeckEditor {
             }
         } else if (commanders.countAll() > 0) {
             final List<PaperCard> existing = commanders.toFlatList();
-            final boolean partner = existing.size() == 1 && card.getRules().canBePartnerCommander()
-                    && existing.get(0).getRules().canBePartnerCommanders(card.getRules());
+            final boolean partner = existing.size() == 1 && (card.getRules().canBePartnerCommander()
+                    && existing.get(0).getRules().canBePartnerCommanders(card.getRules())
+                    // A Commander Draft also pairs two that draft rules let partner, such as two one-colour legends
+                    || commanderDraft() && CommanderDraftUtil.isPartnerEligible(existing.get(0)) && CommanderDraftUtil.isPartnerEligible(card));
             if (!partner) {
                 final CardPool home = commanderDraft() ? deck.getOrCreate(DeckSection.Sideboard) : deck.getMain();
                 for (final Map.Entry<PaperCard, Integer> e : commanders) {

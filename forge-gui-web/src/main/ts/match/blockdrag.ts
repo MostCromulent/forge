@@ -185,8 +185,8 @@ function until(test: () => boolean): Promise<boolean> {
 /** Makes a drag's block as the block prompt takes one, by clicking the attacker and then the blocker, after first taking a blocker off the attacker it already blocks. */
 async function block(actions: Actions, blocker: number, attacker: number, at: Point): Promise<void> {
   if (!current || blocking(blocker, attacker)) return;
-  // The prompt names the attacker being blocked by its id, and one already named is not clicked again
-  const named = (key: number) => (current?.prompt?.message ?? '').includes(`(${key})`);
+  // The block prompt highlights the attacker it is blocking, and one already taken is not clicked again
+  const named = (key: number) => !!current?.prompt?.highlighted?.includes(key);
   const choose = async (key: number) => {
     if (named(key)) return;
     actions.selectCard(key, false, 0, 0);
@@ -203,7 +203,13 @@ async function block(actions: Actions, blocker: number, attacker: number, at: Po
   if (!await until(() => blocking(blocker, attacker))) explainRefusal(blocker, attacker, at);
 }
 
-/** Gives the reason for a refused block only when one of the attacker's keyword reminders states it, and no reason otherwise. */
+/** Keywords that limit what may block a creature, each with the keywords on a blocker that answer it. */
+const EVASION: Record<string, readonly string[]> = {
+  FEAR: [], FLYING: ['FLYING', 'REACH'], HORSEMANSHIP: ['HORSEMANSHIP'], INTIMIDATE: [], LANDWALK: [], MENACE: [], PROTECTION: [],
+  SHADOW: ['SHADOW'], SKULK: [],
+};
+
+/** Gives the reason for a refused block only when one of the attacker's evasion keywords explains it, and no reason otherwise. */
 function explainRefusal(blocker: number, attacker: number, at: Point): void {
   const model = current;
   if (!model) return;
@@ -211,9 +217,9 @@ function explainRefusal(blocker: number, attacker: number, at: Point): void {
   const state = (key: number) => { const c = card(key); return c ? stateOf(model, c) : undefined; };
   const name = (key: number) => state(key)?.Name ?? t('lblWebBlockThatCreature');
   const keywords = (key: number): KeywordText[] => state(key)?.Keywords ?? [];
-  const answers = new Set(keywords(blocker).map(k => k.title));
-  const evasion = keywords(attacker).find(k => /can't be blocked/i.test(k.reminder)
-    && !answers.has(k.title) && !(k.title === 'Flying' && answers.has('Reach')));
+  const answers = new Set(keywords(blocker).map(k => k.keyword));
+  const evasion = keywords(attacker).find(k => k.keyword !== undefined && k.keyword in EVASION
+    && !EVASION[k.keyword].some(a => answers.has(a)));
   showTip(at, t('lblWebBlockCantBlock', name(blocker), name(attacker)), evasion ? `${evasion.title}: ${evasion.reminder}` : '');
 }
 
