@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
-/** A null component is left out of the JSON, and only components marked {@link Nullable} may be null. */
+/** Turns the message records into JSON and back. A null component is left out of the JSON, and only components marked {@link Nullable} may be null. */
 public final class Wire {
     private Wire() {
     }

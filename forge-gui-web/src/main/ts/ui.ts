@@ -1,4 +1,5 @@
-// How the player has arranged the table, none of which goes to the server, kept in one place so a new match clears it at once
+// What this browser has arranged and the server never hears of: the match table, which a new match clears at once (resetMatchUi),
+// and the menu pages' tabs and open panels, which it keeps
 
 import { storeJson, storedJson } from './storage';
 import { reducedMotion } from './dom';

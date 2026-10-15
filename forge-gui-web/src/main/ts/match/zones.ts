@@ -1,3 +1,6 @@
+// The zones panel, for a graveyard, exile or other zone opened over the board.
+// It folds to a bar instead of closing, so the board can be read beside a prompt without losing your place
+
 import { reconcile } from './reconcile';
 import { createCard, updateCard, type CardClick } from './cards';
 import { stateOf, zone, type Model } from '../model';
@@ -12,8 +15,6 @@ import { boundKeys } from '../settings';
 import type { CardView, PromptButton, ZoneType } from '../protocol';
 import { t, type TextKey } from '../text';
 import { manaValue } from './rules';
-
-// The zone dialog folds to a bar instead of closing, so the board can be read beside a prompt without losing your place
 
 // Piles the player opened by clicking, on top of the zones the game asks to show
 interface Panel {

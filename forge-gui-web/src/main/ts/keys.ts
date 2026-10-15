@@ -1,4 +1,4 @@
-// Every key the page answers is decided here, top layer first, so a key answers exactly one thing
+// The page's keys are decided here, top layer first, so a key answers exactly one thing. Escape is the exception: a Preact dialog or menu closes on it by itself
 
 import { cardMenu, oldestRequest, stackPick, type Model } from './model';
 import type { UiState } from './ui';

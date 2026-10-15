@@ -1,3 +1,5 @@
+// The prompt: the game's question and its buttons, at the foot of the side column or in the dock on a phone, whose rim lights while the game waits on you
+
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from '../images';
 import { deref, derefAll, game, me, oldestRequest, stackPick, stateOf, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
@@ -16,9 +18,6 @@ import { declaringBlocks } from './blockdrag';
 import type { CardView, PlayerView, PromptButton, Ref, StackItemView } from '../protocol';
 import { t } from '../text';
 import { ICONS, iconSvg } from '../icons';
-
-// The console in the bottom-left corner, whose rim lights while the game waits on you
-
 
 let built = false;
 /** The row of tools, which a phone moves out of the prompt and onto the player's bar. */

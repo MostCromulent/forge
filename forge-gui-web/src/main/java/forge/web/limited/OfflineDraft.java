@@ -22,7 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/** BoosterDraft has no locks, so everything touching it runs on this draft's own thread. */
+/** One player's booster draft against the computer. BoosterDraft has no locks, so everything touching it runs on this draft's own thread. */
 public final class OfflineDraft implements Draft {
     private final ExecutorService thread = Executors.newSingleThreadExecutor(r -> {
         final Thread t = new Thread(r, "Draft");

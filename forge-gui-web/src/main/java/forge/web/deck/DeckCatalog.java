@@ -406,7 +406,6 @@ public final class DeckCatalog {
         return CardCatalog.letters(DeckProxy.getColorIdentity(deck));
     }
 
-    /** What the panel reports about a deck beside its card list. */
     /** Stars a listed deck as desktop does, in the deck preferences both clients read. */
     public void setFavourite(final String key, final boolean on) {
         final Entry e = key == null ? null : byKey.get(key);
@@ -416,6 +415,7 @@ public final class DeckCatalog {
         DeckPreferences.getPrefs(e.proxy()).setStarCount(on ? 1 : 0);
     }
 
+    /** What the panel reports about a deck beside its card list. */
     public static DeckStats stats(final Deck deck) {
         final CardPool main = deck.get(DeckSection.Main);
         final int[] curve = new int[CURVE_BUCKETS];

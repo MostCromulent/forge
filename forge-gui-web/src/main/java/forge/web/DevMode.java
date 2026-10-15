@@ -20,7 +20,7 @@ import java.util.Arrays;
 import forge.web.match.LocalGame;
 import forge.web.protocol.BrowserChannel;
 
-/** Forge gives a netplay client no cheats, but the host shares its process with the server, so only the host's own seat can cheat. */
+/** Carries out the host's dev mode actions on the running game, such as making mana or setting up a board. Forge gives a netplay client no cheats, but the host shares its process with the server, so only the host's own seat can cheat. */
 final class DevMode {
     private DevMode() {
     }

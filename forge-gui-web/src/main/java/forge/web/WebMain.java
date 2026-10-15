@@ -18,7 +18,7 @@ import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import forge.web.console.ServerConsole;
 
-/** Each launch makes two fresh tokens, one for the host's link and one for guests, so a link from an earlier launch no longer works. */
+/** The program's entry point: loads Forge, opens the server window, starts the web service with this launch's two link tokens and opens the host's link. The tokens are new each launch, so a link from an earlier launch no longer works. */
 public final class WebMain implements IHasForgeLog {
     /** How long the process waits after the last browser goes, unless the console is told to keep it open. */
     private static final long IDLE_MILLIS = 15_000;

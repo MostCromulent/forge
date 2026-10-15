@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** The cell scan follows the desktop FSkin exactly, so an index in the shared preferences picks the same picture in both clients. */
+/** Cuts avatars, sleeves, mana symbols and other icons out of the skin's sprite sheets as PNGs for the page. It repeats desktop FSkin's cell scan because this module cannot depend on the desktop one, and follows it exactly, so an index in the shared preferences picks the same picture in both clients. */
 public final class SkinSprites {
     private static List<BufferedImage> avatars;
     private static BufferedImage manaIcons;

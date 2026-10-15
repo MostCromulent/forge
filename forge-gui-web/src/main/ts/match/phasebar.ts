@@ -1,3 +1,5 @@
+// The phase bar: a pill on the divider showing the turn's owner and the five phases, which opens the grid of phase stops when clicked
+
 import { reconcile } from './reconcile';
 import { deref, game, isLocal, me, opponents, players, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
@@ -9,8 +11,6 @@ import type { GameView, PhaseType, TurnMarker } from '../protocol';
 import { isPortrait } from '../form';
 import { asksPlayer, boardBehind, passingFor } from './pace';
 import { sheet, swipeDown } from '../sheet';
-
-// A pill on the divider showing the turn's owner and the five phases, which opens the grid of phase stops when clicked
 
 function star(): string {
   let d = '';

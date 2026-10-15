@@ -1,3 +1,5 @@
+// A question Forge asks the host outside a match, such as a campaign's choice, drawn over whatever page is open
+
 // The engine thread waits for the answer to a question the host is asked, so cancelling sends an empty choice instead of nothing
 
 import { useEffect, useRef, useState } from 'preact/hooks';

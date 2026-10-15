@@ -23,7 +23,11 @@ import java.util.function.Supplier;
 import forge.web.deck.DeckSession;
 import forge.web.protocol.BrowserChannel;
 
-/** A campaign mode as a session sees it. One per session and mode, over Forge's one model of that mode. */
+/**
+ * A campaign mode as a session sees it. One per session and mode, over Forge's one model of that mode.
+ * Only the host's session opens a campaign, and it makes every call on its campaign thread ({@code WebSession.onCampaign}),
+ * so nothing here takes a lock. {@link #current} only reads a preference and may be called from any thread.
+ */
 public interface Campaign {
     /** What a mode's own pages need of the session. */
     interface Host {

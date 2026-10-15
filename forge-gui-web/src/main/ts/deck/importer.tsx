@@ -1,3 +1,5 @@
+// The deck importer: a pasted or loaded list, checked line by line before it becomes a deck
+
 // The server marks every line of the list, each fix edits the text, and nothing is saved until the player presses Import
 
 import { useEffect, useRef, useState } from 'preact/hooks';

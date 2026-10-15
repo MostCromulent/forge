@@ -1,3 +1,5 @@
+// The arrows drawn over the board: attackers to what they attack, blockers to what they block, and spells to their targets
+
 import { combatShown, game, derefAll, players, type Model } from '../model';
 import { setting } from '../settings';
 import { byId, reducedMotion } from '../dom';

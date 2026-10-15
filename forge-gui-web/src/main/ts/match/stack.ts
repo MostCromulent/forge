@@ -1,3 +1,5 @@
+// The stack: the spells and abilities waiting to resolve, as a pile beside the board, or as a chip under the phase strip on a phone
+
 import { reconcile } from './reconcile';
 import { lastPicture } from './cards';
 import { cardImageSrc, noImageOnError, setImage } from '../images';

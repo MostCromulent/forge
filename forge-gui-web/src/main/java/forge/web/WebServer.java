@@ -86,7 +86,7 @@ import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.JsonCodec;
 import forge.web.protocol.PageText;
 
-/** Listens on every interface so a player elsewhere can open a link, and the per-launch tokens in the links keep everyone else out. */
+/** The HTTP and WebSocket server on the web port: the page, card images, sounds, the browsers' sockets and the app tunnel. It listens on every interface so a player elsewhere can open a link, and the per-launch tokens in the links keep everyone else out. */
 public final class WebServer implements AutoCloseable, IHasForgeLog {
     public interface Endpoint {
         /** The id tells one browser from another across a reload, and mayHost says it came in on the host's link. */

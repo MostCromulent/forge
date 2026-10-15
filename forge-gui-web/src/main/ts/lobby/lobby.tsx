@@ -1,3 +1,5 @@
+// Match setup: the seats, their decks and the table's rules, for a game against the computer or at an online table
+
 // The browser reaches the game through a client even when it hosts, so your own seat arrives as REMOTE and is known by its "mine" flag
 
 import { useEffect, useState } from 'preact/hooks';

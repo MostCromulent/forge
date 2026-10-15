@@ -1016,10 +1016,10 @@ function drawTally(root: HTMLElement, everyone: PlayerView[], wins: (p: PlayerVi
   }
 }
 
-/** Shows the result once the losing portrait has broken, drawn once per ending so what fades in does so once. */
 /** How many motes of light rise past a winner's portrait. */
 const WIN_MOTES = 16;
 
+/** Shows the result once the losing portrait has broken, drawn once per ending so what fades in does so once. */
 function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const root = byId('game-over');
   const show = model.gameOver && titleReady;

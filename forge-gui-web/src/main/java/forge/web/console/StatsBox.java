@@ -9,7 +9,7 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.util.Locale;
 
-/** Under the graph, in its colours: how long the server has been up, who is on it, and every byte so far. */
+/** The server window's totals, under the traffic graph and in its colours: how long the server has been up, who is on it, and every byte so far. */
 final class StatsBox extends JComponent {
     private static final Localizer TEXT = Localizer.getInstance();
     private static final String[] NAMES = {TEXT.getMessage("lblWebConsoleUp"),

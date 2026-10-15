@@ -71,7 +71,7 @@ import forge.web.protocol.ToBrowser.QuestOptions;
 import forge.web.protocol.ToBrowser.QuestSave;
 import forge.web.protocol.ToBrowser.QuestSaves;
 
-/** Holds only what one session knows that the save does not, as the quest itself is Forge's, one for the whole process. */
+/** Quest mode as one session plays it: the saves, the duels and challenges, the decks, the tournaments, travel and the shops. The quest itself is Forge's, one for the whole process, so this holds only what the session knows that the save does not. */
 public final class QuestGame implements Campaign {
     private static final String[] DIFFICULTIES = {"questDifficultyEasy", "questDifficultyMedium", "questDifficultyHard", "questDifficultyExpert"};
     private List<QuestEventDuel> duels;
@@ -167,7 +167,7 @@ public final class QuestGame implements Campaign {
 
     /** Renames a save and its backup. The quest Forge has open is read again under its new name, or its next save would bring the old file back. */
     @Override
-    public synchronized String rename(final String name, final String to) {
+    public String rename(final String name, final String to) {
         final File file = find(name);
         final String clean = NewQuestRules.cleanName(to);
         if (file == null) {
@@ -198,7 +198,7 @@ public final class QuestGame implements Campaign {
     }
 
     @Override
-    public synchronized void delete(final String name) {
+    public void delete(final String name) {
         final File file = find(name);
         if (file == null) {
             return;
@@ -283,9 +283,7 @@ public final class QuestGame implements Campaign {
                     channel.send(host.error(problem));
                     return;
                 }
-                synchronized (this) {
-                    NewQuestRules.start(choices);
-                }
+                NewQuestRules.start(choices);
                 duels = null;
                 reward = null;
                 host.opened(quest().getName());
@@ -896,7 +894,7 @@ public final class QuestGame implements Campaign {
 
     /** Checked as desktop checks it: two values are decimals and taken as they are, the rest whole numbers that Quest validates. */
     @Override
-    public synchronized String setPref(final String key, final String text) {
+    public String setPref(final String key, final String text) {
         final QuestPreferences prefs = FModel.getQuestPreferences();
         final Localizer l = Localizer.getInstance();
         final String value = text.trim();

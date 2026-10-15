@@ -68,7 +68,7 @@ import forge.web.protocol.ToBrowser.TradeList;
 import forge.web.protocol.ToBrowser.ConquestOption;
 import forge.web.protocol.ToBrowser.ConquestPlaneRow;
 
-/** Holds only what one session knows that the save does not, as the conquest itself is Forge's, one for the whole process. */
+/** Planar Conquest as one session plays it: the saves, the map, the party and its decks, aether, planeswalking and the battles. The conquest itself is Forge's, one for the whole process, so this holds only what the session knows that the save does not. */
 public final class ConquestGame implements Campaign {
     private ConquestLocation selection;
     /** The result of the game just ended, while its match is still open. */
@@ -221,7 +221,7 @@ public final class ConquestGame implements Campaign {
     }
 
     /** Starts a conquest and makes it the open one. Answers why it cannot, or null when it is made. */
-    static synchronized String create(final String name, final String planeName, final String commanderName, final String walkerName) {
+    static String create(final String name, final String planeName, final String commanderName, final String walkerName) {
         final String cleaned = QuestUtil.cleanString(name == null ? "" : name).trim();
         final String problem = ConquestUtil.nameProblem(cleaned);
         if (problem != null) {
@@ -238,7 +238,7 @@ public final class ConquestGame implements Campaign {
     }
 
     @Override
-    public synchronized String rename(final String name, final String to) {
+    public String rename(final String name, final String to) {
         final ConquestData data = find(name);
         final String cleaned = QuestUtil.cleanString(to == null ? "" : to).trim();
         if (data == null || cleaned.equals(data.getName())) {
@@ -253,7 +253,7 @@ public final class ConquestGame implements Campaign {
     }
 
     @Override
-    public synchronized void delete(final String name) {
+    public void delete(final String name) {
         final ConquestData data = find(name);
         if (data != null) {
             ConquestController.delete(data);
@@ -682,7 +682,7 @@ public final class ConquestGame implements Campaign {
 
     /** Every one of Conquest's preferences is a whole number. */
     @Override
-    public synchronized String setPref(final String key, final String text) {
+    public String setPref(final String key, final String text) {
         final int value;
         try {
             value = Integer.parseInt(text.trim());
@@ -705,7 +705,7 @@ public final class ConquestGame implements Campaign {
     }
 
     @Override
-    public synchronized void resetPrefs() {
+    public void resetPrefs() {
         final ConquestPreferences prefs = FModel.getConquestPreferences();
         for (final PrefField f : PREFS) {
             prefs.setPref(f.pref(), f.pref().getDefault());

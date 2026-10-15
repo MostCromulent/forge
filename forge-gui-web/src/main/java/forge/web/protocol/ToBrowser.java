@@ -21,7 +21,7 @@ import forge.web.protocol.Wire.Ts;
 import java.util.List;
 import java.util.Map;
 
-/** The build generates src/main/ts/protocol.gen.ts from this file, so a changed record fails the build where the browser reads it. */
+/** Every message the server sends the browser, as records. The build generates src/main/ts/protocol.gen.ts from this file, so a changed record fails the build where the browser reads it. */
 public final class ToBrowser {
     private ToBrowser() {
     }
