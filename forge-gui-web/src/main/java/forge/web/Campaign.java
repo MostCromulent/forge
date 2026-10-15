@@ -13,6 +13,11 @@ import forge.web.ToBrowser.CataloguePage;
 import forge.web.ToBrowser.Reward;
 import forge.web.ToBrowser.Trading;
 
+import java.io.File;
+import java.io.IOException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -90,4 +95,19 @@ interface Campaign {
 
     /** A message of the mode's own. save is null on the list of saved games. */
     void handle(BrowserChannel channel, JsonObject msg, String save, Host host);
+
+    /** Whether file is the saves folder's own child of exactly that name, however its path was written. Save names come from the browser, so one with a path in it must not reach a file to open, rename or delete outside the saves. */
+    static boolean isSaveNamed(final String savesDir, final File file, final String child) {
+        try {
+            final File canonical = file.getCanonicalFile();
+            return new File(savesDir).getCanonicalFile().equals(canonical.getParentFile()) && canonical.getName().equals(child);
+        } catch (final IOException e) {
+            return false;
+        }
+    }
+
+    /** The day a save was last written, as the browser shows it (yyyy-mm-dd). */
+    static String savedOn(final File file) {
+        return LocalDate.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()).toString();
+    }
 }

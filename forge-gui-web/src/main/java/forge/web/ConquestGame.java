@@ -36,10 +36,6 @@ import forge.web.FromBrowser.*;
 import forge.web.ToBrowser.*;
 
 import java.io.File;
-import java.io.IOException;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -75,7 +71,7 @@ final class ConquestGame implements Campaign {
                     planeName(data.getCurrentPlane()), art(data.getCurrentPlane()), data.getCurrentPlaneData().getConqueredCount(),
                     data.getCurrentPlane().getEventCount(), data.getUnlockedCardCount(), data.getAEtherShards(),
                     data.getPlaneswalkEmblems(),
-                    file.exists() ? LocalDate.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()).toString() : null));
+                    file.exists() ? Campaign.savedOn(file) : null));
         }
         return new ConquestSaves(rows, current());
     }
@@ -101,25 +97,14 @@ final class ConquestGame implements Campaign {
     /** The save of a name, or null when there is none or it cannot be read. */
     static ConquestData find(final String name) {
         final File dir = name == null ? null : saveDir(name);
-        // The name is the browser's: one with a path in it would reach a folder that is not a save, to open, rename or delete
-        final ConquestData data = dir != null && dir.isDirectory() && isSave(dir, name.replace(' ', '_')) ? new ConquestData(dir) : null;
+        final ConquestData data = dir != null && dir.isDirectory() && Campaign.isSaveNamed(ForgeConstants.CONQUEST_SAVE_DIR, dir, name.replace(' ', '_'))
+                ? new ConquestData(dir) : null;
         return data != null && readable(data) ? data : null;
     }
 
     /** A save whose file could not be read to its end is left without its planes or with nothing at all, and has no page to show. */
     private static boolean readable(final ConquestData data) {
         return data.getPlaneswalker() != null && data.getCurrentLocation() != null && data.getCurrentPlaneData() != null;
-    }
-
-    /** Whether a folder is the saves folder's own child of exactly that name, however its path was written. */
-    private static boolean isSave(final File dir, final String child) {
-        try {
-            final File saves = new File(ForgeConstants.CONQUEST_SAVE_DIR).getCanonicalFile();
-            final File canonical = dir.getCanonicalFile();
-            return saves.equals(canonical.getParentFile()) && canonical.getName().equals(child);
-        } catch (final IOException e) {
-            return false;
-        }
     }
 
     private static File saveDir(final String name) {
@@ -459,9 +444,7 @@ final class ConquestGame implements Campaign {
         final CataloguePage page = CardCatalog.of(cards).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
                 q.offset(), true), problem, null, name -> 0, c -> new CardCatalog.Extra(data.isNewCard(c) ? Boolean.TRUE : null,
                 exile ? data.getRetrieveCost(List.of(c)) : data.getExileValue(List.of(c)), null, null, null, null));
-        // The page says which list it is of, so the browser never shows one list's cards as another's
-        return new CataloguePage(page.request(), page.rows(), page.total(), page.offset(), page.hiddenBySwitch(), page.ranked(),
-                exile ? "exile" : "collection");
+        return page.from(exile ? "exile" : "collection");
     }
 
     /** Exiles cards of the collection, or from the exile brings them back. A conquest owns one of each card, so a pick's count says nothing. */

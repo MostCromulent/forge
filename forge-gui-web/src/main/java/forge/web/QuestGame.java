@@ -67,9 +67,6 @@ import org.tinylog.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -129,7 +126,7 @@ final class QuestGame implements Campaign {
                 difficulty >= 0 && difficulty < DIFFICULTIES.length ? Localizer.getInstance().getMessage(DIFFICULTIES[difficulty]) : "",
                 quest().getRank(data.getAchievements().getLevel()), data.getAchievements().getWin(), data.getAchievements().getLost(),
                 data.getAssets().getCardPool().countAll(), data.getAssets().getCredits(), world(data.getWorldId()),
-                LocalDate.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()).toString());
+                Campaign.savedOn(file));
     }
 
     private static String world(final String id) {
@@ -171,14 +168,7 @@ final class QuestGame implements Campaign {
             return null;
         }
         final File file = new File(ForgeConstants.QUEST_SAVE_DIR, name + ".dat");
-        // The name is the browser's: one with a path in it would reach a file that is not a save
-        try {
-            final File saves = new File(ForgeConstants.QUEST_SAVE_DIR).getCanonicalFile();
-            final File canonical = file.getCanonicalFile();
-            return file.isFile() && saves.equals(canonical.getParentFile()) && canonical.getName().equals(name + ".dat") ? file : null;
-        } catch (final IOException e) {
-            return null;
-        }
+        return file.isFile() && Campaign.isSaveNamed(ForgeConstants.QUEST_SAVE_DIR, file, name + ".dat") ? file : null;
     }
 
     /** Renames a save and its backup. The quest Forge has open is read again under its new name, or its next save would bring the old file back. */
@@ -1051,8 +1041,7 @@ final class QuestGame implements Campaign {
                 : new CardCatalog.Extra(quest().getCards().isNew(c) ? Boolean.TRUE : null, salePrice(c, multiplier), owned.count(c), null,
                         !using.containsKey(c) ? null : using.get(c) == 1 ? Localizer.getInstance().getMessage("lblWebQuestInOneDeck")
                         : Localizer.getInstance().getMessage("lblWebQuestInDecks", using.get(c)), key(c)));
-        // The page says which list it is of, so the browser never shows one list's cards as another's
-        return new CataloguePage(page.request(), page.rows(), page.total(), page.offset(), page.hiddenBySwitch(), page.ranked(), q.source());
+        return page.from(q.source());
     }
 
     /** The shop's two lists, what selling pays, the products for sale, and the copies Sell All Extras would sell. */

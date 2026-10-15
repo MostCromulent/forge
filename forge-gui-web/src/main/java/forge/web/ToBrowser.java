@@ -230,6 +230,10 @@ final class ToBrowser {
     @Message("catalogue")
     record CataloguePage(int request, List<CatalogueRow> rows, int total, int offset, int hiddenBySwitch, boolean ranked,
             @Nullable String source) {
+        /** The same page, saying which of a mode's lists it is of, so the browser never shows one list's cards as another's. */
+        CataloguePage from(final String list) {
+            return new CataloguePage(request, rows, total, offset, hiddenBySwitch, ranked, list);
+        }
     }
 
     /** The deck open in the editor, or none when the editor is closed. */

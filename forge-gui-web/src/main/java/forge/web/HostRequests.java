@@ -14,7 +14,11 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-/** Questions the host asks outside a match, where the calling thread waits for the browser's answer as desktop waits for its dialog. */
+/**
+ * Questions the host asks outside a match, where the calling thread waits for the browser's answer as desktop waits for its dialog.
+ * Kept apart from {@link PendingRequests}, which holds one seat's questions during its game: these go to whichever browser holds
+ * the host's seat at the time, are drawn on any screen, and give up after a while because no game ends them.
+ */
 final class HostRequests implements IHasForgeLog {
     /** Long enough for someone to read the list and decide, short enough that a closed browser gives up. */
     private static final long ANSWER_TIMEOUT_MINUTES = 5;
