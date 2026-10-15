@@ -119,6 +119,37 @@ function SeatKind({ type, toAi, toOpen }: { type: string; toAi: () => void; toOp
   );
 }
 
+/** What each of Forge's own AI profiles changes; one somebody adds to res/ai has no line. */
+const STYLE_HINTS: Record<string, TextKey> = {
+  Default: 'lblWebLobbyStyleDefaultHint', Cautious: 'lblWebLobbyStyleCautiousHint',
+  Reckless: 'lblWebLobbyStyleRecklessHint', Experimental: 'lblWebLobbyStyleExperimentalHint',
+};
+
+/** How a computer seat plays: a chip the host opens to choose another, and words for everyone else, who are not told of the default. */
+function PlayStyle({ profile, profiles, change }: { profile: string; profiles: string[]; change: ((profile: string) => void) | null }) {
+  if (!change) {
+    return profile === 'Default' ? null : <span class="kind">{profile}</span>;
+  }
+  return (
+    <Dropdown cls="popup-anchor" button={(open, toggle) => (
+      <button class={`kind chip${profile === 'Default' ? ' quiet' : ''}`} title={t('lblWebLobbyPlaystyle')} aria-expanded={open} onClick={toggle}>
+        {profile}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+    )}>
+      {close => (
+        <div class="popup kind-menu style-menu" role="menu" aria-label={t('lblWebLobbyPlaystyle')}>
+          {profiles.map(p => (
+            <button key={p} role="menuitemradio" aria-checked={p === profile} onClick={() => { close(); if (p !== profile) change(p); }}>
+              {p === profile ? <Icon d={ICONS.check} /> : <span />}<span>{p}</span>
+              {STYLE_HINTS[p] && <small>{t(STYLE_HINTS[p])}</small>}
+            </button>
+          ))}
+        </div>
+      )}
+    </Dropdown>
+  );
+}
+
 /** A seat's team, on the plate's top edge over the sleeve. It opens the table's teams for whoever may move the seat. */
 function TeamTab({ team, teams, change }: { team: number; teams: number; change: ((team: number) => void) | null }) {
   const name = (n: number) => t('lblWebLobbyTeamN', n + 1);
@@ -243,6 +274,8 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
             : swappable
               ? <SeatKind type={seat.type} toAi={() => actions.aiSeat(index)} toOpen={() => actions.openSeat(index)} />
               : <span class="kind">{mine ? t(KIND.LOCAL) : kindName(seat.type)}</span>}
+          {seat.aiProfile && <PlayStyle profile={seat.aiProfile} profiles={lobby.aiProfiles}
+            change={lobby.host && seat.mayEdit ? aiProfile => actions.setSeat(index, { aiProfile }) : null} />}
           {seat.role && <span class={`role ${seat.role}`}>{t(seat.role === 'archenemy' ? 'lblArchenemy' : 'lblWebLobbyHero')}</span>}
           {lobby.host && seat.role === 'hero' && (
             <button class="make-archenemy" onClick={() => actions.setArchenemy(index)}>{t('lblWebLobbyMakeArchenemy')}</button>

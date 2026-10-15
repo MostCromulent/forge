@@ -68,10 +68,11 @@ public final class FromBrowser {
     public record SetPlayerCount(int count) {
     }
 
-    /** Changes one or more of a seat's choices; a field left out is left alone, and a blank name gives the computer a new random one. */
+    /** Changes one or more of a seat's choices; a field left out is left alone, and a blank name gives the computer a new random one.
+     *  aiProfile is how a computer seat plays, one of the table's aiProfiles. */
     @Command("setSeat")
     public record SetSeat(int index, @Nullable String name, @Nullable String deck, @Nullable Integer avatar,
-            @Nullable Integer sleeve, @Nullable Integer commander) {
+            @Nullable Integer sleeve, @Nullable Integer commander, @Nullable String aiProfile) {
     }
 
     /** How many games the table's match is: 1, 3 or 5. */

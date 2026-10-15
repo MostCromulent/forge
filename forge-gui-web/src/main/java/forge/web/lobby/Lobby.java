@@ -1,6 +1,7 @@
 package forge.web.lobby;
 
 import forge.StaticData;
+import forge.ai.AiProfileUtil;
 import forge.card.CardEdition;
 import forge.card.CardRarity;
 import forge.deck.CardPool;
@@ -24,6 +25,7 @@ import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.NameGenerator;
 import org.apache.commons.lang3.Range;
+import org.apache.commons.lang3.StringUtils;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser.*;
 import forge.web.deck.ExtraSections.Extra;
@@ -717,7 +719,8 @@ public final class Lobby {
                     maxSeats(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,
                     local.isHost() && problems.isEmpty(), illegal, FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY),
                     events.limitedTable(lobby), maxBracket(), overBracket(lobby), teams(lobby),
-                    local.isHost() ? teamChoices(lobby) : List.of()));
+                    local.isHost() ? teamChoices(lobby) : List.of(),
+                    local.isHost() ? AiProfileUtil.getAvailableProfiles() : List.of()));
         }
     }
 
@@ -744,7 +747,13 @@ public final class Lobby {
                 deck == null || !format().getDeckFormat().hasCommander() || deck.getCommanders().isEmpty() ? null
                         : deck.getCommanders().get(0).getImageKey(false),
                 deck == null || format() != GameType.Commander ? null : DeckCatalog.bracketOf(deck),
-                teams(lobby) > 0 ? slot.getTeam() : null, commanderChoices(index, mayEdit, deck));
+                teams(lobby) > 0 ? slot.getTeam() : null, commanderChoices(index, mayEdit, deck),
+                slot.getType() == LobbySlotType.AI ? aiProfile(slot) : null);
+    }
+
+    /** A computer seat with no playstyle of its own plays the one the settings name, as GameLobby deals it. */
+    private static String aiProfile(final LobbySlot slot) {
+        return StringUtils.isEmpty(slot.getAiProfile()) ? FModel.getPreferences().getPref(FPref.UI_CURRENT_AI_PROFILE) : slot.getAiProfile();
     }
 
     /** The highest Commander bracket this table plays at, 1 to 4, or 5 for any: the host's own setting, as desktop keeps it. */
@@ -1314,6 +1323,17 @@ public final class Lobby {
             host().getSlot(index).setSleeveIndex(value);
             local.pushLobby();
         }
+    }
+
+    /** Sets how a computer seat plays, which only the host can. */
+    public void setAiProfile(final int index, final String profile) {
+        final GameLobby lobby = host();
+        if (lobby == null || index < 0 || index >= lobby.getNumberOfSlots() || lobby.getSlot(index).getType() != LobbySlotType.AI
+                || !AiProfileUtil.getAvailableProfiles().contains(profile)) {
+            return;
+        }
+        lobby.getSlot(index).setAiProfile(profile);
+        local.pushLobby();
     }
 
     /** Deals a seat a sleeve at random: one no seat wears yet while there are enough to go round, and never its own. */

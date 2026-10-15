@@ -149,7 +149,7 @@ public final class ToBrowser {
             @Nullable String cardPool, List<Format> casualVariants, List<String> variantsOn,
             int maxSeats, int gamesPerMatch, List<Seat> seats, List<String> problems, boolean canStart,
             List<String> illegalDecks, boolean legalityEnforced, @Nullable LimitedTable limited, int maxBracket,
-            List<String> overBracket, int teams, List<Integer> teamChoices) {
+            List<String> overBracket, int teams, List<Integer> teamChoices, List<String> aiProfiles) {
     }
 
     /** A Limited table's event, where kind is "draft" or "sealed" and phase is an EventPhase name. */
@@ -188,12 +188,14 @@ public final class ToBrowser {
     public record Format(String id, String name, String group, String desc, List<String> facts, String play) {
     }
 
-    /** type is a netplay lobby slot's (LOCAL, AI, OPEN or REMOTE), and sittingOut says the seat sits the next match out. */
+    /** type is a netplay lobby slot's (LOCAL, AI, OPEN or REMOTE), sittingOut says the seat sits the next match out,
+     *  and aiProfile is how a computer seat plays. */
     public record Seat(@Nullable String name, String type, boolean mine, boolean mayEdit, boolean ready, int avatar,
             int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
             @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
             @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard, boolean sittingOut,
-            @Nullable String commander, @Nullable Integer bracket, @Nullable Integer team, List<CommanderChoice> commanderChoices) {
+            @Nullable String commander, @Nullable Integer bracket, @Nullable Integer team, List<CommanderChoice> commanderChoices,
+            @Nullable String aiProfile) {
     }
 
     /** Who else can lead a seat's deck, as desktop's lobby offers it: the leader's name (two joined by +), the first one's picture,

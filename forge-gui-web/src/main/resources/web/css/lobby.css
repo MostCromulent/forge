@@ -291,7 +291,7 @@ html[data-motion="reduced"] .plate { animation: none; }
 
 .plate .sleeve.empty:hover { border-color: var(--accent-2); }
 
-.who { display: flex; align-items: center; gap: 8px; }
+.who { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 /* The face is the seat's person, so it is the largest thing beside the sleeve */
 .who .avatar { padding: 0; width: 64px; height: 64px; border-radius: 50%; overflow: hidden; flex: none; border: 1px solid var(--line-bright); box-shadow: 0 2px 10px #0006; }
 .who .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -303,8 +303,12 @@ html[data-motion="reduced"] .plate { animation: none; }
 .kind.chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px 3px 8px; border: 1px solid var(--line-bright); border-radius: 13px; background: var(--surface-2); color: var(--text); font-weight: 600; }
 .who .kind.chip:hover, .who .kind.chip[aria-expanded="true"] { border-color: var(--accent-2); color: var(--accent-2); text-decoration: none; }
 :is(.kind.chip, .kind-menu) svg { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* A computer left to play as Forge usually does needs no notice */
+.kind.chip.quiet:not(:hover, [aria-expanded="true"]) { opacity: .6; }
 .kind.chip .chevron { width: 12px; height: 12px; stroke: var(--muted); stroke-width: 2.4; }
 .popup.kind-menu { left: 0; top: calc(100% + 6px); width: max-content; max-width: 270px; padding: 5px; display: flex; flex-direction: column; gap: 1px; }
+/* The playstyle chip sits towards the plate's right, so its menu opens leftwards to stay on a phone's screen */
+.popup.kind-menu.style-menu { left: auto; right: 0; }
 .kind-menu button { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: 9px; align-items: center; padding: 7px 10px; border: 0; border-radius: 6px; background: none; text-align: left; font-size: 13px; }
 .kind-menu button:hover { background: var(--surface-2); }
 .kind-menu button[aria-checked="true"] { background: var(--accent-soft); color: var(--accent-2); }

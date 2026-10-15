@@ -1205,6 +1205,9 @@ public final class WebSession implements IHasForgeLog {
         if (seat.commander() != null) {
             lobby.setCommander(seat.index(), seat.commander());
         }
+        if (seat.aiProfile() != null) {
+            lobby.setAiProfile(seat.index(), seat.aiProfile());
+        }
     }
 
     public Hello hello() {
