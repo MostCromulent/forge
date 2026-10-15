@@ -1,4 +1,4 @@
-import { reconcile } from './render';
+import { reconcile } from './reconcile';
 import { lastPicture } from './cards';
 import { cardImageSrc, noImageOnError, setImage } from '../images';
 import { game, deref, derefAll, me, players, stackPick, stateOf, zone, type Model } from '../model';

@@ -22,28 +22,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-/** What a deck is checked against: a format, and for Constructed an optional card pool. Unrestricted keeps only the copy limit of four. */
-record Check(GameType format, GameFormat pool, boolean unrestricted) {
-    static Check of(final GameType format, final GameFormat pool) {
-        return new Check(format, pool, false);
-    }
-
-    static Check none() {
-        return new Check(GameType.Constructed, null, true);
-    }
-
-    DeckFormat deckFormat() {
-        return unrestricted ? DeckFormat.Constructed : format.getDeckFormat();
-    }
-
-    String label() {
-        if (unrestricted) {
-            return Localizer.getInstance().getMessage("lblWebEditorNoRestriction");
-        }
-        return pool == null ? format.toString() : format + " · " + pool.getName();
-    }
-}
-
 /** Reports the engine's deck rules, adding the commander ban lists and every problem after the first, which DeckFormat leaves out. */
 final class Legality {
     private Legality() {

@@ -17,7 +17,7 @@ import { AutoDecisionsDialog, AutoPassStops, DrawOfferQuestion, GameMenu } from 
 import { DevSetupDialog } from './match/devmenu';
 import { Volume } from './volume';
 import { Notices } from './notices';
-import { Dock } from './match/dock';
+import { Dock } from './dock';
 import { MenuSheet } from './match/menusheet';
 import { isPortrait } from './form';
 import { byId } from './dom';

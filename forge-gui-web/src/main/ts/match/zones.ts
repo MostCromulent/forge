@@ -1,4 +1,4 @@
-import { reconcile } from './render';
+import { reconcile } from './reconcile';
 import { createCard, updateCard, type CardClick } from './cards';
 import { stateOf, zone, type Model } from '../model';
 import { byId, q, make, reducedMotion } from '../dom';

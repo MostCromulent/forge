@@ -1,6 +1,6 @@
 // Lays out the whole match screen and redraws it from the model, leaving each piece to its own module
 
-import { reconcile } from './render';
+import { reconcile } from './reconcile';
 import { cardImageSrc, hideOnError, noImageOnError, setImage, symbolUrl } from '../images';
 import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLocal, type Model } from '../model';
 import { renderHand } from './hand';

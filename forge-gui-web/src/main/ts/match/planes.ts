@@ -1,6 +1,6 @@
 // The face-up planes rule the whole table, so they sit in a dock on the divider between the halves, with their die beside them
 
-import { reconcile } from './render';
+import { reconcile } from './reconcile';
 import { cardImageSrc, setImage } from '../images';
 import { deref, game, me, players, stateOf, zone, type Model } from '../model';
 import { hoverable } from '../preview';

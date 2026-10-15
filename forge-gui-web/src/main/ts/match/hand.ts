@@ -1,7 +1,7 @@
 // The player's hand along the bottom of the board, fanned and sorted as the options say.
 
 import { commandKind } from './command';
-import { reconcile } from './render';
+import { reconcile } from './reconcile';
 import { createCard, frameColour, updateCard, type CardClick } from './cards';
 import { deref, derefAll, game, isLocal, players, stateOf, zone, type Model } from '../model';
 import { isPortrait } from '../form';

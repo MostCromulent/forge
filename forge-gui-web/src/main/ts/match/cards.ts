@@ -5,7 +5,7 @@ import { hoverable, inspectCard } from '../preview';
 import { longPress } from '../press';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from '../images';
 import { playerSleeveUrl, cssUrl } from '../looks';
-import { reconcile } from './render';
+import { reconcile } from './reconcile';
 import { q, replay, make, reducedMotion } from '../dom';
 import type { CardView, KeywordText, PlayerView, Ref } from '../protocol';
 import { t } from '../text';

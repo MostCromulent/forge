@@ -1,15 +1,15 @@
 // Who is on this server and what they are saying: a panel at the bottom edge before a match, a widget under the log during one
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { avatarUrl } from '../looks';
-import { LookPicker } from '../lookpicker';
-import { rememberAvatar } from '../menu';
-import { logTints } from './log';
-import { players, type ChatEntry, type Model } from '../model';
-import type { Actions } from '../actions';
-import type { Person } from '../protocol';
-import { t, type TextKey } from '../text';
-import { Dropdown } from '../dialog';
+import { avatarUrl } from './looks';
+import { LookPicker } from './lookpicker';
+import { rememberAvatar } from './menu';
+import { logTints } from './match/log';
+import { players, type ChatEntry, type Model } from './model';
+import type { Actions } from './actions';
+import type { Person } from './protocol';
+import { t, type TextKey } from './text';
+import { Dropdown } from './dialog';
 
 /** What each person is doing, in the words the roster shows. A seat at a table is worth naming; waiting is not. */
 const DOING: Record<string, TextKey> = {

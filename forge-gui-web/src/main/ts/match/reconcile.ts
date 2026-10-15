@@ -1,3 +1,5 @@
+// Keeps a container's children in step with a list, by key: kept elements are updated and moved, new ones made, gone ones removed
+
 /** Uses moveBefore where the browser has it, because insertBefore takes the element out and puts it back, which ends its transitions. */
 function place(parent: HTMLElement, el: HTMLElement, next: ChildNode | null): void {
   const mover = parent as HTMLElement & { moveBefore?: (node: Node, child: Node | null) => void };

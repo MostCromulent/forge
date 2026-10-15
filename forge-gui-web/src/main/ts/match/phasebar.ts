@@ -1,4 +1,4 @@
-import { reconcile } from './render';
+import { reconcile } from './reconcile';
 import { deref, game, isLocal, me, opponents, players, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
 import { byId, q, replay, make, onPressOutside, reducedMotion } from '../dom';
