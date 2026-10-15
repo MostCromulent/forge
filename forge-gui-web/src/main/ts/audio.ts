@@ -60,7 +60,7 @@ export function playEffect(clip: HTMLAudioElement, from = 0): void {
 }
 
 /** The music a screen plays: desktop's menu playlist, its match playlist, or none. */
-export type Playlist = 'menu' | 'match';
+type Playlist = 'menu' | 'match';
 
 let playing: Playlist | null = null;
 let wanted: Playlist | null = null;

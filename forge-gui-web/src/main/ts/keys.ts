@@ -41,7 +41,7 @@ export function keyName(key: string): string {
   return key === ' ' ? 'Space' : key.length === 1 ? key.toUpperCase() : key;
 }
 
-export interface KeyPress {
+interface KeyPress {
   key: string;
   /** Typed into a field: only Escape, to close what the field sits in, is the page's. */
   typing: boolean;

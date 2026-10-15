@@ -6,7 +6,7 @@ import { CHAOS_MARK } from './conquestwheel';
 import type { PackCard } from '../protocol';
 import { reducedMotion } from '../dom';
 
-export interface PackSpec {
+interface PackSpec {
   name: string;
   /** The line under the name: what kind of pack it is, or for a chaos pack the world its cards come from. */
   sub: string;
@@ -17,7 +17,7 @@ export interface PackSpec {
   hint: string;
 }
 
-export interface PackHooks {
+interface PackHooks {
   /** A card has turned face up, at this place on the screen. */
   flipped(card: PackCard, at: DOMRect): void;
   /** The pack has been clicked and is opening. */

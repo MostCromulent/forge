@@ -935,7 +935,7 @@ public final class DeckEditor {
         }
         final int most = check.deckFormat().getMaxCardCopies(card);
         if (most == Integer.MAX_VALUE) {
-            return Localizer.getInstance().getMessage("lblWebConquestNoneLeft", card.getName());
+            return Localizer.getInstance().getMessage("lblWebDeckNoneLeft", card.getName());
         }
         return most == 1 ? Localizer.getInstance().getMessage("lblWebEditorOnlyOne", card.getName())
                 : Localizer.getInstance().getMessage("lblWebEditorCopiesAlready", most - room, most);

@@ -18,19 +18,19 @@ import { CardGroup, Curve } from './deckview';
 
 const SEARCH_DEBOUNCE_MS = 200;
 /** Every net-deck category is its own source, so they answer to one facet and list their categories under it. */
-export const NET = 'net';
+const NET = 'net';
 const isNet = (source: string) => source.startsWith(`${NET} `);
 const netName = (source: string) => source.slice(NET.length + 1);
-export type SortKey = 'name' | 'colors' | 'formats' | 'size' | 'legal' | 'bracket';
+type SortKey = 'name' | 'colors' | 'formats' | 'size' | 'legal' | 'bracket';
 const SORTS: [SortKey, TextKey][] = [['name', 'lblWebEditorSortName'], ['colors', 'lblWebEditorSortColour'], ['formats', 'lblWebFinderSortFormat'],
   ['size', 'lblWebFinderSortSize'], ['legal', 'lblWebFinderSortLegalFirst'], ['bracket', 'lblWebFinderSortBracket']];
 
 /** Numbers from and to, either left open; null is no limit at all. */
 type Range = { from: number | null; to: number | null } | null;
 /** The filters asked of the server, which alone reads every deck's cards. */
-export type DeckQueryKind = 'card' | 'sideboard' | 'set';
+type DeckQueryKind = 'card' | 'sideboard' | 'set';
 
-export interface DeckFilter {
+interface DeckFilter {
   /** As typed. While there is one, it orders the list instead of the sort. */
   query: string;
   /** A source's name, or 'all'. */
@@ -59,7 +59,7 @@ export interface DeckFilter {
 }
 
 /** How the finder opens: every source, and only decks the lobby would accept. */
-export const FINDER_DEFAULTS: DeckFilter = {
+const FINDER_DEFAULTS: DeckFilter = {
   query: '', source: 'all', colours: new Set(), cardFormat: 'any', legalOnly: true, bracket: null, card: null, sideboard: null,
   set: null, identity: null, colourCount: null, main: null, side: null, mana: null, folder: null, favourites: false, aiPlays: false, sort: 'name',
 };
@@ -67,13 +67,13 @@ export const FINDER_DEFAULTS: DeckFilter = {
 const GUEST_STARS = 'forge.guestStars';
 
 /** The folder a deck's key places it in, "" for none. A key is source:folder/name. */
-export const folderOf = (key: string) => key.slice(key.indexOf(':') + 1, Math.max(key.indexOf(':') + 1, key.lastIndexOf('/')));
+const folderOf = (key: string) => key.slice(key.indexOf(':') + 1, Math.max(key.indexOf(':') + 1, key.lastIndexOf('/')));
 const within = (r: Range, n: number | null | undefined) =>
   !r || (n != null && (r.from === null || n >= r.from) && (r.to === null || n <= r.to));
 const identityLetters = (d: DeckSummary) => (d.colors ?? '').replace('C', '');
 
 /** The decks the filter lets through, in its order, where a generated deck has no cards yet so legality cannot rule it out. */
-export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter,
+function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter,
   found: (kind: DeckQueryKind, value: string) => ReadonlySet<string> | undefined = () => undefined): DeckSummary[] {
   const asked = ([['card', f.card], ['sideboard', f.sideboard], ['set', f.set]] as const)
     .filter(([, value]) => value !== null).map(([kind, value]) => found(kind, value!) ?? new Set<string>());
@@ -109,7 +109,7 @@ export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter,
 }
 
 /** How many decks each source holds, with every net-deck category counted as the one source. */
-export function sourceCounts(decks: readonly DeckSummary[]): Map<string, number> {
+function sourceCounts(decks: readonly DeckSummary[]): Map<string, number> {
   const sources = new Map<string, number>([['all', decks.length]]);
   for (const d of decks) {
     const group = isNet(d.source) ? NET : d.source;

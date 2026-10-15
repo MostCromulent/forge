@@ -2,7 +2,7 @@
 
 import { reducedMotion } from '../dom';
 
-export type Destination = 'Graveyard' | 'Exile';
+type Destination = 'Graveyard' | 'Exile';
 
 /** A tapped card is drawn turned and at this size (board.css). */
 export const TAPPED_SCALE = 0.9;

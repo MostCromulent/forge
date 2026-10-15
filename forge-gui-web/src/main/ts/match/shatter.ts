@@ -8,7 +8,7 @@ import { make, reducedMotion } from '../dom';
 
 type Three = typeof import('three');
 
-export interface ShatterOptions {
+interface ShatterOptions {
   /** The seat avatar the portrait leaves from. */
   from: DOMRect;
   image: string;

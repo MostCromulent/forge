@@ -5,7 +5,7 @@ import type { CardStateView, CardView } from '../protocol';
 export type CommandKind = 'plane' | 'scheme' | 'avatar' | 'commander' | 'signature' | 'dice' | 'effect';
 
 /** The name Forge gives the card that carries each player's planar die. */
-export const PLANAR_DICE = 'Planar Dice';
+const PLANAR_DICE = 'Planar Dice';
 
 export function commandKind(card: CardView, state: Partial<CardStateView>): CommandKind {
   const type = state.Type ?? '';

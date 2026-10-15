@@ -72,7 +72,7 @@ export function copyLimit(state: EditorState, name: string, owned?: number | nul
 }
 
 /** How many more of a card the deck can take: what the pool has left in limited mode, otherwise the copy limit's room. */
-export function roomFor(state: EditorState, row: CatalogueRow, inDeck: number): number {
+function roomFor(state: EditorState, row: CatalogueRow, inDeck: number): number {
   if (state.limited) return state.sideboard.find(c => c.name === row.name)?.count ?? 0;
   return copyLimit(state, row.name, row.count) - inDeck;
 }

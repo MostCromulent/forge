@@ -204,7 +204,7 @@ function RenameField({ name, done }: { name: string; done: (name: string | null)
 }
 
 /** "Check legality against", for the open deck. */
-export function CheckControl({ model, state, actions }: { model: Model; state: EditorState; actions: Actions }) {
+function CheckControl({ model, state, actions }: { model: Model; state: EditorState; actions: Actions }) {
   return (
     <CheckSelect model={model} value={state.unrestricted ? 'none' : `${state.format}|${state.cardPool ?? ''}`}
       change={(format, pool, unrestricted) => actions.setCheck(format, pool, unrestricted)} />

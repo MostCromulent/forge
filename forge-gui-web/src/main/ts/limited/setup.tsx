@@ -39,7 +39,7 @@ function blockOf(options: LimitedOptions, v: SealedValue): SealedBlock | undefin
 }
 
 /** Choosing a block: a block with one set combination has it filled in, since there is nothing to ask. */
-export function sealedBlockChoice(options: LimitedOptions, product: string, name: string): Partial<SealedValue> {
+function sealedBlockChoice(options: LimitedOptions, product: string, name: string): Partial<SealedValue> {
   const combos = blocksFor(options, product).find(b => b.name === name)?.combos ?? [];
   return combos.length === 1 ? { block: name, combo: combos[0] } : { block: name };
 }
@@ -179,19 +179,19 @@ export interface DraftValue {
 }
 
 /** An online draft's table: how many players are seated, which the pod can never be smaller than. */
-export interface DraftTable {
+interface DraftTable {
   seated: number;
 }
 
 /** The pod sizes on offer: from the players seated, and never under two, up to eight. */
-export function podChoices(seated: number): number[] {
+function podChoices(seated: number): number[] {
   const out: number[] = [];
   for (let n = Math.max(2, seated); n <= 8; n++) out.push(n);
   return out;
 }
 
 /** Where the seats start: the product's own pod, raised to the players seated, as desktop's pod choice starts. */
-export function podStart(recommended: number, seated: number): number {
+function podStart(recommended: number, seated: number): number {
   return Math.min(8, Math.max(recommended, Math.max(2, seated)));
 }
 
@@ -229,7 +229,7 @@ const draftBlocksFor = (options: LimitedOptions, product?: string) => product ==
 const draftBlockOf = (options: LimitedOptions, v: DraftValue) => draftBlocksFor(options, v.product).find(b => b.name === v.block);
 
 /** Choosing a block to draft: a single-set block needs no more questions, since there is nothing to choose. */
-export function draftBlockChoice(options: LimitedOptions, product: string, name: string): Partial<DraftValue> {
+function draftBlockChoice(options: LimitedOptions, product: string, name: string): Partial<DraftValue> {
   const sets = draftBlocksFor(options, product).find(b => b.name === name)?.sets ?? [];
   return sets.length === 1 ? { block: name, combo: sets[0] } : { block: name };
 }
@@ -312,7 +312,7 @@ export function pickRuleName(rule?: string, inline = false): string {
 }
 
 /** The table rules as the folded step and the event panel say them. */
-export function rulesLine(v: DraftValue): string {
+function rulesLine(v: DraftValue): string {
   const picks = pickRuleName(v.pickRule, true);
   return t('lblWebSetupRulesLine', v.podSize ?? 0, picks, v.timer ? t('lblWebSetupSecondsToPick', v.timer) : t('lblWebEventNoPickTimer'));
 }

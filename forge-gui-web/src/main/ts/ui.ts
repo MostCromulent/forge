@@ -5,7 +5,7 @@ import { storeJson, storedJson } from './storage';
 import { reducedMotion } from './dom';
 
 /** The card or player the pointer is over, where src is empty when the viewer may not see the card and at is the element hovered in. */
-export type Hover = { card: number | null; src: string; from?: string; at?: HTMLElement } | { player: number };
+type Hover = { card: number | null; src: string; from?: string; at?: HTMLElement } | { player: number };
 
 /** A picker open over match setup, for one seat. */
 export interface Picker {
@@ -136,7 +136,7 @@ export function initUi(schedule: () => void, now: () => void): void {
 }
 
 /** Changes the arrangement and draws it at once, for a view transition, which shows no frames until it is drawn. */
-export function changeUiNow(change: (state: UiState) => void): void {
+function changeUiNow(change: (state: UiState) => void): void {
   change(ui);
   drawNow();
 }

@@ -4,7 +4,7 @@ import { t } from '../text';
 import type { KeywordText } from '../protocol';
 
 /** A stretch of text, where muted does not apply just now and struck is a word a text-changing effect replaced. */
-export interface Run {
+interface Run {
   text: string;
   muted: boolean;
   struck?: boolean;
@@ -23,7 +23,7 @@ export type Block =
   | { kind: 'text'; text: Line; label?: Line };
 
 /** Something the game has done to the card that fits in a chip: counters, damage, shields. */
-export interface Chip {
+interface Chip {
   kind: 'counter' | 'damage' | 'shield' | 'status';
   text: string;
 }

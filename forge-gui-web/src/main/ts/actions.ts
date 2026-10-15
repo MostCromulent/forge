@@ -6,7 +6,7 @@ import type {
 } from './protocol';
 
 /** What a seat's owner can change about it. */
-export type SeatChange = Omit<SetSeat, 't' | 'index'>;
+type SeatChange = Omit<SetSeat, 't' | 'index'>;
 
 export interface Actions {
   /** A click on a card. menu is the right button, which asks for everything the card can do; x and y place that list. */

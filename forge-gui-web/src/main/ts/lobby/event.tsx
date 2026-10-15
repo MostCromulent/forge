@@ -114,7 +114,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
 }
 
 /** Where the event has got to: ready up, the draft or the opening, building, then playing once every seat that plays has a deck. */
-export function eventStage(lobby: LobbyTable): number {
+function eventStage(lobby: LobbyTable): number {
   const lim = lobby.limited!;
   if (!lim.started) return 0;
   if (!lim.activeEventId) return 1;
@@ -123,7 +123,7 @@ export function eventStage(lobby: LobbyTable): number {
 }
 
 /** The line under the bar at a Draft or Sealed table: who or what the table is waiting on. */
-export function eventStatus(lobby: LobbyTable): string {
+function eventStatus(lobby: LobbyTable): string {
   const lim = lobby.limited!;
   if (!lim.product) return lobby.host ? t('lblWebEventSetUpThenReady') : t('lblWebEventHostSettingUp');
   if (!lim.started) {

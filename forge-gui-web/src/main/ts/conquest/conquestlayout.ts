@@ -3,7 +3,7 @@
 import type { ConquestState } from '../protocol';
 
 export const TW = 100, TH = 150, G = 14, BH = 92, GAP = 32, SPINE = 62, X0 = 4, Y0 = 8;
-export interface Layout {
+interface Layout {
   width: number;
   height: number;
   regions: { x: number; w: number; folded: boolean }[];

@@ -2,7 +2,7 @@
 
 import { make } from './dom';
 
-export const LONG_PRESS_MS = 500;
+const LONG_PRESS_MS = 500;
 const MOVE_LIMIT_PX = 8;
 /** How long after a finger lifts the browser's own context menu for that touch may still arrive. */
 const AFTER_TOUCH_MS = 700;

@@ -12,12 +12,12 @@ import type { CardView, GameView, PlayerView } from '../protocol';
 import { t } from '../text';
 
 /** The engine moves the face-up planes into the command zone of whoever's turn it is, so every command zone is looked through. */
-export function faceUpPlanes(model: Model): CardView[] {
+function faceUpPlanes(model: Model): CardView[] {
   return players(model).flatMap(p => zone(model, p, 'Command')).filter(c => commandKind(c, stateOf(model, c)) === 'plane');
 }
 
 /** The roll is a special action at sorcery speed, and the engine refuses it at any other time in any case. */
-export function mayRoll(prompt: { priority: boolean } | null | undefined, g: GameView | undefined, viewer: number | undefined): boolean {
+function mayRoll(prompt: { priority: boolean } | null | undefined, g: GameView | undefined, viewer: number | undefined): boolean {
   return !!prompt?.priority && g?.PlayerTurn?.ref === viewer && (g?.Phase === 'MAIN1' || g?.Phase === 'MAIN2')
     && !(g?.Stack ?? []).some(Boolean);
 }

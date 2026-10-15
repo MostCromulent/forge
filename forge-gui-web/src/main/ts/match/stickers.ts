@@ -7,7 +7,7 @@ import type { CardView, PlayerView } from '../protocol';
 type Kind = 'name' | 'art' | 'ability' | 'pt';
 
 /** A sticker on a card, as the host describes it: a word, "art sticker 4", the ability's text, or "1/4". */
-export interface Applied {
+interface Applied {
   text: string;
   kind: Kind;
 }
@@ -32,7 +32,7 @@ export function applied(text: string | undefined): Applied[] {
 }
 
 /** A sheet's own list: each sticker's text, and whether it has been used. */
-export function sheetLines(text: string | undefined): { text: string; used: boolean }[] {
+function sheetLines(text: string | undefined): { text: string; used: boolean }[] {
   if (!text) return [];
   return text.split(/\r?\n/).slice(1).map(line => {
     const used = / - used\s*$/.test(line);
@@ -66,7 +66,7 @@ function cut(src: string, slot: number): string {
 const escape = (s: string) => s.replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
 
 /** The stickers on a card as markup for a layer over its picture: names along the name line, art on the art, abilities across the text box and numbers on the corner. */
-export function stickersHtml(model: Model, card: CardView | undefined): string {
+function stickersHtml(model: Model, card: CardView | undefined): string {
   // A sheet shows where each sticker it has given away was, as the peeled paper does
   if (card?.Stickers?.startsWith('Stickers on this sheet')) {
     return sheetLines(card.Stickers).map((line, slot) => {

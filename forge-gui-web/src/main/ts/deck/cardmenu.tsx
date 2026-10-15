@@ -32,7 +32,7 @@ export interface MenuAt {
 }
 
 /** The card as a section holds it, or undefined when that section has none. */
-export function cardIn(state: EditorState, zone: Zone | DeckSection, name: string): EditorCard | undefined {
+function cardIn(state: EditorState, zone: Zone | DeckSection, name: string): EditorCard | undefined {
   const cards = zone === 'Main' ? state.main.flatMap(g => g.cards) : zone === 'Sideboard' ? state.sideboard
     : zone === 'Commander' ? state.commanders : [];
   return cards.find(c => c.name === name);

@@ -19,7 +19,7 @@ export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb:
   { id: 'steppe', name: 'lblWebPlaymatSteppe', image: '/playmats/dawn-steppe.jpg', thumb: '/playmats/dawn-steppe-thumb.jpg' },
   { id: 'molten', name: 'lblWebPlaymatMolten', image: '/playmats/molten-forge.jpg', thumb: '/playmats/molten-forge-thumb.jpg' },
 ];
-export type SettingValue = string | number | boolean;
+type SettingValue = string | number | boolean;
 
 interface SettingBase {
   section: string;
@@ -86,18 +86,18 @@ export const SETTINGS: SettingDef[] = [
     options: [['ability', t('lblWebOptionsPerAbility')], ['card', t('lblWebOptionsPerCard')]], def: 'ability',
   },
   {
-    section: t('lblWebOptionsSectionGameplay'), key: 'pace', label: t('lblWebOptionsPace'), hint: t('lblWebOptionsPaceHint'),
+    section: t('GamePlay'), key: 'pace', label: t('lblWebOptionsPace'), hint: t('lblWebOptionsPaceHint'),
     type: 'slider', min: 0, max: 3000, step: 250, unit: 'seconds', def: 1000,
   },
   {
-    section: t('lblWebOptionsSectionGameplay'), key: 'autoTapPreview', label: t('lblWebOptionsAutoTapPreview'), type: 'toggle', server: true, def: false,
+    section: t('GamePlay'), key: 'autoTapPreview', label: t('lblWebOptionsAutoTapPreview'), type: 'toggle', server: true, def: false,
   },
   {
-    section: t('lblWebOptionsSectionGameplay'), key: 'arrows', label: t('lblWebOptionsArrows'), type: 'choice', server: true,
+    section: t('GamePlay'), key: 'arrows', label: t('lblWebOptionsArrows'), type: 'choice', server: true,
     options: [['0', t('lblOff')], ['1', t('lblWebOptionsHover')], ['2', t('lblAlways')]], def: '2',
   },
   {
-    section: t('lblWebOptionsSectionGameplay'), key: 'logDetail', label: t('lblWebOptionsLogDetail'), type: 'choice', server: true,
+    section: t('GamePlay'), key: 'logDetail', label: t('lblWebOptionsLogDetail'), type: 'choice', server: true,
     options: [['LOW', t('lblWebOptionsLow')], ['MEDIUM', t('lblMedium')], ['HIGH', t('lblWebOptionsHigh')]], def: 'MEDIUM',
   },
   {

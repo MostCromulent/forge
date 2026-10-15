@@ -137,7 +137,7 @@ export function inspectPlayer(key: number): void {
 /** Whether el's preview is pinned open, so that a tap on it can mean the second tap a desktop's click needs, as a draft card's pick does. */
 export const isPinned = (el: Element): boolean => ui.inspect && !!ui.hover && 'card' in ui.hover && ui.hover.at === el;
 
-export function closeInspect(): void {
+function closeInspect(): void {
   changeUi(u => { u.hover = null; u.faceIndex = 0; u.inspect = false; });
 }
 

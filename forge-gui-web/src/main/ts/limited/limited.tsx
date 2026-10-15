@@ -124,12 +124,12 @@ function DraftSetup({ model, actions }: { model: Model; actions: Actions }) {
 }
 
 /** How many opponents a free-for-all can seat: a match holds at most eight players, and a pool has so many decks. */
-export function severalCap(opponents: number): number {
+function severalCap(opponents: number): number {
   return Math.min(7, opponents);
 }
 
 /** A deck's colours in words: White–Green, or the count past three, or Colourless. */
-export function colourName(colors: string): string {
+function colourName(colors: string): string {
   const names = [...colors].map(c => COLOUR_NAMES[c]).filter(Boolean).map(key => t(key));
   if (!names.length) return t('lblColorless');
   if (names.length > 3) return names.length === 5 ? t('lblWebLimitedAllFiveColours') : t('lblWebLimitedFourColours');

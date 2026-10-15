@@ -9,7 +9,7 @@ import type { Model } from '../model';
 import type { ExtraChoice, Seat } from '../protocol';
 import { Backdrop } from '../dialog';
 
-export type ExtraKind = 'planes' | 'schemes' | 'vanguard';
+type ExtraKind = 'planes' | 'schemes' | 'vanguard';
 
 const SECTION: Record<ExtraKind, string> = { planes: 'Planes', schemes: 'Schemes', vanguard: 'Avatar' };
 const TITLE: Record<ExtraKind, TextKey> = { planes: 'lblWebLobbyChoosePlanarDeck', schemes: 'lblWebLobbyChooseSchemeDeck', vanguard: 'lblWebLobbyChooseVanguard' };

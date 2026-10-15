@@ -194,7 +194,7 @@ export function NewQuest({ model, actions }: { model: Model; actions: Actions })
       render: (v, set) => <Names names={prizesFrom(v) ?? []} pick={prizeFormat => set({ prizeFormat })} />,
     },
     {
-      id: 'name', label: t('lblWebQuestNameAsk'), short: t('lblQuestName'), hint: '', fields: [],
+      id: 'name', label: t('MsgQuestNewName'), short: t('lblQuestName'), hint: '', fields: [],
       answer: () => null,
       render: () => (
         <form class="rows" onSubmit={e => { e.preventDefault(); start(); }}>

@@ -7,7 +7,7 @@ const APP = 'forge-web';
 // Which browser this is to the server, and a list half typed into the importer, are not the player's settings
 const LEFT_OUT = ['forge.clientId', 'forge.importDraft'];
 
-export interface Backup {
+interface Backup {
   app: string;
   version: number;
   storage: Record<string, string>;

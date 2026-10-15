@@ -11,7 +11,7 @@ import { t } from '../text';
 const REVEAL_MS = 3000;
 
 /** Schemes in play now that were not at the last look. The first look reveals nothing, so a reload replays nothing. */
-export function newSchemes(seen: ReadonlySet<number> | null, now: readonly number[]): number[] {
+function newSchemes(seen: ReadonlySet<number> | null, now: readonly number[]): number[] {
   return seen ? now.filter(k => !seen.has(k)) : [];
 }
 

@@ -42,7 +42,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
       <div class="cq-purse">
         {extra}
         {bar.balances.map(b => <Purse key={b.icon} icon={b.icon} n={b.amount - (held[b.icon] ?? 0)} label={b.label} />)}
-        {prefs && <button onClick={prefs}>{t('lblWebCampaignPreferences')}</button>}
+        {prefs && <button onClick={prefs}>{t('Preferences')}</button>}
       </div>
     </div>
   );
@@ -126,7 +126,7 @@ export function Stats({ model, actions, first }: { model: Model; actions: Action
 }
 
 /** A mode's preferences, each saved as it is changed, since the server checks one against the others as they stand. */
-export function Prefs({ model, actions, close }: { model: Model; actions: Actions; close: () => void }) {
+function Prefs({ model, actions, close }: { model: Model; actions: Actions; close: () => void }) {
   const p = model.campaignPrefs;
   /** What has been typed and not yet accepted, by key. A refused value stays in its field for the player to mend. */
   const [typed, setTyped] = useState<Record<string, string>>({});

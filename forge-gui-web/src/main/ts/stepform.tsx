@@ -22,7 +22,7 @@ export interface Step<V> {
 const applies = <V,>(step: Step<V>, v: V) => step.applies?.(v) ?? true;
 
 /** The first step that applies and has no answer, or null when the form is complete. */
-export function openStep<V>(steps: Step<V>[], v: V): string | null {
+function openStep<V>(steps: Step<V>[], v: V): string | null {
   return steps.find(s => applies(s, v) && s.answer(v) === null)?.id ?? null;
 }
 

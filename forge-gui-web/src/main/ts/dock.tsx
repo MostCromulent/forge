@@ -203,7 +203,7 @@ function Chevron({ up }: { up: boolean }) {
 }
 
 /** Lines someone else said since the last one you could have read, leaving out the server's own and any said before you arrived. */
-export function unreadSince(chat: readonly ChatEntry[], lastSeen: ChatEntry | undefined, me: string): number {
+function unreadSince(chat: readonly ChatEntry[], lastSeen: ChatEntry | undefined, me: string): number {
   const from = lastSeen ? chat.lastIndexOf(lastSeen) + 1 : 0;
   return chat.slice(from).filter(l => l.from && !l.earlier && l.from !== me).length;
 }

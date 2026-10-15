@@ -22,7 +22,7 @@ export function PageHeader({ class: extra, children }: { class?: string; childre
 }
 
 /** A step of game setup in the trail: a way back to it, or none for the step you are on. */
-export interface SetupStep {
+interface SetupStep {
   label: string;
   go?: () => void;
 }

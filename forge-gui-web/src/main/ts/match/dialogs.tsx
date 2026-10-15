@@ -185,7 +185,7 @@ const SECTION = /^=+\s*(.*?)\s*=+$/;
  * Cards laid out to be looked at, in a window that folds to a bar so the board under it can be read before answering.
  * With aiSkipsOf it is the warning that a computer will not play some of its deck, worded and drawn as one.
  */
-export function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
+function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
   model: Model; title: string; cards: RequestOption[]; close: () => void; aiSkipsOf?: PlayerView;
 }) {
   const [folded, setFolded] = useState(false);
@@ -475,7 +475,7 @@ function WordChoices({ req, model, answer }: { req: ChoicesRequest; model: Model
         <div class="word-chips">
           {[...chosen].map(i => (
             <span key={i} class="word-chip"><SymbolText text={labels[i]} />
-              <button title={t('lblWebDialogRemoveChoice')} onClick={() => toggle(i)}>×</button></span>
+              <button title={t('lblRemove')} onClick={() => toggle(i)}>×</button></span>
           ))}
         </div>
       )}

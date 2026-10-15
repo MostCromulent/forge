@@ -477,7 +477,7 @@ const FACE_DOWN_DECKS: ReadonlySet<ZoneType> = new Set(['PlanarDeck', 'SchemeDec
 const CORE_TYPES = ['Artifact', 'Battle', 'Creature', 'Enchantment', 'Instant', 'Kindred', 'Land', 'Planeswalker', 'Sorcery'];
 
 /** The card types among these type lines, in the rules' order, as desktop's graveyard label counts them. */
-export function cardTypes(typeLines: readonly string[]): string[] {
+function cardTypes(typeLines: readonly string[]): string[] {
   const found = new Set<string>();
   for (const line of typeLines) {
     // Only the words before the dash are types; subtypes such as "Forest" follow it
@@ -489,7 +489,7 @@ export function cardTypes(typeLines: readonly string[]): string[] {
 }
 
 /** A graveyard tile's tooltip: how many cards, and how many card types among them. */
-export function graveyardTitle(count: number, types: string[]): string {
+function graveyardTitle(count: number, types: string[]): string {
   const cards = t(count === 1 ? 'lblWebOneCard' : 'lblWebNCards', count);
   if (!types.length) return t('lblWebBoardGraveyardTitle', cards);
   const kinds = t(types.length === 1 ? 'lblWebBoardOneCardType' : 'lblWebBoardCardTypes', types.length);

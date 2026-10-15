@@ -250,7 +250,7 @@ const SETTLE_MS = 700;
 const settling = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
 // An attachment sits under the card at the bottom of its chain, on whichever battlefield that card is
-export function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] {
+function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] {
   const byKey = new Map(onField.map(c => [c.$key, c]));
   const hostOf = (c: CardView) => (c.EntityAttachedTo ? byKey.get(c.EntityAttachedTo.ref) : undefined);
   const rootOf = (c: CardView) => {

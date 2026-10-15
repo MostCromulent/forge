@@ -22,7 +22,7 @@ export const SITES = 'Moxfield, Archidekt, TappedOut, MTGGoldfish';
 /** Where the text is kept while it is not yet imported, so closing the dialog by mistake loses nothing. */
 const DRAFT_KEY = 'forge.importDraft';
 
-export interface ImporterProps {
+interface ImporterProps {
   model: Model;
   actions: Actions;
   from: 'seat' | 'start' | 'editor';
@@ -251,7 +251,7 @@ function Guide() {
 }
 
 /** Where "Check legality against" starts, which also decides where the deck is saved. */
-export function startingCheck(model: Model, from: 'seat' | 'start' | 'editor', browseFormat?: string): string {
+function startingCheck(model: Model, from: 'seat' | 'start' | 'editor', browseFormat?: string): string {
   if (from === 'editor' && model.editor) {
     return model.editor.unrestricted ? 'none' : `${model.editor.format}|${model.editor.cardPool ?? ''}`;
   }

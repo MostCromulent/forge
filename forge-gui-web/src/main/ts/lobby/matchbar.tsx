@@ -43,7 +43,7 @@ function limitedFormats(): (Format & { kind: 'draft' | 'sealed' })[] {
 }
 
 /** A game's deck size in a few words, read from its first fact: "60+ cards", "100 cards", or "no deck" when it is dealt. */
-export function deckMark(format: Format): string {
+function deckMark(format: Format): string {
   const size = /^(\d+\+?)/.exec(format.facts[0] ?? '')?.[1];
   return size ? t('lblWebNCards', size) : t('lblNoDeck');
 }
@@ -126,7 +126,7 @@ function groupsOf(formats: Format[]): [string, Format[]][] {
 }
 
 /** Why a casual variant cannot be switched on, or null. Momir Basic and MoJhoSto bring their own avatars. */
-export function variantBlocked(lobby: LobbyTable, id: string): string | null {
+function variantBlocked(lobby: LobbyTable, id: string): string | null {
   const group = lobby.formats.find(f => f.id === lobby.format)?.group;
   return id === 'Vanguard' && group === 'Other' ? t('lblWebMatchBarVanguardOff') : null;
 }
@@ -169,7 +169,7 @@ export function seatsLeaving(lobby: LobbyTable, count: number): Set<number> {
 }
 
 /** The fewest seats a table can have: two, or everyone who is seated. */
-export function fewestSeats(lobby: LobbyTable): number {
+function fewestSeats(lobby: LobbyTable): number {
   return Math.max(2, lobby.seats.filter(s => s.mine || s.type === 'LOCAL' || s.type === 'REMOTE').length);
 }
 

@@ -411,7 +411,7 @@ function laidCentre(el: HTMLElement): { x: number; y: number } {
 }
 
 /** A card's journey this frame: where it set off, where it ended, and where it turned back if it came home. */
-export type Journey = CardMoved & { via?: Place };
+type Journey = CardMoved & { via?: Place };
 
 /** Each card's first origin and last destination this frame, with the zone it turned back in if it went out and came home. */
 export function journeys(events: readonly GameEvent[]): Map<string, Journey> {

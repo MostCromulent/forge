@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 
 /** Finds the language keys the page uses, and fails the build on a page key en-US.properties lacks or one with a lone apostrophe. */
 final class PageTextKeys {
-    private static final Pattern QUOTED_KEY = Pattern.compile("['\"]([a-z]{2,4}[A-Z][A-Za-z0-9]*)['\"]");
+    private static final Pattern QUOTED_KEY = Pattern.compile("['\"]([A-Za-z][A-Za-z0-9]*)['\"]");
     private static final Pattern OWN_KEY = Pattern.compile("[a-z]+Web[A-Z][A-Za-z0-9]*");
     private static final Pattern LONE_QUOTE = Pattern.compile("(?<!')'(?!')");
 
