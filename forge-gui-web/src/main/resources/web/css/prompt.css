@@ -42,10 +42,10 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 /* With nothing to answer, the console is only as tall as what it says. A phone's dock keeps its one row */
 html:not([data-form="portrait"]) #prompt .buttons:not(:has(button:not(:disabled))) { display: none; }
 /* The key sits beside its label as a keycap of its own, so it reads as the key to press rather than part of the answer */
-#prompt .buttons button { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 7px; min-width: 0; height: 36px; padding: 0 10px; border-radius: 4px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+#prompt .buttons button { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 5px; min-width: 0; height: 36px; padding: 0 9px; border-radius: 4px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
 /* The secondary answer is as wide as its label, and the primary takes the rest */
 #prompt .ok { flex: 1 1 0; border-radius: 8px 4px 4px 8px; }
-#prompt .cancel { flex: 0 1 auto; max-width: 45%; background: var(--surface-2); border-color: var(--line); color: var(--muted); border-radius: 4px 8px 8px 4px; }
+#prompt .cancel { flex: 0 1 auto; max-width: 52%; background: var(--surface-2); border-color: var(--line); color: var(--muted); border-radius: 4px 8px 8px 4px; }
 /* A long secondary label (Cancel auto-pass) goes onto two lines rather than outgrowing the primary */
 #prompt .cancel .label { white-space: normal; text-align: center; line-height: 1.1; }
 #prompt .cancel:hover:not(:disabled) { color: var(--text); }

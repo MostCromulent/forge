@@ -23,7 +23,7 @@ html:not([data-playmat=""]) #match::after {
               color-mix(in srgb, var(--table) 42%, transparent) 0%,
               color-mix(in srgb, var(--table-deep) 68%, transparent) 100%);
 }
-#match { --side-w: 250px; --prompt-w: 300px; --side-gap: calc(var(--side-w) + 20px); display: grid; position: relative; height: 100vh; overflow: hidden; grid-template-columns: 1fr var(--side-w); grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand side"; gap: 8px; padding: 8px 8px 0; }
+#match { --side-w: 250px; --prompt-w: var(--side-w); --side-gap: calc(var(--side-w) + 20px); display: grid; position: relative; height: 100vh; overflow: hidden; grid-template-columns: 1fr var(--side-w); grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand side"; gap: 8px; padding: 8px 8px 0; }
 /* Clipped, not hidden: a hidden overflow can still be scrolled by Space or a focus, which slides the table up and cuts off the top seat */
 #match { overflow: clip; }
 #opponent { grid-area: opp; }
