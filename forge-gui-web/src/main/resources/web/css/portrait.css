@@ -1,4 +1,4 @@
-/* A phone or tablet held upright (form.ts sets data-form). Every rule for it is here, and nothing here applies to the desktop layout. A page's own file keeps only what the desktop alone needs, under html:not([data-form="portrait"]). */
+/* A phone or tablet held upright (form.ts sets data-form). Every rule only that form needs is here, and nothing here applies to the desktop layout. A page's own file keeps only what the desktop alone needs, under html:not([data-form="portrait"]). The width queries in other files apply on a phone too. */
 /* The browser's own answers to a finger: pull to refresh, double-tap zoom, and the long-press callout */
 html[data-form="portrait"], html[data-form="portrait"] body { overscroll-behavior: none; }
 @media (hover: none) {

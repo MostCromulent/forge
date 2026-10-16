@@ -1,7 +1,7 @@
+// Sound effects come from the host as names, and the server serves them and the music from the player's own Forge sound set
+
 import { setting } from './settings';
 import type { Sound } from './protocol';
-
-// Sound effects come from the host as names, and the server serves them and the music from the player's own Forge sound set
 
 const clips = new Map<string, HTMLAudioElement>();
 let music: HTMLAudioElement | null = null;

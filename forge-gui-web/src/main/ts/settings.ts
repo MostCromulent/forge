@@ -26,6 +26,7 @@ interface SettingBase {
   key: string;
   label: string;
   hint?: string;
+  /** The game reads it too, so its preference is in WebSettings and its value in ServerSettings. */
   server?: boolean;
   /** Also set from the volume control beside the options button. */
   volume?: boolean;
