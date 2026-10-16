@@ -260,38 +260,47 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) #side { z
 .backdrop.on-board .card { box-shadow: 0 12px 30px #000d, 0 0 0 1px #000c; }
 .reveal-back.on-board .reveal-panel.bare { background: none; border: 0; box-shadow: none; }
 .reveal-back.on-board .reveal-panel.bare .zone-who { font-size: 18px; text-shadow: 0 2px 10px #000; }
+/* The question as one line: the card asking, then what it asks; under it, whose cards they are */
+.ask-source { font-weight: 800; color: var(--accent-2); }
+.ask-sep { margin: 0 8px; color: var(--faint); font-weight: 400; }
+.ask-where { margin: -8px 0 0; color: var(--muted); font-size: 13px; text-shadow: 0 1px 4px #000; }
+/* Picked lifts in a thick ring with a mark, focused is a dashed outline, and a card that can be neither is drawn as the board draws it */
+.pick-mark { display: none; }
+.backdrop.on-board .card.picked { translate: 0 -8px; box-shadow: 0 0 0 4px var(--pick), 0 0 24px color-mix(in srgb, var(--pick) 45%, transparent), 0 12px 30px #000d; }
+.backdrop.on-board .pick-mark { position: absolute; left: -11px; top: -11px; z-index: 7; width: 26px; height: 26px; box-sizing: border-box; display: grid; place-items: center; border-radius: 50%;
+  background: var(--brass); border: 1px solid var(--accent); color: var(--on-brass); font: 900 15px/1 system-ui, sans-serif; box-shadow: 0 2px 6px #0009; pointer-events: none; }
+.backdrop.on-board .pick-mark::after { content: '¹3'; }
+.backdrop.on-board .card:focus-visible { outline: 2px dashed #ffffffd9; outline-offset: 5px; }
+/* Many cards scroll in place under the question, so the question and the buttons stay put; the foot fades while more lie below */
+.backdrop.on-board .options:not(.ordered) { max-height: calc(100vh - 230px); overflow-y: auto; justify-content: center; gap: 14px; padding: 14px; scrollbar-width: thin; scrollbar-color: #ffffff4d #ffffff0d; }
+.backdrop.on-board .options.more { -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 60px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 60px), transparent); }
+/* On the board a row of abilities shows each card large enough to know it */
+.backdrop.on-board .listed .card { width: 54px; height: 76px; }
 
 /* A card drawn by the board's own code sits in a holder of its own, which takes no part in the layout */
 .card-host { display: contents; }
 
-/* Putting cards back on the library: a shelf for each end, with the rest of the library drawn between them */
-.manipulate { display: grid; gap: 10px; }
-.manipulate .shelf-hint { margin: -4px 0 0; color: var(--muted); font-size: 12.5px; }
-/* Clipped, because a shelf's height is animated as cards come and go (dialogs.tsx) */
-.manipulate .shelf { overflow: hidden; border-radius: 10px; border: 1px solid var(--line-bright); background: var(--surface-2); padding: 10px 14px 14px; }
-/* An empty end is a strip to drop on, not a box as tall as a card */
-.manipulate .shelf:not(:has(.shelf-card)) { border-style: dashed; background: none; padding-bottom: 10px; }
-.manipulate .shelf-label { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
-.manipulate .shelf-label i { min-width: 20px; padding: 0 6px; border-radius: 9px; background: var(--surface); border: 1px solid var(--line-bright); color: var(--text); font-style: normal; letter-spacing: 0; text-align: center; }
-.manipulate .shelf-cards { --fit: 1.3; display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; padding: 14px 8px 0; }
-.manipulate .shelf:not(:has(.shelf-card)) .shelf-cards { padding-top: 6px; }
-.manipulate .shelf-card { position: relative; cursor: grab; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.manipulate .shelf-card:active { cursor: grabbing; }
-.manipulate .seq { position: absolute; right: -5px; top: -5px; z-index: 3; width: 17px; height: 17px; border-radius: 50%; background: var(--brass); border: 1px solid color-mix(in srgb, var(--accent-2) 40%, transparent); color: var(--on-brass); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-.manipulate .shelf.bottom .seq { background: var(--surface-3); border-color: var(--line-bright); color: var(--text); }
-.manipulate .send { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 3px 0; border-radius: 99px; color: var(--muted); font-size: 12px; }
-.manipulate .send:hover { border-color: var(--accent-2); background: var(--accent-soft); color: var(--accent-2); }
-.manipulate .send svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.manipulate .shelf-empty { margin: 0; color: var(--faint); font-size: 12px; }
-/* The library itself, so the two shelves read as its two ends */
-.manipulate .between { display: flex; align-items: center; gap: 12px; margin: 0; color: var(--muted); font-size: 12px; }
-.manipulate .between::before, .manipulate .between::after { content: ''; flex: 1; height: 1px; background: var(--line); }
-.manipulate .deck-mark { position: relative; flex: none; width: 20px; height: 28px; }
-.manipulate .deck-mark::before, .manipulate .deck-mark::after, .manipulate .deck-mark i { content: ''; position: absolute; inset: 0; border-radius: 3px; border: 1px solid var(--back-edge);
-  background: repeating-linear-gradient(135deg, var(--back-a) 0 3px, var(--back-b) 3px 6px); }
-.manipulate .deck-mark::before { translate: -3px 3px; opacity: .5; }
-.manipulate .deck-mark i { translate: -1.5px 1.5px; opacity: .8; }
-.manipulate .all { margin-right: auto; background: none; color: var(--muted); font-size: 12.5px; }
+/* Putting cards back on the library: the top and the bottom either side of the pile, and the further a card lies from it, the nearer that end */
+.manipulate { display: grid; gap: 12px; justify-items: center; }
+.lib-row { --fit: 1.3; display: flex; align-items: flex-start; justify-content: center; gap: 22px; padding: 4px 6px 30px; }
+.lib-side { display: grid; justify-items: center; }
+.lib-cards { display: flex; gap: 14px; }
+.lib-card { position: relative; cursor: grab; }
+.lib-card:active { cursor: grabbing; }
+.dialog .lib-side.top .lib-card:first-child .order-number { background: var(--brass); border-color: var(--accent); color: var(--on-brass); }
+.dialog .lib-side.bottom .order-end { color: var(--muted); }
+/* An end with nothing at it is a place to drop a card, the size of one */
+.lib-slot { display: block; box-sizing: border-box; width: calc(var(--card-w) * var(--fit)); height: calc(var(--card-h) * var(--fit)); border: 1px dashed var(--line-bright); border-radius: var(--radius); }
+/* The library, as backs in the player's sleeve, with what is left in it */
+.lib-pile { position: relative; flex: none; width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); }
+.lib-pile i { position: absolute; inset: 0; box-sizing: border-box; border-radius: var(--radius); border: 2px solid var(--back-edge);
+  background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 6px, var(--back-b) 6px 12px); }
+.lib-pile i:nth-child(1) { translate: -6px 6px; filter: brightness(.45); }
+.lib-pile i:nth-child(2) { translate: -3px 3px; filter: brightness(.7); }
+.lib-pile i:nth-child(3) { box-shadow: 0 10px 22px #000c; }
+.lib-count { position: absolute; z-index: 2; right: -8px; bottom: -8px; min-width: 24px; height: 22px; box-sizing: border-box; padding: 0 6px; display: grid; place-items: center;
+  border-radius: 11px; background: var(--surface); border: 1px solid var(--line-bright); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.lib-name { position: absolute; left: 50%; top: calc(100% + 9px); transform: translateX(-50%); font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; color: var(--muted); }
 /* What one clicked card can do: a menu at the pointer, as on desktop, rather than a dialog */
 .card-menu { position: fixed; min-width: 220px; max-width: min(420px, calc(100vw - 16px)); padding: 6px; display: grid; gap: 1px; background: var(--surface); border: 1px solid var(--line-bright); border-radius: 10px; box-shadow: 0 14px 36px #000c; }
 .card-menu-title { margin: 2px 8px 5px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }

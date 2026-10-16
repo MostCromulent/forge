@@ -613,7 +613,7 @@ html:not([data-form="portrait"]) #zones.asking:not(.minimised) { background: var
 #match:has(#zones:not([hidden]):not(.minimised)) #side { z-index: 41; }
 .zone-ask { display: none; }
 .zone-panel.asking { background: none; border-color: transparent; box-shadow: none; }
-.zone-panel.asking .zone-ask { display: block; margin: 0; padding: 0 18px 2px; font-size: 15px; font-weight: 650; text-align: center; text-wrap: balance; text-shadow: 0 2px 10px #000; }
+.zone-panel.asking .zone-ask { display: block; margin: 0; padding: 0 18px 2px; font-size: 18px; font-weight: 700; text-align: center; text-wrap: balance; text-shadow: 0 2px 10px #000; }
 .zone-panel.asking header { justify-content: center; padding-top: 4px; border: 0; }
 .zone-panel.asking .zone-who { font-size: 13px; font-weight: 400; color: var(--muted); }
 .zone-panel.asking .zone-gap { flex: 0 0 12px; }

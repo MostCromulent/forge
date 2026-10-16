@@ -6,6 +6,7 @@ import { createCard, updateCard, type CardClick } from './cards';
 import { stateOf, zone, type Model } from '../model';
 import { byId, q, make, reducedMotion } from '../dom';
 import { setSymbolText } from '../images';
+import { splitQuestion } from './asking';
 import { changeUi, ui, type ZoneSort } from '../ui';
 import { normalize, rankByName } from '../search';
 import { isPortrait } from '../form';
@@ -122,7 +123,7 @@ function shelf(root: HTMLElement): HTMLElement {
 
 function createPanel(): HTMLElement {
   const el = make('section', 'zone-panel');
-  el.innerHTML = '<p class="zone-ask"></p><header><b class="zone-who"></b><span class="zone-count"></span><span class="zone-gap"></span>'
+  el.innerHTML = '<p class="zone-ask"><span class="ask-source"></span><span class="ask-sep" aria-hidden="true">·</span><span class="ask-text"></span></p><header><b class="zone-who"></b><span class="zone-count"></span><span class="zone-gap"></span>'
     + '<input class="zone-find" type="search">'
     + '<label class="zone-sort"><select></select></label>'
     + '<button class="zone-fold"></button></header>'
@@ -171,7 +172,11 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   const prompt = p.forced ? model.prompt : null;
   const question = p.forced ? prompt?.message || t('lblWebZoneWaitingOnYou') : '';
   q(el, '.zone-hint').textContent = question;
-  setSymbolText(q(el, '.zone-ask'), question);
+  // On the board the question is one line, the card asking then what it asks, as a dialog's is
+  const asked = splitQuestion(question);
+  q(el, '.zone-ask .ask-source').textContent = asked.source;
+  q(el, '.zone-ask .ask-sep').hidden = !asked.source;
+  setSymbolText(q(el, '.zone-ask .ask-text'), asked.ask);
   answer(q(el, '.zone-answer.ok'), prompt?.ok, () => actions.ok());
   q(el, '.zone-answer.ok kbd').textContent = keyName(boundKeys().ok);
   reconcile(q(el, '.cards'), cards, c => c.$key, () => createCard(select), (c, card) => updateCard(c, model, card));

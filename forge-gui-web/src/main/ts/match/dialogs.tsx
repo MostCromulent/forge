@@ -11,8 +11,10 @@ import { useDebounced } from '../hooks';
 import type { Actions } from '../actions';
 import { keyName } from '../keys';
 import { boundKeys } from '../settings';
-import { playerAvatarUrl } from '../looks';
-import { cardMenu, cardPrompt, deref, derefAll, game, isLocal, oldestRequest, stackPick, stateOf, type Model } from '../model';
+import { cssUrl, playerAvatarUrl, playerSleeveUrl } from '../looks';
+import { cardMenu, cardPrompt, deref, derefAll, game, isLocal, me, oldestRequest, stackPick, stateOf, type Model } from '../model';
+import { splitQuestion } from './asking';
+import { zoneTitle } from './zones';
 import { changeUi, ui } from '../ui';
 import { MenuIcon } from './gamemenu';
 import { ICONS } from '../icons';
@@ -166,7 +168,7 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
   const foldable = !at && FOLDABLE.has(req.kind);
   // A question about cards sits on the dimmed board with no box round it; a phone keeps its sheet
   const onBoard = !isPortrait() && cardPrompt(req);
-  const title = <SymbolText text={heading || message || ''} />;
+  const title = onBoard ? <QuestionLine model={model} req={req} text={heading || message || ''} /> : <SymbolText text={heading || message || ''} />;
   const fold = foldable && <button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>;
   return <>
     <div class={at ? 'backdrop anchored' : onBoard ? 'backdrop on-board' : 'backdrop'} hidden={folded}>
@@ -176,6 +178,7 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
           {!onBoard && fold}
         </div>
         {heading && message && <p><SymbolText text={message} /></p>}
+        {onBoard && <WhereFrom model={model} req={req} />}
         <FoldButton.Provider value={onBoard && fold}>{body}</FoldButton.Provider>
       </div>
     </div>
@@ -188,6 +191,39 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
       </div>
     )}
   </>;
+}
+
+/** A question on the board as one line: the card asking, then what it asks, without the engine's rules text and bookkeeping. */
+function QuestionLine({ model, req, text }: { model: Model; req: Request; text: string }) {
+  const asked = splitQuestion(text);
+  const card = 'card' in req && req.card ? model.objects.get(req.card.ref) as CardView | undefined : undefined;
+  // Putting cards in order or back on the library happens as a spell or ability resolves, so the top of the stack is what asks
+  const resolving = req.kind === 'order' || req.kind === 'manipulate' || req.kind === 'distribute'
+    ? deref(model, (derefAll(model, game(model)?.Stack) as StackItemView[])[0]?.SourceCard) as CardView | undefined : undefined;
+  const from = card ?? resolving;
+  const source = asked.source || (from ? stateOf(model, from).Name ?? '' : '');
+  return <>{source && <><span class="ask-source">{source}</span><span class="ask-sep" aria-hidden="true">·</span></>}<SymbolText text={asked.ask} /></>;
+}
+
+/** Whose cards a choice is among and how many, when they all lie in one player's zone, which the dim hides on the board. */
+function WhereFrom({ model, req }: { model: Model; req: Request }) {
+  if (req.kind !== 'choices') return null;
+  const cards = req.options.map(o => (o.card ? model.objects.get(o.card.ref) as CardView | undefined : undefined));
+  const first = cards[0];
+  if (!first?.Zone || !cards.every(c => c?.Zone === first.Zone && c?.Owner?.ref === first.Owner?.ref)) return null;
+  const owner = deref(model, first.Owner) as PlayerView | undefined;
+  return <p class="ask-where">{`${owner?.Name ?? ''} \u00b7 ${zoneTitle(first.Zone)} \u00b7 ${t(cards.length === 1 ? 'lblWebOneCard' : 'lblWebNCards', cards.length)}`}</p>;
+}
+
+/** The player's library as a pile in their sleeve, with the ends of the library either side of it. */
+function LibraryPile({ model, count }: { model: Model; count?: number }) {
+  return (
+    <div class="lib-pile" style={{ '--sleeve': cssUrl(playerSleeveUrl(me(model))) }} aria-hidden="true">
+      <i /><i /><i />
+      {count !== undefined && <span class="lib-count">{count}</span>}
+      <span class="lib-name">{t('lblLibrary')}</span>
+    </div>
+  );
 }
 
 /** The key that gives a question's answer, as the player has chosen it. */
@@ -332,8 +368,12 @@ function BoardCard({ model, card, title, picked, onClick }: {
     }
     c.dataset.key = String(card.$key);
     c.title = title ?? '';
+    c.tabIndex = onClick ? 0 : -1;
     updateCard(c, model, card);
     c.classList.toggle('picked', !!picked);
+    // A mark as well as the ring, so being picked is told by shape, not colour alone
+    if (picked && !c.querySelector(':scope > .pick-mark')) c.append(make('span', 'pick-mark'));
+    else if (!picked) c.querySelector(':scope > .pick-mark')?.remove();
   });
   return <span class="card-host" ref={host} />;
 }
@@ -345,10 +385,11 @@ function InlineCard({ imageKey, name, title, picked, onClick }: {
   const [broken, setBroken] = useState(!imageKey);
   const src = imageKey ? imageUrl(imageKey) : undefined;
   return (
-    <div class={`card inline${broken ? ' noimg' : ''}${picked ? ' picked' : ''}`} title={title ?? ''} data-zoom={src}
+    <div class={`card inline${broken ? ' noimg' : ''}${picked ? ' picked' : ''}`} title={title ?? ''} data-zoom={src} tabIndex={onClick ? 0 : -1}
       onClick={onClick} onMouseEnter={e => hoverCard(e.currentTarget)} onMouseLeave={() => hoverCard(null)}>
       <img alt="" loading="lazy" src={src} onError={() => setBroken(true)} />
       <div class="frame">{name}</div>
+      {picked && <span class="pick-mark" />}
     </div>
   );
 }
@@ -387,17 +428,42 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
   const colours = !reveal && req.options.every(o => o.symbol);
   // Choices that are only words read down a list, as a menu does, rather than across the page
   const words = onlyWords(req);
+  // The arrows move between the cards and Enter picks the one reached, leaving the OK key to answer
+  const onKey = (e: KeyboardEvent) => {
+    const cards = [...(e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('.card[tabindex="0"]')];
+    const at = cards.indexOf(document.activeElement as HTMLElement);
+    if (at < 0) return;
+    const by = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : 0;
+    if (by) cards[Math.max(0, Math.min(cards.length - 1, at + by))].focus();
+    else if (e.key === 'Enter') cards[at].click();
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  // The bottom edge fades while more cards lie below it, and only then
+  const list = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState(false);
+  const measure = () => {
+    const el = list.current;
+    if (el) setMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  };
+  useLayoutEffect(measure, [shown.length]);
   return (
     <>
       {searchable && <input ref={search} class="choice-search" placeholder={t('lblWebDialogSearchOptions', req.options.length)}
         value={typed} onInput={e => setTyped(e.currentTarget.value)} />}
-      <div class={reveal && !words ? 'options grid' : colours ? 'options colours' : words ? 'options words' : 'options'}>
+      <div ref={list} onScroll={measure} onKeyDown={onKey}
+        class={`${reveal && !words ? 'options grid' : colours ? 'options colours' : words ? 'options words' : 'options'}${more ? ' more' : ''}`}>
         {shown.map(i => colours
           ? <ColourOption key={i} symbol={req.options[i].symbol ?? ''} picked={picked.has(i)} onClick={() => toggle(i)} />
           : <OptionView key={i} model={model} opt={req.options[i]} picked={picked.has(i)} onClick={() => toggle(i)} />)}
       </div>
       <p class="hint">{note}</p>
-      <ButtonRow><Button primary disabled={!ready} onClick={() => answer(reveal ? [] : [...picked])}>{reveal ? t('lblOK') : t('lblWebDialogConfirm')} <OkKey /></Button></ButtonRow>
+      <ButtonRow>
+        {/* Picking nothing is an answer the question allows, so it is offered rather than left to an empty Confirm */}
+        {!reveal && req.min === 0 && <Button onClick={() => answer([])}>{t('lblWebDialogChooseNone')}</Button>}
+        <Button primary disabled={!ready} onClick={() => answer(reveal ? [] : [...picked])}>{reveal ? t('lblOK') : t('lblWebDialogConfirm')} <OkKey /></Button>
+      </ButtonRow>
     </>
   );
 }
@@ -687,10 +753,10 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const optional = req.min < req.options.length;
   const rememberBox = req.remember
     && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> {t('lblWebDialogRememberOrder')}</label>;
-  // A library's order is named at both ends, and any other order by what goes first
-  const ends = req.top === t('lblClosestToTop') ? [t('lblTop'), t('lblBottom')]
-    : req.top === t('lblClosestToBottom') ? [t('lblBottom'), t('lblTop')] : [req.top ?? '', ''];
-  const railed = !listed && !optional && !!req.top;
+  // A library's order is named at both ends; any other order by what goes first
+  const library = !listed && (req.top === t('lblClosestToTop') || req.top === t('lblClosestToBottom'));
+  const otherEnd = req.top === t('lblClosestToTop') ? t('lblClosestToBottom') : t('lblClosestToTop');
+  const railed = !listed && !optional && !!req.top && !library;
   const nudge = (by: number, pos: number) => (
     <button class={by < 0 ? 'earlier' : 'later'} disabled={by < 0 ? pos === 0 : pos === chosen.length - 1}
       aria-label={t(by < 0 ? 'lblWebDialogMoveEarlier' : 'lblWebDialogMoveLater')} onClick={() => step(by)}>{by < 0 ? '‹' : '›'}</button>
@@ -724,6 +790,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
               {/* The number is the order they go in, which is the question the dialog is asking */}
               <span class="order-number">{pos + 1}</span>
               {!listed && !railed && pos === 0 && req.top && <span class="order-end">{req.top}</span>}
+              {library && pos === chosen.length - 1 && pos > 0 && <span class="order-end">{otherEnd}</span>}
               {/* Under every card, shown for the one that is held, so holding a card moves nothing else in the dialog */}
               {!listed && <span class="order-nudge">{nudge(-1, pos)}{nudge(1, pos)}</span>}
               {/* The held ability's arrows take the place of its grip, so they are where the eye already is */}
@@ -732,7 +799,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
           );
         })}
       </div>
-      {railed && <p class="order-rail"><b>{ends[0]}</b><i />{ends[1] && <b>{ends[1]}</b>}</p>}
+      {railed && <p class="order-rail"><b>{req.top}</b><i /></p>}
       {!listed && rememberBox}
       <ButtonRow>
         <span class="order-move">
@@ -752,27 +819,13 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
 // The host passes the whole library with only the top cards movable, and those placed after the rest go to the bottom
 type Shelf = 'top' | 'bottom';
 
-/** A shelf for the top of the library and one for the bottom, with the rest of the library drawn between them. */
+/** The top of the library and its bottom either side of the pile; the further a card lies from the pile, the nearer it is to that end. */
 function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Model; answer: Answer }) {
   const all = req.options.map((_, i) => i);
   const rest = all.filter(i => !req.movable.includes(i));
   const [piles, setPiles] = useState(() => ({ top: all.filter(i => req.movable.includes(i)), bottom: [] as number[] }));
   const held = useRef<number | null>(null);
   const bothEnds = req.toBottom || req.toTop;
-  const root = useRef<HTMLDivElement>(null);
-  const heights = useRef<number[]>([]);
-  // Each shelf grows or shrinks to its new height as cards move between them
-  useLayoutEffect(() => {
-    const shelves = [...root.current!.querySelectorAll<HTMLElement>('.shelf')];
-    shelves.forEach((el, k) => {
-      for (const a of el.getAnimations()) a.cancel();
-      const was = heights.current[k];
-      if (was && was !== el.offsetHeight && !reducedMotion()) {
-        el.animate([{ height: `${was}px` }, { height: `${el.offsetHeight}px` }], { duration: 240, easing: 'cubic-bezier(.2, .8, .2, 1)' });
-      }
-    });
-    heights.current = shelves.map(el => el.offsetHeight);
-  }, [piles]);
 
   const place = (shelf: Shelf, at: number) => {
     const card = held.current;
@@ -784,48 +837,46 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
       return next;
     });
   };
+  // A card sent across lands beside the pile, the middle of its new end
   const send = (from: Shelf, pos: number) => setPiles(p => {
     const card = p[from][pos];
-    const to: Shelf = from === 'top' ? 'bottom' : 'top';
     const next = { top: [...p.top], bottom: [...p.bottom] };
     next[from] = next[from].filter((_, k) => k !== pos);
-    next[to] = [...next[to], card];
+    if (from === 'top') next.bottom = [card, ...next.bottom];
+    else next.top = [...next.top, card];
     return next;
   });
 
   offerAnswer(req.id, () => answer([...piles.top, ...rest, ...piles.bottom]));
-  const sendAll = (to: Shelf) => setPiles(p => (to === 'top' ? { top: [...p.top, ...p.bottom], bottom: [] } : { top: [], bottom: [...p.bottom, ...p.top] }));
 
-  const shelf = (name: Shelf, label: string, empty: string) => (
-    <div class={`shelf ${name}`} onDragOver={e => e.preventDefault()} onDrop={() => place(name, piles[name].length)}>
-      <p class="shelf-label"><b>{label}</b><i>{piles[name].length}</i></p>
-      <div class="shelf-cards">
+  // The top runs from its end to the pile, and the bottom from the pile to its end, so each end's card is the one furthest out
+  const side = (name: Shelf) => (
+    <div class={`lib-side ${name}`} onDragOver={e => e.preventDefault()} onDrop={() => place(name, piles[name].length)}>
+      <div class="lib-cards">
         {piles[name].map((i, pos) => (
-          <div key={i} class="shelf-card" draggable onDragStart={() => { held.current = i; }}
+          <div key={i} class="lib-card" draggable onDragStart={() => { held.current = i; }}
             onDragOver={e => e.preventDefault()} onDrop={e => { e.stopPropagation(); place(name, pos); }}>
-            <span class="seq">{pos + 1}</span>
-            <OptionView model={model} opt={req.options[i]} />
-            {bothEnds && <button class="send" onClick={() => send(name, pos)}
-              title={name === 'top' ? t('lblWebDialogPutOnBottom') : t('lblWebDialogPutOnTop')}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d={name === 'top' ? 'M12 5v14M6 13l6 6 6-6' : 'M12 19V5M6 11l6-6 6 6'} /></svg>
-              {name === 'top' ? t('lblWebDialogToBottom') : t('lblWebDialogToTop')}</button>}
+            <OptionView model={model} opt={req.options[i]} onClick={bothEnds ? () => send(name, pos) : undefined} />
+            {name === 'top' && <span class="order-number">{pos + 1}</span>}
+            {name === 'top' && pos === 0 && <span class="order-end">{t('lblClosestToTop')}</span>}
+            {name === 'bottom' && pos === piles.bottom.length - 1 && <span class="order-end">{t('lblClosestToBottom')}</span>}
           </div>
         ))}
-        {piles[name].length === 0 && <p class="shelf-empty">{empty}</p>}
+        {/* An end with nothing at it still says which end it is */}
+        {piles[name].length === 0 && <div class="lib-card"><span class="lib-slot" /><span class="order-end">{t(name === 'top' ? 'lblClosestToTop' : 'lblClosestToBottom')}</span></div>}
       </div>
     </div>
   );
 
   return (
-    <div class="manipulate" ref={root}>
-      <p class="shelf-hint">{t('lblWebDialogReorderHint')}</p>
-      {shelf('top', t('lblTopOfLibrary'), t('lblWebDialogDropForTop'))}
-      <p class="between"><span class="deck-mark" aria-hidden="true"><i /></span>{t('lblWebDialogOtherCards', rest.length)}</p>
-      {bothEnds && shelf('bottom', t('lblWebDialogBottomOfLibrary'), t('lblWebDialogDropForBottom'))}
+    <div class="manipulate">
+      <div class="lib-row">
+        {side('top')}
+        <LibraryPile model={model} count={rest.length} />
+        {bothEnds && side('bottom')}
+      </div>
+      <p class="hint">{t(bothEnds ? 'lblWebDialogMoveAcross' : 'lblWebDialogReorderHint')}</p>
       <ButtonRow>
-        {bothEnds && (piles.top.length > 0
-          ? <button class="all" onClick={() => sendAll('bottom')}>{t('lblWebDialogAllToBottom')}</button>
-          : <button class="all" onClick={() => sendAll('top')}>{t('lblWebDialogAllToTop')}</button>)}
         <Button primary onClick={() => answer([...piles.top, ...rest, ...piles.bottom])}>{t('lblWebDialogConfirm')} <OkKey /></Button>
       </ButtonRow>
     </div>
@@ -939,9 +990,10 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
           {/* A pip for each point, filled as it is placed, while there are few enough to count at a glance */}
           {req.amount <= 20 && <span class="dist-pips">{Array.from({ length: req.amount }, (_, k) => <i key={k} class={k < req.amount - left ? 'on' : ''} />)}</span>}
           {left ? t('lblWebDialogLeftToAssign', left) : t('lblWebDialogAllAssigned', req.amount)}
+          {/* Beside what it resets, and away from the answer */}
+          <Button onClick={() => setValues([...req.default])}>{t('lblReset')}</Button>
         </span>
         {req.maySkip && <Button onClick={() => answer(null)}>{t('lblSkip')}</Button>}
-        <Button onClick={() => setValues([...req.default])}>{t('lblReset')}</Button>
         <Button primary disabled={left !== 0} onClick={() => answer(values)}>{t('lblWebDialogConfirm')} <OkKey /></Button>
       </ButtonRow>
     </>
