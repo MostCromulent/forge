@@ -239,13 +239,18 @@ html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
 }
 .dialog.at-card .options { max-height: 50vh; }
 
+/* The dialog layer is outside #match, which sets the side column's gap */
+#dialog-layer { --side-gap: 270px; }
+html:has(#match.side-folded) #dialog-layer { --side-gap: 48px; }
 /* A question about cards sits on the playing area with no box round it. The whole window dims, but the log, the stack and the prompt are lifted above it to be read while answering */
 html:not([data-form="portrait"]) :is(.backdrop.on-board, .reveal-back.on-board) { padding-right: calc(var(--side-gap) - 12px + 36px); background: var(--scrim-board); backdrop-filter: blur(5px) saturate(.8); }
 /* The stack is lit beside the question, so the question is centred in what is left of the board */
-html:has(#stack:not([hidden])) :is(.backdrop.on-board, .reveal-back.on-board) { padding-right: calc(var(--side-gap) - 12px + var(--stack-w) + 64px); }
+html:not([data-form="portrait"]):has(#stack:not([hidden])) :is(.backdrop.on-board, .reveal-back.on-board) { padding-right: calc(var(--side-gap) - 12px + var(--stack-w) + 64px); }
 html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) #stack:not([hidden]) { z-index: 51; }
-/* The prompt is wider than the column it sits in, so the column is lifted above the scrim rather than leaving the prompt half covered */
-html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) #side { z-index: 51; }
+/* The side column, log and prompt, is lifted above the scrim too, folded or not */
+html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) #match #side { z-index: 51; }
+/* A menu or dialog opened over the question, such as the game menu by the prompt, goes above the lifted column */
+html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.backdrop, .reveal-back):not(.on-board) { z-index: 52; }
 @media (prefers-reduced-transparency: reduce) { :is(.backdrop.on-board, .reveal-back.on-board) { backdrop-filter: none; } }
 .backdrop.on-board > .dialog { max-width: 100%; max-height: 100%; padding: 4px 8px; gap: 14px; justify-items: center; background: none; border: 0; box-shadow: none; }
 .backdrop.on-board .dialog-head { justify-content: center; }

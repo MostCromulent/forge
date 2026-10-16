@@ -179,10 +179,10 @@ function drawPrompt(model: Model, actions: Actions): void {
   const cancel = q<HTMLButtonElement>(root, '.cancel');
   ok.onclick = () => actions.ok();
   cancel.onclick = () => actions.cancel();
-  // A spell picked on the stack has no dialog, so what it asks, and the way out of it, are shown here
   const req = oldestRequest(model);
   const onBoard = !!req && !isPortrait() && cardPrompt(req);
   root.classList.toggle('answering', onBoard);
+  // A spell picked on the stack has no dialog, so what it asks, and the way out of it, are shown here
   const pick = stackPick(model);
   if (pick) {
     setSymbolText(q(root, '.message'), pick.message ?? '');
