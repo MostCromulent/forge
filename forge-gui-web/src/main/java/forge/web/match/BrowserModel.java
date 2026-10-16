@@ -109,7 +109,7 @@ public final class BrowserModel {
         return stateMessage(true, -1, objects, Map.of(), List.of());
     }
 
-    public synchronized Map<Integer, JsonObject> objectsCopy() {
+    synchronized Map<Integer, JsonObject> objectsCopy() {
         final Map<Integer, JsonObject> copy = new LinkedHashMap<>();
         objects.forEach((k, v) -> copy.put(k, v.deepCopy()));
         return copy;

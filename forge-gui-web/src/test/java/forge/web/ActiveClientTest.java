@@ -12,6 +12,7 @@ import forge.game.player.Player;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.net.DeltaPacket;
 import forge.player.PlayerControllerHuman;
+import forge.web.match.MatchProbe;
 import forge.web.match.WebGuiGame;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -94,7 +95,7 @@ public class ActiveClientTest {
             }
             Assert.assertTrue(shown(browser, "Library"), "no library search reached the browser");
             Assert.assertTrue(browser.reloaded, "no reload happened mid-request");
-            Assert.assertEquals(gui.skippedProperties(), 0);
+            Assert.assertEquals(MatchProbe.skippedProperties(gui), 0);
             TestBrowser.command(gui, TestBrowser.action("concede"));
         });
     }
@@ -110,7 +111,7 @@ public class ActiveClientTest {
 
     private static int turn(final TestBrowser browser) {
         final JsonObject state = browser.last("state");
-        final JsonObject game = state == null ? null : browser.model.objectsCopy().get(state.get("root").getAsInt());
+        final JsonObject game = state == null ? null : MatchProbe.objects(browser.model).get(state.get("root").getAsInt());
         return game == null || !game.has("Turn") ? 0 : game.get("Turn").getAsInt();
     }
 
@@ -183,7 +184,7 @@ public class ActiveClientTest {
             final int split = cardKey(game, ZoneType.Hand, true, "Fire // Ice", false);
             final int ownFaceDown = cardKey(game, ZoneType.Battlefield, true, "Grizzly Bears", true);
             final int theirFaceDown = cardKey(game, ZoneType.Battlefield, false, "Grizzly Bears", true);
-            for (int i = 0; i < 100 && !browser.model.objectsCopy().keySet().containsAll(List.of(delver, split, ownFaceDown, theirFaceDown)); i++) {
+            for (int i = 0; i < 100 && !MatchProbe.objects(browser.model).keySet().containsAll(List.of(delver, split, ownFaceDown, theirFaceDown)); i++) {
                 Thread.sleep(100);
             }
 

@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import forge.deck.Deck;
 import forge.gamemodes.match.HostedMatch;
 import forge.web.match.BrowserModel;
+import forge.web.match.MatchProbe;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -25,7 +26,7 @@ public class BatchBoundaryTest {
 
     private static Set<Integer> onBattlefields(final BrowserModel model) {
         final Set<Integer> cards = new HashSet<>();
-        for (final JsonObject object : model.objectsCopy().values()) {
+        for (final JsonObject object : MatchProbe.objects(model).values()) {
             final JsonElement zone = object.get("Battlefield");
             if (zone != null && zone.isJsonArray()) {
                 zone.getAsJsonArray().forEach(card -> cards.add(card.getAsJsonObject().get("ref").getAsInt()));
@@ -36,7 +37,7 @@ public class BatchBoundaryTest {
 
     private static int turn(final TestBrowser browser) {
         final JsonObject last = browser.last("state");
-        final JsonObject game = last == null ? null : browser.model.objectsCopy().get(last.get("root").getAsInt());
+        final JsonObject game = last == null ? null : MatchProbe.objects(browser.model).get(last.get("root").getAsInt());
         return game == null || !game.has("Turn") ? 0 : game.get("Turn").getAsInt();
     }
 

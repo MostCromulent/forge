@@ -186,12 +186,12 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     /** Properties dropped for want of a JSON form, which tests check stays at none. */
-    public int skippedProperties() {
+    int skippedProperties() {
         return skippedProperties.get();
     }
 
     /** The model a browser would hold if it were sent the whole game now, for tests that check the deltas sent kept it in step. Call on the dispatch thread. */
-    public BrowserModel freshSnapshot() {
+    BrowserModel freshSnapshot() {
         final GameView gv = getGameView();
         final BrowserModel fresh = new BrowserModel();
         final Map<Integer, Map<TrackableProperty, Object>> snapshot = snapshotter.snapshot(gv);

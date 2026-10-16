@@ -7,6 +7,7 @@ import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gui.GuiBase;
 import forge.web.match.BrowserModel;
 import forge.web.match.LocalGame;
+import forge.web.match.MatchProbe;
 import forge.web.match.WebGuiGame;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -75,11 +76,11 @@ public class LoopbackGameTest {
             Assert.assertEquals(scored.getAsJsonArray("score").size(), 2);
             Assert.assertEquals(scored.getAsJsonArray("score").asList().stream().mapToInt(e -> e.getAsJsonObject().get("won").getAsInt()).sum(), 1);
             final int root = browser.last("state").get("root").getAsInt();
-            final int turns = browser.model.objectsCopy().get(root).get("Turn").getAsInt();
+            final int turns = MatchProbe.objects(browser.model).get(root).get("Turn").getAsInt();
             Assert.assertTrue(turns > 2, "the game ended on turn " + turns);
-            final BrowserModel fresh = CompletableFuture.supplyAsync(gui::freshSnapshot, gui.dispatchExecutor()).get(10, TimeUnit.SECONDS);
-            assertSameIgnoringZone(browser.model.objectsCopy(), fresh.objectsCopy());
-            Assert.assertEquals(gui.skippedProperties(), 0, "properties with no JSON form");
+            final BrowserModel fresh = CompletableFuture.supplyAsync(() -> MatchProbe.freshSnapshot(gui), gui.dispatchExecutor()).get(10, TimeUnit.SECONDS);
+            assertSameIgnoringZone(MatchProbe.objects(browser.model), MatchProbe.objects(fresh));
+            Assert.assertEquals(MatchProbe.skippedProperties(gui), 0, "properties with no JSON form");
             // The client builds its log from forwarded game events
             final long turnEntries = browser.all("log").stream()
                     .flatMap(m -> m.getAsJsonArray("entries").asList().stream())

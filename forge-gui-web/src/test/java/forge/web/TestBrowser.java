@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.web.match.BrowserModel;
+import forge.web.match.MatchProbe;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.JsonCodec;
@@ -356,20 +357,20 @@ final class TestBrowser implements BrowserChannel {
     }
 
     private boolean inOwnFirstMain() {
-        final JsonObject game = model.objectsCopy().get(root);
+        final JsonObject game = MatchProbe.objects(model).get(root);
         return game != null && !localPlayers.isEmpty() && game.has("PlayerTurn") && game.has("Phase")
                 && game.getAsJsonObject("PlayerTurn").get("ref").getAsInt() == localPlayers.get(0).getAsInt()
                 && "MAIN1".equals(game.get("Phase").getAsString());
     }
 
     private boolean stackEmpty() {
-        final JsonObject game = model.objectsCopy().get(root);
+        final JsonObject game = MatchProbe.objects(model).get(root);
         return game != null && (!game.has("Stack") || game.getAsJsonArray("Stack").isEmpty());
     }
 
     // An entry, "Zone:Card Name", is clicked again until its card leaves that zone, because a click can be rejected
     private Integer nextScriptedCard() {
-        final Map<Integer, JsonObject> objects = model.objectsCopy();
+        final Map<Integer, JsonObject> objects = MatchProbe.objects(model);
         final JsonObject player = objects.get(localPlayers.get(0).getAsInt());
         while (!cardsToUse.isEmpty()) {
             final String[] entry = cardsToUse.peek().split(":", 2);
