@@ -185,7 +185,11 @@ function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number,
       e.preventDefault();
       actions.toggleMarker(STEPS[p.steps[0]][0], myTurn);
     };
-    q(el, '.glyph').outerHTML = glyph(current && step >= 0 ? STEPS[step][1] : p.glyph, 12);
+    const shown = current && step >= 0 ? STEPS[step][1] : p.glyph;
+    if (el.dataset.glyph !== shown) {
+      el.dataset.glyph = shown;
+      q(el, '.glyph').outerHTML = glyph(shown, 12);
+    }
     q(el, '.label').textContent = current ? t(step < 0 ? 'lblWebPhaseUntap' : STEPS[step][3]) : '';
     const pips = q(el, '.pips');
     // A phase left keeps its last pips while they close

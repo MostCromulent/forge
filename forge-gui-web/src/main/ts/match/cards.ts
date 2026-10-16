@@ -36,7 +36,17 @@ export function createCard(onClick: CardClick): HTMLDivElement {
   return el;
 }
 
-const has = (refs: Ref[] | undefined, key: number) => (refs ?? []).some(r => r.ref === key);
+// Every card tests these lists on every frame, and each message replaces a list whole, so its Set is kept while the list lasts
+const refSets = new WeakMap<readonly (Ref | number)[], Set<number>>();
+const has = (refs: readonly (Ref | number)[] | null | undefined, key: number): boolean => {
+  if (!refs) return false;
+  let keys = refSets.get(refs);
+  if (!keys) {
+    keys = new Set(refs.map(r => (typeof r === 'number' ? r : r.ref)));
+    refSets.set(refs, keys);
+  }
+  return keys.has(key);
+};
 
 
 /** The last picture each card was shown with, for a spell whose card is hidden by the time its cast is seen. */
@@ -67,7 +77,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   el.classList.toggle('selectable', selectable);
   el.classList.toggle('playable', has(model.playable?.cards, card.$key));
   el.classList.toggle('auto-tap', has(model.playable?.autoTap, card.$key));
-  el.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(card.$key));
+  el.classList.toggle('highlighted', has(model.prompt?.highlighted, card.$key));
   const attacking = !!card.Attacking && combatShown(model);
   el.classList.toggle('attacking', attacking);
   // On a phone the attacker a tap on your creature will block says so, since the game may have picked it for you

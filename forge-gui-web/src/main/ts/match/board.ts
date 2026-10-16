@@ -177,7 +177,17 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
   }
   const g = game(model);
   const p = model.prompt;
-  const seatOf = (key: number) => Number(document.querySelector<HTMLElement>(`#opponent .card[data-key="${key}"]`)?.closest<HTMLElement>('.seat')?.dataset.player);
+  let seats: Map<number, number> | null = null;
+  const seatOf = (key: number) => {
+    if (!seats) {
+      seats = new Map();
+      for (const card of document.querySelectorAll<HTMLElement>('#opponent .card[data-key]')) {
+        const key = Number(card.dataset.key);
+        if (!seats.has(key)) seats.set(key, Number(card.closest<HTMLElement>('.seat')?.dataset.player));
+      }
+    }
+    return seats.get(key) ?? NaN;
+  };
   const asked = new Set([...(p?.selectable ?? []).map(r => seatOf(r.ref)), ...(p?.highlighted ?? []).map(seatOf), ...(p?.selectablePlayers ?? []).map(r => r.ref)]
     .filter(k => across.some(o => o.$key === k)));
   const open = seatToOpen({ open: ui.openSeat, seats: across.map(o => o.$key), active: g?.PlayerTurn?.ref ?? null, turn: g?.Turn ?? 0, chosenTurn: ui.seatChosenTurn });

@@ -138,7 +138,8 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     const chevron = w * fit * 0.38;
     return mine ? Math.max(glow + 6, chevron - 2) + glow : glow + Math.max(glow + 20, chevron + 14);
   };
-  const height = (fit: number) => root.clientHeight - header - seatPad - fieldPad(fit);
+  const seatHeight = root.clientHeight;
+  const height = (fit: number) => seatHeight - header - seatPad - fieldPad(fit);
 
   // A zone's size for the width it may take: one line or two, the second only as TWO_LINE_GAIN allows
   const sizeFor = (z: Zone, room: number, cap: number, two: boolean, gap: number): Sized => {
@@ -192,9 +193,11 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   // Each layout that fits the height is judged by its smallest zone before the smallest size is applied, so less overflow wins
   const tried: { cap: number; sizes: Sized[][]; smallest: number; split: number }[] = [];
   for (let cap = MAX_FIT; cap >= minFit - 1e-9; cap -= STEP) {
-    for (const twoA of [false, true]) {
-      for (const twoB of [false, true]) {
-        const sizes = [layRow(0, cap, twoA), layRow(1, cap, twoB)];
+    const rowA = [layRow(0, cap, false), layRow(0, cap, true)];
+    const rowB = [layRow(1, cap, false), layRow(1, cap, true)];
+    for (const a of rowA) {
+      for (const b of rowB) {
+        const sizes = [a, b];
         // The 32px above the rows and 24px between them leave some to spare, as a board filled to the pixel scrolls on rounding
         const tall = rowHeight(0, sizes[0], cap) + rowHeight(1, sizes[1], cap) + spare;
         if (tall > height(cap)) continue;
@@ -320,9 +323,9 @@ export function signature(model: Model, card: CardView, marks: Set<number>[]): s
   if (!model.visible.has(card.$key)) return null;
   const s = stateOf(model, card);
   // A land played this turn is no different from the lands played before it, so it belongs in their pile
-  return JSON.stringify([s.Name, s.Power ?? null, s.Toughness ?? null, s.Loyalty && s.Loyalty !== '0' ? s.Loyalty : null, !!card.Tapped,
+  return [s.Name, s.Power ?? null, s.Toughness ?? null, s.Loyalty && s.Loyalty !== '0' ? s.Loyalty : null, !!card.Tapped,
     counters(card.Counters), card.Damage ?? 0, !!card.Attacking, !!card.Blocking, isSick(model, card), !!card.PhasedOut,
-    !!card.Token, !!card.Cloned, card.EntityAttachedTo?.ref ?? null, !!card.IsRingBearer, card.Stickers ?? null, ...marks.map(m => m.has(card.$key))]);
+    !!card.Token, !!card.Cloned, card.EntityAttachedTo?.ref ?? null, !!card.IsRingBearer, card.Stickers ?? null, ...marks.map(m => m.has(card.$key))].join('\u0000');
 }
 
 /** Counters as they show: none at all whether the game sent nothing, nothing left, or zeroes; in a fixed order. */

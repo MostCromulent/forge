@@ -145,7 +145,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   if (model.spectating) {
     renderPlayerChoices(root, model, [], actions);
     q(root, '.step').textContent = stepName(game(model)?.Phase);
-    q(root, '.message').textContent = t('lblWebPromptSpectating');
+    setSymbolText(q(root, '.message'), t('lblWebPromptSpectating'));
     return;
   }
   const autoPass = !!model.controls?.autoPass;
@@ -208,7 +208,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   // Declaring attackers, each button says what it will do: the host's OK reads the same whether nothing attacks or everything does
   const strike = p.ok.enabled && p.cancel.label === t('lblAlphaStrike');
   const attackers = p.ok.enabled && p.cancel.label === t('lblCallBack')
-    ? [...model.objects.values()].filter(o => (o as CardView).Attacking).length : 0;
+    ? countAttacking(model) : 0;
   root.classList.toggle('attack', strike || attackers > 0);
   root.classList.toggle('strike', strike);
   if (strike) setButton(ok, { label: t('lblWebPromptNoAttack'), enabled: true });
@@ -231,6 +231,14 @@ function drawPrompt(model: Model, actions: Actions): void {
 }
 
 /** What having priority asks, which the host says only as the turn, phase and stack the page shows elsewhere. */
+function countAttacking(model: Model): number {
+  let n = 0;
+  for (const o of model.objects.values()) {
+    if ((o as CardView).Attacking) n++;
+  }
+  return n;
+}
+
 function priorityLine(model: Model, pass: string): string {
   const top = (derefAll(model, game(model)?.Stack) as StackItemView[])[0];
   const source = top && deref(model, top.SourceCard) as CardView | undefined;

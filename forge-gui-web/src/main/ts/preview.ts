@@ -612,7 +612,7 @@ function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {
   if (!d) return;
   q(zoom, '.name').textContent = d.name ?? '';
   q(zoom, '.cid').textContent = '';
-  q(zoom, '.cost').textContent = '';
+  setSymbolText(q(zoom, '.cost'), '');
   q(zoom, '.type-line').textContent = '';
   q(zoom, '.kind-chip').textContent = '';
   q(zoom, '.set').textContent = '';

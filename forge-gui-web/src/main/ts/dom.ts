@@ -34,9 +34,9 @@ export function pointerOn(el: Element, e: PointerEvent): { x: number; y: number 
   };
 }
 
-/** Leans every card preview toward the pointer's place on what it is a preview of (theme.css). */
+/** Leans the card preview toward the pointer's place on what it is a preview of (theme.css). */
 export function lean({ x, y }: { x: number; y: number }): void {
-  const root = document.documentElement.style;
+  const root = byId('zoom').style;
   root.setProperty('--lean-x', `${(-y * MAX_LEAN * 2).toFixed(2)}deg`);
   root.setProperty('--lean-y', `${(x * MAX_LEAN * 2).toFixed(2)}deg`);
 }

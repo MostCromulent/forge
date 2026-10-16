@@ -1,6 +1,6 @@
 // The arrows drawn over the board: attackers to what they attack, blockers to what they block, and spells to their targets
 
-import { combatShown, game, derefAll, players, type Model } from '../model';
+import { combatShown, game, derefAll, players, zone, type Model } from '../model';
 import { byId, onRelayout, reducedMotion } from '../dom';
 import { cardElement, pileTopFor } from './motion';
 import { ui } from '../ui';
@@ -162,9 +162,8 @@ function paintArrows(model: Model): void {
   }
   // Without an arrow to what a creature has to block, an illegal block is refused and nothing on screen says why
   if (g.Phase === 'COMBAT_DECLARE_BLOCKERS') {
-    for (const obj of model.objects.values()) {
-      const forced = present((obj as CardView).MustBlockCards);
-      forced.forEach(attacker => ribbon(elementFor(obj.$key), elementFor(attacker.ref), KINDS.mustBlock));
+    for (const card of players(model).flatMap(p => zone(model, p, 'Battlefield'))) {
+      present(card.MustBlockCards).forEach(attacker => ribbon(elementFor(card.$key), elementFor(attacker.ref), KINDS.mustBlock));
     }
   }
   // Another player's spell or ability shows its arrows unasked, since you did not see it aimed; your own show theirs under the pointer
