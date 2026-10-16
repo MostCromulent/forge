@@ -1,18 +1,14 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
-import forge.deck.Deck;
 import forge.deck.DeckGroup;
 import forge.game.GameType;
 import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
-import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.PreparedMatch;
-import forge.gamemodes.net.EventFormat;
-import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
@@ -26,11 +22,11 @@ import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckSession;
 import forge.web.images.SkinSprites;
 import forge.web.limited.Draft;
+import forge.web.limited.EventSeat;
 import forge.web.limited.DraftOwner;
 import forge.web.limited.OfflineDraft;
 import forge.web.limited.OfflineEvents;
 import forge.web.limited.OfflineLimited;
-import forge.web.limited.OnlineDraft;
 import forge.web.lobby.Lobby;
 import forge.web.match.LocalGame;
 import forge.web.match.WebGuiGame;
@@ -63,7 +59,7 @@ public final class WebSession implements IHasForgeLog {
     record Opening() implements Stage { }
 
     /** Match setup, at a seat whose GUI the match will be played through. Invited means others can join. */
-    record Setup(WebGuiGame gui, boolean invited) implements Stage { }
+    public record Setup(WebGuiGame gui, boolean invited) implements Stage { }
 
     /** The Limited pages for a kind of event: the saved pools, the setup form, and the opponents screen of pool, when it is not null. */
     public record Event(EventKind kind, String pool) implements Stage {
@@ -107,10 +103,8 @@ public final class WebSession implements IHasForgeLog {
     /** The face chosen beside the name, before any seat exists to carry it; null until it has chosen one. */
     private volatile Integer avatar;
     private final OfflineLimited limited;
-    /** This seat's part in the table's draft or sealed event; a new one comes with each table. */
-    private volatile OnlineDraft onlineDraft;
-    /** Whether the draft host was told this seat's player left, so it is told when the browser is back. */
-    private volatile boolean seatReportedGone;
+    /** This seat's part in the table's draft or sealed event. */
+    private final EventSeat eventSeat;
     /** The campaign modes, which a build without them replaces with Campaigns.NONE. */
     private final Campaigns campaigns;
 
@@ -140,6 +134,7 @@ public final class WebSession implements IHasForgeLog {
         this.lobby = new Lobby(local, () -> !isHost, device, ui);
         this.decks = new DeckSession(lobby, ui, () -> isHost, () -> stage instanceof Setup, device);
         this.limited = new OfflineLimited(this, ui, lobby, decks, local);
+        this.eventSeat = new EventSeat(this, ui, lobby, decks, local, sessions::hostLobby, sessions::seatsChanged);
         this.campaigns = new CampaignSession(new CampaignHost());
         this.onQuit = onQuit;
     }
@@ -220,7 +215,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** Whether a browser is attached to this session right now. */
-    boolean attached() {
+    public boolean attached() {
         return browser != null;
     }
 
@@ -318,18 +313,7 @@ public final class WebSession implements IHasForgeLog {
             if (isHost && lobby.settingUpEvent()) {
                 sendEventOptions(channel);
             }
-            final OnlineDraft draft = onlineDraft;
-            if (draft != null && draft.drafting()) {
-                channel.send(draft.latest());
-            }
-            if (seatReportedGone) {
-                seatReportedGone = false;
-                final ServerGameLobby table = sessions.hostLobby();
-                if (table != null && table.getDraftHost() != null && podSeat() >= 0) {
-                    table.getDraftHost().onSeatReconnected(podSeat());
-                }
-                sessions.seatsChanged();
-            }
+            eventSeat.reconnected(channel);
         } else if (now instanceof Event) {
             limited.sendLimited(channel);
             final OfflineDraft draft = limited.draft();
@@ -670,7 +654,7 @@ public final class WebSession implements IHasForgeLog {
         final WebGuiGame gui = new WebGuiGame(settings);
         lobby.forget();
         lobby.setShareable(invite);
-        newOnlineDraft(gui);
+        eventSeat.newTable(gui);
         try {
             local.openHost(playerName(), gui, this::lobbyChanged, this::chatted);
             if (invite) {
@@ -712,7 +696,7 @@ public final class WebSession implements IHasForgeLog {
             ui.invokeInEdtAndWait(lobby::forget);
             final WebGuiGame gui = new WebGuiGame(settings);
             gui.whenOpened(() -> guestMatchOpened(gui));
-            newOnlineDraft(gui);
+            eventSeat.newTable(gui);
             try {
                 local.openGuest(seatName, gui, this::lobbyChanged, this::chatted, this::gameGone);
             } catch (final RuntimeException e) {
@@ -740,113 +724,18 @@ public final class WebSession implements IHasForgeLog {
         });
     }
 
-    /** Makes this table's online draft, whose events are handled one at a time on the client's dispatch executor, as the match's are. */
-    private void newOnlineDraft(final WebGuiGame gui) {
-        seatReportedGone = false;
-        toldDrafting = false;
-        // An event from an earlier table's draft can still be on its way, and it is not this table's
-        final OnlineDraft[] self = new OnlineDraft[1];
-        final OnlineDraft draft = new OnlineDraft(gui.dispatchExecutor(), this::eventView, this::podSeat, this::seatHeld,
-                local::sendToHost, state -> {
-                    if (onlineDraft == self[0]) {
-                        showDraft(state);
-                    }
-                }, (eventId, pool) -> ui.invokeInEdtLater(() -> {
-                    if (onlineDraft == self[0]) {
-                        poolArrived(eventId, pool);
-                    }
-                }));
-        self[0] = draft;
-        onlineDraft = draft;
-        local.setDraftHandler(draft);
-    }
-
-    /** The table's event as this seat's lobby last heard it. */
-    private NetworkEventView eventView() {
-        final GameLobby table = local.hostedLobby() != null ? local.hostedLobby() : local.clientLobby();
-        return table == null || table.getData() == null ? null : table.getData().getEventView();
-    }
-
     ServerGameLobby hostedLobby() {
         return local.hostedLobby();
     }
 
-    /** This seat's place in the draft pod, or -1 before the pod is seated. */
-    private int podSeat() {
-        final ServerGameLobby table = sessions.hostLobby();
-        return table == null || local.webSeat() < 0 ? -1 : table.findSeatForLobbySlot(local.webSeat());
-    }
-
-    /** Whether a pod seat's player has gone. Every seat's session lives in the host's process, where the draft runs. */
-    private boolean seatHeld(final int seat) {
-        final ServerGameLobby table = sessions.hostLobby();
-        return table != null && table.getDraftHost() != null && table.getDraftHost().isSeatHeld(seat);
-    }
-
-    private volatile boolean toldDrafting;
-
-    private void showDraft(final DraftState state) {
-        // The first pack takes the browser to the draft, which the hello says it is in
-        if (!toldDrafting) {
-            toldDrafting = true;
-            tell(hello());
-        }
-        tell(state);
-    }
-
-    /** Opens the event's pool in the limited editor: the host keeps it among the event decks, and a guest's is kept in its browser. */
-    private void poolArrived(final String eventId, final Deck pool) {
-        // A pool dealt as this seat leaves its table belongs to a table that is going, and nothing here shows it
-        if (!(stage instanceof Setup)) {
-            return;
-        }
-        final NetworkEventView event = eventView();
-        final GameType type = event != null && event.getFormat() == EventFormat.SEALED ? GameType.Sealed : GameType.Draft;
-        final BrowserChannel b = browser;
-        if (isHost) {
-            final IStorage<Deck> eventDecks = FModel.getDecks().getNetworkEventDecks();
-            final Deck kept;
-            synchronized (DeckCatalog.DECKS) {
-                // Two events of one product on one day share a name, and the older pool is not the newer one's to replace
-                String name = pool.getName();
-                for (int n = 2; eventDecks.contains(name); n++) {
-                    name = pool.getName() + " (" + n + ")";
-                }
-                kept = new Deck(pool, name);
-                eventDecks.add(kept);
-            }
-            final ServerGameLobby table = local.hostedLobby();
-            if (table != null) {
-                table.selectEventForMatch(eventId, true);
-            }
-            decks.openEventPool(kept, type, eventDecks, null, b);
-        } else {
-            decks.openEventPool(pool, type, null, "event-" + eventId, b);
-        }
-        // An event's deck is new, so it is sleeved afresh rather than every seat wearing the sleeve it sat down in
-        lobby.dealSleeve(lobby.mySeat());
-        tell(hello());
-    }
-
     /** A pod seat's player went or came back, so this seat's dial shows it afresh. */
     void seatsChanged() {
-        final OnlineDraft draft = onlineDraft;
-        if (draft != null) {
-            draft.refresh();
-        }
+        eventSeat.seatsChanged();
     }
 
-    /** The browser has been gone a while, so a drafting seat's draft host is told its player left, as a closed connection tells desktop's. */
+    /** The browser has been gone a while, which a drafting seat's draft host is told. */
     void goneAWhile() {
-        final OnlineDraft draft = onlineDraft;
-        final ServerGameLobby table = sessions.hostLobby();
-        final int seat = podSeat();
-        if (browser != null || draft == null || !draft.drafting() || table == null || table.getDraftHost() == null || seat < 0) {
-            return;
-        }
-        table.getDraftHost().onSeatDisconnected(seat);
-        seatReportedGone = true;
-        sessions.seatsChanged();
+        eventSeat.goneAWhile();
     }
 
     /** The host started the match, so this guest's browser follows its seat into the game. */
@@ -983,7 +872,7 @@ public final class WebSession implements IHasForgeLog {
                 seatIndices(FPref.UI_AVATARS), seatIndices(FPref.UI_SLEEVES),
                 SkinSprites.avatarCount(), SkinSprites.sleeveCount(), DeckCatalog.savedSleeveArt(),
                 now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
-                now instanceof Event e ? e.kind() : null, limited.draft() != null || (now instanceof Setup && onlineDrafting()),
+                now instanceof Event e ? e.kind() : null, limited.draft() != null || (now instanceof Setup && eventSeat.drafting()),
                 isHost ? OfflineEvents.storage(EventKind.draft).size() : 0,
                 now instanceof InCampaign m ? m.mode() : null,
                 // The open save is named in its matches too, so the result screen knows whose ending it shows
@@ -1014,12 +903,7 @@ public final class WebSession implements IHasForgeLog {
     /** The draft this browser picks in: its own against the computer, or its seat's while the table drafts. */
     private Draft draft() {
         final OfflineDraft offline = limited.draft();
-        return offline != null ? offline : stage instanceof Setup ? onlineDraft : null;
-    }
-
-    private boolean onlineDrafting() {
-        final OnlineDraft draft = onlineDraft;
-        return draft != null && draft.drafting();
+        return offline != null ? offline : stage instanceof Setup ? eventSeat.draft() : null;
     }
 
     /** Starts a match a campaign built, over netplay. Leaving it returns to the campaign's page. failed undoes what preparing it did. */
