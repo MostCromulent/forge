@@ -71,9 +71,15 @@ public class NetplayTunnelTest extends SessionsTest {
         }, "host-token", GUEST_TOKEN, 0);
     }
 
+    // An app still connected holds the next test's table back until the host gives up waiting for its seat to free
+    @Override
+    void afterDisconnecting() {
+        apps.forEach(App::leave);
+        apps.clear();
+    }
+
     @AfterClass(alwaysRun = true)
     public void closeWebPort() {
-        apps.forEach(App::leave);
         if (server != null) {
             server.close();
         }

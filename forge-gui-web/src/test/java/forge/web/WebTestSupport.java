@@ -25,7 +25,7 @@ public final class WebTestSupport {
                 prefs.setPref(FPref.UI_LANGUAGE, "en-US");
                 prefs.setPref(FPref.ENFORCE_DECK_LEGALITY, false);
                 return null;
-            });
+            }, false);
         }
         FModel.getNetPreferences().setPref(ForgeNetPreferences.FNetPref.UPnP, "NEVER");
     }
