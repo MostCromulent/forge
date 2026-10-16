@@ -10,7 +10,6 @@ import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
-import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.NetworkLogConfig;
 import forge.gamemodes.net.client.ClientGameLobby;
@@ -244,11 +243,11 @@ public final class LocalGame implements IHasForgeLog {
         seatAndStart(seats);
     }
 
-    /** A match a game mode prepared itself, played from the browser's seat as every other web match is. */
-    public void startPrepared(final String playerName, final PreparedMatch match, final WebGuiGame gui) {
+    /** Opens a table for this browser alone, at seat webSeat, on which a game mode starts a match it built itself. */
+    public ServerGameLobby openAlone(final String playerName, final WebGuiGame gui) {
         nameProfile(playerName);
         openHost(playerName, gui, () -> { }, (from, text) -> { });
-        hosted.startPrepared(match, webSeat);
+        return hosted;
     }
 
     /** Saves the player's name where the profile has none, since HostedMatch would otherwise ask for one on the host's screen. */

@@ -18,6 +18,7 @@ import forge.web.WebSession.Playing;
 import forge.web.WebSession.Stage;
 import forge.web.deck.DeckSession;
 import forge.web.limited.DraftOwner;
+import forge.web.match.LocalGame;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.Commands;
@@ -83,7 +84,19 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
             }
             // A game's result belongs to the campaign that started it, wherever the browser has gone by the time it is recorded
             final Campaign campaign = campaign(back.mode());
-            session.startMatch(back, prepare, failed, game -> run(() -> {
+            session.startMatch(back, gui -> {
+                final PreparedMatch prepared = prepare.get();
+                if (prepared == null) {
+                    throw new IllegalStateException("A match is already being played");
+                }
+                // The game names its winner by this name, and the board knows the seat by the session's
+                prepared.human().getPlayer().setName(session.playerName());
+                // Quest plays Forge's one shared human player, whose looks are whatever the last match gave it
+                prepared.human().getPlayer().setAvatarIndex(session.avatarIndex());
+                prepared.human().getPlayer().setSleeveIndex(LocalGame.storedIndex(FPref.UI_SLEEVES, 0));
+                final LocalGame local = session.local();
+                local.openAlone(session.playerName(), gui).startPrepared(prepared, local.webSeat());
+            }, failed, game -> run(() -> {
                 final Record result = campaign.gameOver(game);
                 if (result != null) {
                     session.tell(result);

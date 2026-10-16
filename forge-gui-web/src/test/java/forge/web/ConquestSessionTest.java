@@ -64,7 +64,7 @@ public class ConquestSessionTest extends SessionsTest {
             final ConquestBattle battle = loc.getEvent().createBattle(loc, 0);
             onUi(() -> {
                 final PreparedMatch p = FModel.getConquest().prepareBattle(battle, null);
-                local.startPrepared("Web Player", p, gui);
+                local.openAlone("Web Player", gui).startPrepared(p, local.webSeat());
             });
             body.accept(local.hostedMatch());
         } finally {

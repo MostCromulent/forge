@@ -8,7 +8,6 @@ import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.LobbySlot;
-import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
@@ -45,7 +44,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 /** One browser's session, whose place is held in one {@link Stage} that changes only through {@link #move}. */
 public final class WebSession implements IHasForgeLog {
@@ -907,7 +905,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** Starts a match a campaign built, over netplay. Leaving it returns to the campaign's page. failed undoes what preparing it did. */
-    private void startCampaignMatch(final InCampaign back, final Supplier<PreparedMatch> prepare, final Runnable failed, final Consumer<GameView> gameOver) {
+    private void startCampaignMatch(final InCampaign back, final Consumer<WebGuiGame> start, final Runnable failed, final Consumer<GameView> gameOver) {
         final Playing playing = new Playing(new WebGuiGame(settings), false, false, back);
         if (!move(back, playing)) {
             playing.gui().close();
@@ -919,16 +917,7 @@ public final class WebSession implements IHasForgeLog {
             gameOver.accept(match == null ? null : match.getGameView());
         });
         try {
-            final PreparedMatch prepared = prepare.get();
-            if (prepared == null) {
-                throw new IllegalStateException("A match is already being played");
-            }
-            // The game names its winner by this name, and the board knows the seat by the session's
-            prepared.human().getPlayer().setName(playerName());
-            // Quest plays Forge's one shared human player, whose looks are whatever the last match gave it
-            prepared.human().getPlayer().setAvatarIndex(avatarIndex());
-            prepared.human().getPlayer().setSleeveIndex(LocalGame.storedIndex(FPref.UI_SLEEVES, 0));
-            local.startPrepared(playerName(), prepared, playing.gui());
+            start.accept(playing.gui());
         } catch (final RuntimeException ex) {
             netLog.error(ex, "Could not start the match");
             failed.run();
@@ -1105,9 +1094,24 @@ public final class WebSession implements IHasForgeLog {
         }
 
         @Override
-        public void startMatch(final InCampaign back, final Supplier<PreparedMatch> prepare, final Runnable failed, final Consumer<GameView> gameOver) {
+        public String playerName() {
+            return WebSession.this.playerName();
+        }
+
+        @Override
+        public int avatarIndex() {
+            return WebSession.this.avatarIndex();
+        }
+
+        @Override
+        public LocalGame local() {
+            return local;
+        }
+
+        @Override
+        public void startMatch(final InCampaign back, final Consumer<WebGuiGame> start, final Runnable failed, final Consumer<GameView> gameOver) {
             // A match is started on the host UI thread, as a table's is, and the campaign's work waits for it
-            ui.invokeInEdtAndWait(() -> startCampaignMatch(back, prepare, failed, gameOver));
+            ui.invokeInEdtAndWait(() -> startCampaignMatch(back, start, failed, gameOver));
         }
 
         @Override

@@ -2,17 +2,17 @@ package forge.web;
 
 import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
-import forge.gamemodes.match.PreparedMatch;
 import forge.web.WebSession.InCampaign;
 import forge.web.WebSession.Playing;
 import forge.web.WebSession.Stage;
 import forge.web.deck.DeckSession;
 import forge.web.limited.DraftOwner;
+import forge.web.match.LocalGame;
+import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
 
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 /**
  * One session's campaign modes, which live in forge.web.campaign so that a build can leave them out. The session makes
@@ -39,8 +39,17 @@ public interface Campaigns {
 
         WebGuiBase ui();
 
-        /** Starts a match a campaign built, from back, which leaving it returns to. gameOver hears each game's end with the host's view of it. failed undoes what preparing it did. */
-        void startMatch(InCampaign back, Supplier<PreparedMatch> prepare, Runnable failed, Consumer<GameView> gameOver);
+        String playerName();
+
+        int avatarIndex();
+
+        LocalGame local();
+
+        /**
+         * Starts a match a campaign builds, from back, which leaving it returns to. start builds it on the GUI the match is played
+         * through, and throws if it cannot. gameOver hears each game's end with the host's view of it. failed undoes what preparing it did.
+         */
+        void startMatch(InCampaign back, Consumer<WebGuiGame> start, Runnable failed, Consumer<GameView> gameOver);
 
         /** Opens a draft against the computer whose packs are already dealt, played for owner. */
         void startDraft(BoosterDraft draft, DraftOwner owner);
