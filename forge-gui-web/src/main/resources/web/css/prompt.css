@@ -4,6 +4,8 @@
 /* With the log and chat folded away the column is only tabs, so the console keeps its corner by itself */
 #match.side-folded #prompt { position: fixed; right: 8px; bottom: 14px; }
 #prompt.waiting { border-color: var(--accent-2); }
+/* While a question is answered on the board the prompt only says what is resolving, so it does not call for a press */
+#prompt.answering { border-color: var(--line-bright); }
 /* Two glints run round the gold rim while you hold priority, each three dashes centred on one point and blurred to a soft sheen */
 #prompt .glints { position: absolute; left: -1px; top: -1px; overflow: visible; pointer-events: none; filter: blur(.6px); opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility 0s linear .45s; }
 #prompt.priority .glints { opacity: 1; visibility: visible; transition: opacity .45s ease; }

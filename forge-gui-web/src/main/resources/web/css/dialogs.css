@@ -239,12 +239,12 @@ html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
 }
 .dialog.at-card .options { max-height: 50vh; }
 
-/* A question about cards sits on the playing area with no box round it. The side column stays lit, so the log, the stack and the prompt can be read while answering */
-html:not([data-form="portrait"]) :is(.backdrop.on-board, .reveal-back.on-board) { right: 258px; padding-right: 36px; background: var(--scrim-board); backdrop-filter: blur(5px) saturate(.8); }
-/* The side column's own left edge, folded or not (board.css #match) */
-html:has(#match.side-folded) :is(.backdrop.on-board, .reveal-back.on-board) { right: 36px; }
+/* A question about cards sits on the playing area with no box round it. The whole window dims, but the log, the stack and the prompt are lifted above it to be read while answering */
+html:not([data-form="portrait"]) :is(.backdrop.on-board, .reveal-back.on-board) { padding-right: calc(258px + 36px); background: var(--scrim-board); backdrop-filter: blur(5px) saturate(.8); }
+/* Centred in the playing area: left of the side column, folded or not (board.css #match) */
+html:has(#match.side-folded) :is(.backdrop.on-board, .reveal-back.on-board) { padding-right: calc(36px + 36px); }
 /* The stack is lit beside the question, so the question is centred in what is left of the board */
-html:has(#stack:not([hidden])) :is(.backdrop.on-board, .reveal-back.on-board) { padding-right: calc(var(--stack-w) + 64px); }
+html:has(#stack:not([hidden])) :is(.backdrop.on-board, .reveal-back.on-board) { padding-right: calc(258px + var(--stack-w) + 64px); }
 html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) #stack:not([hidden]) { z-index: 51; }
 /* The prompt is wider than the column it sits in, so the column is lifted above the scrim rather than leaving the prompt half covered */
 html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) #side { z-index: 51; }

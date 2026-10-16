@@ -606,8 +606,8 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 .log-entry.log-game_outcome, .log-entry.log-match_results { color: var(--text); }
 /* An open zone takes the whole screen and dims the board, and folded, the scrim goes and only the bar stays */
 #zones { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--scrim-deep); }
-/* Beside a landscape board the side column stays lit: a pile opened to look at is lightly dimmed, a zone the game asks about as a question about cards is */
-html:not([data-form="portrait"]) #zones:not(.minimised) { right: calc(var(--side-gap) - 12px); background: var(--scrim-look); }
+/* On a landscape board the side column's panels are lifted above the dim: a pile opened to look at dims lightly, a zone the game asks about as a question about cards does */
+html:not([data-form="portrait"]) #zones:not(.minimised) { padding-right: var(--side-gap); background: var(--scrim-look); }
 html:not([data-form="portrait"]) #zones.asking:not(.minimised) { background: var(--scrim-board); backdrop-filter: blur(5px) saturate(.8); }
 @media (prefers-reduced-transparency: reduce) { #zones.asking { backdrop-filter: none; } }
 #match:has(#zones:not([hidden]):not(.minimised)) #side { z-index: 41; }
@@ -625,7 +625,7 @@ html:not([data-form="portrait"]) #zones.asking:not(.minimised) { background: var
 #zones.minimised > *, .reveal-back.minimised > * { pointer-events: auto; }
 /* A zone opened while something is on the stack is usually that spell asking, so the stack stays above the scrim with the zone beside it */
 #match:has(#zones:not([hidden]):not(.minimised)) #stack:not([hidden]) { z-index: 41; }
-#match:has(#stack:not([hidden])) #zones:not(.minimised) { padding-right: calc(var(--stack-w) + 40px); }
+#match:has(#stack:not([hidden])) #zones:not(.minimised) { padding-right: calc(var(--side-gap) + var(--stack-w) + 40px); }
 #match:has(#stack:not([hidden])) #zones:not(.minimised) .zone-panel { width: min(860px, calc(100vw - var(--side-gap) - var(--stack-w) - 80px)); }
 /* A column, not a grid: a grid row grows to its content, so a long library would push the footer and its OK off the screen */
 .zone-shelf { display: flex; flex-direction: column; gap: 12px; max-height: 88vh; }
