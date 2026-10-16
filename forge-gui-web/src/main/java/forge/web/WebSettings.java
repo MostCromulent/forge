@@ -1,5 +1,7 @@
 package forge.web;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.primitives.Ints;
 import forge.MulliganDefs;
 import forge.StaticData;
@@ -12,6 +14,8 @@ import forge.interfaces.IGameController;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
+import forge.model.FModel;
+import forge.sound.SoundSystem;
 import forge.util.IHasForgeLog;
 import forge.web.protocol.ToBrowser.ServerSettings;
 
@@ -34,9 +38,6 @@ public final class WebSettings implements IHasForgeLog {
             Map.entry("interruptReveal", FPref.YIELD_INTERRUPT_ON_REVEAL),
             Map.entry("suppressAfterYield", FPref.YIELD_SUPPRESS_AFTER_END),
             Map.entry("suppressOwnTurn", FPref.YIELD_SUPPRESS_ON_OWN_TURN),
-            Map.entry("skipPhaseDelay", FPref.YIELD_SKIP_PHASE_DELAY),
-            Map.entry("skipResolveDelay", FPref.YIELD_SKIP_RESOLVE_DELAY),
-            Map.entry("autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW),
             Map.entry("autoPassNoActions", FPref.YIELD_AUTO_PASS_NO_ACTIONS));
 
     /** When each yield suggestion is offered again after it is declined, by its DeclineScope name. */
@@ -56,17 +57,16 @@ public final class WebSettings implements IHasForgeLog {
                 DeclineScope.fromPref(player.get(FPref.YIELD_DECLINE_SCOPE_NO_ACTIONS)).name(),
                 player.getBoolean(FPref.YIELD_SUPPRESS_AFTER_END),
                 player.getBoolean(FPref.YIELD_SUPPRESS_ON_OWN_TURN),
-                player.getBoolean(FPref.YIELD_SKIP_PHASE_DELAY),
-                player.getBoolean(FPref.YIELD_SKIP_RESOLVE_DELAY),
-                player.getBoolean(FPref.UI_SHOW_AUTOTAP_PREVIEW),
                 ForgeConstants.AUTO_DECISION_PER_CARD.equals(player.get(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability",
                 GameLogVerbosity.fromString(player.get(FPref.DEV_LOG_ENTRY_TYPE)),
-                player.get(FPref.UI_TARGETING_OVERLAY),
                 player.getBoolean(FPref.DEV_MODE_ENABLED),
                 "#" + player.get(FPref.UI_ACTIONABLE_HIGHLIGHT_COLOR),
                 // A volume of zero is the off switch, so the two preferences are reported as one number
                 player.getBoolean(FPref.UI_ENABLE_SOUNDS) ? player.getInt(FPref.UI_VOL_SOUNDS) : 0,
                 player.getBoolean(FPref.UI_ENABLE_MUSIC) ? player.getInt(FPref.UI_VOL_MUSIC) : 0,
+                // The host serves every player's sounds, so a guest is told the host's set and not its own
+                FModel.getPreferences().getPref(FPref.UI_CURRENT_SOUND_SET),
+                SOUND_SETS.get(),
                 player.getBoolean(FPref.FILTERED_HANDS),
                 MulliganDefs.GetRuleByName(player.get(FPref.MULLIGAN_RULE)).name(),
                 player.get(FPref.UI_CURRENT_AI_PROFILE),
@@ -98,13 +98,17 @@ public final class WebSettings implements IHasForgeLog {
                     "card".equals(value) ? ForgeConstants.AUTO_DECISION_PER_CARD : ForgeConstants.AUTO_DECISION_PER_ABILITY);
         } else if ("logDetail".equals(key)) {
             player.set(FPref.DEV_LOG_ENTRY_TYPE, GameLogVerbosity.fromString(value).toString());
-        } else if ("arrows".equals(key)) {
-            final Integer mode = Ints.tryParse(value);
-            if (mode == null || mode < 0 || mode > 2) {
-                netLog.warn("Web client: bad arrows setting {}", value);
+        } else if ("soundSet".equals(key)) {
+            // The host serves the sounds, so only its own choice counts
+            if (!player.shared()) {
                 return;
             }
-            player.set(FPref.UI_TARGETING_OVERLAY, value);
+            if (!SOUND_SETS.get().contains(value)) {
+                netLog.warn("Web client: bad sound set {}", value);
+                return;
+            }
+            player.set(FPref.UI_CURRENT_SOUND_SET, value);
+            SoundSystem.instance.invalidateSoundCache();
         } else if ("soundVolume".equals(key) || "musicVolume".equals(key)) {
             final Integer volume = Ints.tryParse(value);
             if (volume == null || volume < 0 || volume > 100) {
@@ -121,6 +125,9 @@ public final class WebSettings implements IHasForgeLog {
         }
         player.save();
     }
+
+    /** The sound sets in Forge's sound folder, read once since the controls carry them on every update. */
+    private static final Supplier<List<String>> SOUND_SETS = Suppliers.memoize(() -> List.of(SoundSystem.instance.getAvailableSoundSets()));
 
     private static final List<String> TABLE_SETTINGS = List.of("filteredHands", "mulliganRule", "aiProfile", "ante");
 
@@ -164,11 +171,12 @@ public final class WebSettings implements IHasForgeLog {
         }
     }
 
-    /** Gives a game this player's settings, except auto-pass always respects the interrupts and playable cards are always highlighted. */
+    /** Gives a game this player's settings, except auto-pass always respects the interrupts, and playable cards and the lands auto-tap would use are always highlighted. */
     public static void applyAll(final PlayerSettings player, final IGameController controller) {
         // Every one is pushed after the engine's own seed, which read the shared preferences, so a guest plays by its own
         for (final FPref pref : YieldController.SYNCED_PREFS) {
-            final boolean always = pref == FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS || pref == FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS;
+            final boolean always = pref == FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS || pref == FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS
+                    || pref == FPref.UI_SHOW_AUTOTAP_PREVIEW;
             applyTo(controller, pref, always ? "true" : player.get(pref));
         }
         applyTo(controller, FPref.UI_AUTO_DECISION_MODE, player.get(FPref.UI_AUTO_DECISION_MODE));

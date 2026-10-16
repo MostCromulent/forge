@@ -496,9 +496,9 @@ public final class ToBrowser {
     public record ServerSettings(boolean interruptAttackers, boolean interruptOpponentSpell, boolean interruptTargeting,
             boolean interruptTriggers, boolean interruptMassRemoval, boolean interruptReveal,
             String suggestStackYield, String suggestNoActions, boolean suppressAfterYield, boolean suppressOwnTurn,
-            boolean skipPhaseDelay, boolean skipResolveDelay, boolean autoTapPreview,
-            String autoYieldMode, GameLogVerbosity logDetail, String arrows, boolean devMode,
-            String highlightColor, int soundVolume, int musicVolume, boolean filteredHands, String mulliganRule,
+            String autoYieldMode, GameLogVerbosity logDetail, boolean devMode,
+            String highlightColor, int soundVolume, int musicVolume, String soundSet, List<String> soundSets,
+            boolean filteredHands, String mulliganRule,
             String aiProfile, boolean ante) {
     }
 

@@ -481,7 +481,6 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name, final String track,
             final String range) throws IOException {
         if (sound) {
-            // Kept for an hour and no longer, since the name stays the same when the host picks another sound set
             respondAudio(ctx, isFileName(name) ? SoundSystem.instance.getSoundResource(name) : null, range, KEEP_AN_HOUR);
             return;
         }

@@ -1,6 +1,6 @@
 // The game menu behind the prompt's ⋯ button, which keeps how priority passes by itself one click from the prompt
 
-import { useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CloseIcon, OnOff, OptionsDialog, PlaymatChoice, Row, SectionHeading } from '../options';
 import { SETTINGS, setting, type SettingDef } from '../settings';
 import { DevItems } from './devmenu';
@@ -42,12 +42,9 @@ export function GameMenu({ model, actions, close, open }: {
           onClick={() => setMats(!mats)}><MenuIcon d={ICONS.playmat} />{t('lblWebPlaymat')}<MenuIcon d={ICONS.next} end /></button>
         <div class="card-menu-sep" role="separator" />
         <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('stops')}>
-          <MenuIcon d={ICONS.interrupts} />{t('lblWebGameMenuInterrupts')}
+          <MenuIcon d={ICONS.interrupts} />{t('lblYieldSettings')}
         </button>
-        <button type="button" role="menuitem" class="card-menu-item" disabled={model.spectating} onClick={() => {
-          actions.autoDecisions('list');
-          open('decisions');
-        }}><MenuIcon d={ICONS.yields} />{t('lblWebGameMenuDecisions')}</button>
+        <button type="button" role="menuitem" class="card-menu-item" disabled={model.spectating} onClick={() => open('decisions')}><MenuIcon d={ICONS.yields} />{t('lblWebGameMenuDecisions')}</button>
         <button type="button" role="menuitem" class="card-menu-item" disabled={model.spectating} onClick={() => {
           actions.macroRecord();
           changeUi(u => { u.macro = u.macro === 'recording' ? 'recorded' : 'recording'; });
@@ -102,7 +99,7 @@ function PlaymatPicker({ beside }: { beside: { current: HTMLDivElement | null } 
 export function AutoPassStops({ close }: { close: () => void }) {
   return (
     <OptionsDialog title={t('lblYieldSettings')} label={t('lblYieldSettings')} kind="stops-dialog" close={close}
-      footer={<span class="hint">{t('lblWebGameMenuStopsHint')}</span>}>
+      footer={<span class="hint">{t('lblInterruptSettingsDesc')}</span>}>
       {SETTINGS.filter(def => def.menu === 'stops').flatMap((def, i, all) => [
         ...(def.section !== all[i - 1]?.section ? [<SectionHeading key={`section ${def.section}`} name={def.section} keys={false} />] : []),
         <Row key={def.key} def={def} />,
@@ -123,6 +120,8 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
   const [ordersReset, setOrdersReset] = useState(false);
   const all = model.autoDecisions;
   const entries = all?.entries ?? [];
+  // Asked for on opening, from the game menu or the options alike
+  useEffect(() => { actions.autoDecisions('list'); }, []);
   return (
     <OptionsDialog title={t('lblAutoYieldsAndTriggers')} kind="decisions-dialog" close={close} footer={<>
       <span class="hint">{t('lblWebGameMenuDecisionsHint')}</span>

@@ -11,7 +11,7 @@ import { byId, q, replay, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
 import { keyName } from '../keys';
-import { boundKeys, setting } from '../settings';
+import { boundKeys } from '../settings';
 import { isPortrait } from '../form';
 import { notePick } from './overlay';
 import { declaringBlocks } from './blockdrag';
@@ -130,7 +130,6 @@ function drawPrompt(model: Model, actions: Actions): void {
   // On a phone the tools ride on the player's own bar, which leaves the dock one row
   if (isPortrait() && tools.parentElement === root) byId('match').append(tools);
   else if (!isPortrait() && tools.parentElement !== root) q(root, '.step').before(tools);
-  root.classList.toggle('swapped', !!setting('swapPrompt'));
   // The player can choose these keys in the options, so the labels follow whatever they chose
   const keys = boundKeys();
   q(tools, '.undo').title = t('lblWebPromptUndoTip', keyName(keys.undo));

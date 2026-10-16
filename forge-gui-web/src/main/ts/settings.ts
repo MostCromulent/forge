@@ -33,8 +33,10 @@ interface SettingBase {
   hostOnly?: boolean;
   /** Also set in a dialog opened from the game menu. */
   menu?: 'stops' | 'decisions' | 'playmat';
-  /** Set from another setting's control, so the options give it no row of its own. */
+  /** Set from another setting's control or from a dialog, so the options give it no row of its own. */
   inside?: boolean;
+  /** Listed in the options only while this holds. */
+  when?: () => boolean;
 }
 
 /** A choice shown as a picture: its value, name, a line under the name, the drawing's SVG, and when it cannot be chosen. */
@@ -51,6 +53,8 @@ export type SettingDef = SettingBase & (
   | { type: 'choice'; options: [string, string][]; def: string }
   | { type: 'tiles'; options: Tile[]; def: string }
   | { type: 'playmat'; def: string }
+  /** Not a setting: a button that opens a dialog of the game menu. */
+  | { type: 'dialog'; dialog: 'stops' | 'decisions'; def: string }
   | { type: 'slider'; min: number; max: number; def: number; step?: number; unit?: 'seconds' }
   | { type: 'css'; def: string }
   | { type: 'key'; action: keyof KeyBindings; def: string }
@@ -65,46 +69,31 @@ const tabsOnly = () => Number(document.querySelector<HTMLElement>('#match:not([h
 const SCOPES: [string, string][] = [['NEVER', t('lblNever')], ['ALWAYS', t('lblAlways')], ['STACK', t('lblDeclScopeStack')], ['TURN', t('lblDeclScopeTurn')]];
 
 export const SETTINGS: SettingDef[] = [
-  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptAttackers', label: t('lblWebOptionsInterruptAttackers'), type: 'toggle', server: true, menu: 'stops', def: true },
-  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptOpponentSpell', label: t('lblWebOptionsInterruptOpponentSpell'), type: 'toggle', server: true, menu: 'stops', def: true },
-  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptTargeting', label: t('lblWebOptionsInterruptTargeting'), type: 'toggle', server: true, menu: 'stops', def: false },
-  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptTriggers', label: t('lblWebOptionsInterruptTriggers'), type: 'toggle', server: true, menu: 'stops', def: false },
-  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptMassRemoval', label: t('lblWebOptionsInterruptMassRemoval'), type: 'toggle', server: true, menu: 'stops', def: false },
-  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptReveal', label: t('lblWebOptionsInterruptReveal'), type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: t('lblInterruptSettings'), key: 'interruptAttackers', label: t('lblInterruptOnAttackers'), type: 'toggle', server: true, menu: 'stops', inside: true, def: true },
+  { section: t('lblInterruptSettings'), key: 'interruptOpponentSpell', label: t('lblInterruptOnOpponentSpell'), type: 'toggle', server: true, menu: 'stops', inside: true, def: true },
+  { section: t('lblInterruptSettings'), key: 'interruptTargeting', label: t('lblInterruptOnTargeting'), type: 'toggle', server: true, menu: 'stops', inside: true, def: false },
+  { section: t('lblInterruptSettings'), key: 'interruptTriggers', label: t('lblInterruptOnTriggers'), type: 'toggle', server: true, menu: 'stops', inside: true, def: false },
+  { section: t('lblInterruptSettings'), key: 'interruptMassRemoval', label: t('lblInterruptOnMassRemoval'), type: 'toggle', server: true, menu: 'stops', inside: true, def: false },
+  { section: t('lblInterruptSettings'), key: 'interruptReveal', label: t('lblInterruptOnReveal'), type: 'toggle', server: true, menu: 'stops', inside: true, def: false },
   {
-    section: t('lblWebOptionsYieldOffers'), key: 'suggestStackYield', label: t('lblWebOptionsSuggestStackYield'), type: 'choice', server: true, menu: 'stops',
+    section: t('lblAutomaticSuggestions'), key: 'suggestStackYield', label: t('lblSuggestStackYield'), type: 'choice', server: true, menu: 'stops', inside: true,
     options: SCOPES, def: 'NEVER',
   },
   {
-    section: t('lblWebOptionsYieldOffers'), key: 'suggestNoActions', label: t('lblWebOptionsSuggestNoActions'), type: 'choice', server: true, menu: 'stops',
+    section: t('lblAutomaticSuggestions'), key: 'suggestNoActions', label: t('lblSuggestNoActions'), type: 'choice', server: true, menu: 'stops', inside: true,
     options: SCOPES, def: 'NEVER',
   },
-  { section: t('lblWebOptionsYieldOffers'), key: 'suppressAfterYield', label: t('lblWebOptionsSuppressAfterYield'), type: 'toggle', server: true, menu: 'stops', def: true },
-  { section: t('lblWebOptionsYieldOffers'), key: 'suppressOwnTurn', label: t('lblWebOptionsSuppressOwnTurn'), type: 'toggle', server: true, menu: 'stops', def: true },
-  { section: t('lblSpeedSettings'), key: 'skipPhaseDelay', label: t('lblSkipPhaseDelay'), type: 'toggle', server: true, menu: 'stops', def: false },
-  { section: t('lblSpeedSettings'), key: 'skipResolveDelay', label: t('lblSkipResolveDelay'), type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: t('lblAutomaticSuggestions'), key: 'suppressAfterYield', label: t('lblSuppressAfterYield'), type: 'toggle', server: true, menu: 'stops', inside: true, def: true },
+  { section: t('lblAutomaticSuggestions'), key: 'suppressOwnTurn', label: t('lblSuppressOnOwnTurn'), type: 'toggle', server: true, menu: 'stops', inside: true, def: true },
   {
-    section: t('lblAutoYieldsAndTriggers'), key: 'autoYieldMode', label: t('lblWebOptionsAutoYieldMode'), type: 'choice', server: true, menu: 'decisions',
-    hint: t('lblWebOptionsAutoYieldModeHint'),
-    options: [['ability', t('lblWebOptionsPerAbility')], ['card', t('lblWebOptionsPerCard')]], def: 'ability',
+    section: t('lblDisplay'), key: 'playmat', label: t('lblWebPlaymat'), type: 'playmat', menu: 'playmat', def: 'nebula',
   },
   {
-    section: t('GamePlay'), key: 'pace', label: t('lblWebOptionsPace'), hint: t('lblWebOptionsPaceHint'),
-    type: 'slider', min: 0, max: 3000, step: 250, unit: 'seconds', def: 1000,
+    section: t('lblDisplay'), key: 'playmatBrightness', label: t('lblWebPlaymatBrightness'), type: 'choice', menu: 'playmat', inside: true,
+    options: [['dark', t('lblWebPlaymatDark')], ['dim', t('lblWebPlaymatDim')], ['light', t('lblWebPlaymatLight')], ['bright', t('lblWebPlaymatBright')]], def: 'dim',
   },
   {
-    section: t('GamePlay'), key: 'autoTapPreview', label: t('lblWebOptionsAutoTapPreview'), type: 'toggle', server: true, def: false,
-  },
-  {
-    section: t('GamePlay'), key: 'arrows', label: t('lblWebOptionsArrows'), type: 'choice', server: true,
-    options: [['0', t('lblOff')], ['1', t('lblWebOptionsHover')], ['2', t('lblAlways')]], def: '2',
-  },
-  {
-    section: t('GamePlay'), key: 'logDetail', label: t('lblWebOptionsLogDetail'), type: 'choice', server: true,
-    options: [['LOW', t('lblWebOptionsLow')], ['MEDIUM', t('lblMedium')], ['HIGH', t('lblWebOptionsHigh')]], def: 'MEDIUM',
-  },
-  {
-    section: t('lblDisplay'), key: 'boardLayout', label: t('lblWebOptionsBoardLayout'), type: 'tiles', def: 'columns',
+    section: t('lblDisplay'), key: 'boardLayout', label: t('lblMultiplayerFieldLayout'), type: 'tiles', def: 'columns',
     options: [
       { value: 'columns', label: t('lblColumns'), hint: t('lblWebOptionsColumnsHint'), unavailable: tabsOnly,
         picture: `${theirs(4, 4, 30)}${theirs(37, 4, 30)}${theirs(70, 4, 30)}${YOURS}` },
@@ -115,26 +104,26 @@ export const SETTINGS: SettingDef[] = [
     ],
   },
   {
-    section: t('lblDisplay'), key: 'handSort', label: t('lblWebOptionsHandSort'), type: 'choice',
-    options: [['mana', t('lblCMC')], ['color', t('lblColor')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
-  },
-  { section: t('lblDisplay'), key: 'handSize', label: t('lblHandSize'), type: 'slider', min: 70, max: 130, def: 100 },
-  { section: t('lblDisplay'), key: 'tabNewCards', label: t('lblWebOptionsTabNewCards'), hint: t('lblWebOptionsTabNewCardsHint'), type: 'toggle', def: true },
-  { section: t('lblDisplay'), key: 'swapPrompt', label: t('lblWebOptionsSwapPrompt'), hint: t('lblWebOptionsSwapPromptHint'), type: 'toggle', def: false },
-  {
-    section: t('lblDisplay'), key: 'previewSize', label: t('lblWebOptionsPreviewSize'), hint: t('lblWebOptionsPreviewSizeHint'), type: 'choice',
-    options: [['small', t('lblWebOptionsSmall')], ['medium', t('lblMedium')], ['large', t('lblWebOptionsLarge')]], def: 'medium',
-  },
-  {
-    section: t('lblDisplay'), key: 'playmat', label: t('lblWebPlaymat'), type: 'playmat', menu: 'playmat', def: 'nebula',
-  },
-  {
-    section: t('lblDisplay'), key: 'playmatBrightness', label: t('lblWebPlaymatBrightness'), type: 'choice', menu: 'playmat', inside: true,
-    options: [['dark', t('lblWebPlaymatDark')], ['dim', t('lblWebPlaymatDim')], ['light', t('lblWebPlaymatLight')], ['bright', t('lblWebPlaymatBright')]], def: 'dim',
-  },
-  {
     section: t('lblDisplay'), key: 'motion', label: t('lblWebOptionsMotion'), hint: t('lblWebOptionsMotionHint'), type: 'choice',
     options: [['full', t('lblWebOptionsFull')], ['system', t('lblWebOptionsSystem')], ['reduced', t('lblWebOptionsReduced')]], def: 'full',
+  },
+  {
+    section: t('lblCards'), key: 'previewSize', label: t('lblWebOptionsPreviewSize'), hint: t('lblWebOptionsPreviewSizeHint'), type: 'choice',
+    options: [['small', t('lblWebOptionsSmall')], ['medium', t('lblMedium')], ['large', t('lblWebOptionsLarge')]], def: 'medium',
+  },
+  { section: t('lblCards'), key: 'handSize', label: t('lblHandSize'), type: 'slider', min: 70, max: 130, def: 100 },
+  {
+    section: t('lblCards'), key: 'handSort', label: t('lblWebOptionsHandSort'), type: 'choice',
+    options: [['mana', t('lblCMC')], ['color', t('lblColor')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
+  },
+  {
+    // Forge ships only the default set, so the choice shows once someone has added another, as on desktop
+    section: t('lblWebOptionsSectionSound'), key: 'soundSet', label: t('cbpSoundSets'), type: 'choice', server: true, hostOnly: true,
+    when: () => (server.soundSets?.length ?? 0) > 1,
+    get options(): [string, string][] {
+      return (server.soundSets ?? []).map(s => [s, s]);
+    },
+    def: 'Default',
   },
   {
     section: t('lblWebOptionsSectionSound'), key: 'soundVolume', label: t('lblWebOptionsSoundVolume'), type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
@@ -142,34 +131,53 @@ export const SETTINGS: SettingDef[] = [
   {
     section: t('lblWebOptionsSectionSound'), key: 'musicVolume', label: t('lblWebOptionsMusicVolume'), type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
   },
-  { section: t('lblWebOptionsSectionKeys'), key: 'keyOk', label: t('lblOK'), action: 'ok', type: 'key', def: ' ' },
-  { section: t('lblWebOptionsSectionKeys'), key: 'keyEndTurn', label: t('lblEndTurn'), action: 'endTurn', type: 'key', def: 'e' },
-  { section: t('lblWebOptionsSectionKeys'), key: 'keyAutoPass', label: t('lblWebOptionsKeyAutoPass'), hint: t('lblWebOptionsKeyAutoPassHint'), action: 'autoPass', type: 'key', def: 'p' },
-  { section: t('lblWebOptionsSectionKeys'), key: 'keyUndo', label: t('lblUndo'), action: 'undo', type: 'key', def: 'z' },
-  { section: t('lblWebOptionsSectionKeys'), key: 'keyNextFace', label: t('lblWebOptionsKeyNextFace'), hint: t('lblWebOptionsUnderPointer'), action: 'nextFace', type: 'key', def: 'f' },
-  { section: t('lblWebOptionsSectionKeys'), key: 'keyCardText', label: t('lblWebOptionsKeyCardText'), hint: t('lblWebOptionsUnderPointer'), action: 'cardText', type: 'key', def: 't' },
   {
-    section: t('lblWebOptionsSectionTable'), key: 'mulliganRule', label: t('lblWebOptionsMulliganRule'), type: 'choice', server: true, hostOnly: true,
+    section: t('GamePlay'), key: 'pace', label: t('lblWebOptionsPace'), hint: t('lblWebOptionsPaceHint'),
+    type: 'slider', min: 0, max: 3000, step: 250, unit: 'seconds', def: 1000,
+  },
+  {
+    section: t('GamePlay'), key: 'logDetail', label: t('cbpGameLogEntryType'), type: 'choice', server: true,
+    options: [['LOW', t('lblWebOptionsLow')], ['MEDIUM', t('lblMedium')], ['HIGH', t('lblWebOptionsHigh')]], def: 'MEDIUM',
+  },
+  { section: t('lblAutoYieldsAndTriggers'), key: 'yieldSettings', label: t('lblYieldSettings'), type: 'dialog', dialog: 'stops', def: '' },
+  {
+    // The host reads the remembered list from the player's own game, so a spectator or the menu has none to show
+    section: t('lblAutoYieldsAndTriggers'), key: 'autoDecisions', label: t('lblWebGameMenuDecisions'), type: 'dialog', dialog: 'decisions', def: '',
+    when: () => !!document.querySelector('#match:not([hidden])') && !document.querySelector('#prompt.spectating'),
+  },
+  {
+    section: t('lblAutoYieldsAndTriggers'), key: 'autoYieldMode', label: t('cbpAutoDecisionMode'), type: 'choice', server: true, menu: 'decisions',
+    hint: t('lblWebOptionsAutoYieldModeHint'),
+    options: [['ability', t('lblWebOptionsPerAbility')], ['card', t('lblWebOptionsPerCard')]], def: 'ability',
+  },
+  {
+    section: t('lblWebOptionsSectionTable'), key: 'mulliganRule', label: t('cbpMulliganRule'), type: 'choice', server: true, hostOnly: true,
     options: ['London', 'Vancouver', 'Paris', 'Original', 'Houston'].map(r => [r, r]), def: 'London',
   },
   {
-    section: t('lblWebOptionsSectionTable'), key: 'filteredHands', label: t('lblWebOptionsFilteredHands'), hint: t('lblWebOptionsFilteredHandsHint'),
-    type: 'toggle', server: true, hostOnly: true, def: false,
-  },
-  {
-    section: t('lblWebOptionsSectionTable'), key: 'aiProfile', label: t('lblWebOptionsAiProfile'), hint: t('lblWebOptionsAiProfileHint'),
+    section: t('lblWebOptionsSectionTable'), key: 'aiProfile', label: t('cbpAiProfiles'), hint: t('lblWebOptionsAiProfileHint'),
     type: 'choice', server: true, hostOnly: true,
     options: ['Default', 'Cautious', 'Reckless', 'Experimental', 'Random (Every Match)', 'Random (Every Game)'].map(p => [p, p]), def: 'Default',
   },
   {
-    section: t('lblWebOptionsSectionTable'), key: 'ante', label: t('lblWebOptionsAnte'), type: 'toggle', server: true, hostOnly: true, def: false,
+    section: t('lblWebOptionsSectionTable'), key: 'filteredHands', label: t('cbFilteredHands'), hint: t('lblWebOptionsFilteredHandsHint'),
+    type: 'toggle', server: true, hostOnly: true, def: false,
+  },
+  {
+    section: t('lblWebOptionsSectionTable'), key: 'ante', label: t('cbAnte'), type: 'toggle', server: true, hostOnly: true, def: false,
+  },
+  { section: t('lblKeyboardShortcuts'), key: 'keyOk', label: t('lblOK'), action: 'ok', type: 'key', def: ' ' },
+  { section: t('lblKeyboardShortcuts'), key: 'keyEndTurn', label: t('lblEndTurn'), action: 'endTurn', type: 'key', def: 'e' },
+  { section: t('lblKeyboardShortcuts'), key: 'keyAutoPass', label: t('lblWebOptionsKeyAutoPass'), hint: t('lblWebOptionsKeyAutoPassHint'), action: 'autoPass', type: 'key', def: 'p' },
+  { section: t('lblKeyboardShortcuts'), key: 'keyUndo', label: t('lblUndo'), action: 'undo', type: 'key', def: 'z' },
+  { section: t('lblKeyboardShortcuts'), key: 'keyNextFace', label: t('lblWebOptionsKeyNextFace'), hint: t('lblWebOptionsUnderPointer'), action: 'nextFace', type: 'key', def: 'f' },
+  { section: t('lblKeyboardShortcuts'), key: 'keyCardText', label: t('lblWebOptionsKeyCardText'), hint: t('lblWebOptionsUnderPointer'), action: 'cardText', type: 'key', def: 't' },
+  {
+    section: t('lblAdvanced'), key: 'customCss', label: t('lblWebOptionsCustomCss'), hint: t('lblWebOptionsCustomCssHint'), type: 'css', def: '',
   },
   {
     section: t('lblAdvanced'), key: 'devMode', label: t('lblDevMode'), type: 'toggle', server: true, hostOnly: true, def: false,
     hint: t('lblWebOptionsDevModeHint'),
-  },
-  {
-    section: t('lblAdvanced'), key: 'customCss', label: t('lblWebOptionsCustomCss'), hint: t('lblWebOptionsCustomCssHint'), type: 'css', def: '',
   },
 ];
 

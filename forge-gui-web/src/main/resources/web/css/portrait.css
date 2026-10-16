@@ -27,7 +27,6 @@ html[data-form="portrait"] #prompt { grid-area: prompt; position: relative; righ
   padding: 0 0 env(safe-area-inset-bottom); box-shadow: 0 -8px 24px #0008; backdrop-filter: none; background: var(--surface);
   display: grid; grid-template-columns: 92px minmax(0, 1fr) 92px; grid-template-rows: auto auto auto; min-height: 44px; box-sizing: content-box; gap: 0;
   grid-template-areas: "ok step cancel" "ok body cancel" "players players players"; }
-html[data-form="portrait"] #prompt.swapped { grid-template-areas: "cancel step ok" "cancel body ok" "players players players"; }
 html[data-form="portrait"] #prompt.waiting { border-color: var(--accent-2); }
 html[data-form="portrait"] #prompt .glints { display: none; }
 html[data-form="portrait"] #prompt .step { grid-area: step; align-self: end; margin: 0; padding: 3px 10px 0; font-size: 9px; line-height: 10px; letter-spacing: .12em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

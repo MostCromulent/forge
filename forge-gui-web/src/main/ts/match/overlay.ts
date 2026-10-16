@@ -1,7 +1,6 @@
 // The arrows drawn over the board: attackers to what they attack, blockers to what they block, and spells to their targets
 
 import { combatShown, game, derefAll, players, type Model } from '../model';
-import { setting } from '../settings';
 import { byId, onRelayout, reducedMotion } from '../dom';
 import { cardElement, pileTopFor } from './motion';
 import { ui } from '../ui';
@@ -132,12 +131,10 @@ function paintArrows(model: Model): void {
     placeCharges(new Set());
     return;
   }
-  // A chevron marks the attacker's state, as tapping does, so it shows whatever the arrows setting
   const atFace = atLoneFace(model);
   // Once combat damage is dealt the attack has landed, so the chevrons go, though the attackers stay marked
   const landed = g.Phase === 'COMBAT_DAMAGE';
   placeCharges(landed ? new Set() : chargingAtPlayer(model), landed);
-  // A block being dragged is drawn whatever the arrows setting, as it is the player's own hand on the board
   drawDrag(ctx);
   // A phone names targets with numbered tags, since an arrow from the stack would cross the whole board and cover what it points at
   const phone = isPortrait();
@@ -147,13 +144,7 @@ function paintArrows(model: Model): void {
     drawAim(ctx, model);
   }
   drawPair(ctx, model);
-  const mode = setting('arrows');
-  if (mode === '0') {
-    drawQueued(ctx);
-    return;
-  }
-  // "On hover" keeps combat arrows off and leaves only the ones for the stack item under the pointer
-  for (const band of mode === '1' || !combatShown(model) ? [] : g.CombatView ?? []) {
+  for (const band of !combatShown(model) ? [] : g.CombatView ?? []) {
     const attackers = present(band.attackers);
     // A blocked attacker's block arrow is what matters now, so it loses its arrow at the defender
     const blocked = present(band.blockers).length > 0 || present(band.plannedBlockers).length > 0;
@@ -179,7 +170,7 @@ function paintArrows(model: Model): void {
   // Another player's spell or ability shows its arrows unasked, since you did not see it aimed; your own show theirs under the pointer
   for (const item of phone ? [] : derefAll(model, g.Stack) as StackItemView[]) {
     const theirs = !!item.ActivatingPlayer && !model.localPlayers.includes(item.ActivatingPlayer.ref);
-    if ((mode === '2' && theirs) || item.$key === ui.hoveredStackItem) {
+    if (theirs || item.$key === ui.hoveredStackItem) {
       const from = document.querySelector<HTMLElement>(`.stack-item[data-key="${item.$key}"]`);
       stackTargets(model, item).forEach(target => ribbon(from, elementFor(target.$key), KINDS.target));
     }

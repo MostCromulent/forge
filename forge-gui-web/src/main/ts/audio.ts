@@ -20,10 +20,12 @@ export function playSound(msg: Sound, echo = false): void {
     return;
   }
   started.set(msg.name, now);
-  let clip = clips.get(msg.name);
+  // Named with the host's sound set, so a new set is fetched and not taken from this page or the browser's cache
+  const url = `sound?name=${encodeURIComponent(msg.name)}&set=${encodeURIComponent(String(setting('soundSet')))}`;
+  let clip = clips.get(url);
   if (!clip) {
-    clip = new Audio(`sound?name=${encodeURIComponent(msg.name)}`);
-    clips.set(msg.name, clip);
+    clip = new Audio(url);
+    clips.set(url, clip);
   }
   const playing = !clip.paused && clip.currentTime > 0;
   // A synchronised effect never overlaps itself, as on desktop

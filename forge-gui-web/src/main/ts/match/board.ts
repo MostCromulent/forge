@@ -202,7 +202,7 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
       const shown = o.$key === open;
       const field = zone(model, o, 'Battlefield').map(c => c.$key);
       if (shown) ui.seenOnField.set(o.$key, new Set(field));
-      const changed = !shown && !!setting('tabNewCards') && fieldChanged(ui.seenOnField.get(o.$key), field);
+      const changed = !shown && fieldChanged(ui.seenOnField.get(o.$key), field);
       changedOutOfSight ||= changed;
       const turn = g?.PlayerTurn?.ref === o.$key;
       el.dataset.turn = String(g?.Turn ?? 0);

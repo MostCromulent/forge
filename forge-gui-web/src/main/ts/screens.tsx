@@ -70,7 +70,7 @@ export function renderScreens(model: Model, actions: Actions): void {
     {page === 'match' && ui.gameMenu === 'decisions' && (
       <AutoDecisionsDialog model={model} actions={actions} close={() => changeUi(u => { u.gameMenu = null; })} />
     )}
-    {page === 'match' && ui.gameMenu === 'stops' && <AutoPassStops close={() => changeUi(u => { u.gameMenu = null; })} />}
+    {ui.gameMenu === 'stops' && <AutoPassStops close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && ui.gameMenu === 'devSetup' && <DevSetupDialog actions={actions} close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && <DrawOfferQuestion model={model} actions={actions} />}
     {page === 'match' && isPortrait() && ui.menuSheet && <MenuSheet model={model} actions={actions} />}

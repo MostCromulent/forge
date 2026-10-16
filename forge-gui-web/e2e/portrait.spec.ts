@@ -110,14 +110,6 @@ probe('the prompt is a dock with OK and Cancel in opposite corners', async p => 
   expect(await p.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }, PHONE);
 
-probe('the swap setting puts OK on the right', async p => {
-  await board(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
-  await p.page.evaluate(() => localStorage.setItem('forge.settings', JSON.stringify({ ...JSON.parse(localStorage.getItem('forge.settings') ?? '{}'), swapPrompt: true })));
-  await p.page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(p.page.locator('#prompt .ok')).toBeVisible();
-  expect((await box(p.page, '#prompt .ok')).x).toBeGreaterThan(280);
-}, PHONE);
-
 // Different names, so the cards stand apart rather than folding into piles
 const CROWD = 'humanbattlefield=' + ['Grizzly Bears', 'Runeclaw Bear', 'Hill Giant', 'Gray Ogre', 'Goblin Piker', 'Raging Goblin', 'Craw Wurm', 'Scathe Zombies',
   'Ironroot Treefolk', 'Giant Spider', 'Wall of Wood', 'Elvish Warrior', 'Forest', 'Forest', 'Forest', 'Forest'].join(';')

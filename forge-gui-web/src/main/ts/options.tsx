@@ -9,7 +9,7 @@ import { keyName, rebind, type KeyBindings } from './keys';
 import { PLAYMATS, SETTINGS, boundKeys, defaultKeys, isGuest, set, setKeys, setting, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
 import { t, textLanguage } from './text';
-import { easedLocal } from './ui';
+import { changeUi, easedLocal } from './ui';
 import { useClosing } from './closing';
 import { Backdrop } from './dialog';
 import { ICONS, Icon } from './icons';
@@ -21,28 +21,25 @@ function matching(defs: SettingDef[], typed: string): SettingDef[] {
   const ranked = rankByName(defs.map(d => d.label), typed);
   const found = new Set(ranked);
   defs.forEach((d, i) => {
-    if (!found.has(i) && normalize(`${d.section} ${d.hint ?? ''}`).includes(text)) ranked.push(i);
+    if (!found.has(i) && normalize(`${d.section} ${d.hint ?? ''} ${inDialog(d)}`).includes(text)) ranked.push(i);
   });
   const firstOf = new Map<string, number>();
   defs.forEach((d, i) => { if (!firstOf.has(d.section)) firstOf.set(d.section, i); });
   return ranked.map(i => defs[i]).sort((a, b) => (firstOf.get(a.section) ?? 0) - (firstOf.get(b.section) ?? 0));
 }
 
+/** What a button that opens a dialog leads to, so a search for a setting inside the dialog finds the button. */
+function inDialog(def: SettingDef): string {
+  return def.type === 'dialog' ? SETTINGS.filter(d => d.menu === def.dialog).map(d => `${d.section} ${d.label}`).join(' ') : '';
+}
+
 const TABS: { name: string; sections: string[]; icon: string }[] = [
+  { name: t('lblDisplay'), sections: [t('lblDisplay'), t('lblCards'), t('lblWebOptionsSectionSound')], icon: ICONS.monitor },
   {
-    name: t('GamePlay'),
-    sections: [t('GamePlay'), t('lblWebOptionsSectionTable'), t('lblWebGameMenuStopsTitle'), t('lblWebOptionsYieldOffers'), t('lblSpeedSettings'), t('lblAutoYieldsAndTriggers')],
+    name: t('GamePlay'), sections: [t('GamePlay'), t('lblAutoYieldsAndTriggers'), t('lblWebOptionsSectionTable')],
     icon: ICONS.gamepad,
   },
-  { name: t('lblDisplay'), sections: [t('lblDisplay')], icon: ICONS.monitor },
-  {
-    name: t('lblWebOptionsSectionSound'), sections: [t('lblWebOptionsSectionSound')],
-    icon: ICONS.speaker,
-  },
-  {
-    name: t('lblWebOptionsSectionKeys'), sections: [t('lblWebOptionsSectionKeys')],
-    icon: ICONS.keyboard,
-  },
+  { name: t('lblKeyboardShortcuts'), sections: [t('lblKeyboardShortcuts')], icon: ICONS.keyboard },
   { name: t('lblAdvanced'), sections: [t('lblAdvanced')], icon: ICONS.dev },
 ];
 
@@ -58,7 +55,7 @@ export function Options({ close }: { close: () => void }) {
   }, []);
   const searching = !!query.trim();
   const tab = TABS[at];
-  const all = SETTINGS.filter(def => !def.inside && !(def.hostOnly && isGuest()));
+  const all = SETTINGS.filter(def => !def.inside && (def.when?.() ?? true) && !(def.hostOnly && isGuest()));
   // A tab lists its sections in its own order; a search looks through every tab
   const shown = searching ? matching(all, query) : tab.sections.flatMap(section => all.filter(def => def.section === section));
   // The rail runs down the side, so the next tab's page comes up from below and an earlier one down from above (dialogs.css)
@@ -82,8 +79,8 @@ export function Options({ close }: { close: () => void }) {
       </>}
       footer={!searching && shown[0]?.type === 'key'
         ? <button class="section-action" onClick={() => setKeys(defaultKeys())}>{t('lblWebOptionsResetKeys')}</button> : null}>
-      {blocks(shown, searching, tab.name)}
       {!searching && tab.name === t('lblAdvanced') && <BackupRow />}
+      {blocks(shown, searching, tab.name)}
       {!shown.length && <p class="hint">{t('lblWebOptionsNoMatch')}</p>}
     </OptionsDialog>
   );
@@ -232,6 +229,8 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
     }
     case 'playmat':
       return <PlaymatChoice />;
+    case 'dialog':
+      return <button class="edit" onClick={() => changeUi(u => { u.gameMenu = def.dialog; })}>{t('lblWebOptionsEdit')}</button>;
     case 'css':
       // Row draws the CSS editor's own button and editor, since the editor is too big for the control column
       return null;
