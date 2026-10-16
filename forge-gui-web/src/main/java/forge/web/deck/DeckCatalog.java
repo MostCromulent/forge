@@ -177,7 +177,8 @@ public final class DeckCatalog {
                 proxy == null ? null : proxy.getFormatsString(), d.getAverageCMC()));
     }
 
-    private static String problemAt(final Deck deck, final GameType format, final GameFormat pool) {
+    /** The same verdict as problem, kept for each deck until it is saved. */
+    public static String problemAt(final Deck deck, final GameType format, final GameFormat pool) {
         final String table = format.name() + "|" + (pool == null ? "" : pool.getName()) + "|"
                 + FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY);
         return VERDICTS.computeIfAbsent(deck, d -> new ConcurrentHashMap<>())

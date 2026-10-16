@@ -50,7 +50,12 @@ public final class BrowserModel {
                 }
             }
         }
-        prune();
+        // Only a new object, or a property cleared or given an object or list, can leave something unreachable
+        final boolean mayOrphan = !newObjects.isEmpty() || deltas.values().stream().anyMatch(props -> props.entrySet().stream()
+                .anyMatch(field -> field.getValue().isJsonNull() || field.getValue().isJsonObject() || field.getValue().isJsonArray()));
+        if (mayOrphan) {
+            prune();
+        }
     }
 
     public synchronized void applyStateMessage(final JsonObject msg) {

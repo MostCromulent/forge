@@ -101,12 +101,14 @@ final class Legality {
         final String letters = identityLetters(commanders);
         final String outside = letters.isEmpty() ? Localizer.getInstance().getMessage("lblWebLegalityOutsideColourless")
                 : Localizer.getInstance().getMessage("lblWebLegalityOutside", String.join(" ", letters.split("")));
+        final String bannedHere = bannedIn(check);
+        final String notLegalHere = Localizer.getInstance().getMessage("lblWebLegalityNotLegalIn", formatName(check));
         return card -> {
             if (banned.contains(card.getName())) {
-                return bannedIn(check);
+                return bannedHere;
             }
             if (!df.isLegalCard(card) || (check.pool() != null && !check.pool().getFilterRules().test(card))) {
-                return Localizer.getInstance().getMessage("lblWebLegalityNotLegalIn", formatName(check));
+                return notLegalHere;
             }
             if (!commanders.contains(card) && !inIdentity.test(card)) {
                 return outside;

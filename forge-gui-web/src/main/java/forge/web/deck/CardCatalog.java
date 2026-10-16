@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
+import java.util.regex.Pattern;
 
 /** Every card a deck can be built from, built once and shared by every browser. */
 public final class CardCatalog {
@@ -151,8 +152,7 @@ public final class CardCatalog {
                     || (commanderOnly != null && !commanderOnly.test(row.card()))) {
                 continue;
             }
-            final String problem = problemOf.apply(row.card());
-            if (problem != null && !q.showAll()) {
+            if (!q.showAll() && problemOf.apply(row.card()) != null) {
                 hidden++;
                 continue;
             }
@@ -270,9 +270,11 @@ public final class CardCatalog {
                 + (colours.hasRed() ? "R" : "") + (colours.hasGreen() ? "G" : "");
     }
 
+    private static final Pattern NOT_NAME_CHARACTER = Pattern.compile("[^a-z0-9 ]");
+
     /** Lower case, accents stripped, and nothing but letters, digits and spaces, as desktop's ListChooser compares names. */
     static String normalize(final String s) {
-        return StringUtils.stripAccents(s.toLowerCase()).replaceAll("[^a-z0-9 ]", "");
+        return NOT_NAME_CHARACTER.matcher(StringUtils.stripAccents(s.toLowerCase())).replaceAll("");
     }
 
     // A card with several types goes under the first match in this order, so an artifact land is a land
