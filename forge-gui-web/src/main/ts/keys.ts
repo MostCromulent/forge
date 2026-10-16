@@ -65,6 +65,13 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
   if (model.hostChoice) {
     return escape ? 'declineHostChoice' : null;
   }
+  // The options open on any page, and the yield dialog they open sits over them
+  if (ui.gameMenu === 'stops' || (model.screen === 'playing' && ui.gameMenu)) {
+    return escape ? 'closeGameMenu' : null;
+  }
+  if (ui.optionsOpen) {
+    return escape ? 'closeOptions' : null;
+  }
   if (model.screen !== 'playing') {
     if (ui.importer) {
       return escape ? 'closeImporter' : null;
@@ -79,12 +86,6 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
     return !press.typing && model.screen === 'setup' && key === 'Enter' && table?.host && table.canStart
       // A deck above the table's bracket is started past only by Play, which asks first
       && !table.overBracket.length ? 'startMatch' : null;
-  }
-  if (ui.optionsOpen) {
-    return escape ? 'closeOptions' : null;
-  }
-  if (ui.gameMenu) {
-    return escape ? 'closeGameMenu' : null;
   }
   if (ui.volumeOpen) {
     return escape ? 'closeVolume' : null;
