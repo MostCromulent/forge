@@ -88,8 +88,10 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
   const portrait = isPortrait();
   const asked = model.prompt;
   // A prompt answered with cards from the hand, a discard say, needs them at a size that can be told apart and tapped
-  const fromHand = portrait && !!asked && !asked.priority && !asked.paying && asked.selectableMin > 0
-    && asked.selectable.some(r => held.some(c => c.$key === r.ref));
+  // Before the first turn, the hand just dealt is kept or mulliganed and cards are put back from it, so it is shown while you answer
+  const dealt = !game(model)?.Turn && held.length > 0 && !!asked && (asked.ok.enabled || asked.cancel.enabled);
+  const fromHand = portrait && !!asked && (dealt || (!asked.priority && !asked.paying && asked.selectableMin > 0
+    && asked.selectable.some(r => held.some(c => c.$key === r.ref))));
   if (fromHand) {
     if (asked !== openedFor) {
       openedFor = asked;
