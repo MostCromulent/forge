@@ -18,6 +18,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class ActiveClientTest {
@@ -36,11 +37,11 @@ public class ActiveClientTest {
     }
 
     // GameState names the first player "human" and the second "ai", whoever controls them
-    private static void giveWebSeat(final Game game, final String hand, final String battlefield, final String library) {
+    private static void giveWebSeat(final Game game, final String hand, final String battlefield, final String library) throws InterruptedException {
         giveWebSeat(game, hand, battlefield, library, "");
     }
 
-    private static void giveWebSeat(final Game game, final String hand, final String battlefield, final String library, final String aiBattlefield) {
+    private static void giveWebSeat(final Game game, final String hand, final String battlefield, final String library, final String aiBattlefield) throws InterruptedException {
         final boolean webFirst = game.getPlayers().get(0).getController() instanceof PlayerControllerHuman;
         final String web = webFirst ? "human" : "ai";
         final String ai = webFirst ? "ai" : "human";
@@ -57,7 +58,17 @@ public class ActiveClientTest {
                 ai + "hand=",
                 ai + "battlefield=" + aiBattlefield,
                 ai + "library=Forest;Forest;Forest;Forest;Forest"));
-        state.applyToGame(game);
+        apply(state, game);
+    }
+
+    /** GameState hands its work to the game thread, so this waits for the cards to be placed. */
+    private static void apply(final GameState state, final Game game) throws InterruptedException {
+        final CountDownLatch placed = new CountDownLatch(1);
+        game.getAction().invoke(() -> {
+            state.applyToGame(game);
+            placed.countDown();
+        });
+        Assert.assertTrue(placed.await(30, TimeUnit.SECONDS), "the game never placed the cards");
     }
 
     @Test(timeOut = 180000)
@@ -68,7 +79,6 @@ public class ActiveClientTest {
 
             // Temple's enter trigger scrys; Evolving Wilds searches the library
             giveWebSeat(local.hostedMatch().getGame(), "Temple of Enlightenment", "Evolving Wilds", "Plains;Plains;Plains;Plains;Plains");
-            Thread.sleep(500);
             // Placing cards fires no game event; the host's own resync sends them while the engine waits on this seat
             WebTestSupport.remoteGui(local.hostedMatch()).updateGameView();
             // One card at a time, so the Wilds activation cannot interleave with the Temple's trigger
@@ -168,7 +178,6 @@ public class ActiveClientTest {
             keepAndHoldPriority(gui, browser);
             final Game game = local.hostedMatch().getGame();
             giveWebSeat(game, "Fire // Ice", "Delver of Secrets;Grizzly Bears|FaceDown", "Plains;Plains;Plains", "Grizzly Bears|FaceDown");
-            Thread.sleep(500);
             WebTestSupport.remoteGui(local.hostedMatch()).updateGameView();
             final int delver = cardKey(game, ZoneType.Battlefield, true, "Delver of Secrets", false);
             final int split = cardKey(game, ZoneType.Hand, true, "Fire // Ice", false);
@@ -213,8 +222,7 @@ public class ActiveClientTest {
                     ai + "graveyard=",
                     ai + "hand=",
                     ai + "library=Forest;Forest;Forest;Forest;Forest"));
-            state.applyToGame(game);
-            Thread.sleep(500);
+            apply(state, game);
             WebTestSupport.remoteGui(local.hostedMatch()).updateGameView();
             final Player seat = game.getPlayers().get(webFirst ? 0 : 1);
             final int turn = game.getPhaseHandler().getTurn();

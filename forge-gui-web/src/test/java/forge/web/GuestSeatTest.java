@@ -12,6 +12,7 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.IntStream;
 
 /** A second browser taking a seat in the host's game, with both in this process and reaching the same loopback server. */
 public class GuestSeatTest extends SessionsTest {
@@ -383,8 +384,10 @@ public class GuestSeatTest extends SessionsTest {
         Assert.assertTrue(seatNames(two).contains("Guest"), "the guest lost their seat: " + seatNames(two));
 
         sessions.onMessage(host, message("setPlayerCount", "count", 1));
-        Thread.sleep(500);
-        Assert.assertEquals(host.latestTable().getAsJsonArray("seats").size(), 2, "a table went below two players");
+        // The table takes commands in order, so once the next one shows, the refused one has had its turn
+        sessions.onMessage(host, message("setPlayerCount", "count", 3));
+        host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 3, "the table never grew to three");
+        Assert.assertTrue(seatCounts(host).allMatch(n -> n >= 2), "a table went below two players");
     }
     // Fails if a table stops short of eight seats, or takes a ninth
     @Test(timeOut = 120_000)
@@ -392,8 +395,15 @@ public class GuestSeatTest extends SessionsTest {
         final TestBrowser host = hostAt("invite");
         sessions.onMessage(host, message("setPlayerCount", "count", 9));
         host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 8, "the table never grew to eight");
-        Thread.sleep(500);
-        Assert.assertEquals(host.latestTable().getAsJsonArray("seats").size(), 8, "a table went above eight players");
+        sessions.onMessage(host, message("setPlayerCount", "count", 3));
+        host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 3, "the table never shrank to three");
+        Assert.assertTrue(seatCounts(host).allMatch(n -> n <= 8), "a table went above eight players");
+    }
+
+    /** How many seats each table the browser was sent had, in order. */
+    private static IntStream seatCounts(final TestBrowser browser) {
+        return browser.got.stream().filter(m -> "lobby".equals(m.get("t").getAsString()) && m.has("table"))
+                .mapToInt(m -> m.getAsJsonObject("table").getAsJsonArray("seats").size());
     }
 
     // Fails if two seats can end with the same portrait, by a seat choosing a taken one or a guest arriving with one
