@@ -16,11 +16,6 @@ import java.util.stream.IntStream;
 
 /** A second browser taking a seat in the host's game, with both in this process and reaching the same loopback server. */
 public class GuestSeatTest extends SessionsTest {
-    @Override
-    boolean slow() {
-        return true;
-    }
-
     /** Fails if a guest cannot reach the host's game. */
     @Test(timeOut = 120_000)
     public void aGuestSitsDownWithTheHostAndLeavesWithTheGame() throws Exception {

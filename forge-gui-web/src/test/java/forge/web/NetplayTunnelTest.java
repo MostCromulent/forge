@@ -57,11 +57,6 @@ public class NetplayTunnelTest extends SessionsTest {
     private WebServer server;
     private final List<App> apps = new ArrayList<>();
 
-    @Override
-    boolean slow() {
-        return true;
-    }
-
     @BeforeClass
     public void openWebPort() throws Exception {
         server = new WebServer(new WebServer.Endpoint() {

@@ -44,7 +44,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
     private final ConquestGame conquest = new ConquestGame();
     private final QuestGame quest = new QuestGame();
     /** One thread for everything a campaign does, as its model is Forge's own and nothing guards it; it ends when idle, so a finished session holds none. */
-    private final ExecutorService work = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
+    private final ExecutorService work = new ThreadPoolExecutor(0, 1, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
         final Thread t = new Thread(r, "WebCampaign");
         t.setDaemon(true);
         return t;

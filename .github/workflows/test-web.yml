@@ -36,6 +36,13 @@ jobs:
           java-version: '17'
           cache: 'maven'
 
+      # Node itself is kept in the Maven repository; the packages npm ci installs are kept here
+      - name: Cache npm packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('forge-gui-web/package-lock.json') }}
+
       - name: Install virtual framebuffer (if not available) to allow running GUI on a headless server
         run: command -v Xvfb >/dev/null 2>&1 || { sudo apt update && sudo apt install -y xvfb; }
 

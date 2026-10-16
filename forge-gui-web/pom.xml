@@ -133,7 +133,8 @@
                             <goal>npm</goal>
                         </goals>
                         <configuration>
-                            <arguments>ci</arguments>
+                            <!-- A package already in npm's cache is used without asking the registry, and no audit or funding check is made -->
+                            <arguments>ci --prefer-offline --no-audit --no-fund</arguments>
                         </configuration>
                     </execution>
                     <execution>
