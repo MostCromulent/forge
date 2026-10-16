@@ -47,19 +47,6 @@ public interface IGameController {
 
     IMacroSystem macros();
 
-    // A network client's macro calls reach the host through these names
-    default void setRememberedActions() {
-        macros().setRememberedActions();
-    }
-
-    default void nextRememberedAction() {
-        macros().nextRememberedAction();
-    }
-
-    default void repeatRememberedActions() {
-        macros().repeatRememberedActions();
-    }
-
     void nextGameDecision(NextGameDecision decision);
 
     String getActivateDescription(CardView card);

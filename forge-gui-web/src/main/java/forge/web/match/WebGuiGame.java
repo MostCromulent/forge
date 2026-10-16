@@ -340,7 +340,7 @@ public class WebGuiGame extends NetworkGuiGame {
     public void handleGameEvent(final GameEvent event) {
         // FControlGameEventHandler would post to the host UI thread, so the log, the sound and the animations are sent from here
         if (event instanceof GameEventGameOutcome outcome) {
-            score = matchScore(outcome.winsByPlayerId());
+            score = matchScore(outcome.matchSummary());
             // The outcome can come after the game is seen to be over, so the ending is told again with the score
             if (gameOver) {
                 send(new GameOver(score));
@@ -377,8 +377,28 @@ public class WebGuiGame extends NetworkGuiGame {
         return known == null ? event : new GameEventZone(zone.zoneType(), zone.player(), zone.mode(), known, zone.sa());
     }
 
-    private static List<MatchScore> matchScore(final Map<Integer, Integer> wins) {
-        return wins.entrySet().stream().map(e -> new MatchScore(Ref.player(e.getKey()), e.getValue())).toList();
+    /** Finds each seated player's name in the engine's match summary ("Alice: 1 Bob: 0 "), so a name holding a colon or space is read whole. */
+    private List<MatchScore> matchScore(final String summary) {
+        final GameView gv = getGameView();
+        if (gv == null || summary == null) {
+            return List.of();
+        }
+        final List<MatchScore> out = new ArrayList<>();
+        for (final PlayerView p : gv.getPlayers()) {
+            final String name = p.getName() + ": ";
+            final int at = (" " + summary).indexOf(" " + name);
+            if (at < 0) {
+                continue;
+            }
+            int end = at + name.length();
+            while (end < summary.length() && Character.isDigit(summary.charAt(end))) {
+                end++;
+            }
+            if (end > at + name.length()) {
+                out.add(new MatchScore(Ref.player(p.getId()), Integer.parseInt(summary.substring(at + name.length(), end))));
+            }
+        }
+        return out;
     }
 
     // Phase stops are the desktop preferences: one row for the local player's turns, one for everyone else's
@@ -1183,8 +1203,8 @@ public class WebGuiGame extends NetworkGuiGame {
             }))
             .on(Plain.undo, play((g, controller, c) -> controller.undoLastAction()))
             // The host records the player's actions and asks how many times to repeat them, as desktop's dock buttons do
-            .on(Plain.macroRecord, play((g, controller, c) -> controller.setRememberedActions()))
-            .on(Plain.macroRepeat, play((g, controller, c) -> controller.repeatRememberedActions()))
+            .on(Plain.macroRecord, play((g, controller, c) -> controller.macros().setRememberedActions()))
+            .on(Plain.macroRepeat, play((g, controller, c) -> controller.macros().repeatRememberedActions()))
             .on(Plain.autoPass, play((g, controller, c) -> {
                 WebSettings.set(g.settings, controller, "autoPassNoActions", String.valueOf(!g.settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)));
                 g.send(g.controlsMessage());

@@ -2,37 +2,24 @@ package forge.game.event;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import forge.game.GameOutcome;
-import forge.game.player.Player;
 import forge.game.player.RegisteredPlayer;
 import forge.LobbyPlayer;
 
 import com.google.common.collect.Iterables;
 
-/** winsByPlayerId counts the match's games won by each of this game's players, keyed by player id. */
-public record GameEventGameOutcome(int lastTurnNumber, List<String> outcomeStrings, String winningPlayerName, String matchSummary,
-        Map<Integer, Integer> winsByPlayerId) implements GameEvent {
+public record GameEventGameOutcome(int lastTurnNumber, List<String> outcomeStrings, String winningPlayerName, String matchSummary) implements GameEvent {
 
-    public GameEventGameOutcome(GameOutcome result, Collection<GameOutcome> history, Iterable<Player> players) {
+    public GameEventGameOutcome(GameOutcome result, Collection<GameOutcome> history) {
         this(result.getLastTurnNumber(),
              result.getOutcomeStrings(),
              computeWinningPlayerName(result),
-             computeMatchSummary(history),
-             computeWins(history, players));
-    }
-
-    private static Map<Integer, Integer> computeWins(Collection<GameOutcome> history, Iterable<Player> players) {
-        final Map<Integer, Integer> wins = new LinkedHashMap<>();
-        for (Player p : players) {
-            wins.put(p.getId(), (int) history.stream().filter(go -> go.getWinningPlayer() == p.getRegisteredPlayer()).count());
-        }
-        return wins;
+             computeMatchSummary(history));
     }
 
     private static String computeWinningPlayerName(GameOutcome result) {

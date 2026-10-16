@@ -15,6 +15,7 @@ import forge.gamemodes.match.YieldUpdate;
 import forge.gui.interfaces.IGuiGame;
 import forge.gui.interfaces.IGuiGame.OrderResult;
 import forge.interfaces.IGameController;
+import forge.interfaces.IMacroSystem;
 import forge.localinstance.skin.FSkinProp;
 import forge.trackable.TrackableCollection;
 import forge.util.FSerializableFunction;
@@ -82,9 +83,9 @@ public enum ProtocolMethod implements IHasForgeLog {
     // the threads that're supposed to give that response
     useMana                   (Mode.CLIENT, Void.TYPE, Byte.TYPE),
     undoLastAction            (Mode.CLIENT, Void.TYPE),
-    setRememberedActions      (Mode.CLIENT, Void.TYPE),
-    nextRememberedAction      (Mode.CLIENT, Void.TYPE),
-    repeatRememberedActions   (Mode.CLIENT, Void.TYPE),
+    setRememberedActions      (Mode.MACRO, Void.TYPE),
+    nextRememberedAction      (Mode.MACRO, Void.TYPE),
+    repeatRememberedActions   (Mode.MACRO, Void.TYPE),
     selectPlayer              (Mode.CLIENT, Void.TYPE, PlayerView.class, ITriggerEvent.class),
     selectCard                (Mode.CLIENT, Void.TYPE, CardView.class, List.class, ITriggerEvent.class),
     selectButtonOk            (Mode.CLIENT, Void.TYPE),
@@ -102,7 +103,9 @@ public enum ProtocolMethod implements IHasForgeLog {
 
     private enum Mode {
         SERVER(IGuiGame.class),
-        CLIENT(IGameController.class);
+        CLIENT(IGameController.class),
+        /** A client's call on its controller's macro system. */
+        MACRO(IMacroSystem.class);
 
         private final Class<?> toInvoke;
         Mode(final Class<?> toInvoke) {
@@ -151,6 +154,11 @@ public enum ProtocolMethod implements IHasForgeLog {
             return null;
         }
     }
+    /** What a call received from a client is made on: the controller, or for a macro its macro system. */
+    public Object receiver(final Object toInvoke) {
+        return mode == Mode.MACRO ? ((IGameController) toInvoke).macros() : toInvoke;
+    }
+
     public Class<?> getReturnType() {
         return returnType;
     }
