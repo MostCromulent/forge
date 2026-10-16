@@ -24,6 +24,8 @@ export interface UiState {
   openZones: Set<string>;
   /** The open zones are folded to a bar so the board can be read; they are still open. */
   zonesMinimised: boolean;
+  /** The question folded to a bar so the board can be read, by its id; it is still open. */
+  requestFolded: number | null;
   /** Narrows the open zone to cards whose name contains this, lower case. */
   zoneSearch: string;
   zoneSort: ZoneSort;
@@ -81,6 +83,7 @@ export const ui: UiState = {
   openPiles: new Set(),
   openZones: new Set(),
   zonesMinimised: false,
+  requestFolded: null,
   zoneSearch: '',
   zoneSort: 'order',
   stackCollapsed: false,
@@ -174,6 +177,7 @@ export function resetMatchUi(): void {
   ui.openPiles.clear();
   ui.openZones.clear();
   ui.zonesMinimised = false;
+  ui.requestFolded = null;
   ui.zoneSearch = '';
   ui.zoneSort = 'order';
   ui.hoveredStackItem = null;

@@ -606,12 +606,26 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 .log-entry.log-game_outcome, .log-entry.log-match_results { color: var(--text); }
 /* An open zone takes the whole screen and dims the board, and folded, the scrim goes and only the bar stays */
 #zones { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--scrim-deep); }
+/* Beside a landscape board the side column stays lit: a pile opened to look at is lightly dimmed, a zone the game asks about as a question about cards is */
+html:not([data-form="portrait"]) #zones:not(.minimised) { right: calc(var(--side-gap) - 12px); background: var(--scrim-look); }
+html:not([data-form="portrait"]) #zones.asking:not(.minimised) { background: var(--scrim-board); backdrop-filter: blur(5px) saturate(.8); }
+@media (prefers-reduced-transparency: reduce) { #zones.asking { backdrop-filter: none; } }
+#match:has(#zones:not([hidden]):not(.minimised)) #side { z-index: 41; }
+.zone-ask { display: none; }
+.zone-panel.asking { background: none; border-color: transparent; box-shadow: none; }
+.zone-panel.asking .zone-ask { display: block; margin: 0; padding: 0 18px 2px; font-size: 15px; font-weight: 650; text-align: center; text-wrap: balance; text-shadow: 0 2px 10px #000; }
+.zone-panel.asking header { justify-content: center; padding-top: 4px; border: 0; }
+.zone-panel.asking .zone-who { font-size: 13px; font-weight: 400; color: var(--muted); }
+.zone-panel.asking .zone-gap { flex: 0 0 12px; }
+.zone-panel.asking footer { justify-content: center; border: 0; }
+.zone-panel.asking .zone-hint { display: none; }
+.zone-panel.asking .cards .card { box-shadow: 0 12px 30px #000d, 0 0 0 1px #000c; }
 /* Folded, the bar waits where the stack shows, near the board's top right rather than under the hand */
 #zones.minimised, .reveal-back.minimised { background: none; place-items: start end; padding: 56px calc(var(--side-gap, 270px) + 8px) 0 0; pointer-events: none; }
 #zones.minimised > *, .reveal-back.minimised > * { pointer-events: auto; }
 /* A zone opened while something is on the stack is usually that spell asking, so the stack stays above the scrim with the zone beside it */
 #match:has(#zones:not([hidden]):not(.minimised)) #stack:not([hidden]) { z-index: 41; }
-#match:has(#stack:not([hidden])) #zones:not(.minimised) { padding-right: calc(var(--side-gap) + var(--stack-w) + 40px); }
+#match:has(#stack:not([hidden])) #zones:not(.minimised) { padding-right: calc(var(--stack-w) + 40px); }
 #match:has(#stack:not([hidden])) #zones:not(.minimised) .zone-panel { width: min(860px, calc(100vw - var(--side-gap) - var(--stack-w) - 80px)); }
 /* A column, not a grid: a grid row grows to its content, so a long library would push the footer and its OK off the screen */
 .zone-shelf { display: flex; flex-direction: column; gap: 12px; max-height: 88vh; }

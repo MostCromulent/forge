@@ -5,6 +5,7 @@ import { reconcile } from './reconcile';
 import { createCard, updateCard, type CardClick } from './cards';
 import { stateOf, zone, type Model } from '../model';
 import { byId, q, make, reducedMotion } from '../dom';
+import { setSymbolText } from '../images';
 import { changeUi, ui, type ZoneSort } from '../ui';
 import { normalize, rankByName } from '../search';
 import { isPortrait } from '../form';
@@ -67,6 +68,8 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
   // Back closes what the player opened; what the game put up, the game puts away
   sheet('zones', isPortrait() && open && ui.openZones.size > 0, () => changeUi(u => { u.openZones.clear(); }));
   root.classList.toggle('minimised', ui.zonesMinimised);
+  // A zone the game shows is a question about its cards, laid out on the board as the others are; one opened to look at keeps its window
+  root.classList.toggle('asking', !isPortrait() && [...panels.values()].some(p => p.forced));
   if (!open) {
     root.replaceChildren();
     return;
@@ -119,7 +122,7 @@ function shelf(root: HTMLElement): HTMLElement {
 
 function createPanel(): HTMLElement {
   const el = make('section', 'zone-panel');
-  el.innerHTML = '<header><b class="zone-who"></b><span class="zone-count"></span><span class="zone-gap"></span>'
+  el.innerHTML = '<p class="zone-ask"></p><header><b class="zone-who"></b><span class="zone-count"></span><span class="zone-gap"></span>'
     + '<input class="zone-find" type="search">'
     + '<label class="zone-sort"><select></select></label>'
     + '<button class="zone-fold"></button></header>'
@@ -153,6 +156,9 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   sort.disabled = !!normalize(ui.zoneSearch);
   sort.onchange = () => changeUi(u => { u.zoneSort = sort.value as ZoneSort; });
   q(el, '.zone-fold').onclick = () => changeUi(u => { u.zonesMinimised = true; });
+  // Done already puts a pile the player opened away
+  q(el, '.zone-fold').hidden = !p.forced;
+  el.classList.toggle('asking', p.forced && !isPortrait());
   // The game put this one up and the game takes it down, so it offers no way out of its own
   const done = q<HTMLButtonElement>(el, '.zone-done');
   done.hidden = p.forced;
@@ -163,7 +169,9 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   };
   // A dialog the game put up carries the prompt's question and its OK, but not its other button, which is the way out of priority
   const prompt = p.forced ? model.prompt : null;
-  q(el, '.zone-hint').textContent = p.forced ? prompt?.message || t('lblWebZoneWaitingOnYou') : '';
+  const question = p.forced ? prompt?.message || t('lblWebZoneWaitingOnYou') : '';
+  q(el, '.zone-hint').textContent = question;
+  setSymbolText(q(el, '.zone-ask'), question);
   answer(q(el, '.zone-answer.ok'), prompt?.ok, () => actions.ok());
   q(el, '.zone-answer.ok kbd').textContent = keyName(boundKeys().ok);
   reconcile(q(el, '.cards'), cards, c => c.$key, () => createCard(select), (c, card) => updateCard(c, model, card));

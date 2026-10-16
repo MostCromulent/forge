@@ -1,7 +1,7 @@
 // The game's open questions, shown oldest first, where answering one closes its dialog without waiting for the server
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import type { ComponentChildren } from 'preact';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { createContext, type ComponentChildren } from 'preact';
 import { createCard, updateCard } from './cards';
 import { imageUrl, symbolUrl } from '../images';
 import { hoverCard } from '../preview';
@@ -12,7 +12,7 @@ import type { Actions } from '../actions';
 import { keyName } from '../keys';
 import { boundKeys } from '../settings';
 import { playerAvatarUrl } from '../looks';
-import { cardMenu, deref, derefAll, game, isLocal, oldestRequest, stackPick, stateOf, type Model } from '../model';
+import { cardMenu, cardPrompt, deref, derefAll, game, isLocal, oldestRequest, stackPick, stateOf, type Model } from '../model';
 import { changeUi, ui } from '../ui';
 import { MenuIcon } from './gamemenu';
 import { ICONS } from '../icons';
@@ -115,6 +115,22 @@ export function StackMenu({ model, actions }: { model: Model; actions: Actions }
 /** The questions that lay out cards, which can fold away to show the board. */
 const FOLDABLE = new Set<Request['kind']>(['choices', 'reveal', 'order', 'manipulate', 'distribute']);
 
+/** The open question's answer as it stands, for the OK key to give; null while it cannot be given yet. */
+let shownAnswer: { id: number; give: (() => void) | null } | null = null;
+
+/** Called as a question is drawn, with how to give the answer shown, or null when it is not ready. */
+function offerAnswer(id: number, give: (() => void) | null): void {
+  shownAnswer = { id, give };
+}
+
+/** Gives the answer the open question shows, when it is that question and the answer is ready. */
+export function confirmShown(id: number): void {
+  if (shownAnswer?.id === id) shownAnswer.give?.();
+}
+
+/** The way to fold a question laid out on the board, which goes beside its answer rather than in a heading. */
+const FoldButton = createContext<ComponentChildren>(null);
+
 function RequestDialog({ req, model, answer }: { req: Request; model: Model; answer: Answer }) {
   const body = (() => {
     switch (req.kind) {
@@ -142,18 +158,25 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
   // A list of what one card can do belongs on that card, the way desktop opens its menu under the cursor
   const at = (req.kind === 'choices' || req.kind === 'reveal') && (req.atX || req.atY) ? { x: req.atX ?? 0, y: req.atY ?? 0 } : null;
   // Folded, the dialog stays drawn but hidden, so what was set in it is still there when it opens again
-  const [folded, setFolded] = useState(false);
+  const folded = ui.requestFolded === req.id;
+  const setFolded = (on: boolean) => changeUi(u => { u.requestFolded = on ? req.id : null; });
+  useEffect(() => () => {
+    if (shownAnswer?.id === req.id) shownAnswer = null;
+  }, []);
   const foldable = !at && FOLDABLE.has(req.kind);
+  // A question about cards sits on the dimmed board with no box round it; a phone keeps its sheet
+  const onBoard = !isPortrait() && cardPrompt(req);
   const title = <SymbolText text={heading || message || ''} />;
+  const fold = foldable && <button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>;
   return <>
-    <div class={at ? 'backdrop anchored' : 'backdrop'} hidden={folded}>
+    <div class={at ? 'backdrop anchored' : onBoard ? 'backdrop on-board' : 'backdrop'} hidden={folded}>
       <div class={at ? 'dialog at-card' : 'dialog'} style={at ? { left: `${at.x}px`, top: `${at.y}px` } : undefined}>
         <div class="dialog-head">
           <h3>{title}</h3>
-          {foldable && <button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>}
+          {!onBoard && fold}
         </div>
         {heading && message && <p><SymbolText text={message} /></p>}
-        {body}
+        <FoldButton.Provider value={onBoard && fold}>{body}</FoldButton.Provider>
       </div>
     </div>
     {folded && (
@@ -167,6 +190,11 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
   </>;
 }
 
+/** The key that gives a question's answer, as the player has chosen it. */
+function OkKey() {
+  return <kbd>{keyName(boundKeys().ok)}</kbd>;
+}
+
 function Button({ primary, disabled, onClick, children }: {
   primary?: boolean; disabled?: boolean; onClick: () => void; children: ComponentChildren;
 }) {
@@ -174,7 +202,7 @@ function Button({ primary, disabled, onClick, children }: {
 }
 
 function ButtonRow({ children }: { children: ComponentChildren }) {
-  return <div class="actions">{children}</div>;
+  return <div class="actions">{useContext(FoldButton)}{children}</div>;
 }
 
 // A deck list arrives with its sections marked out as entries of their own, which read as headings, not choices
@@ -231,7 +259,7 @@ function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
   }
   const few = count === 1 ? 2.6 : count <= 3 ? 2.15 : count <= 5 ? 1.7 : 1.45;
   return (
-    <Backdrop layer="reveal-back" dismiss={close}>
+    <Backdrop layer="reveal-back" cls={isPortrait() ? undefined : 'on-board'} dismiss={close}>
       <section class="zone-panel reveal-panel bare" role="dialog" aria-label={title} style={`--few: ${few}`}>
         <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{counted}</span></header>
         <div class="cards">{cards.map((o, i) => <OptionView key={i} model={model} opt={o} />)}</div>
@@ -355,6 +383,7 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
   const note = matches.length > SHOW_AT_MOST ? t('lblWebDialogShowingFirst', SHOW_AT_MOST, req.options.length)
     : searchable && picked.size ? t('lblWebDialogSelected', picked.size) : '';
   const ready = reveal || (picked.size >= req.min && (req.max < 0 || picked.size <= req.max));
+  offerAnswer(req.id, ready ? () => answer(reveal ? [] : [...picked]) : null);
   const colours = !reveal && req.options.every(o => o.symbol);
   // Choices that are only words read down a list, as a menu does, rather than across the page
   const words = onlyWords(req);
@@ -368,7 +397,7 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
           : <OptionView key={i} model={model} opt={req.options[i]} picked={picked.has(i)} onClick={() => toggle(i)} />)}
       </div>
       <p class="hint">{note}</p>
-      <ButtonRow><Button primary disabled={!ready} onClick={() => answer(reveal ? [] : [...picked])}>{reveal ? t('lblOK') : t('lblWebDialogConfirm')}</Button></ButtonRow>
+      <ButtonRow><Button primary disabled={!ready} onClick={() => answer(reveal ? [] : [...picked])}>{reveal ? t('lblOK') : t('lblWebDialogConfirm')} <OkKey /></Button></ButtonRow>
     </>
   );
 }
@@ -653,6 +682,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
     return () => document.removeEventListener('keydown', onKey);
   }, []);
   const waiting = req.options.some((_, i) => !chosen.includes(i));
+  offerAnswer(req.id, chosen.length >= req.min && chosen.length <= req.max ? () => answer({ indices: chosen, remember }) : null);
   // A card may leave the row only when the question lets some be left out
   const optional = req.min < req.options.length;
   const rememberBox = req.remember
@@ -713,7 +743,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
           }}>{t('lblRemove')}</button>}
         </span>
         <Button primary disabled={chosen.length < req.min || chosen.length > req.max}
-          onClick={() => answer({ indices: chosen, remember })}>{t('lblWebDialogConfirm')}</Button>
+          onClick={() => answer({ indices: chosen, remember })}>{t('lblWebDialogConfirm')} <OkKey /></Button>
       </ButtonRow>
     </>
   );
@@ -763,6 +793,7 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
     return next;
   });
 
+  offerAnswer(req.id, () => answer([...piles.top, ...rest, ...piles.bottom]));
   const sendAll = (to: Shelf) => setPiles(p => (to === 'top' ? { top: [...p.top, ...p.bottom], bottom: [] } : { top: [], bottom: [...p.bottom, ...p.top] }));
 
   const shelf = (name: Shelf, label: string, empty: string) => (
@@ -795,7 +826,7 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
         {bothEnds && (piles.top.length > 0
           ? <button class="all" onClick={() => sendAll('bottom')}>{t('lblWebDialogAllToBottom')}</button>
           : <button class="all" onClick={() => sendAll('top')}>{t('lblWebDialogAllToTop')}</button>)}
-        <Button primary onClick={() => answer([...piles.top, ...rest, ...piles.bottom])}>{t('lblWebDialogConfirm')}</Button>
+        <Button primary onClick={() => answer([...piles.top, ...rest, ...piles.bottom])}>{t('lblWebDialogConfirm')} <OkKey /></Button>
       </ButtonRow>
     </div>
   );
@@ -859,20 +890,9 @@ function NumberPick({ req, answer }: { req: NumberRequest; answer: Answer }) {
   );
 }
 
-/** The split shown in the open distribute dialog, for the OK key to confirm; ready once every point is assigned. */
-let shownSplit: { id: number; values: number[]; ready: boolean } | null = null;
-
-/** The split the OK key confirms, or null when there is none or it is not all assigned yet. */
-export function readySplit(): { id: number; values: number[] } | null {
-  return shownSplit?.ready ? shownSplit : null;
-}
-
 function Distribute({ req, model, answer }: { req: DistributeRequest; model: Model; answer: Answer }) {
   // It opens on desktop's Auto split, lethal damage to each in turn and the rest onward, for the player to change
   const [values, setValues] = useState(() => [...req.default]);
-  useEffect(() => () => {
-    if (shownSplit?.id === req.id) shownSplit = null;
-  }, []);
   const step = (i: number, delta: number) => setValues(v => {
     if (v[i] + delta < req.perMin) return v;
     const next = [...v];
@@ -880,7 +900,7 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
     return next;
   });
   const left = req.amount - values.reduce((a, b) => a + b, 0);
-  shownSplit = { id: req.id, values, ready: left === 0 };
+  offerAnswer(req.id, left === 0 ? () => answer(values) : null);
   // Players first, opponents before you, then the cards; each keeps its own place in the answer
   const rank = (i: number) => {
     const ref = req.options[i].player;
@@ -922,7 +942,7 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
         </span>
         {req.maySkip && <Button onClick={() => answer(null)}>{t('lblSkip')}</Button>}
         <Button onClick={() => setValues([...req.default])}>{t('lblReset')}</Button>
-        <Button primary disabled={left !== 0} onClick={() => answer(values)}>{t('lblWebDialogConfirm')} <kbd>{keyName(boundKeys().ok)}</kbd></Button>
+        <Button primary disabled={left !== 0} onClick={() => answer(values)}>{t('lblWebDialogConfirm')} <OkKey /></Button>
       </ButtonRow>
     </>
   );

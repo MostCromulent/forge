@@ -1,13 +1,13 @@
 // The page's keys are decided here, top layer first, so a key answers exactly one thing. Escape is the exception: a Preact dialog or menu closes on it by itself
 
-import { cardMenu, oldestRequest, stackPick, type Model } from './model';
+import { cardMenu, cardPrompt, oldestRequest, stackPick, type Model } from './model';
 import type { UiState } from './ui';
 import { t } from './text';
 
 export type KeyCommand =
   | 'closeOptions' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closeZones' | 'closePicker' | 'declineHostChoice'
   | 'ok' | 'cancel' | 'toggleAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
-  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'confirmDistribute' | 'editorUndo' | 'closeImporter' | 'closeBrowse'
+  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'confirmRequest' | 'foldRequest' | 'unfoldRequest' | 'editorUndo' | 'closeImporter' | 'closeBrowse'
   | 'stackAlwaysYes' | 'stackAlwaysNo';
 
 type Digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
@@ -124,9 +124,10 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
   if (request?.kind === 'reveal' && (escape || ok)) {
     return 'closeReveal';
   }
-  // Assigning damage, OK confirms the split shown, as its button says
-  if (request?.kind === 'distribute' && ok) {
-    return 'confirmDistribute';
+  // A question about cards is answered on the board: OK confirms what is shown, and Escape folds it away to read the board, never declining it
+  if (request && cardPrompt(request)) {
+    if (ui.requestFolded === request.id) return ok ? 'unfoldRequest' : null;
+    return ok ? 'confirmRequest' : escape ? 'foldRequest' : null;
   }
   // A question in a dialog is answered there, and the prompt under it keeps its buttons to itself
   const pick = stackPick(model);

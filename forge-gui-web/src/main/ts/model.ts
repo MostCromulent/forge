@@ -212,6 +212,12 @@ export function cardMenu(model: Model): ChoicesRequest | null {
 }
 
 /** The open question when it is which spell on the stack to choose, answered by clicking the spell where it already is. */
+/** A question about cards, which is laid out on the dimmed board rather than in a box: words, numbers and colours keep their dialog. */
+export function cardPrompt(req: Request): boolean {
+  if (req.kind === 'order' || req.kind === 'manipulate' || req.kind === 'distribute') return true;
+  return req.kind === 'choices' && !req.atX && !req.atY && !req.stackKeys && req.options.some(o => o.card || o.imageKey || o.name || o.player);
+}
+
 export function stackPick(model: Model): ChoicesRequest | null {
   const oldest = oldestRequest(model);
   return oldest?.kind === 'choices' && oldest.stackKeys ? oldest : null;

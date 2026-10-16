@@ -239,6 +239,28 @@ html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
 }
 .dialog.at-card .options { max-height: 50vh; }
 
+/* A question about cards sits on the playing area with no box round it. The side column stays lit, so the log, the stack and the prompt can be read while answering */
+html:not([data-form="portrait"]) :is(.backdrop.on-board, .reveal-back.on-board) { right: 258px; padding-right: 36px; background: var(--scrim-board); backdrop-filter: blur(5px) saturate(.8); }
+/* The side column's own left edge, folded or not (board.css #match) */
+html:has(#match.side-folded) :is(.backdrop.on-board, .reveal-back.on-board) { right: 36px; }
+/* The stack is lit beside the question, so the question is centred in what is left of the board */
+html:has(#stack:not([hidden])) :is(.backdrop.on-board, .reveal-back.on-board) { padding-right: calc(var(--stack-w) + 64px); }
+html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) #stack:not([hidden]) { z-index: 51; }
+/* The prompt is wider than the column it sits in, so the column is lifted above the scrim rather than leaving the prompt half covered */
+html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) #side { z-index: 51; }
+@media (prefers-reduced-transparency: reduce) { :is(.backdrop.on-board, .reveal-back.on-board) { backdrop-filter: none; } }
+.backdrop.on-board > .dialog { max-width: 100%; max-height: 100%; padding: 4px 8px; gap: 14px; justify-items: center; background: none; border: 0; box-shadow: none; }
+.backdrop.on-board .dialog-head { justify-content: center; }
+.backdrop.on-board .dialog-head h3 { flex: none; font-size: 18px; text-align: center; text-wrap: balance; text-shadow: 0 2px 10px #000; }
+.backdrop.on-board .dialog > p, .backdrop.on-board .dialog .hint { text-align: center; text-shadow: 0 1px 4px #000; }
+.backdrop.on-board .actions { justify-content: center; }
+/* The way to fold the question waits beside its answer, which comes last */
+.backdrop.on-board .actions .zone-fold { order: 1; }
+.backdrop.on-board .actions > .primary { order: 2; }
+.backdrop.on-board .card { box-shadow: 0 12px 30px #000d, 0 0 0 1px #000c; }
+.reveal-back.on-board .reveal-panel.bare { background: none; border: 0; box-shadow: none; }
+.reveal-back.on-board .reveal-panel.bare .zone-who { font-size: 18px; text-shadow: 0 2px 10px #000; }
+
 /* A card drawn by the board's own code sits in a holder of its own, which takes no part in the layout */
 .card-host { display: contents; }
 

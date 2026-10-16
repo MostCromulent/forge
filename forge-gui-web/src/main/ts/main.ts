@@ -13,7 +13,7 @@ import { initSheets, matchHistory } from './sheet';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName } from './identity';
 import { renderScreens, pageUnder, screenOf } from './screens';
-import { readySplit } from './match/dialogs';
+import { confirmShown } from './match/dialogs';
 import { renderMatch, resetTable } from './match/board';
 import { renderPrompt, flash, pressPromptButton } from './match/prompt';
 import { appendLog, initLog, logTints } from './match/log';
@@ -154,11 +154,13 @@ function runKey(command: KeyCommand): void {
   switch (command) {
     case 'closeOptions': changeUi(u => { u.optionsOpen = false; }); break;
     case 'closeGameMenu': changeUi(u => { u.gameMenu = null; }); break;
-    case 'confirmDistribute': {
-      const split = readySplit();
-      if (split && oldestRequest(model)?.id === split.id) actions.answer(split.id, split.values);
+    case 'confirmRequest': {
+      const req = oldestRequest(model);
+      if (req) confirmShown(req.id);
       break;
     }
+    case 'foldRequest': changeUi(u => { u.requestFolded = oldestRequest(model)?.id ?? null; }); break;
+    case 'unfoldRequest': changeUi(u => { u.requestFolded = null; }); break;
     case 'closeReveal': {
       const reveal = oldestRequest(model);
       if (reveal) actions.answer(reveal.id, []);

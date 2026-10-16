@@ -57,6 +57,9 @@ html[data-motion="reduced"] #zoom .shot > * { transform: none; }
   --zone-other: #8f9bc4;
   --scrim: #070910b8;
   --scrim-deep: #05070ce0;
+  /* Under a question about cards: dark enough that the board stops competing with them, and a lighter one for looking through a pile */
+  --scrim-board: #05070cdc;
+  --scrim-look: #05070c73;
   /* Magic's five colours, low in chroma beside card art, where the letter in each pip carries the meaning and the hue only decorates */
   --mtg-w: #f4f0dc;
   --mtg-u: #7fb6e0;
