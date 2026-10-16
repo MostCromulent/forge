@@ -227,11 +227,13 @@ public class GuestSeatTest extends SessionsTest {
 
         sessions.disconnected(other);
         host.awaitNewest("presence", p -> disconnected(p, "Player"), "the host was not shown the seat as disconnected");
+        // Presence from before the player arrived never named them, so only one sent after the removal counts
+        final int dropped = host.got.size();
         send(host, message("dropPlayer", "name", "Player"));
         final Game game = sessions.hostLobby().getHostedMatch().getGame();
         awaitTrue(() -> game.getPlayers().stream().anyMatch(p -> "Player".equals(p.getName()) && p.getController() instanceof PlayerControllerAi),
                 "the removed player's seat was not handed to the AI");
-        host.awaitNewest("presence", p -> !named(p, "Player"), "the removed player is still listed");
+        Assert.assertNotNull(host.awaitAfter(dropped, "presence", p -> !named(p, "Player")), "the removed player is still listed");
     }
 
     /** Fails if a match waits for a next-game choice from a seat the AI took over, or the next game gives that seat back to a human. */
@@ -470,8 +472,11 @@ public class GuestSeatTest extends SessionsTest {
         final String key = "Sleeve Removal Test Card";
         DeckCatalog.rememberSleeveArt(key, 500);
         Assert.assertTrue(DeckCatalog.savedSleeveArt().stream().anyMatch(art -> art.key().equals(key)), "the sleeve was never saved");
+        // The hello the table opened with never held this sleeve, so only one sent after the removal counts
+        final int from = host.got.size();
         sessions.onMessage(host, message("forgetSleeveArt", "key", key));
-        host.awaitNewest("hello", h -> !h.has("sleeveArt") || !h.get("sleeveArt").toString().contains(key), "the removed sleeve is still offered");
+        Assert.assertNotNull(host.awaitAfter(from, "hello", h -> !h.has("sleeveArt") || !h.get("sleeveArt").toString().contains(key)),
+                "the removed sleeve is still offered");
         Assert.assertTrue(DeckCatalog.savedSleeveArt().stream().noneMatch(art -> art.key().equals(key)), "the sleeve is still saved");
     }
 
