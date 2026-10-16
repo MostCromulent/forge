@@ -35,8 +35,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -110,6 +114,22 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
 
     private static String withSlash(final String path) {
         return path.endsWith(File.separator) ? path : path + File.separator;
+    }
+
+    /** One thread that runs its jobs in turn and ends when idle, so a session done with it holds none. A job that throws is logged. */
+    public static Executor worker(final String name) {
+        final ExecutorService pool = new ThreadPoolExecutor(0, 1, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
+            final Thread t = new Thread(r, name);
+            t.setDaemon(true);
+            return t;
+        });
+        return job -> pool.execute(() -> {
+            try {
+                job.run();
+            } catch (final RuntimeException e) {
+                netLog.error(e, "{} work failed", name);
+            }
+        });
     }
 
     private static Runnable guarded(final Runnable r) {

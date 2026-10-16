@@ -345,7 +345,7 @@ public final class WebSession implements IHasForgeLog {
 
     /** The commands the session handles itself. The rest belong to the deck editor, the Limited pages, the match or a campaign. */
     public static final Commands<WebSession> COMMANDS = new Commands<WebSession>()
-            .on(Plain.decks, (s, ch, c) -> s.lobby.sendDecks(ch))
+            .on(Plain.decks, (s, ch, c) -> s.lobby.queueDecks(ch, s.decks::inTurn))
             .on(PageError.class, (s, ch, e) -> netLog.warn("Page error for {}: {}", s.label(), LogSafe.forLog(e.text(), 1500)))
             .on(SetName.class, (s, ch, n) -> s.rename(ch, n.name(), n.avatar()))
             // A join that found no seat leaves the browser on the waiting page, which offers to try again
@@ -440,13 +440,13 @@ public final class WebSession implements IHasForgeLog {
                     ch.send(choices);
                 }
             })
-            .on(DeckQuery.class, (s, ch, q) -> ch.send(s.lobby.deckMatches(q.kind(), q.value())))
-            .on(AskDeckDetails.class, (s, ch, a) -> {
+            .on(DeckQuery.class, (s, ch, q) -> s.decks.inTurn(() -> ch.send(s.lobby.deckMatches(q.kind(), q.value()))))
+            .on(AskDeckDetails.class, (s, ch, a) -> s.decks.inTurn(() -> {
                 final ToBrowser.DeckDetailsMessage details = s.lobby.deckDetails(a.key());
                 if (details != null) {
                     ch.send(details);
                 }
-            })
+            }))
             // One set of host questions serves the process, so only the host's browser may answer them
             .on(HostChoiceAnswer.class, host((s, ch, a) -> s.ui.hostRequests().answer(a.id(), a.value())))
             // Core asks which category through a host question, and blocks on it, so not on the socket thread
@@ -460,11 +460,11 @@ public final class WebSession implements IHasForgeLog {
                 prefs.setPref(FPref.DECKGEN_SINGLETONS, gen.singletons());
                 prefs.setPref(FPref.DECKGEN_ARTIFACTS, gen.noArtifacts());
                 prefs.save();
-                s.lobby.sendDecks(ch);
+                s.lobby.queueDecks(ch, s.decks::inTurn);
             }))
-            .on(SearchCards.class, (s, ch, q) -> ch.send(new CardSearch(DeckCatalog.searchCardNames(q.query(), CARD_SEARCH_LIMIT))))
-            .on(AskPrintings.class, (s, ch, a) -> ch.send(new Printings(a.name(), DeckCatalog.printings(a.name(),
-                    a.cardPool() == null ? null : FModel.getFormats().getFormat(a.cardPool())))))
+            .on(SearchCards.class, (s, ch, q) -> s.decks.inTurn(() -> ch.send(new CardSearch(DeckCatalog.searchCardNames(q.query(), CARD_SEARCH_LIMIT)))))
+            .on(AskPrintings.class, (s, ch, a) -> s.decks.inTurn(() -> ch.send(new Printings(a.name(), DeckCatalog.printings(a.name(),
+                    a.cardPool() == null ? null : FModel.getFormats().getFormat(a.cardPool()))))))
             // LocalGame runs on the host UI thread, so host-side dialogs during setup never block a web server thread
             .on(Start.class, (s, ch, st) -> s.ui.invokeInEdtLater(() -> s.start(ch, st)))
             .on(Plain.leave, (s, ch, c) -> s.ui.invokeInEdtLater(s::leave))

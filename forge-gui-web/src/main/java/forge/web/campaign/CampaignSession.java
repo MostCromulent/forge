@@ -11,6 +11,7 @@ import forge.model.FModel;
 import forge.util.IHasForgeLog;
 import forge.util.storage.IStorage;
 import forge.web.Campaigns;
+import forge.web.WebGuiBase;
 import forge.web.WebSession;
 import forge.web.WebSession.InCampaign;
 import forge.web.WebSession.Menu;
@@ -30,10 +31,7 @@ import forge.web.protocol.ToBrowser.Notice;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -43,12 +41,8 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
     /** What this session alone knows of the open conquest: its selection and the last move. */
     private final ConquestGame conquest = new ConquestGame();
     private final QuestGame quest = new QuestGame();
-    /** One thread for everything a campaign does, as its model is Forge's own and nothing guards it; it ends when idle, so a finished session holds none. */
-    private final ExecutorService work = new ThreadPoolExecutor(0, 1, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
-        final Thread t = new Thread(r, "WebCampaign");
-        t.setDaemon(true);
-        return t;
-    });
+    /** One thread for everything a campaign does, as its model is Forge's own and nothing guards it. */
+    private final Executor work = WebGuiBase.worker("WebCampaign");
 
     public CampaignSession(final Campaigns.Host session) {
         this.session = session;
@@ -135,13 +129,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
     };
 
     public void run(final Runnable job) {
-        work.execute(() -> {
-            try {
-                job.run();
-            } catch (final RuntimeException e) {
-                netLog.error(e, "Campaign work failed");
-            }
-        });
+        work.execute(job);
     }
 
     /** Work on the open save of a campaign. */

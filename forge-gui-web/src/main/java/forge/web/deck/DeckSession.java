@@ -37,6 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
@@ -48,6 +49,7 @@ public final class DeckSession implements IHasForgeLog {
     private final WebGuiBase ui;
     private final BooleanSupplier host;
     private final BooleanSupplier atTable;
+    private final Executor work = WebGuiBase.worker("WebDecks");
     private final DeckStore.Storages storages = DeckStore.real();
     /** A guest's decks, by the id its browser keeps each under. The lobby lists them too. */
     private final Map<String, OnDevice> device;
@@ -93,17 +95,16 @@ public final class DeckSession implements IHasForgeLog {
             .on(BrowseFormat.class, (d, ch, b) -> {
                 if (d.host.getAsBoolean() && !d.atTable.getAsBoolean()) {
                     d.lobby.setBrowseFormat(gameType(b.format()));
-                    d.lobby.sendDecks(ch);
+                    d.lobby.queueDecks(ch, d::inTurn);
                 }
             })
             .on(DeviceDecks.class, (d, ch, dd) -> {
                 if (!d.host.getAsBoolean()) {
                     d.keepDeviceDecks(dd.decks());
-                    d.lobby.sendDecks(ch);
+                    d.lobby.queueDecks(ch, d::inTurn);
                 }
             })
-            // Building the catalogue reads every card once, which is far too slow for the socket thread
-            .on(CatalogueQuery.class, (d, ch, q) -> d.slow("Catalogue", () -> ch.send(d.catalogue(q))))
+            .on(CatalogueQuery.class, (d, ch, q) -> d.slow(() -> ch.send(d.catalogue(q))))
             .on(ImportRead.class, DeckSession::read)
             // Fetching waits on a web site
             .on(ImportFetch.class, (d, ch, f) -> d.ui.runBackgroundTask("Import", () -> ch.send(d.fetched(f))))
@@ -114,7 +115,7 @@ public final class DeckSession implements IHasForgeLog {
             .on(DeckFavourite.class, (d, ch, star) -> {
                 if (d.host.getAsBoolean()) {
                     d.lobby.catalog().setFavourite(star.key(), star.on());
-                    d.lobby.sendDecks(ch);
+                    d.lobby.queueDecks(ch, d::inTurn);
                 }
             })
             .on(EditorOpen.class, DeckSession::openFromBrowser)
@@ -171,7 +172,7 @@ public final class DeckSession implements IHasForgeLog {
         final DeckEditor.Collection collection = onCollection == null ? null : onCollection.collection();
         // A collection's deck is of one format, whatever the importer's control says
         final Check check = onCollection != null ? onCollection.check() : check(read.format(), read.cardPool(), read.unrestricted());
-        slow("Import", () -> channel.send(DeckImport.result(read.request(), DeckImport.read(read.text(), check, collection), check, null)));
+        slow(() -> channel.send(DeckImport.result(read.request(), DeckImport.read(read.text(), check, collection), check, null)));
     }
 
     /** Opens the editor. checkedAgainst is the check to open with, or null for the table's, or the finder's when there is no table. */
@@ -284,12 +285,20 @@ public final class DeckSession implements IHasForgeLog {
         channel.send(new EditorMessage(editor.state()));
     }
 
-    /** Runs slow work on a background thread, except over a campaign's collection, which only the campaign thread this runs on may read. */
-    private void slow(final String name, final Runnable work) {
+    /**
+     * Runs a deck list, search or catalogue on this browser's deck thread, in the order they were asked for. The socket threads
+     * also serve every picture, so a list that takes a second to build would stall them.
+     */
+    public void inTurn(final Runnable job) {
+        work.execute(job);
+    }
+
+    /** As inTurn, except over a campaign's collection, which only the campaign thread this runs on may read. */
+    private void slow(final Runnable job) {
         if (collectionEditor() != null) {
-            work.run();
+            job.run();
         } else {
-            ui.runBackgroundTask(name, work);
+            inTurn(job);
         }
     }
 

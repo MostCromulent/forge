@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -170,6 +171,20 @@ public final class Lobby {
 
     /** Skips the send when this browser already has this exact list, but always rebuilds it, as building records what the lobby shows. */
     public void sendDecks(final BrowserChannel to) {
+        settle();
+        sendBuilt(to);
+    }
+
+    /**
+     * As sendDecks, but the list is built and sent through build, where it can wait its turn. What the list settles at the table is
+     * settled now, in order with the browser's other commands, so a Ready pressed after asking is not undone by a list built later.
+     */
+    public void queueDecks(final BrowserChannel to, final Executor build) {
+        settle();
+        build.execute(() -> sendBuilt(to));
+    }
+
+    private void sendBuilt(final BrowserChannel to) {
         synchronized (sentLock) {
             final Decks out = decks();
             if (to == decksSentTo && out.equals(decksSent)) {
@@ -182,8 +197,18 @@ public final class Lobby {
     }
 
     /** Every deck this format can be played with, rebuilt because the pool differs per format. */
-    Decks decks() {
-        final Decks out;
+    private Decks decks() {
+        synchronized (DeckCatalog.DECKS) {
+            final GameFormat cardPool = cardPool();
+            return new Decks(catalog.refresh(format(), cardPool, guest.getAsBoolean(), device, eventFilter()), names(FModel.getFormats().getSanctionedList()),
+                    cardPool == null ? null : cardPool.getName(), guest.getAsBoolean() ? null
+                            : new ToBrowser.DeckGenOptions(FModel.getPreferences().getPrefBoolean(FPref.DECKGEN_SINGLETONS),
+                                    FModel.getPreferences().getPrefBoolean(FPref.DECKGEN_ARTIFACTS)));
+        }
+    }
+
+    /** Brings the table up to the format, card pool and rules a list is about to be built for, which is quick. */
+    private void settle() {
         final boolean newPool;
         final boolean newRules;
         synchronized (DeckCatalog.DECKS) {
@@ -199,9 +224,6 @@ public final class Lobby {
             seenFormat = format;
             seenCardPool = poolName;
             seenRules = rules();
-            out = new Decks(catalog.refresh(format, cardPool, guest.getAsBoolean(), device, eventFilter()), names(FModel.getFormats().getSanctionedList()),
-                    poolName, guest.getAsBoolean() ? null : new ToBrowser.DeckGenOptions(FModel.getPreferences().getPrefBoolean(FPref.DECKGEN_SINGLETONS),
-                            FModel.getPreferences().getPrefBoolean(FPref.DECKGEN_ARTIFACTS)));
         }
         // The list is asked for from any thread, but what it settles at the table is changed on the host UI thread alone
         ui.invokeInEdtNow(() -> {
@@ -213,7 +235,6 @@ public final class Lobby {
                 composeMine();
             }
         });
-        return out;
     }
 
     /** Runs a change to the table on the host UI thread, and answers what it answers. */

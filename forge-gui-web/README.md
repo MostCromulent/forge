@@ -54,6 +54,7 @@ Forge's models were written for a single UI thread, and most have no locks. The 
 - Forge's UI calls (`invokeInEdt`) run on one thread that stands in for Swing's.
 - Each part that drives an unguarded Forge model has its own single thread, such as a campaign session or an offline draft.
 - Browser messages arrive on the web server's threads. A handler that is slow, or that touches one of the models above, hands its work to the owning thread instead of running it there.
+- Deck lists, deck and card searches and the card catalogue run on each session's deck thread, in the order they were asked for, because the web server's threads also serve every picture.
 
 Each seat's netplay client runs its calls on a thread of its own, so a game question waiting on a browser holds only that seat's thread, never a web server thread.
 
