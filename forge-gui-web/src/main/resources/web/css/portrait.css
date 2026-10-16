@@ -441,6 +441,8 @@ html[data-form="portrait"] .reveal-panel.bare .cards { --fit: min(var(--few), 1.
 html[data-form="portrait"] .lib-row { --fit: 1; flex-direction: column; align-items: stretch; gap: 14px; padding: 0 0 24px; }
 html[data-form="portrait"] .lib-side { justify-items: start; }
 html[data-form="portrait"] .lib-row .lib-pile { display: none; }
+/* A touch screen has no drag, so the line about dragging goes */
+html[data-form="portrait"] .manipulate .hint { display: none; }
 /* The count beside them says the same in less room */
 html[data-form="portrait"] .dialog .dist-pips { display: none; }
 html[data-form="portrait"] .reveal-panel .cards .section:first-child:not(:has(~ .section)) { display: none; }

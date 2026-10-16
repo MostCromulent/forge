@@ -138,6 +138,8 @@ initSettings(actions.setSetting, () => {
 // Every key the page answers is decided in keys.ts, from what is open
 document.addEventListener('keydown', e => {
   const target = e.target instanceof HTMLElement ? e.target : null;
+  // Enter on a question's own button, reached with Tab, presses that button rather than giving the answer
+  if (e.key === 'Enter' && target instanceof HTMLButtonElement && target.closest('#dialog-layer')) return;
   const command = keyCommand({
     key: e.key,
     typing: !!target && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),

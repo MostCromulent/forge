@@ -1,7 +1,7 @@
 // The prompt: the game's question and its buttons, at the foot of the side column or in the dock on a phone, whose rim lights while the game waits on you
 
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from '../images';
-import { cardPrompt, deref, derefAll, game, me, oldestRequest, stackPick, stateOf, type Model } from '../model';
+import { askingCard, cardPrompt, deref, game, me, oldestRequest, stackPick, stackTopSource, stateOf, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
 import { hoverable, inspectCard } from '../preview';
 import { longPress } from '../press';
@@ -16,7 +16,7 @@ import { isPortrait } from '../form';
 import { notePick } from './overlay';
 import { declaringBlocks } from './blockdrag';
 import { splitQuestion } from './asking';
-import type { CardView, PlayerView, PromptButton, Ref, StackItemView } from '../protocol';
+import type { CardView, PlayerView, PromptButton, Ref } from '../protocol';
 import { t } from '../text';
 import { ICONS, iconSvg } from '../icons';
 
@@ -180,6 +180,9 @@ function drawPrompt(model: Model, actions: Actions): void {
   ok.onclick = () => actions.ok();
   cancel.onclick = () => actions.cancel();
   // A spell picked on the stack has no dialog, so what it asks, and the way out of it, are shown here
+  const req = oldestRequest(model);
+  const onBoard = !!req && !isPortrait() && cardPrompt(req);
+  root.classList.toggle('answering', onBoard);
   const pick = stackPick(model);
   if (pick) {
     setSymbolText(q(root, '.message'), pick.message ?? '');
@@ -192,18 +195,17 @@ function drawPrompt(model: Model, actions: Actions): void {
     root.classList.remove('priority', 'attack', 'strike', 'no-blocks');
     return;
   }
-  // A question about cards is answered on the board, so the prompt says what is resolving, or, folded away, that the question waits
-  const req = oldestRequest(model);
-  root.classList.toggle('answering', !!req && !isPortrait() && cardPrompt(req));
-  if (req && !isPortrait() && cardPrompt(req)) {
+  // A question about cards is answered on the board, so the prompt says what it comes from, or, folded away, that the question waits
+  if (req && onBoard) {
     const folded = ui.requestFolded === req.id;
-    const top = (derefAll(model, game(model)?.Stack) as StackItemView[])[0];
-    const source = top && deref(model, top.SourceCard) as CardView | undefined;
+    const ref = askingCard(model, req);
+    const card = deref(model, ref) as CardView | undefined;
+    const asked = splitQuestion(('title' in req ? req.title : 'message' in req ? req.message : '') ?? '');
+    const source = asked.source || (card ? stateOf(model, card).Name ?? '' : '');
     q(root, '.step').textContent = folded ? t('lblWebPromptQuestionWaits') : source ? t('lblWebPromptResolving') : stepName(game(model)?.Phase);
-    // Abilities put in order are not on the stack yet, so the question itself is what the prompt says
-    const asked = 'title' in req ? req.title : 'message' in req ? req.message : '';
-    setSymbolText(q(root, '.message'), source ? stateOf(model, source).Name ?? '' : splitQuestion(asked ?? '').ask);
-    renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, source ? { ref: source.$key } as Ref : null);
+    // With no card to name, the question itself is what the prompt says
+    setSymbolText(q(root, '.message'), source || asked.ask);
+    renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, ref);
     renderPlayerChoices(root, model, [], actions);
     setButton(ok, folded ? { label: t('lblWebZoneShowCards'), enabled: true } : undefined);
     ok.onclick = () => changeUi(u => { u.requestFolded = null; });
@@ -260,8 +262,7 @@ function countAttacking(model: Model): number {
 }
 
 function priorityLine(model: Model, pass: string): string {
-  const top = (derefAll(model, game(model)?.Stack) as StackItemView[])[0];
-  const source = top && deref(model, top.SourceCard) as CardView | undefined;
+  const source = deref(model, stackTopSource(model)) as CardView | undefined;
   const name = source && stateOf(model, source).Name;
   return name ? t('lblWebPromptRespond', name, pass) : t('lblWebPromptAct', pass);
 }

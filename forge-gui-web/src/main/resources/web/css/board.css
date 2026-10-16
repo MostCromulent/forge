@@ -606,7 +606,7 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 .log-entry.log-game_outcome, .log-entry.log-match_results { color: var(--text); }
 /* An open zone takes the whole screen and dims the board, and folded, the scrim goes and only the bar stays */
 #zones { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--scrim-deep); }
-/* On a landscape board the side column's panels are lifted above the dim: a pile opened to look at dims lightly, a zone the game asks about as a question about cards does */
+/* On a landscape board the side column's panels are lifted above the dim: a pile opened to look at dims the board lightly, a zone the game asks about dims it as any card question does */
 html:not([data-form="portrait"]) #zones:not(.minimised) { padding-right: var(--side-gap); background: var(--scrim-look); }
 html:not([data-form="portrait"]) #zones.asking:not(.minimised) { background: var(--scrim-board); backdrop-filter: blur(5px) saturate(.8); }
 @media (prefers-reduced-transparency: reduce) { #zones.asking { backdrop-filter: none; } }

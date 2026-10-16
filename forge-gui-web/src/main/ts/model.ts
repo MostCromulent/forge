@@ -211,13 +211,25 @@ export function cardMenu(model: Model): ChoicesRequest | null {
     && oldest.options.every(o => !o.card && !o.imageKey && !o.player) ? oldest : null;
 }
 
-/** The open question when it is which spell on the stack to choose, answered by clicking the spell where it already is. */
 /** A question about cards, which is laid out on the dimmed board rather than in a box: words, numbers and colours keep their dialog. */
 export function cardPrompt(req: Request): boolean {
   if (req.kind === 'order' || req.kind === 'manipulate' || req.kind === 'distribute') return true;
   return req.kind === 'choices' && !req.atX && !req.atY && !req.stackKeys && req.options.some(o => o.card || o.imageKey || o.name || o.player);
 }
 
+/** The card of the spell or ability on top of the stack. */
+export function stackTopSource(model: Model): Ref | undefined {
+  const top = derefAll(model, game(model)?.Stack)[0] as { SourceCard?: Ref } | undefined;
+  return top?.SourceCard ?? undefined;
+}
+
+/** The card a question comes from: the one it names, or for scry, which is only asked as its spell resolves, the top of the stack. */
+export function askingCard(model: Model, req: Request): Ref | undefined {
+  const named = 'card' in req ? req.card : undefined;
+  return named ?? (req.kind === 'manipulate' ? stackTopSource(model) : undefined);
+}
+
+/** The open question when it is which spell on the stack to choose, answered by clicking the spell where it already is. */
 export function stackPick(model: Model): ChoicesRequest | null {
   const oldest = oldestRequest(model);
   return oldest?.kind === 'choices' && oldest.stackKeys ? oldest : null;

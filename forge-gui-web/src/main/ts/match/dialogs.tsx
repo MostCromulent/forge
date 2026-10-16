@@ -12,7 +12,7 @@ import type { Actions } from '../actions';
 import { keyName } from '../keys';
 import { boundKeys } from '../settings';
 import { cssUrl, playerAvatarUrl, playerSleeveUrl } from '../looks';
-import { cardMenu, cardPrompt, deref, derefAll, game, isLocal, me, oldestRequest, stackPick, stateOf, type Model } from '../model';
+import { askingCard, cardMenu, cardPrompt, deref, derefAll, game, isLocal, me, oldestRequest, stackPick, stateOf, type Model } from '../model';
 import { splitQuestion } from './asking';
 import { zoneTitle } from './zones';
 import { changeUi, ui } from '../ui';
@@ -196,11 +196,7 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
 /** A question on the board as one line: the card asking, then what it asks, without the engine's rules text and bookkeeping. */
 function QuestionLine({ model, req, text }: { model: Model; req: Request; text: string }) {
   const asked = splitQuestion(text);
-  const card = 'card' in req && req.card ? model.objects.get(req.card.ref) as CardView | undefined : undefined;
-  // Putting cards in order or back on the library happens as a spell or ability resolves, so the top of the stack is what asks
-  const resolving = req.kind === 'order' || req.kind === 'manipulate' || req.kind === 'distribute'
-    ? deref(model, (derefAll(model, game(model)?.Stack) as StackItemView[])[0]?.SourceCard) as CardView | undefined : undefined;
-  const from = card ?? resolving;
+  const from = deref(model, askingCard(model, req)) as CardView | undefined;
   const source = asked.source || (from ? stateOf(model, from).Name ?? '' : '');
   return <>{source && <><span class="ask-source">{source}</span><span class="ask-sep" aria-hidden="true">·</span></>}<SymbolText text={asked.ask} /></>;
 }
@@ -216,11 +212,11 @@ function WhereFrom({ model, req }: { model: Model; req: Request }) {
 }
 
 /** The player's library as a pile in their sleeve, with the ends of the library either side of it. */
-function LibraryPile({ model, count }: { model: Model; count?: number }) {
+function LibraryPile({ model, count }: { model: Model; count: number }) {
   return (
     <div class="lib-pile" style={{ '--sleeve': cssUrl(playerSleeveUrl(me(model))) }} aria-hidden="true">
       <i /><i /><i />
-      {count !== undefined && <span class="lib-count">{count}</span>}
+      <span class="lib-count">{count}</span>
       <span class="lib-name">{t('lblLibrary')}</span>
     </div>
   );
@@ -288,7 +284,7 @@ function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
               ? headed && <OptionView key={i} model={model} opt={o} />
               : <figure key={i} style={`--i: ${dealt++}`}><OptionView model={model} opt={o} /><figcaption>{o.name ?? o.label}</figcaption></figure>))}
           </div>
-          <footer><span class="zone-hint" /><button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><kbd>{keyName(boundKeys().ok)}</kbd></button></footer>
+          <footer><span class="zone-hint" /><button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><OkKey /></button></footer>
         </section>
       </Backdrop>
     );
@@ -300,7 +296,7 @@ function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
         <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{counted}</span></header>
         <div class="cards">{cards.map((o, i) => <OptionView key={i} model={model} opt={o} />)}</div>
         <footer><button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>
-          <button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><kbd>{keyName(boundKeys().ok)}</kbd></button></footer>
+          <button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><OkKey /></button></footer>
       </section>
     </Backdrop>
   );
@@ -435,7 +431,8 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
     if (at < 0) return;
     const by = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : 0;
     if (by) cards[Math.max(0, Math.min(cards.length - 1, at + by))].focus();
-    else if (e.key === 'Enter') cards[at].click();
+    // A card focused by a click was picked by that click, so Enter after it gives the answer instead
+    else if (e.key === 'Enter' && cards[at].matches(':focus-visible')) cards[at].click();
     else return;
     e.preventDefault();
     e.stopPropagation();
@@ -862,7 +859,6 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
             {name === 'bottom' && pos === piles.bottom.length - 1 && <span class="order-end">{t('lblClosestToBottom')}</span>}
           </div>
         ))}
-        {/* An end with nothing at it still says which end it is */}
         {piles[name].length === 0 && <div class="lib-card"><span class="lib-slot" /><span class="order-end">{t(name === 'top' ? 'lblClosestToTop' : 'lblClosestToBottom')}</span></div>}
       </div>
     </div>
