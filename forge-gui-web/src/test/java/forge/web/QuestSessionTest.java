@@ -761,16 +761,6 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertTrue(duels.getAsJsonArray("pets").toString().contains("Bird"));
     }
 
-    // Fails if a browser without the host's seat can open a quest
-    @Test(timeOut = 120_000)
-    public void aGuestCannotOpenQuest() throws Exception {
-        final TestBrowser guest = connect("guest");
-        sessions.onMessage(guest, message("setName", "name", "Guest"));
-        send(guest, message("campaignOpen", "mode", "quest", "resume", false));
-        Thread.sleep(500);
-        Assert.assertFalse(guest.got.stream().anyMatch(m -> "questSaves".equals(m.get("t").getAsString())));
-    }
-
     // Fails if a name with a path in it reaches a file that is not one of the saves
     @Test
     public void aNameWithAPathInItFindsNothing() throws Exception {

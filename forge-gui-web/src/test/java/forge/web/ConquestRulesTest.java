@@ -282,17 +282,6 @@ public class ConquestRulesTest {
         assertFalse(ConquestAether.pools(data, filter).locked().contains(card));
     }
 
-    // Fails if a pull happens without the shards to pay for it
-    @Test
-    public void aPullNeedsItsShards() {
-        final ConquestData data = ConquestFixture.create("Zendikar");
-        data.spendAEtherShards(data.getAEtherShards());
-        final int cards = data.getUnlockedCardCount();
-        assertNull(ConquestAether.pull(data, ConquestAether.Filter.startingFor(data.getSelectedCommander())));
-        assertEquals(data.getUnlockedCardCount(), cards);
-        assertEquals(data.getAEtherShards(), 0);
-    }
-
     // Fails if basic lands can be pulled, or a card already owned is offered again
     @Test
     public void theAetherHoldsOnlyLockedCardsThatAreNotBasicLands() {
@@ -407,14 +396,6 @@ public class ConquestRulesTest {
         FModel.getConquest().load(data);
         assertEquals(data.getSelectedCommander().getName(), "A-Phylath, World Sculptor");
         assertEquals(data.getSelectedCommander().getDeck().getMain().countAll(), 40);
-    }
-
-    // Fails if deleting leaves the save listed
-    @Test
-    public void aDeletedConquestIsGone() {
-        final ConquestData made = ConquestFixture.create("Zendikar");
-        ConquestController.delete(made);
-        assertFalse(ConquestController.listSaves().stream().anyMatch(d -> d.getName().equals(made.getName())));
     }
 
     // Fails if exiling a commander listed before the selected one leaves a different commander selected

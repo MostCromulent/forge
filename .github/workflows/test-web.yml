@@ -40,6 +40,11 @@ on:
       - '.github/workflows/test-web.yml'
   workflow_dispatch:
 
+# A newer push to the same pull request makes its older run worth nothing, so that run is stopped
+concurrency:
+  group: test-web-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest

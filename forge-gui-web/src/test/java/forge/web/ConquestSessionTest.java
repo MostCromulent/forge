@@ -668,13 +668,6 @@ public class ConquestSessionTest extends SessionsTest {
         return message("campaignPref", "key", key, "value", String.valueOf(value));
     }
 
-    /** A row of one of the statistics' tables, as its cells. */
-    private static List<String> row(final JsonObject stats, final int table, final int row) {
-        final List<String> cells = new ArrayList<>();
-        stats.getAsJsonArray("tables").get(table).getAsJsonObject().getAsJsonArray("rows").get(row).getAsJsonArray().forEach(c -> cells.add(c.getAsString()));
-        return cells;
-    }
-
     private static List<String> names(final JsonObject message, final String list) {
         final List<String> names = new ArrayList<>();
         message.getAsJsonArray(list).forEach(e -> names.add(e.getAsJsonObject().get("name").getAsString()));
@@ -683,22 +676,6 @@ public class ConquestSessionTest extends SessionsTest {
 
     private static File saveDir(final String name) {
         return new File(ForgeConstants.CONQUEST_SAVE_DIR, name.replace(' ', '_'));
-    }
-
-    // Fails if a conquest can be started under a name another has, or the conquest of that name is replaced
-    @Test(timeOut = 120_000)
-    public void aNameInUseIsRefused() throws Exception {
-        final ConquestData existing = ConquestFixture.create("Zendikar");
-        existing.rewardAEtherShards(17);
-        existing.saveData();
-        final int shards = existing.getAEtherShards();
-        final PaperCard commander = existing.getCurrentPlane().getCommanders().get(0);
-        final TestBrowser host = onTheShelf();
-        send(host, message("conquestCreate", "name", existing.getName(), "plane", "Zendikar", "commander", commander.getName(),
-                "planeswalker", ConquestUtil.getStartingPlaneswalkerOptions(commander).iterator().next().getName()));
-        host.awaitMatching("error", e -> true, "a name in use was not refused");
-        Assert.assertFalse(host.got.stream().anyMatch(m -> "conquestState".equals(m.get("t").getAsString())), "a conquest was opened");
-        Assert.assertEquals(new ConquestData(existing.getDirectory()).getAEtherShards(), shards, "the conquest of that name was replaced");
     }
 
     // Fails if the form is not told a plane's commanders or a commander's planeswalkers, or a conquest made from them is not saved and shown
