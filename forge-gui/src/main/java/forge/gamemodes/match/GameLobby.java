@@ -85,10 +85,6 @@ public abstract class GameLobby implements IHasGameType {
         return data.appliedVariants.contains(variant);
     }
 
-    public String getCardPool() {
-        return data.getCardPool();
-    }
-
     public void setCardPool(final String name) {
         if (!Objects.equals(name, data.getCardPool())) {
             data.setCardPool(name);

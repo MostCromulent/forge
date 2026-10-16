@@ -198,7 +198,7 @@ public final class Lobby {
     /** The card pool every deck must come from, or null. Only Constructed has one. */
     public GameFormat cardPool() {
         final GameLobby lobby = view();
-        final String name = lobby == null ? null : lobby.getCardPool();
+        final String name = lobby == null ? null : lobby.getData().getCardPool();
         return name == null ? null : FModel.getFormats().getFormat(name);
     }
 

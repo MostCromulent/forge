@@ -498,10 +498,8 @@ public class YieldController {
         if (yc.getAutoPassUntilMarker() != null) ctrl.sendYieldUpdate(new YieldUpdate.ClearMarker(local));
         if (yc.autoPassUntilStackEmpty()) ctrl.sendYieldUpdate(new YieldUpdate.StackYield(local, false, false));
         if (yc.autoPassUntilEndOfTurn()) ctrl.sendYieldUpdate(new YieldUpdate.SetAutoPassUntilEndOfTurn(local, false));
-        if (gui != null) {
-            gui.refreshYieldUi(local);
-            gui.updateAutoPassPrompt();
-        }
+        gui.refreshYieldUi(local);
+        gui.updateAutoPassPrompt();
     }
 
     /** Activate auto-pass-until-end-of-turn for {@code local} via the unified envelope path. */

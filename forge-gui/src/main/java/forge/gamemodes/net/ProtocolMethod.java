@@ -154,6 +154,7 @@ public enum ProtocolMethod implements IHasForgeLog {
             return null;
         }
     }
+
     /** What a call received from a client is made on: the controller, or for a macro its macro system. */
     public Object receiver(final Object toInvoke) {
         return mode == Mode.MACRO ? ((IGameController) toInvoke).macros() : toInvoke;
