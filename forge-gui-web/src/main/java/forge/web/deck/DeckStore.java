@@ -6,7 +6,6 @@ import forge.game.GameType;
 import forge.model.FModel;
 import forge.util.Localizer;
 import forge.util.storage.IStorage;
-import forge.web.limited.Draft;
 
 import java.util.Collection;
 

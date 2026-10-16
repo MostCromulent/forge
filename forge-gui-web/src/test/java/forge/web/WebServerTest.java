@@ -133,12 +133,12 @@ public class WebServerTest {
         Assert.assertEquals(get("/..%2Fpom.xml?token=secret", null).statusCode(), 404);
     }
 
-    // Fails if the campaign icon route serves none of Conquest's or Quest's icons, or serves a sprite that is not one of them
+    // Fails if the skin icon route cannot cut icons from their sheets, or answers for a name that is no icon, such as a colour
     @Test
-    public void campaignIconsAreServedAndNothingElseIs() throws Exception {
+    public void skinIconsAreServedAndNothingElseIs() throws Exception {
         Assert.assertEquals(get("/skinicon?k=IMG_AETHER_SHARD&token=secret", null).statusCode(), 200);
         Assert.assertEquals(get("/skinicon?k=ICO_QUEST_COINSTACK&token=secret", null).statusCode(), 200);
-        Assert.assertEquals(get("/skinicon?k=IMG_MANA_W&token=secret", null).statusCode(), 404);
+        Assert.assertEquals(get("/skinicon?k=CLR_THEME&token=secret", null).statusCode(), 404);
         Assert.assertEquals(get("/skinicon?k=nonsense&token=secret", null).statusCode(), 404);
     }
 

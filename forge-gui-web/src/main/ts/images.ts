@@ -73,7 +73,7 @@ export const symbolUrl = (symbol: string): string => `mana?s=${encodeURIComponen
 
 /** A keyword's icon, cut from the skin's ability sheet. The server names the icon (FSkinProp.iconFromKeyword). */
 export const abilityUrl = (icon: string): string => `ability?k=${encodeURIComponent(icon)}`;
-/** One of the skin icons a campaign shows, by its skin name, such as IMG_AETHER_SHARD. */
+/** A skin icon by its skin name, such as IMG_AETHER_SHARD. */
 export const skinIconUrl = (icon: string): string => `skinicon?k=${encodeURIComponent(icon)}`;
 
 export function hideOnError(img: HTMLImageElement): void {

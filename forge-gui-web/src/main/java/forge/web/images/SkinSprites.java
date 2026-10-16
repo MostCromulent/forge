@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.imageio.ImageIO;
 
@@ -24,10 +23,8 @@ public final class SkinSprites implements IHasForgeLog {
     private static BufferedImage manaIcons;
     private static BufferedImage abilityIcons;
     private static List<BufferedImage> sleeves;
-    /** The sheets the ticket symbol and campaign icons are cut from, by file name. */
+    /** The sheets skin icons and the ticket symbol are cut from, by file name. */
     private static final Map<String, BufferedImage> iconSheets = new HashMap<>();
-    private static final Set<FSkinProp> CAMPAIGN_ICONS = Set.of(FSkinProp.IMG_AETHER_SHARD, FSkinProp.IMG_PW_BADGE_COMMON,
-            FSkinProp.IMG_SPELLBOOK, FSkinProp.IMG_MULTIVERSE);
     private static final Map<String, byte[]> encoded = new ConcurrentHashMap<>();
 
     private SkinSprites() {
@@ -75,11 +72,10 @@ public final class SkinSprites implements IHasForgeLog {
         return encoded.computeIfAbsent("k" + name, k -> cell(sheetFor(prop), prop, k));
     }
 
-    /** PNG bytes of one of the skin icons a campaign shows, named by its FSkinProp, or null for any other name. */
+    /** PNG bytes of a skin icon named by its FSkinProp, or null for a name that is none or is not cut from a sheet, such as a colour. */
     public static byte[] iconPng(final String name) {
         final FSkinProp prop = prop(name);
-        // Quest's icons are its bazaar's stalls and items, its balances and its reward messages
-        if (prop == null || !(CAMPAIGN_ICONS.contains(prop) || prop.name().startsWith("ICO_QUEST_"))) {
+        if (prop == null || prop.getType().getFilename() == null) {
             return null;
         }
         return encoded.computeIfAbsent("c" + name, k -> cell(iconSheet(prop.getType().getFilename()), prop, k));
