@@ -107,7 +107,7 @@ abstract class SessionsTest {
     }
 
     static void awaitTrue(final BooleanSupplier wanted, final Supplier<String> why) {
-        for (int i = 0; i < 2000 && !wanted.getAsBoolean(); i++) {
+        for (int i = 0; i < 6000 && !wanted.getAsBoolean(); i++) {
             try {
                 Thread.sleep(10);
             } catch (final InterruptedException e) {

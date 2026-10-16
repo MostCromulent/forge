@@ -134,6 +134,12 @@ Git ignores the page bundle (`src/main/resources/web/js/`) and the two generated
 
 The Java tests and Vitest run with `mvn -Pweb -pl forge-gui-web -am test`, and CI runs them. They catch changes elsewhere in Forge that would break this module without anyone noticing. `-Drun.stress.tests=true` adds whole games and events played over netplay.
 
+A few tests fail on purpose when something outside this module changes, because the page depends on it. When one of them fails after a change elsewhere, the fix belongs in this module:
+
+- `CardDetailTextTest` pins the English lines from `CardDetailUtil` that `match/rulestext.ts` turns into chips.
+- `BrowserSoundsTest` pins the sound names the page plays for a land and for a block.
+- `WebGuiGameTest.everyHostCallThatReturnsAValueIsImplementedHere` fails when a new `ProtocolMethod` on `IGuiGame` returns a value and `WebGuiGame` does not override it.
+
 The browser tests in `e2e/` drive the page against a built jar. CI does not run them, so run them by hand before changing the page:
 
     cd forge-gui-web/e2e

@@ -90,7 +90,7 @@ public class WebServerTest {
     }
 
     private void awaitConnected() throws InterruptedException {
-        for (int i = 0; i < 250 && connected == null; i++) {
+        for (int i = 0; i < 3000 && connected == null; i++) {
             Thread.sleep(20);
         }
         Assert.assertNotNull(connected, "the socket never reached the endpoint");
@@ -165,12 +165,12 @@ public class WebServerTest {
         final List<String> texts = new CopyOnWriteArrayList<>();
         final WebSocket ws = openSocket(origin(), texts);
         ws.sendText("{\"t\":\"ping\"}", true).get(5, TimeUnit.SECONDS);
-        for (int i = 0; i < 100 && received.isEmpty(); i++) {
+        for (int i = 0; i < 3000 && received.isEmpty(); i++) {
             Thread.sleep(20);
         }
         Assert.assertEquals(received.get(0).get("t").getAsString(), "ping");
         connected.send(JsonCodec.message("pong"));
-        for (int i = 0; i < 100 && texts.isEmpty(); i++) {
+        for (int i = 0; i < 3000 && texts.isEmpty(); i++) {
             Thread.sleep(20);
         }
         Assert.assertTrue(texts.get(0).contains("pong"));

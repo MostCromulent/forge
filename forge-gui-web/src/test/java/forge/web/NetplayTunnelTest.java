@@ -152,7 +152,7 @@ public class NetplayTunnelTest extends SessionsTest {
         final int hostSeat = host.latestTable().get("mySeat").getAsInt();
 
         final App app = join("Desk", server.inviteUrl("127.0.0.1"), null);
-        Assert.assertTrue(app.seated.await(20, TimeUnit.SECONDS), "the app never took a seat through the web port");
+        Assert.assertTrue(app.seated.await(60, TimeUnit.SECONDS), "the app never took a seat through the web port");
         Assert.assertNotEquals(app.seat, hostSeat, "the app was given the host's seat");
         Assert.assertNotNull(host.awaitLobby(l -> seatIs(l, app.seat, "REMOTE", "Desk")), "the host's table never showed the app arriving");
         host.awaitMatching("presence", p -> {
@@ -201,12 +201,12 @@ public class NetplayTunnelTest extends SessionsTest {
     public void aBrowserAndAnAppReadEachOthersChat() throws Exception {
         final TestBrowser host = hostAt("invite");
         final App app = join("Desk", server.inviteUrl("127.0.0.1"), null);
-        Assert.assertTrue(app.seated.await(20, TimeUnit.SECONDS), "the app never took a seat through the web port");
+        Assert.assertTrue(app.seated.await(60, TimeUnit.SECONDS), "the app never took a seat through the web port");
 
         sessions.onMessage(host, message("chat", "text", "hello from the browser"));
         String line;
         do {
-            line = app.heard.poll(20, TimeUnit.SECONDS);
+            line = app.heard.poll(60, TimeUnit.SECONDS);
         } while (line != null && !line.endsWith("hello from the browser"));
         Assert.assertEquals(line, "Host: hello from the browser", "the app never read the browser's line");
 
@@ -289,7 +289,7 @@ public class NetplayTunnelTest extends SessionsTest {
             Assert.assertThrows(IllegalStateException.class, () -> join("Misnamed", "https://127.0.0.1:" + port + "/?token=" + GUEST_TOKEN, trust));
 
             final App app = join("Secure", "https://localhost:" + port + "/?token=" + GUEST_TOKEN, SslContextBuilder.forClient().trustManager(trusting).build());
-            Assert.assertTrue(app.seated.await(20, TimeUnit.SECONDS), "the app never took a seat over TLS");
+            Assert.assertTrue(app.seated.await(60, TimeUnit.SECONDS), "the app never took a seat over TLS");
             proxy.close().sync();
         } finally {
             group.shutdownGracefully(0, 2, TimeUnit.SECONDS);

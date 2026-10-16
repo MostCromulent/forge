@@ -127,14 +127,16 @@ public class ConquestSessionTest extends SessionsTest {
         final TestBrowser host = hostInConquest(data);
         final JsonObject state = host.awaitNewest("conquestState");
         Assert.assertEquals(state.get("plane").getAsString(), "Zendikar");
-        Assert.assertEquals(state.getAsJsonArray("regions").size(), 6);
-        Assert.assertEquals(state.getAsJsonArray("cells").size(), 54);
+        // The plane's own data says how many regions and places it has
+        final int events = data.getCurrentPlane().getEventCount();
+        Assert.assertEquals(state.getAsJsonArray("regions").size(), data.getCurrentPlane().getRegions().size());
+        Assert.assertEquals(state.getAsJsonArray("cells").size(), events);
         Assert.assertEquals(cell(state, 0, 0, 0).get("state").getAsString(), "open");
         Assert.assertEquals(cell(state, 0, 1, 0).get("state").getAsString(), "fog");
         Assert.assertFalse(cell(state, 0, 1, 0).has("name"), "a place not yet found says what is there");
         final JsonObject bar = host.awaitNewest("campaignBar");
         Assert.assertEquals(balance(bar, "IMG_AETHER_SHARD"), data.getAEtherShards());
-        Assert.assertTrue(str(bar, "line").endsWith("/ 54"), "the bar does not count the plane's 54 events: " + str(bar, "line"));
+        Assert.assertTrue(str(bar, "line").endsWith("/ " + events), "the bar does not count the plane's events: " + str(bar, "line"));
     }
 
     // Fails if selecting a place moves the player, or closes the portal of the place stood on

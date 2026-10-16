@@ -7,18 +7,36 @@ on:
   push:
     paths:
       - 'forge-gui-web/**'
-      # The module builds on the rest of Forge, and its page reads the English language file
-      - '**/*.java'
-      - '**/pom.xml'
+      # The module builds on forge-gui and the modules under it, and nothing else in Forge
+      - 'pom.xml'
+      - 'forge-core/**'
+      - 'forge-game/**'
+      - 'forge-ai/**'
+      - 'forge-gui/pom.xml'
+      - 'forge-gui/src/**'
+      # The page reads the English language file, and the tests read these data folders
       - 'forge-gui/res/languages/en-US.properties'
+      - 'forge-gui/res/quest/**'
+      - 'forge-gui/res/conquest/**'
+      - 'forge-gui/res/formats/**'
+      - 'forge-gui/res/blockdata/**'
       - '.github/workflows/test-web.yml'
   pull_request:
     paths:
       - 'forge-gui-web/**'
-      # The module builds on the rest of Forge, and its page reads the English language file
-      - '**/*.java'
-      - '**/pom.xml'
+      # The module builds on forge-gui and the modules under it, and nothing else in Forge
+      - 'pom.xml'
+      - 'forge-core/**'
+      - 'forge-game/**'
+      - 'forge-ai/**'
+      - 'forge-gui/pom.xml'
+      - 'forge-gui/src/**'
+      # The page reads the English language file, and the tests read these data folders
       - 'forge-gui/res/languages/en-US.properties'
+      - 'forge-gui/res/quest/**'
+      - 'forge-gui/res/conquest/**'
+      - 'forge-gui/res/formats/**'
+      - 'forge-gui/res/blockdata/**'
       - '.github/workflows/test-web.yml'
   workflow_dispatch:
 
@@ -35,13 +53,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'maven'
-
-      # Node itself is kept in the Maven repository; the packages npm ci installs are kept here
-      - name: Cache npm packages
-        uses: actions/cache@v5
-        with:
-          path: ~/.npm
-          key: npm-${{ hashFiles('forge-gui-web/package-lock.json') }}
 
       - name: Install virtual framebuffer (if not available) to allow running GUI on a headless server
         run: command -v Xvfb >/dev/null 2>&1 || { sudo apt update && sudo apt install -y xvfb; }

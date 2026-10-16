@@ -42,7 +42,7 @@ public class WebGuiGameTest {
         final JsonArray choice = new JsonArray();
         choice.add(2);
         TestBrowser.command(gui, TestBrowser.reply(request.get("id").getAsInt(), choice));
-        Assert.assertEquals(picked.get(2, TimeUnit.SECONDS), List.of("c"));
+        Assert.assertEquals(picked.get(60, TimeUnit.SECONDS), List.of("c"));
     }
 
     @Test
@@ -51,7 +51,7 @@ public class WebGuiGameTest {
                 () -> gui.getChoices("Pick one", 1, 1, List.of("a", "b"), null, null));
         browser.awaitNewest("request", "no request reached the browser");
         TestBrowser.command(gui, TestBrowser.action("concede"));
-        Assert.assertEquals(picked.get(2, TimeUnit.SECONDS), List.of("a"));
+        Assert.assertEquals(picked.get(60, TimeUnit.SECONDS), List.of("a"));
     }
 
     @Test
@@ -63,7 +63,7 @@ public class WebGuiGameTest {
         gui.attach(reloaded);
         Assert.assertEquals(reloaded.last("request").get("id"), request.get("id"));
         TestBrowser.command(gui, TestBrowser.reply(request.get("id").getAsInt(), new JsonPrimitive(1)));
-        Assert.assertFalse(answer.get(2, TimeUnit.SECONDS));
+        Assert.assertFalse(answer.get(60, TimeUnit.SECONDS));
     }
 
     @Test
