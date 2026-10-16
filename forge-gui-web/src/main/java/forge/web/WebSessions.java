@@ -191,7 +191,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             netLog.info("{} left.", session.label());
             session.disconnected(channel);
             announcePresence();
-            timer.schedule(session::goneAWhile, DRAFT_HOLD_MILLIS, TimeUnit.MILLISECONDS);
+            timer.schedule(session.eventSeat()::goneAWhile, DRAFT_HOLD_MILLIS, TimeUnit.MILLISECONDS);
         }
         letGo();
         // A seat held by a browser that never comes back would leave nobody able to set the table
@@ -277,7 +277,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     /** The host's lobby, where the table's event and its draft run, or null when nobody is hosting one. */
     ServerGameLobby hostLobby() {
         final WebSession h = host;
-        return h == null ? null : h.hostedLobby();
+        return h == null ? null : h.local().hostedLobby();
     }
 
     /** Every browser is sent the table again, after a change no lobby update carries. */
@@ -287,7 +287,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
 
     /** Every seat's dial reads again which pod seats are held, after a player went or came back. */
     void seatsChanged() {
-        byId.values().forEach(WebSession::seatsChanged);
+        byId.values().forEach(s -> s.eventSeat().seatsChanged());
     }
 
     /** Drops every seat and stops the server, guests first so none of them outlives the game they were in. */
@@ -332,7 +332,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             }
         }
         final WebSession h = host;
-        return h != null && (h.computerNames().stream().anyMatch(name::equalsIgnoreCase)
+        return h != null && (h.lobby().computerNames().stream().anyMatch(name::equalsIgnoreCase)
                 || appSeats().stream().anyMatch(s -> name.equalsIgnoreCase(s.getName())));
     }
 
@@ -342,7 +342,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         if (h == null) {
             return List.of();
         }
-        final List<LobbySlot> seats = new ArrayList<>(h.remoteSeats());
+        final List<LobbySlot> seats = new ArrayList<>(h.lobby().remoteSeats());
         seats.removeIf(seat -> byId.values().stream().anyMatch(s -> s.hasGame() && seat.getName().equalsIgnoreCase(s.playerName())));
         return seats;
     }

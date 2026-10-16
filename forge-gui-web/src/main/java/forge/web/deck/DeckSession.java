@@ -113,7 +113,7 @@ public final class DeckSession implements IHasForgeLog {
             // The stars are the host's own, kept where desktop keeps them
             .on(DeckFavourite.class, (d, ch, star) -> {
                 if (d.host.getAsBoolean()) {
-                    d.lobby.setFavourite(star.key(), star.on());
+                    d.lobby.catalog().setFavourite(star.key(), star.on());
                     d.lobby.sendDecks(ch);
                 }
             })
@@ -189,7 +189,7 @@ public final class DeckSession implements IHasForgeLog {
             readOnly = false;
             target = guest ? new DeckEditor.Device(UUID.randomUUID().toString()) : new DeckEditor.Stored(storages.of(check.format()));
         } else {
-            deck = o.key() == null ? null : lobby.deck(o.key());
+            deck = o.key() == null ? null : lobby.catalog().deck(o.key());
             if (deck == null) {
                 channel.send(new Notice(Localizer.getInstance().getMessage("lblWebEditorCannotOpen"), null, true));
                 return;
@@ -219,7 +219,7 @@ public final class DeckSession implements IHasForgeLog {
     /** Deletes a deck as the editor's Delete does, without the editor, which may be open on another deck. */
     private synchronized void deleteDeck(final BrowserChannel channel, final String key) {
         final boolean guest = !host.getAsBoolean();
-        final Deck deck = lobby.deck(key);
+        final Deck deck = lobby.catalog().deck(key);
         final String problem;
         if (deck == null || DeckCatalog.readOnly(key, guest)) {
             problem = Localizer.getInstance().getMessage("lblWebEditorOnlyOwnDelete");
@@ -375,14 +375,14 @@ public final class DeckSession implements IHasForgeLog {
     /** Registers the editor's deck under the key the finder gives it now, which a rename or a move can have changed. */
     private String adopt(final DeckEditor done) {
         if (done.target() instanceof DeckEditor.Device d) {
-            return lobby.adopt(DeckCatalog.DEVICE, d.id(), done.deck());
+            return lobby.catalog().adopt(DeckCatalog.DEVICE, d.id(), done.deck());
         }
         // The host's pool is kept among the event decks, which the finder lists under their own heading
         if (eventPool) {
-            return lobby.adopt(DeckCatalog.EVENT, "", done.deck());
+            return lobby.catalog().adopt(DeckCatalog.EVENT, "", done.deck());
         }
         final boolean atRoot = done.target() instanceof DeckEditor.Stored s && s.storage() == storages.of(done.check().format());
-        return lobby.adopt(DeckCatalog.MINE, atRoot ? "" : editorPath, done.deck());
+        return lobby.catalog().adopt(DeckCatalog.MINE, atRoot ? "" : editorPath, done.deck());
     }
 
     private ToBrowser.CataloguePage catalogue(final CatalogueQuery q) {
@@ -558,9 +558,9 @@ public final class DeckSession implements IHasForgeLog {
     /** A saved deck's key, registered again after the list was rebuilt, in case the rebuild left it out (Brawl drops illegal decks). */
     private String relisted(final String key, final Deck deck) {
         if (key.startsWith(DeckCatalog.DEVICE + ":")) {
-            return lobby.adopt(DeckCatalog.DEVICE, key.substring(DeckCatalog.DEVICE.length() + 1), deck);
+            return lobby.catalog().adopt(DeckCatalog.DEVICE, key.substring(DeckCatalog.DEVICE.length() + 1), deck);
         }
-        return lobby.adopt(key.substring(0, key.indexOf(':')), "", deck);
+        return lobby.catalog().adopt(key.substring(0, key.indexOf(':')), "", deck);
     }
 
     /** Saves to the host's decks, or to the decks loaded from links; null when the name is taken and the browser must be asked. */
@@ -580,7 +580,7 @@ public final class DeckSession implements IHasForgeLog {
             }
             storage.add(deck);
         }
-        return lobby.adopt(linked ? DeckCatalog.LINKED : DeckCatalog.MINE, "", deck);
+        return lobby.catalog().adopt(linked ? DeckCatalog.LINKED : DeckCatalog.MINE, "", deck);
     }
 
     private String saveOnDevice(final BrowserChannel channel, final Deck deck, final Check check, final ImportCommit c) {
@@ -601,7 +601,7 @@ public final class DeckSession implements IHasForgeLog {
         }
         final String kept = id == null ? UUID.randomUUID().toString() : id;
         sendDeviceDeck(kept, text(deck), check.format());
-        return lobby.adopt(DeckCatalog.DEVICE, kept, deck);
+        return lobby.catalog().adopt(DeckCatalog.DEVICE, kept, deck);
     }
 
     /** Keeps a guest's deck in the lobby's list and sends it to the guest's browser, which stores it. */

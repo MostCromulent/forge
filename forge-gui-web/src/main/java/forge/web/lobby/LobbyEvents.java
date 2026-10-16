@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /** The Limited half of a table: the draft and sealed events hosted through the lobby. */
-final class LobbyEvents {
+public final class LobbyEvents {
     private final Lobby owner;
     private final LocalGame local;
 
@@ -51,7 +51,7 @@ final class LobbyEvents {
     }
 
     /** Whether every seat's finder lists only the table's event's decks, as desktop's conformance switch sets. */
-    void setEventDecksOnly(final boolean on) {
+    public void setEventDecksOnly(final boolean on) {
         final ServerGameLobby lobby = owner.host();
         if (lobby != null && lobby.getData().getActiveEventId() != null) {
             lobby.selectEventForMatch(lobby.getData().getActiveEventId(), on);
@@ -117,7 +117,7 @@ final class LobbyEvents {
     }
 
     /** Plays an event's decks at this table, where type is Draft or Sealed, and answers why not, or null. */
-    String playEvent(final String eventId, final GameType type, final boolean decksOnly) {
+    public String playEvent(final String eventId, final GameType type, final boolean decksOnly) {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null || eventId == null) {
             return null;
@@ -133,7 +133,7 @@ final class LobbyEvents {
     }
 
     /** Hosts a past event again, its kind read from its pools as desktop reads it. */
-    String hostAgain(final String eventId) {
+    public String hostAgain(final String eventId) {
         Deck pool = null;
         synchronized (DeckCatalog.DECKS) {
             for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
@@ -150,7 +150,7 @@ final class LobbyEvents {
     }
 
     /** Starts a new event of the same kind and keeps the old one's pools so it can be played again, answering why not, or null. */
-    String newEvent() {
+    public String newEvent() {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null || !Lobby.limited(lobby)) {
             return null;
@@ -168,7 +168,7 @@ final class LobbyEvents {
     }
 
     /** Deletes a past event's pools from the host's event decks. The event the table is playing stays. Answers why not, or null. */
-    String forgetEvent(final String eventId) {
+    public String forgetEvent(final String eventId) {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null || eventId == null) {
             return null;
@@ -188,7 +188,7 @@ final class LobbyEvents {
     }
 
     /** Switches the table to a kind of event, or to Constructed when kind is null, and answers why not, or null. */
-    String setLimited(final EventKind kind) {
+    public String setLimited(final EventKind kind) {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null) {
             return null;
@@ -215,7 +215,7 @@ final class LobbyEvents {
         final boolean sealed = kind == EventKind.sealed;
         // An event is played without a format or casual variant, as desktop's Limited mode hides them
         owner.setFormat(GameType.Constructed.name());
-        for (final GameType v : Lobby.VARIANTS) {
+        for (final GameType v : LobbyFormats.VARIANTS) {
             lobby.removeVariant(v);
         }
         lobby.setLimitedType(sealed ? GameType.Sealed : GameType.Draft);
@@ -225,7 +225,7 @@ final class LobbyEvents {
     }
 
     /** Answers why not, or null. Building the product can wait on a web site, so this runs off the host UI thread and sets the table up on it. */
-    String setUpEvent(final EventSetup s) {
+    public String setUpEvent(final EventSetup s) {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null || !Lobby.limited(lobby)) {
             return Localizer.getInstance().getMessage("lblWebLobbyChooseLimited");
@@ -264,7 +264,7 @@ final class LobbyEvents {
     }
 
     /** Deals the packs or pools once every seat is ready, as desktop's Start Event does. Answers why not, or null. Runs on the host UI thread, which the dealing holds while it opens every pool. */
-    String startEvent() {
+    public String startEvent() {
         final ServerGameLobby lobby = owner.host();
         final NetworkEvent event = lobby == null ? null : lobby.getCurrentEvent();
         if (event == null || (event.getDraft() == null && event.getSealedGenerator() == null)) {
@@ -285,13 +285,13 @@ final class LobbyEvents {
     }
 
     /** Whether the host's setup form is open: a Limited table whose event has not begun. */
-    boolean settingUpEvent() {
+    public boolean settingUpEvent() {
         final GameLobby lobby = owner.view();
         return lobby != null && Lobby.limited(lobby) && !eventStarted();
     }
 
     /** Sits a seat out of the next match, or brings it back. The host's to do, and not while the pod drafts. */
-    void sitOut(final int index, final boolean sittingOut) {
+    public void sitOut(final int index, final boolean sittingOut) {
         final ServerGameLobby lobby = owner.host();
         if (lobby != null && Lobby.limited(lobby) && !Lobby.drafting(lobby) && index >= 0 && index < lobby.getNumberOfSlots()) {
             lobby.getSlot(index).setSittingOut(sittingOut);

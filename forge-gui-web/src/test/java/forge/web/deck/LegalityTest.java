@@ -7,7 +7,7 @@ import forge.game.GameType;
 import forge.item.PaperCard;
 import forge.model.FModel;
 import forge.web.WebTestSupport;
-import forge.web.lobby.Lobby;
+import forge.web.lobby.LobbyFormats;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -35,7 +35,7 @@ public class LegalityTest {
     @Test
     public void commanderFormatsAreNotConstructedCardPools() {
         final List<String> offered = new ArrayList<>();
-        Lobby.cardPools().groups().forEach(g -> offered.addAll(g.formats()));
+        LobbyFormats.cardPools().groups().forEach(g -> offered.addAll(g.formats()));
         Assert.assertTrue(offered.contains("Premodern"), "a casual Constructed format is missing: " + offered);
         for (final String name : List.of("Commander", "Brawl", "Oathbreaker", "PreDH")) {
             Assert.assertFalse(offered.contains(name), name + " is offered as a Constructed card pool");
