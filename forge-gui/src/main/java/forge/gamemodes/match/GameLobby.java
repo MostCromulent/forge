@@ -489,8 +489,6 @@ public abstract class GameLobby implements IHasGameType {
             }
         }
 
-        // The flag decides sides under Archenemy; a seat's own team is set only when the role moves
-        final boolean archenemyTeams = variantTypes.contains(GameType.Archenemy);
         final GameType baseGameType = data.isLimitedMode() ? data.getLimitedType() : GameType.Constructed;
         final List<RegisteredPlayer> players = new ArrayList<>();
         final Map<RegisteredPlayer, IGuiGame> guis = Maps.newHashMap();
@@ -592,7 +590,7 @@ public abstract class GameLobby implements IHasGameType {
                 rp = RegisteredPlayer.forVariants(activeSlots.size(), variantTypes, deck, schemes, isArchenemy, planes, avatarPool);
             }
 
-            rp.setTeamNumber(archenemyTeams ? (isArchenemy ? 0 : 1) : team);
+            rp.setTeamNumber(team);
             players.add(rp.setPlayer(lobbyPlayer));
 
             if (!isAI) {
