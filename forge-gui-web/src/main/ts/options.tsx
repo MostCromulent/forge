@@ -243,7 +243,7 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
           <input type="range" min={def.min} max={def.max} step={def.step ?? 5} value={Number(value)}
             class={Number(value) > Number(def.min) ? 'level' : 'level off'} style={{ '--level': (Number(value) - Number(def.min)) / (Number(def.max) - Number(def.min)) }}
             onInput={e => change(Number(e.currentTarget.value))} />
-          <span>{def.unit === 'seconds' ? t('lblWebOptionsSeconds', seconds(Number(value))) : t('lblWebOptionsPercent', Number(value))}</span>
+          <span>{def.unit === 'seconds' ? t('lblWebOptionsSeconds', seconds(Number(value))) : `${Number(value)}%`}</span>
         </div>
       );
   }

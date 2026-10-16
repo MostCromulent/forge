@@ -137,7 +137,7 @@ public final class WebSession implements IHasForgeLog {
         this.ui = ui;
         this.sessions = sessions;
         final Map<String, DeckCatalog.OnDevice> device = new ConcurrentHashMap<>();
-        this.lobby = new Lobby(local, () -> !isHost, device);
+        this.lobby = new Lobby(local, () -> !isHost, device, ui);
         this.decks = new DeckSession(lobby, ui, () -> isHost, () -> stage instanceof Setup, device);
         this.limited = new OfflineLimited(this, ui, lobby, decks, local);
         this.campaigns = new CampaignSession(new CampaignHost());
@@ -432,12 +432,15 @@ public final class WebSession implements IHasForgeLog {
             .on(SetLimited.class, atEvent((s, ch, l) -> s.setLimited(ch, l.kind())))
             .on(SitOut.class, atEvent((s, ch, o) -> s.lobby.sitOut(o.index(), o.sittingOut())))
             // Building a product can wait on a web site, and dealing packs opens every pool, so neither runs here
-            .on(EventSetup.class, atEvent((s, ch, e) -> s.ui.runBackgroundTask("Event", () -> reportProblem(ch, s.lobby.setUpEvent(e)))))
+            .on(EventSetup.class, atEvent((s, ch, e) -> s.ui.runBackgroundTask("Event", () -> {
+                reportProblem(ch, s.lobby.setUpEvent(e));
+                s.lobby.sendState(ch);
+            })))
             .on(Plain.eventStart, atEvent((s, ch, c) -> {
                 if (s.limited.draft() != null) {
                     ch.send(error(Localizer.getInstance().getMessage("lblWebSessionFinishDraft")));
                 } else {
-                    s.ui.runBackgroundTask("Event", () -> reportProblem(ch, s.lobby.startEvent()));
+                    reportProblem(ch, s.lobby.startEvent());
                 }
             }))
             .on(GiveSeat.class, host((s, ch, g) -> s.sessions.giveSeat(g.from(), g.to())))

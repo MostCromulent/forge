@@ -174,7 +174,7 @@ public final class DeckImport {
             if (at != null) {
                 kinds[at] = ImportLineKind.problem;
                 cardProblems.add(new ImportProblem(at, Localizer.getInstance().getMessage("lblWebImportLineCard", at + 1, card),
-                        Localizer.getInstance().getMessage("lblWebLegalitySentence", StringUtils.capitalize(flag)),
+                        StringUtils.capitalize(flag) + ".",
                         List.of(new ImportFix(ImportFixKind.leaveOut, Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null))));
             }
         });

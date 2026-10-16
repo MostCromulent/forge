@@ -13,7 +13,7 @@ export interface Picker {
   seat: number;
 }
 
-/** How an open zone is ordered: as the zone holds them, by name, or by card type. */
+/** How an open zone is ordered: as the zone holds them, by name, by card type, or by mana value. */
 export type ZoneSort = 'order' | 'name' | 'type' | 'mana';
 
 export interface UiState {

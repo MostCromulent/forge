@@ -284,7 +284,6 @@ public final class DeckSession implements IHasForgeLog {
         channel.send(new EditorMessage(editor.state()));
     }
 
-    /** The editor, when the deck open in it is built from a collection, or null. */
     /** Runs slow work on a background thread, except over a campaign's collection, which only the campaign thread this runs on may read. */
     private void slow(final String name, final Runnable work) {
         if (collectionEditor() != null) {
@@ -294,6 +293,7 @@ public final class DeckSession implements IHasForgeLog {
         }
     }
 
+    /** The editor, when the deck open in it is built from a collection, or null. */
     private synchronized DeckEditor collectionEditor() {
         return editor != null && editor.collection() != null ? editor : null;
     }
@@ -387,11 +387,14 @@ public final class DeckSession implements IHasForgeLog {
 
     private ToBrowser.CataloguePage catalogue(final CatalogueQuery q) {
         final DeckEditor e;
+        final Check check;
+        final Deck deck;
+        // A copy, since the search runs off the socket thread while an edit there changes the open deck
         synchronized (this) {
             e = editor;
+            check = e == null ? Check.none() : e.check();
+            deck = e == null ? new Deck("") : new Deck(e.deck());
         }
-        final Check check = e == null ? Check.none() : e.check();
-        final Deck deck = e == null ? new Deck("") : e.deck();
         final DeckSection section = q.section();
         if (section != null && section != DeckSection.Main && section != DeckSection.Sideboard && section != DeckSection.Commander) {
             // A section's own cards answer to no format, so none is left out as unusable

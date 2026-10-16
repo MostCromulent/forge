@@ -224,7 +224,7 @@ final class LobbyEvents {
         return null;
     }
 
-    /** Answers why not, or null, and must run off the socket thread because building the product can wait on a web site. */
+    /** Answers why not, or null. Building the product can wait on a web site, so this runs off the host UI thread and sets the table up on it. */
     String setUpEvent(final EventSetup s) {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null || !Lobby.limited(lobby)) {
@@ -237,8 +237,10 @@ final class LobbyEvents {
             if (lobby.getData().getLimitedType() == GameType.Sealed) {
                 final SealedCardPoolGenerator gen = OfflineEvents.generator(new SealedCreate(s.product(), s.block(), s.combo(),
                         s.edition(), s.template(), s.cubeId(), s.packs(), "", false));
-                lobby.createEvent(EventFormat.SEALED);
-                return lobby.configureEvent(LimitedPoolType.valueOf(s.product()), gen, 0, 0) ? null : Localizer.getInstance().getMessage("lblWebLobbySealedSetUpFailed");
+                return owner.onTable(() -> {
+                    lobby.createEvent(EventFormat.SEALED);
+                    return lobby.configureEvent(LimitedPoolType.valueOf(s.product()), gen, 0, 0) ? null : Localizer.getInstance().getMessage("lblWebLobbySealedSetUpFailed");
+                });
             }
             final BoosterDraft draft = OfflineEvents.draft(new DraftStart(s.product(), s.block(), s.combo(), s.cube(), s.theme(),
                     s.cubeId())).get();
@@ -251,15 +253,17 @@ final class LobbyEvents {
             if (s.pickRule() != null) {
                 draft.setDoublePick(DraftOptions.DoublePick.valueOf(s.pickRule()));
             }
-            lobby.createEvent(EventFormat.BOOSTER_DRAFT);
-            return lobby.configureEvent(LimitedPoolType.valueOf(s.product()), draft, Math.max(0, s.timer()), Math.max(0, s.grace()))
-                    ? null : Localizer.getInstance().getMessage("lblWebLobbyDraftSetUpFailed");
+            return owner.onTable(() -> {
+                lobby.createEvent(EventFormat.BOOSTER_DRAFT);
+                return lobby.configureEvent(LimitedPoolType.valueOf(s.product()), draft, Math.max(0, s.timer()), Math.max(0, s.grace()))
+                        ? null : Localizer.getInstance().getMessage("lblWebLobbyDraftSetUpFailed");
+            });
         } catch (final RuntimeException e) {
             return e.getMessage() == null ? Localizer.getInstance().getMessage("lblWebLobbyEventSetUpFailed") : e.getMessage();
         }
     }
 
-    /** Deals the packs or pools once every seat is ready, as desktop's Start Event does. Answers why not, or null. */
+    /** Deals the packs or pools once every seat is ready, as desktop's Start Event does. Answers why not, or null. Runs on the host UI thread, which the dealing holds while it opens every pool. */
     String startEvent() {
         final ServerGameLobby lobby = owner.host();
         final NetworkEvent event = lobby == null ? null : lobby.getCurrentEvent();
@@ -271,7 +275,7 @@ final class LobbyEvents {
         }
         final LobbySlot unready = lobby.findFirstUnreadySlot();
         if (unready != null) {
-            return Localizer.getInstance().getMessage("lblWebLobbyNotReady", String.valueOf(unready.getName()));
+            return Localizer.getInstance().getMessage("lblPlayerIsNotReady", String.valueOf(unready.getName()));
         }
         if (event.getFormat() == EventFormat.SEALED) {
             lobby.startSealedEvent();

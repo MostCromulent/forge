@@ -126,7 +126,7 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
   // What is about to resolve is said here, since the drawer covers the stack
   const top = (derefAll(model, game(model)?.Stack) as StackItemView[])[0];
   const source = top ? deref(model, top.SourceCard) as CardView | undefined : undefined;
-  q(head, '.on-stack').textContent = top ? t('lblWebPortraitStackTop', source ? stateOf(model, source).Name ?? '' : '', deref(model, top.ActivatingPlayer)?.Name ?? '') : '';
+  q(head, '.on-stack').textContent = top ? `${source ? stateOf(model, source).Name ?? '' : ''} (${deref(model, top.ActivatingPlayer)?.Name ?? ''})` : '';
   head.style.bottom = `${innerHeight - root.getBoundingClientRect().top - head.offsetHeight}px`;
   return true;
 }

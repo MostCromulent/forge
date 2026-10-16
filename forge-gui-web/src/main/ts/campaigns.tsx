@@ -1,4 +1,4 @@
-// Where the campaign modes plug into the page. campaign/register.ts fills it in, so a build can leave the campaigns out
+// Where the campaign modes plug into the page. campaign/register.tsx fills it in, so a build can leave the campaigns out
 
 import type { FunctionComponent, VNode } from 'preact';
 import type { Actions, PageActions } from './actions';

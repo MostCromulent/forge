@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** The game's objects as the browser holds them, changed by the same rules as src/main/ts/model.ts so the two copies stay equal. */
+/** The game's objects as the browser holds them, changed by the same rules as src/main/ts/model.ts so the two copies stay equal. The server keeps it so a browser that reloads is sent the game as it stands. */
 public final class BrowserModel {
     private final Map<Integer, JsonObject> objects = new LinkedHashMap<>();
     private int root = -1;

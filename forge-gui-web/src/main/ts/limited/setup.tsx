@@ -106,7 +106,7 @@ export function sealedSteps(options: LimitedOptions): Step<SealedValue>[] {
 
 function defaultName(v: SealedValue): string {
   const what = v.product === 'Prerelease' ? t('lblLimitedPrerelease') : isBlock(v) ? v.block ?? '' : productName(v.product);
-  return t('lblWebSetupDefaultName', what, shortDay());
+  return `${what} ${shortDay()}`;
 }
 
 export function sealedSentence(options: LimitedOptions, v: SealedValue): string {
@@ -115,7 +115,7 @@ export function sealedSentence(options: LimitedOptions, v: SealedValue): string 
     case 'Prerelease': return t('lblWebSetupSealedPrereleaseSentence', options.prereleases.find(e => e.code === v.edition)?.name ?? '');
     case 'Custom': return t('lblWebSetupSealedCustomSentence', v.packs ?? 0, v.template ?? '');
     case 'Import': return t('lblWebSetupSealedImportSentence', (v.packs ?? 0) + 1, v.cubeId ?? '');
-    default: return t('lblWebSetupBlockSentence', v.block ?? '', v.combo ?? '');
+    default: return `${v.block ?? ''}: ${v.combo ?? ''}.`;
   }
 }
 
@@ -362,7 +362,7 @@ export function draftSentence(v: DraftValue, online = false): string {
     case 'Custom': return t('lblWebSetupDraftOf', v.cube ?? '');
     case 'Chaos': return t('lblWebSetupChaosSentence', v.theme ?? '');
     case 'Import': return t('lblWebSetupDraftCubeCobraSentence', v.cubeId ?? '');
-    default: return t('lblWebSetupBlockSentence', v.block ?? '', draftCombo(v) ?? '');
+    default: return `${v.block ?? ''}: ${draftCombo(v) ?? ''}.`;
   }
 }
 
@@ -372,7 +372,7 @@ function draftProduct(v: DraftValue): string | null {
   switch (v.product) {
     case 'Block': case 'FantasyBlock': {
       const sets = draftCombo(v);
-      return v.block ? (sets ? t('lblWebSetupBlockSets', v.block, sets) : v.block) : name;
+      return v.block ? (sets ? `${v.block}: ${sets}` : v.block) : name;
     }
     case 'Custom': return v.cube ?? name;
     case 'Chaos': return v.theme ? t('lblWebSetupChaosTheme', v.theme) : name;

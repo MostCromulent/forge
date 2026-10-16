@@ -76,7 +76,7 @@ public class GuestSeatTest extends SessionsTest {
                 && l.getAsJsonArray("seats").get(guestSeat).getAsJsonObject().has("deckName"), "the host's table never showed the guest's deck");
         // The table that shows the guest's deck is the one to read, because the host's copy can trail the server's by an update
         for (final var problem : table.getAsJsonArray("problems")) {
-            Assert.assertFalse(problem.getAsString().endsWith(" has no deck."),
+            Assert.assertFalse(problem.getAsString().startsWith("Please specify") && problem.getAsString().endsWith(" Guest"),
                     "the host still counted the guest as having no deck: " + problem.getAsString());
         }
 

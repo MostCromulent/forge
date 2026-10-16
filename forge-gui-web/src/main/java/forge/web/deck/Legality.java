@@ -40,10 +40,10 @@ final class Legality {
             }
             if (problemCount() == 1) {
                 if (!deckItems.isEmpty()) {
-                    return Localizer.getInstance().getMessage("lblWebLegalitySentence", StringUtils.capitalize(deckItems.get(0)));
+                    return StringUtils.capitalize(deckItems.get(0)) + ".";
                 }
                 final Map.Entry<String, String> only = flags.entrySet().iterator().next();
-                return Localizer.getInstance().getMessage("lblWebLegalitySentence", describe(only.getKey(), only.getValue(), kinds.get(only.getKey())));
+                return describe(only.getKey(), only.getValue(), kinds.get(only.getKey())) + ".";
             }
             final List<String> parts = new ArrayList<>(deckItems.subList(0, Math.min(2, deckItems.size())));
             final Map<String, Integer> counted = new LinkedHashMap<>();

@@ -140,7 +140,7 @@ function createPanel(): HTMLElement {
 function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, select: CardClick): void {
   const player = model.objects.get(p.player);
   const cards = shown(model, zone(model, player, p.zone));
-  q(el, '.zone-who').textContent = t('lblWebZonePlayersZone', player?.Name ?? '', zoneTitle(p.zone));
+  q(el, '.zone-who').textContent = `${player?.Name ?? ''} \u00b7 ${zoneTitle(p.zone)}`;
   q(el, '.zone-count').textContent = t(cards.length === 1 ? 'lblWebOneCard' : 'lblWebNCards', cards.length);
   const find = q<HTMLInputElement>(el, '.zone-find');
   if (find.value !== ui.zoneSearch) {
@@ -212,7 +212,7 @@ function drawBar(root: HTMLElement, model: Model, panels: Panel[]): void {
     q(bar, '.zone-unfold').textContent = t('lblWebZoneShowCards');
     q(bar, '.zone-shut').setAttribute('aria-label', t('lblWebZoneClose'));
   }
-  q(bar, 'b').textContent = panels.length > 1 ? t('lblWebZoneOpenZones') : t('lblWebZonePlayersZone', player?.Name ?? '', zoneTitle(first.zone));
+  q(bar, 'b').textContent = panels.length > 1 ? t('lblWebZoneOpenZones') : `${player?.Name ?? ''} \u00b7 ${zoneTitle(first.zone)}`;
   q(bar, '.zone-count').textContent = count;
   q(bar, '.zone-unfold').onclick = () => changeUi(u => { u.zonesMinimised = false; });
   // Folding away is not closing, so the way out is still only offered for the ones the player opened
