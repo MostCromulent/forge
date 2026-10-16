@@ -373,7 +373,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return lengths;
     }
 
-    /** The opponent's creature of highest mana value, else its first spell, as the picture of a duel. */
+    /** A deck's creature of highest mana value, else its first spell, as the picture of the deck or duel. */
     private static String face(final Deck deck) {
         PaperCard best = null;
         PaperCard firstSpell = null;
@@ -649,7 +649,6 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         reward = new Reward(steps);
     }
 
-    /** The quest's record, purse and collection, its tournament placings, and in Fantasy mode what it owns of the bazaar. */
     @Override
     public CataloguePage cards(final CatalogueQuery q) {
         return QuestShop.cards(q);
@@ -665,6 +664,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return QuestShop.trade(source, picks);
     }
 
+    /** The quest's record, purse and collection, its tournament placings, and in Fantasy mode what it owns of the bazaar. */
     @Override
     public CampaignStats stats(final String scope) {
         final QuestController quest = quest();

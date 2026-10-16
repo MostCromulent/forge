@@ -38,7 +38,7 @@ public final class CardCatalog {
     public record Query(String text, String colours, String type, String filters, String sort, int offset, boolean showAll) {
     }
 
-    /** What a collection adds to a card's row: whether it is new, its price, how many its list holds, how many the player owns, a line about it, and the key a trade names it by when its image key is not enough. */
+    /** What a collection adds to a card's row. key names the card in a trade when its image key is not enough. */
     public record Extra(Boolean isNew, Integer value, Integer count, Integer owned, String note, String key) {
     }
 
@@ -275,7 +275,7 @@ public final class CardCatalog {
         return StringUtils.stripAccents(s.toLowerCase()).replaceAll("[^a-z0-9 ]", "");
     }
 
-    // A card lands under the first heading its type matches, the order a decklist is normally written in
+    // A card with several types goes under the first match in this order, so an artifact land is a land
     static String heading(final PaperCard card) {
         final CardType type = card.getRules().getType();
         if (type.isLand()) {

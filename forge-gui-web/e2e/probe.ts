@@ -63,7 +63,6 @@ function listen(page: Page, who: string): void {
   });
 }
 
-/** What the page shows and asks, in one line, for a wait that ran out. */
 /** Waits until everything moving on the page has stopped, from the next frame on. Endless animations, such as a pulse, are left out. */
 export async function settled(page: Page): Promise<void> {
   await page.evaluate(async () => {
@@ -73,6 +72,7 @@ export async function settled(page: Page): Promise<void> {
   });
 }
 
+/** What the page shows and asks, in one line, for a wait that ran out. */
 export function explain(page: Page): Promise<string> {
   return page.evaluate(() => {
     const m = window.forge?.model;
@@ -210,8 +210,7 @@ export async function board(p: Probe, state: string, table: Table = {}): Promise
     return lobby?.seats.length === players && (!game || lobby.formats.find(f => f.id === lobby.format)?.name === game);
   }, want);
   p.mark('table');
-  // Each seat without a legal deck is dealt the first legal one by name, as the finder lists them. The deck list for a
-  // new game arrives after it, so a seat dealt from the old list is dealt again until the table can start.
+  // A new game's deck list arrives after it, so seats are dealt legal decks again until the table can start
   for (let tries = 0; ; tries++) {
     const ready = await page.evaluate(() => {
       const { actions, model } = window.forge;

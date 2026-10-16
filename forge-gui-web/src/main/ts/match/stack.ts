@@ -88,8 +88,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
       : paying ? `${t('lblStack')} \u00b7 ${paying} (${me(model)?.Name ?? ''})` : t('lblStack');
     // The dock is drawn after this and can change height, which moves the strip the chip sits on
     requestAnimationFrame(() => place(root));
-    // Over whichever half of the board holds fewer of the top item's targets, so they stay in view; with nothing to choose
-    // between them it opens over the opponent's, since yours is where an answer comes from
+    // Over whichever half holds fewer of the top item's targets, so they stay in view, and over the opponent's on a tie
     const targets = top ? stackTargets(model, top) : [];
     const mine = targets.filter(o => o.$key === me(model)?.$key || document.querySelector(`#me .card[data-key="${o.$key}"]`)).length;
     root.classList.toggle('over-them', mine >= targets.length - mine);
@@ -315,9 +314,8 @@ function arrive(el: HTMLElement, source: string, collapsed: boolean): void {
 const GONE_MS = 140;
 
 /**
- * Shows what leaves the stack this frame, before its element is taken away. A spell that resolves is carried off by its
- * own card's flight, so only an ability fades. One that fizzled, or was taken off while something else resolved (it was
- * countered), is unwoven where it stands.
+ * Shows what leaves the stack this frame, before its element goes. A resolving spell is carried off by its card's flight, so only
+ * an ability fades. One that fizzled, or was taken off while something else resolved, is unwoven where it stands.
  */
 function showLeaving(pile: HTMLElement, staying: Set<string>, events: readonly GameEvent[]): void {
   if (reducedMotion()) return;

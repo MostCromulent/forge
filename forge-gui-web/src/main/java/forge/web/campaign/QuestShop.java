@@ -156,7 +156,7 @@ final class QuestShop {
         final boolean shop = "shop".equals(q.source());
         final ItemPool<InventoryItem> stock = QuestGame.quest().getCards().getShopList();
         final ItemPool<PaperCard> owned = QuestGame.quest().getCards().getCardpool();
-        // Without these the shop's statics are unset, and every card would sell for 1 credit
+        // Without this the shop's statics are unset, and every card would sell for 1 credit
         final double multiplier = QuestSpellShop.updateMultiplier();
         final Map<PaperCard, Integer> using = shop ? Map.of() : decksUsing();
         final CataloguePage page = CardCatalog.of(shop ? cardsIn(stock) : cardsIn(owned)).query(q.request(), new CardCatalog.Query(q.text(),

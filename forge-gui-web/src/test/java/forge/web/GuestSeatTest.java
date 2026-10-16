@@ -20,7 +20,7 @@ public class GuestSeatTest extends SessionsTest {
         return true;
     }
 
-    /** Fails if a guest cannot reach the host's game, in one game because restarting the loopback server mid-test races its shutdown. */
+    /** Fails if a guest cannot reach the host's game. */
     @Test(timeOut = 120_000)
     public void aGuestSitsDownWithTheHostAndLeavesWithTheGame() throws Exception {
         final TestBrowser hostBrowser = connect("host");

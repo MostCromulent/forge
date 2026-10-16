@@ -397,7 +397,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         }
     }
 
-    /** Who is on this server, in the order they took a session. Anyone still unnamed is nobody yet. */
+    /** Who is on this server. Anyone still unnamed is left out. */
     private Presence presence() {
         final List<Person> people = new ArrayList<>();
         for (final WebSession session : byId.values()) {

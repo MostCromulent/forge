@@ -245,7 +245,7 @@ function apply(msg: ServerMessage): void {
       model.looks = { avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
       model.savedSleeveArt = msg.sleeveArt ?? [];
       model.error = null;
-      // A new lobby has an address and a conversation of its own; coming back to the same one keeps them
+      // A new lobby has an address of its own, and coming back to the same one keeps it
       if (msg.screen !== 'setup') {
         model.addresses = null;
         askedAddresses = false;

@@ -288,7 +288,7 @@ final class TestBrowser implements BrowserChannel {
         return def;
     }
 
-    // Two prompt messages arrive per input (text, then buttons); act once, on the latest
+    // Every change to the prompt sends it again, so act once, on the latest
     private void actOnLatestPrompt() {
         final long version = promptVersion.incrementAndGet();
         actions.schedule(() -> {

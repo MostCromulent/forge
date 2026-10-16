@@ -37,7 +37,6 @@ public final class WebImageFetcher extends ImageFetcher implements IHasForgeLog 
         };
     }
 
-    // The browser decodes JPEG and PNG itself, so the file is saved as downloaded
     private static boolean download(final String urlToDownload, final String destPath) throws IOException {
         if ((disableHostedDownload && urlToDownload.startsWith(ForgeConstants.URL_CARDFORGE)) || ScryfallRateLimiter.shouldSkip(urlToDownload)) {
             return false;

@@ -191,7 +191,7 @@ function randomPool(decks: readonly DeckSummary[], maxBracket = 5, forComputer =
   return built.length ? built : fit;
 }
 
-/** A computer seat given a deck legal here, so a table fills without a trip to the chooser each. */
+/** A seat given a deck legal here, so a table fills without a trip to the chooser each. */
 function randomDeck(model: Model, actions: Actions, index: number): void {
   const pool = randomPool(model.decks ?? [], model.lobby?.maxBracket, model.lobby?.seats[index]?.type === 'AI');
   if (pool.length) actions.setSeat(index, { deck: pool[Math.floor(Math.random() * pool.length)].key });
@@ -253,11 +253,11 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
           {/* The sleeve holds two controls, so pointing at it names what each part does */}
           {hasDeck && seat.mayEdit && !dealt && <span class="sleeve-deck">{t('lblWebLobbyChangeDeck')}</span>}
         </button>
-        {/* A sleeve is worn by a deck, so there is nothing to choose until there is one */}
         {/* A deck that more than one card could lead offers the choice between deck and sleeve, the three the same size */}
         {hasDeck && seat.mayEdit && !dealt && seat.commanderChoices.length > 1 && (
           <button class="sleeve-cmdr" onClick={() => choose('commander')}>{t('lblWebLobbyChangeCommander')}</button>
         )}
+        {/* A sleeve is worn by a deck, so there is nothing to choose until there is one */}
         <button class="sleeve-style" title={t('lblWebSleevesChooseSleeve')} hidden={!hasDeck || !seat.mayEdit}
           onClick={() => choose('sleeve')}>{t('lblWebLobbyChangeSleeve')}</button>
       </div>

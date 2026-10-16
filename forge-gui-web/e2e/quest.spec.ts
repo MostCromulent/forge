@@ -10,7 +10,7 @@ const fixture = join(dirname(fileURLToPath(import.meta.url)), '../src/test/resou
 
 let server: Server;
 test.beforeEach(async () => {
-  // Quest reads its saves gzipped; one game a match, so a conceded game ends it; three copies of one card, to see a deck take each one owned; credits for a booster
+  // Quest reads its saves gzipped. One game a match lets a concession end it, three copies of one card show a deck taking each one owned, and the credits buy a booster
   const xml = readFileSync(fixture, 'utf8').replace('<matchLength>3</matchLength>', '<matchLength>1</matchLength>')
     .replace('<card c="Naya Hushblade" s="ARB" i="1" n="1"/>', '<card c="Naya Hushblade" s="ARB" i="1" n="3"/>')
     .replace('<credits>250</credits>', '<credits>5000</credits>');

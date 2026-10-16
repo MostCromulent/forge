@@ -1,4 +1,4 @@
-// Mana symbols and colour pips as Preact components, for the screens around the board.
+// Mana symbols and colour pips as Preact components, for the screens around the board
 
 import { symbolParts, symbolUrl } from './images';
 import { t, type TextKey } from './text';

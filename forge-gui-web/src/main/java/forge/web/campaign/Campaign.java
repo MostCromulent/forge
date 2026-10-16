@@ -19,8 +19,8 @@ import java.util.function.Supplier;
 
 /**
  * A campaign mode as a session sees it. One per session and mode, over Forge's one model of that mode.
- * Only the host's session opens a campaign, and it makes every call on its campaign thread ({@code WebSession.onCampaign}),
- * so nothing here takes a lock. {@link #current} only reads a preference and may be called from any thread.
+ * Only the host's session opens a campaign, and it makes every call on its campaign thread ({@code CampaignSession.run}),
+ * so nothing here takes a lock. {@link #current} reads only a preference and the saves folder, and may be called from any thread.
  */
 public interface Campaign {
     /** What a mode's own pages need of the session. */

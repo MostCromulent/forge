@@ -1,4 +1,4 @@
-/* The Limited pages: the kind-of-play chooser on the start page, the saved pools, the setup form and the opponents. */
+/* The Limited pages: the kind-of-play chooser on the start page, the saved pools, the setup form and the opponents */
 
 .chooser { max-width: 920px; margin: 0 auto; display: grid; gap: 14px; }
 .chooser-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }

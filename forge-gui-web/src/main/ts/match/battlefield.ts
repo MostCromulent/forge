@@ -1,4 +1,4 @@
-// One player's permanents: sorts them into rows, stacks identical ones, and sizes the cards so the board fits.
+// One player's permanents: sorts them into rows, stacks identical ones, and sizes the cards so the board fits
 
 import { reconcile } from './reconcile';
 import { createCard, updateCard, setPileCount, type CardClick } from './cards';
@@ -127,8 +127,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   const block = getComputedStyle(player).position === 'absolute'
     ? Math.max(0, player.getBoundingClientRect().right + 16 - field.getBoundingClientRect().left - px(fieldStyle, 'padding-left')) : 0;
   const room = width - block;
-  // A compact seat keeps its player's details in a row above the cards, and its own padding round both
-  // So does a phone's seat, whose player is a bar across it
+  // A compact seat, like a phone's, keeps its player's details in a row above the cards, and its own padding round both
   const header = root.classList.contains('compact') ? player.offsetHeight + 8 : minWidth ? player.offsetHeight : 0;
   const seatPad = px(style, 'padding-top') + px(style, 'padding-bottom');
   // The room by the phase pill for an attacker's step grows with the cards (board.css), so it is worked out for each size tried

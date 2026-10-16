@@ -760,9 +760,8 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     /**
-     * Whose deck a reveal warns the computer will not play all of, or null for any other reveal. The host sends the warning as a
-     * plain reveal with no owner, so the owner is found by building the host's title for each player, which matches because the
-     * host and this client share one locale.
+     * Whose deck a reveal warns the computer will not play all of, or null for any other reveal. The host sends no owner, so the
+     * host's title is rebuilt for each player, which matches because host and client share one locale.
      */
     private PlayerView aiSkipsOwner(final String message) {
         final GameView gv = getGameView();
@@ -944,7 +943,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return askChoices(title, need, max, list, null, null, Answers.range(0, need));
     }
 
-    /** A click from the browser: the right button asks for the card's list of abilities, as it does on desktop. */
+    /** A click from the browser. The right button reports button 3, which the attack and block prompts read as taking a card out of combat. */
     private record BrowserClick(boolean menu, int x, int y) implements ITriggerEvent {
         @Override
         public int getButton() {
@@ -1180,7 +1179,6 @@ public class WebGuiGame extends NetworkGuiGame {
             .on(SelectCard.class, play((g, controller, click) -> {
                 final CardView card = g.lookup(click.key(), TrackableTypes.CardViewType);
                 if (card != null) {
-                    // A right-click asks for the list of what the card can do; a left-click takes the first
                     final BrowserClick at = new BrowserClick(click.menu(), click.x(), click.y());
                     g.lastClick.set(at);
                     controller.selectCard(card, null, at);

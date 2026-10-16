@@ -1,7 +1,6 @@
-// A player's portrait breaking apart when they lose. At the end of the game it lifts to the middle of the board,
-// strains, cracks and bursts; a player knocked out while the game goes on bursts at once where they sit. The pieces are lit
-// 3D slabs, so this draws with WebGL, and three.js is fetched the first time a portrait breaks rather than with
-// the page.
+// A player's portrait breaking apart when they lose. At the end of the game it lifts to the middle of the board, strains,
+// cracks and bursts, and a player knocked out mid-game bursts at once where they sit. The pieces are lit 3D slabs drawn
+// with WebGL, and three.js is fetched the first time a portrait breaks rather than with the page.
 
 import { playEffect } from '../audio';
 import { make, reducedMotion } from '../dom';

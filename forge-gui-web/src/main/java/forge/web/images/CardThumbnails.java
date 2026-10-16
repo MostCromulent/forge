@@ -21,7 +21,7 @@ import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.MemoryCacheImageOutputStream;
 
-/** Card images the file itself will not do for: shrunk with a proper filter, because a browser shrinking a full scan on a rotated or animated layer breaks up the text, and a foil's with the foil painted on. */
+/** Card images the browser cannot use as stored: shrunk with a proper filter, because a browser shrinking a full scan on a rotated or animated layer breaks up the text, or painted as a foil. */
 public final class CardThumbnails {
     /** Twice a board card's width, so it stays sharp on a screen scaled up to 2.5 times. */
     public static final int WIDTH = 256;

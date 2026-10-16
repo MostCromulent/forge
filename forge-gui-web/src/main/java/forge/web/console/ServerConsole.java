@@ -781,7 +781,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         }
     }
 
-    /** A lamp, filled while the server is up and an empty ring while it is not. */
+    /** A lamp, filled while lit and an empty ring while not. */
     private static final class Light extends JComponent {
         private static final int SIZE = 11;
         private final Color off;

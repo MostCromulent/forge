@@ -128,7 +128,7 @@ html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
 .cq-warn, .cq-mine .t .cq-warn { margin: 0; font-size: 12.5px; color: var(--select); }
 .cq-zoom { max-height: min(86vh, 720px); border-radius: 4.5% / 3.2%; box-shadow: 0 24px 60px #000; }
 
-/* --- A reward, revealed over the map ------------------------------------------------------------------------- */
+/* A reward, revealed over the map */
 .backdrop.cq-reveal { --gold: #f0c05a; --gold-hi: #fbe9bd; background: #05070bf0; flex-direction: column; }
 .cq-reveal svg.ln { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .cq-reveal-foot { min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 16px; }

@@ -141,8 +141,7 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
   const message = 'message' in req ? req.message : undefined;
   // A list of what one card can do belongs on that card, the way desktop opens its menu under the cursor
   const at = (req.kind === 'choices' || req.kind === 'reveal') && (req.atX || req.atY) ? { x: req.atX ?? 0, y: req.atY ?? 0 } : null;
-  // A question about cards folds to a bar, as the zone window does, so the board under it can be read before answering;
-  // the dialog stays drawn while folded, so what was set in it is still there when it opens again
+  // Folded, the dialog stays drawn but hidden, so what was set in it is still there when it opens again
   const [folded, setFolded] = useState(false);
   const foldable = !at && FOLDABLE.has(req.kind);
   const title = <SymbolText text={heading || message || ''} />;

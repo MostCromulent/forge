@@ -1,4 +1,4 @@
-// Where avatar and sleeve pictures come from, for players and for the lobby's pickers.
+// Where avatar and sleeve pictures come from, for players and for the lobby's pickers
 
 import type { PlayerView } from './protocol';
 

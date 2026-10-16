@@ -47,7 +47,6 @@ import java.util.function.Supplier;
 
 /** Match setup read from the engine's lobby: a browser changes its own seat as a client, and the host sets the rest of the table. */
 public final class Lobby {
-    /** A match seats at most four; a draft pod seats up to eight, of whom any four play each match. */
     private static final int MOST_TEAMS = 4;
     static final int MAX_SEATS = 8;
     static final int MAX_POD = 8;
@@ -785,14 +784,14 @@ public final class Lobby {
         }
     }
 
-    /** The format and card pool this browser's deck list was last built for, recorded by {@link #decks()}. */
+    /** The format, card pool and rules this browser's deck list was last built for, recorded by {@link #decks()}. */
     private GameType seenFormat;
     private String seenCardPool;
     private String seenRules;
     /** Whether another player had a seat when the deck list was last built, so their arrival is seen once. */
     private volatile boolean othersSeated;
 
-    /** True when the format or card pool differs from the one the last deck list was built for. */
+    /** True when the format, card pool or rules differ from those the last deck list was built for. */
     public boolean restrictionsChanged() {
         synchronized (DeckCatalog.DECKS) {
             final GameFormat cardPool = cardPool();

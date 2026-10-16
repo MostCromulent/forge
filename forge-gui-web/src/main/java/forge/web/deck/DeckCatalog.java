@@ -70,7 +70,6 @@ public final class DeckCatalog {
             "White", "W", "Blue", "U", "Black", "B", "Red", "R", "Green", "G");
     /** The finder lists a deck's cards as they are: its problems are the verdict line's to state. */
     public static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), Map.of(), List.of());
-    /** Mana values 0 to 5, then everything 6 and above in the last one. */
 
     private final Map<String, Entry> byKey = new ConcurrentHashMap<>();
 
@@ -81,7 +80,7 @@ public final class DeckCatalog {
         }
     }
 
-    /** Which of those formats a deck's cards are all legal in, from the formats core finds it legal in, which take in every sanctioned one. */
+    /** The sanctioned formats among those a deck is legal in, in the sanctioned list's order. */
     private static List<String> legalIn(final Set<GameFormat> formats) {
         final List<String> out = new ArrayList<>();
         for (final GameFormat f : FModel.getFormats().getSanctionedList()) {
@@ -212,7 +211,7 @@ public final class DeckCatalog {
     /** Whether the browser this catalogue serves is a guest's, whose own decks are those on its device. */
     private boolean guest;
 
-    /** Rebuilds the catalogue and returns its decks, which at a Limited table are event pools, only those of event when it is not null. */
+    /** Rebuilds the catalogue and returns its decks. At a Draft table these are event pools, only event's own when it is not null. */
     public List<DeckSummary> refresh(final GameType format, final GameFormat pool, final boolean guest, final Map<String, OnDevice> device,
             final String event) {
         synchronized (DECKS) {

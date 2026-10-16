@@ -13,14 +13,14 @@
 /* On the centred pages the tag hangs off the word's end, so the word itself stays in the middle */
 .wordmark .beta { position: absolute; left: 100%; bottom: .34em; margin-left: .7em; font: 700 .45em/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--muted); }
 
-/* --- menu ------------------------------------------------------------- */
+/* The menu */
 
 .menu-page { min-height: 100%; display: grid; align-content: center; justify-items: center; gap: 24px; padding: 40px 20px; }
 .wordmark-block { display: grid; justify-items: center; }
 .menu-page .wordmark { font-size: 44px; line-height: 1; }
 .menu-page .wordmark .beta { font-size: .3em; }
 
-/* --- the start page --------------------------------------------------- */
+/* The start page */
 
 .start-card {
   display: grid;
@@ -57,7 +57,7 @@
 .start-buttons { display: flex; gap: 8px; }
 .start-buttons button { flex: 1; padding: 11px; font-size: 15px; }
 
-/* --- waiting for a seat ----------------------------------------------- */
+/* Waiting for a seat */
 
 /* One size whichever state it is in, so the page does not jump as a join succeeds or fails */
 .wait-card {
@@ -93,8 +93,6 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .wait-body { margin: 0; color: var(--muted); line-height: 1.55; }
 .wait-buttons { margin-top: auto; display: flex; gap: 8px; }
 .wait-buttons:empty { display: none; }
-
-/* --- the menu --------------------------------------------------------- */
 
 .menu-shell { min-height: 100%; display: flex; flex-direction: column; }
 .menu-shell .menu-page { flex: 1; min-height: 0; }
@@ -202,7 +200,7 @@ html[data-way] .modes .mode.plaque, html[data-motion="reduced"] .modes .mode.pla
 /* What this mode holds for you right now, which is the part worth reading twice */
 .mode-status { color: var(--mode-tint); font-size: 11.5px; margin-top: 3px; }
 
-/* --- lobby ------------------------------------------------------------ */
+/* The lobby */
 
 #lobby { min-height: 100%; display: grid; grid-template-rows: auto 1fr; }
 /* Seats, Add a seat and Play sit together as one block rather than being pushed to opposite edges */
@@ -374,7 +372,7 @@ button.team-tab:hover, button.team-tab[aria-expanded="true"] { border-color: var
 .not-yet.warn b { color: var(--accent-2); }
 .not-yet .hint { margin: 8px 0 0; font-size: 12.5px; color: var(--faint); }
 
-/* --- deck finder ------------------------------------------------------ */
+/* The deck finder */
 
 .finder-back, .sleeves-back { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: 60; }
 .finder, .sleeves { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; width: min(1500px, 94vw); height: min(880px, 92vh); display: grid; grid-template-rows: auto 1fr auto; }
@@ -460,7 +458,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .verdict { margin: 0; font-size: 13px; }
 .verdict.yes { color: var(--muted); }
 
-/* A Commander deck's bracket: a small mark in lists and on seats, 4 in gold, 3 rimmed in gold, 1 and 2 plain */
+/* A Commander deck's bracket: a small mark in lists and on seats */
 /* A Commander bracket is struck in bronze, like a medal, so it never reads as a count or a deck size beside it */
 .bracket-mark, .bnum { --bronze: linear-gradient(180deg, #f0c493 0%, #c98a52 48%, #9a5f2f 100%);
   background: var(--bronze); color: #2b1608; border: 1px solid #5c3416; box-shadow: inset 0 1px 0 #ffe3c288, 0 1px 2px #0008; }
@@ -502,7 +500,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .group h4 { display: flex; justify-content: space-between; margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
 .none { color: var(--muted); padding: 18px; }
 
-/* --- sleeve picker ---------------------------------------------------- */
+/* The sleeve picker */
 
 .sleeves { width: min(1100px, 92vw); grid-template-rows: auto 1fr; }
 .sleeves-body { overflow: auto; padding: 16px 18px; display: grid; gap: 20px; align-content: start; }
@@ -548,7 +546,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
   .preview { grid-column: 1 / -1; }
 }
 
-/* --- finder: filters, statistics and the card peek ---------------------- */
+/* The finder's filters, statistics and card peek */
 
 .count-row { display: flex; gap: 10px; align-items: center; }
 .count-row .shown { flex: 1; }
@@ -592,7 +590,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 
 .finder { position: relative; }
 
-/* --- sleeve picker: fill the dialog rather than leaving it half empty --- */
+/* The sleeve picker fills the dialog rather than leaving it half empty */
 
 .sleeves-body { min-height: 0; }
 .sleeves.picking .sleeves-body { display: grid; grid-template-rows: 1fr; }
@@ -612,7 +610,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .dk-hit.generated .dk-hit-title { flex: none; max-width: 50%; }
 
 
-/* A question the host is blocked on, so it sits above everything else */
+/* A question the host is blocked on, so it sits above every other dialog */
 .host-back { position: fixed; inset: 0; background: rgba(6, 8, 12, .75); display: grid; place-items: center; z-index: 80; }
 .host-choice { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; width: min(520px, 92vw); display: grid; gap: 12px; }
 .host-choice h2 { margin: 0; font-size: 16px; }
@@ -622,7 +620,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .host-option { text-align: left; }
 .host-choice footer { display: flex; justify-content: flex-end; }
 
-/* --- multiplayer ------------------------------------------------------ */
+/* Multiplayer */
 
 .menu-note { color: var(--muted); min-height: 1.2em; max-width: 520px; text-align: center; }
 /* A failure is marked by weight and a bar, not by colour alone */
@@ -651,7 +649,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .share-url { grid-column: 1 / -1; font-family: ui-monospace, monospace; font-size: 11px; overflow-wrap: anywhere; }
 .share-copy { color: var(--accent-2); font-size: 12px; }
 
-/* --- the dock: who is here, and what they are saying -------------------- */
+/* The dock: who is here, and what they are saying */
 
 /* Outside a match it rises out of the bottom edge, so it reads as attached rather than floating over the page */
 #dock .dock { position: fixed; right: 24px; bottom: 0; z-index: 30; width: 318px; }

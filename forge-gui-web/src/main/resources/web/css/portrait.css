@@ -95,7 +95,7 @@ html[data-form="portrait"] #match .seat .battlefield { --row-gap-0: 12px; --row-
 html[data-form="portrait"] #match .seat .battlefield.crowded { overflow-y: auto; }
 html[data-form="portrait"] #match .seat .row { gap: 12px; padding-top: 4px; min-height: 0; }
 html[data-form="portrait"] #match .seat .row > .group.far { margin-left: 0; }
-/* Your line no longer stands beside the hand, so the hand keeps none of its room */
+/* Your line does not stand beside the hand here, so the hand keeps none of its room */
 html[data-form="portrait"] #hand { padding-left: 0; padding-right: 0; }
 /* The hand as a strip of card tops, until its drawer opens */
 html[data-form="portrait"] #match { --hand-w: 50px; --hand-h: 70px; }
@@ -330,7 +330,7 @@ html[data-form="portrait"] #dock .dock { right: 12px; left: auto; max-width: cal
 html[data-form="portrait"] #dock .dock.folded { min-height: 44px; width: auto; }
 html[data-form="portrait"] #dock .dock.open { left: 12px; width: auto; max-height: 60dvh; }
 html[data-form="portrait"] .page-head button { min-width: 44px; min-height: 44px; }
-/* Screens with no phone layout yet scroll inside themselves, never the page */
+/* A screen wider than the phone scrolls sideways inside itself, never the page */
 html[data-form="portrait"] :is(#editor, #limited, #drafting, #campaign) { max-width: 100vw; overflow-x: auto; }
 /* Pinned over the seats, a Play that cannot be pressed yet is dimmed without being seen through */
 html[data-form="portrait"] #lobby .play:disabled { opacity: 1; filter: saturate(.35) brightness(.55); }
@@ -447,7 +447,7 @@ html[data-form="portrait"] .reveal-panel .cards .section:first-child:not(:has(~ 
 /* Asked who goes first, the dock can answer too, so the question stops above it */
 html[data-form="portrait"] #first-reveal.choosing { inset: 0 0 var(--dock-h, 45px) 0; }
 
-/* --- the deck editor -------------------------------------------------------- */
+/* The deck editor */
 /* Head: one line. The deck's name, its save state, Undo, the menu and Done */
 html[data-form="portrait"] #editor .editor-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 6px; padding: 6px 10px; }
 html[data-form="portrait"] #editor .editor-head .wordmark-block, html[data-form="portrait"] #editor .editor-head .icon-button, html[data-form="portrait"] #editor .editor-head > .legality, html[data-form="portrait"] #editor .editor-head > .check-fixed, html[data-form="portrait"] #editor .editor-head .word { display: none; }

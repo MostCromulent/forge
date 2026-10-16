@@ -1,4 +1,4 @@
-// Planar Conquest: the saved conquests as a shelf, and inside one, a bar every page shares over the page itself.
+// Planar Conquest: the saved conquests as a shelf, and inside one, a bar every page shares over the page itself
 
 import { useState } from 'preact/hooks';
 import { Shelf as Cards } from '../shelf';

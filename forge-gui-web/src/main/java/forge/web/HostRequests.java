@@ -65,7 +65,6 @@ final class HostRequests implements IHasForgeLog {
         }
     }
 
-    /** The browser answered one of them. */
     void answer(final int id, final List<Integer> value) {
         final CompletableFuture<List<Integer>> waiting = open.get(id);
         if (waiting != null) {

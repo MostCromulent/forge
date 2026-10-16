@@ -94,7 +94,7 @@ export interface Model {
   draftPools: number;
   /** Which Limited pages are open: 'sealed' or 'draft'. */
   eventKind: EventKind | null;
-  /** An offline draft is running, and draft is its latest state. */
+  /** A draft is running, and draft is its latest state. */
   drafting: boolean;
   draft: DraftState | null;
   /** Where a limited gauntlet stands after its last game; null outside a gauntlet. */

@@ -1,4 +1,4 @@
-// Small pieces of page behaviour that several pages share.
+// Small pieces of page behaviour that several pages share
 
 import { useEffect, useState } from 'preact/hooks';
 import type { RefObject } from 'preact';

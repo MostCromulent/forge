@@ -1,4 +1,4 @@
-/* The deck editor reuses the deck finder's parts, so only its own layout and states are here. */
+/* The deck editor reuses the deck finder's parts, so only its own layout and states are here */
 
 #editor { height: 100%; }
 /* On a desktop the editor is a panel in the deck selector's frame, over the page it was opened from. Notices lie above it, and the chat chip below. */
@@ -46,7 +46,7 @@ html:not([data-form="portrait"]) #editor .editor-head :is(.wordmark-block, .icon
 button.small { padding: 3px 10px; font-size: 12px; }
 button.link { background: none; border: 0; padding: 0; color: var(--accent-2); font-weight: 600; }
 
-/* --- the catalogue -------------------------------------------------------- */
+/* The catalogue */
 .catalogue { display: grid; grid-template-rows: auto auto minmax(0, 1fr); min-height: 0; position: relative; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .seg button { border: 0; border-radius: 0; background: var(--surface-2); color: var(--muted); padding: 6px 12px; }
@@ -109,7 +109,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
   background: repeating-linear-gradient(135deg, #ffffff0a 0 5px, #0000 5px 11px), color-mix(in srgb, var(--select) 7%, transparent);
 }
 
-/* --- the deck half ---------------------------------------------------------- */
+/* The deck half */
 /* The main deck takes the row that stretches, whether or not a command zone lies above it, and the basic lands close the panel */
 .deck-half { border-left: 1px solid var(--line); background: var(--surface); display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto auto auto; min-height: 0; }
 .deck-half > .commander-zone { grid-row: 2; }
@@ -201,8 +201,8 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .sample-hand .hand-cards img { width: 96px; border-radius: 6px; }
 .deck-text textarea { width: min(520px, 80vw); font: 12px/1.5 ui-monospace, monospace; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
 
-/* --- dragging --------------------------------------------------------------- */
-/* A section that takes the card is dashed, the one under the pointer says the result, and one that refuses is hatched and says why. */
+/* Dragging */
+/* A section that takes the card is dashed, the one under the pointer says the result, and one that refuses is hatched and says why */
 [data-zone].drop-eligible, [data-zone].drop-over, [data-zone].drop-refuse, [data-zone].drop-remove { position: relative; }
 [data-zone].drop-eligible::before { content: ''; position: absolute; inset: 3px; border: 1px dashed var(--line-bright); border-radius: 6px; pointer-events: none; }
 [data-zone].drop-over { background: linear-gradient(100deg, var(--accent-soft) 0%, transparent 55%); }
@@ -233,7 +233,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .drag-chip.rm .verb { color: var(--danger); }
 .tile, .ed-line, .commander, .cat-table tr { touch-action: pan-y; user-select: none; }
 
-/* --- the card menu and the printing picker ------------------------------------- */
+/* The card menu and the printing picker */
 .card-menu { position: fixed; right: auto; top: auto; }
 .card-menu button:disabled { opacity: .45; }
 /* The printing picker, laid out as desktop's: a filter bar over a grid of pictures four across */

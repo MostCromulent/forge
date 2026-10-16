@@ -19,7 +19,7 @@ public final class ImageIndex {
     private volatile boolean cancelled;
     private volatile boolean downloading;
 
-    /** The listener is told of every change, on the thread the download runs on. */
+    /** The listener is told of every change: the start on the thread that calls download, the rest on the download's thread. */
     public ImageIndex(final Consumer<State> listener) {
         this.listener = listener;
     }

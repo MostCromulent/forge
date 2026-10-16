@@ -29,7 +29,7 @@ interface ImporterProps {
   from: 'seat' | 'start' | 'editor';
   seat?: number;
   initialText?: string;
-  /** A link to fetch as the dialog opens, which Sync now uses. */
+  /** A link to fetch as the dialog opens, from the finder's link field or its Sync now button. */
   initialUrl?: string;
   /** Syncing a linked deck: importing replaces the deck of the same name without asking. */
   sync?: boolean;

@@ -111,7 +111,6 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
             }} />
           : (
             <div ref={nameMenu} class="menu-anchor name-menu">
-              {/* The deck's name opens what can be done with the deck */}
               <button class="deck-name" aria-expanded={menu !== null} onClick={() => setMenu(menu ? null : 'menu')}>
                 <span>{state.name}</span><svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
               </button>

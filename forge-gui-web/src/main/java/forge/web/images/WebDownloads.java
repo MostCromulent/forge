@@ -105,7 +105,7 @@ public final class WebDownloads implements IHasForgeLog {
         @Override public boolean requestFocusInWindow() { return false; }
     }
 
-    /** The address and port fields a download dialog carries; a zip service reads them and nothing else. */
+    /** The proxy address and port fields of a download dialog, left empty because no proxy is chosen here. */
     public record Text(String value) implements ITextField {
         @Override public String getText() { return value; }
         @Override public void setText(final String text) { }

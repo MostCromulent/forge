@@ -1,4 +1,4 @@
-// Quest: the saved quests as a shelf, and inside one, the bar every page shares over the page itself.
+// Quest: the saved quests as a shelf, and inside one, the bar every page shares over the page itself
 
 import { Shelf as Cards } from '../shelf';
 import { ui } from '../ui';

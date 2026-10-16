@@ -145,8 +145,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       }
       continue;
     }
-    // A stack item carries its source card's key, so only a card that went to the stack is looked for there:
-    // a creature sacrificed for its own ability, or dying with its trigger waiting, is not that item
+    // A stack item carries its source card's key, so only a card that went to the stack is looked for there, not one whose ability is on it
     const el = move.to?.zone === 'Stack' ? elementFor(key) : cardElement(key) ?? pileTopFor(key);
     if (move.to?.zone === 'Stack' && !el) {
       if (start) {
@@ -480,8 +479,6 @@ function layOutPiles(): void {
   intoHint.clear();
 }
 
-// ---- Finding things on the board ---------------------------------------------------------------------------------
-
 const CARDS = '#me .card[data-key], #opponent .card[data-key], #hand .card[data-key], #zones .card[data-key]';
 const BOARD_CARDS = '#me .battlefield .card[data-key], #opponent .battlefield .card[data-key]';
 const HAND_CARDS = '#hand .card[data-key]';
@@ -778,8 +775,6 @@ function note(): void {
   }
 }
 
-// ---- Moving things -----------------------------------------------------------------------------------------------
-
 // A spell waits beside the stack, where it is about to go, rather than over the cards on the table
 function waitingSpot(rect: DOMRect): DOMRect {
   const stack = document.getElementById('stack');
@@ -838,7 +833,7 @@ function shiftTo(el: HTMLElement, scale: number, to: DOMRect): string {
   return `${to.left + to.width / 2 - (now.left + now.width / 2)}px ${to.top + to.height / 2 - (now.top + now.height / 2)}px`;
 }
 
-// The card's own transform (a tap's turn, a tilt in hand) is left alone: the trip moves and scales it on top
+// Scale is its own property, so the card's own transform (a tap's turn, a tilt in hand) stays as it is
 function pop(el: HTMLElement): void {
   el.animate([
     { scale: '.7', opacity: 0 },
@@ -871,7 +866,7 @@ function fly(el: HTMLElement, from: DOMRect, duration: number, delay: number): v
   flight.finished.then(landed, landed);
 }
 
-// The card is already gone from the model, so a copy of it makes the trip
+// A copy of the card makes the trip, so the card's own element, where it still has one, stays put
 function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0, onto?: HTMLElement, duration = FLIGHT_MS): void {
   if (!was.ghost) {
     return;

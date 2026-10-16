@@ -54,7 +54,7 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   strip.classList.add('announcing');
   // The pill returns as the banner starts to fade (84% of turn-sweep), so one fades in while the other fades out
   const sweep = parseFloat(getComputedStyle(banner).animationDuration) * 1000;
-  // unless the next turn's banner has gone up meanwhile, which a turn that passes at once allows
+  // Not if the next turn's banner has gone up meanwhile, which a turn that passes at once allows
   setTimeout(() => {
     if ([...strip.querySelectorAll('.turn-banner')].at(-1) === banner) strip.classList.remove('announcing');
   }, sweep * 0.84);

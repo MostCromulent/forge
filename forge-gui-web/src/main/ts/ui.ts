@@ -44,7 +44,6 @@ export interface UiState {
   renaming: boolean;
   /** Which way to play the start page is showing the kinds of game for, kept so a step back from a table lands there. */
   menuChoice: 'play' | 'friends' | null;
-  /** Match setup's picker for a seat's deck, sleeve or avatar. */
   picker: Picker | null;
   /** The deck finder opened from the start page, with no seat, and the format it lists. A hello does not close it. */
   browse: { format: string } | null;
@@ -55,7 +54,7 @@ export interface UiState {
   hover: Hover | null;
   /** Which face of the hovered card the zoom panel shows. */
   faceIndex: number;
-  /** The zoom panel shows the hovered card's rules text instead of its image. T swaps them. */
+  /** The zoom panel shows the hovered card's rules text instead of its image. Its key, T by default, swaps them. */
   cardText: boolean;
   /** The side column's panels. Kept in the browser across sessions. */
   sidePanels: { log: boolean; chat: boolean };

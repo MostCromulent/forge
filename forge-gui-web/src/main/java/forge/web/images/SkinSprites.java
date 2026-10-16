@@ -24,7 +24,7 @@ public final class SkinSprites implements IHasForgeLog {
     private static BufferedImage manaIcons;
     private static BufferedImage abilityIcons;
     private static List<BufferedImage> sleeves;
-    /** The sheets campaign icons are cut from, by file name. */
+    /** The sheets the ticket symbol and campaign icons are cut from, by file name. */
     private static final Map<String, BufferedImage> iconSheets = new HashMap<>();
     private static final Set<FSkinProp> CAMPAIGN_ICONS = Set.of(FSkinProp.IMG_AETHER_SHARD, FSkinProp.IMG_PW_BADGE_COMMON,
             FSkinProp.IMG_SPELLBOOK, FSkinProp.IMG_MULTIVERSE);

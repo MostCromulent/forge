@@ -108,7 +108,7 @@ function nextTrack(): void {
   music.volume = volume('musicVolume');
   music.play().catch(e => {
     stopMusic();
-    // A browser plays nothing until the page is first clicked or typed into, so the menu's music waits for that
+    // A browser plays nothing until the page is first clicked or typed into, so the music waits for that
     if (e instanceof DOMException && e.name === 'NotAllowedError' && !awaitingGesture) {
       awaitingGesture = true;
       const retry = () => {

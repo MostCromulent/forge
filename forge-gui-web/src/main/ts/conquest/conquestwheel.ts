@@ -3,7 +3,7 @@
 import { skinIconUrl } from '../images';
 import { reducedMotion } from '../dom';
 
-/** The wheel's eight spots, clockwise from the needle, as ConquestEvent.ChaosWheelOutcome orders them. */
+/** The wheel's eight spots, clockwise from the needle, as ConquestEvent.ChaosWheelOutcome's wheelSpots orders them. */
 const WHEEL_SPOTS = ['CHAOS', 'BOOSTER', 'SHARDS', 'DOUBLE_BOOSTER', 'PLANESWALK', 'BOOSTER', 'DOUBLE_SHARDS', 'BOOSTER'] as const;
 export type WheelOutcome = typeof WHEEL_SPOTS[number];
 

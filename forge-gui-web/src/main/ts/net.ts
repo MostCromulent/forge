@@ -3,7 +3,7 @@
 import type { ClientMessage, Send, ServerMessage } from './protocol';
 import { store, stored } from './storage';
 
-// The id says which browser this is, so a reload returns to the seat it left instead of taking another one.
+// The id says which browser this is, so a reload returns to the seat it left instead of taking another one
 const ID_KEY = 'forge.clientId';
 
 /** This browser's id. Where storage is blocked, a new one each page load, so the seat lasts until the page is reloaded. */
@@ -17,7 +17,7 @@ export function clientId(): string {
   return id;
 }
 
-// The server replays full state, prompt, zones and open requests on every connect, so a reconnect needs no bookkeeping here.
+// The server replays full state, prompt, zones and open requests on every connect, so a reconnect needs no bookkeeping here
 export function connect(onMessage: (msg: ServerMessage) => void, onStatus: (online: boolean) => void): Send {
   let socket: WebSocket | undefined;
   let retry = 250;

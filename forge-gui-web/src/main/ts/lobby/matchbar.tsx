@@ -297,7 +297,7 @@ export function MatchBar({ model, lobby, actions, preview }: {
   );
 }
 
-/** How others join, the sound and the options, and the way out. Who is here is the dock's to say. */
+/** How others join, the sound and the options. Who is here is the dock's to say. */
 export function TableHeader({ model, lobby }: { model: Model; lobby: LobbyTable }) {
   return (
     <PageHeader>

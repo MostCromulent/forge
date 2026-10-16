@@ -43,7 +43,7 @@ declare module '../model' {
     trading: Trading | null;
     /** What a new conquest may start with, as far as the form has asked. */
     conquestOptions: ConquestOptions | null;
-    /** The four pages that are Conquest's own, each as its page last asked for it. */
+    /** The Aether, the planes, the statistics and the preferences, each as its page last asked for it. */
     conquestAether: ConquestAetherState | null;
     conquestPlanes: ConquestPlanes | null;
     campaignStats: CampaignStats | null;

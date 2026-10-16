@@ -266,7 +266,7 @@ export function CampaignPages<Tab extends string>({ model, actions, tabs, tab, s
   model: Model; actions: Actions; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void; extra?: ComponentChildren;
   page: (key: number) => ComponentChildren;
 }) {
-  // What a reward being revealed has yet to show. The server's balances already hold it all, so the bar shows less.
+  // What a reward being revealed has yet to show, which the bar takes off the server's balances
   const [owed, setOwed] = useState<Owed>({});
   const reward = model.reward;
   const [prefs, setPrefs] = useState(false);

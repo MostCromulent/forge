@@ -1,4 +1,4 @@
-// Decisions the phone layout makes, kept apart from the page so they can be tested without one.
+// Decisions the phone layout makes, kept apart from the page so they can be tested without one
 
 /**
  * Whether a tap on a card opens its details and sends nothing: only when the tap could not have done anything.

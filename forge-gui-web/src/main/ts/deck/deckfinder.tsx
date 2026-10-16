@@ -160,7 +160,7 @@ export function DeckFinder({ model, actions, seat, close }: {
   useEffect(() => {
     find.current?.focus();
   }, []);
-  // Only the server reads every deck's cards, and asks again once the list is rebuilt, since that renews the keys
+  // Only the server reads every deck's cards, and it is asked again once the list is rebuilt, since that renews the keys
   useEffect(() => { if (filter.card) actions.deckQuery('card', filter.card); }, [filter.card, model.decks]);
   useEffect(() => { if (filter.sideboard) actions.deckQuery('sideboard', filter.sideboard); }, [filter.sideboard, model.decks]);
   useEffect(() => { if (filter.set) actions.deckQuery('set', filter.set); }, [filter.set, model.decks]);
@@ -597,7 +597,6 @@ function Chosen({ details, formats, forComputer }: { details: DeckDetails; forma
   );
 }
 
-/** A deck's Commander bracket as a small mark: 4 in gold, 3 rimmed in gold, 1 and 2 plain. */
 export function BracketMark({ level }: { level: number }) {
   return <span class={`bracket-mark b${level}`} title={t('lblWebBracketTip', level)}>{level}</span>;
 }

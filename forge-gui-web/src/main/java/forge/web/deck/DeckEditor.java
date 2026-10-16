@@ -112,7 +112,7 @@ public final class DeckEditor {
     /** Whether the deck exists where this editor saves it: opened from there, or saved there since. */
     private boolean saved;
     private String landed;
-    /** The edition new basic lands come from, in limited mode; null otherwise. */
+    /** The edition new basic lands come from, or null for the usual printing. */
     private String landSet;
 
     /** saved says the deck was opened from where target saves it; a new deck, or one that is only being read, was not. */
@@ -309,7 +309,7 @@ public final class DeckEditor {
         });
     }
 
-    /** Makes a card the commander, from a section of the deck or (from null) the catalogue. A commander it replaces goes to the main deck. */
+    /** Makes a card the commander, from a section of the deck or (from null) the catalogue. A commander it replaces goes to the main deck, or back to the pool in Commander Draft. */
     String makeCommander(final String name, final DeckSection from) {
         if (fixedSection(DeckSection.Commander)) {
             return Localizer.getInstance().getMessage(MAIN_ONLY);

@@ -821,7 +821,7 @@ public final class ConquestGame implements Campaign {
     }
 
     public static final Commands<Call> COMMANDS = new Commands<Call>()
-            // The form that starts a conquest is all of the list of saves that is Conquest's own
+            // The new-conquest form is the only part of the list of saves that is Conquest's own
             .on(ConquestOptionsQuery.class, onShelf((c, ch, q) -> ch.send(options(q.plane(), q.commander()))))
             .on(ConquestCreate.class, onShelf((c, ch, create) -> {
                 final String problem = create(create.name(), create.plane(), create.commander(), create.planeswalker());

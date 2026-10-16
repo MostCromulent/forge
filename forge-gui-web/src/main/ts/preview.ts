@@ -66,7 +66,7 @@ const hoverGone = () => {
   return !hover.at.isConnected || (!ui.inspect && hover.at.getClientRects().length === 0);
 };
 
-/** The F key turns the hovered card to its next face. Needs the model, which knows how many faces it has. */
+/** Turns the hovered card to its next face. Needs the model, which knows how many faces it has. */
 export function nextFace(model: Model): void {
   const hover = ui.hover;
   const count = hover && 'card' in hover && hover.card !== null ? model.cardDetails.get(hover.card)?.faces.length ?? 0 : 0;

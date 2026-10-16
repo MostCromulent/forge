@@ -346,7 +346,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   showLife(q(root, '.life'), avatar, player.Life ?? 0, isLocal(model, player));
   q(root, '.name .who').textContent = player.Name ?? '';
   q(root, '.name').title = player.Name ?? '';
-  // Out of the game: the seat stays where it was, greyed, with a skull by the name
+  // Out of the game: the seat stays where it was, greyed, with a skull over the portrait
   root.classList.toggle('out', !!player.HasLost);
   root.classList.toggle('turn', game(model)?.PlayerTurn?.ref === player.$key);
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
@@ -485,7 +485,7 @@ function renderZonesPill(root: HTMLElement, model: Model, player: PlayerView): v
   // Your own hand is on show along the bottom, so only another player's is counted here
   q(pill, '[data-zone="Hand"]').hidden = isLocal(model, player);
   const tiles = q(root, '.zone-tiles');
-  // Lit when a zone behind it wants the player: a commander to cast, or a pile that holds more zones than the pill names
+  // Lit when a commander behind it can be cast, and marked when it holds more zones than the pill names
   pill.classList.toggle('lit', !!tiles.querySelector('.zone-tile.selectable, .zone-tile[data-cast="yes"]'));
   pill.classList.toggle('more', tiles.childElementCount > PILL_ZONES.length - 1);
   const open = isPortrait() && ui.zonesFor === player.$key;

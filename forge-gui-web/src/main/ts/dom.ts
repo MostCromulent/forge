@@ -55,7 +55,6 @@ export function placeBeside(el: HTMLElement, x: number, y: number, gap: number):
   el.style.top = `${Math.round(Math.max(8, Math.min(y + gap, innerHeight - el.offsetHeight - 8)))}px`;
 }
 
-/** Hands the player a file to save, holding text. */
 const relayouts: (() => void)[] = [];
 
 /** Runs place when the window resizes, and when relayout says the board moved without it. */

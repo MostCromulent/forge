@@ -251,12 +251,10 @@ export function set(key: string, value: SettingValue): void {
 
 const KEY_SETTINGS = SETTINGS.filter((d): d is SettingDef & { type: 'key' } => d.type === 'key');
 
-/** The keys this player has chosen. */
 export function boundKeys(): KeyBindings {
   return Object.fromEntries(KEY_SETTINGS.map(d => [d.action, String(setting(d.key))])) as unknown as KeyBindings;
 }
 
-/** The keys a player starts with. */
 export function defaultKeys(): KeyBindings {
   return Object.fromEntries(KEY_SETTINGS.map(d => [d.action, d.def])) as unknown as KeyBindings;
 }
@@ -270,7 +268,7 @@ export function setKeys(keys: KeyBindings): void {
   redraw();
 }
 
-// Pushes the hand and preview sizes, the highlight colour and the custom CSS into CSS; the rest is read where it is used
+// Pushes the hand and preview sizes, the highlight colour, the playmat, the motion choice and the custom CSS into CSS; the rest is read where it is used
 function apply(): void {
   const root = document.documentElement;
   // Desktop keeps the highlight colour as a preference of its own, with no control in this dialog

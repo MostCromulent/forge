@@ -59,8 +59,7 @@ export function createPacer(model: Model, apply: (msg: ServerMessage) => void): 
     } else if (!HELD_MESSAGES.has(msg.t)) {
       apply(msg);
     } else if (msg.t === 'sound' && msg.name === TURN_SOUND && announcing && !held.slice(1).some(m => m.t === 'state')) {
-      // The turn's sound is heard as its banner goes up, and not after it with the turn's first draw. A later turn's
-      // sound comes behind that turn's own state, and waits for its own banner
+      // The turn's sound plays as its banner goes up. A later turn's sound waits behind that turn's own state
       apply(msg);
     } else {
       held.push(msg);

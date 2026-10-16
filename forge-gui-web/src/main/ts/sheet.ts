@@ -1,4 +1,4 @@
-// What every sheet on a phone shares: Back closes it, and a swipe down from its handle closes it.
+// What every sheet on a phone shares: Back closes it, and a swipe down from its handle closes it
 
 import { byId, q } from './dom';
 

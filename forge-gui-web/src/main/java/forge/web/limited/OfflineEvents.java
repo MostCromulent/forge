@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-/** The host's offline sealed pools, kept where desktop keeps them: what the setup form offers, making a pool, and listing them. */
+/** The host's offline sealed and draft pools, kept where desktop keeps them: what the setup form offers, making a pool or draft, and listing them. */
 public final class OfflineEvents {
     private OfflineEvents() {
     }

@@ -62,7 +62,7 @@ const TAGS = /^(Token|Token card|Emblem|Boon|Effect)$/;
 // Counters that already show in the card's corner (loyalty, defence) are left out of the chips
 const CORNER_COUNTERS = /^(loyalty|defense)$/i;
 
-/** A chip for a line of game state, or null when the line is something else. */
+/** A chip for a line of game state, 'skip' for a counter the corner already shows, or null when the line is something else. */
 function chipFor(text: string): Chip | null | 'skip' {
   let m = /^(.+) counters: (-?\d+)$/.exec(text);
   if (m) return CORNER_COUNTERS.test(m[1]) ? 'skip' : { kind: 'counter', text: `${m[1]} ×${m[2]}` };

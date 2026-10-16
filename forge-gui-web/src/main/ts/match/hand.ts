@@ -1,4 +1,4 @@
-// The player's hand along the bottom of the board, fanned and sorted as the options say.
+// The player's hand along the bottom of the board, fanned and sorted as the options say
 
 import { commandKind } from './command';
 import { reconcile } from './reconcile';

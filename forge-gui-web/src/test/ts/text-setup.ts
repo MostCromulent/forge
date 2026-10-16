@@ -1,4 +1,4 @@
-// Gives the tests the page's English text, read from Forge's language file as the server would send it.
+// Gives the tests the page's English text, read from Forge's language file as the server would send it
 
 import { setText } from '../../main/ts/text';
 import english from '../../../../forge-gui/res/languages/en-US.properties?raw';

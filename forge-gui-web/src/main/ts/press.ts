@@ -1,4 +1,4 @@
-// A finger rested on something opens what a right-click or a hover opens for a mouse.
+// A finger rested on something opens what a right-click or a hover opens for a mouse
 
 import { make } from './dom';
 

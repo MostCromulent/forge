@@ -1,4 +1,4 @@
-// The phone's menu: what the side column holds on a desktop, behind one button.
+// The phone's menu: what the side column holds on a desktop, behind one button
 
 import { useLayoutEffect, useRef } from 'preact/hooks';
 import { byId } from '../dom';

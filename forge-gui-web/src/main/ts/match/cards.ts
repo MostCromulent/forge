@@ -58,7 +58,6 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   const selectable = has(model.prompt?.selectable, card.$key);
   const type = visible ? (state.Type ?? '') : '';
   el.classList.toggle('back', !visible);
-  // A hidden card shows its owner's sleeve
   const owner = card.Owner ? model.objects.get(card.Owner.ref) : undefined;
   el.style.setProperty('--sleeve', cssUrl(visible ? '' : playerSleeveUrl(owner)));
   el.classList.toggle('tapped', !!card.Tapped);

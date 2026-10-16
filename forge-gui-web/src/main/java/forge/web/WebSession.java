@@ -214,7 +214,6 @@ public final class WebSession implements IHasForgeLog {
         return eventSeat;
     }
 
-    /** Whether a browser is attached to this session right now. */
     public boolean attached() {
         return browser != null;
     }
@@ -980,7 +979,7 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    /** Back to match setup after a game, into the same kind of lobby as before it. */
+    /** Leaves the match: to the pool or campaign it came from, to a new table of the same kind for the host, or to the menu for a guest. */
     private void leave() {
         final Stage from = stage;
         if (!(from instanceof Playing playing)) {
