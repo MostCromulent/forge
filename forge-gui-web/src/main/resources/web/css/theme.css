@@ -1,3 +1,8 @@
+/* Colour, size and motion tokens, and the base controls every page shares */
+/* Stacking, lowest first. Below 0: the board's backdrops. 1-10: within the table. 20-35: the match's panels and bars, the editor panel, the dock.
+   38: notices. 40-45: cards in flight (motion.ts, leaving.ts) and open zones. 50-61: scrims and what sits on them, such as dialogs, sheets,
+   reveals and the game's end. 70: the card preview, the stack menu, the coin toss. 80: the host's questions. 90: tips and the press ring.
+   95-100: the phone's leave question, the turn-the-phone warning, the connection banner. Widths below 900px also meet a phone held upright (form.ts). */
 /* One size for every card preview, registered as a length so that script reads it in pixels */
 @property --preview-w { syntax: '<length>'; inherits: true; initial-value: 280px; }
 :root { --preview-w: clamp(280px, 60vh * 63 / 88, 340px); }

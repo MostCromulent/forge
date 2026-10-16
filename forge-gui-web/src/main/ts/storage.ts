@@ -1,3 +1,4 @@
+// What the browser keeps between visits. Keys start with forge., which backup.ts saves and restores, apart from those it leaves out
 // localStorage throws when the browser blocks it, and then nothing is kept and every value starts from its default next time
 
 export function stored(key: string): string | null {

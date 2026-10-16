@@ -57,13 +57,24 @@ Forge's models were written for a single UI thread, and most have no locks. The 
 
 Each seat's netplay client runs its calls on a thread of its own, so a game question waiting on a browser holds only that seat's thread, never a web server thread.
 
+The table a browser sits at (`Lobby` and `LocalGame`) is changed only on the UI thread, which also opens, starts and leaves it. Other threads may read it, which is why its maps are concurrent and its fields volatile.
+
+A few locks remain where several threads share one thing:
+
+- `DeckCatalog.DECKS` guards the deck lists and stores every session reads.
+- `WebSession`'s own lock covers moving between stages and a browser arriving or leaving.
+- `Lobby`'s `sentLock` keeps the deck list and table messages to one browser in order.
+- `WebGuiGame`'s `mirrorLock` keeps the server's copy of the browser's game in step with what was sent.
+
+They are taken in that order: the session's lock, then `sentLock`, then `DECKS`.
+
 ### The page
 
 The page is TypeScript, bundled by esbuild. Only `main.ts` talks to the server. Components never send messages themselves. They call the functions in `actions.ts`.
 
 State lives in one of three places, and each change belongs in one of them:
 
-- `model` holds what the server said. Only the message handlers write it.
+- `model` holds what the server said. The message handlers write it, and so do the few actions in `main.ts` that clear an answered question at once.
 - `ui` holds what this browser has arranged and the server never hears of, such as an open pile or a pinned preview. It is changed through `changeUi` and its variants in `ui.ts`.
 - A component's own state holds what only that component uses.
 
@@ -71,13 +82,41 @@ Nothing draws when it changes. Messages and `ui` changes schedule one redraw for
 
 The pages outside a match use Preact. The match screen is drawn by hand, because it is laid out by measuring the table, and its cards move between places in animations that a re-created element would restart. `match/reconcile.ts` keeps each card's element across redraws. A new part of the match screen follows its neighbours.
 
-The card preview is shared by every page. Elements join it through data attributes rather than code, as `preview.ts` describes.
+The card preview is shared by every page. Elements join it through data attributes rather than code, as `preview.ts` describes. The match's cards call `hoverable()` and carry `data-zoom`, `data-key` and `data-from` instead.
+
+The campaign modes are kept apart so a build can leave them out. On the server they sit behind `Campaigns`, made in `WebSession`'s constructor, and their messages are in `CampaignProtocol`. On the page, `campaign/register.tsx` adds their model fields, actions and pages through the hooks in `campaigns.tsx`.
 
 ## The protocol
 
-The messages are Java records in `ToBrowser` and `FromBrowser`. Each build generates the page's TypeScript types from them, so a change to a record fails the build wherever the page uses it. A field may be null only when it is marked `@Nullable`. The tests check that every `IGuiGame` method is answered and that every command the page can send is handled.
+The messages are Java records in `ToBrowser` and `FromBrowser`, and the campaigns' in `CampaignProtocol`. Each build generates the page's TypeScript types from them, so a change to a record fails the build wherever the page uses it. A field may be null only when it is marked `@Nullable`.
+
+Each command the page sends has one owner, which handles it from its `Commands` table: the session, the deck editor, the Limited pages, the match or a campaign. The tests check that every `IGuiGame` method is answered and that every command has exactly one owner.
 
 Game state needs no protocol work. It travels as Forge's own `TrackableProperty` values, so a new property reaches the page without a change here.
+
+## Common changes
+
+A new page:
+
+- a `<main id>` for it in `index.html`, and a stylesheet linked there
+- its `render` call, its place in `DEPTH`, and its name in the two return types in `screens.tsx`
+- its id in the list `render()` in `main.ts` shows and hides
+
+A new message from the server:
+
+- a record marked `@Message` in `ToBrowser`, then `process-classes` to write its type
+- a `case` for it in `apply()` in `main.ts`, and a field for it in `Model` in `model.ts`
+
+A new command from the page:
+
+- a record marked `@Command` in `FromBrowser`, or a constant of `Plain` for one with no fields
+- a handler in its owner's `Commands` table
+- a function for it in `Actions` and `createActions` in `actions.ts`
+
+A new setting:
+
+- an entry in `SETTINGS` in `settings.ts`
+- for one marked `server: true`, which the game must know, its preference in `WebSettings` and its value in `ServerSettings`
 
 ## Text and languages
 

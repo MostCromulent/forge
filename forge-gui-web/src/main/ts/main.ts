@@ -43,7 +43,7 @@ let askedAddresses = false;
 let restored = false;
 // A guest's decks live in its browser, so each connection tells the server which it holds
 let sentDeviceDecks = false;
-// A sound or a log line is sent ahead of the board it belongs to, and is taken after it (pace.ts)
+// A sound or a log line is sent ahead of the board it belongs to, and is taken after it, or alone after 300 ms when no board follows (pace.ts)
 const send = connect(behindItsBoard(msg => pacer.receive(msg), 300), online => {
   byId('banner').hidden = online;
   // The server replays the conversation for every connection, so the browser starts each one empty

@@ -87,7 +87,7 @@ const fullName = (phase: PhaseType): string => {
   return s ? t(s[2]) : '';
 };
 const phaseOf = (step: number): number => PHASES.findIndex(p => p.steps.includes(step));
-/** Forge's own default stops (the PHASE_HUMAN_ and PHASE_AI_ preferences), which a row can be reset to. */
+/** Forge's own default stops (the PHASE_HUMAN_ and PHASE_AI_ preferences), which a row can be reset to. Kept in step with them by hand. */
 const DEFAULT_STOPS: Record<'mine' | 'theirs', PhaseType[]> = {
   mine: ['MAIN1', 'COMBAT_DECLARE_BLOCKERS', 'MAIN2'],
   theirs: ['COMBAT_BEGIN', 'COMBAT_DECLARE_ATTACKERS', 'COMBAT_DECLARE_BLOCKERS', 'END_OF_TURN'],

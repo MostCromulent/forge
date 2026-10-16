@@ -1,3 +1,4 @@
+/* The match screen: the table, the seats, the stack, the prompt and the end of a game */
 /* The table is lighter than the other pages' ground, so a card's black border still stands off it */
 #match { --table: #1a202c; --table-deep: #0f131b; }
 #match::after {
@@ -222,6 +223,8 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .slot > .card:last-child { z-index: 1; }
 /* Attached cards and a pile's lower cards fan out to the left only, so a row keeps one card's height, and battlefield.ts counts the room */
 .battlefield { --fan: .15; --support-indent: 28px; }
+/* The room battlefield.ts leaves between its rows and beside a row, which the phone sets smaller */
+.battlefield { --row-gap-0: 40px; --row-gap-1: 52px; --fit-spare: 56px; }
 /* The support group stands in from the row's edge so it does not line up with the stack panel above, and battlefield.ts counts the room */
 .row > .group.support { margin-right: var(--support-indent); }
 .slot { position: relative; padding-left: calc(var(--behind, 0) * var(--card-w) * var(--fit, 1) * var(--fan)); }

@@ -74,7 +74,6 @@ export interface Model {
   nameSent: boolean;
   /** Messages from the server, each until it is dismissed or times out. */
   notices: { id: number; notice: Notice; view?: () => void; label?: string; leaving?: boolean }[];
-  /** A draw offer while it is open. */
   drawOffer: DrawOffer | null;
   /** The auto-yields and trigger answers the player has set, as last asked for. */
   autoDecisions: AutoDecisions | null;

@@ -203,7 +203,7 @@ async function block(actions: Actions, blocker: number, attacker: number, at: Po
   if (!await until(() => blocking(blocker, attacker))) explainRefusal(blocker, attacker, at);
 }
 
-/** Keywords that limit what may block a creature, each with the keywords on a blocker that answer it. */
+/** Keywords that limit what may block a creature, each with the keywords on a blocker that answer it. An empty list means no keyword does, as colour, type, power or a count decides instead. */
 const EVASION: Record<string, readonly string[]> = {
   FEAR: [], FLYING: ['FLYING', 'REACH'], HORSEMANSHIP: ['HORSEMANSHIP'], INTIMIDATE: [], LANDWALK: [], MENACE: [], PROTECTION: [],
   SHADOW: ['SHADOW'], SKULK: [],

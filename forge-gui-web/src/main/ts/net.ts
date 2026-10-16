@@ -1,3 +1,5 @@
+// The page's one connection to the server, which it opens again whenever it drops
+
 import type { ClientMessage, Send, ServerMessage } from './protocol';
 import { store, stored } from './storage';
 

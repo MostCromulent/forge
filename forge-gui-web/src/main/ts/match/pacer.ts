@@ -53,6 +53,7 @@ export function createPacer(model: Model, apply: (msg: ServerMessage) => void): 
       setBoardBehind(false);
       announcing = false;
       showUntil = 0;
+      // The sounds that waited are for moments already past, so they are not all played at once
       waiting.filter(m => m.t !== 'sound').forEach(apply);
       apply(msg);
     } else if (!HELD_MESSAGES.has(msg.t)) {

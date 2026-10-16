@@ -1,3 +1,4 @@
+/* Dialogs, menus and the pages' arrival animations */
 /* Dialogs and menus come in rather than appearing: the scrim fades, a box rises a few pixels, a menu grows from where it opens */
 @keyframes backdrop-in { from { opacity: 0; } }
 @keyframes box-in { from { opacity: 0; translate: 0 6px; } }

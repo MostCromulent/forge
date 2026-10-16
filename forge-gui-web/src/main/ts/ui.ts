@@ -16,6 +16,7 @@ export interface Picker {
 /** How an open zone is ordered: as the zone holds them, by name, by card type, or by mana value. */
 export type ZoneSort = 'order' | 'name' | 'type' | 'mana';
 
+/** A field that belongs to one match is cleared in resetMatchUi, and one that only one layout draws when the layout changes (main.ts). */
 export interface UiState {
   /** Battlefield piles the player has laid out card by card, by the pile's signature. */
   openPiles: Set<string>;
@@ -31,9 +32,7 @@ export interface UiState {
   hoveredStackItem: number | null;
   /** Where a right-click on a stack item happened, until the server's answer opens the menu there. */
   stackMenuAt: { key: number; x: number; y: number } | null;
-  /** The grid of phase stops is open. */
   stopsOpen: boolean;
-  /** The options dialog is open. */
   optionsOpen: boolean;
   /** The game menu behind the prompt's ⋯ button, or a dialog opened from it. */
   gameMenu: 'menu' | 'stops' | 'decisions' | 'dev' | 'devSetup' | null;
