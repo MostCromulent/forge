@@ -1,7 +1,7 @@
 // The game's open questions, shown oldest first, where answering one closes its dialog without waiting for the server
 
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { createContext, type ComponentChildren } from 'preact';
+import { createContext, type ComponentChildren, type RefObject } from 'preact';
 import { createCard, updateCard } from './cards';
 import { imageUrl, symbolUrl } from '../images';
 import { hoverCard } from '../preview';
@@ -30,6 +30,46 @@ import { Backdrop } from '../dialog';
 import { trackDrag } from '../press';
 
 type Answer = (value: unknown) => void;
+
+// Cards on the board grow into the room it leaves them, up to about 200px wide, where their text reads easily
+const MOST_FIT = 2.3;
+
+/**
+ * How much to enlarge a question's cards so they fill the room given. Cards are gap pixels apart, and each has below
+ * pixels of buttons under it. Wrapping rows are tried when allowed, and the layout with the biggest cards wins.
+ */
+function cardScale(count: number, width: number, height: number, card: { w: number; h: number }, gap: number, below: number, wrap: boolean): number {
+  let best = 0;
+  for (let rows = 1; rows <= (wrap ? count : 1); rows++) {
+    const cols = Math.ceil(count / rows);
+    best = Math.max(best, Math.min((width - gap * (cols - 1)) / cols / card.w, (height - gap * (rows - 1) - below * rows) / rows / card.h));
+  }
+  return Math.max(1, Math.min(MOST_FIT, best));
+}
+
+/** Enlarges the cards in a row of a question on the board to fill the space the rest of the question leaves. */
+function useCardFit(row: RefObject<HTMLElement>, count: number, gap: number, below: number, wrap: boolean): void {
+  useLayoutEffect(() => {
+    const el = row.current;
+    const back = el?.closest<HTMLElement>('.backdrop.on-board');
+    const dialog = el?.closest<HTMLElement>('.dialog');
+    if (!el || !back || !dialog || !count) return;
+    const fit = () => {
+      const around = getComputedStyle(back);
+      const own = getComputedStyle(el);
+      const card = { w: parseFloat(own.getPropertyValue('--card-w')), h: parseFloat(own.getPropertyValue('--card-h')) };
+      const width = back.clientWidth - parseFloat(around.paddingLeft) - parseFloat(around.paddingRight)
+        - parseFloat(own.paddingLeft) - parseFloat(own.paddingRight) - 16;
+      // The row's padding holds the labels under its cards, and the rest of the question keeps its height
+      const used = dialog.offsetHeight - el.clientHeight + parseFloat(own.paddingTop) + parseFloat(own.paddingBottom);
+      const height = back.clientHeight - parseFloat(around.paddingTop) - parseFloat(around.paddingBottom) - used - 16;
+      el.style.setProperty('--fit', cardScale(count, width, height, card, gap, below, wrap).toFixed(2));
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [count]);
+}
 
 export function Requests({ model, actions }: { model: Model; actions: Actions }) {
   const req = oldestRequest(model);
@@ -445,6 +485,7 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
     if (el) setMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
   };
   useLayoutEffect(measure, [shown.length]);
+  useCardFit(list, words || colours ? 0 : shown.length, 14, 0, true);
   return (
     <>
       {searchable && <input ref={search} class="choice-search" placeholder={t('lblWebDialogSearchOptions', req.options.length)}
@@ -638,6 +679,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const ghost = useRef<HTMLElement | null>(null);
   // Options that are only words, such as abilities, are listed down the dialog; cards keep their row
   const listed = req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player);
+  useCardFit(row, listed ? 0 : chosen.length, 22, 38, false);
   const words = req.options.map(o => {
     const found = SET_OFF_BY.exec(o.label ?? '');
     return found ? { text: o.label.slice(0, found.index), detail: found[1] } : { text: o.label ?? '', detail: '' };
@@ -823,6 +865,9 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
   const [piles, setPiles] = useState(() => ({ top: all.filter(i => req.movable.includes(i)), bottom: [] as number[] }));
   const held = useRef<number | null>(null);
   const bothEnds = req.toBottom || req.toTop;
+  const row = useRef<HTMLDivElement>(null);
+  // Each end's cards, or the empty place where they would go, and the pile between them, in one row
+  useCardFit(row, Math.max(piles.top.length, 1) + (bothEnds ? Math.max(piles.bottom.length, 1) : 0) + 1, 18, 0, false);
 
   const place = (shelf: Shelf, at: number) => {
     const card = held.current;
@@ -866,7 +911,7 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
 
   return (
     <div class="manipulate">
-      <div class="lib-row">
+      <div class="lib-row" ref={row}>
         {side('top')}
         <LibraryPile model={model} count={rest.length} />
         {bothEnds && side('bottom')}
@@ -965,10 +1010,12 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
     const short = (req.lethal?.[i] ?? 0) - values[i];
     return short <= 0 ? { text: t('lblLethal'), lethal: true } : { text: values[i] ? t('lblWebDialogShortOfLethal', short) : '' };
   };
+  const row = useRef<HTMLDivElement>(null);
+  useCardFit(row, order.length, 26, 60, true);
   // Side by side, each with its count under it, as the cards stand on the table
   return (
     <>
-      <div class="dist-row">
+      <div class="dist-row" ref={row}>
         {order.map(i => (
           <div key={i} class="dist-target">
             <OptionView model={model} opt={req.options[i]} />

@@ -32,6 +32,8 @@ probe('a card question dims the board, and the log, the stack and the prompt sta
   const cards = (await question.locator('.options').boundingBox())!;
   const stack = (await p.page.locator('#stack').boundingBox())!;
   expect(Math.abs(cards.x + cards.width / 2 - stack.x / 2)).toBeLessThan(40);
+  // Three cards have room to be drawn well above the board's own size
+  expect((await question.locator('.options .card').first().boundingBox())!.width).toBeGreaterThan(150);
 });
 
 probe('Escape puts a card question away and keeps what was picked, and the OK key brings it back and answers it', async p => {
