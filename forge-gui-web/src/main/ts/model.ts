@@ -197,7 +197,11 @@ function collectRefs(value: unknown, out: number[]): void {
 
 /** The game's oldest open question, which is the one shown. */
 export function oldestRequest(model: Model): Request | undefined {
-  return [...model.requests.values()].sort((a, b) => a.id - b.id)[0];
+  let oldest: Request | undefined;
+  for (const r of model.requests.values()) {
+    if (!oldest || r.id < oldest.id) oldest = r;
+  }
+  return oldest;
 }
 
 /** The open question when it is which of one clicked card's abilities to use, answered from a menu at the pointer. */

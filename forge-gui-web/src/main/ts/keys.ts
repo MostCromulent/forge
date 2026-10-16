@@ -130,7 +130,7 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
   }
   // A question in a dialog is answered there, and the prompt under it keeps its buttons to itself
   const pick = stackPick(model);
-  if ((oldestRequest(model) && !pick) || model.spectating) {
+  if ((request && !pick) || model.spectating) {
     return null;
   }
   // A spell picked on the stack is declined from the prompt's Cancel, when it may be
