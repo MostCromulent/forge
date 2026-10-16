@@ -23,7 +23,7 @@ import javax.imageio.stream.MemoryCacheImageOutputStream;
 
 /** Card images the browser cannot use as stored: shrunk with a proper filter, because a browser shrinking a full scan on a rotated or animated layer breaks up the text, or painted as a foil. */
 public final class CardThumbnails {
-    /** Twice a board card's width, so it stays sharp on a screen scaled up to 2.5 times. */
+    /** About twice the widest a board card is drawn (88px at a fit of 1.4), so it stays sharp on a screen at twice normal scale. */
     public static final int WIDTH = 256;
     private static final int MOST_KEPT = 600;
     private static final float JPEG_QUALITY = 0.88f;

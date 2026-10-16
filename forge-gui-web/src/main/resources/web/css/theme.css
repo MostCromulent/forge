@@ -17,7 +17,7 @@ html[data-motion="reduced"] #zoom .shot > * { transform: none; }
   /* The table is lit at the centre and falls away at the edges, so the board is not one flat rectangle */
   --bg: #10141c;
   --bg-deep: #070910;
-  /* Six rungs, not four: a panel resting on a panel has to read as raised, and a hover needs its own step */
+  /* Six rungs from --bg to --line-bright, not four: a panel resting on a panel has to read as raised, and a hover needs its own step */
   --surface: #171d27;
   --surface-2: #212936;
   --surface-3: #26303d;

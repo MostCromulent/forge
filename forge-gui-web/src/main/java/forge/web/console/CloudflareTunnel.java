@@ -29,7 +29,7 @@ public final class CloudflareTunnel implements IHasForgeLog {
 
     private static final Pattern ADDRESS = Pattern.compile("https://[a-z0-9-]+\\.trycloudflare\\.com");
     private static final long LOOK_AGAIN_MILLIS = 3000;
-    /** Cloudflare names the address at once but takes up to a minute to start answering at it. */
+    /** Cloudflare names the address at once but can be slow to start answering at it, so it is given this long. */
     private static final long ANSWER_WITHIN_MILLIS = 120_000;
 
     private final int port;

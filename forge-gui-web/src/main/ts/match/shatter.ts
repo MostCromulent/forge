@@ -29,8 +29,8 @@ const SEAT: Timing = { fly: 0, crack: 0, brk: 0, burst: 0.07, title: Infinity, e
 const GRAVITY = 1500;
 // How fast the end of the game plays once it has burst. Slowing the clock leaves every piece on the same path
 const BURST_PACE = 0.75;
-// The build's loudest moment, 2.35s into its file, lands on the burst; the burst's hit, 0.05s into its file, lands
-// a little before it, which reads as on time
+// The build's loudest moment, 2.35s into its file, lands on the burst. The burst's file starts BURST_LEAD early, so its
+// hit, 0.05s in, lands just before the burst, which reads as on time
 const BUILD_PEAK = 2.35;
 const BURST_LEAD = 0.13;
 
