@@ -126,6 +126,8 @@ function drawPrompt(model: Model, actions: Actions): void {
     const card = q<HTMLImageElement>(root, '.prompt-card');
     hideOnError(card);
     hoverable(card);
+    const buttons = q(root, '.buttons');
+    new ResizeObserver(() => buttons.classList.toggle('stacked', q(buttons, '.cancel').offsetTop > q(buttons, '.ok').offsetTop)).observe(buttons);
     built = true;
   }
   // On a phone the tools are moved to the player's own bar, so the dock keeps one row
@@ -315,8 +317,6 @@ function renderPromptCard(img: HTMLImageElement, model: Model, ref: Ref | null |
 
 function setButton(button: HTMLButtonElement, spec: PromptButton | undefined): void {
   setSymbolText(q(button, '.label'), spec?.label);
-  // The prompt cuts off a long label, so the full label is put in the title for hover
-  button.title = spec?.label ?? '';
   button.disabled = !spec?.enabled;
   button.hidden = !spec?.label;
 }

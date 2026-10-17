@@ -37,17 +37,20 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 #prompt .prompt-body:not(:has(.message:not(:empty))):not(:has(img:not([hidden]))) { display: none; }
 #prompt .prompt-card { width: 44px; border-radius: 4px; flex: none; }
 #prompt .message { margin: 0; min-height: 0; max-height: 8em; overflow-y: auto; white-space: pre-line; scrollbar-width: thin; color: var(--text); font-size: 13.5px; line-height: 1.35; }
-/* The answers form one bar. The secondary answer is a narrower segment next to the primary, because the two always come as a pair. */
-#prompt .buttons { display: flex; gap: 2px; }
+/* The answers form one bar. The secondary answer is a narrower segment next to the primary, because the two always come as a pair.
+   When both labels do not fit on one row, the secondary answer moves to a row of its own. */
+#prompt .buttons { display: flex; flex-wrap: wrap; gap: 2px; }
 /* With nothing to answer, the console is only as tall as its text. On a phone, the dock keeps its single row. */
 html:not([data-form="portrait"]) #prompt .buttons:not(:has(button:not(:disabled))) { display: none; }
 /* The key is shown as a separate keycap next to the label. This makes it read as the key to press, not as part of the answer. */
-#prompt .buttons button { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 5px; min-width: 0; height: 36px; padding: 0 9px; border-radius: 4px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
-/* The secondary answer is as wide as its label, and the primary takes the rest */
-#prompt .ok { flex: 1 1 0; border-radius: 8px 4px 4px 8px; }
-#prompt .cancel { flex: 0 1 auto; max-width: 52%; background: var(--surface-2); border-color: var(--line); color: var(--muted); border-radius: 4px 8px 8px 4px; }
-/* A long secondary label (Cancel auto-pass) wraps onto two lines instead of growing wider than the primary */
-#prompt .cancel .label { white-space: normal; text-align: center; line-height: 1.1; }
+#prompt .buttons button { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 5px; min-width: 0; min-height: 36px; padding: 0 9px; border-radius: 4px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+/* On a shared row the secondary answer is as wide as its label and the primary takes the rest. On its own row, each fills the row. */
+#prompt .ok { flex: 1000 1 auto; border-radius: 8px 4px 4px 8px; }
+#prompt .cancel { flex: 1 1 auto; background: var(--surface-2); border-color: var(--line); color: var(--muted); border-radius: 4px 8px 8px 4px; }
+/* A label only breaks onto a second line when it is wider than the whole prompt by itself */
+#prompt .buttons .label { text-align: center; line-height: 1.1; }
+/* Answers on separate rows are separate buttons, so each gets all its corners rounded (prompt.ts sets the class) */
+html:not([data-form="portrait"]) #prompt .buttons.stacked button { border-radius: 8px; }
 #prompt .cancel:hover:not(:disabled) { color: var(--text); }
 #prompt .ok:last-child, #prompt .cancel:first-child { border-radius: 8px; }
 /* When declaring attackers, the answer has its own row. The shortcut button is on a quieter row below it, so attacking with everything is not mistaken for the way out. */
@@ -183,8 +186,6 @@ input.level:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 
 #volume .volume-panel { position: fixed; display: grid; gap: 8px; padding: 10px 12px; min-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 34px #000a; }
 #volume .volume-row { display: grid; grid-template-columns: 48px 1fr 34px; align-items: center; gap: 8px; font-size: 12.5px; }
 #volume .volume-row .value { color: var(--muted); font-size: 11.5px; text-align: right; }
-/* A rare long answer is cut short instead of pushing the other button out of the console. The button's title holds the full text (prompt.ts). */
-#prompt .buttons .label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 /* Buttons for players a prompt lets you pick, when their seat is not on the board to click (prompt.ts) */
 #prompt .choose-players { display: flex; flex-wrap: wrap; gap: 6px; }
 #prompt .choose-player { display: flex; align-items: center; gap: 7px; padding: 3px 10px 3px 3px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }

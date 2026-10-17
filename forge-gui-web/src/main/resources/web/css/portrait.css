@@ -348,7 +348,6 @@ html[data-form="portrait"] .battlefield .card.tapped :is(.count, .pt) { rotate: 
 html[data-form="portrait"] #game-over .panel { max-width: 100%; box-sizing: border-box; padding: 0 16px; }
 html[data-form="portrait"] #game-over .word { margin: 0; font-size: clamp(30px, 11vw, 60px); letter-spacing: .12em; text-align: center; }
 html[data-form="portrait"] #game-over .rule { width: min(240px, 70vw); }
-html[data-form="portrait"] #game-over .actions { flex-wrap: wrap; justify-content: center; }
 html[data-form="portrait"] #game-over .actions button { min-height: 48px; padding: 9px 16px; }
 
 /* The deck finder and the sleeve picker fill the whole screen. The sources are along the top, the list is under them, and the buttons are at the bottom. */
