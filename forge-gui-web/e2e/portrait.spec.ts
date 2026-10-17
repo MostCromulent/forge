@@ -340,7 +340,7 @@ probe('a question about a hidden opponent\'s cards marks the players button and 
   await expect(p.page.locator('#opponent .seat:not([hidden]) .card.selectable')).toBeVisible();
 }, PHONE);
 
-probe('the menu sheet holds the log, and conceding asks twice', async p => {
+probe('the menu sheet holds the log, and conceding asks first', async p => {
   await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
   await p.page.locator('#menu-button').tap();
   const sheet = p.page.locator('.menu-sheet');
@@ -355,8 +355,10 @@ probe('the menu sheet holds the log, and conceding asks twice', async p => {
   await settled(p.page);
   expect((await box(p.page, '.menu-sheet')).height).toBeLessThan(300);
   await sheet.locator('.concede').tap();
+  const ask = p.page.locator('[role=alertdialog]');
+  await expect(ask).toBeVisible();
   await expect(p.page.locator('#game-over')).toBeHidden();
-  await sheet.locator('.concede').tap();
+  await ask.locator('.danger').tap();
   await expect(p.page.locator('#game-over')).toBeVisible();
 }, PHONE);
 

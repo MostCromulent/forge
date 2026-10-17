@@ -483,6 +483,19 @@ public class WebGuiGame extends NetworkGuiGame {
         return item.isOptionalTrigger() && isLocalPlayer(item.getActivatingPlayer()) && !item.getKey().isEmpty();
     }
 
+    /** The Always Yes and Always No shortcuts, as desktop answers them: the ability on top of the stack is yielded to, and its trigger answered if it is the player's to answer. */
+    private void autoYieldTop(final IGameController controller, final boolean yes) {
+        final StackItemView item = getGameView().peekStack();
+        if (item == null || !item.isAbility()) {
+            return;
+        }
+        final boolean abilityScope = controller.getYieldController().isAbilityScope();
+        if (answersTrigger(item)) {
+            controller.setTriggerDecision(item.getKey(), yes ? TriggerDecision.ACCEPT : TriggerDecision.DECLINE, abilityScope);
+        }
+        controller.setShouldAutoYield(item.getKey(), true, abilityScope);
+    }
+
     private void stackYield(final IGameController controller, final StackItemView item, final YieldAction action) {
         final String yieldKey = item.getKey();
         final boolean abilityScope = controller.getYieldController().isAbilityScope();
@@ -1244,6 +1257,7 @@ public class WebGuiGame extends NetworkGuiGame {
                     g.send(g.stackMenuMessage(controller, item));
                 }
             }))
+            .on(AutoYieldTop.class, play((g, controller, y) -> g.autoYieldTop(controller, y.yes())))
             .on(NextGame.class, play((g, controller, n) -> controller.nextGameDecision(n.decision())));
 
     public void onCommand(final BrowserChannel channel, final Record command) {

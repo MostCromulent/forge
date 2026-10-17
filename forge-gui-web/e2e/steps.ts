@@ -57,12 +57,12 @@ export async function gameStarted(page: Page): Promise<void> {
   }).toPass({ timeout: 60_000 });
 }
 
-/** Concedes from the game menu, which asks twice. */
+/** Concedes from the game menu, which asks first. */
 export async function concede(page: Page): Promise<void> {
   await answerDialogs(page);
   await page.click('#prompt .more');
   await page.locator('.game-menu .concede').click();
-  await page.locator('.game-menu .concede').click();
+  await page.locator('[role=alertdialog] .danger').click();
   await expect(page.locator('#game-over')).toBeVisible();
 }
 

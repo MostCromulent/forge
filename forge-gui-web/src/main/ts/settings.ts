@@ -1,6 +1,6 @@
 // Settings marked server:true are Forge preferences shared with the desktop client, and the rest live in this browser
 
-import type { KeyBindings } from './keys';
+import { SHORTCUT_PREFS, codesOfKey, sameShortcut, type KeyBindings } from './keys';
 import type { ServerSettings } from './protocol';
 import { storeJson, storedJson } from './storage';
 import { t, type TextKey } from './text';
@@ -60,6 +60,8 @@ export type SettingDef = SettingBase & (
   | { type: 'slider'; min: number; max: number; def: number; step?: number; unit?: 'seconds' }
   | { type: 'css'; def: string }
   | { type: 'key'; action: keyof KeyBindings; def: string }
+  /** One of Forge's shortcut preferences, which desktop reads too (shortcutSettings). */
+  | { type: 'shortcut'; def: string }
 );
 
 const theirs = (x: number, y: number, width: number) => `<rect class="theirs" x="${x}" y="${y}" width="${width}" height="32" rx="3"/>`;
@@ -169,9 +171,6 @@ export const SETTINGS: SettingDef[] = [
     section: t('lblWebOptionsSectionTable'), key: 'ante', label: t('cbAnte'), type: 'toggle', server: true, hostOnly: true, def: false,
   },
   { section: t('lblKeyboardShortcuts'), key: 'keyOk', label: t('lblOK'), action: 'ok', type: 'key', def: ' ' },
-  { section: t('lblKeyboardShortcuts'), key: 'keyEndTurn', label: t('lblEndTurn'), action: 'endTurn', type: 'key', def: 'e' },
-  { section: t('lblKeyboardShortcuts'), key: 'keyAutoPass', label: t('lblWebOptionsKeyAutoPass'), hint: t('lblWebOptionsKeyAutoPassHint'), action: 'autoPass', type: 'key', def: 'p' },
-  { section: t('lblKeyboardShortcuts'), key: 'keyUndo', label: t('lblUndo'), action: 'undo', type: 'key', def: 'z' },
   { section: t('lblKeyboardShortcuts'), key: 'keyNextFace', label: t('lblWebOptionsKeyNextFace'), hint: t('lblWebOptionsUnderPointer'), action: 'nextFace', type: 'key', def: 'f' },
   { section: t('lblKeyboardShortcuts'), key: 'keyCardText', label: t('lblWebOptionsKeyCardText'), hint: t('lblWebOptionsUnderPointer'), action: 'cardText', type: 'key', def: 't' },
   {
@@ -223,7 +222,7 @@ export function onServerSettings(values: ServerSettings | undefined): void {
 /** Gives the server the settings this guest's browser remembers, sent before any game opens so the game is seeded with them. */
 export function restoreGuestSettings(): void {
   for (const [key, value] of Object.entries(guestSettings())) {
-    if (byKey.get(key)?.server) {
+    if (byKey.get(key)?.server || key.startsWith('SHORTCUT_')) {
       saveOnServer(key, String(value));
     }
   }
@@ -256,14 +255,55 @@ export function boundKeys(): KeyBindings {
   return Object.fromEntries(KEY_SETTINGS.map(d => [d.action, String(setting(d.key))])) as unknown as KeyBindings;
 }
 
-export function defaultKeys(): KeyBindings {
-  return Object.fromEntries(KEY_SETTINGS.map(d => [d.action, d.def])) as unknown as KeyBindings;
+/** Puts every key back as it came, the shortcut preferences included. */
+export function resetKeys(): void {
+  for (const s of server.shortcuts ?? []) saveShortcut(s.pref, s.defaultKeys);
+  setKeys(Object.fromEntries(KEY_SETTINGS.map(d => [d.action, d.def])) as unknown as KeyBindings);
+}
+
+/** The shortcut preferences the web has an action for, as rows of the options, with Forge's name and default for each. */
+export function shortcutSettings(): SettingDef[] {
+  return (server.shortcuts ?? []).filter(s => SHORTCUT_PREFS.has(s.pref))
+    .map(s => ({ section: t('lblKeyboardShortcuts'), key: s.pref, label: s.label, type: 'shortcut', server: true, def: s.defaultKeys }));
+}
+
+/** Each shortcut preference's keys. */
+export function shortcutKeys(): Record<string, string> {
+  return Object.fromEntries((server.shortcuts ?? []).map(s => [s.pref, s.keys]));
+}
+
+function saveShortcut(pref: string, codes: string): void {
+  const s = server.shortcuts?.find(x => x.pref === pref);
+  if (!s) return;
+  s.keys = codes;
+  saveOnServer(pref, codes);
+  if (guest) storeJson(GUEST_KEY, { ...guestSettings(), [pref]: codes });
+}
+
+/** Gives a shortcut preference its keys, which any other shortcut or page key holding them loses, so a key does one thing. */
+export function setShortcut(pref: string, codes: string): void {
+  if (codes) {
+    for (const s of server.shortcuts ?? []) {
+      if (s.pref !== pref && sameShortcut(s.keys, codes)) saveShortcut(s.pref, '');
+    }
+    const keys = boundKeys();
+    for (const d of KEY_SETTINGS) {
+      if (sameShortcut(codesOfKey(keys[d.action]), codes)) local[d.key] = '';
+    }
+    storeJson(LOCAL_KEY, local);
+  }
+  saveShortcut(pref, codes);
+  redraw();
 }
 
 /** Saves every key binding at once, so a swap between two actions lands as one change. */
 export function setKeys(keys: KeyBindings): void {
   for (const d of KEY_SETTINGS) {
     local[d.key] = keys[d.action];
+    // A desktop shortcut on the same key loses it
+    for (const s of server.shortcuts ?? []) {
+      if (sameShortcut(s.keys, codesOfKey(keys[d.action]))) saveShortcut(s.pref, '');
+    }
   }
   storeJson(LOCAL_KEY, local);
   redraw();

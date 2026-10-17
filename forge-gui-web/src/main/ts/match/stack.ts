@@ -39,6 +39,11 @@ function fold(folded: boolean): void {
   changeUi(u => { u.stackCollapsed = folded; });
 }
 
+/** Opens the stack where it was folded, for the shortcut that shows it. */
+export function showStack(): void {
+  if (ui.stackCollapsed) fold(false);
+}
+
 /** A tap on the board puts the phone's list away, so the cards under it can be reached. */
 export function foldStack(): void {
   if (isPortrait() && !ui.stackCollapsed) fold(true);

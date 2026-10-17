@@ -47,6 +47,7 @@ export interface PageActions {
   inspectPlayer(key: number): void;
   askStackMenu(itemKey: number): void;
   stackYield(itemKey: number, action: YieldAction): void;
+  autoYieldTop(yes: boolean): void;
   say(text: string): void;
   giveSeat(from: string, to: string): void;
   dropPlayer(name: string): void;
@@ -193,6 +194,7 @@ export function createActions(send: Send): PageActions {
     inspectPlayer: key => send({ t: 'playerDetail', key }),
     askStackMenu: key => send({ t: 'stackMenu', key }),
     stackYield: (key, action) => send({ t: 'stackYield', key, action }),
+    autoYieldTop: yes => send({ t: 'autoYieldTop', yes }),
     say: text => send({ t: 'chat', text }),
     giveSeat: (from, to) => send({ t: 'giveSeat', from, to }),
     dropPlayer: name => send({ t: 'dropPlayer', name }),

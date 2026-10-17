@@ -5,8 +5,8 @@ import { exportBackup, importBackup } from './backup';
 import { ForgeLinks } from './links';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { saveText } from './dom';
-import { keyName, rebind, type KeyBindings } from './keys';
-import { PLAYMATS, SETTINGS, boundKeys, defaultKeys, isGuest, set, setKeys, setting, type SettingDef } from './settings';
+import { keyName, rebind, shortcutCodes, shortcutName, type KeyBindings } from './keys';
+import { PLAYMATS, SETTINGS, boundKeys, isGuest, resetKeys, set, setKeys, setShortcut, setting, shortcutKeys, shortcutSettings, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
 import { t, textLanguage } from './text';
 import { changeUi, easedLocal } from './ui';
@@ -46,6 +46,12 @@ const TABS: { name: string; sections: string[]; icon: string }[] = [
 /** The tab last looked at, so the dialog opens where it was left. */
 let lastTab = 0;
 
+/** Opens the options at the keyboard shortcuts, for the shortcut that shows them. */
+export function showShortcuts(): void {
+  lastTab = TABS.findIndex(tb => tb.name === t('lblKeyboardShortcuts'));
+  changeUi(u => { u.optionsOpen = true; });
+}
+
 export function Options({ close }: { close: () => void }) {
   const [query, setQuery] = useState('');
   const [at, setAt] = useState(lastTab);
@@ -55,7 +61,7 @@ export function Options({ close }: { close: () => void }) {
   }, []);
   const searching = !!query.trim();
   const tab = TABS[at];
-  const all = SETTINGS.filter(def => !def.inside && (def.when?.() ?? true) && !(def.hostOnly && isGuest()));
+  const all = [...SETTINGS, ...shortcutSettings()].filter(def => !def.inside && (def.when?.() ?? true) && !(def.hostOnly && isGuest()));
   // A tab lists its sections in its own order; a search looks through every tab
   const shown = searching ? matching(all, query) : tab.sections.flatMap(section => all.filter(def => def.section === section));
   // The rail runs down the side, so the next tab's page comes up from below and an earlier one down from above (dialogs.css)
@@ -78,7 +84,7 @@ export function Options({ close }: { close: () => void }) {
         <ForgeLinks />
       </>}
       footer={!searching && shown[0]?.type === 'key'
-        ? <button class="section-action" onClick={() => setKeys(defaultKeys())}>{t('lblWebOptionsResetKeys')}</button> : null}>
+        ? <button class="section-action" onClick={resetKeys}>{t('lblWebOptionsResetKeys')}</button> : null}>
       {!searching && tab.name === t('lblAdvanced') && <BackupRow />}
       {blocks(shown, searching, tab.name)}
       {!shown.length && <p class="hint">{t('lblWebOptionsNoMatch')}</p>}
@@ -147,7 +153,7 @@ export function SectionHeading({ name, keys }: { name: string; keys: boolean }) 
   return (
     <h4>
       {name}
-      {keys && <button class="section-action" onClick={() => setKeys(defaultKeys())}>{t('lblWebOptionsResetKeys')}</button>}
+      {keys && <button class="section-action" onClick={resetKeys}>{t('lblWebOptionsResetKeys')}</button>}
     </h4>
   );
 }
@@ -197,7 +203,7 @@ export function OnOff({ on, label, change }: { on: boolean; label: string; chang
 }
 
 function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) {
-  const value = setting(def.key);
+  const value = def.type === 'shortcut' ? shortcutKeys()[def.key] ?? '' : setting(def.key);
   const change = (next: string | number | boolean) => {
     set(def.key, next);
     onChange?.();
@@ -236,6 +242,8 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
       return null;
     case 'key':
       return <KeyControl action={def.action} value={String(value)} />;
+    case 'shortcut':
+      return <ShortcutControl value={String(value)} change={codes => setShortcut(def.key, codes)} />;
     case 'slider':
       return (
         <div class="slider">
@@ -307,6 +315,25 @@ function CssEditor({ def, value }: { def: SettingDef; value: string }) {
   );
 }
 
+// Click, then press the new key, with Ctrl or Shift if wanted. Escape leaves the key as it was, and Backspace takes it away, as on desktop.
+function ShortcutControl({ value, change }: { value: string; change: (value: string) => void }) {
+  const [listening, setListening] = useState(false);
+  return (
+    <button class={listening ? 'key-bind listening' : 'key-bind'} onClick={() => setListening(true)} onBlur={() => setListening(false)}
+      onKeyDown={e => {
+        if (!listening || ['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.key === 'Backspace') change('');
+        else if (e.key !== 'Escape') change(shortcutCodes(e));
+        setListening(false);
+        e.currentTarget.blur();
+      }}>
+      {listening ? t('lblWebOptionsPressKey') : value ? shortcutName(value) : t('lblNone')}
+    </button>
+  );
+}
+
 // Click, then press the new key. Escape leaves the key as it was.
 function KeyControl({ action, value }: { action: keyof KeyBindings; value: string }) {
   const [listening, setListening] = useState(false);
@@ -322,7 +349,7 @@ function KeyControl({ action, value }: { action: keyof KeyBindings; value: strin
         // Blurring stops a Space from also clicking the button when it is released, which would listen again
         e.currentTarget.blur();
       }}>
-      {listening ? t('lblWebOptionsPressKey') : keyName(value)}
+      {listening ? t('lblWebOptionsPressKey') : value ? keyName(value) : t('lblNone')}
     </button>
   );
 }

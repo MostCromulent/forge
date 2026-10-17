@@ -17,7 +17,9 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.sound.SoundSystem;
 import forge.util.IHasForgeLog;
+import forge.util.Localizer;
 import forge.web.protocol.ToBrowser.ServerSettings;
+import forge.web.protocol.ToBrowser.ShortcutPref;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +47,9 @@ public final class WebSettings implements IHasForgeLog {
             "suggestStackYield", FPref.YIELD_DECLINE_SCOPE_STACK_YIELD,
             "suggestNoActions", FPref.YIELD_DECLINE_SCOPE_NO_ACTIONS);
 
+    /** Forge's keyboard shortcut preferences, which the page offers where it has the action. */
+    private static final List<FPref> SHORTCUTS = Arrays.stream(FPref.values()).filter(p -> p.name().startsWith("SHORTCUT_")).toList();
+
     public static ServerSettings values(final PlayerSettings player) {
         return new ServerSettings(
                 player.getBoolean(FPref.YIELD_INTERRUPT_ON_ATTACKERS),
@@ -70,7 +75,8 @@ public final class WebSettings implements IHasForgeLog {
                 player.getBoolean(FPref.FILTERED_HANDS),
                 MulliganDefs.GetRuleByName(player.get(FPref.MULLIGAN_RULE)).name(),
                 player.get(FPref.UI_CURRENT_AI_PROFILE),
-                player.getBoolean(FPref.UI_ANTE));
+                player.getBoolean(FPref.UI_ANTE),
+                SHORTCUTS.stream().map(p -> new ShortcutPref(p.name(), Localizer.getInstance().getMessage("lbl" + p.name()), player.get(p), p.getDefault())).toList());
     }
 
     /** Saves a setting, dropping an illegal value because it could reach the file the desktop client shares. */
@@ -96,6 +102,13 @@ public final class WebSettings implements IHasForgeLog {
         } else if ("autoYieldMode".equals(key)) {
             setEverywhere(player, controller, FPref.UI_AUTO_DECISION_MODE,
                     "card".equals(value) ? ForgeConstants.AUTO_DECISION_PER_CARD : ForgeConstants.AUTO_DECISION_PER_ABILITY);
+        } else if (SHORTCUTS.stream().anyMatch(s -> s.name().equals(key))) {
+            // Forge's format, Java key codes separated by spaces, since desktop reads the same preference
+            if (!value.matches("(\\d{1,5}( \\d{1,5})*)?")) {
+                netLog.warn("Web client: bad shortcut {}", value);
+                return;
+            }
+            player.set(FPref.valueOf(key), value);
         } else if ("logDetail".equals(key)) {
             player.set(FPref.DEV_LOG_ENTRY_TYPE, GameLogVerbosity.fromString(value).toString());
         } else if ("soundSet".equals(key)) {

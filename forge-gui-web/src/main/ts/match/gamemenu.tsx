@@ -10,18 +10,31 @@ import { deref, type Model } from '../model';
 import { t, type TextKey } from '../text';
 import { useClosing } from '../closing';
 import { changeUi, ui } from '../ui';
-import { Backdrop } from '../dialog';
+import { Backdrop, Confirm } from '../dialog';
 import { ICONS, Icon } from '../icons';
 import { useTwoPress } from '../hooks';
 
 /** A menu item's icon, at its start or, with end, at its end. */
 export const MenuIcon = ({ d, end, cls }: { d: string; end?: boolean; cls?: string }) => <Icon d={d} cls={['menu-icon', end ? 'end' : '', cls ?? ''].filter(Boolean).join(' ')} />;
 
-export function GameMenu({ model, actions, close, open }: {
-  model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'devSetup') => void;
+/** Starts recording a macro, or stops the recording. */
+export function recordMacro(actions: Actions): void {
+  actions.macroRecord();
+  changeUi(u => { u.macro = u.macro === 'recording' ? 'recorded' : 'recording'; });
+}
+
+/** Asks whether to concede, as desktop does, before conceding. */
+export function ConcedeQuestion({ actions }: { actions: Actions }) {
+  const close = () => changeUi(u => { u.concedeAsk = false; });
+  return <Confirm title={t('lblConcedeTitle')} text={t('lblConcedeCurrentGame')} back={close} backLabel={t('lblCancel')}
+    go={() => { close(); actions.concede(); }} goLabel={t('lblConcede')} danger cls="concede-ask" />;
+}
+
+/** dev opens the menu at its dev items, for the shortcut that shows the dev panel. */
+export function GameMenu({ model, actions, close, open, dev: atDev }: {
+  model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'devSetup') => void; dev?: boolean;
 }) {
-  const [armed, press] = useTwoPress();
-  const [dev, setDev] = useState(false);
+  const [dev, setDev] = useState(!!atDev);
   const [mats, setMats] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
   const { closing, shut, gone } = useClosing(close);
@@ -46,8 +59,7 @@ export function GameMenu({ model, actions, close, open }: {
         </button>
         <button type="button" role="menuitem" class="card-menu-item" disabled={model.spectating} onClick={() => open('decisions')}><MenuIcon d={ICONS.yields} />{t('lblWebGameMenuDecisions')}</button>
         <button type="button" role="menuitem" class="card-menu-item" disabled={model.spectating} onClick={() => {
-          actions.macroRecord();
-          changeUi(u => { u.macro = u.macro === 'recording' ? 'recorded' : 'recording'; });
+          recordMacro(actions);
           close();
         }}><MenuIcon d={ICONS.macro} />{t(ui.macro === 'recording' ? 'lblWebGameMenuMacroStop' : 'lblWebGameMenuMacroRecord')}</button>
         <div class="card-menu-sep" role="separator" />
@@ -55,12 +67,11 @@ export function GameMenu({ model, actions, close, open }: {
           onClick={() => { actions.drawOffer('OFFER'); close(); }}>
           <MenuIcon d={ICONS.draw} />{offer?.mine ? t('lblWebGameMenuDrawOffered') : t('lblWebGameMenuOfferDraw')}
         </button>
-        <button type="button" role="menuitem" class={armed ? 'card-menu-item concede armed' : 'card-menu-item concede'}
-          disabled={model.spectating} onClick={press(() => {
-            actions.concede();
-            close();
-          })}>
-          {!armed && <MenuIcon d={ICONS.concede} />}{armed ? t('lblWebGameMenuConcedeAgain') : t('lblConcede')}
+        <button type="button" role="menuitem" class="card-menu-item concede" disabled={model.spectating} onClick={() => {
+          close();
+          changeUi(u => { u.concedeAsk = true; });
+        }}>
+          <MenuIcon d={ICONS.concede} />{t('lblConcede')}
         </button>
         {/* The host's alone: its seat shares a process with the server, and a guest's does not */}
         {setting('devMode') && model.host && !model.spectating && <>

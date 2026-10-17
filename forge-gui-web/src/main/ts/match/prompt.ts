@@ -10,8 +10,8 @@ import { boardBehind } from './pace';
 import { byId, q, replay, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
-import { keyName } from '../keys';
-import { boundKeys } from '../settings';
+import { keyName, shortcutName } from '../keys';
+import { boundKeys, shortcutKeys } from '../settings';
 import { isPortrait } from '../form';
 import { notePick } from './overlay';
 import { declaringBlocks } from './blockdrag';
@@ -133,8 +133,12 @@ function drawPrompt(model: Model, actions: Actions): void {
   else if (!isPortrait() && tools.parentElement !== root) q(root, '.step').before(tools);
   // The player can choose these keys in the options, so the labels follow whatever they chose
   const keys = boundKeys();
-  q(tools, '.undo').title = t('lblWebPromptUndoTip', keyName(keys.undo));
-  q(root, '.buttons .ok kbd').textContent = keyName(keys.ok);
+  const shortcuts = shortcutKeys();
+  const shortcut = (pref: string) => shortcutName(shortcuts[pref] ?? '') || t('lblNone');
+  q(tools, '.undo').title = t('lblWebPromptUndoTip', shortcut('SHORTCUT_UNDO'));
+  const okKey = q(root, '.buttons .ok kbd');
+  okKey.textContent = keyName(keys.ok);
+  okKey.hidden = !keys.ok;
   if (model.prompt !== shown) {
     shown = model.prompt;
     root.dataset.seq = String(++arrived);
@@ -152,7 +156,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   const autoPass = !!model.controls?.autoPass;
   const autoPassButton = q(tools, '.auto-pass');
   autoPassButton.classList.toggle('on', autoPass);
-  autoPassButton.title = t(autoPass ? 'lblWebPromptAutoPassOnTip' : 'lblWebPromptAutoPassOffTip', keyName(keys.autoPass));
+  autoPassButton.title = t(autoPass ? 'lblWebPromptAutoPassOnTip' : 'lblWebPromptAutoPassOffTip', shortcut('SHORTCUT_YIELD_AUTO_PASS'));
   // Lit while the turn is being passed through, as auto-pass is while it is on
   const endingTurn = !!model.controls?.untilEndOfTurn;
   const endTurnButton = q(tools, '.end-turn');
@@ -160,7 +164,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   // A second press stops the pass it started
   endTurnButton.onclick = () => (endingTurn ? actions.stopYield() : actions.endTurn());
   endTurnButton.title = endingTurn ? t('lblWebPromptEndingTurnTip')
-    : t('lblWebPromptEndTurnTip', keyName(keys.endTurn));
+    : t('lblWebPromptEndTurnTip', shortcut('SHORTCUT_ENDTURN'));
   q(tools, '.more').classList.toggle('open', !!ui.gameMenu);
   // While a macro is recorded it is one press from the prompt: a press stops the recording, or plays the macro again
   const macro = q<HTMLButtonElement>(tools, '.macro');

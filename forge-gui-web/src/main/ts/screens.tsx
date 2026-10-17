@@ -12,7 +12,7 @@ import { DeckFinder } from './deck/deckfinder';
 import { Requests, StackMenu } from './match/dialogs';
 import { HostChoice } from './hostchoice';
 import { Options } from './options';
-import { AutoDecisionsDialog, AutoPassStops, DrawOfferQuestion, GameMenu } from './match/gamemenu';
+import { AutoDecisionsDialog, AutoPassStops, ConcedeQuestion, DrawOfferQuestion, GameMenu } from './match/gamemenu';
 import { DevSetupDialog } from './match/devmenu';
 import { Volume } from './volume';
 import { Notices } from './notices';
@@ -63,10 +63,11 @@ export function renderScreens(model: Model, actions: Actions): void {
     {page === 'match' && ui.volumeOpen && <Volume close={() => changeUi(u => { u.volumeOpen = false; })} />}
     {page !== 'match' && ui.volumeOpen && <Volume anchor=":is(.page-head, .cq-purse) .volume" close={() => changeUi(u => { u.volumeOpen = false; })} />}
     {page !== 'name' && ui.optionsOpen && <Options close={() => changeUi(u => { u.optionsOpen = false; })} />}
-    {page === 'match' && ui.gameMenu === 'menu' && (
+    {page === 'match' && (ui.gameMenu === 'menu' || ui.gameMenu === 'dev') && (
       <GameMenu model={model} actions={actions} close={() => changeUi(u => { u.gameMenu = null; })}
-        open={dialog => changeUi(u => { u.gameMenu = dialog; })} />
+        open={dialog => changeUi(u => { u.gameMenu = dialog; })} dev={ui.gameMenu === 'dev'} />
     )}
+    {page === 'match' && ui.concedeAsk && <ConcedeQuestion actions={actions} />}
     {page === 'match' && ui.gameMenu === 'decisions' && (
       <AutoDecisionsDialog model={model} actions={actions} close={() => changeUi(u => { u.gameMenu = null; })} />
     )}

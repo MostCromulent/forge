@@ -9,7 +9,6 @@ import { players, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
 import type { Actions } from '../actions';
 import { t } from '../text';
-import { useTwoPress } from '../hooks';
 
 const TABS = ['log', 'chat', 'players'] as const;
 type Tab = typeof TABS[number];
@@ -17,7 +16,6 @@ type Tab = typeof TABS[number];
 export function MenuSheet({ model, actions }: { model: Model; actions: Actions }) {
   const root = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLDivElement>(null);
-  const [armed, press] = useTwoPress();
   const shown = TABS.filter(x => x !== 'chat' || model.networked);
   const tab: Tab = shown.find(x => x === ui.menuSheet) ?? 'log';
   const close = () => changeUi(u => { u.menuSheet = null; });
@@ -70,11 +68,10 @@ export function MenuSheet({ model, actions }: { model: Model; actions: Actions }
       </div>
       <div class="menu-foot">
         <button type="button" onClick={() => changeUi(u => { u.menuSheet = null; u.optionsOpen = true; })}>{t('lblWebHeadOptions')}</button>
-        {/* Asked twice, as the game menu asks */}
-        <button type="button" class={armed ? 'concede armed' : 'concede'} disabled={model.spectating} onClick={press(() => {
-          actions.concede();
+        <button type="button" class="concede" disabled={model.spectating} onClick={() => {
           close();
-        })}>{armed ? t('lblWebGameMenuConcedeAgain') : t('lblConcede')}</button>
+          changeUi(u => { u.concedeAsk = true; });
+        }}>{t('lblConcede')}</button>
       </div>
     </div>
   );

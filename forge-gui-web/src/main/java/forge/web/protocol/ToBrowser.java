@@ -499,7 +499,11 @@ public final class ToBrowser {
             String autoYieldMode, GameLogVerbosity logDetail, boolean devMode,
             String highlightColor, int soundVolume, int musicVolume, String soundSet, List<String> soundSets,
             boolean filteredHands, String mulliganRule,
-            String aiProfile, boolean ante) {
+            String aiProfile, boolean ante, List<ShortcutPref> shortcuts) {
+    }
+
+    /** One of Forge's keyboard shortcut preferences: its name, its label, and its keys and default keys as Java key codes separated by spaces. */
+    public record ShortcutPref(String pref, String label, String keys, String defaultKeys) {
     }
 
     @Message("log")

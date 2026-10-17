@@ -269,6 +269,11 @@ public final class FromBrowser {
     public record StackYield(int key, YieldAction action) {
     }
 
+    /** The Always Yes and Always No shortcuts, for the ability on top of the stack. */
+    @Command("autoYieldTop")
+    public record AutoYieldTop(boolean yes) {
+    }
+
     /** Sets, not toggles, every stop of one row, so a browser can restore its remembered stops without knowing the server's. */
     @Command("setStops")
     public record SetStops(boolean mine, List<PhaseType> phases) {

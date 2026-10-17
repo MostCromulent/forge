@@ -36,6 +36,8 @@ export interface UiState {
   stackMenuAt: { key: number; x: number; y: number } | null;
   stopsOpen: boolean;
   optionsOpen: boolean;
+  /** Asking whether to concede, from the game menu or its shortcut. */
+  concedeAsk: boolean;
   /** The game menu behind the prompt's ⋯ button, or a dialog opened from it. */
   gameMenu: 'menu' | 'stops' | 'decisions' | 'dev' | 'devSetup' | null;
   /** The host keeps the macro and does not report on it, so the page remembers whether it is recording one or has one. */
@@ -91,6 +93,7 @@ export const ui: UiState = {
   stackMenuAt: null,
   stopsOpen: false,
   optionsOpen: false,
+  concedeAsk: false,
   gameMenu: null,
   macro: 'none',
   volumeOpen: false,
@@ -196,6 +199,7 @@ export function resetMatchUi(): void {
   ui.stackMenuAt = null;
   ui.stopsOpen = false;
   ui.optionsOpen = false;
+  ui.concedeAsk = false;
   ui.gameMenu = null;
   ui.macro = 'none';
   ui.volumeOpen = false;

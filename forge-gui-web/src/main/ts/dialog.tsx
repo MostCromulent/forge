@@ -16,11 +16,11 @@ export function Backdrop({ layer = 'backdrop', cls, dismiss, children, ...rest }
 }
 
 /** A question with a way back, which a press outside also takes, and a way on, marked danger when it loses something. */
-export function Confirm({ title, label, text, back, backLabel, go, goLabel, danger }: {
-  title: string; label?: string; text: string; back: () => void; backLabel: string; go: () => void; goLabel: string; danger?: boolean;
+export function Confirm({ title, label, text, back, backLabel, go, goLabel, danger, cls }: {
+  title: string; label?: string; text: string; back: () => void; backLabel: string; go: () => void; goLabel: string; danger?: boolean; cls?: string;
 }) {
   return (
-    <Backdrop dismiss={back}>
+    <Backdrop cls={cls} dismiss={back}>
       <div class="dialog" role="alertdialog" aria-label={label ?? title}>
         <h3>{title}</h3>
         <p class="hint">{text}</p>

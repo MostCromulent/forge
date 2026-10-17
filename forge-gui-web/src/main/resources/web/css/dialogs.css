@@ -240,6 +240,8 @@ html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
 
 /* A card's own list of what it can do: a menu on the card, not a window in the middle of the board */
 .backdrop.anchored { background: none; }
+/* Conceding can be asked for at any moment, the coin toss included, so the question sits over everything the table shows */
+.backdrop.concede-ask { z-index: 80; }
 .dialog.at-card {
   position: fixed;
   margin: 0;
@@ -338,13 +340,6 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 .dev-group { display: grid; gap: 1px; break-inside: avoid; }
 .dev-group h5 { margin: 8px 10px 3px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 #options textarea.dev-state { width: 100%; box-sizing: border-box; font: 12px/1.4 ui-monospace, monospace; resize: vertical; }
-/* Armed for the second click, the concede row becomes a bar of red metal, so the change reads by brightness as well as colour */
-.game-menu .concede.armed, .game-menu .concede.armed:hover { --red: #c9432f; justify-content: center; text-align: center;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 45%, #fff) 0%, color-mix(in srgb, var(--red) 78%, #fff) 44%,
-    var(--red) 50%, color-mix(in srgb, var(--red) 82%, #000) 53%, color-mix(in srgb, var(--red) 62%, #000) 100%);
-  box-shadow: inset 0 1px 0 #ffffff70, inset 0 -1px 0 #00000050, 0 0 0 1px color-mix(in srgb, var(--red) 55%, #fff),
-    0 0 14px color-mix(in srgb, var(--red) 55%, transparent);
-  color: #fff; text-shadow: 0 1px 1px #0009; font-weight: 700; }
 
 /* The playmats beside the game menu */
 .playmat-picker { position: fixed; z-index: 61; width: 330px; display: grid; gap: 12px; padding: 12px; background: var(--surface);
@@ -368,10 +363,10 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 .game-menu .card-menu-item.on { background: var(--surface-3); }
 /* The game menu's rows shade only under the pointer, grouped by rules: the table, passing, the match, dev mode */
 .game-menu .card-menu-item { align-items: center; }
-.game-menu .card-menu-item:nth-of-type(even):not(:hover, :focus-visible, .on, .armed) { background: none; }
+.game-menu .card-menu-item:nth-of-type(even):not(:hover, :focus-visible, .on) { background: none; }
 .card-menu-sep { height: 1px; margin: 5px 4px; background: var(--line); }
 .menu-icon { flex: none; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; color: var(--muted); }
 .menu-icon.end { margin-left: auto; color: var(--faint); }
-.game-menu .concede:not(.armed) { color: color-mix(in srgb, var(--red, #d4573f) 70%, #fff); }
-.game-menu .concede:not(.armed) .menu-icon { color: currentColor; }
+.game-menu .concede { color: color-mix(in srgb, var(--red, #d4573f) 70%, #fff); }
+.game-menu .concede .menu-icon { color: currentColor; }
 .game-menu .dev-entry { color: var(--muted); }

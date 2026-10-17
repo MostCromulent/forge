@@ -58,6 +58,18 @@ export function initSide(): void {
   }
 }
 
+/** Opens the log, for the shortcut that shows the console: on a phone in the menu sheet, elsewhere in the side column. */
+export function showLog(): void {
+  if (isPortrait()) {
+    changeUi(u => { u.menuSheet = 'log'; });
+  } else if (!ui.sidePanels.log) {
+    folding(u => {
+      u.sidePanels.log = true;
+      rememberSidePanels();
+    });
+  }
+}
+
 /** CSS cannot ease a change of grid areas, so the column slides off the right edge as it folds, and back in as it opens (board.css). */
 function folding(change: (state: UiState) => void): void {
   const match = byId('match');

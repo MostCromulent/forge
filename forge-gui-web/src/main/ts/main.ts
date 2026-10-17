@@ -18,12 +18,14 @@ import { renderMatch, resetTable } from './match/board';
 import { arriveAtMatch, zoomIntoMatch } from './match/entry';
 import { renderPrompt, flash, pressPromptButton } from './match/prompt';
 import { appendLog, initLog, logTints } from './match/log';
-import { initSide, renderSide, renderSky } from './match/side';
+import { initSide, renderSide, renderSky, showLog } from './match/side';
 import { initDetail, nextFace, renderDetail } from './preview';
-import { initStack } from './match/stack';
+import { initStack, showStack } from './match/stack';
+import { recordMacro } from './match/gamemenu';
+import { showShortcuts } from './options';
 import { initOverlay, drawOverlay } from './match/overlay';
 import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './match/blockdrag';
-import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest } from './settings';
+import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest, setting, shortcutKeys } from './settings';
 import { behindItsBoard, passingFor } from './match/pace';
 import { createPacer } from './match/pacer';
 import { setVersion } from './links';
@@ -143,9 +145,13 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && target instanceof HTMLButtonElement && target.matches(':focus-visible') && target.closest('#dialog-layer')) return;
   const command = keyCommand({
     key: e.key,
+    code: e.keyCode,
+    ctrl: e.ctrlKey,
+    shift: e.shiftKey,
+    alt: e.altKey,
+    meta: e.metaKey,
     typing: !!target && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
-    modified: e.ctrlKey || e.altKey || e.metaKey,
-  }, model, ui, boundKeys());
+  }, model, ui, boundKeys(), shortcutKeys());
   if (!command) {
     return;
   }
@@ -156,6 +162,7 @@ document.addEventListener('keydown', e => {
 function runKey(command: KeyCommand): void {
   switch (command) {
     case 'closeOptions': changeUi(u => { u.optionsOpen = false; }); break;
+    case 'closeConcede': changeUi(u => { u.concedeAsk = false; }); break;
     case 'closeGameMenu': changeUi(u => { u.gameMenu = null; }); break;
     case 'confirmRequest': {
       const req = oldestRequest(model);
@@ -171,8 +178,17 @@ function runKey(command: KeyCommand): void {
     }
     case 'closeVolume': changeUi(u => { u.volumeOpen = false; }); break;
     case 'closeStackMenu': changeUi(u => { u.stackMenuAt = null; }); break;
-    case 'stackAlwaysYes': if (ui.hoveredStackItem !== null) actions.stackYield(ui.hoveredStackItem, 'alwaysYes'); break;
-    case 'stackAlwaysNo': if (ui.hoveredStackItem !== null) actions.stackYield(ui.hoveredStackItem, 'alwaysNo'); break;
+    case 'alwaysYes': actions.autoYieldTop(true); break;
+    case 'alwaysNo': actions.autoYieldTop(false); break;
+    case 'showStack': showStack(); break;
+    case 'showLog': showLog(); break;
+    // Desktop shows its dev panel only in dev mode, and the web's dev menu is the host's alone
+    case 'showDev': if (setting('devMode') && model.host && !model.spectating) changeUi(u => { u.gameMenu = 'dev'; }); break;
+    case 'concede': if (!model.spectating) changeUi(u => { u.concedeAsk = true; }); break;
+    case 'yieldOptions': changeUi(u => { u.gameMenu = 'stops'; }); break;
+    case 'macroRecord': recordMacro(actions); break;
+    case 'macroRepeat': actions.macroRepeat(); break;
+    case 'showShortcuts': showShortcuts(); break;
     case 'closeStops': changeUi(u => { u.stopsOpen = false; }); break;
     case 'closeZones': changeUi(u => { u.openZones.clear(); u.zonesMinimised = false; }); break;
     case 'closePicker': changeUi(u => { u.picker = null; }); break;

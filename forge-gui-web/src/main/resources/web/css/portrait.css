@@ -258,7 +258,6 @@ html[data-form="portrait"] .menu-row img { width: 32px; height: 32px; border-rad
 html[data-form="portrait"] .menu-foot { display: flex; gap: 8px; padding: 8px 12px 12px; border-top: 1px solid var(--line); }
 html[data-form="portrait"] .menu-foot button { flex: 1; min-height: 48px; }
 html[data-form="portrait"] .menu-foot .concede { color: var(--danger); }
-html[data-form="portrait"] .menu-foot .concede.armed { background: var(--danger); color: var(--bg-deep); }
 
 /* Zones, dialogs and menus: all rise from the top of the dock, which stays in reach */
 html[data-form="portrait"] #match #zones { inset: 0 0 var(--dock-h, 110px) 0; place-items: end stretch; padding: 0; }
