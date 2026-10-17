@@ -102,7 +102,7 @@ function fitZones(): void {
   for (const el of asked) {
     const row = q(el, '.cards');
     // A long zone keeps its cards at the size a pile opened to look at has, and scrolls
-    fitCards(row, el, root, row.childElementCount, { gap: 14, wrap: true, least: 1.45, share: asked.length });
+    fitCards(row, el, root, row.querySelectorAll(':scope > :not(.back:not(.selectable))').length, { gap: 14, wrap: true, least: 1.45, share: asked.length });
   }
 }
 

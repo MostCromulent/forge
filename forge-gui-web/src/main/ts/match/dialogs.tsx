@@ -934,8 +934,9 @@ function NumberPick({ req, answer }: { req: NumberRequest; answer: Answer }) {
   const top = req.max ?? 999_999_999;
   const [typed, setTyped] = useState(String(req.min));
   const input = useRef<HTMLInputElement>(null);
+  // A phone would raise its keyboard over the quick picks, which a thumb uses instead
   useEffect(() => {
-    input.current?.select();
+    if (!isPortrait()) input.current?.select();
   }, []);
   const parsed = parseInt(typed, 10);
   const value = Number.isNaN(parsed) ? req.min : Math.max(req.min, Math.min(top, parsed));
@@ -989,7 +990,8 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
     return short <= 0 ? { text: t('lblLethal'), lethal: true } : { text: values[i] ? t('lblWebDialogShortOfLethal', short) : '' };
   };
   const row = useRef<HTMLDivElement>(null);
-  useCardFit(row, order.length, { gap: 26, below: 60, wrap: true });
+  // Under each card: its stepper, and the note on lethal damage where the question has one
+  useCardFit(row, order.length, { gap: 26, below: req.lethal ? 88 : 62, wrap: true });
   // Side by side, each with its count under it, as the cards stand on the table
   return (
     <>

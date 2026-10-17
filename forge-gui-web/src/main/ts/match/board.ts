@@ -6,6 +6,7 @@ import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLoc
 import { renderHand, resetHand } from './hand';
 import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
+import { watchBlockTap } from './blockdrag';
 import { followPointer, hoverPlayer, hoverable, inspectCard, inspectPlayer } from '../preview';
 import { foldStack, renderStack, resetStack } from './stack';
 import { renderPlanes } from './planes';
@@ -71,6 +72,10 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
     notePick(key);
     foldStack();
     actions.selectCard(key, menu, e?.clientX ?? 0, e?.clientY ?? 0);
+    if (!menu && el.closest('#me .group.creatures')) {
+      const box = el.getBoundingClientRect();
+      watchBlockTap(key, { x: box.left + box.width / 2, y: box.top });
+    }
   };
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
   const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));

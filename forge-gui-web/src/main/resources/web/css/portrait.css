@@ -129,10 +129,10 @@ html[data-form="portrait"] #phase-strip { padding: 0 6px; }
 html[data-form="portrait"] #phase-strip .pill { position: relative; width: 100%; height: 32px; box-sizing: border-box; border-radius: 16px; gap: 4px; padding: 0 8px 0 4px; min-width: 0; }
 /* Slim to look at, with more of it to touch */
 html[data-form="portrait"] #phase-strip .pill::before { content: ''; position: absolute; inset: -6px 0; }
-html[data-form="portrait"] #phase-strip .owner { min-width: 0; flex: 0 1 auto; padding-right: 8px; }
-/* Short of room, the turn's number gives way before the name of whose turn it is */
+/* Short of room, the turn's number gives way before the name of whose turn it is, and whole, onto a line the pill hides, as part of it would read as another turn */
+html[data-form="portrait"] #phase-strip .owner { min-width: 0; flex: 0 1 auto; flex-wrap: wrap; align-content: flex-start; row-gap: 30px; padding-right: 8px; }
 html[data-form="portrait"] #phase-strip .owner b { flex: none; }
-html[data-form="portrait"] #phase-strip .owner .turn { min-width: 0; overflow: hidden; white-space: nowrap; }
+html[data-form="portrait"] #phase-strip .owner .turn { flex: none; white-space: nowrap; line-height: 30px; }
 html[data-form="portrait"] #phase-strip .track { margin-left: auto; }
 html[data-form="portrait"] #phase-strip .phase .mark { width: 22px; }
 html[data-form="portrait"] #phase-strip .caret { display: none; }
@@ -324,8 +324,11 @@ html[data-form="portrait"] #lobby .play-row { justify-items: stretch; margin-top
 /* Play keeps the bottom edge, in reach whatever the page is scrolled to; what says why it cannot start stays with the seats */
 html[data-form="portrait"] #lobby .play { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 20; min-width: 0; min-height: 52px; box-shadow: 0 0 0 12px var(--bg); }
 html[data-form="portrait"] #lobby .not-yet { margin-top: 0; max-width: none; }
-/* The table's chat folds to its bar, which stands over Play */
+/* The table's chat stands over Play while open, and folded shares Play's row, where it covers none of the seats */
 html[data-form="portrait"] body:has(#lobby:not([hidden])) #dock .dock { bottom: calc(76px + env(safe-area-inset-bottom)); }
+html[data-form="portrait"] body:has(#lobby:not([hidden])) #dock .dock.folded { bottom: calc(12px + env(safe-area-inset-bottom)); width: 112px; min-height: 52px; padding-block: 0; border-bottom: 1px solid var(--line-bright);
+  border-radius: 10px; box-shadow: 0 0 0 12px var(--bg); }
+html[data-form="portrait"] body:has(#dock .dock.folded) #lobby .play { right: calc(12px + 112px + 8px); }
 html[data-form="portrait"] #dock .dock { right: 12px; left: auto; max-width: calc(100vw - 24px); box-sizing: border-box; }
 html[data-form="portrait"] #dock .dock.folded { min-height: 44px; width: auto; }
 html[data-form="portrait"] #dock .dock.open { left: 12px; width: auto; max-height: 60dvh; }
@@ -383,6 +386,8 @@ html[data-form="portrait"] .kind-main .mode-art svg { width: 34px; height: 34px;
 html[data-form="portrait"] .kind-main .mode-text { flex: 1; min-width: 0; }
 /* Room under the last choice for the chat bar that stands in the corner */
 html[data-form="portrait"] #menu { padding-bottom: 64px; }
+/* A phone is too short for the links to stand at its foot over the page, so they follow it */
+html[data-form="portrait"] .forge-links.foot { position: static; order: 1; }
 /* A deck's row keeps its name, size and whether it is legal; its formats and where it came from are in the filters */
 html[data-form="portrait"] .finder .dk-hit :is(.deck-formats, .tag) { display: none; }
 
@@ -449,7 +454,7 @@ html[data-form="portrait"] :is(#dialog-layer .backdrop.on-board > .dialog, .reve
 html[data-form="portrait"] :is(.backdrop.on-board .dialog-head, .reveal-back.on-board header, #zones.asking .zone-ask) { justify-content: flex-start; padding: 0; }
 html[data-form="portrait"] :is(.backdrop.on-board .dialog-head h3, .reveal-back.on-board .zone-who, #zones.asking .zone-ask) { flex: 1; font-size: 16px; line-height: 1.3; text-align: left; }
 html[data-form="portrait"] .backdrop.on-board .dialog-head { align-items: flex-start; gap: 10px; }
-html[data-form="portrait"] :is(.ask-line, #zones.asking header) { display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; margin-top: -6px; padding: 0; color: var(--muted); font-size: 12.5px; }
+html[data-form="portrait"] :is(.ask-line, #zones.asking header) { display: flex; align-items: center; gap: 10px; margin-top: -6px; padding: 0; color: var(--muted); font-size: 12.5px; }
 html[data-form="portrait"] :is(.ask-line .ask-where, #zones.asking .zone-who) { flex: 1; min-width: 0; margin: 0; font-size: 12.5px; }
 html[data-form="portrait"] :is(.ask-line, .backdrop.on-board .dialog-head, .reveal-back.on-board header, #zones.asking header) .zone-fold { flex: none; margin-left: auto; min-height: 36px; padding: 0 12px; font-size: 12.5px; }
 html[data-form="portrait"] .reveal-back.on-board header { display: flex; align-items: center; gap: 10px; }
@@ -457,9 +462,14 @@ html[data-form="portrait"] .reveal-back.on-board header .zone-who { flex: 1; wid
 /* The cards start under the question, and many scroll in place */
 html[data-form="portrait"] :is(.backdrop.on-board .options:not(.ordered), .reveal-back.on-board .cards, #zones.asking .cards) { flex: 0 1 auto; min-height: 0; max-height: none; max-width: none; min-width: 0; overflow-y: auto;
   display: flex; flex-wrap: wrap; justify-content: center; align-content: start; gap: 12px; padding: 10px 0 14px; }
+html[data-form="portrait"] .backdrop.on-board .dist-row { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
 html[data-form="portrait"] #zones.asking .zone-count { display: none; }
 /* A short zone has nothing to search or sort */
-html[data-form="portrait"] #zones.asking .zone-panel:not(:has(.cards > :nth-child(9))) :is(.zone-find:placeholder-shown, .zone-sort) { display: none; }
+html[data-form="portrait"] #zones.asking .zone-panel:not(:has(.cards > :nth-child(9 of :not(.back:not(.selectable))))) :is(.zone-find:placeholder-shown, .zone-sort) { display: none; }
+/* Where a long zone keeps them, the search takes a line of its own under whose zone it is */
+html[data-form="portrait"] #zones.asking .zone-who { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html[data-form="portrait"] #zones.asking .zone-sort { margin-left: 0; }
+html[data-form="portrait"] #zones.asking .zone-find { flex: 1 0 100%; }
 html[data-form="portrait"] #zones.asking footer { display: none; }
 /* The dialog's answer takes the dock's place, as the dock lays out its buttons */
 html[data-form="portrait"] :is(#dialog-layer .backdrop.on-board .actions, .reveal-back.on-board footer) { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; display: flex; gap: 0; padding: 0 0 env(safe-area-inset-bottom);

@@ -805,6 +805,74 @@ public final class Lobby {
         }
     }
 
+    /** A table as its host set it, kept across a match so the table opened after it is set the same way. */
+    public record Kept(GameType format, String cardPool, List<String> variants, int teams, List<KeptSeat> seats, Map<Integer, String> deckKeys,
+            Map<Integer, Map<DeckSection, Extra>> extras, Map<Integer, List<String>> commanderPicks) { }
+
+    private record KeptSeat(LobbySlotType type, String name, int avatar, int sleeve, int team, String aiProfile) { }
+
+    /** The table this browser hosts as it stands, or null when it hosts none. */
+    public Kept keep() {
+        final ServerGameLobby lobby = host();
+        if (lobby == null) {
+            return null;
+        }
+        final List<KeptSeat> seats = new ArrayList<>();
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            final LobbySlot slot = lobby.getSlot(i);
+            seats.add(new KeptSeat(slot.getType(), slot.getName(), slot.getAvatarIndex(), slot.getSleeveIndex(), slot.getTeam(), slot.getAiProfile()));
+        }
+        final GameFormat pool = cardPool();
+        return new Kept(format(), pool == null ? null : pool.getName(), variantsOn(lobby), teams(lobby), seats,
+                Map.copyOf(deckKeys), Map.copyOf(extras), Map.copyOf(commanderPicks));
+    }
+
+    /** Sets a new table as a kept one was. A seat a person held is left open for them to take again, with whatever deck they bring. */
+    public void restore(final Kept kept) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null) {
+            return;
+        }
+        setFormat(kept.format().name());
+        setCardPool(kept.cardPool());
+        kept.variants().forEach(v -> setVariant(v, true));
+        setPlayerCount(kept.seats().size(), false);
+        // The archenemy's role sets the teams itself
+        final boolean teamed = kept.teams() > 0 && !lobby.hasVariant(GameType.Archenemy);
+        if (teamed) {
+            setTeams(kept.teams());
+        }
+        for (int i = 0; i < Math.min(kept.seats().size(), lobby.getNumberOfSlots()); i++) {
+            final KeptSeat seat = kept.seats().get(i);
+            if (seat.type() == LobbySlotType.AI) {
+                if (lobby.getSlot(i).getType() != LobbySlotType.AI) {
+                    aiSeat(i);
+                }
+                setName(i, seat.name());
+                if (StringUtils.isNotEmpty(seat.aiProfile())) {
+                    setAiProfile(i, seat.aiProfile());
+                }
+            } else if (i != local.webSeat()) {
+                openSeat(i);
+                continue;
+            }
+            setAvatar(i, seat.avatar());
+            setSleeve(i, seat.sleeve());
+            if (teamed) {
+                setTeam(i, seat.team());
+            }
+        }
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            if (dealsFor(lobby, i) && (kept.deckKeys().containsKey(i) || kept.extras().containsKey(i))) {
+                deckKeys.compute(i, (k, v) -> kept.deckKeys().get(k));
+                extras.compute(i, (k, v) -> kept.extras().get(k));
+                commanderPicks.compute(i, (k, v) -> kept.commanderPicks().get(k));
+                compose(i);
+            }
+        }
+        local.pushLobby();
+    }
+
     /** The format, card pool and rules this browser's deck list was last built for, recorded by {@link #decks()}. */
     private GameType seenFormat;
     private String seenCardPool;

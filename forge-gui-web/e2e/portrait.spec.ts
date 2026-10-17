@@ -411,7 +411,11 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
     const play = await box(p.page, '#play');
     expect(play.y + play.height).toBeLessThanOrEqual(height);
     expect(play.height).toBeGreaterThanOrEqual(44);
-    expect(play.width).toBeGreaterThan(width * 0.8);
+    // Play shares its row with the folded chat bar, which then covers none of the seats
+    const chat = await box(p.page, '#dock .dock.folded');
+    expect(Math.abs(chat.y - play.y)).toBeLessThan(2);
+    expect(play.x + play.width).toBeLessThanOrEqual(chat.x);
+    expect(chat.x + chat.width - play.x).toBeGreaterThan(width * 0.85);
     for (const plate of await p.page.locator('#seats .plate').all()) expect((await plate.boundingBox())!.width).toBeGreaterThan(width * 0.85);
     for (const b of await p.page.locator('.match-bar button:visible').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(40);
   }, phone);
@@ -672,7 +676,8 @@ probe('a zone the game opens for a choice, with a spell on the stack, lies on th
   expect(panel.x).toBeGreaterThanOrEqual(0);
   expect(panel.x + panel.width).toBeLessThanOrEqual(390);
   // Two across at most, larger than the three a sheet held
-  const widths = await p.page.locator('#zones .cards .card').evaluateAll(cards => cards.map(c => c.getBoundingClientRect().width));
+  // The library's face-down cards are not drawn, so only the cards it shows are measured
+  const widths = await p.page.locator('#zones .cards .card:visible').evaluateAll(cards => cards.map(c => c.getBoundingClientRect().width));
   expect(Math.min(...widths)).toBeGreaterThan(125);
   // The stack's chip does not lie over the question
   expect(await p.page.evaluate(() => { const r = document.querySelector('#zones .zone-panel header')!.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + 20, r.y + 10); return !!hit?.closest('#zones'); })).toBe(true);

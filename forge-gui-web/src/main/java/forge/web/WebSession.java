@@ -1003,11 +1003,17 @@ public final class WebSession implements IHasForgeLog {
             final String event = data != null && data.isLimitedMode() ? data.getActiveEventId() : null;
             final GameType type = data == null ? null : data.getLimitedType();
             final boolean decksOnly = data != null && data.isActiveConformance();
+            // The new table is set as the old one was, so a rematch needs nothing chosen again
+            final Lobby.Kept kept = event == null ? lobby.keep() : null;
             // Opening the lobby moves on from the match, and closes it
             openLobby(b, playing.invited(), null);
             if (event != null) {
                 lobby.events().playEvent(event, type, decksOnly);
                 relistDecks(b);
+            } else if (kept != null) {
+                lobby.restore(kept);
+                relistDecks(b);
+                lobby.sendState(b);
             }
         } else if (move(from, new Menu())) {
             joinHostGame();

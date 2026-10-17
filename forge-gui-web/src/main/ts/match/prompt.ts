@@ -219,7 +219,9 @@ function drawPrompt(model: Model, actions: Actions): void {
   const lines = (p.message ?? '').trim().split('\n');
   // A heading, not a sentence: short, with nothing that ends a sentence, and not a card named with its number
   const heading = lines.length > 1 && lines[0].length <= 24 && !/[.!?]$/.test(lines[0]) && !/\(\d+\)$/.test(lines[0]);
-  q(root, '.step').textContent = heading ? lines[0] : p.priority ? t('lblPriority') : stepName(game(model)?.Phase);
+  const step = heading ? lines[0] : p.priority ? t('lblPriority') : stepName(game(model)?.Phase);
+  // A pick of several cards says how far along it is, since OK waits until enough are picked
+  q(root, '.step').textContent = !p.priority && !p.paying && p.selectableMin > 1 ? `${step} · ${t('lblWebPromptPickedOf', p.highlighted.length, p.selectableMin)}` : step;
   // The host's lines stay lines, as each is a part of its own: the source, what it does, what to do
   const body = (heading ? lines.slice(1) : lines).map(line => line.trim()).filter(line => line).join('\n');
   setSymbolText(q(root, '.message'), body || (p.priority && p.ok.enabled ? priorityLine(model, p.ok.label) : ''));

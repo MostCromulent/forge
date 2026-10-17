@@ -18,6 +18,11 @@ describe('splitQuestion', () => {
     expect(splitQuestion('Thoughtseize (121) - Choose 1 card(s) to discard')).toEqual({ source: 'Thoughtseize', ask: 'Choose 1 card(s) to discard' });
   });
 
+  it('reads a source whose rules text starts on the next line', () => {
+    expect(splitQuestion('Impulse (121)\n - Look at the top four cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.\n'
+      + 'Choose card(s) to put into hand')).toEqual({ source: 'Impulse', ask: 'Choose card(s) to put into hand' });
+  });
+
   it('keeps every line of a question that names no source', () => {
     expect(splitQuestion('Choose order of cards\nto put into the library')).toEqual({ source: '', ask: 'Choose order of cards to put into the library' });
   });

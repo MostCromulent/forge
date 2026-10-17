@@ -203,6 +203,17 @@ async function block(actions: Actions, blocker: number, attacker: number, at: Po
   if (!await until(() => blocking(blocker, attacker))) explainRefusal(blocker, attacker, at);
 }
 
+/** A tap that sets your creature to block the attacker the prompt names says why when it is refused, as a drag does. */
+export function watchBlockTap(blocker: number, at: Point): void {
+  const model = current;
+  if (!model || !declaringBlocks(model) || model.prompt?.priority) return;
+  const attacker = (model.prompt?.highlighted ?? []).find(k => (model.objects.get(k) as CardView | undefined)?.Attacking);
+  if (attacker === undefined || blocking(blocker, attacker)) return;
+  void until(() => blocking(blocker, attacker)).then(taken => {
+    if (!taken) explainRefusal(blocker, attacker, at);
+  });
+}
+
 /** Keywords that limit what may block a creature, each with the keywords on a blocker that answer it. An empty list means no keyword does, as colour, type, power or a count decides instead. */
 const EVASION: Record<string, readonly string[]> = {
   FEAR: [], FLYING: ['FLYING', 'REACH'], HORSEMANSHIP: ['HORSEMANSHIP'], INTIMIDATE: [], LANDWALK: [], MENACE: [], PROTECTION: [],

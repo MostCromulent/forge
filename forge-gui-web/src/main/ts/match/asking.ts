@@ -19,6 +19,8 @@ export function splitQuestion(text: string): Asked {
   const targeted = lines.findIndex(line => line.startsWith('Targeted:'));
   const kept = (targeted < 0 ? lines : lines.slice(0, targeted)).filter(line => line);
   if (!kept.length) return { source: '', ask: '' };
+  // Some prompts break the line after the source's id, before the dash and its rules text
+  if (kept.length > 1 && kept[1].startsWith('- ')) kept.splice(0, 2, `${kept[0]} ${kept[1]}`);
   const named = SOURCE.exec(kept[0]);
   const source = named ? named[1] : '';
   // After a source and its rules text, which the stack and the prompt show, the question keeps only what it asks

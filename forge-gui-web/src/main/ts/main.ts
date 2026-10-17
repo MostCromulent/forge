@@ -418,12 +418,18 @@ function schedule(): void {
   requestAnimationFrame(() => { scheduled = false; render(); });
 }
 
+/** The page last drawn under the editor. */
+let shownUnder = '';
+
 function render(): void {
   // What happened since the last frame is shown once, by this frame
   const events = model.events;
   model.events = [];
   const page = screenOf(model);
   const under = pageUnder(model);
+  // The page keeps the scroll it had before the match, which would open a new table halfway down
+  if (shownUnder === 'match' && under !== 'match') window.scrollTo(0, 0);
+  shownUnder = under;
   byId('editor').hidden = page !== 'editor';
   for (const id of ['menu', 'lobby', 'limited', 'drafting', 'campaign', 'match']) {
     const el = byId(id);
