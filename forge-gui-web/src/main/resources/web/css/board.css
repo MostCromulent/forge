@@ -871,7 +871,8 @@ html[data-motion="reduced"] #game-over .win-rays { animation: none; opacity: .55
 html[data-motion="reduced"] #game-over .win-mote { display: none; }
 html[data-motion="reduced"] #match.ending > :not(#game-over) { transition: none; }
 html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
-.card { width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .3s ease, opacity .3s ease; flex: none; }
+/* A card's corners round as a printed card's do, so a large one's square scan corners stay hidden */
+.card { --radius: max(6px, calc(var(--card-w) * var(--fit, 1) * .05)); width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .3s ease, opacity .3s ease; flex: none; }
 /* A tapped card's shadow turns with it, so its offset turns the other way to keep falling downwards, and glow states carry it by --lift */
 /* A tight dark edge where the card meets the table, and a softer fall around it, so cards stand off a busy playmat */
 .battlefield .card { --lift: 0 1px 2px #000d, 0 3px 7px #000b; box-shadow: var(--lift); }
@@ -923,6 +924,8 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 /* A card held in exile is dimmed rather than brightened, so its frame stays as dark as its holder's */
 .card.ghost { box-shadow: 0 0 0 1px var(--zone-exile), var(--lift, 0 0 #0000); }
 .card.ghost > img { opacity: .55; filter: grayscale(.6); }
+/* The text face under the image would show through it */
+.card.ghost:not(.noimg) .frame { visibility: hidden; }
 .card .pt { display: none; position: absolute; right: 4px; bottom: 4px; background: #000c; border-radius: 4px; padding: 0 4px; font-size: 12px; font-weight: 700; }
 .card .pt.on { display: block; }
 .card .pt i { font-style: normal; }

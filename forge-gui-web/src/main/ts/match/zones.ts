@@ -106,10 +106,10 @@ function fitZones(): void {
   }
 }
 
-/** A window new to the page grows out of the pile it shows; on a phone, or with no pile on the board, it rises in as any dialog does. */
+/** A pile opened to look at grows out of the pile; one the game shows, one on a phone, or one with no pile on the board rises in as any dialog does. */
 function growFromPile(el: HTMLElement): void {
   const [player, zoneName] = (el.dataset.key ?? '').split('/');
-  const pile = isPortrait() ? null
+  const pile = isPortrait() || el.classList.contains('asking') ? null
     : document.querySelector(`.seat[data-player="${player}"] ${zoneName === 'Hand' ? '.hand-fan' : `.zone-tile[data-zone="${zoneName}"]`}`)?.getBoundingClientRect();
   if (!pile?.width) {
     el.dataset.opened = 'plain';
