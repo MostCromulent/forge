@@ -23,6 +23,11 @@ describe('splitQuestion', () => {
       + 'Choose card(s) to put into hand')).toEqual({ source: 'Impulse', ask: 'Choose card(s) to put into hand' });
   });
 
+  it('reads a source named with its id alone, as a later step of the same effect is', () => {
+    expect(splitQuestion('Telling Time (121)\n\nChoose card(s) to put on top of Alice library'))
+      .toEqual({ source: 'Telling Time', ask: 'Choose card(s) to put on top of Alice library' });
+  });
+
   it('keeps every line of a question that names no source', () => {
     expect(splitQuestion('Choose order of cards\nto put into the library')).toEqual({ source: '', ask: 'Choose order of cards to put into the library' });
   });

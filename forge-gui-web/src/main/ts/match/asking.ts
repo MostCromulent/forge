@@ -8,6 +8,8 @@ export interface Asked {
 
 // "Gravedigger (121) - When Gravedigger enters, ...": the source card, its id, and its rules text
 const SOURCE = /^(.+?) \(\d+\) - (.*)$/;
+// A later step of the same effect names the source and its id alone, without the rules text again
+const BARE_SOURCE = /^(.+?) \(\d+\)$/;
 // The engine's own notes ride along in square brackets, such as the trigger that holds an ability
 const BRACKETED = /\s*\[[^\]]*\]/g;
 const CARD_ID = / \(\d+\)/g;
@@ -21,7 +23,7 @@ export function splitQuestion(text: string): Asked {
   if (!kept.length) return { source: '', ask: '' };
   // Some prompts break the line after the source's id, before the dash and its rules text
   if (kept.length > 1 && kept[1].startsWith('- ')) kept.splice(0, 2, `${kept[0]} ${kept[1]}`);
-  const named = SOURCE.exec(kept[0]);
+  const named = SOURCE.exec(kept[0]) ?? (kept.length > 1 ? BARE_SOURCE.exec(kept[0]) : null);
   const source = named ? named[1] : '';
   // After a source and its rules text, which the stack and the prompt show, the question keeps only what it asks
   const ask = !named ? kept.join(' ') : kept.length > 1 ? kept[kept.length - 1] : named[2];
