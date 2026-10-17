@@ -18,6 +18,7 @@ export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb:
   { id: 'bayou', name: 'lblWebPlaymatBayou', image: '/playmats/twilight-bayou.jpg', thumb: '/playmats/twilight-bayou-thumb.jpg' },
   { id: 'steppe', name: 'lblWebPlaymatSteppe', image: '/playmats/dawn-steppe.jpg', thumb: '/playmats/dawn-steppe-thumb.jpg' },
   { id: 'molten', name: 'lblWebPlaymatMolten', image: '/playmats/molten-forge.jpg', thumb: '/playmats/molten-forge-thumb.jpg' },
+  { id: 'emerald', name: 'lblWebPlaymatEmerald', image: '/playmats/emerald-mistscape.jpg', thumb: '/playmats/emerald-mistscape-thumb.jpg' },
 ];
 type SettingValue = string | number | boolean;
 
