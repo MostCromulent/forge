@@ -31,7 +31,9 @@
 /* A change of tab slides the page (dialogs.css); a page arriving any other way, as on a new plane, rises in */
 .cq-main { flex: 1; min-height: 0; display: grid; view-transition-name: page; }
 .cq-main > * { animation: box-in .18s ease-out; }
-html[data-way] .cq-main > *, html[data-motion="reduced"] .cq-main > * { animation: none; }
+html[data-motion="reduced"] .cq-main > * { animation: none; }
+/* A tab's page plays its rise at once rather than not at all: turned off, it would play when the slide ends and the mark comes off */
+html[data-way] .cq-main > * { animation-duration: 0s; }
 
 .cq-kicker { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .cq-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line-bright); background: var(--surface-2); white-space: nowrap; }

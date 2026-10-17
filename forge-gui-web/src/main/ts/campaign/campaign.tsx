@@ -255,7 +255,7 @@ export function CampaignShelf({ model, actions, creating, setCreating, words, fo
 /** A change of tab slides the page the way the tabs run (dialogs.css). */
 export function slideTab<Tab extends string>(tabs: [Tab, TextKey][], from: Tab, to: Tab, set: (u: UiState) => void): void {
   const order = tabs.map(([id]) => id);
-  if (to !== from) eased(set, () => ({ way: order.indexOf(to) > order.indexOf(from) ? 'on' : 'back' }));
+  if (to !== from) eased(set, () => ({ way: order.indexOf(to) > order.indexOf(from) ? 'on' : 'back' }), () => !document.querySelector('.cq-main .pools-wait'));
 }
 
 /**

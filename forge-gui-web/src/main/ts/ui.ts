@@ -130,12 +130,24 @@ function changeUiNow(change: (state: UiState) => void): void {
   drawNow();
 }
 
+/** How long a change waits for what it shows to arrive before it eases in anyway. */
+const READY_WAIT_MS = 500;
+
 /**
  * Changes the arrangement inside a view transition, which eases what CSS cannot, such as a change of grid areas or of page.
  * `mark` names, once the change is drawn, the attributes the root carries while it runs, which pick the animation in CSS.
+ * `ready` says whether the new page has what it shows; until it does the old one stays, so a placeholder never slides in.
  */
-export function eased(change: (state: UiState) => void, mark: () => Record<string, string> = () => ({})): void {
-  transition(() => changeUiNow(change), () => changeUi(change), mark);
+export function eased(change: (state: UiState) => void, mark: () => Record<string, string> = () => ({}), ready?: () => boolean): void {
+  transition(async () => {
+    changeUiNow(change);
+    const until = performance.now() + READY_WAIT_MS;
+    // Frames are held while a transition gets ready, so what arrives meanwhile is drawn here
+    while (ready && !ready() && performance.now() < until) {
+      await new Promise(next => setTimeout(next, 16));
+      drawNow();
+    }
+  }, () => changeUi(change), mark);
 }
 
 /** As eased, for a change held in a component's own state, which Preact draws a moment after it is made rather than at once. */
