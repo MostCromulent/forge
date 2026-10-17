@@ -92,7 +92,10 @@ public class WebGuiGame extends NetworkGuiGame {
     private final AtomicInteger skippedProperties = new AtomicInteger();
     // Netplay drops a click's trigger event on its way to the host, so the ability menu reads the click from here
     private final AtomicReference<BrowserClick> lastClick = new AtomicReference<>();
-    private final PromptState prompt = new PromptState(this::send);
+    private final PromptState prompt = new PromptState(p -> {
+        flushZones();
+        send(p);
+    });
     /** A number the browser gave that the list it was picked from did not hold, kept for the typed prompt that follows. */
     private Integer typedNumber;
     // Zones are shown and hidden from the dispatch thread and replayed to a reloading browser from the socket thread
@@ -101,6 +104,8 @@ public class WebGuiGame extends NetworkGuiGame {
     /** Zones opened for the current choice, and for the cards revealed with the current prompt, closed with them. */
     private final List<PlayerZoneUpdate> selectionZonesShown = new ArrayList<>();
     private final List<PlayerZoneUpdate> revealZonesShown = new ArrayList<>();
+    /** Zones have closed since the browser was last told, which it hears with the next prompt or question. */
+    private boolean zonesClosedUnsent;
     // Written on the dispatch thread, replayed to a reloading browser from the socket thread
     private final WebGameLog gameLog;
     private final BrowserSounds sounds = new BrowserSounds(this::getCurrentPlayer, this::isLocalPlayer);
@@ -158,6 +163,7 @@ public class WebGuiGame extends NetworkGuiGame {
         channel.send(model.fullState());
         prompt.sendTo(channel::send);
         synchronized (zonesLock) {
+            zonesClosedUnsent = false;
             channel.send(zonesMessage());
         }
         channel.send(controlsMessage());
@@ -525,8 +531,8 @@ public class WebGuiGame extends NetworkGuiGame {
         for (final CardView c : cards) {
             refs.add(cardRef(c));
         }
-        prompt.selectable(refs, min);
-        // A choice among cards opens the zones holding them, as desktop does; a maximum of 0 only highlights
+        // A choice among cards opens the zones holding them, as desktop does; a maximum of 0 only highlights.
+        // Opened before the prompt changes, because a prompt sends the zones the last choice closed, and this one may reopen them
         if (max > 0) {
             synchronized (zonesLock) {
                 selectionZonesShown.addAll(showZones(getZonesHolding(cards)));
@@ -545,6 +551,7 @@ public class WebGuiGame extends NetworkGuiGame {
             if (getWeakSelectableStrength(c) >= 2) {
                 autoTap.add(cardRef(c));
             }
+        prompt.selectable(refs, min);
         }
         sendPlayable(playable, autoTap);
     }
@@ -656,13 +663,17 @@ public class WebGuiGame extends NetworkGuiGame {
                 }
             }
         }
-        if (!opened.isEmpty()) {
+        if (!opened.isEmpty() || zonesClosedUnsent) {
+            zonesClosedUnsent = false;
             send(zonesMessage());
         }
         return opened;
     }
 
-    /** Closes zones showZones opened. Called holding zonesLock. */
+    /**
+     * Closes zones showZones opened. Called holding zonesLock. The browser is told with the next prompt or question,
+     * so an effect that reopens the zone for its next step, as Telling Time does, never shows it closing and opening again.
+     */
     private void hideZones(final List<PlayerZoneUpdate> zones) {
         if (zones.isEmpty()) {
             return;
@@ -672,7 +683,16 @@ public class WebGuiGame extends NetworkGuiGame {
                 shownZones.remove(zoneKey(update.getPlayer(), zone));
             }
         }
-        send(zonesMessage());
+        zonesClosedUnsent = true;
+    }
+
+    private void flushZones() {
+        synchronized (zonesLock) {
+            if (zonesClosedUnsent) {
+                zonesClosedUnsent = false;
+                send(zonesMessage());
+            }
+        }
     }
 
     @Override public void showCombat() { }
@@ -697,6 +717,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
+        flushZones();
     private boolean isInMirror(final CardView card) {
         final GameView gv = getGameView();
         return gv != null && gv.getTracker() != null && gv.getTracker().getObj(TrackableTypes.CardViewType, card.getId()) == card;

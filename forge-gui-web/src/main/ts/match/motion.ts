@@ -125,6 +125,11 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   const dealt: { el: HTMLElement; start: DOMRect }[] = [];
   const leavingHand: { was: Snapshot; target: DOMRect | null; tile?: boolean; key?: string; onto?: HTMLElement | null }[] = [];
   const trips = journeys(events);
+  // A card put back into the zone it is shown in, as cards looked at go back on the library, has only changed places there, so it slides
+  for (const [key, move] of trips) {
+    const sameZone = move.from?.zone === move.to?.zone && move.from?.player?.ref === move.to?.player?.ref && !move.via;
+    if (sameZone && lastSeen.get(key)?.ghost?.closest('#zones') && cardElement(key)?.closest('#zones')) trips.delete(key);
+  }
   // Hand icons already swelling this frame, so several cards drawn at once swell it once
   const swelled = new Set<HTMLElement>();
   // Zone tiles cards are landing on this frame: how many, and when the first arrives
