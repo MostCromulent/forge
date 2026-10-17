@@ -227,9 +227,9 @@ public class GuestSeatTest extends SessionsTest {
 
         sessions.disconnected(other);
         host.awaitNewest("presence", p -> disconnected(p, "Player"), "the host was not shown the seat as disconnected");
-        // Presence from before the player arrived never named them, so only one sent after the removal counts
+        // Only presence sent after the removal counts, and send() would clear the list this index points into
         final int dropped = host.got.size();
-        send(host, message("dropPlayer", "name", "Player"));
+        sessions.onMessage(host, message("dropPlayer", "name", "Player"));
         final Game game = sessions.hostLobby().getHostedMatch().getGame();
         awaitTrue(() -> game.getPlayers().stream().anyMatch(p -> "Player".equals(p.getName()) && p.getController() instanceof PlayerControllerAi),
                 "the removed player's seat was not handed to the AI");
