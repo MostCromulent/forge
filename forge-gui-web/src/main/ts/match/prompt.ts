@@ -192,7 +192,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     setButton(cancel, pick.min === 0 ? { label: t('lblCancel'), enabled: true } : undefined);
     cancel.onclick = () => actions.answer(pick.id, []);
     root.classList.add('waiting');
-    root.classList.remove('priority', 'attack', 'strike', 'no-blocks');
+    root.classList.remove('priority', 'attack', 'strike', 'blocks', 'no-blocks');
     return;
   }
   // A question about cards is answered on the board, so the prompt says what it comes from, or, folded away, that the question waits
@@ -210,7 +210,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     setButton(ok, folded ? { label: t('lblWebZoneShowCards'), enabled: true } : undefined);
     ok.onclick = () => changeUi(u => { u.requestFolded = null; });
     setButton(cancel, undefined);
-    root.classList.remove('waiting', 'priority', 'attack', 'strike', 'no-blocks');
+    root.classList.remove('waiting', 'priority', 'attack', 'strike', 'blocks', 'no-blocks');
     return;
   }
   const p = model.prompt;
@@ -247,6 +247,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   const blockers = blocks ? new Set((game(model)?.CombatView ?? []).flatMap(b => [...b.blockers ?? [], ...b.plannedBlockers ?? []])
     .filter(r => r && (model.objects.get(r.ref) as CardView | undefined)?.Controller?.ref === mine).map(r => r?.ref)).size : 0;
   if (blocks) setButton(ok, { label: blockers ? t('lblWebPromptBlockWith', blockers) : t('lblWebPromptNoBlocks'), enabled: true });
+  root.classList.toggle('blocks', blocks);
   root.classList.toggle('no-blocks', blocks && !blockers);
   q(root, '.ok').classList.toggle('focus', !!p.focusOk);
   const waiting = !!p.ok?.enabled || !!p.cancel?.enabled;

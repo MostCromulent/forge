@@ -56,6 +56,8 @@ html:not([data-form="portrait"]) #prompt.attack .ok { flex: none; border-radius:
 html:not([data-form="portrait"]) #prompt.attack .cancel { max-width: none; height: 30px; border-radius: 8px; border-style: dashed; background: none; font-size: 11.5px; }
 html:not([data-form="portrait"]) #prompt.attack .cancel::before { content: ''; flex: none; width: 14px; height: 14px; background: currentColor;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3'/%3E%3C/svg%3E") center / contain no-repeat; }
+/* Declaring blockers, Cancel never answers, so the one answer has the row to itself */
+html:not([data-form="portrait"]) #prompt.blocks .cancel { display: none; }
 html:not([data-form="portrait"]) #prompt.strike .cancel::before {
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 4l10 10M4 4v4M4 4h4M20 4L10 14M20 4v4M20 4h-4M7 17l-3 3M17 17l3 3M9 15l-2 2M15 15l2 2'/%3E%3C/svg%3E"); }
 /* Attacking or blocking with nothing is a pass, so it is not cast in brass until there is something to confirm */
