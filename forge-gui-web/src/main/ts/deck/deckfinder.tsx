@@ -77,8 +77,9 @@ function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter,
   found: (kind: DeckQueryKind, value: string) => ReadonlySet<string> | undefined = () => undefined): DeckSummary[] {
   const asked = ([['card', f.card], ['sideboard', f.sideboard], ['set', f.set]] as const)
     .filter(([, value]) => value !== null).map(([kind, value]) => found(kind, value!) ?? new Set<string>());
+  const colours = [...f.colours];
   const list = decks.filter(d => (f.source === 'all' || d.source === f.source || (f.source === NET && isNet(d.source)))
-    && (!f.colours.size || [...f.colours].every(c => (d.colors ?? '').includes(c)))
+    && colours.every(c => (d.colors ?? '').includes(c))
     && (d.generated || !f.legalOnly || !d.problem)
     && (d.generated || f.cardFormat === 'any' || (d.legalIn ?? []).includes(f.cardFormat))
     && (d.generated || f.bracket === null || (d.bracket ?? 0) <= f.bracket)
