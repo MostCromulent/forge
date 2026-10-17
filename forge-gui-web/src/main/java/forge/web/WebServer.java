@@ -102,8 +102,6 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private static final AttributeKey<Boolean> KEEP_ALIVE = AttributeKey.valueOf("forge.keepAlive");
     /** For content that never changes at its address, such as a card picture of one printing or a hashed script chunk. The browser keeps it permanently. */
     private static final String KEEP_FOREVER = "public, max-age=31536000, immutable";
-    /** For an avatar or sleeve. A repeat request for one would queue behind card pictures that use every connection the browser allows. */
-    private static final String KEEP_AN_HOUR = "private, max-age=3600";
     private static final Pattern BYTE_RANGE = Pattern.compile("bytes=(\\d*)-(\\d*)");
     /** The most bytes that one reply to an audio range request carries: about a minute of music at 128 kbps. */
     private static final int AUDIO_SLICE = 1 << 20;
@@ -395,13 +393,22 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain");
     }
 
-    /** Sends a picture drawn from the skin, cached for an hour like the avatars, or a not-found reply. */
-    private void respondOrNotFound(final ChannelHandlerContext ctx, final byte[] body, final String type) {
+    /** Sends a picture drawn from the skin, or a not-found reply. The browser asks again each time, because another skin changes the picture at the same address. */
+    private void respondOrNotFound(final ChannelHandlerContext ctx, final byte[] body, final String type, final String ifNoneMatch) {
         if (body == null) {
             notFound(ctx);
         } else {
-            respond(ctx, HttpResponseStatus.OK, body, type, null, KEEP_AN_HOUR, null);
+            respondUnlessUnchanged(ctx, body, type, null, "no-cache", ifNoneMatch);
         }
+    }
+
+    /** Answers with the body, or with an empty 304 when the browser already holds the same body. */
+    private void respondUnlessUnchanged(final ChannelHandlerContext ctx, final byte[] body, final String type, final String cookieToken,
+            final String cacheControl, final String ifNoneMatch) {
+        final String etag = etag(body);
+        final boolean unchanged = etag.equals(ifNoneMatch);
+        respond(ctx, unchanged ? HttpResponseStatus.NOT_MODIFIED : HttpResponseStatus.OK, unchanged ? new byte[0] : body,
+                type, cookieToken, cacheControl, etag);
     }
 
     /**
@@ -479,9 +486,10 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
 
     /** A playlist request gets a redirect to one of its tracks by name. The shuffle then stays on the server, and each track is downloaded once. */
     private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name, final String track,
-            final String range) throws IOException {
+            final String range, final String ifNoneMatch) throws IOException {
         if (sound) {
-            respondAudio(ctx, isFileName(name) ? SoundSystem.instance.getSoundResource(name) : null, range, KEEP_AN_HOUR);
+            // A file in the sound set can be replaced, so the browser asks each time whether it changed
+            respondAudio(ctx, isFileName(name) ? SoundSystem.instance.getSoundResource(name) : null, range, "no-cache", ifNoneMatch);
             return;
         }
         final boolean menu = "menu".equals(name);
@@ -497,7 +505,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             return;
         }
         final File dir = SoundSystem.findMusicDirectory(playlist);
-        respondAudio(ctx, dir != null && isFileName(track) ? new File(dir, track) : null, range, KEEP_FOREVER);
+        respondAudio(ctx, dir != null && isFileName(track) ? new File(dir, track) : null, range, KEEP_FOREVER, ifNoneMatch);
     }
 
     private static boolean isFileName(final String name) {
@@ -505,13 +513,19 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     }
 
     /** Answers a range one slice at a time, because a media player asks for the rest of a track and often abandons the request. */
-    private void respondAudio(final ChannelHandlerContext ctx, final File file, final String range, final String cacheControl)
-            throws IOException {
+    private void respondAudio(final ChannelHandlerContext ctx, final File file, final String range, final String cacheControl,
+            final String ifNoneMatch) throws IOException {
         if (file == null || !file.isFile()) {
             notFound(ctx);
             return;
         }
         final long length = file.length();
+        final String etag = "\"" + Long.toHexString(file.lastModified()) + "-" + Long.toHexString(length) + "\"";
+        // The browser checks its copy before it asks for a range, so an unchanged file is answered before the range is read
+        if (etag.equals(ifNoneMatch)) {
+            respond(ctx, HttpResponseStatus.NOT_MODIFIED, new byte[0], "audio/mpeg", null, cacheControl, etag);
+            return;
+        }
         long from = 0;
         long to = length - 1;
         // Several ranges in one request, or a header this does not read, are answered with the whole file
@@ -556,6 +570,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 .set(HttpHeaderNames.CONTENT_TYPE, file.getName().toLowerCase(Locale.ROOT).endsWith(".wav") ? "audio/wav" : "audio/mpeg")
                 .set(HttpHeaderNames.ACCEPT_RANGES, HttpHeaderValues.BYTES)
                 .set(HttpHeaderNames.CACHE_CONTROL, cacheControl)
+                .set(HttpHeaderNames.ETAG, etag)
                 .setInt(HttpHeaderNames.CONTENT_LENGTH, resp.content().readableBytes())
                 .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
         send(ctx, resp, keepAlive);
@@ -649,13 +664,14 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         protected void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest req) throws IOException {
             final QueryStringDecoder q = new QueryStringDecoder(req.uri());
             final String path = q.path();
+            final String ifNoneMatch = req.headers().get(HttpHeaderNames.IF_NONE_MATCH);
             asked = path;
             ServerTraffic.carrying(ctx.channel(), "/img".equals(path) || "/sleeveart".equals(path) ? ServerTraffic.Kind.CARD_ART
                     : "/sound".equals(path) || "/music".equals(path) ? ServerTraffic.Kind.AUDIO : ServerTraffic.Kind.PAGE);
             if ("/avatar".equals(path) || "/sleeve".equals(path)) {
                 final String index = param(q, "i");
                 final Integer i = index == null ? null : Ints.tryParse(index);
-                respondOrNotFound(ctx, i == null ? null : SkinSprites.png("/avatar".equals(path), i), "image/png");
+                respondOrNotFound(ctx, i == null ? null : SkinSprites.png("/avatar".equals(path), i), "image/png", ifNoneMatch);
                 return;
             }
             if ("/sleeveart".equals(path)) {
@@ -669,25 +685,25 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             }
             if ("/mana".equals(path)) {
                 final String symbol = param(q, "s");
-                respondOrNotFound(ctx, symbol == null ? null : SkinSprites.manaPng(symbol), "image/png");
+                respondOrNotFound(ctx, symbol == null ? null : SkinSprites.manaPng(symbol), "image/png", ifNoneMatch);
                 return;
             }
             if ("/ability".equals(path)) {
                 final String icon = param(q, "k");
-                respondOrNotFound(ctx, icon == null ? null : SkinSprites.abilityPng(icon), "image/png");
+                respondOrNotFound(ctx, icon == null ? null : SkinSprites.abilityPng(icon), "image/png", ifNoneMatch);
                 return;
             }
             if ("/coin".equals(path)) {
-                respondOrNotFound(ctx, SkinSprites.coinPng(!"tails".equals(param(q, "side"))), "image/png");
+                respondOrNotFound(ctx, SkinSprites.coinPng(!"tails".equals(param(q, "side"))), "image/png", ifNoneMatch);
                 return;
             }
             if ("/skinicon".equals(path)) {
                 final String icon = param(q, "k");
-                respondOrNotFound(ctx, icon == null ? null : SkinSprites.iconPng(icon), "image/png");
+                respondOrNotFound(ctx, icon == null ? null : SkinSprites.iconPng(icon), "image/png", ifNoneMatch);
                 return;
             }
             if ("/sound".equals(path) || "/music".equals(path)) {
-                serveAudio(ctx, "/sound".equals(path), param(q, "name"), param(q, "track"), req.headers().get(HttpHeaderNames.RANGE));
+                serveAudio(ctx, "/sound".equals(path), param(q, "name"), param(q, "track"), req.headers().get(HttpHeaderNames.RANGE), ifNoneMatch);
                 return;
             }
             if ("/img".equals(path)) {
@@ -712,13 +728,10 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             }
             // The page stores the link's token as a cookie, so its later requests come in on the same link
             final String token = param(q, "token");
-            // Other page files keep their names between builds, so the browser asks whether the file changed
-            final String etag = etag(body);
-            final boolean unchanged = etag.equals(req.headers().get(HttpHeaderNames.IF_NONE_MATCH));
+            // Other page files keep their names between builds, so the browser asks whether the file changed.
             // A chunk's name contains a hash of its contents. A changed chunk is a new file, so an old chunk never goes stale.
-            respond(ctx, unchanged ? HttpResponseStatus.NOT_MODIFIED : HttpResponseStatus.OK, unchanged ? new byte[0] : body,
-                    type, accessOf(token) == Access.NONE ? null : token,
-                    resource.startsWith("js/chunks/") ? KEEP_FOREVER : "no-cache", etag);
+            respondUnlessUnchanged(ctx, body, type, accessOf(token) == Access.NONE ? null : token,
+                    resource.startsWith("js/chunks/") ? KEEP_FOREVER : "no-cache", ifNoneMatch);
         }
     }
 
