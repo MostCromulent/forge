@@ -1047,11 +1047,13 @@ body.dragging-block #zoom { display: none; }
 .card.phased > img, .card.phased .frame { filter: grayscale(1); }
 /* A detained card shows chains held by a lock seal. No other state uses this shape, because the board's white rings already mean selectable and attacking. */
 .card .chains, .card .seal { display: none; position: absolute; inset: 0; z-index: 1; border-radius: var(--radius); pointer-events: none;
-  background: center / 100% 100% no-repeat; filter: drop-shadow(0 1px 1px #000c); }
-.card .chains { background-image: url(../detained-chains.svg); }
+  background: center / 100% 100% no-repeat; }
+/* The SVGs draw their own glow. A CSS drop-shadow here would also glow from the mist past the card's edge. */
+.card .chains { background-image: url(../detained-chains.svg), radial-gradient(ellipse, #8fcaff00 35%, #8fcaff1f 75%, #b8e0ff38 100%);
+  mix-blend-mode: screen; }
 .card .seal { background-image: url(../detained-seal.svg); }
 .card:is(.detained, .releasing) :is(.chains, .seal) { display: block; }
-.card.detained > img, .card.detained .frame { filter: brightness(.88) saturate(.7); }
+.card.detained > img, .card.detained .frame { filter: brightness(.74) saturate(.45) hue-rotate(-8deg); }
 /* The seal stamps on and the chains grow out from under it. On release, the chains shrink back and the seal lifts away. */
 .card.detaining .seal { animation: detain-seal-in .28s cubic-bezier(.2, .8, .3, 1.2) both; }
 .card.detaining .chains { animation: detain-chains-out .38s cubic-bezier(.3, .7, .2, 1) .16s both; }
