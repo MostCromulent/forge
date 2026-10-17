@@ -100,7 +100,7 @@ function Page({ tab, model, actions }: { tab: ConquestTab; model: Model; actions
     case 'collection': return <Collection model={model} actions={actions} />;
     case 'planes': return <Planes model={model} actions={actions} />;
     case 'stats': return <Stats model={model} actions={actions} first={model.conquestState?.plane} />;
-    default: return <ConquestMap actions={actions} state={model.conquestState!} />;
+    default: return <ConquestMap actions={actions} state={model.conquestState!} held={!!model.reward} />;
   }
 }
 

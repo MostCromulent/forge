@@ -17,6 +17,9 @@ import { zoomIntoMatch } from '../match/entry';
 
 /** How long the marker takes over one step, as mobile's token does. */
 const STEP_MS = 500;
+/** When the counts go up after a win, and when the win animation ends. They match the .cq-map.won rules in conquest.css. */
+const COUNT_MS = 2000;
+const WON_MS = 2600;
 const HOVER_W = 232;
 
 const key = (p: ConquestPlace): string => `${p.region}:${p.row}:${p.col}`;
@@ -28,8 +31,32 @@ const variantName = (v: string): string => (VARIANT_NAMES[v] ? t(VARIANT_NAMES[v
 
 const fight = (actions: Actions) => zoomIntoMatch(byId('campaign'), () => actions.conquestBattle());
 
-export function ConquestMap({ actions, state }: { actions: Actions; state: ConquestState }) {
+/** Each tile's state the last time this plane's map was shown. The map compares against it after a battle to find what the win changed. */
+let lastSeen: { plane: string; states: Map<string, string> } | null = null;
+
+/** held is true while a reward is revealed over the map. The win animation waits for it to close. */
+export function ConquestMap({ actions, state, held }: { actions: Actions; state: ConquestState; held: boolean }) {
   const cells = new Map(state.cells.map(c => [key(c), c]));
+  // The tile just won and the tiles it unlocked, kept until the animation has played
+  const [won, setWon] = useState<{ tile: ConquestCell; opened: string[]; revealed: boolean; counted: boolean } | null>(null);
+  useLayoutEffect(() => {
+    const states = new Map(state.cells.map(c => [key(c), c.state]));
+    const before = lastSeen?.plane === state.plane ? lastSeen.states : null;
+    lastSeen = { plane: state.plane, states };
+    const tile = before && state.cells.find(c => c.state === 'won' && before.get(key(c)) !== 'won');
+    if (!tile || reducedMotion()) return;
+    setWon({ tile, opened: state.cells.filter(c => c.state !== 'fog' && before.get(key(c)) === 'fog').map(key), revealed: false, counted: false });
+  }, [state]);
+  // The server sends the reward after the map, so wait until its reveal has opened and closed
+  useEffect(() => { if (won && held && !won.revealed) setWon({ ...won, revealed: true }); }, [won, held]);
+  const showing = !!won?.revealed && !held;
+  useEffect(() => {
+    if (!showing) return;
+    const count = setTimeout(() => setWon(w => w && { ...w, counted: true }), COUNT_MS);
+    const end = setTimeout(() => setWon(null), WON_MS);
+    return () => { clearTimeout(count); clearTimeout(end); };
+  }, [showing]);
+  const skip = () => { if (showing) setWon(null); };
   // The marker is first put at the walk's start with no movement, since the map that brings the path already has the player at its end
   const [walk, setWalk] = useState<{ at: ConquestPlace; moving: boolean } | null>(null);
   const battleWanted = useRef(false);
@@ -113,16 +140,20 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
     }
   };
 
+  const wonHere = showing && !won!.counted ? won!.tile : null;
+  const sealAt = wonHere && l.at(wonHere.region, wonHere.row, wonHere.col);
   return (
-    <div class="cq-map">
-      <div class="cq-stage">
-        <div class="cq-map-head"><h2>{state.plane}</h2><span class="muted">{state.cells.filter(c => c.state === 'won').length} / {state.cells.length}</span></div>
+    <div class={showing ? 'cq-map won' : 'cq-map'}>
+      <div class="cq-stage" onPointerDown={skip}>
+        <div class="cq-map-head"><h2>{state.plane}</h2>
+          <span class="muted cq-count">{state.cells.filter(c => c.state === 'won').length - (wonHere ? 1 : 0)} / {state.cells.length}</span></div>
         <div class="cq-trail" ref={trail}>
           <div class={walk?.moving ? 'cq-trail-in walking' : 'cq-trail-in'} style={{ width: `${l.width}px`, height: `${l.height}px` }}>
             {state.regions.map((region, r) => {
               const at = l.regions[r];
-              const done = region.conquered === region.total;
-              const count = `${region.conquered} / ${region.total}`;
+              const conquered = region.conquered - (wonHere?.region === r ? 1 : 0);
+              const done = conquered === region.total;
+              const count = `${conquered} / ${region.total}`;
               const toggle = r === state.at.region ? undefined : () => { const open = folded(r); changeUi(u => { u.conquestOpened[`${state.plane}:${r}`] = open; }); };
               if (at.folded) {
                 return (
@@ -136,7 +167,7 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
               return (
                 <button key={`b${r}`} class={done ? 'cq-banner done' : 'cq-banner'} disabled={!toggle} onClick={toggle}
                   style={{ left: `${at.x}px`, top: `${Y0}px`, width: `${at.w}px`, height: `${BH}px`, backgroundImage: `url("${artUrl(region.art)}")` }}>
-                  <b>{region.name}</b><span>{done && <img alt={t('lblWebConquestConquered')} src={skinIconUrl('IMG_PW_BADGE_COMMON')} />}{count}</span>
+                  <b>{region.name}</b><span class={showing && won!.tile.region === r ? 'cq-count' : undefined}>{done && <img alt={t('lblWebConquestConquered')} src={skinIconUrl('IMG_PW_BADGE_COMMON')} />}{count}</span>
                 </button>
               );
             })}
@@ -144,10 +175,13 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
               const p = l.at(c.region, c.row, c.col);
               const here = same(c, state.at) && !walk;
               const sel = same(c, state.selected) && !same(c, state.at);
-              const cls = ['cq-tile', c.state, here && 'here', sel && 'sel', hover === key(c) && 'hover'].filter(Boolean).join(' ');
+              const opened = won ? won.opened.indexOf(key(c)) : -1;
+              const cls = ['cq-tile', c.state, here && 'here', sel && 'sel', hover === key(c) && 'hover', won && same(c, won.tile) && 'sealed',
+                opened >= 0 && 'unveiled'].filter(Boolean).join(' ');
               return (
                 <button key={key(c)} class={cls} disabled={c.state === 'fog'} aria-label={c.name ?? undefined}
-                  style={{ left: `${p.x}px`, top: `${p.y}px`, width: `${TW}px`, height: `${TH}px`, backgroundImage: c.avatar ? `url("${artUrl(c.avatar)}")` : undefined }}
+                  style={{ left: `${p.x}px`, top: `${p.y}px`, width: `${TW}px`, height: `${TH}px`, backgroundImage: c.avatar ? `url("${artUrl(c.avatar)}")` : undefined,
+                    '--i': opened }}
                   onPointerEnter={() => setHover(key(c))} onPointerLeave={() => setHover(null)}
                   onClick={() => { if (!walk) actions.conquestSelect(c.region, c.row, c.col); }}>
                   {(c.state === 'open' || here) && <span>{c.name}</span>}
@@ -157,10 +191,18 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
             {ties.map(({ a, b }) => {
               const p = l.at(a.region, a.row, a.col), q = l.at(b.region, b.row, b.col);
               const kind = a.state === 'won' && b.state === 'won' ? 'won' : 'open';
+              // A new tie grows out from the tile just won
+              const far = won && (same(a, won.tile) ? b : same(b, won.tile) ? a : null);
+              const drawn = !!far && far.state !== 'won';
+              const cls = ['cq-tie', p.y !== q.y && 'down', kind, drawn && 'drawn', drawn && far === a && 'back'].filter(Boolean).join(' ');
               return p.y === q.y
-                ? <i key={`${key(a)}-${key(b)}`} class={`cq-tie ${kind}`} style={{ left: `${p.x + TW}px`, top: `${p.y + TH / 2}px`, width: `${q.x - p.x - TW}px` }} />
-                : <i key={`${key(a)}-${key(b)}`} class={`cq-tie down ${kind}`} style={{ left: `${p.x + TW / 2}px`, top: `${p.y + TH}px`, height: `${G}px` }} />;
+                ? <i key={`${key(a)}-${key(b)}`} class={cls} style={{ left: `${p.x + TW}px`, top: `${p.y + TH / 2}px`, width: `${q.x - p.x - TW}px` }} />
+                : <i key={`${key(a)}-${key(b)}`} class={cls} style={{ left: `${p.x + TW / 2}px`, top: `${p.y + TH}px`, height: `${G}px` }} />;
             })}
+            {sealAt && <>
+              <i class="cq-burst" style={{ left: `${sealAt.x}px`, top: `${sealAt.y}px`, width: `${TW}px`, height: `${TH}px` }} />
+              <span class="cq-stamp" style={{ left: `${sealAt.x + TW / 2}px`, top: `${sealAt.y + 54}px` }}><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} /></span>
+            </>}
             <div class="cq-you" style={{ left: `${markerAt.x + TW / 2}px`, top: `${markerAt.y + 54}px` }}>
               <i style={{ backgroundImage: `url("${artUrl(state.walkerImage)}")` }} /><b>{t('lblWebLobbyKindYou')}</b>
             </div>
