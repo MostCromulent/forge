@@ -179,7 +179,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             }
         }
         // Nobody hosts by arriving. A browser asks for the seat, and the first to ask while it is free gets it
-        final WebSession session = new WebSession(ui, this, onQuit, mayHost);
+        final WebSession session = new WebSession(ui, this, mayHost);
         byId.put(key, session);
         return session;
     }

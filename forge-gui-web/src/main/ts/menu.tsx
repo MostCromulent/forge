@@ -39,7 +39,6 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
       <PageHeader>
         <div class="head-right">
           <HeadControls />
-          <button onClick={() => actions.quit()}>{t('lblWebMenuQuitForge')}</button>
         </div>
       </PageHeader>
       <div class="menu-page">

@@ -91,7 +91,6 @@ public final class WebSession implements IHasForgeLog {
     /** Whether this browser came in on the host's link, which is what lets it claim the host's seat. */
     private final boolean mayHost;
     private final LocalGame local = new LocalGame();
-    private final Runnable onQuit;
     private volatile BrowserChannel browser;
     private volatile Stage stage = new Menu();
     /** This player's settings: a guest's own, or the host's, which are Forge's preferences. */
@@ -124,7 +123,7 @@ public final class WebSession implements IHasForgeLog {
         return left == 0 ? -1 : (System.currentTimeMillis() - left) / 1000;
     }
 
-    WebSession(final WebGuiBase ui, final WebSessions sessions, final Runnable onQuit, final boolean mayHost) {
+    WebSession(final WebGuiBase ui, final WebSessions sessions, final boolean mayHost) {
         this.mayHost = mayHost;
         this.ui = ui;
         this.sessions = sessions;
@@ -134,7 +133,6 @@ public final class WebSession implements IHasForgeLog {
         this.limited = new OfflineLimited(this, ui, lobby, decks, local);
         this.eventSeat = new EventSeat(this, ui, lobby, decks, local, sessions::hostLobby, sessions::seatsChanged);
         this.campaigns = new CampaignSession(new CampaignHost());
-        this.onQuit = onQuit;
     }
 
     /** Takes the host's seat. Host dialogs belong to whoever holds it, so they are pointed here. */
@@ -490,8 +488,6 @@ public final class WebSession implements IHasForgeLog {
                     s.ui.runBackgroundTask("Dev mode", () -> DevMode.run(s.local, d, ch));
                 }
             }))
-            // Quitting stops the process every browser is served from, so it is the host's to do
-            .on(Plain.quit, host((s, ch, c) -> s.ui.invokeInEdtLater(s::quit)))
             // A setting changed before a match is what the match is seeded with, and during one the game is told as well
             .on(SetSetting.class, (s, ch, set) -> {
                 if (s.stage instanceof Playing p) {
@@ -1024,15 +1020,6 @@ public final class WebSession implements IHasForgeLog {
     void shutdown() {
         closeGui();
         local.shutdown();
-    }
-
-    private void quit() {
-        sessions.hostGameClosed();
-        if (stage instanceof Playing p) {
-            p.gui().concede();
-        }
-        shutdown();
-        onQuit.run();
     }
 
     /** Each GUI holds a thread of its own, so a session going away has to let go of it. */

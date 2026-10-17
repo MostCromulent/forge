@@ -59,7 +59,6 @@ export interface PageActions {
   claimHost(): void;
   /** Tries again for a seat after a join found none free. */
   join(): void;
-  quit(): void;
 
   /** Opens the Limited pages for a kind of event. */
   limitedOpen(kind: EventKind, resume: boolean): void;
@@ -202,7 +201,6 @@ export function createActions(send: Send): PageActions {
     openLobby: invite => send({ t: invite ? 'invite' : 'lobby' }),
     claimHost: () => send({ t: 'claimHost' }),
     join: () => send({ t: 'join' }),
-    quit: () => send({ t: 'quit' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
     openLimitedTable: kind => send({ t: 'invite', limited: kind }),
     setLimited: kind => send(kind ? { t: 'setLimited', kind } : { t: 'setLimited' }),
