@@ -90,8 +90,23 @@ export function explain(page: Page): Promise<string> {
   });
 }
 
+// Loading the cards is most of starting a server, so each worker starts one and has it start again in the same process
+// before each probe. FORGE_E2E_REUSE=0 starts a server of its own for each probe instead.
+const reuse = process.env.FORGE_E2E_REUSE !== '0';
+const probeTest = test.extend<object, { shared: Server | null }>({
+  shared: [async ({}, use) => {
+    if (!reuse) {
+      await use(null);
+      return;
+    }
+    const server = await startServer(undefined, PROBE_SEED, true);
+    await use(server);
+    await server.stop();
+  }, { scope: 'worker' }],
+});
+
 export function probe(title: string, body: (p: Probe) => Promise<void>, device: BrowserContextOptions = { viewport: VIEWPORT }): void {
-  test(title, async ({ browser }) => {
+  probeTest(title, async ({ browser, shared }) => {
     test.setTimeout(600_000);
     const began = Date.now();
     const stages: string[] = [];
@@ -101,7 +116,8 @@ export function probe(title: string, body: (p: Probe) => Promise<void>, device: 
       stages.push(`${stage} ${((now - last) / 1000).toFixed(1)}`);
       last = now;
     };
-    const server = await startServer(undefined, PROBE_SEED);
+    if (shared) await shared.reset(PROBE_SEED);
+    const server = shared ?? await startServer(undefined, PROBE_SEED);
     mark('server');
     const context = await browser.newContext(device);
     // A test answers faster than a person reads, so the pause on an opponent's play is off unless a test sets it
@@ -150,7 +166,7 @@ export function probe(title: string, body: (p: Probe) => Promise<void>, device: 
       console.log(`[time] ${((Date.now() - began) / 1000).toFixed(1)} s: ${stages.join(', ')}`);
     } finally {
       await context.close();
-      await server.stop();
+      if (!shared) await server.stop();
     }
   });
 }

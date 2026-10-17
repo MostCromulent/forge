@@ -2,15 +2,19 @@ package forge.web;
 
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgeConstants;
+import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.web.console.ServerConsole;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HexFormat;
@@ -63,6 +67,9 @@ public final class WebMain implements IHasForgeLog {
             if (console != null) {
                 console.attach(service, failure);
             }
+            if (Boolean.getBoolean("forge.web.resetOnInput")) {
+                resetOnInput(service);
+            }
             if (service.running() && !Boolean.getBoolean("forge.web.noBrowser")) {
                 openBrowser(service.url(), ui);
             }
@@ -75,6 +82,39 @@ public final class WebMain implements IHasForgeLog {
         }
         // Engine and netplay threads are not all daemons
         System.exit(0);
+    }
+
+    /**
+     * Lets a test harness run one test after another in this process, which keeps the cards loaded: each line "reset" on
+     * standard input, followed by any preferences as key=value, drops every seat and match, sets the preferences to
+     * their defaults and those, and starts the server again on the same address.
+     */
+    private static void resetOnInput(final WebService service) {
+        // Between tests nobody is connected, which would otherwise end the process
+        service.quitWhenEmpty(false);
+        final Thread reader = new Thread(() -> {
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
+                for (String line = in.readLine(); line != null; line = in.readLine()) {
+                    final String[] words = line.trim().split("\\s+");
+                    if (!"reset".equals(words[0])) {
+                        continue;
+                    }
+                    service.stop();
+                    final ForgePreferences prefs = FModel.getPreferences();
+                    prefs.reset();
+                    for (int i = 1; i < words.length; i++) {
+                        final String[] pair = words[i].split("=", 2);
+                        prefs.setPref(FPref.valueOf(pair[0]), pair.length > 1 ? pair[1] : "");
+                    }
+                    prefs.save();
+                    service.start();
+                }
+            } catch (final IOException | InterruptedException e) {
+                netLog.error(e, "Stopped reading resets");
+            }
+        }, "WebReset");
+        reader.setDaemon(true);
+        reader.start();
     }
 
     private static String newToken() {

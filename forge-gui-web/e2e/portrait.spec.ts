@@ -77,6 +77,8 @@ probe('a long-press asks for no ability menu', async p => {
   // The press must land on the card itself, so the coin toss over the board goes first
   await expect(p.page.locator('#coin-toss')).toBeHidden();
   const card = p.page.locator('#opponent .card').first();
+  await expect(card).toBeVisible();
+  await settled(p.page);
   const at = (await card.boundingBox())!;
   const x = Math.round(at.x + at.width / 2);
   const y = Math.round(at.y + at.height / 2);
@@ -716,6 +718,7 @@ for (const [name, device] of [['a phone', PHONE], ['a desktop', undefined]] as c
     await expect(items.nth(1).locator('.order-number')).toHaveText('2');
     // A card a tap left hovered still shows its number over it
     await items.nth(1).locator('.card').hover();
+    await settled(p.page);
     const badge = (await items.nth(1).locator('.order-number').boundingBox())!;
     // The number takes no presses, so it is made to for the moment it is looked for
     expect(await items.nth(1).locator('.order-number').evaluate((n, [x, y]) => {

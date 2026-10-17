@@ -15,6 +15,8 @@ export interface Server {
   /** The page's address, with the token that lets a browser in. */
   url: string;
   port: number;
+  /** Drops every seat and match and starts again with only the seed's preferences, in the same process. Only on a server started to be reused. */
+  reset(seed: Seed): Promise<void>;
   stop(): Promise<void>;
 }
 
@@ -60,7 +62,7 @@ function killTree(pid: number): void {
 }
 
 /** Starts a server; on a given port, to stand in for the same server restarted, which a browser treats as the same site. */
-export async function startServer(onPort?: number, seed: Seed = {}): Promise<Server> {
+export async function startServer(onPort?: number, seed: Seed = {}, reusable = false): Promise<Server> {
   const home = mkdtempSync(join(tmpdir(), 'forge-e2e-'));
   // Forge's user folder: under APPDATA on Windows (set to home below), a dot folder in the home folder elsewhere
   const user = process.platform === 'win32' ? join(home, 'Forge') : join(home, '.forge');
@@ -87,31 +89,44 @@ export async function startServer(onPort?: number, seed: Seed = {}): Promise<Ser
     // FORGE_PAGE_DIR serves another build of the page, so two builds can be compared against the same server
     `-Dforge.web.pageDir=${process.env.FORGE_PAGE_DIR ?? join(module, 'src/main/resources/web')}`,
     `-Duser.home=${home}`,
+    ...(reusable ? ['-Dforge.web.resetOnInput=true'] : []),
     '-jar', join(module, 'target/forge-gui-web.jar'),
   // On Windows Forge keeps its preferences under APPDATA rather than the home folder
-  ], { cwd: repo, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, APPDATA: home, LOCALAPPDATA: home } });
+  ], { cwd: repo, stdio: [reusable ? 'pipe' : 'ignore', 'pipe', 'pipe'], env: { ...process.env, APPDATA: home, LOCALAPPDATA: home } });
   const running = () => java.exitCode === null && java.signalCode === null;
   // A run stopped part way (a timeout, Ctrl+C) never reaches stop(), and the server would keep its port for good
   const orphaned = () => { if (running()) killTree(java.pid!); };
   process.once('exit', orphaned);
   let log = '';
-  const url = await new Promise<string>((resolveUrl, reject) => {
+  java.stdout?.on('data', (chunk: Buffer) => { log += chunk; });
+  java.stderr?.on('data', (chunk: Buffer) => { log += chunk; });
+  // The server says where it listens each time it starts, and a reset starts it again
+  const started = (after: number) => new Promise<string>((resolveUrl, reject) => {
     const timer = setTimeout(() => reject(new Error(`Forge did not start in time:\n${log.slice(-4000)}`)), 180_000);
-    const read = (chunk: Buffer) => {
-      log += chunk;
-      const found = /Forge web UI: (\S+)/.exec(log);
-      if (found) {
-        clearTimeout(timer);
-        resolveUrl(found[1]);
-      }
+    const exited = (code: number | null) => reject(new Error(`Forge exited with ${code} before it started:\n${log.slice(-4000)}`));
+    const read = () => {
+      const found = /Forge web UI: (\S+)/.exec(log.slice(after));
+      if (!found) return;
+      clearTimeout(timer);
+      java.stdout?.off('data', read);
+      java.stderr?.off('data', read);
+      java.off('exit', exited);
+      resolveUrl(found[1]);
     };
     java.stdout?.on('data', read);
     java.stderr?.on('data', read);
-    java.on('exit', code => reject(new Error(`Forge exited with ${code} before it started:\n${log.slice(-4000)}`)));
+    java.once('exit', exited);
+    read();
   });
+  const url = await started(0);
   return {
     url,
     port,
+    async reset(again: Seed) {
+      const after = log.length;
+      java.stdin!.write(`reset ${Object.entries(again.prefs ?? {}).map(([k, v]) => `${k}=${v}`).join(' ')}\n`);
+      await started(after);
+    },
     async stop() {
       process.off('exit', orphaned);
       if (running()) {
