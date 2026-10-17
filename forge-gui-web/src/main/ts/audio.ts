@@ -51,16 +51,6 @@ export function echoSound(name: string, delays: number[]): void {
   }
 }
 
-/** A sound the page ships itself rather than one from the host's sound set, played from `from` seconds in. */
-export function playEffect(clip: HTMLAudioElement, from = 0): void {
-  if (volume('soundVolume') <= 0) {
-    return;
-  }
-  clip.volume = volume('soundVolume');
-  clip.currentTime = from;
-  clip.play().catch(() => {});
-}
-
 /** The music a screen plays: desktop's menu playlist, its match playlist, or none. */
 type Playlist = 'menu' | 'match';
 
