@@ -7,7 +7,7 @@ import { mountWheel, spotFor, type Wheel, type WheelOutcome } from '../conquest/
 import { pendingAmounts } from '../conquest/conquestpending';
 import type { Reward, RewardStep } from '../protocol';
 import { t, formatNumber } from '../text';
-import { make, reducedMotion } from '../dom';
+import { byId, make, reducedMotion } from '../dom';
 import { Backdrop } from '../dialog';
 
 /** What the reveal has yet to show, by the icon of the balance it was paid into. */
@@ -48,6 +48,12 @@ export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed
   };
   // A reward with nothing to show is over as soon as it arrives
   useEffect(() => { if (at >= steps.length) finish(); }, []);
+  // The dock lies outside the campaign, so the reveal shuts it off itself while it is up
+  useEffect(() => {
+    const dock = byId('dock');
+    dock.inert = true;
+    return () => { dock.inert = false; };
+  }, []);
 
   // The step on show has paid, except a pack, which pays card by card
   const packShards = step?.kind === 'BOOSTER' ? (step.cards ?? []).reduce((sum, c) => sum + c.shards, 0) : 0;

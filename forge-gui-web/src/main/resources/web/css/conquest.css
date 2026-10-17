@@ -4,7 +4,7 @@
 .cq-shell { height: 100vh; display: flex; flex-direction: column; }
 /* On a desktop an open save is a panel in the deck editor's frame, a step under the editor, which can be opened from it */
 html:not([data-form="portrait"]) #campaign:not([hidden]):has(.cq-shell) { position: fixed; inset: 0; z-index: 34; display: grid; place-items: center; background: var(--scrim); }
-html:not([data-form="portrait"]) .cq-shell { width: min(1500px, 94vw); height: min(880px, 92vh); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+html:not([data-form="portrait"]) .cq-shell { width: min(1500px, 94vw); height: min(880px, 92vh); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: clip; }
 .cq-shell > .limited-error { margin: 8px 20px 0; }
 .cq-coin { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px 3px 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-variant-numeric: tabular-nums; }
 .cq-coin img { width: 20px; height: 20px; }
@@ -12,7 +12,8 @@ html:not([data-form="portrait"]) .cq-shell { width: min(1500px, 94vw); height: m
 .cq-save .ev-line .cq-coin { margin-left: 6px; }
 
 /* The bar every page of a conquest shares */
-.cq-bar { display: flex; align-items: stretch; gap: 22px; padding: 0 20px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 70%, transparent); }
+/* Too narrow for one row, the balances and the way out go under the tabs rather than past the edge */
+.cq-bar { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0 22px; padding: 0 20px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 70%, transparent); }
 .cq-id { display: grid; align-content: center; gap: 1px; padding: 9px 0; min-width: 190px; }
 .cq-id b { font-size: 15px; }
 .cq-id span { font-size: 12px; color: var(--muted); }
@@ -23,7 +24,7 @@ html:not([data-form="portrait"]) .cq-shell { width: min(1500px, 94vw); height: m
 .cq-tab[aria-current="page"] { color: var(--accent-2); background: linear-gradient(180deg, transparent, var(--accent-soft)); }
 /* The open tab's line is an element of its own, so a change of tab can glide it to the next */
 .cq-tab-line { position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: var(--accent-2); view-transition-name: cq-tab-line; }
-.cq-purse { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.cq-purse { margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 8px 0; }
 /* The balances stay in view over a reward's reveal, which counts into them */
 .cq-shell:has(.cq-reveal) .cq-purse { position: relative; z-index: 55; }
 .cq-shell:has(.cq-reveal) .cq-purse > :not(.cq-coin) { visibility: hidden; }
@@ -31,7 +32,8 @@ html:not([data-form="portrait"]) .cq-shell { width: min(1500px, 94vw); height: m
 .cq-purse .deck-menu { width: 170px; }
 .cq-purse .deck-menu [aria-checked="true"] { color: var(--accent-2); }
 /* A change of tab slides the page (dialogs.css); a page arriving any other way, as on a new plane, rises in */
-.cq-main { flex: 1; min-height: 0; display: grid; view-transition-name: page; }
+/* One column no wider than the window, so a strip that scrolls on its own, like the Spell Shop's packs, does not widen the page */
+.cq-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); view-transition-name: page; }
 /* The slide's pictures are drawn above every page, so on a desktop they are cut to the panel's page here */
 html:not([data-form="portrait"]):has(#campaign .cq-shell)::view-transition-image-pair(page) { overflow: clip; }
 .cq-main > * { animation: box-in .18s ease-out; }
@@ -372,7 +374,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-ticket-cards .cq-pic .nm { position: absolute; left: 8px; right: 8px; top: 8px; font-size: 11.5px; color: var(--muted); }
 .cq-ticket-cards .cq-pic img { position: absolute; inset: 0; width: 100%; height: 100%; }
 
-.cq-purse > button { font-size: 12.5px; padding: 5px 12px; }
+.cq-purse > button:not(.icon-button) { font-size: 12.5px; padding: 5px 12px; }
 .cq-sep { opacity: .5; margin: 0 8px; }
 
 /* The Aether: the filters down the left, and what a pull would draw from in the middle */
