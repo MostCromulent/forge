@@ -83,14 +83,19 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 #match.tabbed #seat-tabs:not([hidden]) { grid-area: tabs; display: flex; align-items: flex-end; min-width: 0; margin-bottom: -8px; }
 #seat-tabs::after { content: ''; flex: 1; align-self: flex-end; border-bottom: 1px solid var(--edge); }
 #match.tabbed #opponent.many { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); }
-#opponent.tabbed > .seat:not(.compact) { position: relative; padding: 8px 10px; border: 1px solid var(--edge); border-top: 0; border-radius: 0 0 10px 10px; }
+/* The open tab and its seat share one faint fill, so they read as one panel */
+#opponent.tabbed > .seat:not(.compact) { position: relative; padding: 8px 10px; border: 1px solid var(--edge); border-top: 0; border-radius: 0 0 10px 10px;
+  background: color-mix(in srgb, var(--open-tint, var(--line)) 7%, transparent); }
 #opponent.tabbed > .seat:not(.compact) .player { position: absolute; left: 12px; top: 14px; z-index: 6; }
+/* On the open player's turn the whole outline, tab and strip included, lights gold as a compact seat's frame does. The glow stays under the seat, clear of the tabs. */
+#match.tabbed:has(#opponent > .seat.turn:not(.compact, [hidden])) { --edge: color-mix(in srgb, var(--accent-2) 70%, transparent); }
+#opponent.tabbed > .seat.turn:not(.compact) { box-shadow: 0 12px 22px -14px color-mix(in srgb, var(--accent-2) 30%, transparent), inset 0 -18px 30px -26px color-mix(in srgb, var(--accent-2) 40%, transparent); }
 .seat-tab { position: relative; flex: 0 1 auto; min-width: 118px; max-width: 190px; display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; column-gap: 9px; align-items: center; padding: 8px 14px 9px 10px;
   border: 1px solid transparent; border-bottom-color: var(--edge); border-radius: 12px 12px 0 0; background: none; text-align: left; }
 .seat-tab:hover { background: color-mix(in srgb, var(--surface) 60%, transparent); }
 .seat-tab + .seat-tab:not(.on)::after { content: ''; position: absolute; left: -1px; top: 26%; bottom: 26%; width: 1px; background: var(--line); }
 .seat-tab.on + .seat-tab::after { display: none; }
-.seat-tab.on { border-color: var(--edge); border-bottom-color: transparent; background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 12%, transparent), transparent); }
+.seat-tab.on { border-color: var(--edge); border-bottom-color: transparent; background: color-mix(in srgb, var(--tint) 7%, transparent); }
 .seat-tab .pic { position: relative; width: 32px; height: 32px; border-radius: 50%; }
 .seat-tab img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; filter: brightness(.7) saturate(.75); }
 .seat-tab:is(.on, .turn, .asked, :hover) img { filter: none; }
