@@ -2,6 +2,9 @@
 
 
 .cq-shell { height: 100vh; display: flex; flex-direction: column; }
+/* On a desktop an open save is a panel in the deck editor's frame, a step under the editor, which can be opened from it */
+html:not([data-form="portrait"]) #campaign:not([hidden]):has(.cq-shell) { position: fixed; inset: 0; z-index: 34; display: grid; place-items: center; background: var(--scrim); }
+html:not([data-form="portrait"]) .cq-shell { width: min(1500px, 94vw); height: min(880px, 92vh); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 .cq-shell > .limited-error { margin: 8px 20px 0; }
 .cq-coin { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px 3px 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-variant-numeric: tabular-nums; }
 .cq-coin img { width: 20px; height: 20px; }
@@ -21,7 +24,6 @@
 /* The open tab's line is an element of its own, so a change of tab can glide it to the next */
 .cq-tab-line { position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: var(--accent-2); view-transition-name: cq-tab-line; }
 .cq-purse { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.cq-under { display: contents; }
 /* The balances stay in view over a reward's reveal, which counts into them */
 .cq-shell:has(.cq-reveal) .cq-purse { position: relative; z-index: 55; }
 .cq-shell:has(.cq-reveal) .cq-purse > :not(.cq-coin) { visibility: hidden; }
@@ -30,6 +32,8 @@
 .cq-purse .deck-menu [aria-checked="true"] { color: var(--accent-2); }
 /* A change of tab slides the page (dialogs.css); a page arriving any other way, as on a new plane, rises in */
 .cq-main { flex: 1; min-height: 0; display: grid; view-transition-name: page; }
+/* The slide's pictures are drawn above every page, so on a desktop they are cut to the panel's page here */
+html:not([data-form="portrait"]):has(#campaign .cq-shell)::view-transition-image-pair(page) { overflow: clip; }
 .cq-main > * { animation: box-in .18s ease-out; }
 html[data-motion="reduced"] .cq-main > * { animation: none; }
 /* Zero duration rather than none: with none, the rise plays when data-way is removed at the end of the slide */
@@ -119,6 +123,8 @@ html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
 .cq-steps { margin: 0; font-size: 12.5px; color: var(--text); }
 /* The dock stands over the foot of the page, so the panel ends above it */
 .cq-foot { margin-top: auto; border-top: 1px solid var(--line); padding: 14px 20px 62px; display: grid; gap: 10px; background: color-mix(in srgb, var(--bg-deep) 35%, transparent); }
+/* On a desktop the dock lies under the panel, so the foot need not clear it */
+html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
 .cq-mine { display: flex; align-items: center; gap: 10px; }
 .cq-face2 { width: 46px; height: 46px; padding: 0; border: 0; border-radius: 9px; background: var(--surface-2) center 20% / cover; box-shadow: 0 0 0 1px var(--line-bright); flex: none; }
 .cq-face2.round { border-radius: 50%; width: 34px; height: 34px; margin: 0 6px; }

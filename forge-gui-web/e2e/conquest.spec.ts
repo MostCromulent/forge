@@ -71,7 +71,7 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   const reveal = page.locator('.cq-reveal');
   await expect(reveal.locator('.cq-wheel-first')).toBeVisible();
   // Nothing behind the reveal can be reached, so the reward is gone through to its end
-  const back = page.locator('.cq-shell .page-head button', { hasText: 'Back' });
+  const back = page.locator('.cq-purse button', { hasText: 'Back' });
   // The page's own frame follows the reveal's by one, so this is asked until it holds
   await expect(async () => {
     await back.focus();

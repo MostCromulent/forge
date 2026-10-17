@@ -22,12 +22,12 @@ export function Purse({ icon, n, label }: { icon: string; n: number; label: stri
 /** How much of a currency the bar says the player has, by the currency's icon. */
 export const balance = (bar: Bar | null, icon: string): number => bar?.balances.find(b => b.icon === icon)?.amount ?? 0;
 
-/** The bar every page of a campaign shares: its name and a line, the mode's tabs, and the balances. */
-export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, extra, prefs, under }: {
+/** The bar every page of a campaign shares: its name and a line, the mode's tabs, the balances, and the way out. */
+export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, extra, prefs, leave, under }: {
   bar: Bar; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void;
   /** What a reward being revealed has yet to show, by balance icon: the server's balances already hold it all, so the bar shows less. */
   held: Record<string, number>;
-  extra?: ComponentChildren; prefs?: () => void; under: boolean;
+  extra?: ComponentChildren; prefs?: () => void; leave: () => void; under: boolean;
 }) {
   return (
     <div class="cq-bar" inert={under}>
@@ -43,6 +43,8 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
         {extra}
         {bar.balances.map(b => <Purse key={b.icon} icon={b.icon} n={b.amount - (held[b.icon] ?? 0)} label={b.label} />)}
         {prefs && <button onClick={prefs}>{t('Preferences')}</button>}
+        <HeadControls />
+        <button onClick={leave}>{t('lblBack')}</button>
       </div>
     </div>
   );
@@ -220,15 +222,15 @@ export function CampaignShell({ model, actions, icons, shelf, open }: {
   useEffect(() => { if (inside) setCreating(false); }, [inside]);
   return (
     <div key={inside ? 'open' : 'shelf'} class={inside ? 'cq-shell' : 'limited-page'}>
-      {/* A reward being revealed is gone through to its end: nothing behind it can be reached, by key or by pointer */}
-      <div class="cq-under" inert={inside && !!model.reward}>
+      {/* An open save's way out is on its bar */}
+      {!inside && (
         <PageHeader class="limited-head">
           <div class="head-right">
             <HeadControls />
-            <button onClick={() => (creating && !inside ? setCreating(false) : actions.campaignLeave())}>{t('lblBack')}</button>
+            <button onClick={() => (creating ? setCreating(false) : actions.campaignLeave())}>{t('lblBack')}</button>
           </div>
         </PageHeader>
-      </div>
+      )}
       {inside ? open() : shelf(creating, setCreating)}
     </div>
   );
@@ -274,7 +276,8 @@ export function CampaignPages<Tab extends string>({ model, actions, tabs, tab, s
   useEffect(() => { if (!reward) setOwed({}); }, [reward]);
   const bar = model.campaignBar!;
   return <>
-    <CampaignBar bar={bar} tabs={tabs} tab={tab} setTab={setTab} held={reward ? owed : {}} prefs={() => setPrefs(true)} under={!!reward} extra={extra} />
+    <CampaignBar bar={bar} tabs={tabs} tab={tab} setTab={setTab} held={reward ? owed : {}} prefs={() => setPrefs(true)}
+      leave={() => actions.campaignLeave()} under={!!reward} extra={extra} />
     {model.error && <p class="limited-error">{model.error}</p>}
     <div class="cq-main" inert={!!reward}>{page(priced)}</div>
     {prefs && <Prefs model={model} actions={actions} close={() => { setPrefs(false); setPriced(priced + 1); }} />}
