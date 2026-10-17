@@ -279,8 +279,8 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   for (const e of events) {
     if (e.kind === 'shuffled') riffle(e.player.ref);
   }
-  settleWaiting(!!model.prompt?.paying);
-  const travelled = new Set(trips.keys());
+  // A cancelled cast that flew back from beside the stack has travelled, so it does not also fly out of its zone's tile
+  const travelled = new Set([...trips.keys(), ...settleWaiting(!!model.prompt?.paying)]);
   arriveElsewhere(travelled);
   shiftBoard(travelled, unmaking);
   shiftHand(travelled);
@@ -436,18 +436,22 @@ export function journeys(events: readonly GameEvent[]): Map<string, Journey> {
   return out;
 }
 
-// Forge undoes a cancelled cast without an event. So a waiting card that is drawn in a zone again flies back from beside the stack
-function settleWaiting(paying: boolean): void {
+// Forge undoes a cancelled cast without an event. So a waiting card that is drawn in a zone again flies back from beside the stack.
+// Returns the cards that flew back.
+function settleWaiting(paying: boolean): string[] {
+  const flown: string[] = [];
   for (const [key, held] of waiting) {
     const arrived = stackItemFor(key) ?? cardElement(key);
     if (arrived) {
       const from = whereNow(held);
       land(key);
       fly(arrived, from, FLIGHT_MS, 0);
+      flown.push(key);
     } else if (!awaitingSlot(key) && !paying && Date.now() - held.since > SETTLE_MS) {
       land(key);
     }
   }
+  return flown;
 }
 
 /** Where a waiting spell is drawn now. While it is still flying, this is short of its waiting place. */
