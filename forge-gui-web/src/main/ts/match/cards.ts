@@ -20,7 +20,7 @@ const EYE = iconSvg(ICONS.eye);
 
 export function createCard(onClick: CardClick): HTMLDivElement {
   const el = make('div', 'card');
-  el.innerHTML = '<img alt="" draggable="false"><span class="stickers" aria-hidden="true"></span><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="seen">' + EYE + '</span><span class="owned-by"></span><span class="kind-tag"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><span class="block-tab"></span><span class="combat-tag"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span><i class="pile-edge" aria-hidden="true"></i>';
+  el.innerHTML = '<img alt="" draggable="false"><span class="stickers" aria-hidden="true"></span><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><i class="chains" aria-hidden="true"></i><i class="seal" aria-hidden="true"></i><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="seen">' + EYE + '</span><span class="owned-by"></span><span class="kind-tag"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><span class="block-tab"></span><span class="combat-tag"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span><i class="pile-edge" aria-hidden="true"></i>';
   q(el, '.sick').title = t('lblWebCardSummoningSick');
   q(el, '.seen').title = t('lblWebCardRevealed');
   q(el, '.block-tab').textContent = t('lblWebCardBlocking');
@@ -93,6 +93,13 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   q(el, '.combat-tag').textContent = blockThis ? t('lblWebPortraitBlockingThis') : '';
   el.classList.toggle('blocking', !!card.Blocking);
   el.classList.toggle('phased', !!card.PhasedOut);
+  // The chains go on and come off as the card is detained and released, but a board drawn fresh just shows them
+  const detained = !!card.Detained;
+  if (el.dataset.detained !== undefined && (el.dataset.detained === '1') !== detained && el.closest('.battlefield') && !reducedMotion()) {
+    replay(el, detained ? 'detaining' : 'releasing', 'detaining', 'releasing');
+  }
+  el.dataset.detained = detained ? '1' : '';
+  el.classList.toggle('detained', detained);
   // The board shows a shrunk copy, while the preview (data-zoom) keeps the full image
   const src = cardImageSrc(model, card);
   const small = visible ? smallImage(src) : '';

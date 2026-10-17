@@ -1045,6 +1045,21 @@ body.dragging-block #zoom { display: none; }
 .card.sickness > img, .card.sickness .frame { filter: grayscale(1) brightness(.78); }
 .card.phased { opacity: .35; outline: 2px dotted var(--muted); }
 .card.phased > img, .card.phased .frame { filter: grayscale(1); }
+/* Detained: chains held by a lock seal, a shape no other state uses, since the board's white rings already mean selectable and attacking */
+.card .chains, .card .seal { display: none; position: absolute; inset: 0; z-index: 1; border-radius: var(--radius); pointer-events: none;
+  background: center / 100% 100% no-repeat; filter: drop-shadow(0 1px 1px #000c); }
+.card .chains { background-image: url(../detained-chains.svg); }
+.card .seal { background-image: url(../detained-seal.svg); }
+.card:is(.detained, .releasing) :is(.chains, .seal) { display: block; }
+.card.detained > img, .card.detained .frame { filter: brightness(.88) saturate(.7); }
+/* The seal stamps on and the chains grow out from under it. Coming off, they draw back in and the seal lifts away */
+.card.detaining .seal { animation: detain-seal-in .28s cubic-bezier(.2, .8, .3, 1.2) both; }
+.card.detaining .chains { animation: detain-chains-out .38s cubic-bezier(.3, .7, .2, 1) .16s both; }
+.card.releasing .chains { animation: detain-chains-out .28s cubic-bezier(.6, 0, .8, .4) reverse forwards; }
+.card.releasing .seal { animation: detain-seal-out .22s ease-in .16s forwards; }
+@keyframes detain-seal-in { from { opacity: 0; transform: scale(1.35); } 65% { opacity: 1; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
+@keyframes detain-seal-out { to { opacity: 0; transform: scale(1.12); } }
+@keyframes detain-chains-out { from { clip-path: circle(0% at 50% 50%); } to { clip-path: circle(74% at 50% 50%); } }
 /* Isolated, so the copies under the top card sit under its image but above whatever the board paints */
 .card.pile { isolation: isolate; }
 .card.pile::before, .card.pile::after { content: ''; position: absolute; inset: 0; z-index: -1; display: none; border-radius: var(--radius);
