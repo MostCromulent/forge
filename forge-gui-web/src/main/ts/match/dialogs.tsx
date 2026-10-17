@@ -641,6 +641,113 @@ const CHEVRON = { up: 'M6.5 14.5l5.5-5.5 5.5 5.5', down: 'M6.5 9.5l5.5 5.5 5.5-5
 const CARRY_MS = 170;
 const CARRY_EASE = 'cubic-bezier(.2,.8,.2,1)';
 
+/** Where an item rests in its row, less any slide it is part way through. */
+function resting(el: Element): DOMRect {
+  const r = el.getBoundingClientRect();
+  const [x = 0, y = 0] = getComputedStyle(el).translate.split(' ').map(v => parseFloat(v) || 0);
+  return new DOMRect(r.left - x, r.top - y, r.width, r.height);
+}
+
+/**
+ * Slides the items a change moves from where they stood to their new places: call what it returns just before the
+ * change. Items are matched by data-slide, so one drawn again in another row still slides from where it was.
+ */
+function useSlide(items: () => HTMLElement[], change: unknown): () => void {
+  const stood = useRef<Map<string, DOMRect> | null>(null);
+  useLayoutEffect(() => {
+    const was = stood.current;
+    stood.current = null;
+    if (!was || reducedMotion()) return;
+    for (const el of items()) {
+      const from = was.get(el.dataset.slide ?? '');
+      el.getAnimations().forEach(a => a.cancel());
+      const to = el.getBoundingClientRect();
+      if (!from || el.classList.contains('carried') || (from.left === to.left && from.top === to.top)) continue;
+      el.animate([{ translate: `${from.left - to.left}px ${from.top - to.top}px` }, { translate: '0 0' }], { duration: CARRY_MS, easing: CARRY_EASE });
+    }
+  }, [change]);
+  return () => { stood.current = new Map(items().map(el => [el.dataset.slide ?? '', el.getBoundingClientRect()])); };
+}
+
+interface Carry {
+  /** The row the card is lifted from; the copy is drawn beside it with the row's classes, so the card in it is drawn as the row draws it. */
+  row: HTMLElement;
+  copyClass: string;
+  ghost: { current: HTMLElement | null };
+  /** The places the card can be set down. */
+  slots: () => Element[];
+  /** Where the card stands now, which it settles into when let go, if not where it was lifted from. */
+  home?: () => Element | null;
+  /** A card leans the way it is moving; a line of words does not, and keeps its width. */
+  words: boolean;
+  lifted: () => void;
+  over: (slot: number) => void;
+  dropped: () => void;
+}
+
+/** Lifts a card onto a copy that follows the pointer, moves it to the place nearest the pointer as it goes, and settles it there when let go. A finger scrolls the dialog, so only a mouse or pen carries. */
+function carryCard(e: PointerEvent, c: Carry): void {
+  if (e.pointerType === 'touch' || e.button !== 0 || c.ghost.current) return;
+  const el = e.currentTarget as HTMLElement;
+  const start = { x: e.clientX, y: e.clientY };
+  let from: DOMRect | null = null;
+  let last = e.clientX;
+  let lean = 0;
+  const lift = () => {
+    from = el.getBoundingClientRect();
+    const lifted = make('div', `${c.copyClass} order-ghost`);
+    lifted.style.cssText = `left: ${from.left}px; top: ${from.top}px;${c.words ? ` width: ${from.width}px; min-width: 0;` : ''}`;
+    // The row's cards are sized to fit the screen, and the copy's card is the same size
+    const fit = c.row.style.getPropertyValue('--fit');
+    if (fit) lifted.style.setProperty('--fit', fit);
+    lifted.append(el.cloneNode(true));
+    c.row.after(lifted);
+    c.ghost.current = lifted;
+    c.lifted();
+    return true;
+  };
+  const onMove = (m: PointerEvent) => {
+    const dx = m.clientX - start.x;
+    const dy = m.clientY - start.y;
+    const lifted = c.ghost.current;
+    if (!lifted || !from) return;
+    // The card leans the way it is moving, and settles upright when it stops
+    lean += (Math.max(-9, Math.min(9, (m.clientX - last) * 0.9)) - lean) * 0.35;
+    last = m.clientX;
+    lifted.style.translate = `${dx}px ${dy}px`;
+    if (!c.words) lifted.style.rotate = `${lean.toFixed(2)}deg`;
+    const x = from.left + from.width / 2 + dx;
+    const y = from.top + from.height / 2 + dy;
+    const far = (r: DOMRect) => Math.hypot(r.left + r.width / 2 - x, r.top + r.height / 2 - y);
+    const slots = c.slots().map(resting);
+    let best = 0;
+    slots.forEach((s, n) => {
+      if (far(s) < far(slots[best])) best = n;
+    });
+    if (slots.length) c.over(best);
+  };
+  const onUp = () => {
+    const lifted = c.ghost.current;
+    if (!lifted || !from) return;
+    const done = () => {
+      lifted.remove();
+      c.ghost.current = null;
+      c.dropped();
+    };
+    const home = c.home ? c.home() : el;
+    if (reducedMotion() || !home) {
+      done();
+      return;
+    }
+    const to = resting(home);
+    lifted.animate([{ translate: lifted.style.translate || '0 0', rotate: lifted.style.rotate || '0deg', scale: getComputedStyle(lifted).scale },
+      { translate: `${to.left - from.left}px ${to.top - from.top}px`, rotate: '0deg', scale: '1' }],
+    { duration: CARRY_MS, easing: CARRY_EASE, fill: 'forwards' }).finished.then(done, done);
+  };
+  // The click that ends a carry is not a tap on the card, which trackDrag sees to
+  trackDrag(e, 5, { start: lift, move: onMove, end: onUp });
+}
+
 function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer: Answer }) {
   const [chosen, setChosen] = useState<number[]>(() => [...req.selected]);
   const [remember, setRemember] = useState(false);
@@ -651,8 +758,6 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const row = useRef<HTMLDivElement>(null);
   const order = useRef(chosen);
   order.current = chosen;
-  /** Where each card stood before the order changed, so it slides from there to its new place. */
-  const stood = useRef<Map<Element, DOMRect> | null>(null);
   const ghost = useRef<HTMLElement | null>(null);
   // Options that are only words, such as abilities, are listed down the dialog; cards keep their row
   const listed = req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player);
@@ -664,88 +769,29 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   });
   // What set an ability off is worth its line only where it tells two of them apart
   const tellsApart = new Set(words.map(w => w.detail)).size > 1;
+  const items = () => (row.current ? [...row.current.children] as HTMLElement[] : []);
+  const slide = useSlide(items, chosen);
   const move = (from: number, to: number) => {
-    if (row.current) stood.current = new Map([...row.current.children].map(el => [el, el.getBoundingClientRect()]));
+    slide();
     setChosen(list => {
       const next = [...list];
       next.splice(to, 0, next.splice(from, 1)[0]);
       return next;
     });
   };
-  useLayoutEffect(() => {
-    const was = stood.current;
-    stood.current = null;
-    if (!was || reducedMotion()) return;
-    for (const [el, from] of was) {
-      el.getAnimations().forEach(a => a.cancel());
-      const to = el.getBoundingClientRect();
-      if (el.classList.contains('carried') || (from.left === to.left && from.top === to.top)) continue;
-      el.animate([{ translate: `${from.left - to.left}px ${from.top - to.top}px` }, { translate: '0 0' }], { duration: CARRY_MS, easing: CARRY_EASE });
-    }
-  }, [chosen]);
   useEffect(() => () => ghost.current?.remove(), []);
-  // A finger scrolls the dialog, so only a mouse or pen carries a card; a tap holds it for the arrows
   const carry = (e: PointerEvent, i: number) => {
-    if (e.pointerType === 'touch' || e.button !== 0 || ghost.current) return;
-    const el = e.currentTarget as HTMLElement;
-    const start = { x: e.clientX, y: e.clientY };
-    let from: DOMRect | null = null;
-    let slots: DOMRect[] = [];
-    let last = e.clientX;
-    let lean = 0;
-    const lift = () => {
-      if (!row.current) return false;
-      from = el.getBoundingClientRect();
-      slots = [...row.current.children].map(c => c.getBoundingClientRect());
-      // The copy sits under the same classes as the row, so the card in it is drawn as the row draws it
-      const lifted = make('div', `options ordered order-ghost${listed ? ' listed' : ''}`);
-      lifted.style.cssText = `left: ${from.left}px; top: ${from.top}px;${listed ? ` width: ${from.width}px; min-width: 0;` : ''}`;
-      lifted.append(el.cloneNode(true));
-      row.current.after(lifted);
-      ghost.current = lifted;
-      setHeld(null);
-      setCarried(i);
-      return true;
-    };
-    const onMove = (m: PointerEvent) => {
-      const dx = m.clientX - start.x;
-      const dy = m.clientY - start.y;
-      const lifted = ghost.current;
-      if (!lifted || !from) return;
-      // The card leans the way it is moving, and settles upright when it stops
-      lean += (Math.max(-9, Math.min(9, (m.clientX - last) * 0.9)) - lean) * 0.35;
-      last = m.clientX;
-      lifted.style.translate = `${dx}px ${dy}px`;
-      if (!listed) lifted.style.rotate = `${lean.toFixed(2)}deg`;
-      const x = from.left + from.width / 2 + dx;
-      const y = from.top + from.height / 2 + dy;
-      const far = (r: DOMRect) => Math.hypot(r.left + r.width / 2 - x, r.top + r.height / 2 - y);
-      let best = 0;
-      slots.forEach((s, n) => {
-        if (far(s) < far(slots[best])) best = n;
-      });
-      const at = order.current.indexOf(i);
-      if (at >= 0 && best !== at) move(at, best);
-    };
-    const onUp = () => {
-      const lifted = ghost.current;
-      if (!lifted || !from) return;
-      const done = () => {
-        lifted.remove();
-        ghost.current = null;
-        setCarried(null);
-      };
-      if (reducedMotion()) {
-        done();
-        return;
-      }
-      const to = el.getBoundingClientRect();
-      lifted.animate([{ translate: lifted.style.translate || '0 0', rotate: lifted.style.rotate || '0deg', scale: getComputedStyle(lifted).scale },
-        { translate: `${to.left - from.left}px ${to.top - from.top}px`, rotate: '0deg', scale: '1' }],
-      { duration: CARRY_MS, easing: CARRY_EASE, fill: 'forwards' }).finished.then(done, done);
-    };
-    // The click that ends a carry is not a tap on the card, which trackDrag sees to
-    trackDrag(e, 5, { start: lift, move: onMove, end: onUp });
+    if (!row.current) return;
+    carryCard(e, {
+      row: row.current, copyClass: `options ordered${listed ? ' listed' : ''}`, ghost, words: listed,
+      slots: items,
+      lifted: () => { setHeld(null); setCarried(i); },
+      over: best => {
+        const at = order.current.indexOf(i);
+        if (at >= 0 && best !== at) move(at, best);
+      },
+      dropped: () => setCarried(null),
+    });
   };
   const at = held === null ? -1 : chosen.indexOf(held);
   const step = (by: number) => {
@@ -799,7 +845,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
             setHeld(h => (h === i ? null : i));
           };
           return (
-            <div key={i} class={`ordered-item${carried === i ? ' carried' : ''}${held === i ? ' selected' : ''}`} onPointerDown={e => carry(e, i)}>
+            <div key={i} data-slide={i} class={`ordered-item${carried === i ? ' carried' : ''}${held === i ? ' selected' : ''}`} onPointerDown={e => carry(e, i)}>
               {listed
                 ? <AbilityRow model={model} opt={req.options[i]} text={words[i].text} detail={tellsApart ? words[i].detail : ''}
                     tag={pos === 0 ? req.top : undefined} onClick={hold} />
@@ -841,20 +887,41 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
   const all = req.options.map((_, i) => i);
   const rest = all.filter(i => !req.movable.includes(i));
   const [piles, setPiles] = useState(() => ({ top: all.filter(i => req.movable.includes(i)), bottom: [] as number[] }));
-  const held = useRef<number | null>(null);
+  const now = useRef(piles);
+  now.current = piles;
+  /** The card the pointer is carrying, by its place among the options. */
+  const [carried, setCarried] = useState<number | null>(null);
+  const ghost = useRef<HTMLElement | null>(null);
   const bothEnds = req.toBottom || req.toTop;
   const row = useRef<HTMLDivElement>(null);
   // Each end's cards, or the empty place where they would go, and the pile between them, in one row. A phone stacks the ends instead (portrait.css).
   useCardFit(row, isPortrait() ? 0 : Math.max(piles.top.length, 1) + (bothEnds ? Math.max(piles.bottom.length, 1) : 0) + 1, { gap: 18 });
 
-  const place = (shelf: Shelf, at: number) => {
-    const card = held.current;
-    held.current = null;
-    if (card === null) return;
+  // Each end's cards, and the empty place of an end with none, in the order they stand
+  const slots = () => (row.current ? [...row.current.querySelectorAll<HTMLElement>('.lib-card')] : []);
+  const slide = useSlide(() => slots().filter(el => el.dataset.slide), piles);
+  useEffect(() => () => ghost.current?.remove(), []);
+  const place = (card: number, shelf: Shelf, at: number) => {
+    const p = now.current;
+    if (p[shelf][at] === card) return;
+    slide();
     setPiles(p => {
       const next = { top: p.top.filter(i => i !== card), bottom: p.bottom.filter(i => i !== card) };
       next[shelf].splice(Math.min(at, next[shelf].length), 0, card);
       return next;
+    });
+  };
+  const carry = (e: PointerEvent, card: number) => {
+    if (!row.current) return;
+    carryCard(e, {
+      row: row.current, copyClass: 'lib-row', ghost, words: false, slots,
+      home: () => row.current?.querySelector(`.lib-card[data-slide="${card}"]`) ?? null,
+      lifted: () => setCarried(card),
+      over: n => {
+        const slot = slots()[n];
+        if (slot) place(card, slot.dataset.shelf as Shelf, Number(slot.dataset.pos));
+      },
+      dropped: () => setCarried(null),
     });
   };
   // A card sent across lands beside the pile, the middle of its new end
@@ -871,18 +938,17 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
 
   // The top runs from its end to the pile, and the bottom from the pile to its end, so each end's card is the one furthest out
   const side = (name: Shelf) => (
-    <div class={`lib-side ${name}`} onDragOver={e => e.preventDefault()} onDrop={() => place(name, piles[name].length)}>
+    <div class={`lib-side ${name}`}>
       <div class="lib-cards">
         {piles[name].map((i, pos) => (
-          <div key={i} class="lib-card" draggable onDragStart={() => { held.current = i; }}
-            onDragOver={e => e.preventDefault()} onDrop={e => { e.stopPropagation(); place(name, pos); }}>
+          <div key={i} data-slide={i} data-shelf={name} data-pos={pos} class={`lib-card${carried === i ? ' carried' : ''}`} onPointerDown={e => carry(e, i)}>
             <OptionView model={model} opt={req.options[i]} onClick={bothEnds ? () => send(name, pos) : undefined} />
             {name === 'top' && <span class="order-number">{pos + 1}</span>}
             {name === 'top' && pos === 0 && <span class="order-end">{t('lblClosestToTop')}</span>}
             {name === 'bottom' && pos === piles.bottom.length - 1 && <span class="order-end">{t('lblClosestToBottom')}</span>}
           </div>
         ))}
-        {piles[name].length === 0 && <div class="lib-card"><span class="lib-slot" /><span class="order-end">{t(name === 'top' ? 'lblClosestToTop' : 'lblClosestToBottom')}</span></div>}
+        {piles[name].length === 0 && <div class="lib-card" data-shelf={name} data-pos={0}><span class="lib-slot" /><span class="order-end">{t(name === 'top' ? 'lblClosestToTop' : 'lblClosestToBottom')}</span></div>}
       </div>
     </div>
   );
@@ -1027,8 +1093,28 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
 function Sideboard({ req, model, answer }: { req: SideboardRequest; model: Model; answer: Answer }) {
   const [inMain, setInMain] = useState(() => [...req.main]);
   const move = (i: number, delta: number) => setInMain(m => m.map((n, k) => (k === i ? n + delta : n)));
+  const columns = useRef<HTMLDivElement>(null);
+  const ghost = useRef<HTMLElement | null>(null);
+  useEffect(() => () => ghost.current?.remove(), []);
+  const lists = () => (columns.current ? [...columns.current.querySelectorAll('.sb-list')] : []);
+  // A copy carried over the other list moves there at once, and back again if carried back, as a click would move it
+  const carry = (e: PointerEvent, i: number, fromMain: boolean) => {
+    if (!columns.current) return;
+    let inMainNow = fromMain;
+    carryCard(e, {
+      row: columns.current, copyClass: 'sb-list', ghost, words: true, slots: lists,
+      home: () => lists()[inMainNow ? 0 : 1]?.querySelector(`.sb-row[data-entry="${i}"]`) ?? null,
+      lifted: () => {},
+      over: n => {
+        if ((n === 0) === inMainNow) return;
+        inMainNow = n === 0;
+        move(i, inMainNow ? 1 : -1);
+      },
+      dropped: () => {},
+    });
+  };
   const row = (i: number, count: number, arrow: string, delta: number) => (
-    <div key={i} class="sb-row">
+    <div key={i} class="sb-row" data-entry={i} onPointerDown={e => carry(e, i, delta < 0)}>
       <OptionView model={model} opt={req.entries[i]} onClick={() => move(i, delta)} />
       <span class="sb-name">{req.entries[i].name}</span>
       <span class="sb-count">{`×${count}`}</span>
@@ -1040,7 +1126,7 @@ function Sideboard({ req, model, answer }: { req: SideboardRequest; model: Model
   return (
     <>
       <p class="hint">{t('lblWebDialogMoveOneCopy')}</p>
-      <div class="sb-columns">
+      <div class="sb-columns" ref={columns}>
         <div>
           <h4>{t('lblWebDialogMainDeckCount', mainTotal)}</h4>
           <div class="sb-list">{req.entries.map((_, i) => (inMain[i] > 0 ? row(i, inMain[i], '→', -1) : null))}</div>

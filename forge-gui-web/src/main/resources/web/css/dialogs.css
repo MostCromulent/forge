@@ -142,7 +142,8 @@ html:not([data-form="portrait"]) .dialog .dist-row .po-avatar { width: 78px; hei
 .sb-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-width: min(80vw, 760px); }
 .sb-columns h4 { margin: 0 0 6px; }
 .sb-list { display: grid; gap: 4px; max-height: 60vh; overflow: auto; padding-right: 4px; }
-.sb-row { display: flex; align-items: center; gap: 8px; }
+.sb-row { display: flex; align-items: center; gap: 8px; cursor: grab; border-radius: 8px; }
+.dialog .order-ghost .sb-row { background: var(--surface-2); }
 .sb-row .card.inline { width: 44px; height: 62px; flex: none; }
 .sb-row .card.inline .frame { font-size: 8px; padding: 3px; }
 .sb-count { min-width: 28px; font-weight: 700; }
@@ -151,10 +152,13 @@ html:not([data-form="portrait"]) .dialog .dist-row .po-avatar { width: 78px; hei
 /* Where a card lands, numbered so the order reads without counting rows */
 .dialog .ordered-item { cursor: grab; border-radius: 6px; }
 /* The place a carried card will land stays open in the row, and a copy of the card follows the pointer above the dialog */
-.dialog .ordered-item.carried { outline: 2px dashed color-mix(in srgb, var(--accent-2) 45%, transparent); outline-offset: -1px; background: #ffffff0a; }
-.dialog .ordered-item.carried > :not(.order-number, .order-end) { visibility: hidden; }
+.dialog :is(.ordered-item, .lib-card).carried { outline: 2px dashed color-mix(in srgb, var(--accent-2) 45%, transparent); outline-offset: -1px; background: #ffffff0a; }
+.dialog :is(.ordered-item, .lib-card).carried > :not(.order-number, .order-end) { visibility: hidden; }
 .dialog .order-ghost { position: fixed; z-index: 90; display: block; margin: 0; padding: 0; pointer-events: none; scale: 1.07; }
-.dialog .order-ghost .ordered-item { cursor: grabbing; box-shadow: 0 20px 34px #000b, 0 4px 10px #0008; }
+.dialog .order-ghost.sb-list { overflow: visible; }
+/* Pressing to carry would otherwise start selecting the dialog's text */
+.dialog :is(.ordered-item, .lib-card, .sb-row) { user-select: none; -webkit-user-select: none; }
+.dialog .order-ghost :is(.ordered-item, .lib-card, .sb-row) { cursor: grabbing; box-shadow: 0 20px 34px #000b, 0 4px 10px #0008; }
 .dialog .order-ghost :is(.order-number, .order-end, .order-nudge) { display: none; }
 /* Cards to be ordered are large enough to read, in a centred row, each with the arrows that move it under it */
 .dialog .ordered:not(.listed) { justify-content: center; gap: 22px; padding: 14px 6px 0; }
