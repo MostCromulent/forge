@@ -6,7 +6,7 @@
 import { appendSymbolText, cardImageSrc, imageUrl, setImage, setSymbolText } from './images';
 import { showFoil, tiltFoil } from './match/foil';
 import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './match/rulestext';
-import { byId, lean, pointerOn, q, replay, make, placeBeside } from './dom';
+import { byId, pointerOn, q, replay, make, placeBeside } from './dom';
 import { changeUi, redrawUi, ui } from './ui';
 import { keyName } from './keys';
 import { boundKeys } from './settings';
@@ -41,13 +41,12 @@ export function initDetail(actionsFor: Actions): void {
     const item = menuItem(e.target);
     if (item) longPress(e, () => inspectCard(item));
   });
-  // The preview lets the pointer through, so it leans, and a foil's streaks move, with the pointer across the card the preview is of
+  // The preview lets the pointer through, so a foil's streaks move with the pointer across the card the preview is of
   document.addEventListener('pointermove', e => {
     const hover = ui.hover;
     if (!hover || !('card' in hover) || !hover.at) return;
     const at = pointerOn(hover.at, e);
     tiltFoil(at.x, at.y);
-    lean(at);
   });
 }
 
