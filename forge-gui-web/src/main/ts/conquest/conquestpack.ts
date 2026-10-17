@@ -115,7 +115,10 @@ export function mountPack(host: HTMLElement, spec: PackSpec, hooks: PackHooks): 
   const turnUp = (i: number) => {
     if (up.has(i)) return;
     up.add(i);
-    slots[i].firstElementChild!.classList.add('up');
+    const card = slots[i].firstElementChild as HTMLElement;
+    card.classList.add('up');
+    // Face up and landed, it previews on hover as any card does
+    card.dataset.image = cards[i].image;
     hooks.flipped(cards[i], slots[i].getBoundingClientRect());
   };
 
