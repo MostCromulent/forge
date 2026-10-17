@@ -2,7 +2,7 @@
 
 import type { ComponentChildren } from 'preact';
 import { exportBackup, importBackup } from './backup';
-import { ForgeLinks } from './links';
+import { buildVersion, ForgeLinks } from './links';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { saveText } from './dom';
 import { keyName, rebind, shortcutCodes, shortcutName, type KeyBindings } from './keys';
@@ -70,6 +70,8 @@ export function Options({ close }: { close: () => void }) {
     setAt(i);
     setQuery('');
   }, (): Record<string, string> => (i === at ? {} : { rail: i > at ? 'on' : 'back' }));
+  const resettable = !searching && shown[0]?.type === 'key';
+  const version = buildVersion();
   return (
     <OptionsDialog title={t('lblWebHeadOptions')} kind="tabbed" close={close}
       head={<input ref={search} class="search" type="search" placeholder={t('lblWebOptionsSearch')} aria-label={t('lblWebOptionsSearch')}
@@ -83,8 +85,10 @@ export function Options({ close }: { close: () => void }) {
         ))}
         <ForgeLinks />
       </>}
-      footer={!searching && shown[0]?.type === 'key'
-        ? <button class="section-action" onClick={resetKeys}>{t('lblWebOptionsResetKeys')}</button> : null}>
+      footer={resettable || version ? <>
+        {resettable && <button class="section-action" onClick={resetKeys}>{t('lblWebOptionsResetKeys')}</button>}
+        {version && <span class="version">v{version}</span>}
+      </> : null}>
       {!searching && tab.id === 'advanced' && <BackupRow />}
       {blocks(shown, searching, tab.name)}
       {!shown.length && <p class="hint">{t('lblWebOptionsNoMatch')}</p>}

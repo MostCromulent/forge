@@ -112,9 +112,10 @@ button.primary:active:not(:disabled) { box-shadow: none; transform: translateY(1
 /* On the start pages, the two links are shown side by side along the bottom edge */
 .forge-links.foot { position: fixed; left: 0; right: 0; bottom: 16px; z-index: 1; grid-auto-flow: column; justify-content: center; }
 .forge-links.foot .leaves { display: none; }
-/* The server's build version, for bug reports. It is shown under the links in the options rail, and after them in the row at the bottom of the start pages. */
-.forge-links .version { padding: 4px 10px 2px; color: var(--faint); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; user-select: text; }
+/* The server's build version, for bug reports. It is shown at the right of the options footer, and after the links in the row at the bottom of the start pages. */
+.forge-links.foot .version, #options footer .version { color: var(--faint); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; user-select: text; }
 .forge-links.foot .version { align-self: center; padding: 0 10px; }
+#options footer .version { margin-left: auto; }
 @media (max-width: 620px) { .forge-links.foot .version { grid-row: 2; grid-column: 1 / span 2; padding: 0 0 2px; text-align: center; } }
 /* Notices are drawn over the table but under any dialog or window. So a notice never covers the thing it asks the player to look at. */
 #notices { position: fixed; top: 12px; right: 12px; display: grid; gap: 8px; z-index: 38; }
