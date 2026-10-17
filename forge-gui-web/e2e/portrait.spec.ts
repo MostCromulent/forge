@@ -647,7 +647,7 @@ probe('a block is declared by taps: the attacker, then your creature', async p =
   await expect(p.page.locator('#me .card.blocking')).toHaveCount(1);
 }, PHONE);
 
-probe('a zone the game opens for a choice, with a spell on the stack, is a whole sheet whose cards can be tapped', async p => {
+probe('a zone the game opens for a choice, with a spell on the stack, lies on the dimmed board with cards large enough to tap', async p => {
   await settledBoard(p, 'humanhand=Diabolic Vision\nhumanbattlefield=Island;Swamp\nhumanlibrary=Forest;Mountain;Plains;Island;Swamp;Hill Giant;Grizzly Bears\naibattlefield=Mountain');
   await castFromHand(p);
   // Paid for, then let resolve: one answer at a time, since a second sent early would land on the choice itself
@@ -663,13 +663,18 @@ probe('a zone the game opens for a choice, with a spell on the stack, is a whole
   await expect(p.page.locator('#prompt .cancel')).toBeHidden();
   await expect(p.page.locator('#match > .tools .more')).toBeVisible();
   await expect(p.page.locator('#prompt')).toBeHidden();
-  const panel = await box(p.page, '#zones .zone-panel');
-  // The dock has given up its row, so the sheet runs to the foot of the screen
+  // The dock has given up its row, so the dimmed board runs to the foot of the screen, and the question lies within it
   const dock = { y: 664 };
-  expect(panel.width).toBe(390);
-  expect(panel.y + panel.height).toBeLessThanOrEqual(dock.y + 2);
-  expect(panel.y + panel.height).toBeGreaterThanOrEqual(dock.y - 2);
-  // The stack's chip does not lie over the sheet
+  const back = await box(p.page, '#zones');
+  expect(back.width).toBe(390);
+  expect(back.y + back.height).toBeGreaterThanOrEqual(dock.y - 2);
+  const panel = await box(p.page, '#zones .zone-panel');
+  expect(panel.x).toBeGreaterThanOrEqual(0);
+  expect(panel.x + panel.width).toBeLessThanOrEqual(390);
+  // Two across at most, larger than the three a sheet held
+  const widths = await p.page.locator('#zones .cards .card').evaluateAll(cards => cards.map(c => c.getBoundingClientRect().width));
+  expect(Math.min(...widths)).toBeGreaterThan(125);
+  // The stack's chip does not lie over the question
   expect(await p.page.evaluate(() => { const r = document.querySelector('#zones .zone-panel header')!.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + 20, r.y + 10); return !!hit?.closest('#zones'); })).toBe(true);
   for (const each of await p.page.locator('#zones .card.selectable').all()) await each.tap({ trial: true, timeout: 3000 });
   const card = p.page.locator('#zones .card.selectable').first();

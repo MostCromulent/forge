@@ -180,7 +180,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   ok.onclick = () => actions.ok();
   cancel.onclick = () => actions.cancel();
   const req = oldestRequest(model);
-  const onBoard = !!req && !isPortrait() && cardPrompt(req);
+  const onBoard = !!req && cardPrompt(req);
   root.classList.toggle('answering', onBoard);
   // A spell picked on the stack has no dialog, so what it asks, and the way out of it, are shown here
   const pick = stackPick(model);

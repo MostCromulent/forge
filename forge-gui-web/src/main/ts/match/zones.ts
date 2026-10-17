@@ -71,7 +71,7 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
   sheet('zones', isPortrait() && open && ui.openZones.size > 0, () => changeUi(u => { u.openZones.clear(); }));
   root.classList.toggle('minimised', ui.zonesMinimised);
   // A zone the game shows is a question about its cards, laid out on the board as the others are; one opened to look at keeps its window
-  root.classList.toggle('asking', !isPortrait() && [...panels.values()].some(p => p.forced));
+  root.classList.toggle('asking', [...panels.values()].some(p => p.forced));
   if (!open) {
     root.replaceChildren();
     return;
@@ -179,12 +179,13 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   fold.onclick = () => changeUi(u => { u.zonesMinimised = true; });
   // Done already puts a pile the player opened away
   fold.hidden = !p.forced;
-  const asking = p.forced && !isPortrait();
+  const asking = p.forced;
   el.classList.toggle('asking', asking);
-  // On the board the way to fold waits beside the answer, as a question's does
-  const home = asking ? q(el, 'footer') : q(el, 'header');
+  // On the board the way to fold waits beside the answer, as a question's does, but a phone answers from the dock
+  const beside = asking && !isPortrait();
+  const home = beside ? q(el, 'footer') : q(el, 'header');
   if (fold.parentElement !== home) {
-    if (asking) home.insertBefore(fold, q(el, '.zone-answer.ok'));
+    if (beside) home.insertBefore(fold, q(el, '.zone-answer.ok'));
     else home.append(fold);
   }
   // The game put this one up and the game takes it down, so it offers no way out of its own

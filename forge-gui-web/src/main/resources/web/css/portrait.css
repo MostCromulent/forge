@@ -435,8 +435,38 @@ html[data-form="portrait"] .reveal-panel header .zone-who { flex: 1; min-width: 
 html[data-form="portrait"] .reveal-panel header .zone-count { display: none; }
 html[data-form="portrait"] .reveal-panel.bare { max-width: none; padding: 8px 0; }
 html[data-form="portrait"] .reveal-panel.bare .zone-who { width: auto; }
-/* Three across at most, and larger than a zone's cards when there are few */
-html[data-form="portrait"] .reveal-panel.bare .cards { --fit: min(var(--few), 1.25); max-width: none; }
+/* A question about cards is laid out as on the board, with no sheet: the question at the top, then where the cards are and the way to fold,
+   then the cards as large as the room allows (fit.ts). A zone is answered from the dock, and a dialog, which leaves the dock nothing to answer, along the foot. */
+html[data-form="portrait"] :is(#dialog-layer .backdrop.on-board, .reveal-back.on-board, #match #zones.asking:not(.minimised)) { inset: 0 0 var(--dock-h, 110px) 0; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch;
+  padding: 14px 12px 0; box-sizing: border-box; background: var(--scrim-board); backdrop-filter: blur(4px) saturate(.8); }
+html[data-form="portrait"] :is(#dialog-layer .backdrop.on-board, .reveal-back.on-board) { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
+/* Each box is only as tall as what it holds, since the cards are fitted to the room left round it. It does not rise in, which would carry the answer bar with it. */
+html[data-form="portrait"] :is(#dialog-layer .backdrop.on-board > .dialog, .reveal-back.on-board .reveal-panel.bare, #match #zones.asking .zone-shelf, #match #zones.asking .zone-panel) { flex: 0 1 auto; min-height: 0; max-height: none; width: auto; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 10px; border: 0; border-radius: 0; overflow: visible; animation: none; }
+html[data-form="portrait"] :is(.backdrop.on-board .dialog-head, .reveal-back.on-board header, #zones.asking .zone-ask) { justify-content: flex-start; padding: 0; }
+html[data-form="portrait"] :is(.backdrop.on-board .dialog-head h3, .reveal-back.on-board .zone-who, #zones.asking .zone-ask) { flex: 1; font-size: 16px; line-height: 1.3; text-align: left; }
+html[data-form="portrait"] .backdrop.on-board .dialog-head { align-items: flex-start; gap: 10px; }
+html[data-form="portrait"] :is(.ask-line, #zones.asking header) { display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; margin-top: -6px; padding: 0; color: var(--muted); font-size: 12.5px; }
+html[data-form="portrait"] :is(.ask-line .ask-where, #zones.asking .zone-who) { flex: 1; min-width: 0; margin: 0; font-size: 12.5px; }
+html[data-form="portrait"] :is(.ask-line, .backdrop.on-board .dialog-head, .reveal-back.on-board header, #zones.asking header) .zone-fold { flex: none; margin-left: auto; min-height: 36px; padding: 0 12px; font-size: 12.5px; }
+html[data-form="portrait"] .reveal-back.on-board header { display: flex; align-items: center; gap: 10px; }
+html[data-form="portrait"] .reveal-back.on-board header .zone-who { flex: 1; width: auto; min-width: 0; }
+/* The cards start under the question, and many scroll in place */
+html[data-form="portrait"] :is(.backdrop.on-board .options:not(.ordered), .reveal-back.on-board .cards, #zones.asking .cards) { flex: 0 1 auto; min-height: 0; max-height: none; max-width: none; min-width: 0; overflow-y: auto;
+  display: flex; flex-wrap: wrap; justify-content: center; align-content: start; gap: 12px; padding: 10px 0 14px; }
+html[data-form="portrait"] #zones.asking .zone-count { display: none; }
+/* A short zone has nothing to search or sort */
+html[data-form="portrait"] #zones.asking .zone-panel:not(:has(.cards > :nth-child(9))) :is(.zone-find:placeholder-shown, .zone-sort) { display: none; }
+html[data-form="portrait"] #zones.asking footer { display: none; }
+/* The dialog's answer takes the dock's place, as the dock lays out its buttons */
+html[data-form="portrait"] :is(#dialog-layer .backdrop.on-board .actions, .reveal-back.on-board footer) { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; display: flex; gap: 0; padding: 0 0 env(safe-area-inset-bottom);
+  background: var(--surface); border-top: 1px solid var(--accent-2); box-shadow: 0 -8px 24px #0008; }
+html[data-form="portrait"] :is(#dialog-layer .backdrop.on-board .actions, .reveal-back.on-board footer) > button { flex: 1 1 0; max-width: none; min-width: 0; height: auto; min-height: 50px; border: 0; border-radius: 0; font-size: 14px; }
+html[data-form="portrait"] #dialog-layer .backdrop.on-board .actions > .primary { order: -1; }
+/* What is left to assign takes the dock's middle, with Reset at its right end */
+html[data-form="portrait"] #dialog-layer .backdrop.on-board .actions .dist-left { flex: 1 1 0; align-self: stretch; justify-content: space-between; gap: 8px; margin: 0; padding-left: 10px; font-size: 12.5px; }
+html[data-form="portrait"] #dialog-layer .backdrop.on-board .actions .dist-left button { align-self: stretch; min-height: 50px; border: 0; border-left: 1px solid var(--line); border-radius: 0; }
+html[data-form="portrait"] :is(#dialog-layer .backdrop.on-board .actions, .reveal-back.on-board footer) kbd { display: none; }
 /* A phone stacks the two ends, and the pile between them gives its room to the cards */
 html[data-form="portrait"] .lib-row { --fit: 1; flex-direction: column; align-items: stretch; gap: 14px; padding: 0 0 24px; }
 html[data-form="portrait"] .lib-side { justify-items: start; }

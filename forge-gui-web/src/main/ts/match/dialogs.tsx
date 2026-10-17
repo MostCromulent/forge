@@ -181,8 +181,10 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
     if (shownAnswer?.id === req.id) shownAnswer = null;
   }, []);
   const foldable = !at && FOLDABLE.has(req.kind);
-  // A question about cards sits on the dimmed board with no box round it; a phone keeps its sheet
-  const onBoard = !isPortrait() && cardPrompt(req);
+  // A question about cards sits on the dimmed board with no box round it. A phone keeps the way to fold up by the question, and its answer along the foot.
+  const onBoard = cardPrompt(req);
+  const phone = isPortrait();
+  const where = onBoard && whereFrom(model, req);
   const title = onBoard ? <QuestionLine model={model} req={req} text={heading || message || ''} /> : <SymbolText text={heading || message || ''} />;
   const fold = foldable && <button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>;
   return <>
@@ -190,11 +192,11 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
       <div class={at ? 'dialog at-card' : 'dialog'} style={at ? { left: `${at.x}px`, top: `${at.y}px` } : undefined}>
         <div class="dialog-head">
           <h3>{title}</h3>
-          {!onBoard && fold}
+          {(!onBoard || phone && !where) && fold}
         </div>
         {heading && message && <p><SymbolText text={message} /></p>}
-        {onBoard && <WhereFrom model={model} req={req} />}
-        <FoldButton.Provider value={onBoard && fold}>{body}</FoldButton.Provider>
+        {where && (phone ? <div class="ask-line"><p class="ask-where">{where}</p>{fold}</div> : <p class="ask-where">{where}</p>)}
+        <FoldButton.Provider value={onBoard && !phone && fold}>{body}</FoldButton.Provider>
       </div>
     </div>
     {folded && (
@@ -217,13 +219,13 @@ function QuestionLine({ model, req, text }: { model: Model; req: Request; text: 
 }
 
 /** Whose cards a choice is among and how many, when they all lie in one player's zone, which the dim hides on the board. */
-function WhereFrom({ model, req }: { model: Model; req: Request }) {
+function whereFrom(model: Model, req: Request): string | null {
   if (req.kind !== 'choices') return null;
   const cards = req.options.map(o => (o.card ? model.objects.get(o.card.ref) as CardView | undefined : undefined));
   const first = cards[0];
   if (!first?.Zone || !cards.every(c => c?.Zone === first.Zone && c?.Owner?.ref === first.Owner?.ref)) return null;
   const owner = deref(model, first.Owner) as PlayerView | undefined;
-  return <p class="ask-where">{`${owner?.Name ?? ''} \u00b7 ${zoneTitle(first.Zone)} \u00b7 ${t(cards.length === 1 ? 'lblWebOneCard' : 'lblWebNCards', cards.length)}`}</p>;
+  return `${owner?.Name ?? ''} \u00b7 ${zoneTitle(first.Zone)} \u00b7 ${t(cards.length === 1 ? 'lblWebOneCard' : 'lblWebNCards', cards.length)}`;
 }
 
 /** The player's library as a pile in their sleeve, with the ends of the library either side of it. */
@@ -270,6 +272,8 @@ function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
   const title = !aiSkipsOf ? asSent : count === 1 ? t('lblWebRevealAiSkipsOne', who) : t('lblWebRevealAiSkipsN', who, count);
   const row = useRef<HTMLDivElement>(null);
   useCardFit(row, folded || aiSkipsOf ? 0 : count, { gap: 14, wrap: true });
+  const phone = isPortrait();
+  const fold = <button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>;
   if (folded) {
     return (
       <div class="reveal-back minimised">
@@ -307,11 +311,11 @@ function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
     );
   }
   return (
-    <Backdrop layer="reveal-back" cls={isPortrait() ? undefined : 'on-board'} dismiss={close}>
+    <Backdrop layer="reveal-back" cls="on-board" dismiss={close}>
       <section class="zone-panel reveal-panel bare" role="dialog" aria-label={title}>
-        <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{counted}</span></header>
+        <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{counted}</span>{phone && fold}</header>
         <div class="cards" ref={row}>{cards.map((o, i) => <OptionView key={i} model={model} opt={o} />)}</div>
-        <footer><button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>
+        <footer>{!phone && fold}
           <button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><OkKey /></button></footer>
       </section>
     </Backdrop>
@@ -652,7 +656,8 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const ghost = useRef<HTMLElement | null>(null);
   // Options that are only words, such as abilities, are listed down the dialog; cards keep their row
   const listed = req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player);
-  useCardFit(row, listed ? 0 : chosen.length, { gap: 22, below: 38 });
+  // A phone sets these cards four to a row (portrait.css), since one row would leave them too small to read
+  useCardFit(row, listed || isPortrait() ? 0 : chosen.length, { gap: 22, below: 38 });
   const words = req.options.map(o => {
     const found = SET_OFF_BY.exec(o.label ?? '');
     return found ? { text: o.label.slice(0, found.index), detail: found[1] } : { text: o.label ?? '', detail: '' };
@@ -839,8 +844,8 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
   const held = useRef<number | null>(null);
   const bothEnds = req.toBottom || req.toTop;
   const row = useRef<HTMLDivElement>(null);
-  // Each end's cards, or the empty place where they would go, and the pile between them, in one row
-  useCardFit(row, Math.max(piles.top.length, 1) + (bothEnds ? Math.max(piles.bottom.length, 1) : 0) + 1, { gap: 18 });
+  // Each end's cards, or the empty place where they would go, and the pile between them, in one row. A phone stacks the ends instead (portrait.css).
+  useCardFit(row, isPortrait() ? 0 : Math.max(piles.top.length, 1) + (bothEnds ? Math.max(piles.bottom.length, 1) : 0) + 1, { gap: 18 });
 
   const place = (shelf: Shelf, at: number) => {
     const card = held.current;
