@@ -127,7 +127,6 @@ public final class LobbyEvents {
         }
         lobby.clearCurrentEvent();
         lobby.setLimitedType(type);
-        lobby.setLimitedMode(true);
         lobby.selectEventForMatch(eventId, decksOnly);
         return null;
     }
@@ -206,7 +205,7 @@ public final class LobbyEvents {
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 lobby.getSlot(i).setSittingOut(false);
             }
-            lobby.setLimitedMode(false);
+            lobby.setLimitedType(null);
             return null;
         }
         if (eventStarted()) {
@@ -220,7 +219,6 @@ public final class LobbyEvents {
         }
         lobby.setLimitedType(sealed ? GameType.Sealed : GameType.Draft);
         lobby.createEvent(sealed ? EventFormat.SEALED : EventFormat.BOOSTER_DRAFT);
-        lobby.setLimitedMode(true);
         return null;
     }
 

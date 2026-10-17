@@ -234,7 +234,6 @@ public final class LocalGame implements IHasForgeLog {
                 .orElseThrow(() -> new IllegalArgumentException("No seat for the browser"));
         nameProfile(mine.name());
         openHost(mine.name(), gui, () -> { }, (from, text) -> { });
-        hosted.setLimitedMode(true);
         hosted.setLimitedType(limitedType);
         // Desktop starts a Commander Draft match with the Commander variant. That gives each deck its commander and 40 life
         if (limitedType == GameType.CommanderDraft) {
