@@ -1,5 +1,5 @@
 /* Dialogs, menus and the pages' arrival animations */
-/* Dialogs and menus come in rather than appearing: the scrim fades, a box rises a few pixels, a menu grows from where it opens */
+/* Dialogs and menus animate in instead of appearing at once. The scrim fades in, a box rises a few pixels, and a menu grows from where it opens. */
 @keyframes backdrop-in { from { opacity: 0; } }
 @keyframes box-in { from { opacity: 0; translate: 0 6px; } }
 @keyframes box-out { to { opacity: 0; translate: 0 6px; } }
@@ -7,22 +7,22 @@
 @keyframes menu-out { to { opacity: 0; scale: .96; } }
 .backdrop { animation: backdrop-in .15s ease-out; }
 .dialog, .host-choice, .zone-panel, .zone-bar { animation: box-in .16s ease-out; }
-/* A zone window with a pile on the board grows out of that pile instead (zones.ts sets where from) */
+/* A zone window opened from a pile on the board grows out of that pile instead (zones.ts sets the start point) */
 .zone-panel[data-opened="pile"] { animation: zone-grow .24s cubic-bezier(.2, .8, .2, 1); }
 @keyframes zone-grow { from { opacity: 0; scale: .06; } 35% { opacity: 1; } }
 .card-menu, .deck-menu { animation: menu-in .14s cubic-bezier(.2,.7,.3,1); transform-origin: 0 0; }
-/* The game menu grows up out of its button, and an editor menu down out of its own; any other menu from the pointer */
+/* The game menu grows upward out of its button, and an editor menu grows downward out of its own. Any other menu grows from the pointer. */
 .game-menu { transform-origin: 100% 100%; }
 .deck-menu { transform-origin: 100% 0; }
-/* What closes plays its way out before it goes (closing.ts) */
-/* A way out has a keyframes name of its own, since the same name with only its direction changed would not run again */
+/* A closing element plays its exit animation before it is removed (closing.ts) */
+/* Each exit animation has its own keyframes name. The same name with only the direction changed would not run again. */
 @keyframes backdrop-out { to { opacity: 0; } }
 .backdrop.closing { animation: backdrop-out .12s ease-in forwards; }
 .backdrop.closing > * { animation: box-out .12s ease-in forwards; }
 .card-menu.closing, .backdrop.closing > .card-menu { animation: menu-out .1s ease-in forwards; }
-/* A screen rises in as a box does when it opens (index.html holds a root for each) */
+/* A screen rises in when it opens, as a box does (index.html holds a root for each screen) */
 :is(#menu, #lobby, #editor, #limited, #drafting, #campaign) > * { animation: box-in .18s ease-out; }
-/* A page starting a match zooms in as it darkens, and the board zooms in after it once its seats are drawn (match/entry.ts) */
+/* A page that starts a match zooms in as it darkens. The board then zooms in when its seats are drawn (match/entry.ts). */
 .to-match { transform-origin: 50% 50%; animation: to-match .8s cubic-bezier(.45, 0, .8, .6) forwards; }
 @keyframes to-match { to { scale: 1.25; filter: brightness(.2); } }
 html:has(.to-match) { overflow: hidden; }
@@ -31,7 +31,7 @@ html:has(.to-match) { overflow: hidden; }
 @keyframes match-arrive { from { opacity: 0; scale: .9; } }
 /* Going back to an earlier screen shows it at once (screens.tsx) */
 html[data-back] :is(#menu, #lobby, #editor, #limited, #drafting, #campaign) > *, html[data-back] .modes .mode.plaque { animation: none; }
-/* A move along something with an order slides the way it runs: a Conquest tab, a step of the start menu (ui.ts eased) */
+/* A move through an ordered set, such as a Conquest tab or a step of the start menu, slides in the direction of the order (ui.ts eased) */
 html[data-way]::view-transition-old(page) { animation: .24s cubic-bezier(.2,.7,.3,1) both page-out; }
 html[data-way]::view-transition-new(page) { animation: .26s cubic-bezier(.2,.7,.3,1) both page-in; }
 html[data-way="back"]::view-transition-old(page) { animation-name: page-out-back; }
@@ -40,7 +40,7 @@ html[data-way="back"]::view-transition-new(page) { animation-name: page-in-back;
 @keyframes page-in { from { opacity: 0; translate: 40px 0; } }
 @keyframes page-out-back { to { opacity: 0; translate: 40px 0; } }
 @keyframes page-in-back { from { opacity: 0; translate: -40px 0; } }
-/* The options rail runs down the side, so its pages slide up and down; its own mark keeps the screen behind from sliding too */
+/* The options rail runs down the side, so its pages slide up and down. The rail page has its own transition name, so the screen behind does not slide too. */
 html[data-rail]::view-transition-old(rail-page) { animation: .2s cubic-bezier(.2,.7,.3,1) both rail-out; }
 html[data-rail]::view-transition-new(rail-page) { animation: .24s cubic-bezier(.2,.7,.3,1) both rail-in; }
 html[data-rail="back"]::view-transition-old(rail-page) { animation-name: rail-out-back; }
@@ -55,7 +55,7 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 .backdrop { position: fixed; inset: 0; background: #0009; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 16px; z-index: 50; }
 .dialog { margin: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; max-width: min(90vw, 900px); max-height: calc(100vh - 32px); overflow: auto; display: grid; gap: 10px; }
 .dialog h3 { margin: 0; }
-/* A confirm's text keeps the line breaks Forge's own sentences carry */
+/* A confirm's text keeps the line breaks in Forge's own messages */
 .dialog[role=alertdialog] > .hint { white-space: pre-line; }
 .dialog-head { display: flex; align-items: center; gap: 16px; }
 .dialog-head h3 { flex: 1; }
@@ -66,14 +66,14 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 .dialog .options.grid { display: grid; grid-template-columns: repeat(3, max-content); gap: 12px 16px; align-items: start; justify-content: center; }
 .dialog .options .section { grid-column: 1 / -1; width: 100%; margin-top: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .dialog .options .section:first-child { margin-top: 0; }
-/* The cards being put in order run along a row, first to last, and onto a second row when one is not enough */
+/* The cards being ordered run along a row, first to last. They wrap onto a second row when one row is not enough. */
 .dialog .ordered { gap: 30px 12px; padding: 12px 2px 30px; }
 .dialog .ordered-item { position: relative; transition: transform .12s ease; user-select: none; -webkit-user-select: none; }
 .dialog .ordered-item.selected { transform: translateY(-8px); outline: 2px solid var(--select); outline-offset: 2px; }
 .dialog .row { display: flex; align-items: center; gap: 8px; }
 .dialog .picked { box-shadow: 0 0 0 3px var(--pick); }
 .dialog .text-option.picked { background: var(--brass); color: var(--on-brass); }
-/* A list of words keeps one width and height while it is searched, so the dialog never moves under the pointer */
+/* A word list keeps a fixed width and height while it is searched, so the dialog never moves under the pointer */
 .dialog:has(.word-choices) { width: min(440px, 100%); }
 .word-choices { display: grid; gap: 8px; min-width: 0; }
 .word-search { position: relative; }
@@ -99,26 +99,26 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 .word-foot kbd { margin-left: 6px; padding: 0 5px; border: 1px solid #0003; border-radius: 3px; background: #0002; font: 600 11px system-ui, sans-serif; }
 .word-keys { margin: 0; color: var(--faint); font-size: 11.5px; }
 .dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
-/* Damage or counters split between targets: room round the cards, and what is left to assign beside the buttons that need it gone */
+/* Damage or counters split between targets. The cards get space around them. The amount left to assign is next to the buttons that need it to reach zero. */
 .dialog:has(.dist-row) { padding: 20px 24px; gap: 20px; }
 .dialog .dist-row { display: flex; flex-wrap: wrap; gap: 26px; justify-content: center; align-items: flex-start; padding: 4px 8px; }
-/* Large enough to read, since what each card is decides the split */
+/* The cards are large enough to read, because the split depends on what each card is */
 html:not([data-form="portrait"]) .dialog .dist-row { --fit: 1.5; }
 .dialog .dist-left { display: flex; align-items: center; gap: 12px; margin-right: auto; color: var(--accent-2); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .dialog .dist-pips { display: flex; flex-wrap: wrap; gap: 4px; max-width: 124px; }
 .dialog .dist-pips i { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--line-bright); }
 .dialog .dist-pips i.on { background: var(--accent-2); border-color: var(--accent-2); }
 .dialog .dist-left.done { color: var(--muted); font-weight: 400; }
-/* Room under each card for a tab on its foot, such as Blocking, above its steppers */
+/* Space under each card for a tab on its bottom edge, such as Blocking, above its steppers */
 .dialog .dist-target { width: calc(var(--card-w) * var(--fit, 1)); display: grid; justify-items: center; gap: 22px; }
-/* A player stands in a frame the size of the cards beside it, with the whole name, so every count lines up */
+/* A player is shown in a frame the same size as the cards next to it, with the full name, so every count lines up */
 .dialog .dist-row .player-option { box-sizing: border-box; width: 100%; height: calc(var(--card-h) * var(--fit, 1)); }
 html:not([data-form="portrait"]) .dialog .dist-row .po-avatar { width: 78px; height: 78px; }
 .dialog .dist-row .po-name { white-space: normal; overflow-wrap: anywhere; text-align: center; line-height: 1.2; }
 .dialog .dist-note { margin: -14px 0 0; min-height: 17px; color: var(--muted); font-size: 12px; }
 .dialog .dist-note.lethal { color: var(--accent-2); font-weight: 650; }
 .dialog .dist-note.lethal::before { content: '✓ '; }
-/* A player offered in a dialog, the size of a card beside the cards: their portrait with their life on it, and their name */
+/* A player offered in a dialog is the size of a card. It shows their portrait with their life on it, and their name. */
 .player-option { width: var(--card-w); min-height: var(--card-h); display: grid; align-content: center; justify-items: center; gap: 10px; padding: 8px 6px;
   border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--line-bright); }
 .player-option:hover { border-color: var(--accent-2); }
@@ -129,7 +129,7 @@ html:not([data-form="portrait"]) .dialog .dist-row .po-avatar { width: 78px; hei
 .player-option .po-life { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); padding: 0 7px; border-radius: 10px; background: var(--bg);
   border: 1px solid var(--line-bright); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .player-option .po-name { max-width: 100%; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The steppers span the card above them, edge to edge, so each count reads as that card's */
+/* The steppers span the full width of the card above them, so each count clearly belongs to that card */
 .dialog .dist-step { width: 100%; height: 40px; display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; border: 1px solid var(--line-bright);
   border-radius: 10px; background: var(--surface-2); overflow: hidden; }
 .dialog .dist-step button { height: 100%; padding: 0; border: 0; border-radius: 0; background: none; font-size: 20px; line-height: 1; }
@@ -137,7 +137,7 @@ html:not([data-form="portrait"]) .dialog .dist-row .po-avatar { width: 78px; hei
 .dialog .dist-step b { text-align: center; font-size: 21px; font-variant-numeric: tabular-nums; }
 .dialog .actions button.primary { min-width: 110px; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .dialog input { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }
-/* A number is set large between its two steps, with the first few a click away */
+/* A number is shown large between its two step buttons. The first few values are one click away. */
 .dialog .number-step { display: flex; align-items: center; justify-content: center; gap: 14px; }
 .dialog .number-step button { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 22px; line-height: 1; }
 .dialog .number-step input { width: 3.2ch; box-sizing: content-box; padding: 0 6px; background: none; border: 0; border-bottom: 2px solid var(--line-bright); border-radius: 0;
@@ -156,9 +156,9 @@ html:not([data-form="portrait"]) .dialog .dist-row .po-avatar { width: 78px; hei
 .sb-count { min-width: 28px; font-weight: 700; }
 .sb-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Where a card lands, numbered so the order reads without counting rows */
+/* Each card's position is numbered, so the order is clear without counting rows */
 .dialog .ordered-item { cursor: grab; border-radius: 6px; }
-/* The place a carried card will land stays open in the row, and a copy of the card follows the pointer above the dialog */
+/* The place where a dragged card will land stays open in the row. A copy of the card follows the pointer above the dialog. */
 .dialog :is(.ordered-item, .lib-card).carried { outline: 2px dashed color-mix(in srgb, var(--accent-2) 45%, transparent); outline-offset: -1px; background: #ffffff0a; }
 .dialog :is(.ordered-item, .lib-card).carried > :not(.order-number, .order-end) { visibility: hidden; }
 .dialog .order-ghost { position: fixed; z-index: 90; display: block; margin: 0; padding: 0; pointer-events: none; scale: 1.07; }
@@ -167,20 +167,20 @@ html:not([data-form="portrait"]) .dialog .dist-row .po-avatar { width: 78px; hei
 .dialog :is(.ordered-item, .lib-card, .sb-row) { user-select: none; -webkit-user-select: none; }
 .dialog .order-ghost :is(.ordered-item, .lib-card, .sb-row) { cursor: grabbing; box-shadow: 0 20px 34px #000b, 0 4px 10px #0008; }
 .dialog .order-ghost :is(.order-number, .order-end, .order-nudge) { display: none; }
-/* Cards to be ordered are large enough to read, in a centred row, each with the arrows that move it under it */
+/* Cards to be ordered are large enough to read, in a centred row. The arrows that move a card are under it. */
 .dialog .ordered:not(.listed) { justify-content: center; gap: 22px; padding: 14px 6px 0; }
 .dialog .ordered:not(.listed):has(.order-end) { padding-bottom: 30px; }
 .dialog .ordered.order-ghost { padding: 0; }
 html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
 .dialog .ordered:not(.listed) .ordered-item { display: grid; justify-items: center; gap: 8px; }
-/* The ring goes round the held card, not round its arrows as well */
+/* The ring goes around the held card only, not around its arrows */
 .dialog .ordered:not(.listed) .ordered-item.selected { outline: none; }
 .dialog .ordered:not(.listed) .ordered-item.selected :is(.card, .player-option) { outline: 2px solid var(--select); outline-offset: 2px; }
 .dialog .order-nudge { display: flex; gap: 6px; }
 .dialog .ordered-item:not(.selected) .order-nudge { visibility: hidden; }
 .dialog .order-nudge button { width: 44px; height: 30px; padding: 0; border-radius: 99px; font-size: 18px; line-height: 1; }
 .dialog .ordered:not(.listed) .order-number { left: -11px; top: -11px; min-width: 28px; height: 28px; font-size: 14px; box-shadow: 0 2px 6px #0008; }
-/* Which way the order runs, under the row it describes */
+/* The direction of the order, shown under the row it describes */
 .dialog .order-rail { display: flex; align-items: center; gap: 12px; margin: 0; padding: 0 6px; color: var(--muted); font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
 .dialog .order-rail b:first-child { color: var(--accent-2); }
 .dialog .order-rail i { position: relative; flex: 1; height: 1px; background: linear-gradient(90deg, var(--accent-2), var(--line)); }
@@ -203,14 +203,14 @@ html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
   pointer-events: none;
 }
 .dialog .ordered-item:first-child .order-number { background: var(--brass); border-color: var(--accent); color: var(--on-brass); }
-/* What the first place means, in the game's own words */
+/* A label for what the first position means, in the game's own words */
 .dialog .order-end { position: absolute; left: 50%; top: calc(100% + 7px); transform: translateX(-50%); font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; white-space: nowrap; color: var(--accent-2); pointer-events: none; }
-/* The two that carry the held card along the row share the foot of the dialog with its answer */
+/* The two buttons that move the held card along the row share the bottom of the dialog with its answer */
 .dialog .order-move { display: flex; align-items: center; gap: 8px; margin-right: auto; }
 .dialog .order-move :is(.earlier, .later) { width: 44px; height: 36px; padding: 0; font-size: 20px; line-height: 1; }
 .dialog .order-move button:disabled { opacity: .4; }
-/* Abilities being put in order are read, not looked at, so they run down a striped list, each with the card it comes from */
+/* Abilities being ordered are read, not looked at. So they are shown in a striped list, each with the card it comes from. */
 .dialog .ordered.listed { display: grid; gap: 0; padding: 0; min-width: min(640px, 80vw); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .dialog .listed .ordered-item { display: grid; grid-template-columns: 24px auto 1fr auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 0; background: var(--surface); }
 .dialog .listed .ordered-item:nth-child(even) { background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); }
@@ -218,7 +218,7 @@ html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
 .dialog .listed .order-number { position: static; grid-area: 1 / 1; width: 24px; height: 24px; box-sizing: border-box; }
 .dialog .listed .card-host { grid-area: 1 / 2; display: flex; }
 .dialog .listed .card { --fit: 1; width: 40px; height: 56px; }
-/* At this size the card only says which one it is; what the board marks on it would cover the picture */
+/* At this size the card only shows which card it is. The board's marks on it would cover the picture. */
 .dialog .listed .card :is(.pt, .badges, .sick, .count, .corner, .cost-badge, .kind-tag) { display: none; }
 .dialog .listed .ability { grid-area: 1 / 3; min-width: 0; display: grid; gap: 2px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: inherit; }
 .dialog .listed .ability-source { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; font-weight: 650; color: var(--accent-2); }
@@ -230,7 +230,7 @@ html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
 .dialog .listed .order-step button { width: 34px; height: 30px; padding: 0; display: grid; place-items: center; }
 .dialog .listed .order-step button:disabled { opacity: .4; }
 .dialog .listed .order-step svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-/* A colour is chosen by its mana symbol, in Magic's own order, with its name under it so the hue is never the only sign */
+/* A colour is chosen by its mana symbol, in Magic's own colour order. Its name is shown under it, so the hue is never the only sign. */
 .dialog .options.colours { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(64px, 1fr); gap: 6px; }
 .dialog .colour-option { display: grid; justify-items: center; gap: 7px; padding: 12px 4px 9px; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--muted); font-size: 12.5px; }
 .dialog .colour-option img { width: 42px; height: 42px; border-radius: 50%; filter: drop-shadow(0 3px 5px #0009); }
@@ -238,9 +238,9 @@ html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
 .dialog .colour-option.picked { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent-2) 55%, transparent); box-shadow: none; color: var(--text); font-weight: 650; }
 .dialog .colour-option.picked img { outline: 2px solid var(--accent-2); outline-offset: 3px; }
 
-/* A card's own list of what it can do: a menu on the card, not a window in the middle of the board */
+/* A card's list of what it can do is a menu on the card, not a window in the middle of the board */
 .backdrop.anchored { background: none; }
-/* Conceding can be asked for at any moment, the coin toss included, so the question sits over everything the table shows */
+/* Conceding can be asked for at any moment, including the coin toss. So the question is drawn over everything on the table. */
 .backdrop.concede-ask { z-index: 80; }
 .dialog.at-card {
   position: fixed;
@@ -255,14 +255,14 @@ html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
 /* The dialog layer is outside #match, which sets the side column's gap */
 #dialog-layer { --side-gap: 270px; }
 html:has(#match.side-folded) #dialog-layer { --side-gap: 48px; }
-/* A question about cards sits on the playing area with no box round it. The whole window dims, but the log, the stack and the prompt are lifted above it to be read while answering */
+/* A question about cards is shown on the playing area with no box around it. The whole window dims. The log, the stack and the prompt are raised above the dim layer, so they can be read while answering. */
 html:not([data-form="portrait"]) :is(.backdrop.on-board, .reveal-back.on-board) { padding-right: calc(var(--side-gap) - 12px + 36px); background: var(--scrim-board); backdrop-filter: blur(5px) saturate(.8); }
-/* The stack is lit beside the question, so the question is centred in what is left of the board */
+/* The stack stays visible next to the question. So the question is centred in the space left on the board. */
 html:not([data-form="portrait"]):has(#stack:not([hidden])) :is(.backdrop.on-board, .reveal-back.on-board) { padding-right: calc(var(--side-gap) - 12px + var(--stack-w) + 64px); }
 html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) #stack:not([hidden]) { z-index: 51; }
-/* The side column, log and prompt, is lifted above the scrim too, folded or not */
+/* The side column (log and prompt) is raised above the scrim too, folded or not */
 html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) #match #side { z-index: 51; }
-/* A menu or dialog opened over the question, such as the game menu by the prompt, goes above the lifted column */
+/* A menu or dialog opened over the question, such as the game menu from the prompt, is drawn above the raised column */
 html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.backdrop, .reveal-back):not(.on-board) { z-index: 52; }
 @media (prefers-reduced-transparency: reduce) { :is(.backdrop.on-board, .reveal-back.on-board) { backdrop-filter: none; } }
 .backdrop.on-board > .dialog { max-width: 100%; max-height: 100%; padding: 4px 8px; gap: 14px; justify-items: center; background: none; border: 0; box-shadow: none; }
@@ -270,36 +270,36 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 .backdrop.on-board .dialog-head h3 { flex: none; font-size: 18px; text-align: center; text-wrap: balance; text-shadow: 0 2px 10px #000; }
 .backdrop.on-board .dialog > p, .backdrop.on-board .dialog .hint { text-align: center; text-shadow: 0 1px 4px #000; }
 .backdrop.on-board .actions { justify-content: center; }
-/* The way to fold the question waits beside its answer, which comes last */
+/* The button that folds the question is next to the answer, and the answer comes last */
 .backdrop.on-board .actions .zone-fold { order: 1; }
 .backdrop.on-board .actions > .primary { order: 2; }
 .backdrop.on-board .card { box-shadow: 0 12px 30px #000d, 0 0 0 1px #000c; }
 .reveal-back.on-board .reveal-panel.bare { background: none; border: 0; box-shadow: none; }
 .reveal-back.on-board .reveal-panel.bare { max-width: 100%; }
 .reveal-back.on-board .reveal-panel.bare .zone-who { font-size: 18px; text-shadow: 0 2px 10px #000; }
-/* The question as one line: the card asking, then what it asks; under it, whose cards they are */
+/* The question on one line: the card asking, then what it asks. Under it is whose cards they are. */
 .ask-source { font-weight: 800; color: var(--accent-2); }
 .ask-sep { margin: 0 8px; color: var(--faint); font-weight: 400; }
 .ask-where { margin: -8px 0 0; color: var(--muted); font-size: 13px; text-shadow: 0 1px 4px #000; }
-/* Picked lifts in a thick ring with a mark, and focused is a dashed outline */
+/* A picked card moves up and gets a thick ring and a mark. A focused card gets a dashed outline. */
 .pick-mark { display: none; }
 :is(.backdrop.on-board, .zone-panel.asking) .card.picked { translate: 0 -8px; box-shadow: 0 0 0 4px var(--pick), 0 0 24px color-mix(in srgb, var(--pick) 45%, transparent), 0 12px 30px #000d; }
 :is(.backdrop.on-board, .zone-panel.asking) .pick-mark { position: absolute; left: -11px; top: -11px; z-index: 7; width: 26px; height: 26px; box-sizing: border-box; display: grid; place-items: center; border-radius: 50%;
   background: var(--brass); border: 1px solid var(--accent); color: var(--on-brass); font: 900 15px/1 system-ui, sans-serif; box-shadow: 0 2px 6px #0009; pointer-events: none; }
-/* A zone's card picked on the board drops the outlines the board gives it, for the ring */
+/* A zone card picked on the board loses the board's outlines, so the ring shows instead */
 .zone-panel.asking .card.picked { outline: none; }
 :is(.backdrop.on-board, .zone-panel.asking) .pick-mark::after { content: '\2713'; }
 .backdrop.on-board .card:focus-visible { outline: 2px dashed #ffffffd9; outline-offset: 5px; }
-/* Many cards scroll in place under the question, so the question and the buttons stay put; the foot fades while more lie below */
+/* Many cards scroll in place under the question, so the question and the buttons stay fixed. The bottom edge fades while more cards are below. */
 .backdrop.on-board .options:not(.ordered) { max-height: calc(100vh - 230px); overflow-y: auto; justify-content: center; gap: 14px; padding: 14px; scrollbar-width: thin; scrollbar-color: #ffffff4d #ffffff0d; }
 .backdrop.on-board .options.more { -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 60px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 60px), transparent); }
-/* On the board a row of abilities shows each card large enough to know it */
+/* On the board, a row of abilities shows each card large enough to recognise */
 .backdrop.on-board .listed .card { width: 54px; height: 76px; }
 
-/* A card drawn by the board's own code sits in a holder of its own, which takes no part in the layout */
+/* A card drawn by the board's own code is placed in its own holder. The holder takes no part in the layout. */
 .card-host { display: contents; }
 
-/* Putting cards back on the library: the top and the bottom either side of the pile, and the further a card lies from it, the nearer that end */
+/* Putting cards back on the library. The top and the bottom are on each side of the pile. A card further from the pile is nearer to that end. */
 .manipulate { display: grid; gap: 12px; justify-items: center; }
 .lib-row { --fit: 1.3; display: flex; align-items: flex-start; justify-content: center; gap: 22px; padding: 4px 6px 30px; }
 .lib-side { display: grid; justify-items: center; }
@@ -308,9 +308,9 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 .lib-card:active { cursor: grabbing; }
 .dialog .lib-side.top .lib-card:first-child .order-number { background: var(--brass); border-color: var(--accent); color: var(--on-brass); }
 .dialog .lib-side.bottom .order-end { color: var(--muted); }
-/* An end with nothing at it is a place to drop a card, the size of one */
+/* An empty end is shown as a drop target the size of a card */
 .lib-slot { display: block; box-sizing: border-box; width: calc(var(--card-w) * var(--fit)); height: calc(var(--card-h) * var(--fit)); border: 1px dashed var(--line-bright); border-radius: var(--radius); }
-/* The library, as backs in the player's sleeve, with what is left in it */
+/* The library is shown as card backs in the player's sleeve, with a count of the cards left in it */
 .lib-pile { position: relative; flex: none; width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); }
 .lib-pile i { position: absolute; inset: 0; box-sizing: border-box; border-radius: var(--radius); border: 2px solid var(--back-edge);
   background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 6px, var(--back-b) 6px 12px); }
@@ -320,7 +320,7 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 .lib-count { position: absolute; z-index: 2; right: -8px; bottom: -8px; min-width: 24px; height: 22px; box-sizing: border-box; padding: 0 6px; display: grid; place-items: center;
   border-radius: 11px; background: var(--surface); border: 1px solid var(--line-bright); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .lib-name { position: absolute; left: 50%; top: calc(100% + 9px); transform: translateX(-50%); font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; color: var(--muted); }
-/* What one clicked card can do: a menu at the pointer, as on desktop, rather than a dialog */
+/* The actions for one clicked card are a menu at the pointer, as on desktop, not a dialog */
 .card-menu { position: fixed; min-width: 220px; max-width: min(420px, calc(100vw - 16px)); padding: 6px; display: grid; gap: 1px; background: var(--surface); border: 1px solid var(--line-bright); border-radius: 10px; box-shadow: 0 14px 36px #000c; }
 .card-menu-title { margin: 2px 8px 5px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .card-menu-item { display: flex; align-items: baseline; gap: 10px; padding: 7px 10px; text-align: left; background: none; border: 0; border-radius: 6px; font-size: 13px; line-height: 1.35; }
@@ -330,9 +330,9 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 .card-menu-gap { background: none; box-shadow: none; }
 .card-menu-item:disabled { color: var(--muted); cursor: default; }
 .card-menu-item:disabled:hover { background: none; }
-/* The game menu opens upward from the prompt's ⋯ button; conceding asks twice, and says so the second time */
+/* The game menu opens upward from the prompt's ⋯ button. Conceding asks twice, and the second time says so. */
 .game-menu { min-width: 240px; }
-/* Dev mode's many cheats flow as newspaper columns, which balance their heights, and the menu scrolls if they still do not fit */
+/* Dev mode's many cheats flow in newspaper columns, which balance their heights. The menu scrolls if they still do not fit. */
 .game-menu { max-height: calc(100vh - 140px); overflow-y: auto; }
 .game-menu.dev { width: min(720px, calc(100vw - 16px)); max-width: none; }
 .dev-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px 10px; }
@@ -341,11 +341,11 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 .dev-group h5 { margin: 8px 10px 3px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 #options textarea.dev-state { width: 100%; box-sizing: border-box; font: 12px/1.4 ui-monospace, monospace; resize: vertical; }
 
-/* The playmats beside the game menu */
+/* The playmat picker, shown next to the game menu */
 .playmat-picker { position: fixed; z-index: 61; width: 330px; display: grid; gap: 12px; padding: 12px; background: var(--surface);
   border: 1px solid var(--line-bright); border-radius: 10px; box-shadow: 0 16px 40px #000c; }
 .playmat-picker h3 { margin: 0; font-size: 14px; }
-/* Each mat's picture lies under the wash the board would give it, so the brightness shows on the pictures too (board.css) */
+/* Each mat's picture gets the same dark layer the board would give it, so the brightness setting shows on the pictures too (board.css) */
 .playmat-choice { display: grid; gap: 12px; }
 .playmat-choice .mats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(120px, 28%), 1fr)); gap: 10px; }
 .playmat-choice .mat { min-width: 0; display: grid; gap: 6px; padding: 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2);
@@ -361,7 +361,7 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 .playmat-choice .seg button { padding: 5px 12px; font-size: 12.5px; }
 .playmat-picker .mats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .game-menu .card-menu-item.on { background: var(--surface-3); }
-/* The game menu's rows shade only under the pointer, grouped by rules: the table, passing, the match, dev mode */
+/* The game menu's rows are shaded only under the pointer. Divider lines group them: the table, passing, the match, dev mode. */
 .game-menu .card-menu-item { align-items: center; }
 .game-menu .card-menu-item:nth-of-type(even):not(:hover, :focus-visible, .on) { background: none; }
 .card-menu-sep { height: 1px; margin: 5px 4px; background: var(--line); }

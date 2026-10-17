@@ -1,6 +1,6 @@
-/* The deck importer: pasted text with a mark per line in a gutter and a wash behind lines with a problem, beside the result list */
+/* The deck importer. The pasted text is on the left, with a mark for each line in a gutter. A line with a problem gets a tinted background. The result list is on the right. */
 
-/* Above the deck finder, which it can be opened from */
+/* The importer is drawn above the deck finder, because it can be opened from the deck finder */
 .importer-back { z-index: 70; }
 .importer {
   width: min(1240px, 94vw); height: min(760px, 92vh); display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto;
@@ -28,7 +28,7 @@ html[data-motion="reduced"] .spinner { animation: none; }
 .gl { height: 22px; display: grid; grid-template-columns: 30px 22px; align-items: center; }
 .gl .ln { color: var(--faint); text-align: right; padding-right: 6px; font-size: 11px; }
 .gl .mk { text-align: center; font-family: system-ui, sans-serif; font-weight: 700; font-size: 12px; }
-/* The mark classes carry a k- prefix, so a line marked read never picks up the result panel's .read */
+/* The mark classes use a k- prefix. Without it, a line marked read would match the result panel's .read rules. */
 .gl.k-read .mk { color: var(--muted); }
 .gl.k-problem .mk { color: var(--select); }
 .gl.k-ignored .mk { color: var(--faint); }

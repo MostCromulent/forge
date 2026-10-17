@@ -1,20 +1,20 @@
-/* Colour, size and motion tokens, and the base controls every page shares */
-/* Stacking, lowest first. Below 0: the board's backdrops. 1-10: within the table. 20-35: the match's panels and bars, menus inside a page, the editor panel, the dock.
-   38: notices. 40-45: cards in flight (motion.ts, leaving.ts, stack.ts), open zones and the stack beside them, the out-of-game banner. 50-61: scrims and what sits on them,
-   such as dialogs, sheets, reveals, the game's end and a card flying between lists (flight.ts). 65: the turn banner. 70: the card preview, the stack menu, the coin toss,
-   who goes first, the importer. 80: the host's questions, the concede question, the hit flash, conquest's shards. 90: tips, dragged items and the press ring.
-   95-100: the phone's leave question, the turn-the-phone warning, the connection banner. Widths below 900px also meet a phone held upright (form.ts). */
-/* One size for every card preview */
+/* Colour, size and motion tokens, and the base controls used on every page */
+/* Z-index layers, lowest first. Below 0: the board's backdrops. 1-10: layers inside the table. 20-35: the match's panels and bars, menus inside a page, the editor panel and the dock.
+   38: notices. 40-45: cards in flight (motion.ts, leaving.ts, stack.ts), open zones and the stack next to them, and the out-of-game banner. 50-61: scrims and what is drawn on them.
+   This includes dialogs, sheets, reveals, the game-end screen and a card flying between lists (flight.ts). 65: the turn banner. 70: the card preview, the stack menu, the coin toss,
+   the who-goes-first reveal and the importer. 80: the host's questions, the concede question, the hit flash and conquest's shards. 90: tips, dragged items and the press ring.
+   95-100: the phone's leave question, the warning to turn the phone, and the connection banner. A max-width rule below 900px also applies to a phone held upright (form.ts). */
+/* One width for every card preview */
 @property --preview-w { syntax: '<length>'; inherits: true; initial-value: 280px; }
 :root { --preview-w: clamp(280px, 60vh * 63 / 88, 340px); }
 :root[data-preview="small"] { --preview-w: 280px; }
 :root[data-preview="large"] { --preview-w: clamp(280px, 60vh * 63 / 88, 400px); }
 
 :root {
-  /* The table is lit at the centre and falls away at the edges, so the board is not one flat rectangle */
+  /* The table is lighter at the centre and darker at the edges, so the board is not one flat colour */
   --bg: #10141c;
   --bg-deep: #070910;
-  /* Six rungs from --bg to --line-bright, not four: a panel resting on a panel has to read as raised, and a hover needs its own step */
+  /* Six shades from --bg to --line-bright, not four. A panel on top of another panel must look raised. A hover also needs its own shade. */
   --surface: #171d27;
   --surface-2: #212936;
   --surface-3: #26303d;
@@ -23,30 +23,30 @@
   --text: #e6edf3;
   --muted: #8b96a5;
   --faint: #6b7686;
-  /* The dark gold (--accent) is only ink laid on brass, never a fill, because a gold that dark reads as dull brown */
+  /* The dark gold (--accent) is used only for text and marks on brass, never as a fill. A fill of a gold this dark looks dull brown. */
   --accent: #8d680b;
   --accent-2: #f2c344;
-  /* Tinted forms of the accent, so it can sit behind something instead of only filling or outlining it */
+  /* Translucent forms of the accent. They can be used as a background behind content, not only as a fill or an outline. */
   --accent-soft: #f2c3441f;
   --accent-glow: #f2c34430;
-  /* A filled control in the accent is a piece of brass, cast like the turn banner, with dark type on it */
+  /* A control filled with the accent gets a brass gradient like the turn banner's, with dark text on it */
   --brass: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 68%, #fff) 0%, var(--accent-2) 52%,
            color-mix(in srgb, var(--accent-2) 72%, #000) 100%);
   --on-brass: color-mix(in srgb, var(--accent) 32%, #000);
-  /* A card back with no sleeve: a quiet stripe in the accent's family */
+  /* A card back with no sleeve is drawn as a muted stripe in shades of the accent */
   --back-a: #2d2513;
   --back-b: #251e0f;
   --back-edge: #574319;
-  /* Selection and attack cues differ in luminance and shape, never only in red versus green */
+  /* Selection and attack cues differ in brightness and shape, never only in red versus green */
   --select: #b4f05a;
   --selectable: #ffffff;
   --pick: var(--accent-2);
   --attack: #ffffff;
   --danger: #f59e0b;
-  /* Taking something away for good. A red of its own, since the amber above reads as the gold of a choice. */
+  /* The colour for removing something permanently. It is a separate red because the amber above looks like the gold of a choice. */
   --remove: #e5383b;
   --error: #ef4a3c;
-  /* Where a card you may play is sitting, from desktop's zone banners, all clear of the castable cyan and the prompt's lime */
+  /* The zone that a playable card is in. The colours come from the desktop zone banners. None of them is close to the castable cyan or the prompt's lime. */
   --zone-graveyard: #a98fe0;
   --zone-exile: #cfd6ea;
   --zone-command: #f0c05a;
@@ -54,10 +54,10 @@
   --zone-other: #8f9bc4;
   --scrim: #070910b8;
   --scrim-deep: #05070ce0;
-  /* Under a question about cards: dark enough that the board stops competing with them, and a lighter one for looking through a pile */
+  /* The scrim behind a question about cards. It is dark enough that the board does not distract from the cards. The lighter one is for looking through a pile. */
   --scrim-board: #05070cdc;
   --scrim-look: #05070c73;
-  /* Magic's five colours, low in chroma beside card art, where the letter in each pip carries the meaning and the hue only decorates */
+  /* Magic's five colours, kept low in saturation next to card art. The letter in each pip carries the meaning. The colour is only decoration. */
   --mtg-w: #f4f0dc;
   --mtg-u: #7fb6e0;
   --mtg-b: #9a92a8;
@@ -69,23 +69,23 @@
   --tile-w: 72px;
   --stack-w: 150px;
   --radius: 6px;
-  /* Air either side of a card on the battlefield, beyond the room a tapped card needs */
+  /* Extra space on each side of a card on the battlefield, beyond the space a tapped card needs */
   --slot-gap: 3px;
-  /* How far a highlighted card's glow reaches past its edge: a scrolling box holds this much room, or cuts it off */
+  /* How far a highlighted card's glow extends past its edge. A scrolling box must leave this much space, or it cuts off the glow. */
   --glow: 10px;
-  /* A cost that is not the one printed on the card */
+  /* The colour of a cost that differs from the one printed on the card */
   --cost-changed: var(--zone-command);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-/* The bare attribute must come first: it is the fallback for a zone with no colour, and all of these match with the same weight */
+/* The bare attribute must come first. It is the fallback for a zone with no colour of its own. All of these selectors have the same specificity, so the last match wins. */
 [data-from] { --zone-glow: var(--zone-other); }
 [data-from="Graveyard"] { --zone-glow: var(--zone-graveyard); }
 [data-from="Exile"] { --zone-glow: var(--zone-exile); }
 [data-from="Command"] { --zone-glow: var(--zone-command); }
 [data-from="Library"] { --zone-glow: var(--zone-library); }
-/* Painted on the root, because the board's backdrop layers sit at a negative z-index, behind any background the body paints */
-/* The menus sit on the table's lit-centre ground, a shade darker so their panels still stand off it */
+/* The background is set on the root, not the body. The board's backdrop layers have a negative z-index, so they are drawn behind any background on the body. */
+/* The menus use the same centre-lit background as the table, one shade darker so their panels still contrast with it */
 html { background: radial-gradient(120% 90% at 50% 38%, #151a24 0%, #0b0e14 100%) fixed, var(--bg); }
 html, body { margin: 0; height: 100%; color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
 [hidden] { display: none !important; }
@@ -93,7 +93,7 @@ button { font: inherit; color: var(--text); background: var(--surface-2); border
 button:disabled { opacity: .4; cursor: default; }
 input { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 input:focus { outline: 2px solid var(--accent-2); outline-offset: -1px; }
-/* The primary button is brass built from the turn banner's token, so warming the gold warms both */
+/* The primary button's brass is built from --accent-2, like the turn banner. A change to that gold changes both. */
 button.primary {
   background: var(--brass);
   border-color: color-mix(in srgb, var(--accent-2) 52%, #fff);
@@ -109,23 +109,23 @@ button.primary:active:not(:disabled) { box-shadow: none; transform: translateY(1
 .forge-links a:hover { color: var(--text); background: var(--surface-2); }
 .forge-links svg { flex: none; width: 16px; height: 16px; fill: currentColor; }
 .forge-links .leaves { margin-left: auto; width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: .6; }
-/* On the start pages the two lie side by side along the bottom edge */
+/* On the start pages, the two links are shown side by side along the bottom edge */
 .forge-links.foot { position: fixed; left: 0; right: 0; bottom: 16px; z-index: 1; grid-auto-flow: column; justify-content: center; }
 .forge-links.foot .leaves { display: none; }
-/* The server's build, for a bug report: under the links in the options rail, after them along the foot */
+/* The server's build version, for bug reports. It is shown under the links in the options rail, and after them in the row at the bottom of the start pages. */
 .forge-links .version { padding: 4px 10px 2px; color: var(--faint); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; user-select: text; }
 .forge-links.foot .version { align-self: center; padding: 0 10px; }
 @media (max-width: 620px) { .forge-links.foot .version { grid-row: 2; grid-column: 1 / span 2; padding: 0 0 2px; text-align: center; } }
-/* Over the table, under any dialog or window, so a notice never covers what it would have you look at */
+/* Notices are drawn over the table but under any dialog or window. So a notice never covers the thing it asks the player to look at. */
 #notices { position: fixed; top: 12px; right: 12px; display: grid; gap: 8px; z-index: 38; }
-/* A notice slides in from the edge it sits against, and back out as it goes (notices.tsx) */
+/* A notice slides in from the right edge, and slides back out when it is removed (notices.tsx) */
 .notice { animation: notice-in .22s cubic-bezier(.2,.7,.3,1); }
 .notice.leaving { animation: notice-out .18s ease-in forwards; pointer-events: none; }
 @keyframes notice-in { from { opacity: 0; translate: 24px 0; } }
 @keyframes notice-out { to { opacity: 0; translate: 24px 0; } }
 html[data-motion="reduced"] .notice { animation: none; }
 .notice { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; max-width: 320px; cursor: pointer; }
-/* An error is edged in red, apart from the amber the connection banner uses */
+/* An error notice has a red border, so it looks different from the amber connection banner */
 .notice.error { border: 1.5px solid var(--error); box-shadow: 0 0 12px color-mix(in srgb, var(--error) 30%, transparent); }
 .notice { display: grid; gap: 4px; justify-items: start; }
 .notice-view { margin-top: 6px; padding: 5px 12px; font-size: 12.5px; font-weight: 600; border-color: var(--accent-2); background: var(--accent-soft); color: var(--accent-2); }

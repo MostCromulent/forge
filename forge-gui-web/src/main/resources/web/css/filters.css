@@ -1,4 +1,4 @@
-/* The filter bar the deck finder and the deck editor share */
+/* The filter bar used by both the deck finder and the deck editor */
 .fbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; position: relative; z-index: 3; }
 .fbar .find { flex: 1 1 180px; min-width: 140px; }
 .fbar .colours { margin: 0; }
@@ -11,7 +11,7 @@
 .chip b { font-weight: 600; }
 .chip .x { display: grid; place-items: center; width: 22px; height: 22px; margin-right: 3px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--muted); font-size: 14px; line-height: 1; }
 .chip .x:hover { background: var(--surface-2); color: var(--text); }
-/* Set by the table rather than the player */
+/* A filter chip set by the table, not by the player */
 .chip.set-by { border-color: color-mix(in srgb, var(--accent-2) 55%, transparent); background: var(--accent-soft); }
 .chip.set-by .k { color: var(--accent-2); }
 

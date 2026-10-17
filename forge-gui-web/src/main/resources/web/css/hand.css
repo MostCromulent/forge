@@ -1,25 +1,25 @@
-/* The hand sits low with the bottom of each card below the screen edge; a hovered card rises clear */
+/* The hand is placed low, so the bottom of each card is below the screen edge. A hovered card rises fully into view. */
 #hand { display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); padding-left: var(--line-w, 0px); }
-/* With the log folded away the hand has the whole width, less the corner the console keeps */
+/* When the log panel is folded, the hand uses the full width. It leaves space on the right for the prompt console. */
 #match.side-folded #hand { padding-right: calc(var(--prompt-w) + 16px); }
 #hand .card { width: var(--hand-w); height: var(--hand-h); }
-/* A shade rises from the bottom of the window behind the hand, so the cards stand against it and not on the playmat */
+/* A dark gradient behind the hand runs up from the bottom of the window. The cards are drawn against it, not against the playmat. */
 #hand::before { content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--hand-h) * 1.05); z-index: -1; pointer-events: none;
   background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--bg-deep) 55%, transparent) 55%, color-mix(in srgb, var(--bg-deep) 88%, transparent) 100%); }
-/* Each card lies over the edge of the one before it; --step is set from the hand size */
+/* Each card overlaps the edge of the card before it. --step is set from the hand size (hand.ts). */
 #hand .card + .card { margin-left: var(--step, 0px); }
-/* A card shades the one it lies on, so two dark edges stay apart; glow states carry the shadow by --lift */
+/* Each card casts a shadow on the card it overlaps, so the edges of two dark cards stay distinct. Glow states include this shadow through --lift. */
 #hand .card { --lift: 0 3px 12px #0009; }
 #hand .card + .card { --lift: calc(var(--hand-w) * -.06) 0 calc(var(--hand-w) * .09) calc(var(--hand-w) * -.04) #000d, 0 3px 12px #0009; }
 :where(#hand) .card { box-shadow: var(--lift); }
-/* The cost to cast sits over the card's top-right corner as bare symbols, sized from the card */
+/* The cost to cast is drawn at the card's top-right corner as bare symbols. Its size is set from the card width. */
 #hand .card .cost-badge { display: flex; position: absolute; bottom: calc(100% - var(--hand-w) * 0.01); right: calc(var(--hand-w) * 0.03); z-index: 3; gap: 1px; filter: drop-shadow(0 1px 2px #000c); transform-origin: 100% 100%; transition: transform .12s ease; }
 #hand .card .cost-badge:empty { display: none; }
 #hand .card .cost-badge .sym { height: calc(var(--hand-w) * 0.15); width: calc(var(--hand-w) * 0.15); margin: 0; }
-/* The hovered card grows 1.8 times; its cost grows by only a fifth, so the symbols stay the size of a label */
+/* The hovered card grows 1.8 times. Its cost grows by only a fifth, so the symbols stay the size of a label. */
 #hand .card:hover .cost-badge { transform: scale(.67); }
 #hand .card .cost-badge .pip { position: relative; display: flex; border-radius: 50%; }
-/* A changed cost rings each of its symbols with a still band and moving light, as a card from another zone is ringed */
+/* A changed cost draws a fixed ring and a moving glow around each symbol. Cards playable from another zone get the same kind of ring. */
 #hand .card .cost-badge.changed { gap: 3px; }
 #hand .card .cost-badge.changed .pip { outline: 1.5px solid var(--cost-changed); outline-offset: 1px;
   box-shadow: 0 0 5px 1px color-mix(in srgb, var(--cost-changed) 40%, transparent); }
@@ -29,8 +29,8 @@
 }
 #hand .card .cost-badge.changed .pip:nth-child(2n)::before { filter: url(#cost-warp-b) blur(1.2px); }
 html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filter: blur(2px); }
-/* Revealed to other players: a red eye in the top-left corner, on the row the cost sits on */
-/* Both marks are the hand's alone; a card anywhere else never shows them */
+/* A card revealed to other players shows a red eye in the top-left corner. The eye is on the same row as the cost. */
+/* Only cards in the hand show these two marks. A card anywhere else never shows them. */
 .card .seen, .card .owned-by { display: none; }
 #hand .card .seen { display: none; position: absolute; bottom: calc(100% - var(--hand-w) * 0.01); left: calc(var(--hand-w) * 0.03); z-index: 3;
   width: calc(var(--hand-w) * 0.2); height: calc(var(--hand-w) * 0.2); padding: 2px; border-radius: 50%; background: #0e1116e6; color: #ff6b5a;
@@ -38,35 +38,35 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 #hand .card .seen svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 #hand .card.revealed .seen { display: block; }
 #hand .card:hover .seen { transform: scale(.67); }
-/* Another player's card you may play: their name across it, in their colour */
+/* A card owned by another player that you may play shows the owner's name across it, in their colour */
 #hand .card.foreign .owned-by { display: block; position: absolute; left: 6%; right: 6%; top: 13%; z-index: 3; padding: 1px 4px; border-radius: 4px;
   background: color-mix(in srgb, var(--owner-tint) 85%, #000); color: #0b0e14; font-size: calc(var(--hand-w) * 0.1); font-weight: 800; text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 1px 4px #000a; }
 #hand .card { flex: none; transform: translateX(var(--shift, 0px)) translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg)); transform-origin: 50% 100%; transition: transform .2s cubic-bezier(.2, .8, .2, 1), filter .3s ease; }
-/* The cards either side of a risen card slide away from it, the two beside it furthest */
+/* The cards on each side of a hovered card move away from it. The two cards next to it move furthest. */
 #hand .card:has(~ .card:hover) { --shift: calc(var(--hand-w) * -.12); }
 #hand .card:hover ~ .card { --shift: calc(var(--hand-w) * .12); }
 #hand .card:has(+ .card:hover) { --shift: calc(var(--hand-w) * -.32); }
 #hand .card:hover + .card { --shift: calc(var(--hand-w) * .32); }
 #hand .card:hover { transform: translateY(-28%) scale(1.8); z-index: 10; box-shadow: 0 10px 30px #000c; }
-/* The risen card still owns the strip it rose from: a pointer there would otherwise fall off it, drop it, and raise it again */
+/* The hovered card keeps the strip below it as part of its hover area. Without it, a pointer there would leave the card, the card would drop, and then rise again. */
 #hand .card:hover::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 25%; }
 
-/* A card playable from outside the hand is ringed, not filled, so the ring cannot tint a face-down or artless card */
+/* A card playable from outside the hand gets a ring, not a fill. A fill would tint a face-down card or a card without art. */
 .card .haze, .card .halo, .card .rim { display: none; }
 #hand .card.elsewhere .rim, #hand .card.elsewhere .halo {
   display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter;
 }
-/* Thinner than the castable outline, so it reads as where the card is rather than as a card you can cast */
+/* The rim is thinner than the castable outline. It shows where the card is, not that the card can be cast. */
 #hand .card.elsewhere .rim { inset: -2px; border: 1.5px solid var(--zone-glow); border-radius: 8px; opacity: .92; }
 #hand .card.elsewhere .halo {
   inset: -5px; border: 5px solid color-mix(in srgb, var(--zone-glow) 42%, transparent); border-radius: 13px;
   filter: url(#zone-warp-a) blur(3px);
 }
-/* Three copies of the filter at different points in the loop, so neighbours in the hand are never in step */
+/* Three copies of the filter start at different points in the loop, so neighbouring cards never animate in step */
 #hand .card.elsewhere:nth-child(3n+2) .halo { filter: url(#zone-warp-b) blur(3px); }
 #hand .card.elsewhere:nth-child(3n) .halo { filter: url(#zone-warp-c) blur(3px); }
-/* The rim moves out so it nests with the castable outline, which starts at the card's edge and paints over what is under it */
+/* The rim moves outward to fit around the castable outline. That outline starts at the card's edge and paints over anything under it. */
 #hand .card.elsewhere.playable:not(.selectable) .rim { inset: -4px; border-radius: 10px; }
 #hand .card.elsewhere.auto-tap:not(.selectable) .rim { inset: -5px; border-radius: 11px; }
 #hand .card.elsewhere:hover .rim { opacity: 1; }

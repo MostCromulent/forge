@@ -1,6 +1,6 @@
 /* The table and the drafting screen */
 
-/* The table: avatars round one ring, a chevron between seats, and each seat's name and packs outside the ring */
+/* The draft table. Seat avatars are placed around one ring, with a chevron between neighbouring seats. Each seat's name and held packs are shown outside the ring. */
 .dial { position: relative; flex: none; }
 .dial svg { position: absolute; inset: 0; overflow: visible; }
 .dial-ring { fill: none; stroke: var(--surface-3); stroke-width: 2; }
@@ -26,7 +26,7 @@
 .dial-centre b { font-size: 17px; }
 .dial-centre span { font-size: 12px; color: var(--muted); }
 
-/* Show table, and the table under it */
+/* The Show table button, and the table popup that opens below it */
 .table-menu { position: relative; }
 .drop-btn { display: inline-flex; align-items: center; gap: 8px; }
 .table-btn { padding-left: 5px; }
@@ -38,7 +38,7 @@
 .table-pop { position: absolute; right: 0; top: calc(100% + 10px); z-index: 30; padding: 12px; background: var(--surface);
   border: 1px solid var(--line-bright); border-radius: 12px; box-shadow: 0 20px 50px #000c; }
 
-/* The pack and the picks, framed and held in the middle of the page */
+/* The pack panel and the picks panel, side by side and centred on the page */
 #drafting { height: 100%; }
 .drafting-page { position: relative; height: 100%; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
 .drafting-wait { padding: 20px; }
@@ -54,7 +54,7 @@
 .draft-panel-head .head-end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .pick-line { position: relative; }
 .pick-line .pick-title { font-size: 16px; }
-/* The clock: large at the end of the pick's line, and a bar along its foot that runs down with it */
+/* The pick clock is shown large at the end of the pick line. A bar along the bottom of the line shrinks as the time runs down. */
 .pick-line .clock { margin-left: auto; font-size: 22px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; color: var(--accent-2); }
 .pick-line .clock.low { color: var(--danger); animation: clock-low 1s ease-in-out infinite; }
 @keyframes clock-low { 50% { opacity: .55; } }
@@ -64,13 +64,13 @@ html[data-motion="reduced"] .pick-line .clock.low { animation: none; }
 .tool-line { padding: 8px 16px; }
 .draft-pack { grid-template-rows: auto auto minmax(0, 1fr); overflow: visible; }
 .draft-pack .cat-grid { border-radius: 0 0 12px 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-/* A pack slides across as it passes (drafting.tsx), so the grid clips it rather than scrolling to follow it */
+/* A pack slides sideways when it is passed (drafting.tsx). The grid hides the overflow so it does not scroll to follow the pack. */
 .draft-pack .cat-grid { overflow-x: hidden; }
-/* The rest of a pack leaving, lifted into a layer clipped to where the pack was */
+/* Copies of the cards left in a passed pack slide out in a fixed layer (drafting.tsx). The layer is clipped to the pack's area. */
 .pack-leaving { position: fixed; z-index: 40; overflow: hidden; pointer-events: none; }
 .pack-leaving .cat-grid { position: absolute; inset: 0; padding: 0; overflow: visible; display: block; }
 .draft-slot.chosen .tile img { outline: 3px solid var(--accent-2); outline-offset: 2px; box-shadow: 0 0 18px var(--accent-glow); transform: translateY(-4px); }
-/* A card whose picture cannot be had is drawn as its text, in the card's shape */
+/* When a card's picture is not available, its text is drawn in a card-shaped box instead */
 .text-face { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 4px; padding: 7px 8px; border-radius: 6px; overflow: hidden;
   background: var(--surface-2); border: 1px solid var(--line-bright); box-shadow: 0 3px 10px #0007; text-align: left; color: var(--text); font-size: 10px; line-height: 1.3; }
 .text-face .tf-head { display: flex; justify-content: space-between; gap: 4px; align-items: flex-start; }
@@ -81,12 +81,12 @@ html[data-motion="reduced"] .pick-line .clock.low { animation: none; }
 .text-face .tf-text { flex: 1; white-space: pre-line; overflow: hidden; }
 .text-face .tf-text .sym { width: 10px; height: 10px; vertical-align: -1px; }
 .text-face .tf-pt { align-self: flex-end; font-weight: 700; }
-/* A tile lays its picture over the whole card; the symbols in its text are pictures too, and stay in the line */
+/* The tile rules stretch an image over the whole card. Mana symbols in the text are images too, so this rule keeps them inline. */
 .tile .text-face img.sym { position: static; inset: auto; border-radius: 50%; box-shadow: none; transform: none; outline: none; }
 .draft-slot.chosen .tile .text-face { outline: 3px solid var(--accent-2); outline-offset: 2px; box-shadow: 0 0 18px var(--accent-glow); transform: translateY(-4px); }
 .draft-slot .confirm { position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%); z-index: 3; background: var(--brass);
   color: var(--on-brass); font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 11px; white-space: nowrap; box-shadow: 0 0 0 2px var(--bg); }
-/* The ranking shield's grades run gold, silver, bronze, steel and iron, so they read by lightness as well as colour */
+/* The ranking shield's grades are gold, silver, bronze, steel and iron. The grades differ in lightness as well as colour, so they can be told apart without colour. */
 .draft-slot .rank { position: absolute; left: 50%; top: 50%; z-index: 2; width: 34px; height: 42px; transform: translate(-50%, -50%);
   display: grid; place-items: center; pointer-events: none; filter: drop-shadow(0 3px 6px #000d); }
 .draft-slot .rank svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
@@ -104,7 +104,7 @@ html[data-motion="reduced"] .pick-line .clock.low { animation: none; }
 .rank.tier-c { --rank-fill: #5d6a7d; --rank-ink: #f1f4f8; }
 .rank.tier-d { --rank-fill: #2f3642; --rank-ink: #c9d0da; }
 
-/* The picks: the main deck and the sideboard, each a place a card can be dragged to */
+/* The picks panel holds the main deck and the sideboard. A card can be dragged into either one. */
 .draft-picks { grid-template-rows: auto auto minmax(0, 1fr); }
 .draft-group-by { display: flex; align-items: center; gap: 10px; padding: 10px 16px 4px; font-size: 12.5px; }
 .draft-sections { overflow: auto; padding: 6px 12px 14px; display: grid; gap: 12px; align-content: start; }

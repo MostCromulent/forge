@@ -1,13 +1,13 @@
-/* The deck editor reuses the deck finder's parts, so only its own layout and states are here */
+/* The deck editor reuses the deck finder's parts. This file holds only the editor's own layout and states. */
 
 #editor { height: 100%; }
-/* On a desktop the editor is a panel in the deck selector's frame, over the page it was opened from. Notices lie above it, and the chat chip below. */
+/* In landscape, the editor is a panel the same size as the deck selector, over the page it was opened from. Notices are drawn above it, and the chat chip below it. */
 html:not([data-form="portrait"]) #editor:not([hidden]) { position: fixed; inset: 0; z-index: 35; height: auto; display: grid; place-items: center; background: var(--scrim); }
 html:not([data-form="portrait"]) #editor .editor-page { width: min(1500px, 94vw); height: min(880px, 92vh); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-/* The wordmark, volume and options belong to the page behind */
+/* The wordmark, volume and options are hidden, because the page behind the editor shows them */
 html:not([data-form="portrait"]) #editor .editor-head :is(.wordmark-block, .icon-button, .volume) { display: none; }
 .editor-page { position: relative; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
-/* The deck's name is the button for what can be done with the deck, so it wears a frame and a chevron */
+/* The deck's name is the button that opens the deck's actions, so it has a frame and a chevron */
 .editor-head .deck-name { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 5px 9px 5px 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; font-size: 16px; font-weight: 650; }
 .editor-head .deck-name > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-head .deck-name:hover, .editor-head .deck-name[aria-expanded="true"] { border-color: var(--accent-2); }
@@ -17,7 +17,7 @@ html:not([data-form="portrait"]) #editor .editor-head :is(.wordmark-block, .icon
 .deck-name-field { font-size: 16px; font-weight: 650; min-width: 260px; }
 .save-state { color: var(--muted); font-size: 12px; }
 .editor-head .legality, .imp-sub .legality, .finder-head .legality { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
-/* A format choice is the lobby's brass pill: a rounded select with its own caret, washed in the accent */
+/* A format choice uses the lobby's brass pill style. It is a rounded select with its own caret and an accent-coloured fill. */
 .pill-select { position: relative; display: inline-flex; }
 .pill-select select {
   appearance: none; background: var(--accent-soft); color: var(--text); border: 1px solid var(--accent-2); border-radius: 999px;
@@ -41,7 +41,7 @@ html:not([data-form="portrait"]) #editor .editor-head :is(.wordmark-block, .icon
 .deck-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 6px; }
 .menu-cap { padding: 4px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
 .editor-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; }
-/* What only a phone shows: the tabs between the halves, the menu as dots, and the check in the deck's summary */
+/* Only a phone shows these: the tabs between the two halves and the check in the deck's summary */
 .editor-tabs, .deck-head .deck-check { display: none; }
 button.small { padding: 3px 10px; font-size: 12px; }
 button.link { background: none; border: 0; padding: 0; color: var(--accent-2); font-weight: 600; }
@@ -88,7 +88,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .under .why { margin-left: auto; color: var(--muted); }
 .under.centred { justify-content: center; }
 .under.centred .side { margin-left: 0; }
-/* How the search works, shown while the pointer is on the field, or while it is focused and still empty */
+/* Help for the search syntax. It is shown while the pointer is over the field, or while the field is focused and empty. */
 .search-wrap { position: relative; flex: 1; min-width: 0; display: flex; }
 .search-wrap .find { flex: 1; min-width: 0; }
 .search-tip {
@@ -101,7 +101,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .none-found { padding: 26px 0; display: grid; gap: 8px; justify-items: start; color: var(--muted); grid-column: 1 / -1; max-width: 520px; }
 .none-found b { color: var(--text); }
 
-/* A card the deck can't use: the problem colour, a hatch and a "!" together */
+/* A card the deck cannot use is marked three ways: the problem colour, a hatch pattern and a "!" */
 .slot.bad .tile img { filter: saturate(.55) brightness(.8); }
 .flag { color: var(--select); font-size: 11px; font-weight: 600; white-space: nowrap; }
 .slot .flag { overflow: hidden; text-overflow: ellipsis; }
@@ -110,7 +110,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 }
 
 /* The deck half */
-/* The main deck takes the row that stretches, whether or not a command zone lies above it, and the basic lands close the panel */
+/* The main deck takes the row that stretches, with or without a command zone above it. The basic lands are the last row of the panel. */
 .deck-half { border-left: 1px solid var(--line); background: var(--surface); display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto auto auto; min-height: 0; }
 .deck-half > .commander-zone { grid-row: 2; }
 .deck-half > .main-zone { grid-row: 3; }
@@ -150,7 +150,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .zone { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; position: relative; border-bottom: 1px solid var(--line); }
 .zone > h4 { margin: 0; padding: 7px 16px 5px; display: flex; align-items: center; gap: 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .zone > h4 .zn { color: var(--text); font-weight: 700; }
-/* A zone's count reads with its name */
+/* A zone's count is drawn close to its name */
 .zone > h4 .count { margin-left: -2px; padding: 0 7px; border-radius: 9px; background: var(--surface-2); color: var(--text); font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: 0; font-size: 12.5px; }
 .zone > h4 .view-seg { margin-left: auto; }
 .zone > h4 select { text-transform: none; letter-spacing: 0; font-size: 11.5px; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; font-family: inherit; }
@@ -168,7 +168,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .ed-line:hover { background: var(--surface-2); padding-left: 4px; }
 .ed-line:hover .ra { display: inline-flex; }
 .ed-line:hover .cost { display: none; }
-/* The deck as cards: a column a group, each card overlapping the one before so its name shows */
+/* In the card view, each group is one column. Each card overlaps the one before it but leaves that card's name visible. */
 .zone > h4 .view-seg { text-transform: none; letter-spacing: 0; }
 .zone > h4 .view-seg button { padding: 2px 9px; font-size: 11.5px; }
 .zone-body.deck-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px 10px; align-content: start; }
@@ -202,7 +202,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .deck-text textarea { width: min(520px, 80vw); font: 12px/1.5 ui-monospace, monospace; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
 
 /* Dragging */
-/* A section that takes the card is dashed, the one under the pointer says the result, and one that refuses is hatched and says why */
+/* A section that accepts the dragged card gets a dashed outline. The section under the pointer shows the result. A section that refuses the card is hatched and shows why. */
 [data-zone].drop-eligible, [data-zone].drop-over, [data-zone].drop-refuse, [data-zone].drop-remove { position: relative; }
 [data-zone].drop-eligible::before { content: ''; position: absolute; inset: 3px; border: 1px dashed var(--line-bright); border-radius: 6px; pointer-events: none; }
 [data-zone].drop-over { background: linear-gradient(100deg, var(--accent-soft) 0%, transparent 55%); }
@@ -236,7 +236,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 /* The card menu and the printing picker */
 .card-menu { position: fixed; right: auto; top: auto; }
 .card-menu button:disabled { opacity: .45; }
-/* The printing picker, laid out as desktop's: a filter bar over a grid of pictures four across */
+/* The printing picker uses the desktop layout. A filter bar is above a grid of pictures, four across. */
 .picker { width: min(920px, 94vw); max-width: none; max-height: 86vh; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 12px; }
 .picker h3 { margin: 0; }
 .print-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
@@ -245,7 +245,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .print-bar select { padding: 0 8px 0 12px; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); font: inherit; }
 .print-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-content: start; overflow-y: auto; padding: 2px 6px 2px 2px; }
 .print-grid .hint { grid-column: 1 / -1; margin: 24px 0; text-align: center; }
-/* One column no wider than the cell, or a long set name would stretch its picture with it */
+/* The single column is no wider than the cell. Otherwise a long set name would stretch the picture too. */
 .print-cell { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 6px; padding: 6px; border: 2px solid transparent; border-radius: 12px; text-align: center; }
 .print-cell.cur { border-color: var(--accent-2); background: var(--accent-soft); }
 .print-cell.off { opacity: .45; }
@@ -260,6 +260,6 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 span.deck-name { border-bottom: 0 !important; }
 .editor-head .check-fixed { color: var(--muted); font-size: 12px; padding-left: 14px; border-left: 1px solid var(--line); }
 .land-row .land-set { font-size: 12px; padding: 2px 22px 2px 8px; max-width: 220px; }
-/* A deck built from a game mode's own cards: whose it is before its name, and the cards not yet played with */
+/* A deck built from a game mode's own cards shows its owner before its name. Cards not yet played with are marked as new. */
 .editor-head .deck-owner { color: var(--muted); font-size: 14px; }
 .new-card { position: absolute; left: -4px; top: 10px; padding: 2px 7px; border-radius: 999px; background: var(--accent-2); color: #1a1405; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; box-shadow: 0 2px 6px #000a; }

@@ -2,7 +2,7 @@
 
 
 .cq-shell { height: 100vh; display: flex; flex-direction: column; }
-/* On a desktop an open save is a panel in the deck editor's frame, a step under the editor, which can be opened from it */
+/* In landscape, an open save is shown as a panel the same size as the deck editor. It sits one layer below the editor, which can be opened from it. */
 html:not([data-form="portrait"]) #campaign:not([hidden]):has(.cq-shell) { position: fixed; inset: 0; z-index: 34; display: grid; place-items: center; background: var(--scrim); }
 html:not([data-form="portrait"]) .cq-shell { width: min(1500px, 94vw); height: min(880px, 92vh); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: clip; }
 .cq-shell > .limited-error { margin: 8px 20px 0; }
@@ -11,8 +11,8 @@ html:not([data-form="portrait"]) .cq-shell { width: min(1500px, 94vw); height: m
 .cq-coin b { font-size: 13.5px; }
 .cq-save .ev-line .cq-coin { margin-left: 6px; }
 
-/* The bar every page of a conquest shares */
-/* Too narrow for one row, the balances and the way out go under the tabs rather than past the edge */
+/* The bar shared by every page of a conquest */
+/* When the bar is too narrow for one row, the balances and the exit wrap under the tabs instead of running past the edge */
 .cq-bar { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0 22px; padding: 0 20px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 70%, transparent); }
 .cq-id { display: grid; align-content: center; gap: 1px; padding: 9px 0; min-width: 190px; }
 .cq-id b { font-size: 15px; }
@@ -22,23 +22,23 @@ html:not([data-form="portrait"]) .cq-shell { width: min(1500px, 94vw); height: m
 .cq-tab:hover:not(:disabled) { color: var(--text); }
 .cq-tab:disabled { opacity: .45; }
 .cq-tab[aria-current="page"] { color: var(--accent-2); background: linear-gradient(180deg, transparent, var(--accent-soft)); }
-/* The open tab's line is an element of its own, so a change of tab can glide it to the next */
+/* The open tab's underline is a separate element, so a tab change can animate it to the new tab */
 .cq-tab-line { position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: var(--accent-2); view-transition-name: cq-tab-line; }
 .cq-purse { margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 8px 0; }
-/* The balances stay in view over a reward's reveal, which counts into them */
+/* The balances are drawn above the reward reveal, because the reveal counts up into them */
 .cq-shell:has(.cq-reveal) .cq-purse { position: relative; z-index: 55; }
 .cq-shell:has(.cq-reveal) .cq-purse > :not(.cq-coin) { visibility: hidden; }
 .cq-dev { font-size: 12px; padding: 3px 8px; white-space: nowrap; }
 .cq-purse .deck-menu { width: 170px; }
 .cq-purse .deck-menu [aria-checked="true"] { color: var(--accent-2); }
-/* A change of tab slides the page (dialogs.css); a page arriving any other way, as on a new plane, rises in */
-/* One column no wider than the window, so a strip that scrolls on its own, like the Spell Shop's packs, does not widen the page */
+/* A tab change slides the page (dialogs.css). A page that arrives any other way, such as on a new plane, rises in. */
+/* The page is one column no wider than the window. So a strip that scrolls by itself, such as the Spell Shop's packs, does not widen the page. */
 .cq-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); view-transition-name: page; }
-/* The slide's pictures are drawn above every page, so on a desktop they are cut to the panel's page here */
+/* The slide's snapshots are drawn above every page. So in landscape they are clipped to the panel's page here. */
 html:not([data-form="portrait"]):has(#campaign .cq-shell)::view-transition-image-pair(page) { overflow: clip; }
 .cq-main > * { animation: box-in .18s ease-out; }
 html[data-motion="reduced"] .cq-main > * { animation: none; }
-/* Zero duration rather than none: with none, the rise plays when data-way is removed at the end of the slide */
+/* Use a zero duration, not none. With none, the rise animation plays when data-way is removed at the end of the slide. */
 html[data-way] .cq-main > * { animation-duration: 0s; }
 
 .cq-kicker { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -48,7 +48,7 @@ html[data-way] .cq-main > * { animation-duration: 0s; }
 .cq-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .cq-reward-line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 
-/* The map: the plane as a road, left to right */
+/* The map shows the plane as a road from left to right */
 .cq-map { display: grid; grid-template-columns: minmax(0, 1fr) 352px; min-height: 0; }
 .cq-stage { position: relative; min-width: 0; overflow: hidden; display: flex; flex-direction: column; background: radial-gradient(100% 80% at 50% 40%, #131a26 0%, #080b11 100%); }
 .cq-map-head { display: flex; align-items: baseline; gap: 14px; padding: 18px 28px 12px; }
@@ -65,12 +65,12 @@ html[data-way] .cq-main > * { animation-duration: 0s; }
 .cq-banner span { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #d6dde6; font-variant-numeric: tabular-nums; }
 .cq-banner span img { width: 16px; height: 16px; }
 .cq-banner.done span { color: var(--accent-2); font-weight: 700; }
-/* A banner or an empty place is a button that does nothing, and is not dimmed for it */
+/* A banner or an empty place can be a disabled button. It is not dimmed. */
 button.cq-banner:disabled, button.cq-tile:disabled, button.cq-art:disabled { opacity: 1; cursor: default; }
-/* Any region but yours folds back to its spine from its banner */
+/* Clicking the banner of any region except yours folds it back to its spine (conquestmap.tsx) */
 button.cq-banner:not(:disabled):hover { filter: brightness(1.15); }
 
-/* What can be fought next is in full colour with a lit gold edge, conquered ground is dimmed, and the unfound is an empty place */
+/* A place that can be fought next is in full colour with a gold glow. Conquered places are dimmed. Places not yet found are empty. */
 .cq-tile { position: absolute; padding: 8px; border: 0; border-radius: 9px; background: #141a26 center 20% / cover; overflow: hidden; display: flex; align-items: flex-end; text-align: left; color: var(--text); opacity: 1; transition: transform .12s, box-shadow .12s, filter .12s; }
 .cq-tile span { position: relative; z-index: 1; font-size: 11.5px; font-weight: 600; line-height: 1.2; text-shadow: 0 1px 3px #000; }
 .cq-tile.open { box-shadow: 0 0 0 2px var(--accent-2), 0 0 18px color-mix(in srgb, var(--accent-2) 45%, transparent); }
@@ -84,7 +84,7 @@ button.cq-banner:not(:disabled):hover { filter: brightness(1.15); }
 .cq-tile.open.sel { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent-2); }
 .cq-tile.here { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent-2), 0 0 30px 4px color-mix(in srgb, var(--accent-2) 60%, transparent); z-index: 4; }
 
-/* A region nobody has reached, or one that is finished, folded to a spine */
+/* A region that nobody has reached, or one that is finished, is folded to a spine */
 .cq-spine { position: absolute; padding: 0 0 12px; border: 0; border-radius: 12px; overflow: hidden; background: #0d1118; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px; color: var(--muted); box-shadow: inset 0 0 0 1px #ffffff12; opacity: 1; }
 .cq-spine i { position: absolute; inset: 0; background: #111 center / cover; opacity: .2; filter: grayscale(.8); }
 .cq-spine b { position: relative; writing-mode: vertical-rl; transform: rotate(180deg); font: 700 16px/1 Georgia, "Times New Roman", serif; letter-spacing: .04em; color: #aeb8c6; white-space: nowrap; }
@@ -94,13 +94,13 @@ button.cq-banner:not(:disabled):hover { filter: brightness(1.15); }
 .cq-spine.done span { color: var(--accent-2); font-weight: 700; }
 .cq-spine.done b { color: #fff; text-shadow: 0 1px 4px #000; }
 
-/* Ties between places that touch: light across conquered ground, gold toward what it has opened */
+/* Ties join neighbouring places. A tie between conquered places is light grey. A tie to a place that a conquest opened is gold. */
 .cq-tie { position: absolute; z-index: 1; height: 4px; margin-top: -2px; pointer-events: none; }
 .cq-tie.down { width: 4px; height: auto; margin: 0 0 0 -2px; }
 .cq-tie.won { background: #c3ccd9; }
 .cq-tie.open { background: var(--accent-2); box-shadow: 0 0 8px color-mix(in srgb, var(--accent-2) 60%, transparent); }
 
-/* Where the player stands. It is ringed in white, and it is the one thing on the map that moves. */
+/* The player's marker on the map. It has a white ring, and it is the only thing on the map that moves. */
 .cq-you { position: absolute; z-index: 6; pointer-events: none; display: grid; justify-items: center; transform: translate(-50%, -50%); }
 .cq-trail-in.walking .cq-you { transition: left .5s linear, top .5s linear; }
 .cq-you i { width: 58px; height: 58px; border-radius: 50%; background: var(--surface-2) center 15% / cover; border: 3px solid #fff; box-shadow: 0 0 0 2px #0b0e14, 0 0 0 4px var(--accent-2), 0 0 24px 8px #ffffff66, 0 8px 16px #000; }
@@ -108,7 +108,7 @@ button.cq-banner:not(:disabled):hover { filter: brightness(1.15); }
 @keyframes cq-you-pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(1.9); opacity: 0; } }
 .cq-you b { margin-top: -9px; font: 800 9.5px/1 system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #fff; color: #0b0e14; box-shadow: 0 2px 6px #000a; }
 html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
-/* Win animation, played after the reward reveal closes (conquestmap.tsx). The won tile is stamped, new ties grow from it, the unlocked tiles fade in one by one, and the counts go up. */
+/* Win animation, played after the reward reveal closes (conquestmap.tsx). The won tile is stamped and new ties grow from it. Then the unlocked tiles fade in one by one, and the counts go up. */
 .cq-map.won .cq-tile.sealed { animation: cq-sealed .65s .3s ease-out; }
 @keyframes cq-sealed { 35% { transform: scale(1.08); filter: brightness(1.6); } }
 .cq-burst { position: absolute; z-index: 7; pointer-events: none; border-radius: 12px; border: 3px solid #f6d37a; box-shadow: 0 0 30px 6px #f2c34499, inset 0 0 20px #f2c34466; opacity: 0; animation: cq-burst .7s .3s cubic-bezier(.2,.7,.3,1); }
@@ -136,11 +136,11 @@ html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
 .cq-map.won .cq-count { animation: cq-count .6s 2s ease-out; }
 @keyframes cq-count { from { color: #f6d37a; transform: scale(1.3); } }
 
-/* What a tile says when pointed at */
+/* The details a tile shows on hover */
 .cq-hov { position: absolute; z-index: 8; display: grid; gap: 8px; padding: 11px 13px 12px; border-radius: 10px; background: var(--surface-3); border: 1px solid var(--line-bright); box-shadow: 0 14px 34px #000d; pointer-events: none; }
 .cq-hov > b { font-size: 14.5px; line-height: 1.25; }
 
-/* The selected event, beside the map */
+/* The side panel next to the map shows the selected event */
 .cq-side { border-left: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; min-height: 0; }
 .cq-panel { padding: 18px 20px; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
 .cq-panel h3 { margin: 0; font-size: 20px; line-height: 1.2; text-wrap: balance; }
@@ -150,9 +150,9 @@ html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
 .cq-art b { position: relative; z-index: 1; font-size: 14px; text-shadow: 0 1px 3px #000, 0 0 10px #000; }
 .cq-desc { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
 .cq-steps { margin: 0; font-size: 12.5px; color: var(--text); }
-/* The dock stands over the foot of the page, so the panel ends above it */
+/* The chat dock covers the bottom of the page, so the panel stops above it */
 .cq-foot { margin-top: auto; border-top: 1px solid var(--line); padding: 14px 20px 62px; display: grid; gap: 10px; background: color-mix(in srgb, var(--bg-deep) 35%, transparent); }
-/* On a desktop the dock lies under the panel, so the foot need not clear it */
+/* In landscape the dock is drawn behind the panel, so the foot does not need to leave room for it */
 html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
 .cq-mine { display: flex; align-items: center; gap: 10px; }
 .cq-face2 { width: 46px; height: 46px; padding: 0; border: 0; border-radius: 9px; background: var(--surface-2) center 20% / cover; box-shadow: 0 0 0 1px var(--line-bright); flex: none; }
@@ -165,31 +165,31 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
 .cq-warn, .cq-mine .t .cq-warn { margin: 0; font-size: 12.5px; color: var(--select); }
 .cq-zoom { max-height: min(86vh, 720px); border-radius: 4.5% / 3.2%; box-shadow: 0 24px 60px #000; }
 
-/* A reward, revealed over the map */
+/* The reward reveal, drawn over the map */
 .backdrop.cq-reveal { --gold: #f0c05a; --gold-hi: #fbe9bd; background: #05070bf0; flex-direction: column; }
 .cq-reveal svg.ln { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .cq-reveal-foot { min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 16px; }
 .cq-zoom-layer { z-index: 60; }
 @keyframes cq-breathe { 50% { opacity: .6; } }
 
-/* The small dialogs: what the wheel paid, in one shape */
+/* The small dialogs that show what the wheel paid. They all use one layout. */
 .cq-gift { min-width: 300px; max-width: 440px; justify-items: center; text-align: center; gap: 14px; padding: 22px 26px; }
 .cq-gift p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .cq-gift-what { display: flex; align-items: center; gap: 12px; }
 .cq-gift-what img { width: 64px; height: 64px; }
 .cq-gift-what b { font: 700 34px/1 Georgia, "Times New Roman", serif; font-variant-numeric: tabular-nums; }
-/* A message's breakdown, each line with its amount at its end */
+/* The breakdown in a message. Each line shows its amount at the right end. */
 .cq-gift-lines { list-style: none; margin: 0; padding: 0; width: 100%; display: grid; gap: 4px; text-align: left; font-size: 13px; }
 .cq-gift-lines li { display: flex; justify-content: space-between; gap: 18px; padding: 5px 10px; border-radius: 6px; background: var(--surface-2); }
 .cq-gift-lines li b { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cq-gift-lines li:last-child { background: var(--accent-soft); font-weight: 700; }
-/* Cards a reward gave, face up; cards lost to ante are dimmed and grey */
+/* Cards a reward gave are shown face up. Cards lost to ante are dimmed and grey. */
 .cq-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 12px; max-width: min(1000px, 92vw); }
 .cq-cards-card { width: 148px; aspect-ratio: 63 / 88; padding: 0; border: 0; border-radius: 8px; overflow: hidden; background: var(--surface-2); box-shadow: 0 8px 20px #000b; }
 .cq-cards-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cq-cards.lost .cq-cards-card { filter: grayscale(.85) brightness(.6); }
 
-/* The Chaos Wheel as a dial: engraved brass round dark glass, and nothing that blinks */
+/* The Chaos Wheel is drawn as a dial of engraved brass around dark glass. When the spin stops, the flare behind the result pulses slowly. */
 .cq-wheel-stop { display: grid; justify-items: center; gap: 18px; }
 .cq-wheel-first { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gold-hi); }
 .cq-wheel-first img { width: 22px; height: 22px; }
@@ -221,7 +221,7 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
   background: conic-gradient(from -22.5deg, #f0c05a3d 0 45deg, transparent 0); }
 .cq-dl.done .cq-dl-flare { opacity: 1; animation: cq-breathe 2.6s ease-in-out infinite; }
 
-/* A booster pack over the places its cards will take */
+/* A booster pack, shown over the slots its cards will fill */
 .cq-pack-stop { width: min(1080px, 100%); display: grid; justify-items: center; gap: 14px; }
 .cq-pack-stop h3 { margin: 0; font: 700 20px/1.2 Georgia, "Times New Roman", serif; letter-spacing: .04em; }
 .cq-pack-host { width: 100%; }
@@ -233,7 +233,7 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
 .cq-bp-cell { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 30px; pointer-events: none; }
 .cq-pk { position: relative; width: 196px; height: 312px; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; pointer-events: auto; animation: cq-pk-float 3.6s ease-in-out infinite; }
 @keyframes cq-pk-float { 50% { transform: translateY(-9px) rotate(-1deg); } }
-/* The light a card in hand wears when it can be cast from another zone, drawn here on the pack's own outline */
+/* The same glow a hand card gets when it can be cast from another zone. Here it follows the pack's own outline. */
 .cq-pk-lit { position: absolute; inset: 0; transition: filter .35s ease;
   filter: drop-shadow(0 0 .8px var(--gold)) drop-shadow(0 0 .8px var(--gold)) drop-shadow(0 0 1.2px var(--gold)); }
 .cq-pk.open .cq-pk-lit { filter: none; }
@@ -242,7 +242,7 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
 .cq-pk-glow.far { transform: scale(1.12, 1.075); filter: url(#zone-warp-b) blur(11px); opacity: .3; }
 .cq-pk-speck { position: absolute; bottom: 20%; width: 4px; height: 4px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 7px 1px var(--gold); opacity: 0; animation: cq-pk-rise 2.6s linear infinite; pointer-events: none; }
 @keyframes cq-pk-rise { 0% { opacity: 0; transform: translateY(20px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-150px); } }
-/* The pouch: foil, pillowed, crimped shut at both ends */
+/* The pack is a foil pouch, shaded to look padded, and crimped shut at both ends */
 .cq-pk-whole { position: absolute; inset: 0; }
 .cq-pk-top, .cq-pk-body { position: absolute; left: 0; right: 0; }
 .cq-pk-top { top: 0; height: 9%; transform-origin: 100% 50%; }
@@ -260,16 +260,16 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
 .cq-pk-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, #000000b3 0, #00000000 14%, #ffffff24 40%, #00000000 58%, #00000099 100%); }
 .cq-pk-sheen { position: absolute; inset: 0; background: linear-gradient(105deg, transparent 40%, #ffffff3d 50%, transparent 60%); background-size: 280% 100%; animation: cq-pk-sheen 3.2s linear infinite; mix-blend-mode: screen; pointer-events: none; }
 @keyframes cq-pk-sheen { from { background-position: 140% 0; } to { background-position: -140% 0; } }
-/* One chaos pack serves every chaos-battle booster: a darker foil, and the chaos mark where the plane's art would be */
+/* One chaos pack is used for every chaos-battle booster. It has a darker foil, and the chaos mark in place of the plane's art. */
 .cq-pk.chaos .cq-pk-art { background: radial-gradient(circle at 50% 38%, #3a2a6e 0, #171033 46%, #07060f 100%); }
 .cq-pk.chaos .cq-pk-crimp { background: repeating-linear-gradient(90deg, #ffffff22 0 1px, #00000040 1px 3px), linear-gradient(180deg, #4a4470, #25223f 55%, #3d3861); }
-/* The tear: a point of light at its front, light from the mouth as far as it has reached, and flecks of foil */
+/* The tear has a point of light at its front. Light comes from the opening as far as the tear has gone. Flecks of foil fly off. */
 .cq-pk-zip { position: absolute; left: 0; top: 9%; width: 12px; height: 12px; margin: -6px 0 0 -6px; z-index: 6; border-radius: 50%; pointer-events: none; background: #fff; box-shadow: 0 0 16px 7px #ffe2a0; opacity: 0; }
 .cq-pk-mouth { position: absolute; left: 0; right: 0; top: 9%; height: 6px; border-radius: 50%; background: #fff3d2; box-shadow: 0 0 34px 18px #ffdf9ccc; opacity: 0; pointer-events: none; }
 .cq-pk-fleck { position: absolute; width: 6px; height: 3px; margin: -1px 0 0 -3px; background: linear-gradient(90deg, #fff, #f0c05a); opacity: 0; pointer-events: none; z-index: 7; }
 .cq-pk-hint { margin: 0; font: 600 12.5px/1 system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-hi); animation: cq-breathe 2s ease-in-out infinite; }
 
-/* The cards: whatever count the pack held, eight to a row, a short last row centred */
+/* The cards are shown eight to a row, whatever count the pack held. A short last row is centred. */
 .cq-rv-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 12px; }
 .cq-rv-slot { position: relative; flex: 0 0 calc((100% - 7 * 12px) / 8); aspect-ratio: 63 / 88; perspective: 800px; }
 .cq-rv-card, .cq-rv-y, .cq-rv-in { position: absolute; inset: 0; }
@@ -289,7 +289,7 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
   background: #0b0e14f2; border: 1px solid var(--gold); color: var(--gold); font: 700 13px/1 system-ui, sans-serif; white-space: nowrap; z-index: 2; }
 .cq-rv-plus img { width: 13px; height: 13px; filter: none !important; }
 .cq-rv-card.dup.up .cq-rv-plus { display: flex; }
-/* A duplicate's shards on their way to the bar */
+/* The shards from a duplicate card, moving to the bar */
 .cq-mote { position: fixed; left: 0; top: 0; width: 22px; height: 22px; margin: -11px; z-index: 80; pointer-events: none; filter: drop-shadow(0 0 6px #7fe0ff); }
 
 html[data-motion="reduced"] :is(.cq-dl-glow, .cq-pk, .cq-pk-sheen, .cq-pk-speck, .cq-pk-hint) { animation: none; }
@@ -300,7 +300,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
   .cq-side { border-left: 0; border-top: 1px solid var(--line); }
 }
 
-/* Commanders and planeswalkers: one plate for both, and the one being looked at beside them */
+/* Commanders and planeswalkers use the same card style. The selected one is shown in detail next to the list. */
 .cq-party { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 372px; min-height: 0; }
 .cq-party-list { padding: 18px 24px 80px; overflow-y: auto; display: grid; gap: 22px; align-content: start; }
 .cq-party-list h4 { margin: 0 0 10px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; gap: 10px; align-items: baseline; }
@@ -322,7 +322,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .cq-two button[aria-pressed="true"] { border-color: var(--accent-2); color: var(--accent-2); }
 
-/* The collection and the exile: a grid of cards, each with what it is worth */
+/* The collection and the exile show a grid of cards, each with its value */
 .cq-coll { position: relative; display: flex; flex-direction: column; min-height: 0; }
 .cq-coll-bar { display: flex; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .cq-coll-bar .find { width: 260px; }
@@ -332,7 +332,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-coll-grid { flex: 1; overflow-y: auto; padding: 18px 24px 130px; display: grid; grid-template-columns: repeat(auto-fill, 148px); gap: 16px 14px; justify-content: center; align-content: start; }
 .cq-cc { position: relative; padding: 0; border: 0; background: none; border-radius: 8px; display: flex; flex-direction: column; gap: 5px; text-align: left; color: var(--text); }
 .cq-cc[aria-disabled="true"] { cursor: help; }
-/* The name shows until the picture has arrived, and when there is none */
+/* The name is shown until the picture loads, and when there is no picture */
 .cq-cc .cq-pic { position: relative; display: block; flex: none; width: 100%; aspect-ratio: 63 / 88; border-radius: 7px; background: var(--surface-2); box-shadow: 0 4px 12px #0009; overflow: hidden; }
 .cq-cc .cq-pic .nm { position: absolute; left: 9px; right: 9px; top: 9px; font-size: 12px; color: var(--muted); }
 .cq-cc .cq-pic img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -340,7 +340,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-cc.sel .cq-pic { box-shadow: 0 0 0 3px var(--accent-2), 0 0 18px var(--accent-glow); }
 .cq-cc.sel::after { content: '\2713'; position: absolute; right: 6px; top: 6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-2); color: #1a1405; font-weight: 800; font-size: 13px; box-shadow: 0 2px 6px #000c; }
 .cq-cc.used .cq-pic img { filter: brightness(.6); }
-/* A list that counts copies: the card and, under it once picked, how many of them */
+/* A list that counts copies shows the card. When the card is picked, the number of copies is shown under it. */
 .cq-cc-slot { position: relative; display: grid; gap: 6px; align-content: start; }
 .cq-stock { position: absolute; right: 6px; top: 6px; padding: 2px 7px; border-radius: 999px; background: #0b0e14e6; border: 1px solid var(--line-bright); font-size: 11px; font-weight: 700; }
 .cq-cc.sel .cq-stock { right: 34px; }
@@ -362,7 +362,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-cards-list li { display: flex; gap: 10px; padding: 5px 10px; border-radius: 6px; background: var(--surface-2); }
 .cq-cards-list li span { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* A saved conquest's card: its plane's art across the head, with the planeswalker over it */
+/* A saved conquest's card shows its plane's art across the top, with the planeswalker over it */
 .cq-save { grid-template-rows: auto auto 1fr auto; }
 .cq-save.current { border-color: color-mix(in srgb, var(--accent-2) 60%, #000); }
 .cq-save-art { position: relative; height: 92px; border-radius: 11px 11px 0 0; background: #111 center 30% / cover; }
@@ -375,7 +375,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-pbar i { display: block; height: 100%; min-width: 4px; border-radius: 3px; background: var(--accent-2); }
 .cq-save .ev-menu button.plain { color: var(--text); }
 
-/* Starting a conquest: planes as tiles, commanders and planeswalkers as rows, and the ticket's picture */
+/* Starting a conquest. Planes are tiles, and commanders and planeswalkers are rows. The ticket shows a picture. */
 .cq-plane-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: max-content; gap: 8px; max-height: 372px; overflow-y: auto; padding: 2px; }
 .cq-plane { display: grid; gap: 2px; padding: 0 0 9px; overflow: hidden; border-radius: 9px; background: var(--bg); text-align: left; }
 .cq-plane .a { height: 70px; margin-bottom: 6px; background: #111 center 35% / cover; }
@@ -404,7 +404,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-purse > button:not(.icon-button) { font-size: 12.5px; padding: 5px 12px; }
 .cq-sep { opacity: .5; margin: 0 8px; }
 
-/* The Aether: the filters down the left, and what a pull would draw from in the middle */
+/* The Aether page has the filters down the left. The middle shows what a pull would draw from. */
 .cq-aether { position: relative; display: grid; grid-template-columns: 372px minmax(0, 1fr); min-height: 0; }
 .cq-ae-filters { border-right: 1px solid var(--line); background: var(--surface); padding: 20px 20px 80px; display: grid; gap: 20px; align-content: start; overflow-y: auto; }
 .cq-ae-filters h4 { margin: 0 0 7px; display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -431,7 +431,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-ae-recent button { padding: 0; border: 0; background: none; border-radius: 4px; }
 .cq-ae-recent img { display: block; width: 52px; aspect-ratio: 63 / 88; border-radius: 4px; background: var(--surface-2); }
 
-/* Planeswalk: every plane as a tile, and the one being looked at beside them */
+/* The Planeswalk page shows every plane as a tile. The selected plane is shown in detail next to them. */
 .cq-planes { display: grid; grid-template-columns: minmax(0, 1fr) 372px; min-height: 0; }
 .cq-planes-list { padding: 18px 24px 80px; overflow-y: auto; display: grid; gap: 12px; align-content: start; }
 .cq-planes-list h4 { margin: 6px 0 0; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -469,7 +469,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-tables th:first-child, .cq-tables td:first-child { text-align: left; }
 @media (max-width: 900px) { .cq-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-/* Conquest's preferences, as a dialog */
+/* The conquest preferences dialog */
 .dialog.cq-prefs { padding: 0; width: min(92vw, 760px); gap: 0; }
 .cq-prefs header, .cq-prefs footer { display: flex; align-items: center; gap: 10px; padding: 14px 20px; }
 .cq-prefs header { justify-content: space-between; border-bottom: 1px solid var(--line); }
@@ -492,6 +492,6 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-pref-table input { width: 72px; padding: 5px 8px; text-align: right; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
 .cq-pref-table td.bad input { border-color: var(--select); }
 
-/* A wedge on the dial's lower half is read from outside the dial, so its icon and label are turned the right way up */
+/* A wedge on the lower half of the dial would show its icon and label upside down. So they are rotated to be the right way up. */
 .cq-dl-wedge.low > * { transform: rotate(180deg); }
 .cq-dl-wedge.low .cq-dl-ic { order: 2; }
