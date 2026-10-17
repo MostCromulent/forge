@@ -1,4 +1,4 @@
-// The end of a game: each loser's portrait breaks, then the result shows with the buttons that lead on
+// The end of a game. Each loser's portrait breaks, then the result is shown with the buttons for what comes next
 
 import { game, isLocal, players, type Model } from '../model';
 import { cssUrl, playerAvatarUrl } from '../looks';
@@ -11,10 +11,10 @@ import type { GameView, PlayerView } from '../protocol';
 
 /** Players whose portrait has broken this game, so each breaks once. Null until the table is first drawn. */
 let broken: Set<number> | null = null;
-/** False while a portrait breaking at the end of the game has not reached the moment its title follows. */
+/** False while a portrait that breaks at the end of the game has not yet reached the point where the title is shown. */
 let titleReady = true;
 let finalRunning = false;
-/** The longest the result waits on a breaking portrait: a slow machine draws its frames too far apart to keep the break's pace. */
+/** The longest the result waits for a breaking portrait. A slow machine draws its frames too far apart to keep the break's pace. */
 const TITLE_LIMIT_MS = 6000;
 
 export function resetGameOver(): void {
@@ -27,7 +27,7 @@ export function resetGameOver(): void {
   over.replaceChildren();
 }
 
-/** Breaks the portrait of each player who has just lost, taking the losses a table already had when first seen as broken. */
+/** Breaks the portrait of each player who has just lost. Losses already present when the table is first drawn count as broken. */
 export function noticeLosses(model: Model, actions: Actions): void {
   const lost = players(model).filter(p => p.HasLost);
   if (!broken) {
@@ -37,7 +37,7 @@ export function noticeLosses(model: Model, actions: Actions): void {
   const fresh = lost.filter(p => !broken!.has(p.$key));
   if (!fresh.length) return;
   fresh.forEach(p => broken!.add(p.$key));
-  // The loss and the end of the game can arrive a message apart, so the ending is decided a moment later
+  // The loss and the end of the game can arrive one message apart, so the ending is decided a moment later
   titleReady = false;
   window.setTimeout(() => breakPortraits(model, fresh, actions), 120);
 }
@@ -83,12 +83,12 @@ function breakPortraits(model: Model, losers: PlayerView[], actions: Actions): v
   if (!final) release();
 }
 
-/** The middle of the window, not of the board, so a breaking portrait lands where the result then shows the winner's face. */
+/** The middle of the window, not of the board. A breaking portrait ends there, where the result then shows the winner's face. */
 function pageCentre(): { x: number; y: number } {
   return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 }
 
-/** Each player's games won in the match: their portrait, their name and the count, the match's winner in gold. */
+/** Draws each player's games won in the match: their portrait, name and count. The match's winner is shown in gold. */
 function drawTally(root: HTMLElement, everyone: PlayerView[], wins: (p: PlayerView) => number | undefined,
   champion: PlayerView | undefined): void {
   const counted = everyone.filter(p => wins(p) !== undefined);
@@ -108,11 +108,11 @@ function drawTally(root: HTMLElement, everyone: PlayerView[], wins: (p: PlayerVi
 /** How many motes of light rise past a winner's portrait. */
 const WIN_MOTES = 16;
 
-/** Shows the result once the losing portrait has broken, drawn once per ending so what fades in does so once. */
+/** Shows the result once the losing portrait has broken. It is drawn once per ending, so its fade-in plays only once. */
 export function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const root = byId('game-over');
   const show = model.gameOver && titleReady;
-  // Looking over the final board lifts the ending off it, and the result comes back from a button
+  // While the player looks at the final board, the ending effect is removed. A button shows the result again
   byId('match').classList.toggle('ending', (show || finalRunning) && !root.classList.contains('viewing'));
   if (!show) {
     if (!root.hidden) {
@@ -122,9 +122,9 @@ export function renderGameOver(model: Model, g: GameView, actions: Actions): voi
     }
     return;
   }
-  // A gauntlet's result and the match's score follow the game's end, so a panel drawn before they arrive is drawn again
+  // A gauntlet's result and the match's score arrive after the game's end. So a panel drawn before they arrive is drawn again
   const limited = model.limitedResult;
-  // A campaign's match ends as its mode says, which the panel waits to hear
+  // A campaign's mode decides how its match ends. The panel waits until the mode has answered
   const ending = campaigns()?.ending(model, actions) ?? null;
   if (ending && ending.key === null) return;
   const drawnFor = `${!!limited}/${ending?.key ?? ''}/${model.matchScore.map(s => `${s.player.ref}:${s.won}`).join(',')}`;
@@ -146,10 +146,10 @@ export function renderGameOver(model: Model, g: GameView, actions: Actions): voi
     ? ({ draw: 'lblWebBoardDraw', watched: 'lblWebBoardGameOver', win: 'lblWebBoardGameWon', lose: 'lblWebBoardGameLost' } as const)[outcome]
     : ({ draw: 'lblWebBoardDraw', watched: 'lblWebBoardGameOver', win: 'lblWebBoardVictory', lose: 'lblWebBoardDefeat' } as const)[outcome]);
   const wins = (p: PlayerView) => model.matchScore.find(s => s.player.ref === p.$key)?.won;
-  // Two players' match score reads as the winner's wins to the other's, as it is said aloud
+  // With two players the match score is the winner's wins then the other player's, as a score is usually said
   const score = winner && everyone.length === 2 && wins(winner) !== undefined
     ? [wins(winner) ?? 0, wins(everyone.find(p => p !== winner) as PlayerView) ?? 0] : null;
-  // The count of games played is taken as the game starts, so it counts the ones before this
+  // The count of games played is taken when the game starts, so it does not include this game
   const gameNumber = (g.NumPlayedGamesInMatch ?? 0) + 1;
   const sub = !winner ? t('lblWebBoardNobodyWins')
     : midMatch ? (won ? t('lblWebBoardYouWinGame', gameNumber) : t('lblWebBoardPlayerWinsGame', winner.Name ?? '', gameNumber))
@@ -175,7 +175,7 @@ export function renderGameOver(model: Model, g: GameView, actions: Actions): voi
   const panel = q(root, '.panel');
   panel.classList.add(outcome);
   const face = q(root, '.face');
-  // Your own win is lit from behind the portrait: rays that stay, and motes that rise past it once
+  // Your own win shows light behind the portrait. The rays stay, and the motes rise past it once
   if (outcome === 'win') {
     face.before(make('span', 'win-rays'), ...Array.from({ length: WIN_MOTES }, (_, i) => {
       const mote = make('span', 'win-mote');
@@ -199,7 +199,7 @@ export function renderGameOver(model: Model, g: GameView, actions: Actions): voi
     b.onclick = onClick;
     buttons.append(b);
   };
-  // The battlefield can be looked at whatever the campaign offers
+  // The player can view the battlefield whatever buttons the campaign offers
   if (ending) {
     ending.buttons({
       add,

@@ -1,4 +1,4 @@
-// Who is on this server and what they are saying: a panel at the bottom edge before a match, a widget under the log during one
+// The list of people on this server and their chat. It is a panel at the bottom edge before a match and a widget under the log during one
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { avatarUrl } from './looks';
@@ -11,7 +11,7 @@ import type { Person } from './protocol';
 import { t, type TextKey } from './text';
 import { Dropdown } from './dialog';
 
-/** What each person is doing, in the words the roster shows. A seat at a table is worth naming; waiting is not. */
+/** The roster text for what each person is doing. */
 const DOING: Record<string, TextKey> = {
   waiting: 'lblWebDockWaiting', joining: 'lblWebDockJoining', table: 'lblWebDockAtTheTable', playing: 'lblWebDockPlaying',
   watching: 'lblWebDockWatching',
@@ -25,7 +25,7 @@ function Crown() {
   );
 }
 
-/** rename, when given, puts an edit button on your own row: the name is changed from the menu only. */
+/** When rename is given, your own row gets an edit button. Only the menu page passes it, so the name can only change there. */
 export function Dock({ model, actions, rename }: { model: Model; actions: Actions; rename?: () => void }) {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -33,16 +33,16 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   const [text, setText] = useState('');
   const [picking, setPicking] = useState(false);
   const log = useRef<HTMLDivElement>(null);
-  // A new line is only worth reading if you can see it
+  // Scroll the newest line into view when a line arrives or the panel opens
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [model.chat.length, open]);
-  // The last line you could have read, held by the line itself so a chat replayed after a reconnect is counted from its start
+  // The last line the player could have read. It is stored as the entry, not an index, so a chat replayed after a reconnect is counted from its start
   const lastSeen = useRef<ChatEntry | undefined>(model.chat[model.chat.length - 1]);
   if (open || model.screen === 'playing') {
     lastSeen.current = model.chat[model.chat.length - 1];
   }
-  // Who was here when the dock was last touched, so anyone who has arrived since is marked until it is touched again
+  // The names present when the dock was last pressed. Anyone who arrived since is marked until the next press
   const known = useRef<Set<string> | null>(null);
   const [, redraw] = useState(0);
 
@@ -62,9 +62,9 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
     }
   };
   const inMatch = model.screen === 'playing';
-  // In a match the roster is a summary until asked, because the board already names everyone with a seat
+  // Only the host can reassign a disconnected seat, so the host sees the full roster without opening it
   const mayReseat = model.host && people.some(p => p.disconnected);
-  // A disconnected seat is the host's to settle, so the host is shown it without asking
+  // In a match the roster shows only a summary until opened, because the board already names every seated player
   const showList = !inMatch || listed || mayReseat;
   const waiting = people.filter(p => !p.host && !p.disconnected && (p.doing === 'waiting' || p.doing === 'joining'));
   const host = people.find(p => p.host);
@@ -79,13 +79,13 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
           {people.slice(0, 3).map(p => <img key={p.name} alt="" src={avatarUrl(p.avatar)} />)}
         </span>
         <span class="dock-count">{t('lblWebDockHere', people.length)}</span>
-        {/* Keyed on the count, so each new line redraws it and it pulses again */}
+        {/* Keyed on the count, so each new line creates a new badge and its pulse animation plays again */}
         {unread > 0 && <span key={unread} class="dock-new">{t('lblWebDockNew', unread > 9 ? '9+' : unread)}</span>}
         {arrivedBadge}
       </button>
     );
   }
-  // Before a match your own face in the roster changes it; in one, the seat's face is already fixed
+  // Before a match, pressing your own avatar in the roster opens this picker. During a match the seat's avatar is fixed
   const picker = picking && (
     <LookPicker title={t('lblWebMenuChooseYourAvatar')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
       current={people.find(p => p.name === model.playerName)?.avatar ?? 0} close={chosen => {
@@ -100,7 +100,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
     <section class={inMatch ? 'dock open in-match' : closing ? 'dock open closing' : 'dock open'} aria-label={t('lblWebDockWhoIsHere')}
       onPointerDown={sawArrivals}
       onAnimationEnd={e => {
-        // The panel folds once it has slid down, so the bar takes its place without a jump
+        // The panel closes only after its slide-down animation ends, so the bar replaces it without a jump
         if (e.animationName === 'dock-sink') {
           setClosing(false);
           setOpen(false);
@@ -172,7 +172,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   </>);
 }
 
-/** What the host can do with a seat whose player has disconnected: give it to someone waiting, or take it away. */
+/** The host's options for a seat whose player has disconnected. The host can give it to someone waiting or drop the player. */
 function SeatMenu({ name, waiting, inMatch, mayDrop, actions }: {
   name: string; waiting: readonly Person[]; inMatch: boolean; mayDrop: boolean; actions: Actions;
 }) {
@@ -186,7 +186,7 @@ function SeatMenu({ name, waiting, inMatch, mayDrop, actions }: {
           {waiting.map(w => (
             <button key={w.name} role="menuitem" onClick={() => actions.giveSeat(name, w.name)}>{t('lblWebDockGiveSeatTo', w.name)}</button>
           ))}
-          {/* A drafter's seat is held by the draft, so it cannot be opened */}
+          {/* A drafter's seat belongs to the draft, so it cannot be opened */}
           {mayDrop && <button role="menuitem" onClick={() => actions.dropPlayer(name)}>{t(inMatch ? 'lblWebDockSeatToAi' : 'lblWebDockOpenSeat')}</button>}
         </div>
       )}
@@ -202,19 +202,19 @@ function Chevron({ up }: { up: boolean }) {
   );
 }
 
-/** Lines someone else said since the last one you could have read, leaving out the server's own and any said before you arrived. */
+/** Counts lines from other people after the last line the player could have read. Server notes and lines from before the player arrived are left out. */
 function unreadSince(chat: readonly ChatEntry[], lastSeen: ChatEntry | undefined, me: string): number {
   const from = lastSeen ? chat.lastIndexOf(lastSeen) + 1 : 0;
   return chat.slice(from).filter(l => l.from && !l.earlier && l.from !== me).length;
 }
 
-/** Each name's colour: in a match the log's, taken in seat order, then everyone watching after them. */
+/** The colour of each name. Players get the log's colours in seat order, then everyone watching gets the next ones. */
 function chatTints(model: Model): Map<string, string> {
   const names = new Set([...players(model).map(p => p.Name ?? ''), ...model.presence.map(p => p.name)]);
   return new Map(logTints([...names].map(name => ({ name, local: name === model.playerName }))).map(n => [n.name, n.colour]));
 }
 
-/** The face a line was said under. Someone who has since left keeps the first avatar rather than none. */
+/** The avatar shown beside a chat line. A person who has since left gets the first avatar instead of none. */
 function faceOf(people: readonly Person[], name: string): number {
   return people.find(p => p.name === name)?.avatar ?? 0;
 }

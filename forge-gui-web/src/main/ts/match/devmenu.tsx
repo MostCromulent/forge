@@ -1,4 +1,4 @@
-// Dev mode: each cheat asks what it needs (which card, how much life) as the game's own prompts
+// Dev mode. Each cheat asks for what it needs (which card, how much life) through the game's own prompts
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { OptionsDialog } from '../options';
@@ -7,7 +7,7 @@ import type { Model } from '../model';
 import type { DevAction } from '../protocol';
 import { t, type TextKey } from '../text';
 
-// Each group is listed alphabetically when drawn, so an entry can go anywhere in its group here
+// Each group is sorted alphabetically when drawn, so the order of entries within a group here does not matter
 const GROUPS: [TextKey, [DevAction, TextKey][]][] = [
   ['lblCards', [
     ['addCardToHand', 'lblWebDevAddCardToHand'], ['addCardToBattlefield', 'lblWebDevAddCardToBattlefield'],
@@ -31,7 +31,7 @@ const GROUPS: [TextKey, [DevAction, TextKey][]][] = [
   ['lblPlanechase', [['riggedPlanarRoll', 'lblWebDevRiggedPlanarRoll'], ['planeswalkTo', 'lblWebDevPlaneswalkTo']]],
 ];
 
-/** The cheats, in place of the game menu's own items. */
+/** The cheats, shown in place of the game menu's own items. */
 export function DevItems({ model, actions, back, close, setUp }: {
   model: Model; actions: Actions; back: () => void; close: () => void; setUp: () => void;
 }) {
@@ -69,7 +69,7 @@ export function DevItems({ model, actions, back, close, setUp }: {
   );
 }
 
-/** A game state to set up, pasted or read from a file, as desktop's dev mode reads one from its games folder. */
+/** Sets up a game state that is pasted in or read from a file. Desktop's dev mode reads one from its games folder. */
 export function DevSetupDialog({ actions, close }: { actions: Actions; close: () => void }) {
   const [text, setText] = useState('');
   const file = useRef<HTMLInputElement>(null);

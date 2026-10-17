@@ -23,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-/** One server serves the whole class, because stopping and restarting it between tests races with its own shutdown. */
+/** One server runs for the whole class, because a restart between tests races with the server's own shutdown. */
 abstract class SessionsTest {
     WebSessions sessions;
     final List<TestBrowser> browsers = new CopyOnWriteArrayList<>();
@@ -37,12 +37,12 @@ abstract class SessionsTest {
         sessions = new WebSessions(gui(), 120_000, () -> { });
     }
 
-    /** Whether the class plays whole sessions over netplay, which is slow enough to run only when asked for. */
+    /** Whether the class plays whole sessions over netplay. These are slow, so they run only when asked for. */
     boolean slow() {
         return false;
     }
 
-    /** The GUI the sessions run on: their own, unless a test needs the browser asked what core asks. */
+    /** The GUI the sessions run on. It is their own, unless a test needs core's questions sent to the browser. */
     WebGuiBase gui() {
         return new WebGuiBase();
     }
@@ -56,7 +56,7 @@ abstract class SessionsTest {
         afterDisconnecting();
     }
 
-    /** What a test leaves behind besides its browsers, cleared once they are gone. */
+    /** Clears what a test leaves behind besides its browsers. It runs after the browsers disconnect. */
     void afterDisconnecting() {
     }
 
@@ -68,7 +68,7 @@ abstract class SessionsTest {
         }
     }
 
-    /** A browser on the host's link as "host", and on a guest's link otherwise. */
+    /** Connects a browser. The id "host" uses the host's link, and any other id uses a guest's link. */
     TestBrowser connect(final String id) {
         final TestBrowser browser = new TestBrowser();
         browsers.add(browser);
@@ -76,19 +76,19 @@ abstract class SessionsTest {
         return browser;
     }
 
-    /** Sends a browser's message with what it was told before forgotten, so a wait that follows is answered by what this brings. */
+    /** Clears the browser's received messages, then sends its message. A wait that follows sees only the replies to this message. */
     void send(final TestBrowser browser, final JsonObject message) {
         browser.forget();
         sessions.onMessage(browser, message);
     }
 
-    /** The host, named Host, at a fresh table of its own that open ("lobby" or "invite") starts. */
+    /** Connects the host, named Host, and seats it at a new table opened with open ("lobby" or "invite"). */
     TestBrowser hostAt(final String open) throws InterruptedException {
         final TestBrowser host = connect("host");
         sessions.onMessage(host, JsonCodec.message("claimHost"));
         sessions.onMessage(host, message("setName", "name", "Host"));
         send(host, JsonCodec.message(open));
-        // The table an earlier test left can still speak until the new one is open, and only then is a command taken
+        // A table left by an earlier test can still send messages until the new one opens. Commands are accepted only after that
         final JsonObject opening = host.awaitMatching("hello", h -> "opening".equals(h.get("screen").getAsString()), "the host's table never started opening");
         final JsonObject opened = host.awaitMatching("hello", h -> host.got.indexOf(h) > host.got.indexOf(opening)
                 && "setup".equals(h.get("screen").getAsString()), "the host's table never opened");
@@ -101,7 +101,7 @@ abstract class SessionsTest {
         GuiBase.getInterface().invokeInEdtAndWait(r);
     }
 
-    /** The game's thread deals the zones after the match has started, so what it sets up is waited for. */
+    /** Waits until the condition holds. The game thread deals the zones after the match starts, so its setup must be waited for. */
     static void awaitTrue(final BooleanSupplier wanted, final String why) {
         awaitTrue(wanted, () -> why);
     }
@@ -122,9 +122,9 @@ abstract class SessionsTest {
         return o.has(field) && !o.get(field).isJsonNull() ? o.get(field).getAsString() : null;
     }
 
-    /** Wins the game for the web seat with dev mode's cheat, as a player checking a reward by hand would. */
+    /** Wins the game for the web seat with the dev mode cheat, as a player does to check a reward by hand. */
     void computerLoses(final TestBrowser host) {
-        // The cheat sets life to 0 and passes priority, so a life gain resolving on that pass would save the computer
+        // The cheat sets life to 0 and passes priority. A life gain that resolves on that pass would save the computer, so wait for an empty stack
         final Object[] passed = { null };
         awaitTrue(() -> {
             awaitPriority(host);
@@ -144,13 +144,13 @@ abstract class SessionsTest {
         sessions.onMessage(host, message("dev", "action", "winGame"));
     }
 
-    /** By message and not by id: a restarted match numbers its questions from the start again. */
+    /** Tracked by message, not by id, because a restarted match numbers its questions from the start again. */
     final Set<JsonObject> answered = Collections.newSetFromMap(new IdentityHashMap<>());
 
-    /** Gives every question on the way its default answer, since only at first priority is the game past dealing its zones and safe to end. */
+    /** Gives each question its default answer until the web seat has priority. Only then has the game dealt its zones and is safe to end. */
     void awaitPriority(final TestBrowser host) {
         final String[] seen = { "no game" };
-        // A press that lands before the input is ready is lost, so it is made again
+        // A press sent before the input is ready is lost, so it is sent again
         final long[] lastPress = { 0 };
         awaitTrue(() -> {
             final ServerGameLobby lobby = sessions.hostLobby();
@@ -174,13 +174,13 @@ abstract class SessionsTest {
                     }
                     if (input != null && System.currentTimeMillis() - lastPress[0] > 500) {
                         lastPress[0] = System.currentTimeMillis();
-                        // At a table of more than two the winner of the toss names who goes first, which OK does not answer
+                        // At a table of more than two the toss winner chooses who goes first. OK does not answer that prompt
                         final JsonObject prompt = host.last("prompt");
                         final JsonArray players = prompt == null ? null : prompt.getAsJsonArray("selectablePlayers");
                         if (players != null && !players.isEmpty()) {
                             sessions.onMessage(host, message("selectPlayer", "key", players.get(0).getAsJsonObject().get("ref").getAsInt()));
                         } else {
-                            // Keeping the opening hand is an input of its own, answered with OK
+                            // Keeping the opening hand is a separate input, answered with OK
                             sessions.onMessage(host, JsonCodec.message("ok"));
                         }
                     }
@@ -196,7 +196,7 @@ abstract class SessionsTest {
         return actions;
     }
 
-    /** The names at a table's seats, null for a seat nobody has named. */
+    /** The names at a table's seats, with null for a seat that has no name. */
     static List<String> seatNames(final JsonObject table) {
         final List<String> out = new ArrayList<>();
         table.getAsJsonArray("seats").forEach(s -> out.add(s.getAsJsonObject().has("name")
@@ -204,7 +204,7 @@ abstract class SessionsTest {
         return out;
     }
 
-    /** A message of a type with its fields given as name, value pairs; a null value is left out. */
+    /** Builds a message of the given type from name, value pairs. A field with a null value is left out. */
     static JsonObject message(final String type, final Object... fields) {
         final JsonObject m = JsonCodec.message(type);
         for (int i = 0; i < fields.length; i += 2) {

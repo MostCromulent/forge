@@ -1,4 +1,4 @@
-// A phone that locks while the others take their turns drops its connection, so the screen is kept on during a match
+// A phone that locks during other players' turns drops its connection, so the screen is kept on during a match
 
 type WakeLock = { release(): Promise<void> };
 let lock: WakeLock | null = null;
@@ -9,7 +9,7 @@ export async function keepAwake(on: boolean): Promise<void> {
   if (!wake || locking || on === !!lock) return;
   locking = true;
   if (on && document.visibilityState === 'visible') {
-    // Refused, as a browser saving power may, it is not asked for again until the page is next shown
+    // A browser saving power can refuse. The lock is then not requested again until the page is next shown
     lock = await wake.request('screen').catch(() => ({ release: async () => {} }));
   } else if (!on && lock) {
     await lock.release().catch(() => {});
@@ -18,7 +18,7 @@ export async function keepAwake(on: boolean): Promise<void> {
   locking = false;
 }
 
-/** The browser has given the lock up, as it does when the page is hidden, so it is asked for again when next wanted. */
+/** The browser released the lock, as it does when the page is hidden. The lock is requested again when next needed. */
 export function forgetWakeLock(): void {
   lock = null;
 }

@@ -25,7 +25,7 @@ import javax.swing.JTextArea;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 
-/** The rows, boxes, buttons and wrapped text the console's windows are laid out from. */
+/** The rows, boxes, buttons and wrapped text that the console's windows are built from. */
 final class ConsoleWidgets {
     private static final Localizer TEXT = Localizer.getInstance();
     private static final Color LINK = new Color(0x1f, 0x5f, 0xc4);
@@ -45,7 +45,7 @@ final class ConsoleWidgets {
         return b;
     }
 
-    /** A button drawn as coloured text, for what leads somewhere rather than does something. */
+    /** A button drawn as coloured text. It is for actions that open something, not actions that change something. */
     static JButton link(final String label, final Runnable action) {
         return asLink(button(label, action));
     }
@@ -59,7 +59,7 @@ final class ConsoleWidgets {
         return b;
     }
 
-    /** A button that copies what it is given, and says so for a moment. */
+    /** A button that copies the given text. Its label then shows that it was copied for a moment. */
     static JButton copyButton(final String label, final Supplier<String> what) {
         final JButton b = new JButton(label);
         final Timer reset = new Timer(2000, e -> b.setText(label));
@@ -84,7 +84,7 @@ final class ConsoleWidgets {
         return label;
     }
 
-    /** A white box around an address or a state and the button that acts on it, so the two read as one thing. */
+    /** A white box around an address or a state and the button that acts on it, so the two look like one control. */
     static JPanel field(final Component... parts) {
         final JPanel field = row(parts);
         field.setOpaque(true);
@@ -115,10 +115,10 @@ final class ConsoleWidgets {
         return area;
     }
 
-    /** A wrapped text's height follows from its width, so both are fixed again whenever its words change. */
+    /** A wrapped text's height depends on its width, so both are set again whenever the text changes. */
     static void reword(final JTextArea area, final String words, final int width) {
         area.setText(words);
-        // Room to the right: on a scaled display a line that just fits when measured is drawn a little wider, and would lose its last letters
+        // Leave room on the right. On a scaled display a line that just fits is drawn a little wider, and its last letters would be cut off.
         area.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, width / 20));
         area.setPreferredSize(null);
         area.setSize(width, Short.MAX_VALUE);
@@ -154,7 +154,7 @@ final class ConsoleWidgets {
         for (final JComponent part : parts) {
             part.setAlignmentX(0f);
             main.add(part);
-            // The space under a part comes and goes with it, so a hidden one leaves no hole
+            // The gap under a part is shown and hidden with the part, so a hidden part leaves no empty space
             final Component gap = Box.createVerticalStrut(9);
             gap.setVisible(part.isVisible());
             part.addComponentListener(new ComponentAdapter() {
@@ -183,7 +183,7 @@ final class ConsoleWidgets {
         return box(WARN, WARN_FILL, parts);
     }
 
-    /** A blue box for something the host is asked or has to do, which is not a fault. */
+    /** A blue box for a question or a task for the host that is not an error. */
     static JPanel note(final JComponent... parts) {
         return box(NOTE, NOTE_FILL, parts);
     }

@@ -1,20 +1,20 @@
-// A player's portrait breaking apart when they lose. At the end of the game it lifts to the middle of the board, strains,
-// cracks and bursts, and a player knocked out mid-game bursts at once where they sit. The pieces are lit 3D slabs drawn
-// with WebGL, and three.js is fetched the first time a portrait breaks rather than with the page.
+// Breaks a player's portrait apart when they lose. At the end of the game it moves to the middle of the board, shakes,
+// cracks and bursts. For a player who loses mid-game it bursts at once on their seat. The pieces are lit 3D slabs drawn
+// with WebGL. three.js is loaded the first time a portrait breaks, not with the page.
 
 import { make, reducedMotion } from '../dom';
 
 type Three = typeof import('three');
 
 interface ShatterOptions {
-  /** The seat avatar the portrait leaves from. */
+  /** The bounds of the seat avatar the portrait starts from. */
   from: DOMRect;
   image: string;
-  /** The end of the game: the portrait breaks in the middle of the board, and the title follows. */
+  /** True at the end of the game. The portrait then breaks in the middle of the board and the title shows after. */
   final: boolean;
   /** Where the portrait breaks when final, in viewport pixels. */
   centre: { x: number; y: number };
-  /** Called at the moment the title should appear; only when final. */
+  /** Called when the title should appear. Only called when final. */
   onTitle?: () => void;
 }
 
@@ -22,11 +22,11 @@ interface Timing {
   fly: number; crack: number; brk: number; burst: number; title: number; end: number;
 }
 
-// Tuned on a 1440 by 900 board. A seat's portrait has no build-up: it comes apart and bursts, without the slow motion
+// Tuned on a 1440 by 900 board. A seat's portrait has no build-up. It breaks and bursts at once, with no slow motion.
 const FINAL: Timing = { fly: 0.75, crack: 1.0, brk: 1.22, burst: 1.3, title: 2.23, end: 4.78 };
 const SEAT: Timing = { fly: 0, crack: 0, brk: 0, burst: 0.07, title: Infinity, end: 2.45 };
 const GRAVITY = 1500;
-// How fast the end of the game plays once it has burst. Slowing the clock leaves every piece on the same path
+// Playback speed of the final burst. Slowing the clock does not change the path of any piece.
 const BURST_PACE = 0.75;
 
 let three: Promise<{ THREE: Three; Room: typeof import('three/examples/jsm/environments/RoomEnvironment.js').RoomEnvironment }> | null = null;
@@ -37,7 +37,7 @@ function loadThree() {
   return three;
 }
 
-/** Whether a portrait may break here at all; without it, the seat just empties and the title shows at once. */
+/** Whether this browser can show the effect. If not, the seat just empties and the title shows at once. */
 export function canShatter(): boolean {
   if (reducedMotion()) return false;
   try {
@@ -61,7 +61,7 @@ function mulberry(seed: number) {
 
 type Point = [number, number];
 
-/** Voronoi cells inside a disc of radius r, seeded densely around the point where it gives way. */
+/** Voronoi cells inside a disc of radius r. The seeds are densest around the impact point. */
 function fracture(rng: () => number, r: number, impact: Point): Point[][] {
   const seeds: Point[] = [];
   for (let i = 0; i < 38; i++) {
@@ -107,7 +107,7 @@ function fracture(rng: () => number, r: number, impact: Point): Point[][] {
   return cells;
 }
 
-/** The portrait in a steel frame with a brass inner rim, drawn once and cut up with the pieces. */
+/** Draws the portrait in a steel frame with a brass inner rim. It is drawn once and used as the texture of every piece. */
 function medalCanvas(img: HTMLImageElement): HTMLCanvasElement {
   const S = 1024, r = S / 2, c = document.createElement('canvas');
   c.width = c.height = S;
@@ -144,13 +144,13 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Breaks one portrait. Resolves once it is over; rejects if WebGL or the portrait cannot be had, before anything shows. */
+/** Breaks one portrait. Resolves when the effect ends. Rejects before anything shows if WebGL or the portrait image is not available. */
 export async function shatter(o: ShatterOptions): Promise<void> {
   const [{ THREE, Room }, img] = await Promise.all([loadThree(), loadImage(o.image)]);
   const T = o.final ? FINAL : SEAT;
   const W = window.innerWidth, H = window.innerHeight;
   const seatR = o.from.width / 2;
-  // The breaking portrait is sized to the board; a seat's stays the size it sits at
+  // The final portrait is sized to the board. A seat's portrait keeps its size on the seat.
   const R = o.final ? Math.min(140, Math.max(95, Math.min(W, H) * 0.145)) : seatR;
   const k = R / 130;
 
@@ -163,7 +163,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
     return el;
   };
   const gBloom = glow('bloom'), gRing = glow('ring'), gCore = glow('core'), gStreak = glow('streak');
-  // Throws here when the browser has no WebGL, before anything is on the page
+  // This throws when the browser has no WebGL, before anything is added to the page
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   document.body.append(layer);
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
@@ -196,7 +196,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
   const edgeMat = new THREE.MeshStandardMaterial({ color: 0x3b424d, roughness: 0.3, metalness: 0.75 });
   const debrisMat = new THREE.MeshStandardMaterial({ color: 0xaeb8c5, roughness: 0.25, metalness: 0.6 });
   const depth = 12 * k;
-  // No inset on the bevel: side by side the pieces meet without a seam until one slips
+  // The bevel has no inset, so neighbouring pieces show no seam until they move apart
   const extrude = { depth, bevelEnabled: true, bevelThickness: 1.4 * k, bevelSize: 1.1 * k, bevelOffset: 0, bevelSegments: 1, curveSegments: 1 };
 
   const rng = mulberry((Math.random() * 1e9) | 0);
@@ -204,7 +204,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
   const disc = new THREE.Shape();
   disc.absarc(0, 0, R, 0, Math.PI * 2, false);
   const whole = new THREE.Mesh(new THREE.ExtrudeGeometry(disc, { ...extrude, curveSegments: 64 }), [faceMat, edgeMat]);
-  // Just behind the pieces, so it shows wherever a piece has not cracked away yet
+  // The whole disc is placed just behind the pieces, so it shows wherever a piece is not visible yet
   whole.geometry.translate(0, 0, -depth / 2 - 0.4);
   medal.add(whole);
   const impact: Point = [(-14 + rng() * 10) * k, (12 + rng() * 10) * k];
@@ -221,7 +221,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
     const d = Math.hypot(dx, dy) || 1;
     const near = Math.max(0, 1 - d / (R * 1.1));
     const dir = new THREE.Vector3(dx / d, dy / d, 0);
-    // The end of the game throws its pieces harder than a seat breaking mid-game
+    // Pieces fly faster at the end of the game than for a seat breaking mid-game
     const spd = (390 + near * 620 + rng() * 280) * (o.final ? 1.9 : 0.55);
     const vz = (near > 0.5 || rng() > 0.8 ? 490 + rng() * 780 : rng() * 380 - 150) * (o.final ? 1.6 : 0.5);
     return {
@@ -256,7 +256,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
   };
 
   let t = 0;
-  // A beat at 0 is reached on the first frame, which starts from 0 rather than from before it
+  // A time of 0 counts as reached on the first frame, because `before` is 0 there and not less than 0
   const reaches = (before: number, at: number) => (before < at || before === 0) && t >= at;
   let titled = false;
   let last = performance.now();
@@ -265,7 +265,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       const real = Math.min(0.05, (now - last) / 1000);
       last = now;
       const before = t;
-      // Right after the burst the shot runs slowest for a moment, then ramps up to the pace it keeps
+      // Just after the burst, playback is slowest for a moment. It then speeds up to BURST_PACE and stays there.
       let scale = 1;
       if (o.final && t >= T.burst) {
         const s = t - T.burst;
@@ -297,7 +297,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       medal.rotation.x = o.final ? -0.35 * (1 - m) : 0;
       medal.rotation.y = o.final ? 0.28 * (1 - m) : 0;
       if (t > T.fly) {
-        // A strain that builds: stronger and faster the closer it gets to giving way, with a slight swell
+        // The shake grows stronger and faster as the break nears, and the portrait grows slightly
         const p = (t - T.fly) / (T.brk - T.fly);
         const amp = (0.6 + 8.5 * p * p) * k;
         const f = 20 + 16 * p;
@@ -308,7 +308,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       }
     }
     if (t >= T.crack && t < T.brk) {
-      // Hairline cracks creep out from the weak point while it strains, slowly and then faster
+      // While it shakes, hairline cracks spread out from the impact point, slowly at first and then faster
       const c = Math.pow((t - T.crack) / (T.brk - T.crack), 1.6);
       for (const q of pieces) {
         const p = ease((c * 1.2 - q.reach * 0.95 - q.jit * 0.12) / 0.14);
@@ -361,7 +361,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
         d.mesh.rotation.y += d.spin.y * dt;
         if (d.mesh.position.y < -H) d.mesh.visible = false;
       }
-      // The light of the burst, added to what is behind it rather than laid over it
+      // The glow elements of the burst. Their CSS adds their light to what is behind them instead of covering it.
       const x = to.x + impact[0] + W / 2, y = H / 2 - (to.y + impact[1]);
       const rise = Math.min(1, s / 0.025);
       const core = (0.25 + 1.15 * ease(s / 0.3)) * k;
@@ -373,7 +373,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       place(gRing, x, y, ring, ring, rise * 0.7 * Math.pow(1 - ringK, 2.2));
       place(gStreak, x, y, (0.3 + 0.8 * ease(s / 0.3)) * k, 1, rise * 0.4 * Math.exp(-s * 10));
     }
-    // The camera takes the hit by moving, never by rolling
+    // The camera shakes by moving sideways and up and down, never by rotating
     let amp = 0;
     if (t >= T.brk && t < T.burst) amp = 3 * k * Math.exp(-(t - T.brk) * 16);
     if (t >= T.burst) amp = (o.final ? 20 : 4) * Math.exp(-(t - T.burst) * 6.5);

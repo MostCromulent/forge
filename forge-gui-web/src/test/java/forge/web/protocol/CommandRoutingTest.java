@@ -13,12 +13,12 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-/** The session hands each command to whichever of these owns it, so each must be owned once. */
+/** The session passes each command to the one of these that owns it, so each command must have exactly one owner. */
 public class CommandRoutingTest {
     private static final List<Commands<?>> OWNERS = List.of(WebSession.COMMANDS, DeckSession.COMMANDS, OfflineLimited.COMMANDS,
             WebGuiGame.COMMANDS, CampaignSession.COMMANDS, ConquestGame.COMMANDS, QuestGame.COMMANDS);
 
-    // Fails if a command the browser can send is handled nowhere, so it would be dropped without a word, or by two owners, of which only the first is asked
+    // Fails if a browser command has no owner, so it is silently dropped, or has two owners, so only the first one handles it
     @Test
     public void everyCommandHasOneOwner() {
         final List<String> wrong = new ArrayList<>();

@@ -1,14 +1,14 @@
-// A permanent leaving for a graveyard or exile is unmade where it stood, drawn on a canvas over the card from its own picture
+// Animates a permanent that goes to a graveyard or exile. The effect is drawn from the card's image on a canvas over the card.
 
 import { reducedMotion } from '../dom';
 
 type Destination = 'Graveyard' | 'Exile';
 
-/** A tapped card is drawn turned and at this size (board.css). */
+/** A tapped card is drawn rotated and at this scale (board.css). */
 export const TAPPED_SCALE = 0.9;
-/** The card has fully gone this long after it starts to go: when the zone tile may show it. */
+/** How long after the effect starts the card is fully gone. The zone tile may show the card after this time. */
 const GONE_MS: Record<Destination, number> = { Graveyard: 870, Exile: 540 };
-/** The exile zone's colour (theme.css), for the light an exiled card gives off. */
+/** The exile zone's colour (theme.css), used for the glow of an exiled card. */
 const EXILE_RGB = '207,214,234';
 
 interface Spark { x: number; y: number; vx: number; vy: number; life: number; age: number; rgb: string; size: number }
@@ -30,7 +30,7 @@ function valueNoise(x: number, y: number): number {
   return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
 }
 
-/** Layered noise over the card, spread to the full 0 to 1 so a threshold swept across it starts and ends with the card. */
+/** Layered noise over the card, scaled to the full 0 to 1 range. So a threshold moved from 0 to 1 starts with the whole card and ends with none of it. */
 function noiseField(pw: number, ph: number, scale: number): Float32Array {
   const out = new Float32Array(pw * ph);
   const ox = Math.random() * 500, oy = Math.random() * 500;
@@ -48,7 +48,7 @@ function noiseField(pw: number, ph: number, scale: number): Float32Array {
   return out;
 }
 
-/** Unmakes a card where it stood and returns how long until it has gone, or 0 when it cannot be drawn and the caller must move it. */
+/** Starts the leave effect on a card and returns how long until it is gone. Returns 0 when it cannot be drawn, and the caller must move the card. */
 export function unmake(card: HTMLElement, rect: DOMRect, size: { w: number; h: number } | undefined, tapped: boolean,
   to: Destination): number {
   const img = card.querySelector('img');
@@ -58,7 +58,7 @@ export function unmake(card: HTMLElement, rect: DOMRect, size: { w: number; h: n
   }
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const w = size?.w || rect.width, h = size?.h || rect.height;
-  // A card in a seat that is out of sight has no size, and nothing of it can be drawn
+  // A card in a hidden seat has no size, so nothing can be drawn
   if (!w || !h) {
     return 0;
   }
@@ -86,7 +86,7 @@ export function unmake(card: HTMLElement, rect: DOMRect, size: { w: number; h: n
   const job: Job = {
     ctx: canvas.getContext('2d') as CanvasRenderingContext2D, dpr, w, h, pad, pw, ph, base, off,
     src: b.getImageData(0, 0, pw, ph).data, out: b.createImageData(pw, ph), sparks: [],
-    // On a tapped card the canvas is turned too, so up the screen is along the card
+    // For a tapped card the canvas is rotated too, so screen up is the canvas's -x direction
     up: tapped ? [-1, 0] : [0, -1],
   };
   const draw = to === 'Graveyard' ? soot(job) : wormhole(job);
@@ -118,7 +118,7 @@ interface Job {
   pw: number;
   ph: number;
   base: HTMLCanvasElement;
-  /** Where each frame's worked image is put, to be drawn from like the card's own picture. */
+  /** Holds each frame's processed image, so it can be drawn like the card's own image. */
   off: HTMLCanvasElement;
   src: Uint8ClampedArray;
   out: ImageData;
@@ -126,7 +126,7 @@ interface Job {
   up: [number, number];
 }
 
-/** Draws a card-sized image over where the card stood, offset, scaled about its centre. */
+/** Draws a card-sized image over the card's position, with an offset and a scale about its centre. */
 function drawCard(job: Job, image: CanvasImageSource, dx = 0, dy = 0, scale = 1): void {
   const { ctx, w, h, pad } = job;
   ctx.drawImage(image, pad + dx + (w - w * scale) / 2, pad + dy + (h - h * scale) / 2, w * scale, h * scale);
@@ -144,12 +144,12 @@ function drawSparks(job: Job, dt: number): void {
     s.x += s.vx * dt;
     s.y += s.vy * dt;
     ctx.fillStyle = `rgba(${s.rgb},${(1 - s.age / s.life).toFixed(3)})`;
-    // Snapped to device pixels, so a fleck stays a sharp point rather than a blur
+    // Snapped to device pixels, so a spark stays a sharp point and is not blurred
     ctx.fillRect(Math.round(s.x * dpr) / dpr, Math.round(s.y * dpr) / dpr, s.size, s.size);
   }
 }
 
-/** The graveyard: a jolt, then holes open in patches and spread into each other behind a band of char, shedding soot. */
+/** The graveyard effect. The card shakes. Then holes burn open in patches and join up, with a dark charred edge that gives off soot. */
 function soot(job: Job): (t: number) => boolean {
   const { pw, ph, src, out, dpr, up } = job;
   const noise = noiseField(pw, ph, 1 / (10 * dpr));
@@ -185,7 +185,7 @@ function soot(job: Job): (t: number) => boolean {
   };
 }
 
-/** Exile: a rim of light comes up round the card, a hole opens inside it and pulls both in in a spiral, then closes with a flash. */
+/** The exile effect. A rim of light fades in round the card. A hole opens in the middle and pulls card and rim in, in a spiral. It closes with a flash. */
 function wormhole(job: Job): (t: number) => boolean {
   const { ctx, pw, ph, src, out, dpr } = job;
   const px = out.data;
@@ -199,7 +199,7 @@ function wormhole(job: Job): (t: number) => boolean {
   rc.beginPath();
   rc.roundRect(RIM / 2, RIM / 2, pw - RIM, ph - RIM, Math.max(0, pw * 0.05 - RIM / 2));
   rc.stroke();
-  // The rim is bent through the hole as the card is, on a layer of its own so that it can glow
+  // The rim is warped into the hole the same way as the card. It is on its own layer so it can glow.
   const rimSrc = rc.getImageData(0, 0, pw, ph).data, rimOut = rc.getImageData(0, 0, pw, ph), rpx = rimOut.data;
   const [red, green, blue] = EXILE_RGB.split(',').map(Number);
   for (let j = 0; j < rpx.length; j += 4) {
@@ -229,7 +229,7 @@ function wormhole(job: Job): (t: number) => boolean {
     }
     to[4] = rimSrc[i0 + 3];
   };
-  // The fifth of each is how much rim lies at the point
+  // The fifth value in each is the rim's alpha at the sampled point
   const o = [0, 0, 0, 0, 0], i = [0, 0, 0, 0, 0];
   return t => {
     const shown = clamp(t / RIM_IN), rimAlpha = shown * shown * (3 - 2 * shown);
@@ -254,7 +254,7 @@ function wormhole(job: Job): (t: number) => boolean {
         const wave = Math.sin(3 * th + phase) * 0.6 + Math.sin(5 * th - phase * 1.3 + 1.7) * 0.4;
         const edge = hole * (1 + AMP * wave), d = r - edge;
         if (d > -FEATHER) {
-          // Dragged round as well as in, hardest near the hole
+          // Pixels are pulled round as well as inward, most strongly near the hole
           const ang = th - DRAG * pull * (edge + 1) / (r + edge * 0.5 + 1), rs = r + inflow;
           sample(cx + Math.cos(ang) * rs, cy + Math.sin(ang) * rs, o);
         }
@@ -269,7 +269,7 @@ function wormhole(job: Job): (t: number) => boolean {
           i[4] *= dim * (i[3] / 255);
           i[3] = Math.max(i[3] * dim, voidA * (1 - dim) + i[3] * dim);
         }
-        // Across the feather the two blend, so the card bends into the hole with no line between them
+        // The outside and inside samples blend across the feather, so no line shows at the hole's edge
         const f = clamp((d + FEATHER) / (2 * FEATHER)), s = f * f * (3 - 2 * f);
         for (let c = 0; c < 4; c++) px[j + c] = i[c] + (o[c] - i[c]) * s;
         rpx[j + 3] = i[4] + (o[4] - i[4]) * s;
@@ -282,7 +282,7 @@ function wormhole(job: Job): (t: number) => boolean {
   };
 }
 
-/** The light let out as the hole closes: a hot point and its halo in exile's colour, up fast and down slower, sized to the card. */
+/** The flash as the hole closes. A bright point and a halo in the exile colour, sized to the card. It brightens fast and fades more slowly. */
 function flash(job: Job, q: number): boolean {
   const { ctx, w, h, pad } = job;
   const x = pad + w / 2, y = pad + h / 2, size = 2.2 * w / 150;

@@ -1,5 +1,5 @@
 // The zones panel, for a graveyard, exile or other zone opened over the board.
-// It folds to a bar instead of closing, so the board can be read beside a prompt without losing your place
+// It folds to a bar instead of closing. So the player can look at the board during a prompt and come back to the same place.
 
 import { reconcile } from './reconcile';
 import { createCard, markPicked, updateCard, type CardClick } from './cards';
@@ -19,11 +19,11 @@ import type { CardView, PromptButton, ZoneType } from '../protocol';
 import { t, type TextKey } from '../text';
 import { manaValue } from './rules';
 
-// Piles the player opened by clicking, on top of the zones the game asks to show
+// One open zone. It is either a zone the game asks to show or a pile the player opened by clicking.
 interface Panel {
   player: number;
   zone: ZoneType;
-  /** The game is showing it, so the game, not a Close button, puts it away. */
+  /** True when the game is showing it. Then the game closes it, not a Close button. */
   forced: boolean;
 }
 
@@ -62,15 +62,15 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
   }
   const root = byId('zones');
   const open = panels.size > 0;
-  // Nothing open means nothing folded away either, so the bar cannot outlive what it stands for
+  // With no zone open, nothing is folded either. So the folded state is cleared when the last zone closes.
   if (!open && ui.zonesMinimised) {
     changeUi(u => { u.zonesMinimised = false; });
   }
   root.hidden = !open;
-  // Back closes what the player opened; what the game put up, the game puts away
+  // Back closes the zones the player opened. The game closes the zones it showed.
   sheet('zones', isPortrait() && open && ui.openZones.size > 0, () => changeUi(u => { u.openZones.clear(); }));
   root.classList.toggle('minimised', ui.zonesMinimised);
-  // A zone the game shows is a question about its cards, laid out on the board as the others are; one opened to look at keeps its window
+  // A zone the game shows is a question about its cards, laid out on the board like other questions. A zone opened only to look at stays a window.
   root.classList.toggle('asking', [...panels.values()].some(p => p.forced));
   if (!open) {
     root.replaceChildren();
@@ -80,7 +80,7 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
     drawBar(root, model, [...panels.values()]);
     return;
   }
-  // Put back only when missing: taking an open dialog out of the page resets its scroll and drops the search box's focus
+  // Add the shelf again only when it is missing. Removing an open dialog from the page resets its scroll and loses the search box's focus.
   const box = shelf(root);
   if (root.firstElementChild !== box || root.childElementCount !== 1) root.replaceChildren(box);
   reconcile(q(root, '.zone-shelf'), [...panels.entries()], ([k]) => k, createPanel,
@@ -91,7 +91,7 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
 
 let fitting = false;
 
-/** Grows the cards of the zones the game asks about into the room the board leaves them, as a question's cards are. */
+/** Sizes the cards of zones the game asks about to fill the space the board leaves, as for a question's cards. */
 function fitZones(): void {
   if (!fitting) {
     fitting = true;
@@ -101,12 +101,12 @@ function fitZones(): void {
   const asked = [...root.querySelectorAll<HTMLElement>('.zone-panel.asking')];
   for (const el of asked) {
     const row = q(el, '.cards');
-    // A long zone keeps its cards at the size a pile opened to look at has, and scrolls
+    // A long zone does not shrink its cards below the size used in a pile opened to look at. It scrolls instead.
     fitCards(row, el, root, row.querySelectorAll(':scope > :not(.back:not(.selectable))').length, { gap: 14, wrap: true, least: 1.45, share: asked.length });
   }
 }
 
-/** A pile opened to look at grows out of the pile; one the game shows, one on a phone, or one with no pile on the board rises in as any dialog does. */
+/** A pile opened to look at animates out of its pile on the board. Others use the normal dialog animation: a zone the game shows, any zone on a phone, or one with no pile on the board. */
 function growFromPile(el: HTMLElement): void {
   const [player, zoneName] = (el.dataset.key ?? '').split('/');
   const pile = isPortrait() || el.classList.contains('asking') ? null
@@ -120,7 +120,7 @@ function growFromPile(el: HTMLElement): void {
   el.dataset.opened = 'pile';
 }
 
-/** A window that grew out of a pile goes back into it before it is closed. */
+/** A window that opened out of a pile animates back into it before it closes. */
 function putAway(el: HTMLElement, close: () => void): void {
   if (el.dataset.opened !== 'pile' || reducedMotion()) {
     close();
@@ -130,7 +130,7 @@ function putAway(el: HTMLElement, close: () => void): void {
     .onfinish = close;
 }
 
-/** The one element the dialogs sit in, kept across renders so a reconcile of the panels is not undone. */
+/** The single container for the dialogs. It is kept across renders so the reconciled panels are not lost. */
 function shelf(root: HTMLElement): HTMLElement {
   const known = root.querySelector<HTMLElement>('.zone-shelf');
   if (known) {
@@ -172,35 +172,35 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   find.oninput = () => changeUi(u => { u.zoneSearch = find.value; });
   const sort = q<HTMLSelectElement>(el, '.zone-sort select');
   sort.value = ui.zoneSort;
-  // A search orders the zone by how well each name matches, so the sort waits until it is cleared
+  // A search orders the zone by how well each name matches, so the sort is disabled until the search is cleared
   sort.disabled = !!normalize(ui.zoneSearch);
   sort.onchange = () => changeUi(u => { u.zoneSort = sort.value as ZoneSort; });
   const fold = q(el, '.zone-fold');
   fold.onclick = () => changeUi(u => { u.zonesMinimised = true; });
-  // Done already puts a pile the player opened away
+  // A pile the player opened already has Done to close it
   fold.hidden = !p.forced;
   const asking = p.forced;
   el.classList.toggle('asking', asking);
-  // On the board the way to fold waits beside the answer, as a question's does, but a phone answers from the dock
+  // On the board the fold button goes beside the answer, as in a question. A phone answers from the dock, so it stays in the header.
   const beside = asking && !isPortrait();
   const home = beside ? q(el, 'footer') : q(el, 'header');
   if (fold.parentElement !== home) {
     if (beside) home.insertBefore(fold, q(el, '.zone-answer.ok'));
     else home.append(fold);
   }
-  // The game put this one up and the game takes it down, so it offers no way out of its own
+  // The game opens and closes a zone it shows, so that zone has no Done button
   const done = q<HTMLButtonElement>(el, '.zone-done');
   done.hidden = p.forced;
   done.onclick = () => {
-    // A second press while the window shrinks would open it again
+    // A second press during the close animation would open it again
     done.disabled = true;
     putAway(el, () => togglePile(p.player, p.zone));
   };
-  // A dialog the game put up carries the prompt's question and its OK, but not its other button, which is the way out of priority
+  // A zone the game shows has the prompt's question and its OK button. It leaves out the other button, which is the way out of priority.
   const prompt = p.forced ? model.prompt : null;
   const question = p.forced ? prompt?.message || t('lblWebZoneWaitingOnYou') : '';
   q(el, '.zone-hint').textContent = question;
-  // On the board the question is one line, the card asking then what it asks, as a dialog's is
+  // On the board the question is one line: the source card, then the question, as in a dialog
   const asked = splitQuestion(question);
   q(el, '.zone-ask .ask-source').textContent = asked.source;
   q(el, '.zone-ask .ask-sep').hidden = !asked.source;
@@ -219,7 +219,7 @@ function answer(el: HTMLElement, button: PromptButton | undefined, run: () => vo
   el.onclick = run;
 }
 
-/** The zone as the dialog lists it: best match first while searching, otherwise in the order asked for. */
+/** The zone's cards in dialog order. While searching, the best match is first. Otherwise they follow the chosen sort. */
 function shown(model: Model, cards: CardView[]): CardView[] {
   const name = (c: CardView) => stateOf(model, c).Name ?? '';
   if (normalize(ui.zoneSearch)) {
@@ -240,12 +240,12 @@ function shown(model: Model, cards: CardView[]): CardView[] {
   return kept;
 }
 
-/** Folded away: what is open, and the way back. */
+/** The folded bar. It shows what is open and a button to unfold it. */
 function drawBar(root: HTMLElement, model: Model, panels: Panel[]): void {
   const first = panels[0];
   const player = model.objects.get(first.player);
   const count = panels.length > 1 ? t('lblWebZoneNZones', panels.length) : t('lblWebNCards', zone(model, player, first.zone).length);
-  // Kept across renders, so a click is not lost to a render between the press and the release
+  // Kept across renders, so a render between press and release does not lose the click
   let bar = root.querySelector<HTMLElement>(':scope > .zone-bar');
   if (!bar) {
     bar = document.createElement('section');
@@ -259,7 +259,7 @@ function drawBar(root: HTMLElement, model: Model, panels: Panel[]): void {
   q(bar, 'b').textContent = panels.length > 1 ? t('lblWebZoneOpenZones') : `${player?.Name ?? ''} \u00b7 ${zoneTitle(first.zone)}`;
   q(bar, '.zone-count').textContent = count;
   q(bar, '.zone-unfold').onclick = () => changeUi(u => { u.zonesMinimised = false; });
-  // Folding away is not closing, so the way out is still only offered for the ones the player opened
+  // Folding is not closing. So the close button still closes only the zones the player opened.
   const shut = q(bar, '.zone-shut');
   shut.hidden = panels.every(p => p.forced);
   shut.onclick = () => changeUi(u => {

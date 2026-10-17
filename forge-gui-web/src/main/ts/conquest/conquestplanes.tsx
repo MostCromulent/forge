@@ -1,4 +1,4 @@
-// Planeswalk: travelling to an unlocked plane is free, and a locked one is unlocked for emblems and travelled to at once
+// Planeswalk. Travel to an unlocked plane is free. A locked plane is unlocked for emblems and the player travels there at once
 
 import { useEffect, useState } from 'preact/hooks';
 import { artUrl } from '../sleeves';
@@ -20,7 +20,7 @@ export function Planes({ model, actions }: { model: Model; actions: Actions }) {
   useEffect(() => { actions.conquestPlanes(); }, []);
   if (!p) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   const plane = p.planes.find(x => x.name === chosen) ?? p.planes.find(x => x.current) ?? p.planes[0];
-  // The map is where a journey ends, as on mobile
+  // After travel the map page is shown, as on mobile
   const go = (unlock: boolean) => {
     setAsking(false);
     actions.conquestPlaneswalk(plane.name, unlock);

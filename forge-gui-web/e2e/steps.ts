@@ -1,21 +1,21 @@
-// What a player does, in the words of the page. The specs read as the steps a person would take.
+// Player actions, named with the page's own words. The specs read as the steps a person would take.
 
 import { expect, type Locator, type Page } from '@playwright/test';
 
-/** Answers the name prompt, where the first browser to answer is the host because the host seat is offered already ticked. */
+/** Answers the name prompt. The first browser to answer becomes the host, because the host seat option starts ticked. */
 export async function enterName(page: Page, name: string): Promise<void> {
   await page.fill('#player-name', name);
   await page.keyboard.press('Enter');
 }
 
-/** Opens a table from the host's menu: against the computer, or one others can join by link. */
+/** Opens a table from the host's menu. The table is against the computer, or one that others can join by link. */
 export async function hostTable(page: Page, invite: boolean): Promise<void> {
   await page.click(invite ? '[data-mode=multiplayer]' : '[data-mode=play]');
   await page.click('.chooser [data-kind=constructed]');
   await expect(page.locator('#seats .plate').first()).toBeVisible();
 }
 
-/** Chooses the first legal deck for a seat through the deck finder, which opens on legal decks only. */
+/** Chooses the first legal deck for a seat in the deck finder. The finder shows only legal decks when it opens. */
 export async function chooseDeck(page: Page, plate: Locator): Promise<void> {
   await plate.locator('.sleeve').click();
   await page.locator('.dk-hit:not(.generated)').first().dblclick();
@@ -23,7 +23,7 @@ export async function chooseDeck(page: Page, plate: Locator): Promise<void> {
   await expect(plate.locator('.deck-name')).not.toHaveText('');
 }
 
-/** The address a guest opens, pointed at this machine, read from the header's Invite. */
+/** Reads the guest address from the header's Invite menu and points it at this machine. */
 export async function inviteLink(page: Page, serverUrl: string): Promise<string> {
   await page.locator('.page-head .menu-button', { hasText: 'Invite' }).click();
   await expect(page.locator('.share-url').first()).toBeVisible();
@@ -32,7 +32,7 @@ export async function inviteLink(page: Page, serverUrl: string): Promise<string>
   return (shared ?? '').replace(/^https?:\/\/[^/]+/, new URL(serverUrl).origin);
 }
 
-/** Answers each dialog with its first choice until none is open, and closes cards only put up to be seen. */
+/** Closes cards that are only revealed, then answers each dialog with its first choice until none is open. */
 export async function answerDialogs(page: Page): Promise<void> {
   const dialog = page.locator('#dialog-layer .dialog');
   const reveal = page.locator('#dialog-layer .reveal-panel');
@@ -48,7 +48,7 @@ export async function answerDialogs(page: Page): Promise<void> {
   }
 }
 
-/** Waits for the game's first question, closing the window of cards the AI plays poorly, which the game waits on. */
+/** Waits for the game's first question. It closes the list of cards the AI plays poorly, because the game waits for it. */
 export async function gameStarted(page: Page): Promise<void> {
   await expect(async () => {
     const reveal = page.locator('#dialog-layer .reveal-panel .zone-answer.ok');
@@ -57,7 +57,7 @@ export async function gameStarted(page: Page): Promise<void> {
   }).toPass({ timeout: 60_000 });
 }
 
-/** Concedes from the game menu, which asks first. */
+/** Concedes from the game menu and confirms the question it asks. */
 export async function concede(page: Page): Promise<void> {
   await answerDialogs(page);
   await page.click('#prompt .more');
@@ -71,7 +71,7 @@ export async function say(page: Page, input: string, text: string): Promise<void
   await page.press(input, 'Enter');
 }
 
-/** Builds the open limited deck to forty cards, topping up with basics because a short deck is refused when legality is enforced. */
+/** Builds the open limited deck to forty cards. It adds basic lands to reach forty, because a short deck is refused when legality is enforced. */
 export async function buildLimitedDeck(page: Page): Promise<void> {
   const sizes = page.locator('.deck-head .sizes');
   const tiles = page.locator('.cat-grid .slot .tile');
@@ -89,7 +89,7 @@ export async function buildLimitedDeck(page: Page): Promise<void> {
   }
 }
 
-/** A finger rested on something, which Playwright's tap cannot do. Chromium only. */
+/** Holds a finger on an element, which Playwright's tap cannot do. Chromium only. */
 export async function hold(page: Page, target: Locator, ms = 650): Promise<void> {
   const box = await target.boundingBox();
   if (!box) throw new Error('Nothing to hold: the element is not on the page.');

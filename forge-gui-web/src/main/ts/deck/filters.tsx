@@ -1,4 +1,4 @@
-// One filter bar for the deck finder and the editor's catalogue, where a chip the table or the deck sets is gold and says its source
+// The filter bar shared by the deck finder and the editor's catalogue. A chip set by the table or the deck is gold and names its source.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
@@ -10,14 +10,14 @@ export interface FilterKind<F> {
   /** The heading it is listed under in the menu. */
   group: string;
   label: string;
-  /** The words on its chip while it is in use, or null while it is not. */
+  /** The text on its chip while the filter is in use, or null when it is not. */
   chip: (f: F) => string | null;
-  /** Where a chip set by something other than the player comes from, which gilds it. Empty gilds it and names nothing. */
+  /** The source of a chip not set by the player. Any non-null value makes the chip gold. An empty string names no source. */
   from?: (f: F) => string | null;
-  /** A filter the table fixes has a chip but no ×. */
+  /** A filter fixed by the table has a chip but no × button. */
   fixed?: (f: F) => boolean;
   clear: (f: F) => F;
-  /** Its panel. done closes the menu, for a choice that needs nothing more. */
+  /** The filter's panel. Call done to close the menu after a choice that needs no further input. */
   panel: (f: F, set: (next: F) => void, done: () => void) => ComponentChildren;
 }
 
@@ -27,7 +27,7 @@ export function FilterBar<F>({ kinds, filter, set, clearAll, narrowed, children 
   const [open, setOpen] = useState<{ kind: string | null } | null>(null);
   const [find, setFind] = useState('');
   const root = useRef<HTMLDivElement>(null);
-  // A press anywhere else, or Escape, puts the menu away
+  // A press outside the bar, or Escape, closes the menu
   useEffect(() => {
     if (!open) return;
     const away = (e: Event) => { if (!root.current?.contains(e.target as Node)) setOpen(null); };
@@ -100,7 +100,7 @@ export function FilterBar<F>({ kinds, filter, set, clearAll, narrowed, children 
   );
 }
 
-/** A panel of options of which one is chosen, which applies at once. */
+/** A panel where one option is chosen. The choice applies at once. */
 export function OneOf<V extends string | number>({ options, value, pick }: {
   options: readonly (readonly [V, string])[]; value: V | null; pick: (v: V) => void;
 }) {
@@ -115,7 +115,7 @@ export function OneOf<V extends string | number>({ options, value, pick }: {
   );
 }
 
-/** A panel of options of which any are ticked; Add applies them. */
+/** A panel where any number of options are ticked. Apply applies them. */
 export function AnyOf<V extends string>({ options, value, apply }: {
   options: readonly (readonly [V, string])[]; value: readonly V[]; apply: (v: V[]) => void;
 }) {
@@ -132,7 +132,7 @@ export function AnyOf<V extends string>({ options, value, apply }: {
   );
 }
 
-/** A panel for a range of numbers, either end left empty for no limit. */
+/** A panel for a range of numbers. An empty end means no limit at that end. */
 export function Between({ from, to, apply, min = 0 }: {
   from: number | null; to: number | null; apply: (from: number | null, to: number | null) => void; min?: number;
 }) {
@@ -151,7 +151,7 @@ export function Between({ from, to, apply, min = 0 }: {
   );
 }
 
-/** A panel for words: a box, and Apply. With names, the box offers those matching what typing has sent. */
+/** A panel with a text box and an Apply button. Given names, the box suggests them. typing reports each change so the caller can update names. */
 export function Words({ value, placeholder, apply, names, typing }: {
   value: string; placeholder: string; apply: (words: string) => void; names?: readonly string[]; typing?: (words: string) => void;
 }) {
@@ -171,7 +171,7 @@ export function Words({ value, placeholder, apply, names, typing }: {
   );
 }
 
-/** A range as a chip says it: "2–4", "≥ 2", "≤ 4". */
+/** A range as chip text, such as "2–4", "≥ 2" or "≤ 4". */
 export function rangeWords(from: number | null, to: number | null): string | null {
   if (from === null && to === null) return null;
   if (from !== null && to !== null) return from === to ? String(from) : `${from}–${to}`;

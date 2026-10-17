@@ -1,12 +1,12 @@
-// Where avatar and sleeve pictures come from, for players and for the lobby's pickers
+// The URLs of avatar and sleeve images, for players and for the lobby's pickers
 
 import type { PlayerView } from './protocol';
 
-// Avatars and sleeves are numbered cells of the skin's sprite sheets, the same numbers desktop stores
+// Avatars and sleeves are numbered cells of the skin's sprite sheets. Desktop stores the same numbers
 export const avatarUrl = (index: number): string => `avatar?i=${index}`;
 export const sleeveUrl = (index: number): string => `sleeve?i=${index}`;
 
-// A missing index means 0 because packets omit default values, -1 means none, and a card-art avatar wins over the sprite
+// A missing index means 0, because packets omit default values. -1 means none. A card-art avatar takes priority over the sprite
 export function playerAvatarUrl(player: PlayerView): string {
   if (player.AvatarCardImageKey) return `/sleeveart?key=${encodeURIComponent(player.AvatarCardImageKey)}`;
   const index = player.AvatarIndex ?? 0;
@@ -18,7 +18,7 @@ export function playerSleeveUrl(player: PlayerView | undefined): string {
   return index >= 0 ? sleeveUrl(index) : '';
 }
 
-// For a CSS variable: a relative url() there resolves against the stylesheet that uses it, not the page
+// Makes the URL absolute for a CSS variable. A relative url() there resolves against the stylesheet that uses it, not the page
 export function cssUrl(url: string): string {
   return url ? `url("${new URL(url, document.baseURI).href}")` : 'none';
 }

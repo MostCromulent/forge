@@ -47,7 +47,7 @@ public final class WebSettings implements IHasForgeLog {
             "suggestStackYield", FPref.YIELD_DECLINE_SCOPE_STACK_YIELD,
             "suggestNoActions", FPref.YIELD_DECLINE_SCOPE_NO_ACTIONS);
 
-    /** Forge's keyboard shortcut preferences, which the page offers where it has the action. */
+    /** Forge's keyboard shortcut preferences. The page offers each one where it has the matching action. */
     private static final List<FPref> SHORTCUTS = Arrays.stream(FPref.values()).filter(p -> p.name().startsWith("SHORTCUT_")).toList();
 
     public static ServerSettings values(final PlayerSettings player) {
@@ -66,10 +66,10 @@ public final class WebSettings implements IHasForgeLog {
                 GameLogVerbosity.fromString(player.get(FPref.DEV_LOG_ENTRY_TYPE)),
                 player.getBoolean(FPref.DEV_MODE_ENABLED),
                 "#" + player.get(FPref.UI_ACTIONABLE_HIGHLIGHT_COLOR),
-                // A volume of zero is the off switch, so the two preferences are reported as one number
+                // A volume of zero means off, so the on/off preference and the volume are reported as one number
                 player.getBoolean(FPref.UI_ENABLE_SOUNDS) ? player.getInt(FPref.UI_VOL_SOUNDS) : 0,
                 player.getBoolean(FPref.UI_ENABLE_MUSIC) ? player.getInt(FPref.UI_VOL_MUSIC) : 0,
-                // The host serves every player's sounds, so a guest is told the host's set and not its own
+                // The host serves every player's sounds, so a guest is sent the host's sound set, not its own
                 FModel.getPreferences().getPref(FPref.UI_CURRENT_SOUND_SET),
                 SOUND_SETS.get(),
                 player.getBoolean(FPref.FILTERED_HANDS),
@@ -79,23 +79,23 @@ public final class WebSettings implements IHasForgeLog {
                 SHORTCUTS.stream().map(p -> new ShortcutPref(p.name(), Localizer.getInstance().getMessage("lbl" + p.name()), player.get(p), p.getDefault())).toList());
     }
 
-    /** Saves a setting, dropping an illegal value because it could reach the file the desktop client shares. */
+    /** Saves a setting. An illegal value is dropped, because it could reach the preferences file that the desktop client also uses. */
     public static void set(final PlayerSettings player, final IGameController controller, final String key, final String value) {
         final FPref pref = BOOLEAN_PREFS.get(key);
         if (pref != null) {
-            // The host decides from its own copy of these, seeded when the game opened, so a change mid-game has to reach it as well
+            // The host decides from its own copy of these, set when the game opened. A change during a game must reach that copy too.
             setEverywhere(player, controller, pref, String.valueOf(Boolean.parseBoolean(value)));
         } else if (SCOPE_PREFS.containsKey(key)) {
             setEverywhere(player, controller, SCOPE_PREFS.get(key), DeclineScope.fromPref(value).name());
         } else if ("devMode".equals(key)) {
             final boolean on = Boolean.parseBoolean(value);
             player.set(FPref.DEV_MODE_ENABLED, on);
-            // Desktop keeps the switch in a static as well, which the draft code and debug output read
+            // Desktop also keeps this setting in a static field, which the draft code and debug output read
             if (player.shared()) {
                 ForgePreferences.DEV_MODE = on;
             }
         } else if (TABLE_SETTINGS.contains(key)) {
-            // These are the rules of the host's table, so a guest's browser has no say in them
+            // These are the rules of the host's table, so a guest's browser cannot change them
             if (!player.shared() || !setTableRule(player, key, value)) {
                 return;
             }
@@ -103,7 +103,7 @@ public final class WebSettings implements IHasForgeLog {
             setEverywhere(player, controller, FPref.UI_AUTO_DECISION_MODE,
                     "card".equals(value) ? ForgeConstants.AUTO_DECISION_PER_CARD : ForgeConstants.AUTO_DECISION_PER_ABILITY);
         } else if (SHORTCUTS.stream().anyMatch(s -> s.name().equals(key))) {
-            // Forge's format, Java key codes separated by spaces, since desktop reads the same preference
+            // Use Forge's format of Java key codes separated by spaces, because desktop reads the same preference
             if (!value.matches("(\\d{1,5}( \\d{1,5})*)?")) {
                 netLog.warn("Web client: bad shortcut {}", value);
                 return;
@@ -130,7 +130,7 @@ public final class WebSettings implements IHasForgeLog {
             }
             final boolean effects = "soundVolume".equals(key);
             player.set(effects ? FPref.UI_VOL_SOUNDS : FPref.UI_VOL_MUSIC, value);
-            // Silence is off: the desktop client reads the switch, not the volume
+            // A volume of zero turns the sound off. The desktop client reads the on/off preference, not the volume.
             player.set(effects ? FPref.UI_ENABLE_SOUNDS : FPref.UI_ENABLE_MUSIC, volume > 0);
         } else {
             netLog.warn("Web client: unknown setting {}", key);
@@ -139,12 +139,12 @@ public final class WebSettings implements IHasForgeLog {
         player.save();
     }
 
-    /** The sound sets in Forge's sound folder, read once since the controls carry them on every update. */
+    /** The sound sets in Forge's sound folder. They are read only once, because every settings update sends them. */
     private static final Supplier<List<String>> SOUND_SETS = Suppliers.memoize(() -> List.of(SoundSystem.instance.getAvailableSoundSets()));
 
     private static final List<String> TABLE_SETTINGS = List.of("filteredHands", "mulliganRule", "aiProfile", "ante");
 
-    /** Sets one of the host's table rules, and answers false for a value Forge does not know. */
+    /** Sets one of the host's table rules. Returns false for a value Forge does not know. */
     private static boolean setTableRule(final PlayerSettings player, final String key, final String value) {
         switch (key) {
             case "filteredHands" -> {
@@ -175,7 +175,7 @@ public final class WebSettings implements IHasForgeLog {
         return true;
     }
 
-    /** A setting the game reads as well as the player: the player's own copy, and the game's copy of it, if any. */
+    /** Sets a setting that the game reads as well as the player. It sets the player's own copy, and the game's copy if there is a game. */
     private static void setEverywhere(final PlayerSettings player, final IGameController controller, final FPref pref,
             final String value) {
         player.set(pref, value);
@@ -184,9 +184,9 @@ public final class WebSettings implements IHasForgeLog {
         }
     }
 
-    /** Gives a game this player's settings, except auto-pass always respects the interrupts, and playable cards and the lands auto-tap would use are always highlighted. */
+    /** Gives a game this player's settings, with two exceptions. Auto-pass always respects the interrupts. Playable cards and the lands that auto-tap would use are always highlighted. */
     public static void applyAll(final PlayerSettings player, final IGameController controller) {
-        // Every one is pushed after the engine's own seed, which read the shared preferences, so a guest plays by its own
+        // Each setting is pushed after the engine sets its first values from the shared preferences. So a guest plays by its own settings.
         for (final FPref pref : YieldController.SYNCED_PREFS) {
             final boolean always = pref == FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS || pref == FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS
                     || pref == FPref.UI_SHOW_AUTOTAP_PREVIEW;
@@ -199,13 +199,13 @@ public final class WebSettings implements IHasForgeLog {
         if (controller.getYieldController() != null) {
             controller.getYieldController().setPref(pref, value);
         }
-        // The host's engine keeps no copy of the auto-yield mode: the client decides how a choice is stored
+        // The host's engine keeps no copy of the auto-yield mode. The client decides how a choice is stored.
         if (pref != FPref.UI_AUTO_DECISION_MODE) {
             controller.setYieldPref(pref, value);
         }
     }
 
-    /** The phases one row of the stop grid has a stop on; untap takes no stop, as on desktop. */
+    /** The phases that have a stop in one row of the stop grid. Untap never has a stop, as on desktop. */
     public static List<PhaseType> stops(final PlayerSettings player, final FPref[] keys) {
         final List<PhaseType> out = new ArrayList<>();
         final PhaseType[] phases = PhaseType.values();
@@ -217,7 +217,7 @@ public final class WebSettings implements IHasForgeLog {
         return out;
     }
 
-    /** Sets every stop of one row, those listed on and the rest off, and answers the phases that changed. */
+    /** Sets every stop in one row: the listed phases on and the rest off. Returns the phases that changed. */
     public static List<PhaseType> setStops(final PlayerSettings player, final boolean mine, final List<PhaseType> phases) {
         final List<PhaseType> changed = new ArrayList<>();
         for (final PhaseType phase : PhaseType.values()) {

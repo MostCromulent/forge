@@ -8,14 +8,14 @@ import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-/** Draft and sealed events at a web table, set up and started by the host with guests seated, as desktop's lobby runs them. */
+/** Tests draft and sealed events at a web table. The host sets them up and starts them with guests seated, as desktop's lobby does. */
 public class OnlineEventTest extends SessionsTest {
     @Override
     boolean slow() {
         return true;
     }
 
-    /** The host at a fresh table of its own, invited or not, with the Limited switch set to kind. */
+    /** Seats the host at a new table, invited or not, with the Limited switch set to kind. */
     private TestBrowser hostAt(final String open, final String kind) throws InterruptedException {
         final TestBrowser host = hostAt(open);
         sessions.onMessage(host, setLimited(kind));
@@ -47,13 +47,13 @@ public class OnlineEventTest extends SessionsTest {
         return message("draftPick", "step", step, "index", index);
     }
 
-    /** A browser must see the table's event before it readies, because learning of the event deals the seat afresh and unreadies it. */
+    /** Waits until the browser sees the table's event. It must see it before it readies, because the event resets the seat and clears Ready. */
     private static void seeEvent(final TestBrowser browser) throws InterruptedException {
         browser.awaitLobby(l -> l.has("limited") && l.getAsJsonObject("limited").has("product"),
                 "the event never reached this browser's table");
     }
 
-    /** A host and a guest at a Limited table of kind, both ready, with the event setup describes set up and started. */
+    /** Seats a host and a guest at a Limited table of kind, readies both, then sets up and starts the event that setup describes. */
     private TestBrowser[] startedEvent(final String kind, final JsonObject setup) throws InterruptedException {
         final TestBrowser host = hostAt("invite", kind);
         final TestBrowser guest = connect("guest");
@@ -77,7 +77,7 @@ public class OnlineEventTest extends SessionsTest {
         return state.getAsJsonArray("picks").size();
     }
 
-    // Fails if an event starts while a seat is not ready, or does not start once every seat is
+    // Fails if an event starts while a seat is not ready, or does not start once every seat is ready
     @Test(timeOut = 180_000)
     public void startWaitsForReady() throws Exception {
         final TestBrowser host = hostAt("invite", "sealed");
@@ -104,7 +104,7 @@ public class OnlineEventTest extends SessionsTest {
                 ? l.getAsJsonObject("limited").get("phase").getAsString() : null), "the sealed event never started");
     }
 
-    // Fails if no pack reaches a seat, one pick counts twice, a pick on a pack that has moved on counts, or the other seat never sees the pick
+    // Fails if no pack reaches a seat, one pick counts twice, a pick from a pack already passed on counts, or the other seat never sees the pick
     @Test(timeOut = 300_000)
     public void aGuestPicksOnlyItsOwnPacks() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -140,7 +140,7 @@ public class OnlineEventTest extends SessionsTest {
                 && d.getAsJsonArray("cards").equals(shown.getAsJsonArray("cards")), "the reload was not shown its pack again");
     }
 
-    // Fails if closing a table leaves its draft host running, whose packs would then reach the next table's seats
+    // Fails if closing a table leaves its draft host running. Its packs would then reach the next table's seats
     @Test(timeOut = 180_000)
     public void endMatchStopsTheDraftHost() throws Exception {
         final TestBrowser host = hostAt("lobby", "draft");
@@ -156,7 +156,7 @@ public class OnlineEventTest extends SessionsTest {
         Assert.assertNotNull(draftHost);
         sessions.onMessage(host, JsonCodec.message("leaveLobby"));
         host.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()), "the host never left the table");
-        // The browser is told it left before the table is taken down
+        // The browser is told it left before the table is closed, so wait for the draft host to finish
         for (int i = 0; i < 250 && !draftHost.isFinished(); i++) {
             Thread.sleep(20);
         }

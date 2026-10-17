@@ -1,4 +1,4 @@
-// Quest's Duels page: the opponents on offer as tiles, and beside them the chosen one with what the player brings to it
+// Quest's Duels page: the opponents on offer as tiles. Beside them are the chosen opponent and what the player brings to the duel
 
 import { useState } from 'preact/hooks';
 import { DeckRow, SidePanel } from '../campaign/campaign';
@@ -8,10 +8,10 @@ import type { Actions } from '../actions';
 import type { QuestDuelRow, QuestDuels } from '../protocol';
 import { t, type TextKey } from '../text';
 
-/** A duel's difficulty by its number, 1 to 5; the random opponent has none. */
+/** A duel's difficulty by its number, 1 to 5. The random opponent has none. */
 const DIFFICULTY: TextKey[] = ['lblEasy', 'lblMedium', 'lblHard', 'lblExpert', 'lblWebQuestWild'];
 
-/** How hard a duel is, as bars that fill and the word beside them, so it reads without colour. */
+/** How hard a duel is, as filled bars with the word beside them. The word means it can be read without colour. */
 export function Difficulty({ n }: { n: number }) {
   const word = t(DIFFICULTY[n - 1]);
   return (
@@ -38,7 +38,7 @@ function Tile({ duel, chosen, choose }: { duel: QuestDuelRow; chosen: boolean; c
   );
 }
 
-/** What the player brings to a duel or a challenge, under the panel: the deck, the pet and the plant, the match length, and the button that starts it. fixedDeck names the challenge's own deck. */
+/** What the player brings to a duel or a challenge, at the foot of the panel: the deck, the pet, the plant, the match length and the start button. fixedDeck means the challenge supplies its own deck. */
 export function Brings({ page, actions, zoom, start, label, fixedDeck }: {
   page: QuestDuels; actions: Actions; zoom: (image: string | null) => void; start: () => void; label: string; fixedDeck?: boolean;
 }) {
@@ -83,7 +83,7 @@ export function Brings({ page, actions, zoom, start, label, fixedDeck }: {
   </>;
 }
 
-/** Travel, and Unlock Sets where the quest's format offers an unlock, as desktop has them beside the duels and challenges. */
+/** Travel, plus Unlock Sets when the quest's format offers an unlock. Desktop has the same buttons beside the duels and challenges. */
 export function WorldButtons({ page, actions }: { page: QuestDuels; actions: Actions }) {
   return <>
     <button onClick={() => actions.questTravel()}>{t('btnTravel')}</button>

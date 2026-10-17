@@ -1,4 +1,4 @@
-// Quest's Tournaments page: the drafts on offer as tiles, or the one entered drawn as its bracket with the player's next match beside it
+// Quest's Tournaments page: the drafts on offer as tiles. Once one is entered, it is drawn as a bracket with the player's next match beside it
 
 import { useState } from 'preact/hooks';
 import { balance } from '../campaign/campaign';
@@ -55,7 +55,7 @@ function Offered({ page, credits, actions }: { page: QuestTournaments; credits: 
   );
 }
 
-/** Fixed geometry, since eight players is the only size: each round's matches sit midway between the two matches feeding them. */
+/** Fixed geometry, because eight players is the only size. Each round's matches sit midway between the two matches that feed them. */
 const SEAT = 40;
 const COL = 216;
 const GAP = 56;
@@ -83,7 +83,7 @@ function Seat({ seat, round, index, me }: { seat: QuestSeat; round: number; inde
   );
 }
 
-/** The bracket: each match's line runs from its winner, or from between its two seats while it is open, to the seat it feeds. */
+/** The bracket. Each match's line runs from its winner to the seat it feeds. While the match is open, the line starts between its two seats. */
 function Bracket({ bracket, me }: { bracket: QuestBracket; me: string }) {
   const lines = [];
   for (let round = 0; round < 3; round++) {
@@ -115,7 +115,7 @@ function Panel({ bracket, actions }: { bracket: QuestBracket; actions: Actions }
   const [leaving, setLeaving] = useState(false);
   const playing = bracket.started && bracket.next !== null && bracket.next !== undefined;
   const over = bracket.started && !playing;
-  // A tournament whose draft never finished has no deck, and leaving it gives the fee back
+  // A tournament whose draft never finished has no deck. Leaving it gives the entry fee back
   if (!bracket.drafted) return (
     <aside class="cq-side">
       <div class="cq-panel">

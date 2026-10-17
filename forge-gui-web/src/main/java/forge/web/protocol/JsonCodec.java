@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-/** Writes netplay's changed properties as JSON for the browser, with a property that points at another object as {@code {"ref": key}}. */
+/** Writes netplay's changed properties as JSON for the browser. A property that refers to another object is written as {@code {"ref": key}}. */
 public final class JsonCodec {
     public static final Gson GSON = new GsonBuilder().serializeNulls().create();
 
@@ -67,7 +67,7 @@ public final class JsonCodec {
         return out;
     }
 
-    // ProtocolTypes writes the TypeScript type of each of these forms; a new form needs one there too
+    // ProtocolTypes writes the TypeScript type of each of these forms. A new form needs a type there too
     @SuppressWarnings("unchecked")
     static JsonElement encodeValue(final TrackableProperty prop, final Object value, final int ownerId) {
         if (value == null) {
@@ -96,7 +96,7 @@ public final class JsonCodec {
             return entity((int[]) value);
         }
         if (type == TrackableTypes.CardStateViewType) {
-            // The packet carries only the CardStateName ordinal; the state object's key is derived from its card
+            // The packet holds only the CardStateName ordinal. The state object's key is derived from its card
             return ref(DeltaPacket.TYPE_CSV, ownerId * 16 + (Integer) value);
         }
         if (type == TrackableTypes.CombatViewType) {
@@ -108,7 +108,7 @@ public final class JsonCodec {
         return plain(value);
     }
 
-    // These maps are keyed by the commander's card id, which the browser can only follow as a reference
+    // These maps are keyed by the commander's card id. The browser can look up that id only as a reference
     private static JsonElement byCommander(final Map<Integer, Integer> values) {
         final JsonArray out = new JsonArray();
         for (final Map.Entry<Integer, Integer> e : values.entrySet()) {
@@ -159,7 +159,7 @@ public final class JsonCodec {
             return new JsonPrimitive(s);
         }
         if (v instanceof ColorSet c) {
-            // ColorSet is an enum; the colour mask is what the UI needs
+            // ColorSet is an enum. The UI needs the colour mask
             return new JsonPrimitive(c.getColor());
         }
         if (v instanceof Enum<?> e) {

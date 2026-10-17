@@ -1,4 +1,4 @@
-// A conquest's commanders and planeswalkers on one page, with the one being looked at and its deck beside them
+// A conquest's commanders and planeswalkers on one page, with a panel beside them for the chosen one and its deck
 
 import { useEffect, useState } from 'preact/hooks';
 import { imageUrl } from '../images';
@@ -12,11 +12,11 @@ import { t } from '../text';
 import { CardGroup, Curve } from '../deck/deckview';
 
 
-/** What both lists are narrowed by: any of these colours, and for a commander the plane it comes from. A planeswalker has no origin. */
+/** The filter for both lists: any of these colours, and for a commander the plane it comes from. A planeswalker has no origin. */
 interface PartyFilter { colours: string[]; plane: string | null }
 const NO_FILTER: PartyFilter = { colours: [], plane: null };
 
-/** A commander's origin is its plane and region; the plane is what the filter offers. */
+/** A commander's origin is its plane and region. The filter offers only the plane. */
 const planeOf = (origin: string): string => origin.split(' - ')[0];
 
 export function Party({ model, actions }: { model: Model; actions: Actions }) {
@@ -30,7 +30,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
   const lead = party?.commanders.find(c => c.selected);
   const commander = chosen?.walker ? undefined : party?.commanders.find(c => c.name === chosen?.name) ?? lead;
   const walker = chosen?.walker ? party?.planeswalkers.find(w => w.name === chosen.name) : undefined;
-  // The panel's curve and list are the deck's own details, asked for whenever the commander shown or its deck changes
+  // The panel's curve and list come from the deck's details. They are requested again when the shown commander or its deck size changes
   useEffect(() => { if (commander) actions.conquestViewDeck(commander.name); }, [commander?.name, commander?.deckSize]);
   useEffect(() => setReading(false), [commander?.name, walker?.name]);
   if (!party) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
@@ -106,7 +106,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
   );
 }
 
-/** A commander's deck in a few words: none, too small to play, or its size. */
+/** A short summary of a commander's deck: no deck, an invalid deck with its size, or its size. */
 function DeckLine({ commander }: { commander: ConquestCommanderRow }) {
   if (!commander.deckSize) return <>{t('lblNoDeck')}</>;
   return commander.problem

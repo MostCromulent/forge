@@ -1,4 +1,4 @@
-// The face-up planes rule the whole table, so they sit in a dock on the divider between the halves, with their die beside them
+// The face-up planes affect the whole table. So they are shown in a dock on the divider between the halves, with the planar die beside them.
 
 import { reconcile } from './reconcile';
 import { cardImageSrc, setImage } from '../images';
@@ -11,12 +11,12 @@ import type { Actions } from '../actions';
 import type { CardView, GameView, PlayerView } from '../protocol';
 import { t } from '../text';
 
-/** The engine moves the face-up planes into the command zone of whoever's turn it is, so every command zone is looked through. */
+/** The engine moves the face-up planes into the command zone of whoever's turn it is, so every command zone is searched. */
 function faceUpPlanes(model: Model): CardView[] {
   return players(model).flatMap(p => zone(model, p, 'Command')).filter(c => commandKind(c, stateOf(model, c)) === 'plane');
 }
 
-/** The roll is a special action at sorcery speed, and the engine refuses it at any other time in any case. */
+/** Rolling the planar die is a special action at sorcery speed. The engine also refuses it at any other time. */
 function mayRoll(prompt: { priority: boolean } | null | undefined, g: GameView | undefined, viewer: number | undefined): boolean {
   return !!prompt?.priority && g?.PlayerTurn?.ref === viewer && (g?.Phase === 'MAIN1' || g?.Phase === 'MAIN2')
     && !(g?.Stack ?? []).some(Boolean);
@@ -55,12 +55,12 @@ export function renderPlanes(model: Model, actions: Actions): void {
     const box = button.getBoundingClientRect();
     actions.selectCard(dice.$key, false, box.left, box.top);
   };
-  // The dock hangs just above the divider between the two halves of the table
+  // The dock is placed just above the divider between the two halves of the table
   const strip = byId('phase-strip');
   dock.style.top = `${Math.max(8, strip.offsetTop - dock.offsetHeight - 6)}px`;
 }
 
-/** A card shown landscape beside the board, as a plane or a scheme is: its picture, which previews it, and its name. cls names the tile, and cls-name its name. */
+/** Draws cards in landscape beside the board, as planes and schemes are. Each tile shows the card's picture, which opens its preview, and its name. `cls` is the tile's class and `cls-name` the name's class. */
 export function drawNamedTiles(root: HTMLElement, model: Model, cards: CardView[], cls: string): void {
   reconcile(root, cards, c => c.$key,
     () => {

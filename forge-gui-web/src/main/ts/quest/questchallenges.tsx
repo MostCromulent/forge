@@ -1,4 +1,4 @@
-// Quest's Challenges page: the challenges on offer as tiles, and beside them the chosen one's terms and what the player brings
+// Quest's Challenges page: the challenges on offer as tiles. Beside them are the chosen challenge's terms and what the player brings
 
 import { useState } from 'preact/hooks';
 import { SidePanel } from '../campaign/campaign';

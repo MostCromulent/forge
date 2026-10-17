@@ -79,7 +79,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 
-/** One player's view of a match for the browser: game calls run on one dispatch thread, and browser replies arrive on the socket's thread. */
+/** One player's view of a match for the browser. Game calls run on one dispatch thread. Browser replies arrive on the socket thread. */
 public class WebGuiGame extends NetworkGuiGame {
     private final ReentrantLock mirrorLock = new ReentrantLock();
     private final ExecutorService dispatch = Executors.newSingleThreadExecutor(
@@ -89,41 +89,41 @@ public class WebGuiGame extends NetworkGuiGame {
             () -> getCurrentPlayer() == null ? "a player" : getCurrentPlayer().getName());
     private final DeltaSyncManager snapshotter = new DeltaSyncManager();
     private final AtomicInteger skippedProperties = new AtomicInteger();
-    // Netplay drops a click's trigger event on its way to the host, so the ability menu reads the click from here
+    // Netplay drops the trigger event of a click before it reaches the host. So the ability menu reads the click from here
     private final AtomicReference<BrowserClick> lastClick = new AtomicReference<>();
     private final PromptState prompt = new PromptState(p -> {
         flushZones();
         send(p);
     });
-    /** A number the browser gave that the list it was picked from did not hold, kept for the typed prompt that follows. */
+    /** A number the browser gave that was not in the list offered. It is kept for the typed prompt that follows. */
     private Integer typedNumber;
-    // Zones are shown and hidden from the dispatch thread and replayed to a reloading browser from the socket thread
+    // The dispatch thread shows and hides zones. The socket thread resends them to a reloading browser
     private final Object zonesLock = new Object();
     private final Map<String, ShownZone> shownZones = new LinkedHashMap<>();
-    /** Zones opened for the current choice, and for the cards revealed with the current prompt, closed with them. */
+    /** Zones opened for the current choice and for the cards revealed with the current prompt. They close when those end. */
     private final List<PlayerZoneUpdate> selectionZonesShown = new ArrayList<>();
     private final List<PlayerZoneUpdate> revealZonesShown = new ArrayList<>();
-    /** Zones have closed since the browser was last told, which it hears with the next prompt or question. */
+    /** Whether zones have closed since the browser was last told. The browser is told with the next prompt or question. */
     private boolean zonesClosedUnsent;
-    // Written on the dispatch thread, replayed to a reloading browser from the socket thread
+    // Written on the dispatch thread. The socket thread resends it to a reloading browser
     private final WebGameLog gameLog;
     private final BrowserSounds sounds = new BrowserSounds(this::getCurrentPlayer, this::isLocalPlayer);
-    /** The settings of the player this GUI is the view of, which are not the shared preferences unless it is the host. */
+    /** The settings of the player this GUI shows the match to. Only the host's settings are the shared preferences. */
     private final PlayerSettings settings;
     private volatile BrowserChannel browser;
     private volatile boolean gameOver;
-    /** Each player's games won in the match, from the engine's outcome of the game just ended. */
+    /** Each player's games won in the match. It is read from the engine's outcome of the game that just ended. */
     private volatile List<MatchScore> score = List.of();
     /** Run once, when this seat's game ends. */
     private volatile Runnable onGameOver;
-    /** What the game did since the last state message, in order, filled and drained on the dispatch thread only. */
+    /** What the game did since the last state message, in order. Only the dispatch thread fills and empties it. */
     private final List<Record> events = new ArrayList<>();
 
     public void onGameOver(final Runnable listener) {
         onGameOver = listener;
     }
 
-    /** A GUI for the host's own seat, whose settings are Forge's preferences. */
+    /** A GUI for the host's own seat. Its settings are Forge's preferences. */
     public WebGuiGame() {
         this(PlayerSettings.saved());
     }
@@ -133,7 +133,7 @@ public class WebGuiGame extends NetworkGuiGame {
         this.gameLog = new WebGameLog(this::mayView, settings);
     }
 
-    /** Frees the thread that sends to the browser and stops the waiting timer; the match it belongs to is over. */
+    /** Stops the thread that sends to the browser and stops the waiting timer. Called when the match is over. */
     public void close() {
         cancelAwaitNextInput();
         dispatch.shutdown();
@@ -152,7 +152,7 @@ public class WebGuiGame extends NetworkGuiGame {
         });
     }
 
-    /** Sends on the caller's thread, because the dispatch thread can be blocked on a request only the new browser can answer. */
+    /** Sends on the caller's thread. The dispatch thread can be blocked on a request that only the new browser can answer. */
     public void attach(final BrowserChannel channel) {
         sendFullState(channel);
     }
@@ -190,12 +190,12 @@ public class WebGuiGame extends NetworkGuiGame {
         send(Wire.encode(message));
     }
 
-    /** Properties dropped for want of a JSON form, which tests check stays at none. */
+    /** How many properties were dropped because they have no JSON form. Tests check that it stays at zero. */
     int skippedProperties() {
         return skippedProperties.get();
     }
 
-    /** The model a browser would hold if it were sent the whole game now, for tests that check the deltas sent kept it in step. Call on the dispatch thread. */
+    /** The model a browser would hold if it were sent the whole game now. Tests compare it with the model the sent deltas built. Call on the dispatch thread. */
     BrowserModel freshSnapshot() {
         final GameView gv = getGameView();
         final BrowserModel fresh = new BrowserModel();
@@ -214,7 +214,7 @@ public class WebGuiGame extends NetworkGuiGame {
         });
     }
 
-    /** Moves a later game's game view under the key of the one view the client holds, which is the only key the browser reads. */
+    /** Moves the game view of a later game under the key of the client's one game view. The browser reads only that key. */
     static Map<Integer, Map<TrackableProperty, Object>> asRootGame(final Map<Integer, Map<TrackableProperty, Object>> objects,
             final int root) {
         Map<Integer, Map<TrackableProperty, Object>> out = objects;
@@ -248,13 +248,13 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         final Map<Integer, Map<TrackableProperty, Object>> snapshot = snapshotter.snapshot(gv);
         if (snapshot == null) {
-            // A failed walk must never clear the browser: the old model is closer to the truth than nothing
+            // A failed snapshot must never clear the browser. The old model is more accurate than an empty one
             netLog.warn("Web client: game view snapshot failed; keeping the previous browser model");
             return;
         }
         gameOver = false;
         score = List.of();
-        // A whole new state has nothing to animate from, so what led up to it is dropped
+        // A full new state has no earlier state to animate from, so the queued events are dropped
         events.clear();
         model.reset(rootKey(gv));
         model.apply(encode(snapshot), Map.of());
@@ -296,7 +296,7 @@ public class WebGuiGame extends NetworkGuiGame {
         if (tracker == null) {
             return visible;
         }
-        // A card you may play from somewhere else is one you may see, even another player's or one lying face down
+        // A card the local player may play from another zone counts as visible. This includes another player's card or a face-down card
         final Set<Integer> playable = new HashSet<>();
         for (final PlayerView p : getLocalPlayers()) {
             p.getCards(ZoneType.Flashback).forEach(c -> playable.add(c.getId()));
@@ -310,7 +310,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return visible;
     }
 
-    /** Told when the game opens, which for a guest happens on the host's say rather than its own. */
+    /** Run when the game opens. For a guest, the host decides when that happens. */
     private volatile Runnable onOpen = () -> { };
 
     public void whenOpened(final Runnable action) {
@@ -325,9 +325,9 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         model.setLocalPlayers(keys);
         send(model.fullState());
-        // A remote seat skips phases only from what the client seeds (PlayerControllerHuman.isUiSetToSkipPhase)
+        // For a remote seat, the host skips phases only by the state the client seeds (PlayerControllerHuman.isUiSetToSkipPhase)
         seedYieldStateOnHost();
-        // The seed read the shared preferences for everything else, so this player's own follow it
+        // The seed used the shared preferences for all other settings. So this player's own settings are applied after it
         final IGameController controller = getGameController();
         if (controller != null) {
             WebSettings.applyAll(settings, controller);
@@ -343,10 +343,10 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public void handleGameEvent(final GameEvent event) {
-        // FControlGameEventHandler would post to the host UI thread, so the log, the sound and the animations are sent from here
+        // FControlGameEventHandler would post to the host UI thread. So the log, the sound and the animations are sent from here
         if (event instanceof GameEventGameOutcome outcome) {
             score = matchScore(outcome.matchSummary());
-            // The outcome can come after the game is seen to be over, so the ending is told again with the score
+            // The outcome can arrive after the game is already over. So the game-over message is sent again with the score
             if (gameOver) {
                 send(new GameOver(score));
             }
@@ -373,7 +373,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    /** A card that has just moved arrives in its event as a name and a picture only, so its sound is chosen from the card this client holds. */
+    /** The event for a card that just moved holds only its name and picture. So the sound is chosen from this client's copy of the card. */
     private static GameEvent withKnownCard(final GameEvent event, final GameView gv) {
         if (!(event instanceof GameEventZone zone) || zone.card() == null) {
             return event;
@@ -382,7 +382,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return known == null ? event : new GameEventZone(zone.zoneType(), zone.player(), zone.mode(), known, zone.sa());
     }
 
-    /** Finds each seated player's name in the engine's match summary ("Alice: 1 Bob: 0 "), so a name holding a colon or space is read whole. */
+    /** Finds each seated player's name in the engine's match summary ("Alice: 1 Bob: 0 "). A name that contains a colon or space is still read whole. */
     private List<MatchScore> matchScore(final String summary) {
         final GameView gv = getGameView();
         if (gv == null || summary == null) {
@@ -406,7 +406,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return out;
     }
 
-    // Phase stops are the desktop preferences: one row for the local player's turns, one for everyone else's
+    // Phase stops are the desktop preferences. One row is for the local player's turns and one is for all other turns
     private Controls controlsMessage() {
         final IGameController controller = getGameController();
         final YieldController yields = controller == null ? null : controller.getYieldController();
@@ -441,7 +441,7 @@ public class WebGuiGame extends NetworkGuiGame {
         pushStop(phase, mine);
     }
 
-    /** Tells the game a stop changed. One set before the game has players is read when they are seeded instead. */
+    /** Tells the game a stop changed. A stop set before the game has players is read when the players are seeded instead. */
     private void pushStop(final PhaseType phase, final boolean mine) {
         if (getGameView() == null) {
             return;
@@ -453,7 +453,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    // Desktop's right-click on a phase: pass priority until that phase. The opponents' row marks the first opponent
+    // Desktop's right-click on a phase passes priority until that phase. The opponents' row sets the marker for the first opponent
     private void toggleMarker(final PhaseType phase, final boolean mine) {
         if (phase.ordinal() == 0) {
             return;
@@ -482,7 +482,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return item.isOptionalTrigger() && isLocalPlayer(item.getActivatingPlayer()) && !item.getKey().isEmpty();
     }
 
-    /** The Always Yes and Always No shortcuts, as desktop answers them: the ability on top of the stack is yielded to, and its trigger answered if it is the player's to answer. */
+    /** The Always Yes and Always No shortcuts, handled as on desktop. The player yields to the ability on top of the stack. Its trigger is also answered if it is the player's to answer. */
     private void autoYieldTop(final IGameController controller, final boolean yes) {
         final StackItemView item = getGameView().peekStack();
         if (item == null || !item.isAbility()) {
@@ -498,7 +498,7 @@ public class WebGuiGame extends NetworkGuiGame {
     private void stackYield(final IGameController controller, final StackItemView item, final YieldAction action) {
         final String yieldKey = item.getKey();
         final boolean abilityScope = controller.getYieldController().isAbilityScope();
-        // A key press reaches here for any stack item, where the menu offers these two only for the player's own optional trigger
+        // A key press arrives here for any stack item. The menu offers these two only for the player's own optional trigger
         if ((action == YieldAction.alwaysYes || action == YieldAction.alwaysNo) && !answersTrigger(item)) {
             return;
         }
@@ -540,9 +540,9 @@ public class WebGuiGame extends NetworkGuiGame {
     public void setSelection(final Selection selection) {
         final Selection before = getSelection();
         super.setSelection(selection);
-        // A choice among cards opens the zones holding them, as desktop does. A maximum of 0 only highlights.
-        // A pick in the same choice keeps its cards, so its zones are left as they are.
-        // Zones change before the prompt does, because the prompt sends the zones the last choice closed and this one may reopen them.
+        // A choice among cards opens the zones that hold them, as on desktop. A maximum of 0 only highlights the cards.
+        // A new pick in the same choice has the same cards, so their zones are left as they are.
+        // Zones change before the prompt does. The prompt sends the zones the last choice closed, and this choice may reopen them.
         if (!selection.cards().equals(before.cards()) || selection.max() != before.max()) {
             synchronized (zonesLock) {
                 hideZones(selectionZonesShown);
@@ -555,7 +555,7 @@ public class WebGuiGame extends NetworkGuiGame {
         prompt.selection(selection);
     }
 
-    // Cards the engine says you can act on now, and, at strength two, the ones the Auto button would tap
+    // Cards the engine says the player can act on now. Cards at strength two are also the ones the Auto button would tap
     @Override
     public void setWeaklySelectable(final Iterable<CardView> cards) {
         super.setWeaklySelectable(cards);
@@ -582,7 +582,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public void showRevealedCards(final Iterable<CardView> cards) {
-        // The host sends these only for a hand reveal, so another zone the cards came from stays closed
+        // The host sends these only for a hand reveal. So any other zone the cards came from stays closed
         final List<PlayerZoneUpdate> hands = new ArrayList<>();
         for (final PlayerZoneUpdate update : getZonesHolding(cards)) {
             if (update.getZones().contains(ZoneType.Hand)) {
@@ -630,7 +630,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return player.getId() + "/" + zone.name();
     }
 
-    /** Called holding zonesLock, and returns only the zones it opened so that closing them spares a zone something else opened. */
+    /** Call while holding zonesLock. Returns only the zones this call opened, so closing them leaves open the zones something else opened. */
     private List<PlayerZoneUpdate> showZones(final Iterable<PlayerZoneUpdate> zones) {
         final List<PlayerZoneUpdate> opened = new ArrayList<>();
         for (final PlayerZoneUpdate update : zones) {
@@ -654,8 +654,8 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     /**
-     * Closes zones showZones opened. Called holding zonesLock. The browser is told with the next prompt or question,
-     * so an effect that reopens the zone for its next step, as Telling Time does, never shows it closing and opening again.
+     * Closes zones that showZones opened. Call while holding zonesLock. The browser is told with the next prompt or question.
+     * So an effect that reopens the zone for its next step, as Telling Time does, never shows it closing and opening again.
      */
     private void hideZones(final List<PlayerZoneUpdate> zones) {
         if (zones.isEmpty()) {
@@ -684,7 +684,7 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override public void setPanelSelection(final CardView hostCard) { }
     @Override public void setPlayerAvatar(final LobbyPlayer player, final IHasIcon ihi) { }
 
-    // Parking releases the mirror lock so browser actions and replies can proceed while the player decides
+    // While the player decides, the mirror lock is released so browser actions and replies can still run
     private JsonElement ask(final Record request, final Predicate<JsonElement> valid) {
         flushZones();
         final int holds = mirrorLock.getHoldCount();
@@ -710,7 +710,7 @@ public class WebGuiGame extends NetworkGuiGame {
         for (final T item : items) {
             final String label = display != null ? display.apply(item) : String.valueOf(item);
             if (item instanceof CardView card) {
-                // Ephemeral views (pile splits, getCardForUi copies, LKI) have no mirror entry to point at
+                // Temporary views (pile splits, getCardForUi copies, LKI) have no mirror entry to refer to
                 out.add(isInMirror(card)
                         ? new RequestOption(label, cardRef(card), null, null, null)
                         : new RequestOption(label, null, card.getName(),
@@ -724,7 +724,7 @@ public class WebGuiGame extends NetworkGuiGame {
             } else if (item instanceof SpellAbilityView ability && ability.getHostCard() != null && isInMirror(ability.getHostCard())) {
                 out.add(new RequestOption(label, null, null, null, null, cardRef(ability.getHostCard()), null));
             } else {
-                // A colour is offered as itself or, by some effects, as its English name
+                // A colour is offered as a colour value or, by some effects, as its English name
                 final MagicColor.Color colour = item instanceof MagicColor.Color c ? c
                         : item instanceof String s ? MagicColor.Color.fromName(s) : null;
                 out.add(new RequestOption(label, null, null, null, null, null, colour == null ? null : colour.getShortName()));
@@ -744,27 +744,27 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override
     public <T> List<T> getChoices(final String message, final int min, final int max, final List<T> choices, final List<T> selected, final FSerializableFunction<T, String> display) {
         if (min < 0 && max < 0) {
-            // AbstractGuiGame.reveal: display only, the return value is ignored
+            // AbstractGuiGame.reveal only displays the cards. The return value is ignored
             final ChoicesRequest shown = choicesRequest(ChoiceKind.reveal, message, min, max, choices, selected, display, null, null, List.of());
             final PlayerView skipper = aiSkipsOwner(message);
             ask(skipper == null ? shown : shown.warningOf(Ref.player(skipper.getId())), v -> true);
             return new ArrayList<>();
         }
         final int need = Math.min(Math.max(min, 0), choices.size());
-        // Choices labelled by the host, such as stickers offered by their place in a list, are read as their labels, not as numbers
+        // Choices the host labels, such as stickers offered by their place in a list, are read as labels, not as numbers
         final List<T> number = max == 1 && display == null ? askNumber(message, need == 0, choices) : null;
         if (number != null) {
             return number;
         }
-        // Spells being chosen are already drawn on the stack, so they are picked there rather than from a list
+        // Spells being chosen are already drawn on the stack, so the player picks them there instead of from a list
         final ChoicesRequest request = choicesRequest(ChoiceKind.choices, message, need, max, choices, selected, display,
                 stackKeysFor(choices), null, Answers.range(0, need));
         return Answers.pick(choices, ask(request, Answers.indexList(choices.size(), need, max)));
     }
 
     /**
-     * Whose deck a reveal warns the computer will not play all of, or null for any other reveal. The host sends no owner, so the
-     * host's title is rebuilt for each player, which matches because host and client share one locale.
+     * The player whose deck the AI will not play all of, as a reveal warns. Null for any other reveal. The host sends no owner,
+     * so the host's title is rebuilt for each player. It matches because host and client share one locale.
      */
     private PlayerView aiSkipsOwner(final String message) {
         final GameView gv = getGameView();
@@ -782,7 +782,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return null;
     }
 
-    /** Asks for a number when the choices count up by one, with or without a last entry for any number past them; null when they do not. */
+    /** Asks for a number when the choices count up by one. A last entry may mean any larger number. Returns null when the choices do not count up. */
     private <T> List<T> askNumber(final String message, final boolean maySkip, final List<T> choices) {
         final int last = choices.size() - 1;
         final boolean open = last > 0 && choices.get(last) instanceof String;
@@ -813,7 +813,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return Lists.newArrayList(choices.get(last));
     }
 
-    /** The stack item each choice is, in the same order, or null unless every choice is a different spell on the stack. */
+    /** The stack item key of each choice, in the same order. Null unless every choice is a different spell on the stack. */
     private <T> List<Integer> stackKeysFor(final List<T> choices) {
         final GameView gv = getGameView();
         if (gv == null || gv.getStack() == null || choices.isEmpty()) {
@@ -832,7 +832,7 @@ public class WebGuiGame extends NetworkGuiGame {
                     }
                 }
             }
-            // Two abilities of one card are one item on the stack, which a click could not tell apart
+            // Two abilities of one card are one item on the stack. A click could not tell them apart
             if (found == null || keys.contains(found)) {
                 return null;
             }
@@ -848,7 +848,7 @@ public class WebGuiGame extends NetworkGuiGame {
                 at == null ? null : at.x(), at == null ? null : at.y(), onDefault);
     }
 
-    /** Asks the browser to pick from a list; {@code onDefault} is the answer taken when it cannot. */
+    /** Asks the browser to pick from a list. {@code onDefault} is the answer used when the browser cannot answer. */
     private <T> List<T> askChoices(final String message, final int min, final int max, final List<T> items,
             final List<T> selected, final FSerializableFunction<T, String> display, final List<Integer> onDefault) {
         final ChoicesRequest request = choicesRequest(ChoiceKind.choices, message, min, max, items, selected, display,
@@ -877,7 +877,7 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override
     public List<CardView> manipulateCardList(final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable, final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
         final List<CardView> list = Lists.newArrayList(cards);
-        // The original order is always a valid answer; arrangeForMove throws on an empty list
+        // The original order is always a valid answer. arrangeForMove throws on an empty list
         final ManipulateRequest request = new ManipulateRequest(title, options(list, null),
                 Answers.indicesOf(list, Lists.newArrayList(manipulable)), toTop, toBottom, Answers.range(0, list.size()));
         return Answers.pick(list, ask(request, Answers.indexList(list.size(), list.size(), list.size())));
@@ -1043,11 +1043,11 @@ public class WebGuiGame extends NetworkGuiGame {
         if (abilities.isEmpty()) {
             return null;
         }
-        // One thing to do needs no asking, unless the ability itself says to ask, as on desktop
+        // A single ability needs no question, unless the ability itself says to ask, as on desktop
         if (abilities.size() == 1 && (triggerEvent == null || !abilities.get(0).promptIfOnlyPossibleAbility())) {
             return abilities.get(0);
         }
-        // A click with either button offers what the card can do now in a menu where it was clicked, and a single thing is simply done
+        // A click with either button shows a menu, at the click, of what the card can do now. A single option is done at once
         final List<SpellAbilityView> offered = triggerEvent == null ? abilities
                 : abilities.stream().filter(SpellAbilityView::canPlay).toList();
         if (offered.isEmpty()) {
@@ -1056,7 +1056,7 @@ public class WebGuiGame extends NetworkGuiGame {
         if (triggerEvent != null && offered.size() == 1 && !offered.get(0).promptIfOnlyPossibleAbility()) {
             return offered.get(0);
         }
-        // No answer means no ability chosen, which is how a cancelled click reads
+        // No answer means no ability is chosen. A cancelled click gives the same result
         final ChoicesRequest request = choicesRequest(ChoiceKind.choices, hostCard == null ? "" : hostCard.getName(), 0, 1,
                 offered, null, WebGuiGame::firstLine, null, triggerEvent instanceof BrowserClick click ? click : null, List.of());
         final List<SpellAbilityView> picked = Answers.pick(offered, ask(request, Answers.indexList(offered.size(), 0, 1)));
@@ -1106,7 +1106,7 @@ public class WebGuiGame extends NetworkGuiGame {
         if (def.length > 0) {
             def[0] += Math.max(0, remaining);
         }
-        // Desktop's title: "Assign damage by" the spell, from the engine's lower-case name for what is assigned
+        // Desktop's title, such as "Assign damage by" the spell. amountLabel is the engine's lower-case name for what is assigned
         final String title = Localizer.getInstance().getMessage("lbLAssignAmountForEffect", amountLabel,
                 effectSource == null ? "" : effectSource.getName());
         final DistributeRequest request = new DistributeRequest(title, amount, perMin, options(recipients, null),
@@ -1119,7 +1119,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return result;
     }
 
-    // The reply is how many copies of each distinct card go in the main deck, and PlayerControllerHuman asks again if that is illegal
+    // The reply is how many copies of each distinct card go in the main deck. PlayerControllerHuman asks again if the deck is illegal
     @Override
     public List<PaperCard> sideboard(final CardPool sideboard, final CardPool main, final String message) {
         final Map<PaperCard, int[]> counts = new LinkedHashMap<>();
@@ -1162,7 +1162,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return newMain;
     }
 
-    /** A command the game acts on through the player's controller, which it does only once there is one. */
+    /** A command run through the player's controller. It runs only once the controller exists. */
     private interface Play<T> {
         void run(WebGuiGame gui, IGameController controller, T command);
     }
@@ -1194,11 +1194,11 @@ public class WebGuiGame extends NetworkGuiGame {
             .on(AutoDecisionCommand.class, play((g, controller, a) -> g.autoDecisions(controller, a)))
             .on(Plain.endTurn, play((g, controller, c) -> {
                 YieldController.endTurn(controller, g.getCurrentPlayer());
-                // The yield is set on this side at once, so the chip beside the phase pill names it straight away
+                // The yield is set here at once, so the chip beside the phase pill shows it immediately
                 g.send(g.controlsMessage());
             }))
             .on(Plain.stopYield, play((g, controller, c) -> {
-                // Ends whichever pass is running: a second press of End Turn, or a click on the chip naming it
+                // Ends whichever pass is running. It comes from a second press of End Turn, or a click on the chip that names the pass
                 YieldController.stopYielding(controller, g.getCurrentPlayer(), g);
                 g.send(g.controlsMessage());
             }))
@@ -1237,7 +1237,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final boolean leaving = command instanceof Bare b && b.t() == Plain.concede
                 || command instanceof NextGame n && n.decision() == NextGameDecision.QUIT;
         if (leaving) {
-            // The host's engine thread waits on an open request with no timeout, so answer it before leaving
+            // The host's engine thread waits on an open request with no timeout. So the request is answered before leaving
             requests.cancelAll();
         }
         mirrorLock.lock();
@@ -1284,7 +1284,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    /** A setting belongs to the player, not the game, so one sent before the game has a controller still counts. */
+    /** A setting belongs to the player, not the game. So a setting sent before the game has a controller still applies. */
     public void setSetting(final SetSetting setting) {
         mirrorLock.lock();
         try {
@@ -1295,7 +1295,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    /** Stops are the player's too. The game, once it has players, is told of each one that changed. */
+    /** Stops also belong to the player. Once the game has players, it is told of each stop that changed. */
     public void setStops(final SetStops stops) {
         mirrorLock.lock();
         try {

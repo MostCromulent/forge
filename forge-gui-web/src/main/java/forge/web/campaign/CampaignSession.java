@@ -35,13 +35,13 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-/** One session's campaign modes: the commands their pages share, the thread they run on, and what they show as the browser moves. */
+/** One session's campaign modes. It holds the commands their pages share, the thread they run on, and what they show as the browser moves between pages. */
 public final class CampaignSession implements Campaigns, IHasForgeLog {
     private final Campaigns.Host session;
-    /** What this session alone knows of the open conquest: its selection and the last move. */
+    /** The open conquest's state that only this session holds: its selection and the last move. */
     private final ConquestGame conquest = new ConquestGame();
     private final QuestGame quest = new QuestGame();
-    /** One thread for everything a campaign does, as its model is Forge's own and nothing guards it. */
+    /** One thread for all campaign work, because the campaign model is Forge's own and has no locking. */
     private final Executor work = WebGuiBase.worker("WebCampaign");
 
     public CampaignSession(final Campaigns.Host session) {
@@ -76,16 +76,16 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
             if (!(session.stage() instanceof InCampaign back)) {
                 return;
             }
-            // A game's result belongs to the campaign that started it, wherever the browser has gone by the time it is recorded
+            // A game's result belongs to the campaign that started it, wherever the browser is when the result is recorded
             final Campaign campaign = campaign(back.mode());
             session.startMatch(back, gui -> {
                 final PreparedMatch prepared = prepare.get();
                 if (prepared == null) {
                     throw new IllegalStateException("A match is already being played");
                 }
-                // The game names its winner by this name, and the board knows the seat by the session's
+                // The game names its winner by this name. The board finds the seat by the session's player name
                 prepared.human().getPlayer().setName(session.playerName());
-                // Quest plays Forge's one shared human player, whose looks are whatever the last match gave it
+                // Quest plays as Forge's one shared human player. Its avatar and sleeve are whatever the last match set
                 prepared.human().getPlayer().setAvatarIndex(session.avatarIndex());
                 prepared.human().getPlayer().setSleeveIndex(LocalGame.storedIndex(FPref.UI_SLEEVES, 0));
                 final LocalGame local = session.local();
@@ -118,7 +118,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
 
                 @Override
                 public void discarded() {
-                    // Left as desktop leaves it, with its fee given back
+                    // Left as desktop leaves it, with the fee refunded
                     run(() -> {
                         quest.cancelDraft();
                         show();
@@ -132,7 +132,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         work.execute(job);
     }
 
-    /** Work on the open save of a campaign. */
+    /** A command that works on the open save of a campaign. */
     private interface OpenHandler<T> {
         void run(CampaignSession campaigns, BrowserChannel channel, Campaign campaign, T command);
     }
@@ -148,7 +148,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
 
     /** The commands every mode's pages share. Each mode's own are in its table. */
     public static final Commands<CampaignSession> COMMANDS = new Commands<CampaignSession>()
-            // A campaign is Forge's own, one for the whole process, so it is the host's
+            // A campaign is Forge's own, with one per process, so only the host may open it
             .on(CampaignOpen.class, (s, ch, o) -> {
                 final Campaign campaign = s.campaign(o.mode());
                 if (s.session.hosting() && campaign != null) {
@@ -189,7 +189,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
                 if (problem != null) {
                     ch.send(new Notice(problem, null, false));
                 }
-                // What was traded away may have been on any of the campaign's pages
+                // The traded cards may have been on any of the campaign's pages
                 campaign.page().forEach(m -> ch.send(m));
                 final Reward opened = campaign.reward();
                 if (opened != null) {
@@ -197,7 +197,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
                 }
                 ch.send(campaign.trading());
             }))
-            // The wheel is the conquest's and not a game's, so this cheat is not one of DevMode's
+            // The wheel belongs to the conquest, not to a game, so this cheat is not one of DevMode's
             .on(DevConquestWheel.class, (s, ch, w) -> {
                 if (s.session.hosting() && FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {
                     try {
@@ -218,7 +218,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         if (COMMANDS.run(this, channel, command)) {
             return;
         }
-        // Whatever else a campaign's pages say is the open mode's own
+        // Every other command from a campaign's pages belongs to the open mode
         run(() -> {
             if (session.stage() instanceof InCampaign c) {
                 campaign(c.mode()).handle(channel, command, c.save(), host);
@@ -229,16 +229,16 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
     @Override
     public boolean deckCommand(final BrowserChannel channel, final Record command) {
         if (command instanceof CatalogueQuery q && q.source() != null) {
-            // A campaign's own cards, which need no deck open
+            // A campaign's own cards, which do not need an open deck
             inOpen((s, ch, campaign, c) -> ch.send(campaign.cards(q))).run(this, channel, command);
             return true;
         }
         if (!(session.stage() instanceof InCampaign)) {
             return false;
         }
-        // A campaign's collection editor reads and saves the campaign's cards, which only its thread may touch
+        // A campaign's collection editor reads and saves the campaign's cards. Only the campaign thread may touch them
         run(() -> session.decks().onCommand(channel, command));
-        // A deck may have changed size or become playable, which the campaign's pages show
+        // A deck may have changed size or become playable, and the campaign's pages show both
         if (command instanceof Bare b && b.t() == Plain.editorClose) {
             inOpen((s, ch, campaign, c) -> campaign.page().forEach(m -> ch.send(m))).run(this, channel, command);
         }
@@ -273,13 +273,13 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
 
     @Override
     public void becameHost() {
-        // Cards Forge shows the host outside a match are what a quest's purchase or prize opened
+        // The cards Forge shows the host outside a match are the ones a quest purchase or prize opened
         session.ui().setCardsSink(quest::shown);
     }
 
     @Override
     public void left(final Playing from, final InCampaign back) {
-        // Queued behind the last game's result, so the campaign records the game before it is told the match is left
+        // Queued after the last game's result, so the campaign records the game before it is told the match was left
         final Campaign campaign = campaign(back.mode());
         run(() -> {
             if (session.stage() == from) {
@@ -291,7 +291,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         });
     }
 
-    /** What the campaign stage draws from: the saved games, or the open one's pages and any reward yet to be shown. */
+    /** Sends what the campaign stage draws: the saved games, or the open save's pages and any reward not yet shown. */
     @Override
     public void show() {
         if (!(session.stage() instanceof InCampaign c)) {
@@ -309,21 +309,21 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         }
     }
 
-    /** Opens a campaign's saved games, or one of them. Reading a save is slow, so this is campaign work. */
+    /** Opens a campaign's list of saved games, or one save. Reading a save is slow, so this runs as campaign work. */
     private void open(final String mode, final String save) {
         final Stage from = session.stage();
         final Campaign campaign = campaign(mode);
         if (!session.hosting() || campaign == null || !(from instanceof Menu || from instanceof InCampaign)) {
             return;
         }
-        // A deck of the campaign being left has nothing to be built from any more
+        // A deck from the campaign being left can no longer be built
         session.decks().closeCollectionDeck(session.browser());
         if (session.move(from, new InCampaign(mode, save == null ? null : campaign.open(save)))) {
             show();
         }
     }
 
-    /** The menu of a saved game on the list of them. change answers why it could not be made, or null. */
+    /** Applies a change from the menu of a saved game in the saves list. change returns why it could not be made, or null. */
     private void shelf(final BrowserChannel channel, final Function<Campaign, String> change) {
         if (!session.hosting() || !(session.stage() instanceof InCampaign c) || c.save() != null) {
             return;
@@ -331,9 +331,9 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         final Campaign campaign = campaign(c.mode());
         final String problem = change.apply(campaign);
         channel.send(campaign.saves());
-        // The start page's Resume names the save played last
+        // The start page's Resume button names the save played last
         channel.send(session.hello());
-        // Last, since the browser forgets an error at every hello
+        // Sent last, because the browser clears any error on each hello
         if (problem != null) {
             channel.send(WebSession.error(problem));
         }

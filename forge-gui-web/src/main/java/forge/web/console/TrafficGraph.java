@@ -11,7 +11,7 @@ import java.awt.RenderingHints;
 import java.util.Locale;
 import javax.swing.JComponent;
 
-/** The last five minutes of bytes through the port, with what was sent stacked by kind and what was received as a dashed line. */
+/** The last five minutes of bytes through the port. Bytes sent are stacked by kind, and bytes received are drawn as a dashed line. */
 final class TrafficGraph extends JComponent {
     private static final Localizer TEXT = Localizer.getInstance();
     static final int SAMPLE_MILLIS = 1000;
@@ -26,7 +26,7 @@ final class TrafficGraph extends JComponent {
             new Color(0xa9, 0xc4, 0xff), new Color(0x4a, 0x52, 0x60)};
     private static final ServerTraffic.Kind[] KINDS = ServerTraffic.Kind.values();
     private static final int SAMPLES = 300;
-    /** The floor of the scale, so a server with nobody on it does not magnify a few bytes into peaks. */
+    /** The smallest scale, so that a few bytes on an empty server are not drawn as tall peaks. */
     private static final long SMALLEST_SCALE = 1024;
     private static final Color GRID = new Color(0x2a, 0x31, 0x3c);
     private static final Color IN = new Color(0xe8, 0xee, 0xf4);
@@ -35,7 +35,7 @@ final class TrafficGraph extends JComponent {
 
     private final long[] in = new long[SAMPLES];
     private final long[][] out = new long[KINDS.length][SAMPLES];
-    /** Where the next sample goes, which is also the oldest one still shown. */
+    /** The index of the next sample, which is also the oldest sample still shown. */
     private int next;
     private ServerTraffic counter;
     private long receivedBefore;
@@ -47,7 +47,7 @@ final class TrafficGraph extends JComponent {
         setAlignmentX(0f);
     }
 
-    /** The counters only ever grow, so a sample is the difference from the last; a new server starts from zero. */
+    /** The counters only grow, so a sample is the difference from the last reading. A new server starts from zero. */
     void sample(final ServerTraffic now) {
         final long received = now == null ? 0 : now.received();
         final long[] sent = new long[KINDS.length];
@@ -98,7 +98,7 @@ final class TrafficGraph extends JComponent {
         g2.drawLine(0, plotTop, w, plotTop);
         g2.drawLine(0, h - 4, w, h - 4);
         final int[] xs = xs();
-        // The tallest layer first, so each lower one is painted over the part of it that is not its own
+        // Paint the tallest layer first. Each lower layer then covers the part of the layer above that is not that layer's own kind.
         for (int k = KINDS.length - 1; k >= 0; k--) {
             g2.setColor(KIND_COLOURS[k]);
             g2.fillPolygon(xs, ys(stacked[k], top, plotTop, plotHeight), SAMPLES + 2);
@@ -124,7 +124,7 @@ final class TrafficGraph extends JComponent {
         g2.dispose();
     }
 
-    /** A filled square in a kind's colour and its name; returns where the next entry can start. */
+    /** Draws a filled square in a kind's colour, then its name. Returns the x where the next entry can start. */
     static int swatch(final Graphics2D g2, final int x, final int baseline, final Color colour, final String name) {
         g2.setColor(colour);
         g2.fillRect(x, baseline - 9, 9, 9);
@@ -133,7 +133,7 @@ final class TrafficGraph extends JComponent {
         return x + 14 + g2.getFontMetrics().stringWidth(name);
     }
 
-    /** Each sample's x, then the plot's two bottom corners, so the same points close an area under a line. */
+    /** Each sample's x, then the plot's two bottom corners. The same points can then close the area under a line. */
     private int[] xs() {
         final int[] xs = new int[SAMPLES + 2];
         for (int i = 0; i < SAMPLES; i++) {

@@ -14,13 +14,13 @@ import javax.swing.text.StyledDocument;
 
 /** Copies what the process prints into the console's text pane, where errors and warnings are coloured. */
 final class LogCapture {
-    /** Enough to see what just happened without holding a whole session's output. */
+    /** Enough lines to see what just happened without holding a whole session's output. */
     private static final int MAX_LINES = 300;
 
     private final StringBuilder pending = new StringBuilder();
     private final JTextPane text;
     private final Runnable onError;
-    /** The colour of the last error or warning written, so the stack trace under it is coloured with it. */
+    /** The colour of the last error or warning written. The stack trace under it is drawn in the same colour. */
     private SimpleAttributeSet carried = PLAIN;
 
     /** onError is run for each error written to the pane. */
@@ -29,14 +29,14 @@ final class LogCapture {
         this.onError = onError;
     }
 
-    /** Everything the process prints also lands here, which is the log a player can actually see. */
+    /** Everything the process prints is also copied to the pane. This is the log a player can actually see. */
     void captureOutput() {
         System.setOut(tee(System.out));
         System.setErr(tee(System.err));
     }
 
     private PrintStream tee(final PrintStream original) {
-        // var keeps the anonymous type, so drain() is callable without ByteArrayOutputStream's throwing flush
+        // var keeps the anonymous type, so drain() can be called. ByteArrayOutputStream's flush declares IOException.
         final var copyOf = new ByteArrayOutputStream() {
             void drain() {
                 final String chunk = toString(StandardCharsets.UTF_8);
@@ -58,7 +58,7 @@ final class LogCapture {
                 }
             }
 
-            // Card loading prints tens of thousands of lines, and a byte at a time is too slow for that
+            // Card loading prints tens of thousands of lines. Writing one byte at a time is too slow for that.
             @Override
             public void write(final byte[] bytes, final int off, final int len) {
                 original.write(bytes, off, len);
@@ -93,7 +93,7 @@ final class LogCapture {
         return true;
     }
 
-    // Red for errors and the stack traces under them, amber for warnings; the rest in the log's own colour
+    // Red for errors and the stack traces under them, amber for warnings. Other lines use the log's own colour.
     private static final SimpleAttributeSet PLAIN = new SimpleAttributeSet();
     private static final SimpleAttributeSet ERROR = colour(new Color(0xff, 0x6b, 0x5c));
     private static final SimpleAttributeSet WARNING = colour(new Color(0xf2, 0xc3, 0x44));
@@ -104,7 +104,7 @@ final class LogCapture {
         return set;
     }
 
-    /** A stack trace line carries on the colour of the error or warning above it, which tinylog marks as [ERROR] or [WARN ]. */
+    /** A stack trace line keeps the colour of the error or warning above it. tinylog marks those lines as [ERROR] or [WARN ]. */
     private SimpleAttributeSet styleOf(final String line) {
         if (line.contains("[ERROR]")) {
             return carried = ERROR;

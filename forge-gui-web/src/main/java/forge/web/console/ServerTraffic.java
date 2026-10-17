@@ -10,7 +10,7 @@ import io.netty.util.AttributeKey;
 
 import java.util.concurrent.atomic.LongAdder;
 
-/** Counts every byte through the web port, with what is sent split by the kind its connection was last marked as carrying. */
+/** Counts every byte through the web port. Bytes sent are split by the kind that their connection was last marked as carrying. */
 @ChannelHandler.Sharable
 public final class ServerTraffic extends ChannelDuplexHandler {
     public enum Kind { GAME, CARD_ART, AUDIO, PAGE }
@@ -27,7 +27,7 @@ public final class ServerTraffic extends ChannelDuplexHandler {
         }
     }
 
-    /** What the connection sends from here on, until it is told otherwise. */
+    /** Marks what the connection sends from now on, until the next call changes it. */
     public static void carrying(final Channel channel, final Kind kind) {
         channel.attr(KIND).set(kind);
     }

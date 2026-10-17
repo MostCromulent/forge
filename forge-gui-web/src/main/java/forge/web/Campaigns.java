@@ -15,8 +15,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * One session's campaign modes, which live in forge.web.campaign so that a build can leave them out. The session makes
- * them in its constructor; without them it uses {@link #NONE}, which takes no command and shows nothing.
+ * One session's campaign modes. They live in forge.web.campaign so that a build can leave them out. The session creates
+ * them in its constructor. Without them it uses {@link #NONE}, which handles no command and shows nothing.
  */
 public interface Campaigns {
     Campaigns NONE = new Campaigns() { };
@@ -46,12 +46,12 @@ public interface Campaigns {
         LocalGame local();
 
         /**
-         * Starts a match a campaign builds, from back, which leaving it returns to. start builds it on the GUI the match is played
-         * through, and throws if it cannot. gameOver hears each game's end with the host's view of it. failed undoes what preparing it did.
+         * Starts a match that a campaign builds. Leaving the match returns to back. start builds the match on the GUI it is played
+         * through, and throws if it cannot. gameOver receives each game's end with the host's view of it. failed undoes the preparation.
          */
         void startMatch(InCampaign back, Consumer<WebGuiGame> start, Runnable failed, Consumer<GameView> gameOver);
 
-        /** Opens a draft against the computer whose packs are already dealt, played for owner. */
+        /** Opens a draft against the computer whose packs are already dealt. The draft is played for owner. */
         void startDraft(BoosterDraft draft, DraftOwner owner);
     }
 
@@ -62,29 +62,29 @@ public interface Campaigns {
     default void run(final BrowserChannel channel, final Record command) {
     }
 
-    /** A deck command, which the campaigns take when it is about their own cards or made on their pages. Answers whether they took it. */
+    /** A deck command. The campaigns take it when it is about their own cards or was made on their pages. Returns whether they took it. */
     default boolean deckCommand(final BrowserChannel channel, final Record command) {
         return false;
     }
 
-    /** The browser came back to now, so what a campaign shows there is sent to it again. */
+    /** The browser reconnected at stage now, so what a campaign shows there is sent to it again. */
     default void reconnected(final BrowserChannel channel, final Stage now) {
     }
 
-    /** The save each mode would resume, by mode, which the start page offers. */
+    /** The save that each mode would resume, keyed by mode. The start page offers these. */
     default Map<String, String> resume() {
         return Map.of();
     }
 
-    /** The session took the host's seat, which is the only one that opens a campaign. */
+    /** The session took the host's seat. Only the host's seat can open a campaign. */
     default void becameHost() {
     }
 
-    /** The match started from back was left. */
+    /** The player left the match that was started from back. */
     default void left(final Playing from, final InCampaign back) {
     }
 
-    /** The campaign stage is showing again, so its page is sent. */
+    /** The campaign stage is shown again, so its page is sent. */
     default void show() {
     }
 }

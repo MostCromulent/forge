@@ -1,4 +1,4 @@
-// Settings marked server:true are Forge preferences shared with the desktop client, and the rest live in this browser
+// Settings marked server:true are Forge preferences shared with the desktop client. The rest are stored in this browser
 
 import { SHORTCUT_PREFS, codesOfKey, sameShortcut, type KeyBindings } from './keys';
 import type { ServerSettings } from './protocol';
@@ -6,11 +6,11 @@ import { storeJson, storedJson } from './storage';
 import { t, type TextKey } from './text';
 
 const LOCAL_KEY = 'forge.settings';
-/** The server keeps a guest's settings only as long as the session, so the browser remembers them and gives them back on connecting. */
+/** The server keeps a guest's settings only for the session. The browser stores them and sends them again on connecting. */
 const GUEST_KEY = 'forge.guestSettings';
 
 
-/** The playmats a player can lay under the board; the first is the bare table, with no picture. */
+/** The playmats a player can show under the board. The first is the bare table, with no picture. */
 export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb: string | null }[] = [
   { id: 'table', name: 'lblNone', image: null, thumb: null },
   { id: 'mistbound', name: 'lblWebPlaymatMistbound', image: '/playmats/mistbound-ruins.jpg', thumb: '/playmats/mistbound-ruins-thumb.jpg' },
@@ -27,21 +27,21 @@ interface SettingBase {
   key: string;
   label: string;
   hint?: string;
-  /** The game reads it too, so its preference is in WebSettings and its value in ServerSettings. */
+  /** The game also reads it. Its preference is in WebSettings and its value is in ServerSettings. */
   server?: boolean;
   /** Also set from the volume control beside the options button. */
   volume?: boolean;
-  /** Only the host has it: a guest's browser leaves it out of the options. */
+  /** Only the host has it. A guest's browser leaves it out of the options. */
   hostOnly?: boolean;
   /** Also set in a dialog opened from the game menu. */
   menu?: 'stops' | 'decisions' | 'playmat';
-  /** Set from another setting's control or from a dialog, so the options give it no row of its own. */
+  /** Set from another setting's control or from a dialog, so it has no row of its own in the options. */
   inside?: boolean;
-  /** Listed in the options only while this holds. */
+  /** Listed in the options only while this returns true. */
   when?: () => boolean;
 }
 
-/** A choice shown as a picture: its value, name, a line under the name, the drawing's SVG, and when it cannot be chosen. */
+/** A choice shown as a picture. It has a value, a name, a hint line under the name, an SVG drawing, and a test for when it is unavailable. */
 export interface Tile {
   value: string;
   label: string;
@@ -55,21 +55,21 @@ export type SettingDef = SettingBase & (
   | { type: 'choice'; options: [string, string][]; def: string }
   | { type: 'tiles'; options: Tile[]; def: string }
   | { type: 'playmat'; def: string }
-  /** Not a setting: a button that opens a dialog of the game menu. */
+  /** Not a setting. It is a button that opens a game menu dialog. */
   | { type: 'dialog'; dialog: 'stops' | 'decisions'; def: string }
   | { type: 'slider'; min: number; max: number; def: number; step?: number; unit?: 'seconds' }
   | { type: 'css'; def: string }
   | { type: 'key'; action: keyof KeyBindings; def: string }
-  /** One of Forge's shortcut preferences, which desktop reads too (shortcutSettings). */
+  /** One of Forge's shortcut preferences, which desktop also reads (shortcutSettings). */
   | { type: 'shortcut'; def: string }
 );
 
 const theirs = (x: number, y: number, width: number) => `<rect class="theirs" x="${x}" y="${y}" width="${width}" height="32" rx="3"/>`;
 const YOURS = '<rect class="yours" x="4" y="44" width="96" height="32" rx="3"/>';
-/** A table of five or more shows one opponent at a time whatever is chosen, so the other layouts cannot be picked during one. */
+/** A table of five or more players always shows one opponent at a time. The other layouts cannot be picked during such a match. */
 const tabsOnly = () => Number(document.querySelector<HTMLElement>('#match:not([hidden])')?.dataset.opponents ?? 0) > 3;
 
-/** How often a yield suggestion comes back once it is declined, as desktop offers it. */
+/** When a declined yield suggestion is offered again, with the same options as desktop. */
 const SCOPES: [string, string][] = [['NEVER', t('lblNever')], ['ALWAYS', t('lblAlways')], ['STACK', t('lblDeclScopeStack')], ['TURN', t('lblDeclScopeTurn')]];
 
 export const SETTINGS: SettingDef[] = [
@@ -121,7 +121,7 @@ export const SETTINGS: SettingDef[] = [
     options: [['mana', t('lblCMC')], ['color', t('lblColor')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
   },
   {
-    // Forge ships only the default set, so the choice shows once someone has added another, as on desktop
+    // Forge ships only the default set. As on desktop, the choice is shown only after someone adds another set
     section: t('lblWebOptionsSectionSound'), key: 'soundSet', label: t('cbpSoundSets'), type: 'choice', server: true, hostOnly: true,
     when: () => (server.soundSets?.length ?? 0) > 1,
     get options(): [string, string][] {
@@ -145,7 +145,7 @@ export const SETTINGS: SettingDef[] = [
   },
   { section: t('lblAutoYieldsAndTriggers'), key: 'yieldSettings', label: t('lblYieldSettings'), type: 'dialog', dialog: 'stops', def: '' },
   {
-    // The host reads the remembered list from the player's own game, so a spectator or the menu has none to show
+    // The host reads the saved list from the player's own game. A spectator or the menu has no list to show
     section: t('lblAutoYieldsAndTriggers'), key: 'autoDecisions', label: t('lblWebGameMenuDecisions'), type: 'dialog', dialog: 'decisions', def: '',
     when: () => !!document.querySelector('#match:not([hidden])') && !document.querySelector('#prompt.spectating'),
   },
@@ -188,7 +188,7 @@ let server: Partial<ServerSettings> = {};
 /** Saves a setting the server keeps. */
 let saveOnServer: (key: string, value: string) => void = () => {};
 let redraw: () => void = () => {};
-/** The host's server settings are Forge's preferences, which outlive the server; a guest's do not. */
+/** The host's server settings are Forge preferences, which persist after the server stops. A guest's do not. */
 let guest = false;
 
 export function setGuest(value: boolean): void {
@@ -219,7 +219,7 @@ export function onServerSettings(values: ServerSettings | undefined): void {
   apply();
 }
 
-/** Gives the server the settings this guest's browser remembers, sent before any game opens so the game is seeded with them. */
+/** Sends the server the settings this guest's browser stored. It runs before any game opens, so the game starts with them. */
 export function restoreGuestSettings(): void {
   for (const [key, value] of Object.entries(guestSettings())) {
     if (byKey.get(key)?.server || key.startsWith('SHORTCUT_')) {
@@ -255,13 +255,13 @@ export function boundKeys(): KeyBindings {
   return Object.fromEntries(KEY_SETTINGS.map(d => [d.action, String(setting(d.key))])) as unknown as KeyBindings;
 }
 
-/** Puts every key back as it came, the shortcut preferences included. */
+/** Resets every key to its default, including the shortcut preferences. */
 export function resetKeys(): void {
   for (const s of server.shortcuts ?? []) saveShortcut(s.pref, s.defaultKeys);
   setKeys(Object.fromEntries(KEY_SETTINGS.map(d => [d.action, d.def])) as unknown as KeyBindings);
 }
 
-/** The shortcut preferences the web has an action for, as rows of the options, with Forge's name and default for each. */
+/** Option rows for the shortcut preferences the web has an action for, each with Forge's name and default. */
 export function shortcutSettings(): SettingDef[] {
   return (server.shortcuts ?? []).filter(s => SHORTCUT_PREFS.has(s.pref))
     .map(s => ({ section: t('lblKeyboardShortcuts'), key: s.pref, label: s.label, type: 'shortcut', server: true, def: s.defaultKeys }));
@@ -280,7 +280,7 @@ function saveShortcut(pref: string, codes: string): void {
   if (guest) storeJson(GUEST_KEY, { ...guestSettings(), [pref]: codes });
 }
 
-/** Gives a shortcut preference its keys, which any other shortcut or page key holding them loses, so a key does one thing. */
+/** Gives a shortcut preference its keys. Any other shortcut or page key with the same keys is cleared, so a key does one thing. */
 export function setShortcut(pref: string, codes: string): void {
   if (codes) {
     for (const s of server.shortcuts ?? []) {
@@ -296,11 +296,11 @@ export function setShortcut(pref: string, codes: string): void {
   redraw();
 }
 
-/** Saves every key binding at once, so a swap between two actions lands as one change. */
+/** Saves every key binding at once, so a swap between two actions is saved as one change. */
 export function setKeys(keys: KeyBindings): void {
   for (const d of KEY_SETTINGS) {
     local[d.key] = keys[d.action];
-    // A desktop shortcut on the same key loses it
+    // A desktop shortcut on the same key is cleared
     for (const s of server.shortcuts ?? []) {
       if (sameShortcut(s.keys, codesOfKey(keys[d.action]))) saveShortcut(s.pref, '');
     }
@@ -309,10 +309,10 @@ export function setKeys(keys: KeyBindings): void {
   redraw();
 }
 
-// Pushes the hand and preview sizes, the highlight colour, the playmat, the motion choice and the custom CSS into CSS; the rest is read where it is used
+// Copies the hand and preview sizes, highlight colour, playmat, motion choice and custom CSS into CSS. Other settings are read where they are used
 function apply(): void {
   const root = document.documentElement;
-  // Desktop keeps the highlight colour as a preference of its own, with no control in this dialog
+  // The highlight colour is a desktop preference with no control in the web options
   root.style.setProperty('--playable', server.highlightColor ?? '#66ccff');
   const hand = Number(setting('handSize')) / 100;
   root.style.setProperty('--hand-w', `${Math.round(88 * hand)}px`);

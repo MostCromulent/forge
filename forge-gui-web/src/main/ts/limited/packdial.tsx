@@ -1,4 +1,4 @@
-// The table: the draft's seats round a ring in pass order, you at the bottom, with a chevron between seats for the way packs go
+// The draft table. The seats are drawn round a ring in pass order, with you at the bottom. A chevron between seats shows which way packs pass
 
 import { nextFrom, seatAngle } from './dial';
 import type { DraftState } from '../protocol';
@@ -9,7 +9,7 @@ const HEIGHT = 400;
 const CX = WIDTH / 2;
 const CY = 196;
 const RING_R = 120;
-/** How far out from the ring a seat's name and packs sit. */
+/** How far out from the ring a seat's name and pack count are drawn. */
 const LABEL_R = RING_R + 52;
 
 const at = (angle: number, r: number) => ({ x: CX + r * Math.cos(angle), y: CY + r * Math.sin(angle) });

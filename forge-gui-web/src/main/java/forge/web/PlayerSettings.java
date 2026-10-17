@@ -6,7 +6,7 @@ import forge.model.FModel;
 import java.util.EnumMap;
 import java.util.Map;
 
-/** Anything a player can set is read through here, never straight from the preferences, so one player's choice cannot become another's. */
+/** Every setting a player can change is read through this class, never straight from the preferences. This stops one player's choice from changing another player's settings. */
 public final class PlayerSettings {
     /** Null for the host, whose settings are the preferences themselves. */
     private final Map<FPref, String> own;
@@ -15,12 +15,12 @@ public final class PlayerSettings {
         this.own = own;
     }
 
-    /** The host's: Forge's preferences, which the desktop client shares. */
+    /** The host's settings. These are Forge's preferences, which the desktop client also uses. */
     public static PlayerSettings saved() {
         return new PlayerSettings(null);
     }
 
-    /** A guest's, starting from Forge's defaults. */
+    /** A guest's settings, starting from Forge's defaults. */
     static PlayerSettings fresh() {
         return new PlayerSettings(new EnumMap<>(FPref.class));
     }
@@ -33,7 +33,7 @@ public final class PlayerSettings {
         return value != null ? value : pref.getDefault();
     }
 
-    /** Whether these are the host's, which are Forge's own preferences. */
+    /** Whether these are the host's settings, which are Forge's own preferences. */
     boolean shared() {
         return own == null;
     }
@@ -62,7 +62,7 @@ public final class PlayerSettings {
         set(pref, String.valueOf(value));
     }
 
-    /** Keeps what was set. Only the host's settings outlive the process; a guest's browser remembers its own. */
+    /** Saves what was set. Only the host's settings are kept after the process ends. A guest's browser stores its own. */
     public void save() {
         if (own == null) {
             FModel.getPreferences().save();

@@ -1,4 +1,4 @@
-// The printing a player likes best for each card, kept in this browser: the catalogue shows it, and a card new to a deck is added in it
+// The player's preferred printing of each card, stored in this browser. The catalogue shows it, and a card new to a deck is added in it.
 
 import type { Actions } from '../actions';
 import type { DeckSection, EditorState } from '../protocol';
@@ -10,13 +10,13 @@ let byName: Record<string, string> | null = null;
 
 const all = (): Record<string, string> => (byName ??= storedJson<Record<string, string>>(KEY, {}));
 
-/** Whether this deck takes any printing of any card, which a pool's deck or a campaign's does not. */
+/** Whether this deck can use any printing of any card. A limited pool's deck or a collection deck cannot. */
 export const choosesPrintings = (state: EditorState): boolean => !state.limited && !state.collection;
 
 /** The image key of the printing preferred for a card, or undefined when none was chosen. */
 export const preferredPrinting = (name: string): string | undefined => all()[name];
 
-/** Keeps a card's preferred printing, or forgets it when given null, and draws the page again since the catalogue shows it. */
+/** Stores a card's preferred printing, or clears it when key is null. The page is redrawn because the catalogue shows the printing. */
 export function preferPrinting(name: string, key: string | null): void {
   const next = { ...all() };
   if (key === null) delete next[name];
@@ -26,7 +26,7 @@ export function preferPrinting(name: string, key: string | null): void {
   redrawUi();
 }
 
-/** Adds a card to the deck. One the deck does not hold yet arrives in its preferred printing; one it holds keeps the deck's printing. */
+/** Adds a card to the deck. A single copy of a card new to the deck is added in its preferred printing. A card the deck holds keeps the deck's printing. */
 export function addCard(actions: Actions, state: EditorState, name: string, to: DeckSection, count = 1): void {
   const held = [...state.main.flatMap(g => g.cards), ...state.sideboard, ...state.commanders].some(card => card.name === name);
   const key = choosesPrintings(state) && !held && count === 1 ? preferredPrinting(name) : undefined;

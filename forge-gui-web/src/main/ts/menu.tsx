@@ -1,4 +1,4 @@
-// The first screen: the name and face you play under, then the menu for the host and a wait for a table for everyone else
+// The first screen. It asks for a name and avatar, then shows the menu to the host and a waiting card to everyone else
 
 import type { ComponentChildren } from 'preact';
 import { ForgeLinks } from './links';
@@ -13,23 +13,23 @@ import { t } from './text';
 import { rememberAvatar, rememberedAvatar } from './identity';
 import { CampaignMenu } from './campaigns';
 
-/** Kept to the server's limit (WebSession.MAX_NAME_LENGTH), so the field stops where the server would refuse. */
+/** Matches the server's limit (WebSession.MAX_NAME_LENGTH), so the field stops before the server would refuse the name. */
 const MAX_NAME_LENGTH = 24;
 
 export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   const choosing = ui.menuChoice;
-  // A step deeper slides forward, and the trail back shows the earlier step at once (dialogs.css)
+  // A step forward slides in. A step back through the trail shows the earlier step at once (dialogs.css)
   const setChoosing = (way: 'play' | 'friends' | null) => {
     document.documentElement.toggleAttribute('data-back', !way);
     if (way) eased(u => { u.menuChoice = way; }, () => ({ way: 'on' }));
     else changeUi(u => { u.menuChoice = null; });
   };
-  // A new name arriving means the change went through
+  // A new name from the server means the rename succeeded, so the rename prompt closes
   useEffect(() => changeUi(u => { u.renaming = false; }), [model.playerName]);
   if (ui.renaming) {
     return <NamePrompt model={model} actions={actions} initial={model.playerName} cancel={() => changeUi(u => { u.renaming = false; })} />;
   }
-  // A browser without the host's seat has no menu: it waits for somebody to open a table
+  // A browser that is not the host has no menu. It waits for somebody to open a table
   if (!model.host) {
     return <Waiting model={model} actions={actions} />;
   }
@@ -66,7 +66,7 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   );
 }
 
-/** The kind of play, chosen before entering, the same way whoever the opponents are. Greyed ones are still to come. */
+/** The choice of game kind, shown the same way for AI and friend opponents. Greyed kinds are not available yet. */
 function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model: Model; actions: Actions; back: () => void }) {
   const computer = who === 'play';
   return (
@@ -87,7 +87,7 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
   );
 }
 
-// A fanned deck for Constructed; two packs passing between players for Draft; an opened pack with its cards rising for Sealed
+// A fanned deck for Constructed. Two packs passing between players for Draft. An opened pack with cards rising out for Sealed
 const KIND_ICONS: Record<string, ComponentChildren> = {
   constructed: <><rect x="16" y="11" width="21" height="29" rx="3" /><path d="M12 15v21M8 19v13" /></>,
   draft: <><rect x="7" y="16" width="14" height="22" rx="2" /><rect x="27" y="16" width="14" height="22" rx="2" /><path d="M17 9h13l-3-3M31 45H18l3 3" /></>,
@@ -95,7 +95,7 @@ const KIND_ICONS: Record<string, ComponentChildren> = {
     <rect x="16" y="6" width="10" height="15" rx="1.5" transform="rotate(-12 21 13.5)" /><rect x="23" y="5" width="10" height="15" rx="1.5" transform="rotate(10 28 12.5)" /></>,
 };
 
-/** A kind of game, drawn as two buttons in one frame because a button cannot hold another, and greyed when it opens nothing. icon replaces the kind's own. */
+/** A kind of game, drawn as two buttons in one frame because a button cannot contain another. It is greyed when onClick is missing. icon replaces the kind's own icon. */
 export function Kind({ id, icon, name, note, blurb, resume, resumeLabel, onClick }: {
   id: string; icon?: ComponentChildren; name: string; note?: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
 }) {
@@ -126,10 +126,10 @@ const MODE_ICONS: Record<string, ComponentChildren> = {
   editor: <><rect x="16" y="11" width="21" height="29" rx="3" /><path d="M12 15v21M8 19v13" /></>,
 };
 
-/** Blank cards in the five colours fanned on the Decks plaque, a deck's worth of variety at a glance. */
+/** The frame colours of the blank cards fanned on the Decks plaque, one card for each of the five colours. */
 const DECK_FAN = ['W', 'U', 'B', 'R', 'G'];
 
-/** A way in from the start page, drawn as a plaque with an icon because card art is not Forge's to use. */
+/** An entry on the start page, drawn as a plaque with an icon because Forge may not use card art. */
 function Mode({ id, fan, name, blurb, status, onClick }: {
   id: string; fan?: string[]; name: string; blurb: string; status: string; onClick?: () => void;
 }) {
@@ -152,7 +152,7 @@ function Mode({ id, fan, name, blurb, status, onClick }: {
   );
 }
 
-/** Asks for the name and face to play under, and offers the host seat while it is free. */
+/** Asks for the player's name and avatar. It also offers the host seat while the seat is free. */
 export function NamePrompt({ model, actions, initial = '', cancel }: {
   model: Model; actions: Actions; initial?: string; cancel?: () => void;
 }) {
@@ -161,8 +161,8 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
   const [picking, setPicking] = useState(false);
   const [takeHost, setTakeHost] = useState(true);
   const input = useRef<HTMLInputElement>(null);
-  // A name this browser used before is being offered already, so asking again would only flash past.
-  // Before the server's first hello nobody knows whether the host seat is free, and a name sent then would take a guest's place
+  // A name this browser used before is already sent, so the prompt would only flash on screen.
+  // Before the server's first hello the browser cannot tell if the host seat is free. A name sent then would join as a guest
   const asking = !model.nameSent && !!model.looks;
   useEffect(() => {
     input.current?.focus();
@@ -170,7 +170,7 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
   if (!asking) {
     return <div class="menu-page start"><Wordmark /></div>;
   }
-  // Changing your name later is not the moment to be offered a seat you may already hold
+  // A rename does not offer the host seat, because the player may already hold it
   const offerHost = !cancel && model.canClaimHost;
   return (
     <div class="menu-page start">
@@ -183,7 +183,7 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
           return;
         }
         rememberAvatar(avatar);
-        // The seat is taken first, so the name reaches a session that knows it is the host and does not join as a guest
+        // Claim the host seat before sending the name. Otherwise the session does not know it is the host and joins as a guest
         if (offerHost && takeHost) {
           actions.claimHost();
         }
@@ -230,11 +230,11 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
   );
 }
 
-/** A browser with no seat: one is being taken, the last attempt at one failed, or nobody has opened a table yet. */
+/** The page for a browser with no seat. A seat is being taken, the last attempt failed, or nobody has opened a table yet. */
 function Waiting({ model, actions }: { model: Model; actions: Actions }) {
   const failed = model.screen !== 'opening' && !!model.error;
   const state = model.screen === 'opening' ? 'joining' : failed ? 'failed' : 'idle';
-  // A match takes nobody new, so the wait is for the host to give up a seat or open the next table
+  // A match in progress takes no new players, so the guest waits for the host to give up a seat or open the next table
   const midMatch = state === 'idle' && model.presence.some(p => p.host && (p.doing === 'playing' || p.doing === 'watching'));
   return (
     <div class="menu-page">

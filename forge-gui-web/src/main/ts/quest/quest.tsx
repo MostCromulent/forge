@@ -1,4 +1,4 @@
-// Quest: the saved quests as a shelf, and inside one, the bar every page shares over the page itself
+// Quest: the saved quests as a shelf. Inside a quest, every page shares the bar above it
 
 import { Shelf as Cards } from '../shelf';
 import { ui } from '../ui';
@@ -19,7 +19,7 @@ import { t, shortDay, type TextKey } from '../text';
 
 const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels'], ['challenges', 'lblChallenges'], ['tournaments', 'lblTournaments'], ['decks', 'lblQuestDecks'],
   ['shop', 'lblSpellShop'], ['bazaar', 'lblBazaar'], ['stats', 'lblStatistics']];
-/** The bazaar is Fantasy mode's only, which a Classic quest's bar shows by having no life. */
+/** Only Fantasy mode has the bazaar. A Classic quest is recognised by having no life balance on its bar. */
 const FANTASY_ONLY: QuestTab[] = ['bazaar'];
 
 export function Quest({ model, actions }: { model: Model; actions: Actions }) {

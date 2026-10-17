@@ -1,4 +1,4 @@
-// The phone's menu: what the side column holds on a desktop, behind one button
+// The phone's menu. It holds what the side column shows on desktop, behind one button.
 
 import { useLayoutEffect, useRef } from 'preact/hooks';
 import { byId } from '../dom';
@@ -26,7 +26,7 @@ export function MenuSheet({ model, actions }: { model: Model; actions: Actions }
     if (root.current) swipeDown(root.current, close);
     return () => sheet('menu', false, close);
   }, []);
-  // The log and the chat are drawn into elements of their own, which are lent to the sheet while their tab shows
+  // The log and the chat are drawn into their own elements. Each is moved into the sheet while its tab is open, then moved back
   useLayoutEffect(() => {
     const el = tab === 'log' ? byId('log') : tab === 'chat' ? byId('match-chat') : null;
     const home = el?.parentElement;
@@ -35,7 +35,7 @@ export function MenuSheet({ model, actions }: { model: Model; actions: Actions }
     if (tab === 'log') el.scrollTop = el.scrollHeight;
     return () => { home.append(el); };
   }, [tab]);
-  // The keyboard takes the bottom of the screen, so while the chat is typed in the sheet ends where the visible part does
+  // The on-screen keyboard covers the bottom of the screen. While the chat tab is open, the sheet ends at the top of the keyboard
   useLayoutEffect(() => {
     const view = window.visualViewport;
     const el = root.current;

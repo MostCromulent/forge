@@ -1,4 +1,4 @@
-// A shelf of saved things as cards, each with the one thing to do next, after a card that starts a new one
+// A shelf of saved items shown as cards, after a card that starts a new one. Each card offers its next action
 
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
@@ -10,11 +10,11 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
   create?: { title: string; line?: string; go: () => void };
   cls: (row: Row) => string;
   art?: (row: Row) => ComponentChildren;
-  /** What a card says under its name and in its middle, and its buttons while it is asked nothing. */
+  /** The text under a card's name, the card's middle, and its buttons while no delete question is shown. */
   sub: (row: Row) => ComponentChildren; mid: (row: Row) => ComponentChildren; foot: (row: Row) => ComponentChildren;
-  /** field names the name's input for a reader who cannot see it. */
+  /** field is the accessible label of the name input, for screen readers. */
   rename?: { field: string; go: (row: Row, to: string) => void };
-  /** item is the menu's word for it, ask the question put before it is done, and keep the answer that leaves it. */
+  /** item is the menu label. ask is the question shown before the delete. keep is the label of the button that cancels it. */
   remove?: { item: string; ask: (row: Row) => string; keep: string; go: (row: Row) => void };
 }) {
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
               : <>
                   {foot(r)}
                   <span class="sp" />
-                  {/* Without a way to remove a save there is nothing for its menu to hold */}
+                  {/* The menu is only shown when a save can be removed, because removing is its main item */}
                   {remove && <Dropdown cls="ev-more" button={(open, toggle) => (
                     <button class="more" title={t('lblWebLimitedMore')} aria-label={t('lblWebLimitedMoreFor', r.name)} aria-expanded={open}
                       onClick={toggle}>⋯</button>
@@ -75,7 +75,7 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
   );
 }
 
-/** A name typed in: submitted, a name that is not blank goes to done, and a blank one, Escape or Cancel goes to cancel. */
+/** A name input. On submit a name that is not blank goes to done. A blank name, Escape or Cancel calls cancel. */
 export function NameForm({ cls, initial, label, placeholder, submit, done, cancel }: {
   cls: string; initial: string; label: string; placeholder?: string; submit: string; done: (name: string) => void; cancel: () => void;
 }) {

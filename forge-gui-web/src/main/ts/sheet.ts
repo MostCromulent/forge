@@ -1,26 +1,26 @@
-// What every sheet on a phone shares: Back closes it, and a swipe down from its handle closes it
+// Behaviour shared by every sheet on a phone. Back closes it, and so does a swipe down from its handle
 
 import { byId, q } from './dom';
 
 const open = new Map<string, () => void>();
 let inMatch = false;
 let leaving = false;
-/** Steps back this module took itself, to give a closed sheet's entry back, which are not the player pressing Back. */
+/** History steps back that this module made itself to remove a closed sheet's entry. They are not Back presses by the player. */
 let ownSteps = 0;
 
-/** A match holds one history entry of its own, so Back with nothing open asks before it leaves the page. */
+/** A match adds one history entry of its own. Back with nothing open then asks before it leaves the page. */
 export function matchHistory(now: boolean): void {
-  // A reload keeps the entry the match already had
+  // After a reload the match's entry is still in the history
   if (now && !inMatch && !history.state?.match) history.pushState({ match: true }, '');
   if (!now && inMatch) {
-    // Given back with the match, so the page it returns to has no Back press that goes nowhere
+    // The entry is removed when the match ends, so the next page has no Back press that does nothing
     open.clear();
     if (history.state?.match) step();
   }
   inMatch = now;
 }
 
-/** A step back this module takes itself, which the Back handler must not take for the player's. */
+/** Steps back in history for this module. The popstate handler must not treat it as the player's Back press. */
 function step(): void {
   ownSteps++;
   history.back();
@@ -28,16 +28,16 @@ function step(): void {
 
 export function initSheets(): void {
   const ask = byId('leave-ask');
-  // Staying puts back the entry that Back took, so the next Back asks again
+  // Stay pushes back the entry that Back removed, so the next Back asks again
   q(ask, '.stay').onclick = () => {
     ask.hidden = true;
     if (inMatch && !history.state?.match) history.pushState({ match: true }, '');
   };
-  // Leaving is what Back would have done: out past the entry the match holds
+  // Leave does what Back would have done without the match's entry
   q(ask, '.leave').onclick = () => {
     ask.hidden = true;
     leaving = true;
-    // Back was already taken once to get here, so one more step is the page before this one
+    // Back already removed the match's entry, so one more step goes to the page before this one
     history.back();
     setTimeout(() => { leaving = false; }, 500);
   };
@@ -47,12 +47,12 @@ export function initSheets(): void {
       return;
     }
     const last = [...open.keys()].pop();
-    // An entry left by a sheet that closed while another was above it holds nothing, so Back passes through it
+    // A sheet that closed while another sheet was above it leaves a stale entry. Back skips over it
     if (history.state?.sheet && !open.has(history.state.sheet)) {
       step();
     }
     if (last === undefined) {
-      // The match's own entry was just left; the question stands in front of the step that leaves the page
+      // Back just removed the match's own entry. The leave question is shown before the next step leaves the page
       if (inMatch && !leaving && !history.state?.match) ask.hidden = false;
       return;
     }
@@ -62,7 +62,7 @@ export function initSheets(): void {
   });
 }
 
-/** Told each frame whether a sheet is open, so a sheet closed by any route also gives its history entry back. */
+/** Called each frame with whether a sheet is open. A sheet closed by any means then also removes its history entry. */
 export function sheet(id: string, isOpen: boolean, close: () => void): void {
   if (isOpen && !open.has(id)) {
     open.set(id, close);
@@ -75,12 +75,12 @@ export function sheet(id: string, isOpen: boolean, close: () => void): void {
   }
 }
 
-/** How far a finger travels before a swipe counts. */
+/** How far a finger must move before a swipe counts. */
 const SWIPE_PX = 60;
 
-/** A swipe down from a sheet's handle closes it; lower down, the same swipe scrolls what the sheet holds. */
+/** A swipe down from a sheet's handle closes it. Lower down, the same swipe scrolls the sheet's content. */
 export function swipeDown(el: HTMLElement, close: () => void): void {
-  // Touch events, since a browser that takes a drag for a scroll cancels the pointer and never says where it lifted
+  // This uses touch events. When a browser treats a drag as a scroll, it cancels the pointer and never reports where it lifted
   let from: number | null = null;
   el.addEventListener('touchstart', e => {
     const y = e.touches[0].clientY;
@@ -93,7 +93,7 @@ export function swipeDown(el: HTMLElement, close: () => void): void {
   el.addEventListener('touchcancel', () => { from = null; });
 }
 
-/** A swipe left, right or up that starts on the part of el matching inside. */
+/** Calls swiped for a swipe left, right or up that starts on the part of el matching inside. */
 export function swipeAcross(el: HTMLElement, inside: string, swiped: (way: 'left' | 'right' | 'up') => void): void {
   let from: Touch | null = null;
   el.addEventListener('touchstart', e => {
@@ -110,9 +110,9 @@ export function swipeAcross(el: HTMLElement, inside: string, swiped: (way: 'left
   el.addEventListener('touchcancel', () => { from = null; });
 }
 
-/** The prompt a sheet opened over, so that a prompt that came since, and not that one, can make it give way. note is called once a draw. */
+/** Tracks the prompt a sheet opened over, so only a later prompt closes the sheet. note is called once per draw. */
 export function openedOver(): { readonly seen: object | null; note(open: boolean, prompt: object | null | undefined): void } {
-  // Opened with no prompt at all, the next prompt is a new one too
+  // If the sheet opened with no prompt, any later prompt also counts as new
   const none = {};
   let seen: object | null = null;
   return {
@@ -121,7 +121,7 @@ export function openedOver(): { readonly seen: object | null; note(open: boolean
   };
 }
 
-/** True the first time it is given each key in a row, so a sheet acts once on a prompt rather than on every draw. null is no key. */
+/** Returns true when given a key that differs from the previous one, so a sheet acts once per prompt and not on every draw. null is no key. */
 export function oncePer<T>(): (key: T | null) => boolean {
   let last: T | null = null;
   return key => {

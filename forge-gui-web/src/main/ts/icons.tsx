@@ -1,4 +1,4 @@
-// Every icon the page draws from Lucide (ISC, see forge-gui/res/licenses/lucide-license.txt), as the shapes inside a 24-unit svg
+// Every Lucide icon the page uses (ISC, see forge-gui/res/licenses/lucide-license.txt). Each entry is the shapes inside a 24-unit svg
 
 export const ICONS = {
   check: '<path d="M20 6 9 17l-5-5"/>',
@@ -35,7 +35,7 @@ export const ICONS = {
   bot: '<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/>',
 };
 
-/** An icon as markup, for an element drawn by hand. */
+/** An icon as an svg string, for an element built by hand. */
 export const iconSvg = (shapes: string, cls?: string): string =>
   `<svg${cls ? ` class="${cls}"` : ''} viewBox="0 0 24 24" aria-hidden="true">${shapes}</svg>`;
 

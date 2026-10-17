@@ -1,4 +1,4 @@
-// Starting a quest: mobile's questions, asked one at a time, with the quest as it will be on the ticket beside them
+// Starting a quest: mobile's questions, asked one at a time. The ticket beside them shows the quest as it will be
 
 import { useEffect, useState } from 'preact/hooks';
 import { Pick, StepForm, type Step, type Ticket } from '../stepform';
@@ -8,7 +8,7 @@ import type { Model } from '../model';
 import type { QuestOptions } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
 
-/** How the starting pool's cards are chosen, as mobile's four buttons offer it. */
+/** How the starting pool's cards are chosen, matching mobile's four buttons. */
 interface Distribution { poolType: string; colors: string; artifacts: boolean; completeSet: boolean; duplicates: boolean; boosters: number }
 
 interface NewValue {
@@ -20,7 +20,7 @@ interface NewValue {
   /** The pool's own choice: a format, a precon or a saved deck, by name. */
   choice?: string;
   distribution?: Distribution;
-  /** "same" for the starting pool's, otherwise a pool type. */
+  /** "same" to match the starting pool, otherwise a pool type. */
   prizes?: string;
   prizeFormat?: string;
   allowUnlocks?: boolean;
@@ -36,7 +36,7 @@ const DISTRIBUTIONS: [string, TextKey][] = [['BALANCED', 'lblBalanced'], ['RANDO
 const COMMANDER_WORLD = 'Random Commander';
 const nameOf = (list: [string, TextKey][], id?: string) => { const found = list.find(([key]) => key === id); return found ? t(found[1]) : null; };
 
-/** The names a pool type chooses among, or null for one that chooses nothing more. */
+/** The names a pool type chooses from, or null for a pool type with no further choice. */
 function choicesFor(options: QuestOptions, pool?: string): string[] | null {
   switch (pool) {
     case 'Sanctioned': return options.sanctioned;
@@ -49,10 +49,10 @@ function choicesFor(options: QuestOptions, pool?: string): string[] | null {
   }
 }
 
-/** A starting pool built from a deck is that deck, and has no distribution to choose. */
+/** A starting pool built from a deck is that deck, so it has no distribution to choose. */
 const fromDeck = (pool?: string) => pool === 'Precon' || pool === 'SealedDeck' || pool === 'DraftDeck' || pool === 'Cube';
 
-/** A list of names, narrowed by what is typed, as long lists of formats and decks are; an empty list says there is nothing saved. */
+/** A list of names that typing filters, for the long lists of formats and decks. An empty list says that nothing is saved. */
 function Names({ names, pick }: { names: string[]; pick: (name: string) => void }) {
   if (!names.length) return <p class="hint">{t('lblWebQuestNoneSaved')}</p>;
   return <Pick items={names.map(n => [n, n])} placeholder={t('lblSearch')} pick={pick} />;
@@ -94,10 +94,10 @@ function DistributionStep({ set }: { set: (d: Distribution) => void }) {
 
 export function NewQuest({ model, actions }: { model: Model; actions: Actions }) {
   const [value, setValue] = useState<NewValue>({});
-  // The name is the last thing asked and is typed, not picked: Embark takes it as it stands
+  // The name is asked last and is typed, not picked. Embark uses it as typed
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
-  // An error from before the form was opened is the shelf's, and is not this form's to show
+  // An error from before the form opened belongs to the shelf. This form only shows errors after it sends
   const [sent, setSent] = useState(false);
   useEffect(() => { actions.questOptions(); }, []);
   useEffect(() => setBusy(false), [model.error]);
@@ -105,7 +105,7 @@ export function NewQuest({ model, actions }: { model: Model; actions: Actions })
   if (!options) return <p class="muted pools-wait">{t('lblWebQuestReading')}</p>;
   const difficulty = value.difficulty === undefined ? null : options.difficulties[value.difficulty];
   const worldOf = (v: NewValue) => (v.commander ? COMMANDER_WORLD : v.world);
-  // A world with sets of its own makes its pool from them, as mobile's screen greys the pool's choices out
+  // A world with its own sets builds the pool from them. Mobile's screen greys out the pool choices in this case
   const ownSets = (v: NewValue) => options.formatWorlds.includes(worldOf(v) ?? '');
   const prizesFrom = (v: NewValue) => (v.prizes === 'Sanctioned' ? options.sanctioned : v.prizes === 'Casual' ? options.casual : null);
   const complete = value.prizes !== undefined && (prizesFrom(value) === null || value.prizeFormat !== undefined);
@@ -154,7 +154,7 @@ export function NewQuest({ model, actions }: { model: Model; actions: Actions })
       ),
     },
     {
-      // A Commander quest starts in the world of commander decks, as mobile sets it
+      // A Commander quest starts in the commander decks world, as on mobile
       id: 'world', label: t('lblStartingWorld'), hint: '', fields: ['world'], applies: v => !v.commander,
       answer: v => v.world ?? null,
       render: (_, set) => <Names names={options.worlds} pick={world => set({ world })} />,

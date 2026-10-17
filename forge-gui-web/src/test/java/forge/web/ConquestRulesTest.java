@@ -37,7 +37,7 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
-/** Conquest's rules as the shared package states them, with no screen involved. They are tested here because forge-gui's tests have no IGuiBase or FModel set-up to load the cards. */
+/** Tests Conquest's rules in the shared package, with no screen. They are tested here because forge-gui's tests have no IGuiBase or FModel setup to load the cards. */
 public class ConquestRulesTest {
     @BeforeClass
     public void setUp() {
@@ -49,7 +49,7 @@ public class ConquestRulesTest {
         ConquestFixture.cleanUp();
     }
 
-    // Fails if a second conquest can take the name of one that exists, which would write into the first one's folder
+    // Fails if a second conquest can use an existing conquest's name. It would then write into the first one's folder
     @Test
     public void aNameInUseIsRefused() {
         final String name = ConquestFixture.name();
@@ -59,7 +59,7 @@ public class ConquestRulesTest {
         assertNotNull(ConquestUtil.nameProblem("  "));
     }
 
-    // Fails if a created conquest is missing from the list, or reads back with another place, balance or commander deck
+    // Fails if a created conquest is missing from the list, or reads back with a different place, balance or commander deck
     @Test
     public void aCreatedConquestIsListedAndReadsBack() {
         final ConquestData made = ConquestFixture.create("Zendikar");
@@ -94,7 +94,7 @@ public class ConquestRulesTest {
         assertNull(FModel.getConquest().prepareBattle(battle, null), "a second battle was prepared over the first");
     }
 
-    // Fails if preparing an event with no Commander variant changes the deck the commander keeps
+    // Fails if preparing an event with no Commander variant changes the commander's stored deck
     @Test
     public void preparingABattleLeavesTheStoredDeckAlone() {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -106,7 +106,7 @@ public class ConquestRulesTest {
         assertEquals(data.getSelectedCommander().getDeck().getMain().countAll(), before);
     }
 
-    // Fails if a chaos battle left before it ends is not a loss, or leaves the controller unable to start another
+    // Fails if leaving a chaos battle before it ends is not a loss, or stops the controller from starting another battle
     @Test
     public void aChaosBattleLeftEarlyIsALoss() {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -121,7 +121,7 @@ public class ConquestRulesTest {
         assertNotNull(conquest.prepareBattle(loc.getEvent().createBattle(loc, 0), null));
     }
 
-    // Fails if the wheel can be told to rest on a spot that pays something else
+    // Fails if the wheel, given an outcome, can stop on a spot that pays a different outcome
     @Test
     public void theWheelRestsOnTheOutcomeItWasGiven() {
         for (final ChaosWheelOutcome outcome : ChaosWheelOutcome.values()) {
@@ -131,7 +131,7 @@ public class ConquestRulesTest {
         }
     }
 
-    // Fails if a first win does not give its emblem before the wheel, or the shards spot does not pay the wheel's shards
+    // Fails if a first win does not give its emblem before the wheel, a second win gives one, or the shards spot does not pay the wheel's shards
     @Test
     public void aFirstWinGivesAnEmblemThenTheWheel() {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -152,7 +152,7 @@ public class ConquestRulesTest {
         assertEquals(data.getAEtherShards(), shards + 3 * wheelShards);
     }
 
-    // Fails if a booster's cards are not unlocked, its duplicates are not paid for, or two boosters are not two steps
+    // Fails if a booster's cards are not unlocked, its duplicates are not paid for, or two boosters are not two separate steps
     @Test
     public void boostersUnlockTheirCardsAndPayForDuplicates() {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -218,7 +218,7 @@ public class ConquestRulesTest {
         assertEquals(data.getPlaneswalkEmblems(), 0);
     }
 
-    // Fails if moving away from an event that opened a secret plane leaves the plane open, or the new place is not saved
+    // Fails if moving away from an event that opened a secret plane leaves that plane open, or the new place is not saved
     @Test
     public void movingAwayClosesThePortal() {
         final ConquestData data = ConquestFixture.create("Eldraine");
@@ -231,7 +231,7 @@ public class ConquestRulesTest {
         ConquestUtil.setPlaneTemporarilyAccessible(secret.getName(), true);
         assertFalse(secret.isUnreachable());
 
-        // Standing still is not a move
+        // A move to the current place is not a move
         assertEquals(data.moveTo(portal).size(), 1);
         assertFalse(secret.isUnreachable());
 
@@ -243,7 +243,7 @@ public class ConquestRulesTest {
         assertEquals(new ConquestData(data.getDirectory()).getCurrentLocation(), next);
     }
 
-    // Fails if a place that touches no conquered event can be walked to
+    // Fails if the player can move to a place that is not next to a conquered event
     @Test
     public void anUnreachablePlaceIsNotMovedTo() {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -292,7 +292,7 @@ public class ConquestRulesTest {
         }
     }
 
-    // Fails if exile misprices a card or takes one a deck uses or the planeswalker, or if a card comes back cheaply or without the shards
+    // Fails if exile pays the wrong price or accepts a card in a deck or the planeswalker, or a retrieval charges the wrong price or works without the shards
     @Test
     public void exilePaysAndRefusesWhatIsInUse() {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -324,7 +324,7 @@ public class ConquestRulesTest {
         assertNotNull(data.getRetrieveProblem(cards));
     }
 
-    // Fails if a figure of the statistics does not match the save: a new conquest has no wins and owns its starting cards
+    // Fails if a statistics figure does not match the save. A new conquest has no wins and owns its starting cards
     @Test
     public void statisticsReadTheSave() {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -341,7 +341,7 @@ public class ConquestRulesTest {
         assertTrue(data.getStats(null).events() > plane.events());
     }
 
-    // Fails if a region's art cannot be named as a card, which is how the web asks for the picture
+    // Fails if a region's art does not name a card. The web requests the picture by that card
     @Test
     public void everyRegionOfAPlaneNamesItsArt() {
         for (final ConquestRegion region : FModel.getPlanes().get("Zendikar").getRegions()) {
@@ -349,7 +349,7 @@ public class ConquestRulesTest {
         }
     }
 
-    // Fails if a new conquest's generated deck is not legal for Conquest, or the check passes a deck cut short
+    // Fails if a new conquest's generated deck is not legal for Conquest, or the check accepts an emptied deck
     @Test
     public void theDeckCheckIsConquestsOwn() {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -369,7 +369,7 @@ public class ConquestRulesTest {
         return steps.stream().map(ConquestRewardStep::kind).toList();
     }
 
-    /** The first place on a plane whose event's variants are wanted. */
+    /** The first place on the plane whose event variants match wanted. */
     static ConquestLocation eventWhere(final ConquestPlane plane, final Predicate<Set<GameType>> wanted) {
         for (int region = 0; region < plane.getRegions().size(); region++) {
             for (int row = 0; row < plane.getRowsPerRegion(); row++) {
@@ -384,7 +384,7 @@ public class ConquestRulesTest {
         throw new AssertionError("no such event on " + plane.getName());
     }
 
-    // Fails if a save written by today's code, which is also what mobile writes, no longer reads back as it was written
+    // Fails if a save written by the current code, which mobile also writes, no longer reads back as written
     @Test
     public void aSavedConquestStillLoads() throws Exception {
         final ConquestData data = ConquestFixture.install();
@@ -421,7 +421,7 @@ public class ConquestRulesTest {
         assertSame(data.getSelectedCommander(), third);
     }
 
-    // Fails if the last commander can be exiled, which would leave the conquest with nobody to lead it and no way to open
+    // Fails if the last commander can be exiled. The conquest would then have no commander and could not open
     @Test
     public void theLastCommanderCannotBeExiled() {
         final ConquestData data = ConquestFixture.create("Zendikar");

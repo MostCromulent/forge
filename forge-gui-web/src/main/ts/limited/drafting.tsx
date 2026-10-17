@@ -1,4 +1,4 @@
-// Drafting: a click selects a card and a second click or Enter picks it, because a pick cannot be taken back
+// The draft screen. A click selects a card and a second click or Enter picks it, because a pick cannot be undone
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Dial } from './packdial';
@@ -24,39 +24,39 @@ import { campaigns } from '../campaigns';
 
 type GroupBy = 'colour' | 'type' | 'mv' | 'pick';
 type Drag = { from: 'pack' | 'pick'; index: number };
-/** A pick with its place in the order picked, which is how the server names it. */
+/** A pick and its index in pick order. The server refers to a pick by this index. */
 type Held = { card: DraftCard; index: number };
 
 const DRAG_TYPE = 'application/x-forge-draft';
-/** Under this much time the clock turns amber. */
+/** With less than this much time left, the clock turns amber. */
 const CLOCK_LOW_MS = 15_000;
 
-/** How long the rest of a pack takes to slide off, and a new pack to slide in, and how far each column follows the last. */
+/** How long the rest of a pack takes to slide off, how long a new pack takes to slide in, and the delay between columns. */
 const PASS_MS = 300;
 const ARRIVE_MS = 400;
 const COLUMN_STAGGER_MS = 22;
 
-/** When the last pack started leaving, so the next one can follow it out rather than cross it. */
+/** When the last pack started to leave. The next pack waits on this so the two packs do not cross. */
 let passedAt = 0;
 
 /** The side of the screen a pack passes to: -1 for left, 1 for right. */
 const passSide = (direction: number): -1 | 1 => (direction < 0 ? -1 : 1);
 
-/** Each pack card's column, counted from one side of the grid, so a pack moves across it a column at a time. */
+/** Each pack card's column index, counted from one side of the grid. This lets a pack move across one column at a time. */
 function columnsFrom(slots: HTMLElement[], edge: -1 | 1): number[] {
   const xs = slots.map(s => s.offsetLeft);
   const columns = [...new Set(xs)].sort((a, b) => edge * (b - a));
   return xs.map(x => columns.indexOf(x));
 }
 
-/** Slides the rest of the pack off to the next player, hiding the real cards until a new pack replaces them or none comes. */
+/** Slides the rest of the pack off towards the next player. The real cards stay hidden until a new pack replaces them, or for two seconds if none comes. */
 function passPack(picked: number, side: -1 | 1): void {
   const grid = document.querySelector<HTMLElement>('.draft-pack .cat-grid');
   const slots = [...grid?.querySelectorAll<HTMLElement>('.draft-slot') ?? []].filter((_, i) => i !== picked);
   if (!grid || !slots.length) return;
   const reduced = reducedMotion();
   const box = grid.getBoundingClientRect();
-  // Clipped to the pack, and inside the same classes, so the copies are drawn as the cards are
+  // The copies go in a layer clipped to the pack, with the same classes, so they are drawn the same way as the cards
   const layer = make('div', 'draft-pack pack-leaving');
   Object.assign(layer.style, { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px` });
   const inner = make('div', 'cat-grid');
@@ -79,15 +79,15 @@ function passPack(picked: number, side: -1 | 1): void {
   setTimeout(() => slots.forEach(s => { s.style.visibility = ''; }), 2000);
 }
 
-/** Slides a new pack in from the side it comes from, the column with furthest to go first. */
+/** Slides a new pack in from the side it comes from. The column with the furthest to go starts first. */
 function arrive(grid: HTMLElement, from: -1 | 1): void {
   const slots = [...grid.querySelectorAll<HTMLElement>('.draft-slot')];
   const reduced = reducedMotion();
   const columns = columnsFrom(slots, -from as -1 | 1);
-  // A pack the next player had waiting comes in behind the one leaving, once that one is mostly gone
+  // If the next pack was already waiting, it comes in behind the leaving pack once that pack is mostly gone
   const behind = Math.max(0, passedAt + PASS_MS * 0.6 - performance.now());
   slots.forEach((slot, i) => {
-    // A card the new pack shares with the old, in the same place, is the same element, still hidden from the pass
+    // A card the new pack shares with the old one in the same place is the same element. The pass hid it, so it is shown again here
     slot.style.visibility = '';
     slot.animate(reduced ? [{ opacity: 0 }, { opacity: 1 }]
       : [{ transform: `translateX(${from * grid.clientWidth * 0.7}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
@@ -103,9 +103,9 @@ function launch(index: number): void {
 export function Drafting({ model, actions }: { model: Model; actions: Actions }) {
   const state = model.draft;
   const [leaving, setLeaving] = useState(false);
-  /** On a phone the picks are a drawer over the pack, opened from its bar at the foot of the screen. */
+  /** On a phone the picks are a drawer over the pack. Its bar at the bottom of the screen opens it. */
   const [picksOpen, setPicksOpen] = useState(false);
-  // An online draft belongs to the table and goes on without this browser, so leaving only goes back to the table
+  // An online draft belongs to the table and continues without this browser. So leaving only goes back to the table
   const online = model.screen === 'setup';
   const owned = campaigns()?.draft(model) ?? null;
   const faces = state ? seatFaces(model, state.seats) : [];
@@ -122,7 +122,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
         </div>
       </PageHeader>
       {model.error && <p class="limited-error">{model.error}</p>}
-      {/* Opening packs can wait on a web site, so leaving stays possible while it does */}
+      {/* Opening packs can wait on a web site. The leave button stays available while it does */}
       {!state && <p class="muted drafting-wait">{t('lblWebDraftOpeningPacks')}</p>}
       {state && (
         <div class="drafting-shell">
@@ -132,7 +132,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
       )}
       {picksOpen && isPortrait() && <div class="picks-scrim" onClick={() => setPicksOpen(false)} />}
       {state?.done && (owned ? <owned.Done state={state} actions={actions} /> : <SaveDraft model={model} state={state} actions={actions} />)}
-      {/* A draft played for a campaign says what leaving it costs, as desktop says before it does */}
+      {/* For a campaign draft, the confirm says what leaving costs, as desktop does */}
       {leaving && <Confirm title={t('lblWebDraftLeaveTheDraftQ')} label={t('lblLeaveDraft')}
         text={t(owned ? owned.leaveText : 'lblWebDraftPicksNotSaved')}
         back={() => setLeaving(false)} backLabel={t('lblWebDraftKeepDrafting')} go={() => actions.draftDiscard()} goLabel={t('lblLeave')} danger />}
@@ -140,7 +140,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
   );
 }
 
-/** Each seat's face, where a computer drafter's is picked from its name so it keeps the same face all draft. */
+/** Each seat's portrait. A drafter with no lobby seat gets one from a hash of its name, so it keeps the same portrait all draft. */
 function seatFaces(model: Model, seats: DraftSeat[]): string[] {
   const count = model.looks?.avatarCount ?? 0;
   return seats.map((seat, i) => {
@@ -156,7 +156,7 @@ function hash(text: string): number {
   return h;
 }
 
-/** Show table: the seat feeding you, you and the seat you pass to on the button, and the whole table under it. */
+/** The Show table button. It shows the seat passing to you, you, and the seat you pass to. Its panel shows the whole table. */
 function TableMenu({ state, faces }: { state: DraftState; faces: string[] }) {
   const n = state.seats.length;
   const direction = state.direction < 0 ? -1 : 1;
@@ -181,7 +181,7 @@ function HeadMenu({ label, children, class: cls }: { label: ComponentChildren; c
   );
 }
 
-/** What is left of the pick clock, counted down from what the state said when it arrived. */
+/** The time left on the pick clock, counted down from the value in the state when it arrived. */
 function useClock(state: DraftState): number {
   const stamp = useRef(Date.now());
   const [now, setNow] = useState(Date.now());
@@ -197,16 +197,16 @@ function useClock(state: DraftState): number {
 
 function Pack({ state, faces, actions, log }: { state: DraftState; faces: string[]; actions: Actions; log: boolean }) {
   const [selected, setSelected] = useState<number | null>(null);
-  // A new state clears the selection, since its cards are not the ones selected
+  // A new state clears the selection, because its cards are not the ones that were selected
   useEffect(() => setSelected(null), [state.step]);
   const pick = (index: number) => {
-    // The card under the pointer is about to leave with the pack, so its preview goes now
+    // The card under the pointer is about to leave with the pack, so its preview is closed now
     hoverCard(null);
     launch(index);
     passPack(index, passSide(state.direction));
     actions.draftPick(state.step, index, false);
   };
-  // A new pack slides in from the player it came from, the side opposite the one packs pass to
+  // A new pack slides in from the player it came from. That is the side opposite the one packs pass to
   const grid = useRef<HTMLDivElement>(null);
   const shown = useRef('');
   const cards = state.cards.map(c => c.image).join('|');
@@ -232,7 +232,7 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
   const seat = (i: number) => <>{faces[i] && <img alt="" src={faces[i]} />}<strong>{state.seats[i].name}</strong></>;
   return (
     <section class="draft-panel draft-pack">
-      {/* The pick and its clock, which runs down a bar along the line's foot; under them, where the packs go */}
+      {/* The pick and its clock. A bar along the bottom of this line also counts down. The next line shows where packs go */}
       <div class="draft-panel-head pick-line">
         <b class="pick-title">{t('lblWebDraftPackPickOf', state.pack, state.pick, state.packSize)}</b>
         {left > 0 && <span class={left < CLOCK_LOW_MS ? 'clock low' : 'clock'} title={t('ttWebDraftTimeLeft')}>{clockText(left)}</span>}
@@ -251,7 +251,7 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
         {state.cards.map((card, i) => (
           <div key={`${card.image}-${i}`} class={i === selected ? 'slot draft-slot chosen' : 'slot draft-slot'} data-image={card.image} {...textData(card)}
             data-act={t('lblWebDraftPick')} onClick={e => {
-              // A card a third of a phone's screen wide cannot be read, so there a tap opens its preview, whose Pick taps it again
+              // A card a third of a phone's screen wide is too small to read. So on a phone a tap opens its preview, and the preview's Pick button picks it
               if (isPinned(e.currentTarget)) pick(i);
               else if (isPortrait()) inspectCard(e.currentTarget);
               else if (i === selected) pick(i);
@@ -271,12 +271,12 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
   );
 }
 
-/** A card's text on its pack slot or pick, which its preview shows when the card has no picture. */
+/** A card's text on its pack slot or pick. The preview shows this text when the card has no picture. */
 function textData(card: DraftCard) {
   return { 'data-card': card.name, 'data-cost': card.cost, 'data-type': card.type, 'data-text': card.text, 'data-pt': card.pt ?? '' };
 }
 
-/** A card's picture, or when none can be had, its name, cost, type and rules text in the card's own shape. */
+/** A card's picture. If the picture fails to load, it shows the name, cost, type and rules text in the card's shape. */
 function CardFace({ card }: { card: DraftCard }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [card.image]);
@@ -298,13 +298,13 @@ function clockText(ms: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** The browser's own drag and drop carries a pick: nothing is judged on the way, which the deck editor's pointer drag (deck/drag.ts) is for. */
+/** Picks use the browser's own drag and drop, because nothing is checked during the drag. The deck editor's pointer drag (deck/drag.ts) is for drags that need checks. */
 function startDrag(e: DragEvent, drag: Drag): void {
   e.dataTransfer?.setData(DRAG_TYPE, JSON.stringify(drag));
   if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
 }
 
-/** Desktop's draft ranking overlay: the score on a shield in the middle of the card, the shield graded by the score. */
+/** Desktop's draft ranking overlay: the score on a shield in the middle of the card. The shield's colour tier follows the score. */
 function RankShield({ rank }: { rank: number }) {
   const tier = rank >= 90 ? 's' : rank >= 80 ? 'a' : rank >= 60 ? 'b' : rank >= 25 ? 'c' : 'd';
   return (
@@ -329,9 +329,9 @@ function Picks({ state, actions, open, toggle }: { state: DraftState; actions: A
   const held: Held[] = state.picks.map((card, index) => ({ card, index }));
   const main = held.filter(h => !h.card.sideboard);
   const side = held.filter(h => h.card.sideboard);
-  // A card dropped from the pack is picked there; a pick dropped on the other section moves to it
+  // A card dropped from the pack is picked into that section. A pick dropped on the other section moves there
   const drop = (sideboard: boolean) => (drag: Drag) => {
-    // A dragged card has been carried here already, so nothing flies
+    // A dragged card is already at its target, so no flight animation runs
     cancelFlight();
     if (drag.from === 'pack') {
       passPack(drag.index, passSide(state.direction));
@@ -343,10 +343,10 @@ function Picks({ state, actions, open, toggle }: { state: DraftState; actions: A
   const panel = useRef<HTMLElement>(null);
   const bar = useRef<HTMLButtonElement>(null);
   const count = useRef(state.picks.length);
-  // A pick made by a click in the pack flies here once it is drawn; the newest pick is the last in pick order
+  // A pick made by a click in the pack flies here once it is drawn. The newest pick is the last in pick order
   useLayoutEffect(() => {
     if (state.picks.length > count.current) {
-      // A closed drawer shows only its bar, which is where the pick goes
+      // A closed drawer shows only its bar, so the pick flies to the bar
       if (isPortrait() && !open) land(bar.current, null, bar.current);
       else {
         const pick = panel.current?.querySelector<HTMLElement>(`[data-pick="${state.picks.length - 1}"]`) ?? null;
@@ -389,7 +389,7 @@ const GROUP_NAMES: Record<GroupBy, TextKey> = { colour: 'lblColor', type: 'lblTy
 function PickSection({ title, held, by, cards, onDrop, move }: {
   title: string; held: Held[]; by: GroupBy; cards: boolean; onDrop: (drag: Drag) => void; move: (h: Held) => void;
 }) {
-  // On a phone a tap opens the pick's preview, whose button taps it again to move it, as a double click does
+  // On a phone a tap opens the pick's preview. The preview's button then moves the pick, as a double click does
   const tap = (h: Held) => (e: MouseEvent) => {
     const el = e.currentTarget as HTMLElement;
     if (isPinned(el)) move(h);
@@ -437,7 +437,7 @@ function PickSection({ title, held, by, cards, onDrop, move }: {
   );
 }
 
-/** Other seats' picks are most of the log, so they are shown only when asked for; the newest line comes first. */
+/** Other seats' picks make up most of the log, so they are shown only on request. The newest line comes first. */
 function DraftLog({ lines }: { lines: string[] }) {
   const [everyone, setEveryone] = useState(false);
   const shown = lines.filter(l => everyone || !/ picked · \d+ waiting$/.test(l)).reverse();
@@ -455,7 +455,7 @@ function DraftLog({ lines }: { lines: string[] }) {
 function grouped(held: Held[], by: GroupBy): [string, Held[]][] {
   if (by === 'pick') return held.length ? [[t('lblWebDraftInPickOrder'), held]] : [];
   const groups = new Map<string, Held[]>();
-  // Mana value runs low to high; the other groupings keep the order their first card was picked in
+  // Mana value sorts low to high. The other groupings keep the order in which their first card was picked
   const ordered = by === 'mv' ? [...held].sort((a, b) => a.card.mv - b.card.mv) : held;
   for (const h of ordered) {
     const c = h.card;
@@ -471,7 +471,7 @@ function typeHeading(type: string): string {
   return t(found ? found[2] : 'lblOther');
 }
 
-/** The end of the draft, as desktop ends it: a name to save it under, or leaving without saving. */
+/** The end of the draft, as on desktop: save it under a name, or leave without saving. */
 function SaveDraft({ model, state, actions }: { model: Model; state: DraftState; actions: Actions }) {
   const [name, setName] = useState(() => `${state.product} ${shortDay()}`);
   const [discarding, setDiscarding] = useState(false);

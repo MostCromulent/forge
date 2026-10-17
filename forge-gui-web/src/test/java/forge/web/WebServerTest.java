@@ -75,7 +75,7 @@ public class WebServerTest {
         Assert.assertTrue(r.headers().firstValue("set-cookie").orElse("").contains("forge_token=secret"));
     }
 
-    /** Fails if the endpoint cannot tell a browser on the host's link from one on a guest's. */
+    /** Fails if the endpoint cannot tell a browser on the host's link from a browser on a guest's link. */
     @Test
     public void theSocketSaysWhichLinkOpenedIt() throws Exception {
         final WebSocket guest = openSocket(origin(), "guest-secret", new CopyOnWriteArrayList<>());
@@ -106,7 +106,7 @@ public class WebServerTest {
         }
     }
 
-    // Fails if a marked key stops naming the foil printing, whose picture the server then would not find, or if its seed leaves the browser's, which foil.test.ts pins
+    // Fails if a marked key no longer names the foil printing, so the server cannot find its picture, or its seed differs from the browser's. foil.test.ts checks the same seed
     @Test
     public void aFoilsImageKeyNamesItsPrintingAndItsStreaks() {
         final PaperCard plain = FModel.getMagicDb().getCommonCards().getCard("Shivan Dragon", "M14");
@@ -121,7 +121,7 @@ public class WebServerTest {
 
     @Test
     public void missingImageAndPathTraversalAre404() throws Exception {
-        // Asked online, a missing image is answered only once the fetcher gives up, which is its own matter
+        // With online fetching on, a missing image gets a reply only after the fetcher gives up. That case is not tested here
         final ForgePreferences prefs = FModel.getPreferences();
         final boolean online = prefs.getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER);
         prefs.setPref(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER, false);
@@ -133,7 +133,7 @@ public class WebServerTest {
         Assert.assertEquals(get("/..%2Fpom.xml?token=secret", null).statusCode(), 404);
     }
 
-    // Fails if the skin icon route cannot cut icons from their sheets, or answers for a name that is no icon, such as a colour
+    // Fails if the skin icon route cannot cut icons from their sheets, or serves a name that is not an icon, such as a colour
     @Test
     public void skinIconsAreServedAndNothingElseIs() throws Exception {
         Assert.assertEquals(get("/skinicon?k=IMG_AETHER_SHARD&token=secret", null).statusCode(), 200);

@@ -45,7 +45,7 @@ import static forge.web.console.ConsoleWidgets.heading;
 /** The console's window for saving card pictures to this computer ahead of time. */
 final class CardImageDownloads {
     private static final Localizer TEXT = Localizer.getInstance();
-    /** A rough size for one saved image, for the estimate beside the count. */
+    /** A rough size for one saved image, used for the size estimate next to the count. */
     private static final double MB_PER_IMAGE = 0.08;
     private static final int TEXT_WIDTH = 400;
     private static final Color GOOD = new Color(0x2f, 0x8f, 0x46);
@@ -65,7 +65,7 @@ final class CardImageDownloads {
     private int downloadPercent = -1;
     private GuiDownloadService running;
     private long downloadStarted;
-    /** Counts for the choice now picked; a newer count replaces an older one still being made. */
+    /** The number of the latest count for the current choice. A newer count replaces an older one that is still running. */
     private int countRun;
 
     /** A choice of cards to save images for. */
@@ -76,17 +76,17 @@ final class CardImageDownloads {
         }
     }
 
-    /** showProgress is told what the console's button should read: its plain name, or with the progress of a run. */
+    /** showProgress receives the text for the console's button: its plain name, or its name with the progress of a download. */
     CardImageDownloads(final Consumer<String> showProgress) {
         this.showProgress = showProgress;
     }
 
-    /** Forge has loaded its cards, which the console is drawn before: until then there is nothing to count or fetch. */
+    /** Forge has loaded its cards. The console is drawn before that, and until then there is nothing to count or download. */
     void ready() {
         SwingUtilities.invokeLater(() -> ready = true);
     }
 
-    /** Opens the window, or brings it forward; a run going on in it carries on whether it is open or not. */
+    /** Opens the window, or brings it to the front. A download in progress continues whether the window is open or not. */
     void show(final JFrame owner) {
         if (!ready) {
             return;
@@ -108,7 +108,7 @@ final class CardImageDownloads {
         choices.addItem(new Choice(TEXT.getMessage("lblWebImagesMyDecks"), null));
         choices.addItem(new Choice(TEXT.getMessage("lblWebImagesAllCards"), c -> true));
         for (final GameFormat format : FModel.getFormats().getFilterList()) {
-            // A named format is the cards its rules allow; a format of sets is the printings in those sets
+            // A named format selects the cards its rules allow. A format without a name selects the printings in its sets.
             choices.addItem(new Choice(format.getName(), format.getName() == null ? format.getFilterPrinted() : format.getFilterRules()));
         }
         choices.setMaximumSize(choices.getPreferredSize());
@@ -117,7 +117,7 @@ final class CardImageDownloads {
         pick.add(plain(new JLabel(TEXT.getMessage("lblCards") + "  ")));
         pick.add(choices);
         pick.add(Box.createHorizontalGlue());
-        // Each count under its heading, as wide as its own text, so a long one is never cut short
+        // Each count sits under its heading and is as wide as its own text, so a long count is never cut off
         final JPanel counts = row();
         final List<String> heads = List.of("lblCards", "lblWebEditorSaved", "lblWebImagesToDownload");
         final List<JLabel> values = List.of(cardCount, savedCount, neededCount);
@@ -156,7 +156,7 @@ final class CardImageDownloads {
         return dialog;
     }
 
-    /** One tool: what it is, what it does, where it stands, and its buttons. */
+    /** One tool section: its name, what it does, its state and its buttons. */
     private static JPanel section(final String tag, final String title, final String about, final String note,
             final JProgressBar bar, final JComponent... rows) {
         final JPanel section = new JPanel();
@@ -174,7 +174,7 @@ final class CardImageDownloads {
             section.add(Box.createVerticalStrut(4));
             section.add(wrapped(note, MUTED));
         }
-        // The bar shows over the last row, the one with the buttons, while the tool is working
+        // While the tool is working, the bar is shown above the last row, which holds the buttons
         for (int i = 0; i < rows.length; i++) {
             section.add(Box.createVerticalStrut(8));
             if (i == rows.length - 1) {
@@ -221,7 +221,7 @@ final class CardImageDownloads {
         return bar;
     }
 
-    /** The look's labels are bold by default; the window's prose is not. */
+    /** The look and feel makes labels bold by default. The window's body text is not bold. */
     private static JLabel plain(final JLabel label) {
         label.setFont(label.getFont().deriveFont(Font.PLAIN));
         return label;
@@ -232,7 +232,7 @@ final class CardImageDownloads {
         return choice == null ? c -> false : choice.cards() != null ? choice.cards() : inMyDecks();
     }
 
-    /** Counts the choice's cards and how many of their images are saved, off the window's thread. */
+    /** Counts the chosen cards and how many of their images are saved. The count runs off the window's thread. */
     private void recount() {
         if (running != null) {
             return;
@@ -267,7 +267,7 @@ final class CardImageDownloads {
                 cardCount.setText(n.format(t));
                 savedCount.setText(n.format(s));
                 final long mb = Math.max(1, Math.round(needed * MB_PER_IMAGE));
-                // Past a gigabyte, in gigabytes to one place: "6.8 GB" rather than "6,777 MB"
+                // Above a gigabyte, show gigabytes to one decimal place: "6.8 GB" instead of "6,777 MB"
                 final String size = mb < 1000 ? TEXT.getMessage("lblWebImagesMB", n.format(mb))
                         : TEXT.getMessage("lblWebImagesGB", String.format("%.1f", mb / 1000.0));
                 neededCount.setText(needed == 0 ? "0" : TEXT.getMessage("lblWebImagesToDownloadSize", n.format(needed), size));
@@ -292,7 +292,7 @@ final class CardImageDownloads {
         window.pack();
         running = new GuiDownloadFilteredCardImages(chosenCards());
         downloadStarted = 0;
-        // Once the service has listed what is missing, the start command it hands over runs at once, as the count was the confirmation
+        // Once the service has listed what is missing, its start command runs at once. The count shown earlier was the confirmation.
         running.initialize(new WebDownloads.Text(""), new WebDownloads.Text(""), new Bar(), new Starter(), this::finished, null, null);
     }
 
@@ -315,7 +315,7 @@ final class CardImageDownloads {
         });
     }
 
-    /** "2,417 of 3,830, 2 min left" from how fast the images have come so far. */
+    /** Shows "2,417 of 3,830, 2 min left", based on how fast the images have arrived so far. */
     private void showDownloadProgress(final int done, final int total) {
         if (downloadStarted == 0) {
             downloadStarted = System.currentTimeMillis();
@@ -335,12 +335,12 @@ final class CardImageDownloads {
         }
     }
 
-    /** The console's button names whichever run is going, so a closed window's work can be found again. */
+    /** The console's button shows the progress of a running download, so the host can find it again after closing the window. */
     private void showButtonProgress() {
         showProgress.accept(downloadPercent < 0 ? TEXT.getMessage("lblWebImagesButton") : TEXT.getMessage("lblWebImagesButtonProgress", downloadPercent));
     }
 
-    /** Every printing in the decks this player has saved, in every kind of deck they build. */
+    /** Every printing in this player's saved Constructed, Commander, Oathbreaker, Brawl and Tiny Leaders decks. */
     private static Predicate<PaperCard> inMyDecks() {
         final Set<PaperCard> cards = Collections.newSetFromMap(new ConcurrentHashMap<>());
         final var decks = FModel.getDecks();
@@ -362,7 +362,7 @@ final class CardImageDownloads {
         }
     }
 
-    /** The service's progress, shown in the window's own words. */
+    /** Shows the service's progress in the window's own words. */
     private final class Bar implements IProgressBar {
         private volatile int maximum;
 
@@ -376,7 +376,7 @@ final class CardImageDownloads {
         @Override public void setMaximum(final int maximum0) { maximum = maximum0; }
     }
 
-    /** Stands in for the service's Start button, running the start and close commands as soon as each is handed over. */
+    /** Replaces the service's Start button. It runs the start and close commands as soon as the service hands each one over. */
     private static final class Starter implements IButton {
         @Override public void setCommand(final UiCommand command) { command.run(); }
         @Override public void setEnabled(final boolean b0) { }

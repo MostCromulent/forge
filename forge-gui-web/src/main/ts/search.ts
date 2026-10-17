@@ -1,11 +1,11 @@
-// Searches a long list by name by the same rules as desktop's ListChooser, so either client finds the same cards in the same order
+// Searches a long list by name with the same rules as desktop's ListChooser, so both clients find the same cards in the same order
 
-/** Lower case, accents stripped, and nothing but letters, digits and spaces. */
+/** Converts to lower case, strips accents, and keeps only letters, digits and spaces. */
 export function normalize(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, '');
 }
 
-/** Where the typed text falls in a name, as start and end in the name itself, which normalizing may have shortened. */
+/** The start and end of the typed text in the original name. These are positions before normalizing, which can shorten the name. */
 export function matchedSpan(name: string, typed: string): [number, number] | null {
   const text = normalize(typed);
   if (!text) return null;
@@ -21,7 +21,7 @@ export function matchedSpan(name: string, typed: string): [number, number] | nul
   return at < 0 ? null : [from[at], from[at + text.length - 1] + 1];
 }
 
-/** The indexes of the names matching the typed text: those starting with it, shortest first, then those containing it. */
+/** The indexes of the names that match the typed text. Names that start with it come first, shortest first, then names that contain it. */
 export function rankByName(names: readonly string[], typed: string): number[] {
   const text = normalize(typed);
   if (!text) return names.map((_, i) => i);

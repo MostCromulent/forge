@@ -1,4 +1,4 @@
-// A conquest's cards, owned and exiled: the trade page in Conquest's words
+// A conquest's owned and exiled cards. This is the trade page with Conquest's wording
 
 import { TYPES as CARD_TYPES } from '../deck/catalogue';
 import { TradePage, type TradeWords } from '../campaign/trade';
@@ -6,9 +6,9 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import { t } from '../text';
 
-/** A conquest's planes hold no battles. */
+/** Conquest's planes contain no battle cards, so the type filter leaves them out. */
 const TYPES = CARD_TYPES.filter(([id]) => id !== 'battle');
-/** Where mobile's sentences put the shard symbol. */
+/** The token that marks where mobile's sentences put the shard symbol. */
 const SHARD = '{AE}';
 
 const cards = (n: number): string => (n === 1 ? t('lblCard') : t('lblCards'));

@@ -1,9 +1,9 @@
-// The Chaos Wheel as a dial, drawn and turned by hand, and the server decides where it stops
+// The Chaos Wheel, drawn as a dial and spun by hand. The server decides where it stops
 
 import { skinIconUrl } from '../images';
 import { reducedMotion } from '../dom';
 
-/** The wheel's eight spots, clockwise from the needle, as ConquestEvent.ChaosWheelOutcome's wheelSpots orders them. */
+/** The wheel's eight spots, clockwise from the needle, in the order of wheelSpots in ConquestEvent.ChaosWheelOutcome. */
 const WHEEL_SPOTS = ['CHAOS', 'BOOSTER', 'SHARDS', 'DOUBLE_BOOSTER', 'PLANESWALK', 'BOOSTER', 'DOUBLE_SHARDS', 'BOOSTER'] as const;
 export type WheelOutcome = typeof WHEEL_SPOTS[number];
 
@@ -19,12 +19,12 @@ const emblem = `<img alt="" src="${skinIconUrl('IMG_PW_BADGE_COMMON')}">`;
 const ICONS: Record<WheelOutcome, string> = {
   CHAOS: LINES.chaos, BOOSTER: LINES.pack, SHARDS: LINES.shard, DOUBLE_BOOSTER: LINES.pack + LINES.pack, PLANESWALK: emblem, DOUBLE_SHARDS: LINES.shard + LINES.shard,
 };
-/** The chaos mark, which the dial's hub and the chaos pack both carry. */
+/** The chaos symbol, shown on the dial's hub and on the chaos pack. */
 export const CHAOS_MARK = LINES.chaos;
 
 const SPIN_MS = 5600;
 
-/** A spot that holds the outcome. Three hold a booster, and which of them it stops on is nobody's business. */
+/** A spot that holds the outcome. Three spots hold a booster, so one of them is picked at random. */
 export function spotFor(outcome: string): number {
   const spots = WHEEL_SPOTS.map((o, i) => (o === outcome ? i : -1)).filter(i => i >= 0);
   return spots.length ? spots[Math.floor(Math.random() * spots.length)] : 0;

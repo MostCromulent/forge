@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
-/** The shapes of the browser's answers to the game's questions, as pure functions so each can be tested without a game. */
+/** Checks and converts the browser's answers to the game's questions. These are pure functions, so each can be tested without a game. */
 final class Answers {
     private Answers() {
     }

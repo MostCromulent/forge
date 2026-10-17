@@ -1,12 +1,12 @@
-// What closes plays its way out first (dialogs.css), as the chat dock does, and is gone once that animation ends
+// A closing element plays its exit animation first (dialogs.css), as the chat dock does. It is removed when that animation ends
 
 import { useState } from 'preact/hooks';
 import { reducedMotion } from './dom';
 
-/** Longer than any way out (dialogs.css). */
+/** Longer than any exit animation (dialogs.css). */
 const GIVE_UP_MS = 400;
 
-/** A close that waits for the way out: the element takes `closing`, and its own animation's end closes it. */
+/** A close that waits for the exit animation. The element gets `closing`, and the end of its own animation closes it. */
 export function useClosing(close: () => void): { closing: boolean; shut: () => void; gone: (e: AnimationEvent) => void } {
   const [closing, setClosing] = useState(false);
   return {
@@ -17,14 +17,14 @@ export function useClosing(close: () => void): { closing: boolean; shut: () => v
         return;
       }
       setClosing(true);
-      // Closed anyway if no animation runs to say so, as when a style leaves it none
+      // Close anyway if no animation runs, for example when no style gives it one
       setTimeout(close, GIVE_UP_MS);
     },
     gone: e => { if (closing && e.target === e.currentTarget) close(); },
   };
 }
 
-/** The same for an element drawn by hand: it takes `closing`, and is removed once its animation ends. */
+/** The same for a hand-built element. It gets `closing`, and is removed when its animation ends. */
 export function leave(el: Element | null): void {
   if (!el) return;
   if (reducedMotion() || el.classList.contains('closing')) {

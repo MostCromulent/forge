@@ -51,7 +51,7 @@ import java.util.concurrent.TimeUnit;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
-/** Desktop or mobile Forge joining a web host: a netplay client that comes in through the web port by the invite link. */
+/** Tests desktop or mobile Forge joining a web host. The netplay client connects through the web port by the invite link. */
 public class NetplayTunnelTest extends SessionsTest {
     private static final String GUEST_TOKEN = "guest-token";
     private WebServer server;
@@ -66,7 +66,7 @@ public class NetplayTunnelTest extends SessionsTest {
         }, "host-token", GUEST_TOKEN, 0);
     }
 
-    // An app still connected holds the next test's table back until the host gives up waiting for its seat to free
+    // A connected app delays the next test's table until the host stops waiting for the app's seat to become free
     @Override
     void afterDisconnecting() {
         apps.forEach(App::leave);
@@ -80,13 +80,13 @@ public class NetplayTunnelTest extends SessionsTest {
         }
     }
 
-    /** A netplay client as desktop Forge makes one, with a screen a test can read. */
+    /** A netplay client built the way desktop Forge builds one, with a screen state that a test can read. */
     private static final class App implements ILobbyListener {
         final ClientGameLobby lobby = new ClientGameLobby();
         final WebGuiGame gui = new WebGuiGame();
         final TestBrowser screen = new TestBrowser();
         final CountDownLatch seated = new CountDownLatch(1);
-        /** The chat lines this app has read, as "source: message". */
+        /** The chat lines this app has received, as "source: message". */
         final BlockingQueue<String> heard = new LinkedBlockingQueue<>();
         volatile int seat = -1;
         FGameClient client;
@@ -145,7 +145,7 @@ public class NetplayTunnelTest extends SessionsTest {
         return deck;
     }
 
-    /** Fails if a netplay client with the invite link cannot sit down, is missing from the table or the list of who is here, or is left out of the match. */
+    /** Fails if a netplay client with the invite link cannot take a seat, is missing from the table or the presence list, or is left out of the match. */
     @Test(timeOut = 120_000)
     public void anAppSitsDownByTheInviteLinkAndFollowsTheHostIntoTheMatch() throws Exception {
         final TestBrowser host = hostAt("invite");
@@ -164,7 +164,7 @@ public class NetplayTunnelTest extends SessionsTest {
             return false;
         }, "the app was never listed among who is here");
 
-        // A browser may not take the name of someone playing from an app, any more than another browser's
+        // A browser cannot use the name of a player on an app, just as it cannot use another browser's name
         final TestBrowser guest = connect("guest");
         sessions.onMessage(guest, message("setName", "name", "desk"));
         guest.awaitMatching("error", e -> e.get("message").getAsString().contains("already called"),
@@ -172,7 +172,7 @@ public class NetplayTunnelTest extends SessionsTest {
         sessions.disconnected(guest);
 
         sessions.onMessage(host, JsonCodec.message("decks"));
-        // The list can come before hostAt forgets what was said, and the server does not send the same list to the same browser twice
+        // The list can arrive before hostAt clears the messages, and the server never sends the same list to a browser twice
         final JsonObject decks = host.awaitDecks();
         Assert.assertNotNull(decks, "no deck list arrived");
         String deck = null;
@@ -196,7 +196,7 @@ public class NetplayTunnelTest extends SessionsTest {
         app.screen.awaitMatching("state", m -> m.get("full").getAsBoolean(), "the app was never shown the table of the match");
     }
 
-    /** Fails if a browser's chat and an app's chat at the same table do not reach each other, or a browser is shown its own line twice. */
+    /** Fails if chat between a browser and an app at the same table does not arrive, or a browser is shown its own line twice. */
     @Test(timeOut = 120_000)
     public void aBrowserAndAnAppReadEachOthersChat() throws Exception {
         final TestBrowser host = hostAt("invite");
@@ -217,7 +217,7 @@ public class NetplayTunnelTest extends SessionsTest {
                 "the browser was shown its own line again from netplay");
     }
 
-    /** Fails if the netplay route lets in a client whose link carries the wrong token, or none. */
+    /** Fails if the netplay route accepts a client whose link has the wrong token or no token. */
     @Test(timeOut = 60_000)
     public void anAppWithoutTheTokenIsTurnedAway() throws Exception {
         hostAt("invite");
@@ -225,7 +225,7 @@ public class NetplayTunnelTest extends SessionsTest {
         for (final String address : List.of(route + "?token=wrong", route)) {
             Assert.assertThrows(IllegalStateException.class, () -> join("Stranger", URI.create(address), null));
         }
-        // A page in a guest's browser holds the token as a cookie, and must not be able to open the route with it
+        // A page in a guest's browser has the token as a cookie. It must not be able to open the route with it
         final HttpClient http = HttpClient.newHttpClient();
         final URI page = URI.create("http://127.0.0.1:" + server.port() + WebSocketTunnel.PATH);
         final int byCookie = http.send(HttpRequest.newBuilder(page).header("Cookie", "forge_token=" + GUEST_TOKEN).build(),
@@ -236,7 +236,7 @@ public class NetplayTunnelTest extends SessionsTest {
         Assert.assertNotEquals(byLink, 403, "the netplay route turned away the token it should take");
     }
 
-    /** Fails if an address of the older kind is taken for an invite link, which would send a desktop host's guests to a web port. */
+    /** Fails if an old-style address is treated as an invite link. That would send a desktop host's guests to a web port. */
     @Test
     public void onlyAnInviteLinkIsTunnelled() {
         Assert.assertNull(WebSocketTunnel.of("localhost:36743"));
@@ -247,7 +247,7 @@ public class NetplayTunnelTest extends SessionsTest {
         Assert.assertEquals(String.valueOf(WebSocketTunnel.of(" HTTPS://play.example.com/?token=abc ").uri()), "wss://play.example.com:443/netplay?token=abc");
     }
 
-    /** Fails if an https invite link is not joined over TLS, or the host's certificate is not checked against what the client trusts. */
+    /** Fails if an https invite link is not joined over TLS, or the host's certificate is not checked against the client's trusted certificates. */
     @Test(timeOut = 120_000)
     public void anHttpsLinkIsJoinedEncrypted() throws Exception {
         hostAt("invite");
@@ -271,7 +271,7 @@ public class NetplayTunnelTest extends SessionsTest {
         final TrustManagerFactory trusting = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         trusting.init(certs);
 
-        // Stands where Cloudflare would: it ends the TLS and passes what is inside to the web port
+        // Acts as Cloudflare would. It terminates the TLS and passes the decrypted traffic to the web port
         final SslContext front = SslContextBuilder.forServer(own).build();
         final EventLoopGroup group = new NioEventLoopGroup(1);
         try {
@@ -283,7 +283,7 @@ public class NetplayTunnelTest extends SessionsTest {
                     }).bind(0).sync().channel();
             final int port = ((InetSocketAddress) proxy.localAddress()).getPort();
 
-            // A certificate this machine does not trust, then one it trusts but made out to another name
+            // First a certificate this machine does not trust, then a trusted one issued to another name
             Assert.assertThrows(IllegalStateException.class, () -> join("Untrusting", "https://localhost:" + port + "/?token=" + GUEST_TOKEN, null));
             final SslContext trust = SslContextBuilder.forClient().trustManager(trusting).build();
             Assert.assertThrows(IllegalStateException.class, () -> join("Misnamed", "https://127.0.0.1:" + port + "/?token=" + GUEST_TOKEN, trust));

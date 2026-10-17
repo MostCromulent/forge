@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-/** A browser that keeps everything the server sends it and the game it describes, and can answer for the web seat. */
+/** A fake browser. It records every message the server sends and the game they describe, and can answer for the web seat. */
 final class TestBrowser implements BrowserChannel {
     private static final int WAIT_MILLIS = 60_000;
     private static final int POLL_MILLIS = 10;
@@ -38,11 +38,11 @@ final class TestBrowser implements BrowserChannel {
     private volatile JsonObject decks;
     final BrowserModel model = new BrowserModel();
     final CountDownLatch gameOver = new CountDownLatch(1);
-    /** Counted down when a held browser reaches its own first main phase, where it waits for {@link #release}. */
+    /** Counted down when a held browser reaches its own first main phase. It then waits there for {@link #release}. */
     final CountDownLatch atOwnMain = new CountDownLatch(1);
-    /** Whether the server closed this browser's connection, as it does one past its limit. */
+    /** Whether the server closed this browser's connection, as it does for a connection over its limit. */
     volatile boolean closed;
-    /** The newest hello, kept when the rest is forgotten: where the session stands. */
+    /** The newest hello, which shows the session's current state. {@link #forget} does not clear it. */
     volatile JsonObject hello;
     volatile boolean reloaded;
 
@@ -60,17 +60,17 @@ final class TestBrowser implements BrowserChannel {
     private volatile int root = -1;
     private volatile JsonArray localPlayers = new JsonArray();
 
-    /** Only records. */
+    /** A browser that only records messages. */
     TestBrowser() {
         this(null, false, false, 0);
     }
 
-    /** Answers every request for the web seat; when plays, also passes priority and picks what a prompt needs picked. */
+    /** Answers every request for the web seat. When plays is true it also passes priority and makes the picks a prompt needs. */
     TestBrowser(final WebGuiGame gui, final boolean plays) {
         this(gui, plays, false, 20);
     }
 
-    /** Plays, but waits in its own first main phase until released, holds each request open, and reloads once while the first is open. */
+    /** A browser that plays but waits in its own first main phase until released. It delays each answer, and reloads once while the first request is open. */
     static TestBrowser held(final WebGuiGame gui, final long answerMillis) {
         return new TestBrowser(gui, true, true, answerMillis);
     }
@@ -121,7 +121,7 @@ final class TestBrowser implements BrowserChannel {
         closed = true;
     }
 
-    /** Lets a held browser play on, using each "Zone:Card Name" in turn from its own first main phase. */
+    /** Lets a held browser continue. From its own first main phase it uses each "Zone:Card Name" in turn. */
     void release(final String... cardNames) {
         for (final String name : cardNames) {
             cardsToUse.add(name);
@@ -134,7 +134,7 @@ final class TestBrowser implements BrowserChannel {
         return JsonCodec.message(type);
     }
 
-    /** Hands a match the command a browser sent. */
+    /** Passes a browser's command to the match. */
     static void command(final WebGuiGame gui, final JsonObject message) {
         gui.onCommand(null, Wire.decode(message));
     }
@@ -155,7 +155,7 @@ final class TestBrowser implements BrowserChannel {
         return matches.isEmpty() ? null : matches.get(matches.size() - 1);
     }
 
-    /** The earliest message of a type that is wanted, or null if none arrived in time. */
+    /** The earliest message of the type that matches wanted, or null if none arrived in time. */
     JsonObject awaitMatching(final String type, final Predicate<JsonObject> wanted) throws InterruptedException {
         for (int i = 0; i < WAIT_MILLIS / POLL_MILLIS; i++) {
             for (final JsonObject m : got) {
@@ -173,12 +173,12 @@ final class TestBrowser implements BrowserChannel {
         return awaitAfter(0, type, m -> true);
     }
 
-    /** The newest message of a type that is wanted, or null if none arrived in time. */
+    /** The newest message of the type that matches wanted, or null if none arrived in time. */
     JsonObject awaitNewest(final String type, final Predicate<JsonObject> wanted) throws InterruptedException {
         return awaitAfter(0, type, wanted);
     }
 
-    /** The newest wanted message among those that arrived at or after index from. */
+    /** The newest matching message at or after index from, or null if none arrived in time. */
     JsonObject awaitAfter(final int from, final String type, final Predicate<JsonObject> wanted) throws InterruptedException {
         for (int i = 0; i < WAIT_MILLIS / POLL_MILLIS; i++) {
             for (int j = got.size() - 1; j >= from; j--) {
@@ -192,7 +192,7 @@ final class TestBrowser implements BrowserChannel {
         return null;
     }
 
-    /** Waits until the latest table is the one wanted, because an earlier lobby message can describe a table that has already moved on. */
+    /** Waits until the latest table matches wanted. An earlier lobby message can describe a table that has since changed. */
     JsonObject awaitLobby(final Predicate<JsonObject> wanted) throws InterruptedException {
         for (int i = 0; i < WAIT_MILLIS / POLL_MILLIS; i++) {
             final JsonObject latest = latestTable();
@@ -218,7 +218,7 @@ final class TestBrowser implements BrowserChannel {
         return latest;
     }
 
-    // The same waits, failing with why when nothing wanted arrives in time
+    // The same waits, but they fail with why if no matching message arrives in time
 
     JsonObject awaitMatching(final String type, final Predicate<JsonObject> wanted, final String why) throws InterruptedException {
         return found(awaitMatching(type, wanted), why);
@@ -241,7 +241,7 @@ final class TestBrowser implements BrowserChannel {
         return message;
     }
 
-    /** The deck list this browser holds, kept through {@link #forget} because the server does not send again a list the browser already has. */
+    /** The browser's deck list. {@link #forget} keeps it, because the server does not resend a list the browser already has. */
     JsonObject awaitDecks() throws InterruptedException {
         for (int i = 0; decks == null && i < WAIT_MILLIS / POLL_MILLIS; i++) {
             Thread.sleep(POLL_MILLIS);
@@ -249,7 +249,7 @@ final class TestBrowser implements BrowserChannel {
         return decks;
     }
 
-    /** Drops what has been said so far, so a later wait cannot be satisfied by an earlier message. */
+    /** Clears the messages received so far, so an earlier message cannot satisfy a later wait. */
     void forget() {
         got.clear();
     }
@@ -257,7 +257,7 @@ final class TestBrowser implements BrowserChannel {
     private void onRequest(final JsonObject m) {
         final int id = m.get("id").getAsInt();
         if (!answered.add(id)) {
-            // Replays after a reload repeat open requests
+            // After a reload the server sends open requests again
             return;
         }
         if (holds && !reloaded) {
@@ -277,7 +277,7 @@ final class TestBrowser implements BrowserChannel {
         }, answerMillis, TimeUnit.MILLISECONDS);
     }
 
-    // An optional single choice defaults to "none"; taking the first option is what plays or activates the clicked card
+    // An optional single choice defaults to "none". Taking the first option is what plays or activates the clicked card
     private static JsonElement answerFor(final JsonObject request) {
         final JsonElement def = request.get("default");
         if ("choices".equals(request.get("kind").getAsString()) && def.isJsonArray() && def.getAsJsonArray().isEmpty()
@@ -289,7 +289,7 @@ final class TestBrowser implements BrowserChannel {
         return def;
     }
 
-    // Every change to the prompt sends it again, so act once, on the latest
+    // Every change to the prompt resends it, so act once, on the latest one
     private void actOnLatestPrompt() {
         final long version = promptVersion.incrementAndGet();
         actions.schedule(() -> {
@@ -305,7 +305,7 @@ final class TestBrowser implements BrowserChannel {
             atOwnMain.countDown();
             return;
         }
-        // A rejected click sends no new prompt, so act again if nothing arrives, but only MAX_RETRIES times so the wait can fail
+        // A rejected click sends no new prompt, so act again if nothing arrives. Stop after MAX_RETRIES so the wait can fail
         final long seen = promptVersion.get();
         actions.schedule(() -> {
             if (promptVersion.get() == seen && retries.incrementAndGet() <= MAX_RETRIES) {
@@ -316,7 +316,7 @@ final class TestBrowser implements BrowserChannel {
             selectUnchosen(prompt);
             return;
         }
-        // Cards are only used from the priority prompt with an empty stack; cost prompts such as "Sacrifice X?" are answered with OK
+        // Cards are used only from the priority prompt with an empty stack. Cost prompts such as "Sacrifice X?" are answered with OK
         final boolean priority = prompt.has("priority") && prompt.get("priority").getAsBoolean();
         final boolean canUse = priority && inOwnFirstMain() && stackEmpty();
         final Integer card = canUse ? nextScriptedCard() : null;
@@ -339,7 +339,7 @@ final class TestBrowser implements BrowserChannel {
                 return;
             }
         }
-        // A prompt that offers players is answered by clicking the first one's avatar
+        // A prompt that offers players is answered by clicking the first player's avatar
         final JsonArray players = prompt.getAsJsonArray("selectablePlayers");
         if (players != null && !players.isEmpty()) {
             final JsonObject msg = action("selectPlayer");
@@ -368,7 +368,7 @@ final class TestBrowser implements BrowserChannel {
         return game != null && (!game.has("Stack") || game.getAsJsonArray("Stack").isEmpty());
     }
 
-    // An entry, "Zone:Card Name", is clicked again until its card leaves that zone, because a click can be rejected
+    // Each "Zone:Card Name" entry is clicked again until its card leaves that zone, because a click can be rejected
     private Integer nextScriptedCard() {
         final Map<Integer, JsonObject> objects = MatchProbe.objects(model);
         final JsonObject player = objects.get(localPlayers.get(0).getAsInt());

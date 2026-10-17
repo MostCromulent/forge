@@ -1,4 +1,4 @@
-// One player's permanents: sorts them into rows, stacks identical ones, and sizes the cards so the board fits
+// Draws one player's permanents. It sorts them into rows, piles identical ones, and sizes the cards to fit the board.
 
 import { reconcile } from './reconcile';
 import { createCard, updateCard, setPileCount, type CardClick } from './cards';
@@ -10,7 +10,7 @@ import { changeUi, ui } from '../ui';
 import type { CardView } from '../protocol';
 import { t } from '../text';
 
-// A slot is one spot on the battlefield: a card with its attachments tucked under it, or a pile of identical permanents
+// A slot is one place on the battlefield. It holds a card with its attachments under it, or a pile of identical permanents.
 interface Slot {
   top: CardView;
   members: CardView[];
@@ -18,15 +18,15 @@ interface Slot {
   sig: string | null;
 }
 
-/** The cards drawn behind a slot's top card: what is attached to it, or up to three copies of a pile's. */
+/** How many cards are drawn behind a slot's top card. These are its attachments, or up to three other copies in a pile. */
 const behind = (s: Slot): number => s.attached.length || Math.min(3, s.members.length - 1);
 
-/** Planeswalkers and battles go to the far end of the creature row, because they can be attacked but do not block. */
+/** Planeswalkers and battles go in the far group at the end of the creature row, because they can be attacked but do not block. */
 type Group = 'lands' | 'support' | 'creatures' | 'far';
 
 function groupOf(model: Model, slot: Slot): Group {
   const type = stateOf(model, slot.top).Type ?? '';
-  // A land made a creature fights as one, so it stands with the creatures
+  // A land that is also a creature can attack and block, so it goes with the creatures
   if (/Creature/.test(type)) return 'creatures';
   if (/Land/.test(type)) return 'lands';
   if (/Planeswalker|Battle/.test(type)) return 'far';
@@ -37,7 +37,7 @@ export function renderBattlefield(root: HTMLElement, model: Model, cards: CardVi
   const slots = slotsFor(model, cards, onField);
   const of = (group: Group) => slots.filter(s => groupOf(model, s) === group);
   const groups: Record<Group, Slot[]> = {
-    // Tokens are creatures like any other, laid out after the cards so the row's order stays readable
+    // Token creatures are placed after the card creatures, so the row's order is easier to read
     lands: of('lands'), support: of('support'),
     creatures: [...of('creatures').filter(s => !s.top.Token), ...of('creatures').filter(s => s.top.Token)], far: of('far'),
   };
@@ -58,38 +58,38 @@ export function renderBattlefield(root: HTMLElement, model: Model, cards: CardVi
   fitCards(root, [[[stats('lands')], [stats('support')]], [[stats('creatures')], [stats('far')]]]);
 }
 
-/** Below this the art stops being worth looking at, so a board wider than that scrolls after all. */
+/** Below this size the art is too small to be useful. A board that needs smaller cards scrolls instead. */
 const MIN_FIT = 0.42;
-/** An empty board's cards start this large and shrink as it fills, as Arena's do. */
+/** Cards on an empty board start at this size and shrink as the board fills, as in Arena. */
 const MAX_FIT = 1.4;
 const STEP = 0.02;
-/** A zone takes a second line only when its cards grow by this much, so a card coming or going does not flip it back and forth. */
+/** A zone splits onto a second line only when its cards grow by this much. This stops one card added or removed from switching it back and forth. */
 const TWO_LINE_GAIN = 0.08;
 const TWO_LINE_BELOW = 0.72;
-/** How much of the smallest zone's size a layout may give up to keep every other zone larger. */
+/** How much smaller the smallest zone may get in a layout that keeps every other zone larger. */
 const SMALLEST_SLACK = 0.06;
 
-/** One group of a row's cards as the sizing needs it: how many slots, the fans behind them, and battles. */
+/** The counts the sizing needs for one group in a row: slots, cards fanned behind them, and battles. */
 interface GroupStats {
   el: HTMLElement;
   slots: number;
-  /** Cards fanned behind the group's slots, attachments and pile copies together. */
+  /** Cards fanned behind the group's slots, counting both attachments and pile copies. */
   steps: number;
   /** The most cards behind any one slot. */
   depth: number;
-  /** Battles, which lie on their side and so are wider than a slot's usual room. */
+  /** Battles. They are drawn sideways, so they are wider than a normal slot. */
   battles: number;
 }
 
-/** Groups sized as one, sharing a card size and a line count. fitCards gives each group a zone of its own. */
+/** Groups sized together, with one card size and one line count. fitCards puts each group in a zone of its own. */
 type Zone = GroupStats[];
 /** The zones side by side in one of a battlefield's two rows. */
 type RowZones = Zone[];
 
-/** A zone's size and line count; raw is its size before the smallest size is applied, less than it when it overflows. */
+/** A zone's size and line count. raw is the size before the minimum is applied. It is below the minimum when the zone overflows. */
 interface Sized { fit: number; lines: number; raw: number; }
 
-/** Sizes each zone on its own, measured against the seat rather than the cards so the answer cannot feed back into itself. */
+/** Sizes each zone separately. It measures the seat, not the cards, so the new card size cannot change the measurement. */
 function fitCards(root: HTMLElement, rows: RowZones[]): void {
   const field = q(root, '.battlefield');
   const style = getComputedStyle(root);
@@ -101,39 +101,39 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   const fan = px(fieldStyle, '--fan');
   const glow = px(fieldStyle, '--glow');
   const supportIndent = px(fieldStyle, '--support-indent');
-  // A phone sets a floor in pixels, below which a card can be neither read nor tapped
+  // A phone sets a minimum card width in pixels. Below it a card cannot be read or tapped.
   const minWidth = px(style, '--min-card-w');
   const minFit = minWidth ? Math.max(MIN_FIT, minWidth / w) : MIN_FIT;
   const slotW = h * 0.9 + 2 * air;
-  // A group's width at a card size of 1, on one line or split over two
+  // A group's width at card size 1, on one line or split over two
   const groupUnit = (g: GroupStats, lines: number) => {
     const total = g.slots * slotW + g.steps * w * fan + g.battles * (h - w);
-    // Two lines hold at most half the width plus the widest slot, as the second line takes what the first leaves
+    // Two lines need at most half the total width plus the widest slot, because the second line holds what does not fit on the first
     return lines === 1 ? total : total / 2 + slotW + g.depth * w * fan + (g.battles ? h - w : 0);
   };
-  // Between a group's two lines, room for an attacker on the back line to step forward into, with its chevron
+  // The gap between a group's two lines leaves room for an attacker on the back line to move forward, with its chevron
   const lineGap = (fit: number) => 14 + (h - w * 0.9) / 2 * fit;
   const live = (z: Zone) => z.filter(g => g.slots > 0);
   const rowGap = (r: number) => px(fieldStyle, r === 1 ? '--row-gap-1' : '--row-gap-0') || (r === 1 ? 52 : 40);
   const zoneWidth = (z: Zone, s: Omit<Sized, 'raw'>, gap: number) =>
     live(z).reduce((n, g) => n + groupUnit(g, s.lines) * s.fit, 0) + gap * Math.max(0, live(z).length - 1);
-  // What is behind a card fans out to its left only, so it costs a row width and never height
+  // Cards behind a card fan out to its left only, so they add width to a row but never height
   const zoneHeight = (s: Sized) => s.lines * h * s.fit + (s.lines - 1) * lineGap(s.fit);
 
-  // offsetWidth, so a scrollbar appearing does not shrink the room it measures and feed back into the size
+  // Use offsetWidth, so a scrollbar that appears does not reduce the measured width and change the size again
   const width = field.offsetWidth - px(fieldStyle, 'padding-left') - px(fieldStyle, 'padding-right') - 2;
-  // A two-player seat's portrait and zones stand over the board's left edge (board.css), so the rows fit beside them
+  // In a two-player game the seat's portrait and zones are drawn over the board's left edge (board.css). The rows must fit beside them.
   const player = q(root, '.player');
   const block = getComputedStyle(player).position === 'absolute'
     ? Math.max(0, player.getBoundingClientRect().right + 16 - field.getBoundingClientRect().left - px(fieldStyle, 'padding-left')) : 0;
   const room = width - block;
-  // A compact seat, like a phone's, keeps its player's details in a row above the cards, and its own padding round both
+  // A compact seat, like a phone's, shows the player's details in a row above the cards. The seat's padding surrounds both.
   const header = root.classList.contains('compact') ? player.offsetHeight + 8 : minWidth ? player.offsetHeight : 0;
   const seatPad = px(style, 'padding-top') + px(style, 'padding-bottom');
-  // The room by the phase pill for an attacker's step grows with the cards (board.css), so it is worked out for each size tried
+  // The space near the phase pill for an attacker to move forward grows with the cards (board.css). So it is computed for each size tried.
   const mine = root.id === 'me';
   const fieldPad = (fit: number) => {
-    // A phone gives the field's padding in its own styles, tighter than the room worked out below
+    // A phone sets the field's padding in its own styles. It is smaller than the space computed below.
     if (minWidth) return px(fieldStyle, 'padding-top') + px(fieldStyle, 'padding-bottom');
     const chevron = w * fit * 0.38;
     return mine ? Math.max(glow + 6, chevron - 2) + glow : glow + Math.max(glow + 20, chevron + 14);
@@ -141,11 +141,11 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   const seatHeight = root.clientHeight;
   const height = (fit: number) => seatHeight - header - seatPad - fieldPad(fit);
 
-  // A zone's size for the width it may take: one line or two, the second only as TWO_LINE_GAIN allows
+  // A zone's size for the width it is given, on one line or two. It uses two lines only as TWO_LINE_GAIN allows.
   const sizeFor = (z: Zone, room: number, cap: number, two: boolean, gap: number): Sized => {
     const g = live(z);
     const inner = gap * Math.max(0, g.length - 1);
-    // Compared before the smallest size is applied, so a second line that stops an overflow counts as a gain
+    // Sizes are compared before the minimum is applied, so a second line that stops an overflow counts as a gain
     const fitOn = (lines: number) =>
       Math.min(cap, (room - inner) / Math.max(1, g.reduce((n, x) => n + groupUnit(x, lines), 0)));
     const one = fitOn(1);
@@ -156,16 +156,16 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     const takeTwo = was === 2 ? split > one : split >= one + TWO_LINE_GAIN && one < TWO_LINE_BELOW;
     return takeTwo ? { fit: floor(split), lines: 2, raw: split } : { fit: floor(one), lines: 1, raw: one };
   };
-  // Each zone takes the width it needs up to an equal share of the row, found by halving, so the widest zone gives way first
+  // Each zone gets the width it needs, up to an equal share of the row. A binary search finds the share, so the widest zone shrinks first.
   const layRow = (r: number, cap: number, two: boolean): Sized[] => {
     const row = rows[r];
     const gap = rowGap(r);
     const zones = row.filter(z => live(z).length);
     const need = zones.map(z => zoneWidth(z, { fit: cap, lines: 1 }, gap));
-    // The support group (permanents that are neither lands nor creatures) stands in from the row's end (board.css), clear of the stack panel's edge
+    // The support group (permanents that are not lands or creatures) is indented from the row's end (board.css). This keeps it clear of the stack panel's edge.
     const indent = r === 0 && live(rows[0][1]).length ? supportIndent : 0;
     const gaps = gap * Math.max(0, zones.length - 1) + indent;
-    // A zone at the smallest size keeps that width whatever its share, so the zones beside it give up the difference
+    // A zone at the minimum size keeps that width whatever its share. The zones beside it lose the difference.
     const least = zones.map(z => zoneWidth(z, { fit: minFit, lines: 1 }, gap));
     const taken = (i: number, share: number) => Math.max(least[i], Math.min(need[i], share));
     const used = (share: number) => zones.reduce((n, _, i) => n + taken(i, share), 0) + gaps;
@@ -176,21 +176,21 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
       if (used(mid) <= room) lo = mid;
       else hi = mid;
     }
-    // Zones too wide for the row even at the smallest size are sized for the room there is, so the overflow counts against the layout
+    // Zones too wide for the row even at the minimum size are sized for the width there is. Their raw size then shows the overflow, which counts against the layout.
     const over = Math.min(1, (room - gaps) / least.reduce((n, x) => n + x, 0));
     const sizes = zones.map((z, i) => sizeFor(z, taken(i, lo) * over, cap, two, gap));
     return row.map(z => sizes[zones.indexOf(z)] ?? { fit: cap, lines: 1, raw: cap });
   };
   const rowHeight = (r: number, sizes: Sized[], cap: number) => {
     const row = rows[r];
-    // An empty row still keeps 60% of a card's height (.row's min-height)
+    // An empty row is still 60% of a card's height (.row's min-height)
     if (!row.some(z => live(z).length)) return 0.6 * h * cap;
     return Math.max(...row.map((z, i) => (live(z).length ? zoneHeight(sizes[i]) : 0)));
   };
 
-  // A phone has less to spare, and says how much
+  // A phone has less spare space and sets it in --fit-spare
   const spare = px(fieldStyle, '--fit-spare') || 32 + 24;
-  // Each layout that fits the height is judged by its smallest zone before the smallest size is applied, so less overflow wins
+  // Each layout that fits the height is scored by its smallest raw zone size, before the minimum is applied. So less overflow wins.
   const tried: { cap: number; sizes: Sized[][]; smallest: number; split: number }[] = [];
   for (let cap = MAX_FIT; cap >= minFit - 1e-9; cap -= STEP) {
     const rowA = [layRow(0, cap, false), layRow(0, cap, true)];
@@ -198,7 +198,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     for (const a of rowA) {
       for (const b of rowB) {
         const sizes = [a, b];
-        // The 32px above the rows and 24px between them leave some to spare, as a board filled to the pixel scrolls on rounding
+        // The spare space (32px above the rows and 24px between them) is needed because a board filled to the pixel scrolls after rounding
         const tall = rowHeight(0, sizes[0], cap) + rowHeight(1, sizes[1], cap) + spare;
         if (tall > height(cap)) continue;
         const flat = sizes.flat();
@@ -206,16 +206,16 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
       }
     }
   }
-  // Within SMALLEST_SLACK of the best smallest zone the larger cap wins, then fewer split zones, then the larger smallest zone
+  // Among layouts within SMALLEST_SLACK of the best smallest zone, prefer the larger cap, then fewer split zones, then the larger smallest zone
   const top = Math.max(...tried.map(t => t.smallest));
   const best = tried.filter(t => t.smallest >= top - SMALLEST_SLACK)
     .sort((a, b) => b.cap - a.cap || a.split - b.split || b.smallest - a.smallest)[0];
-  // Past the smallest size nothing fits; the smallest cards, split where they can be, scroll rather than shrink
+  // When nothing fits at the minimum size, use the minimum size with two lines where allowed. The board scrolls instead of shrinking further.
   const chosen = best ?? { cap: minFit, sizes: [layRow(0, minFit, true), layRow(1, minFit, true)] };
   field.classList.toggle('crowded', !best);
   root.style.setProperty('--fit', chosen.cap.toFixed(2));
   let shrinking = false;
-  // A row stays centred on the board while that keeps it clear of the portrait, and otherwise moves right just enough
+  // A row stays centred on the board if that keeps it clear of the portrait. Otherwise it moves right just enough to clear it.
   rows.forEach((row, r) => {
     const zones = row.filter(z => live(z).length);
     const indent = r === 0 && live(row[1]).length ? supportIndent : 0;
@@ -233,13 +233,13 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
       g.el.style.setProperty('--fit', s.fit.toFixed(3));
       g.el.dataset.lines = String(s.lines);
       g.el.classList.toggle('two', s.lines === 2);
-      // The split width is given at full size and scaled in CSS, so it shrinks with the cards rather than ahead of them
+      // The split width is set at full size and scaled in CSS, so it shrinks at the same rate as the cards
       g.el.style.setProperty('--split-w', s.lines === 2 ? `${groupUnit(g, 2)}px` : '');
-      // Below this the keyword icons are too small to tell apart, so the group drops them and keeps the art
+      // Below this size the keyword icons are too small to tell apart, so the group hides them and shows only the art
       g.el.classList.toggle('cramped', s.fit < TWO_LINE_BELOW);
     }
   }));
-  // A card joining a full row overflows it while the size eases down, so overflow is clipped until then to keep a scrollbar away
+  // A card added to a full row overflows it while the size animates down. Overflow is clipped until then so no scrollbar appears.
   if (shrinking) {
     field.classList.add('settling');
     clearTimeout(settling.get(field));
@@ -251,13 +251,13 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
 const SETTLE_MS = 700;
 const settling = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
-// An attachment sits under the card at the bottom of its chain, on whichever battlefield that card is
+// An attachment is drawn under the card at the end of its attachment chain, on whichever battlefield that card is
 function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] {
   const byKey = new Map(onField.map(c => [c.$key, c]));
   const hostOf = (c: CardView) => (c.EntityAttachedTo ? byKey.get(c.EntityAttachedTo.ref) : undefined);
   const rootOf = (c: CardView) => {
     let host = c;
-    // A chain of attachments cannot be longer than this, and the bound stops a cycle in a broken one
+    // No real attachment chain is this long. The limit stops an endless loop if a broken chain has a cycle.
     for (let i = 0; i < 10; i++) {
       const next = hostOf(host);
       if (!next) break;
@@ -273,9 +273,9 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
     list.push(c);
     under.set(host, list);
   }
-  // A card a permanent holds in exile, such as an Oblivion Ring's, sits under it as an attachment would, as a ghost
+  // A card that a permanent holds in exile, such as an Oblivion Ring's, is drawn under it like an attachment, as a ghost
   for (const holder of onField) {
-    // The spell a prepared creature can cast comes first, as desktop and mobile place it
+    // The spell a prepared creature can cast comes first, as on desktop and mobile
     const held = [holder.PreparedSpell, ...(holder.UntilLeavesBattlefield ?? [])]
       .map(r => r && model.objects.get(r.ref) as CardView | undefined)
       .filter((c): c is CardView => c?.Zone === 'Exile');
@@ -295,7 +295,7 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
   for (const c of hosts) {
     const attached = under.get(c.$key) ?? [];
     const sig = attached.length ? null : signature(model, c, marks);
-    // A pile the player has opened lays its cards out one by one until they are put back
+    // A pile the player has opened shows its cards separately until the player closes it
     const pile = sig && !ui.openPiles.has(sig) && piles.get(sig);
     if (pile) {
       pile.members.push(c);
@@ -305,7 +305,7 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
     if (sig) piles.set(sig, slot);
     slots.push(slot);
   }
-  // Cards of one name stay side by side in the order the name first appears, so a pile that splits does so in place
+  // Cards with the same name stay together, in the order the name first appears. So a pile that splits stays in place.
   const firstOf = new Map<string, number>();
   slots.forEach((slot, i) => {
     const name = stateOf(model, slot.top).Name ?? '';
@@ -313,22 +313,22 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
   });
   const order = new Map(slots.map((slot, i) => [slot, i]));
   const rank = (slot: Slot) => firstOf.get(stateOf(model, slot.top).Name ?? '') ?? 0;
-  // Within a name, the untapped stand first and the tapped to their right, so a land tapped out of its pile moves on
+  // Within a name, untapped cards come first and tapped cards after them. So a land tapped out of its pile moves to the right.
   const tapped = (slot: Slot) => Number(!!slot.top.Tapped);
   return slots.sort((a, b) => rank(a) - rank(b) || tapped(a) - tapped(b) || order.get(a)! - order.get(b)!);
 }
 
-// Cards with the same signature pile together, so it holds everything a player can see or act on, and a property never set reads the same as one set back
+// Cards with the same signature pile together. So it includes everything a player can see or act on. A property never set gives the same value as one reset to its default.
 export function signature(model: Model, card: CardView, marks: Set<number>[]): string | null {
   if (!model.visible.has(card.$key)) return null;
   const s = stateOf(model, card);
-  // A land played this turn is no different from the lands played before it, so it belongs in their pile
+  // A land played this turn is the same as the lands played before it, so it goes in their pile
   return [s.Name, s.Power ?? null, s.Toughness ?? null, s.Loyalty && s.Loyalty !== '0' ? s.Loyalty : null, !!card.Tapped,
     counters(card.Counters), card.Damage ?? 0, !!card.Attacking, !!card.Blocking, isSick(model, card), !!card.PhasedOut,
     !!card.Detained, !!card.Token, !!card.Cloned, card.EntityAttachedTo?.ref ?? null, !!card.IsRingBearer, card.Stickers ?? null, ...marks.map(m => m.has(card.$key))].join('\u0000');
 }
 
-/** Counters as they show: none at all whether the game sent nothing, nothing left, or zeroes; in a fixed order. */
+/** Counters as they are shown, in a fixed order. No counters, an empty list and zero counts all give the same result. */
 function counters(all: Record<string, number> | null | undefined): string {
   return Object.entries(all ?? {}).filter(([, n]) => n > 0).sort(([a], [b]) => a.localeCompare(b))
     .map(([name, n]) => `${name}:${n}`).join(',');
@@ -346,15 +346,15 @@ function createSlot(): HTMLElement {
 }
 
 function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick, charging: Set<number>): void {
-  // The card the others are attached to comes last, so it paints over them
+  // The card the others are attached to comes last, so it is drawn over them
   const cards = [...slot.attached, slot.top];
   reconcile(el, cards, c => c.$key, () => createCard(select), (c, card) => {
-    // Marked first, since a ghost lying face down is drawn as its sleeve
+    // Set before updateCard, because a face-down ghost is drawn as its sleeve
     c.classList.toggle('ghost', card.Zone === 'Exile');
     updateCard(c, model, card);
-    // The engine flags creatures off the battlefield as sick too, so the mark belongs to battlefield cards only
+    // The engine also flags creatures off the battlefield as sick, so the mark is shown only on battlefield cards
     c.classList.toggle('sickness', card.Zone !== 'Exile' && isSick(model, card));
-    // A land standing among the creatures says why, since its art still reads as a land
+    // A land among the creatures gets a tag that explains why, because its art still looks like a land
     const type = stateOf(model, card).Type ?? '';
     q(c, '.kind-tag').textContent = /Land/.test(type) && /Creature/.test(type) ? t('lblWebBoardLandCreature') : '';
   });
@@ -370,7 +370,7 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
   const count = q(top, '.count');
   count.onclick = spreadable && sig ? e => {
     e.stopPropagation();
-    // The cards fan out of the pile, or fold back into it, rather than appearing beside it
+    // The cards animate out of the pile, or back into it, instead of just appearing beside it
     const keys = slot.members.map(c => String(c.$key));
     const from = top.getBoundingClientRect();
     changeUi(u => {

@@ -1,4 +1,4 @@
-// A campaign's lists of cards and the trade between them, where every price shown is the server's
+// A campaign's card lists and the trade between them. Every price shown comes from the server
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
@@ -13,29 +13,29 @@ import type { CatalogueRow } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
 import { Backdrop } from '../dialog';
 
-/** What a mode calls one of its lists, and what it says of trading from it. */
+/** A mode's name for one of its lists, and the text it shows for trading from that list. */
 export interface TradeWords {
   label: string;
-  /** The title of the bar and of the question, for n cards picked. */
+  /** The title of the selection bar and of the confirm dialog, for n cards picked. */
   verb: (n: number) => string;
-  /** Under a card: what it costs or pays in this list, with the currency's token where its symbol goes. */
+  /** The text under a card: what it costs or pays in this list. The token marks where the currency symbol goes. */
   row: (price: string) => string;
-  /** The question's sentence for n cards at this total, with the token where the symbol goes. */
+  /** The confirm dialog's sentence for n cards at this total. The token marks where the symbol goes. */
   confirm: (n: number, total: string) => string;
-  /** The badge on a card for how many its list holds, for a list that counts copies. */
+  /** The badge on a card with the number of copies its list holds, for a list that counts copies. */
   count?: (n: number) => string;
 }
 
-/** Something picked: a card's printing or a product, by the key a trade names it by, and how many of it. */
+/** A picked card printing or product, with the key a trade uses for it and the number picked. */
 export interface Pick { key: string; name: string; value: number; count: number; most: number }
 
-/** A row as a pick of one, up to as many as its list holds. */
+/** Makes a pick from a row, of one copy by default. most is the number its list holds. */
 export const pickOf = (row: CatalogueRow, count = 1): Pick => ({ key: keyOf(row), name: row.name, value: row.value ?? 0, count, most: row.count ?? 1 });
 
-/** What names a row in a trade: the server's key where its image key is not enough, as for a foil, otherwise its image key. */
+/** The key for a row in a trade. It is the server's key when the image key is not enough, as for a foil. Otherwise it is the image key. */
 const keyOf = (row: CatalogueRow): string => row.key ?? row.image;
 
-/** One button that spends a balance: its verb, the currency's icon and the cost, refused while the balance is short. */
+/** A button that spends a balance. It shows its label, the currency's icon and the cost, and is disabled while the balance is too low. */
 export function PricedButton({ label, icon, iconLabel, size, cost, have, disabled, cls, onClick }: {
   label: string; icon: string; iconLabel: string; size: number; cost: number; have: number; disabled?: boolean; cls?: string; onClick: () => void;
 }) {
@@ -46,7 +46,7 @@ export function PricedButton({ label, icon, iconLabel, size, cost, have, disable
   );
 }
 
-/** Owned copies as a playset of squares, filled for each copy held, and the number beside them. */
+/** Owned copies shown as four squares, one filled for each copy held, with the number beside them. */
 function Owned({ n }: { n: number }) {
   return (
     <span class="cq-owned" title={t('lblWebTradeOwned', n)}>
@@ -56,17 +56,17 @@ function Owned({ n }: { n: number }) {
   );
 }
 
-/** The lists are the keys of words, in that order, and each is the source its cards are asked for by. */
+/** The keys of words are the lists, in that order. Each key is also the source used to request that list's cards. */
 export function TradePage({ model, actions, icon, iconLabel, token, words, types, groupLabel, blocked, top }: {
   model: Model; actions: Actions;
-  /** The currency's skin icon, its name for a reader who cannot see it, and where a sentence names it. */
+  /** The currency's skin icon, its name as alt text, and the token that marks where a sentence names it. */
   icon: string; iconLabel: string; token: string;
   words: Record<string, TradeWords>; types: [string, TextKey][];
-  /** The choice that narrows a list to none of the server's groups, when the mode has groups. */
+  /** The label of the group filter and of its option that filters by no group. Only modes with groups set it. */
   groupLabel?: string;
-  /** The mark on a card that cannot be picked. */
+  /** The badge on a card that cannot be picked. */
   blocked: string;
-  /** What a list shows above its cards: given the picks, a way to pick or unpick one, and a way to ask about a whole set of picks at once. */
+  /** What a list shows above its cards. It gets the picks, a function to pick or unpick one, and a function to confirm a set of picks at once. */
   top?: (source: string, picked: Map<string, Pick>, toggle: (pick: Pick) => void, askAbout: (picks: Pick[]) => void) => ComponentChildren;
 }) {
   const info = model.trading;
@@ -76,7 +76,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
   const [colours, setColours] = useState<Set<string>>(() => new Set());
   const [type, setType] = useState('any');
   const [group, setGroup] = useState('');
-  /** What is picked, by key, which for a card is its image key, the key of its printing. */
+  /** The picks, by the key from keyOf. For most cards this is the image key, which names the printing. */
   const [picked, setPicked] = useState<Map<string, Pick>>(() => new Map());
   const [asking, setAsking] = useState(false);
   const query = { text, colours: [...colours].join(''), type, filters: '', sort: 'name', showAll: true, source, group: group || undefined };
@@ -87,10 +87,10 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
   };
 
   useEffect(() => { actions.trading(); }, []);
-  // The catalogue is shared with the deck editor and the other lists, whose page may still be the one held
+  // The catalogue is shared with the deck editor and the other lists. The page it holds may still belong to one of them
   const page = model.catalogue?.source === source ? model.catalogue : null;
   const rows = page?.rows ?? [];
-  // The lists change when cards are traded, which their sizes say
+  // A trade changes the lists. Their sizes show the change, so the sizes are a dependency
   const more = useCataloguePages(actions, query, page, [text, query.colours, type, group, source, sizes]);
   useEffect(() => { setPicked(new Map()); setAsking(false); }, [source, sizes]);
   const toggle = (pick: Pick) => {
@@ -149,7 +149,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
                 <span class="val">{priced(said.row(formatNumber(row.value ?? 0)))}{row.owned != null && <Owned n={row.owned} />}{row.note && <span class="cq-cc-note">{row.note}</span>}</span>
               </button>
           );
-          // A list that counts copies takes a count for a pick, under the card; any other is the card alone
+          // In a list that counts copies, a pick gets a count stepper under the card. Other lists show the card alone
           if (row.count == null) return card;
           return (
             <div key={keyOf(row)} class="cq-cc-slot">

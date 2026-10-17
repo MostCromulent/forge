@@ -1,6 +1,6 @@
-// Keeps a container's children in step with a list, by key: kept elements are updated and moved, new ones made, gone ones removed
+// Matches a container's children to a list by key. Existing elements are updated and moved, new ones are created and missing ones are removed.
 
-/** Uses moveBefore where the browser has it, because insertBefore takes the element out and puts it back, which ends its transitions. */
+/** Uses moveBefore where the browser supports it. insertBefore removes the element and adds it back, which ends its transitions. */
 function place(parent: HTMLElement, el: HTMLElement, next: ChildNode | null): void {
   const mover = parent as HTMLElement & { moveBefore?: (node: Node, child: Node | null) => void };
   if (el.isConnected && mover.moveBefore) {
@@ -8,7 +8,7 @@ function place(parent: HTMLElement, el: HTMLElement, next: ChildNode | null): vo
       mover.moveBefore(el, next);
       return;
     } catch {
-      // A move the browser will not do atomically falls back to the plain insert
+      // If the browser cannot do the move atomically, use the plain insert
     }
   }
   parent.insertBefore(el, next);

@@ -1,4 +1,4 @@
-// The campaign modes' part of the page: their model fields, actions and tabs, and the hooks the shared pages call (campaigns.tsx)
+// The campaign modes' model fields, actions and tabs, and the hooks the shared pages call (campaigns.tsx)
 
 import { registerCampaigns } from '../campaigns';
 import { Kind } from '../menu';
@@ -15,7 +15,7 @@ import type {
   Reward, Trading,
 } from '../protocol';
 
-/** The modes, by the name the server knows each by. */
+/** The modes, by the names the server uses for them. */
 export type CampaignMode = 'conquest' | 'quest';
 export type ConquestTab = 'map' | 'aether' | 'party' | 'collection' | 'planes' | 'stats';
 export type QuestTab = 'duels' | 'challenges' | 'tournaments' | 'decks' | 'shop' | 'bazaar' | 'stats';
@@ -27,23 +27,23 @@ declare module '../model' {
     questDuels: QuestDuels | null;
     questDecks: QuestDecks | null;
     questChallenges: QuestChallenges | null;
-    /** The bazaar with one stall open, once its tab has asked. */
+    /** The bazaar with one stall open. It is set once the Bazaar tab has requested it. */
     questBazaar: QuestBazaar | null;
-    /** What the new-quest form offers, once it has asked. */
+    /** The choices the new-quest form offers. It is set once the form has requested them. */
     questOptions: QuestOptions | null;
     questTournaments: QuestTournaments | null;
     campaignBar: CampaignBar | null;
     conquestState: ConquestState | null;
-    /** The result of a battle's game, while its match is open; and what a won battle gave, until it has been shown. */
+    /** The result of a battle's game while its match is open. reward holds what a won battle gave until it has been shown. */
     campaignResult: CampaignResult | null;
     reward: Reward | null;
-    /** The commanders and planeswalkers found, once the Commanders page has asked. */
+    /** The commanders and planeswalkers found. It is set once the Commanders page has requested them. */
     conquestParty: ConquestParty | null;
-    /** The lists a campaign trades between, by size, once its trade page has asked. */
+    /** The sizes of the lists a campaign trades between. It is set once the trade page has requested them. */
     trading: Trading | null;
-    /** What a new conquest may start with, as far as the form has asked. */
+    /** The choices a new conquest can start with, as far as the form has requested them. */
     conquestOptions: ConquestOptions | null;
-    /** The Aether, the planes, the statistics and the preferences, each as its page last asked for it. */
+    /** The Aether, the planes, the statistics and the preferences. Each holds what its page last requested. */
     conquestAether: ConquestAetherState | null;
     conquestPlanes: ConquestPlanes | null;
     campaignStats: CampaignStats | null;
@@ -53,9 +53,9 @@ declare module '../model' {
 
 declare module '../ui' {
   interface UiState {
-    /** Which page of the open conquest is showing. It outlives the deck editor, which takes the page's place for a while. */
+    /** The page of the open conquest that is shown. It is kept while the deck editor replaces the page for a while. */
     conquestTab: ConquestTab;
-    /** Which page of the open quest is showing. */
+    /** The page of the open quest that is shown. */
     questTab: QuestTab;
     conquestOpened: Record<string, boolean>;
   }
@@ -63,89 +63,89 @@ declare module '../ui' {
 
 declare module '../actions' {
   interface Actions {
-    /** Opens a mode's saved games, or with resume, the one played last. */
+    /** Opens a mode's saved games. With resume, it opens the save played last. */
     campaignOpen(mode: CampaignMode, resume: boolean): void;
     campaignLoad(name: string): void;
-    /** Back from an open game to the saved ones, or from those to the start page. */
+    /** Goes back from an open save to the saved games, or from the saved games to the start page. */
     campaignLeave(): void;
     campaignRename(name: string, to: string): void;
     campaignDelete(name: string): void;
-    /** Selects a place on the map; the player does not move. */
+    /** Selects a place on the map. The player does not move. */
     conquestSelect(region: number, row: number, col: number): void;
     /** Walks to the selected place. */
     conquestMove(): void;
-    /** Fights the event the player stands on. */
+    /** Starts the battle for the event at the player's current place. */
     conquestBattle(): void;
-    /** Says a won battle's reward has been shown. */
+    /** Tells the server that a won battle's reward has been shown. */
     rewardClaim(): void;
-    /** Dev mode: where the next Chaos Wheel stops. */
+    /** Dev mode: sets where the next Chaos Wheel stops. */
     devConquestWheel(outcome: string): void;
-    /** Asks what a new conquest may start with: the planes, a plane's commanders, a commander's planeswalkers. */
+    /** Requests the choices for a new conquest. These are the planes, a plane's commanders, or a commander's planeswalkers. */
     conquestOptions(plane?: string, commander?: string): void;
     conquestCreate(c: { name: string; plane: string; commander: string; planeswalker: string }): void;
-    /** Asks what the Aether holds under these filters, or with pull spends the shards for a card. An empty type asks for the filters a visit starts with. */
+    /** Requests the Aether's cards under these filters. With pull, it spends shards for a card. An empty type requests the filters a visit starts with. */
     conquestAether(q: { colors: string; type: string; rarity: string; cmc: string; pull: boolean }): void;
     conquestPlanes(): void;
-    /** Travels to a plane, with unlock spending the emblems to unlock it first. */
+    /** Travels to a plane. With unlock, it first spends emblems to unlock the plane. */
     conquestPlaneswalk(plane: string, unlock: boolean): void;
-    /** Asks for the statistics of a plane, or of every plane. */
+    /** Requests the campaign's statistics. In Conquest a scope is a plane, and no scope means every plane. */
     campaignStats(scope?: string): void;
     campaignPrefs(): void;
     campaignPref(key: string, value: string): void;
     campaignPrefsReset(): void;
-    /** Asks for the commanders and planeswalkers found. */
+    /** Requests the commanders and planeswalkers found. */
     conquestParty(): void;
     conquestLead(commander: string): void;
     conquestWalker(planeswalker: string): void;
-    /** Asks for a commander's deck, which arrives as a deck's details do. */
+    /** Requests a commander's deck. It arrives in the same message as other deck details. */
     conquestViewDeck(commander: string): void;
     conquestEditDeck(commander: string): void;
-    /** Asks for the sizes of the lists a campaign trades between. */
+    /** Requests the sizes of the lists a campaign trades between. */
     trading(): void;
-    /** Trades the picks out of the list of that source: for Conquest, exiles them or brings them back. */
+    /** Trades the picks out of the list for that source. In Conquest this exiles them or brings them back. */
     trade(source: string, picks: { key: string; count: number }[]): void;
 
-    /** Fights a duel of the Duels page, by its place in the list. */
+    /** Starts a duel from the Duels page, by its index in the list. */
     questDuel(index: number): void;
-    /** Chooses the pet for a slot, the plant's being 0; null summons none. */
+    /** Chooses the pet for a slot. The plant uses slot 0. null chooses no pet. */
     questPet(slot: number, name: string | null): void;
     questMatchLength(games: number): void;
-    /** Makes an empty deck of a name and opens it in the editor. */
+    /** Creates an empty deck with the given name and opens it in the editor. */
     questDeckNew(name: string): void;
     questDeckRename(deck: string, to: string): void;
-    /** Makes a deck the one duels are fought with. */
+    /** Makes a deck the one used for duels. */
     questDeckCurrent(deck: string): void;
-    /** Asks for a deck's list, which arrives as a deck's details do. */
+    /** Requests a deck's list. It arrives in the same message as other deck details. */
     questDeckView(deck: string): void;
     questDeckEdit(deck: string): void;
     questDeckDelete(deck: string): void;
-    /** Asks what the new-quest form offers. */
+    /** Requests the choices the new-quest form offers. */
     questOptions(): void;
     questChallenge(id: string): void;
-    /** Flies the zeppelin, which draws the challenges again once between two matches. */
+    /** Flies the zeppelin. It redraws the challenges, and can be used once between two matches. */
     questZeppelin(): void;
-    /** Opens a stall of the bazaar, or with null the first. */
+    /** Opens a stall of the bazaar. null opens the first stall. */
     questStall(name: string | null): void;
     questBuy(stall: string, item: string): void;
-    /** Enters a tournament on offer, which pays its fee and opens its draft. */
+    /** Enters a tournament on offer. This pays its fee and opens its draft. */
     questEnter(title: string): void;
-    /** Spends a draft token; the host asks for the format. */
+    /** Spends a draft token. The host then asks for the format. */
     questToken(): void;
     questTournamentStart(): void;
     questTournamentNext(): void;
-    /** Leaves the tournament, collecting its prizes once it has started. */
+    /** Leaves the tournament. If it has started, its prizes are collected. */
     questTournamentLeave(): void;
     /** Opens the tournament's deck in the editor. */
     questTournamentDeck(): void;
-    /** Travels to another world; the host asks which. */
+    /** Travels to another world. The host asks which one. */
     questTravel(): void;
-    /** Unlocks a set; the host asks which. */
+    /** Unlocks a set. The host asks which one. */
     questUnlock(): void;
     questCreate(c: Omit<QuestCreate, 't'>): void;
   }
 }
 
-/** An open campaign's pages, as they stand with none open; hello resets them to this when the campaign is left. */
+/** An open campaign's page fields when no campaign is open. hello resets them to this when the campaign is left. */
 const NO_CAMPAIGN = { campaignBar: null, reward: null, trading: null, campaignStats: null } satisfies Partial<Model>;
 /** The same for an open conquest's own pages. */
 const NO_CONQUEST = { conquestState: null, conquestParty: null, conquestAether: null, conquestPlanes: null } satisfies Partial<Model>;
@@ -154,12 +154,12 @@ const NO_QUEST = {
   questSaves: null, questDuels: null, questDecks: null, questChallenges: null, questBazaar: null, questTournaments: null,
 } satisfies Partial<Model>;
 
-/** The messages that only fill a campaign's field of the same name. */
+/** The messages that are only stored in the campaign field of the same name. */
 const STORED = new Set(['conquestSaves', 'questSaves', 'questDuels', 'questDecks', 'questOptions', 'questChallenges', 'questBazaar', 'questTournaments',
   'campaignBar', 'conquestState', 'campaignResult', 'reward', 'conquestParty', 'trading', 'conquestOptions', 'conquestAether', 'conquestPlanes',
   'campaignStats', 'campaignPrefs']);
 
-// A ringed world for Conquest; a pennant on its staff for Quest
+// Conquest's icon is a ringed planet. Quest's icon is a pennant on a staff
 const CONQUEST_ICON = <><circle cx="24" cy="24" r="11" /><ellipse cx="24" cy="24" rx="20" ry="6.5" transform="rotate(-18 24 24)" /></>;
 const QUEST_ICON = <><path d="M13 42V7" /><path d="M13 9h22l-6 7 6 7H13" /></>;
 
@@ -169,7 +169,7 @@ registerCampaigns({
   fields: () => ({ conquestSaves: null, questOptions: null, campaignResult: null, conquestOptions: null, campaignPrefs: null, ...NO_CAMPAIGN, ...NO_CONQUEST, ...NO_QUEST }),
 
   hello: (model, msg) => {
-    // A match's result belongs to its match, and a campaign's pages to the campaign
+    // A match's result is cleared when its match ends. A campaign's pages are cleared when the campaign is left
     if (msg.screen !== 'playing') model.campaignResult = null;
     if (!msg.campaign) Object.assign(model, NO_CAMPAIGN);
     if (msg.campaign !== 'conquest') {
@@ -178,7 +178,7 @@ registerCampaigns({
     }
     if (msg.campaign !== 'quest') {
       Object.assign(model, NO_QUEST);
-      // A match is played from the quest's page, so the tab it was started from is the one returned to
+      // A match is played from the quest's page, so the player returns to the tab the match was started from
       if (msg.screen !== 'playing') ui.questTab = 'duels';
     }
   },
@@ -193,7 +193,7 @@ registerCampaigns({
     campaignOpen: (mode, resume) => send({ t: 'campaignOpen', mode, resume }),
     campaignLoad: name => send({ t: 'campaignLoad', name }),
     campaignLeave: () => send({ t: 'campaignLeave' }),
-    // What the last one was refused for is no longer what the page should say
+    // The error from the last refused request no longer applies, so it is cleared
     campaignRename: (name, to) => {
       model.error = null;
       send({ t: 'campaignRename', name, to });
@@ -205,7 +205,7 @@ registerCampaigns({
     conquestSelect: (region, row, col) => send({ t: 'conquestSelect', region, row, col }),
     conquestMove: () => send({ t: 'conquestMove' }),
     conquestBattle: () => send({ t: 'conquestBattle' }),
-    // A reward that has been shown leaves the model at once, so its dialog closes without waiting for the server
+    // A shown reward is removed from the model at once, so its dialog closes without waiting for the server
     rewardClaim: () => {
       model.reward = null;
       send({ t: 'rewardClaim' });
@@ -243,7 +243,7 @@ registerCampaigns({
       model.error = null;
       send({ t: 'conquestCreate', ...c });
     },
-    // A visit to the Aether starts from its own filters, and the card the last visit pulled is not this one's
+    // A new visit to the Aether starts from its default filters. The card pulled on the last visit is cleared too
     conquestAether: q => {
       if (!q.type) model.conquestAether = null;
       send({ t: 'conquestAether', ...q });
@@ -290,7 +290,7 @@ registerCampaigns({
 
   ending: (model, actions: Actions) => {
     if (!model.campaignSave) return null;
-    // A campaign's result says which buttons the ending offers, so the panel waits for it
+    // The campaign's result sets which buttons the ending offers, so the panel waits for it
     const result = model.campaignResult;
     if (!result) return { key: null, line: null, buttons: () => {} };
     return {
@@ -302,7 +302,7 @@ registerCampaigns({
           panel.clear();
           const does: Record<string, () => void> = {
             nextGame: () => actions.nextGame(), leave: () => actions.leave(), restart: () => actions.restartGame(), quit,
-            // A forfeit loses what was paid to enter, so it is asked first, as desktop asks
+            // A forfeit loses the entry fee, so the player must confirm it first, as on desktop
             forfeit: () => {
               panel.clear();
               panel.say(t('lblWebQuestForfeitAsk'));

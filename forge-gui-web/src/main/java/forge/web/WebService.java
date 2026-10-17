@@ -11,18 +11,18 @@ import forge.web.console.ServerTraffic;
 import java.io.File;
 import java.util.function.Consumer;
 
-/** The web server as something the console can stop and start again, with tokens that outlive a restart so old links still work. */
+/** The web server, in a form the console can stop and start again. The tokens are kept across a restart, so old links still work. */
 public final class WebService implements IHasForgeLog {
     private final WebGuiBase ui;
     private final long idleMillis;
     private final Runnable onQuit;
-    /** True when a console is on screen, which is itself the sign that Forge is running and waiting. */
+    /** True when a console is on screen. The console itself shows that Forge is running and waiting. */
     private final boolean consoleShown;
     private final String hostToken;
     private final String guestToken;
     private WebServer server;
     private volatile WebSessions sessions;
-    /** Set at launch for a server that should outlast its browsers, such as one with no window to untick the choice in. */
+    /** Set at launch for a server that should keep running after its browsers leave, such as one with no window to turn the option off in. */
     public static final boolean KEEP_OPEN = Boolean.getBoolean("forge.web.keepOpen");
     private boolean quitWhenEmpty = !KEEP_OPEN;
     private volatile PortForward forward;
@@ -32,7 +32,7 @@ public final class WebService implements IHasForgeLog {
     private volatile CloudflareTunnel.State tunnelling = CloudflareTunnel.State.OFF;
     private volatile Consumer<CloudflareTunnel.State> onTunnel = t -> { };
 
-    /** Where asking the router to forward the port stands. */
+    /** The state of the request to the router to forward the port. */
     public enum Forwarding { OFF, ASKING, FORWARDED, REFUSED }
 
     WebService(final WebGuiBase ui, final long idleMillis, final Runnable onQuit, final boolean consoleShown,
@@ -54,14 +54,14 @@ public final class WebService implements IHasForgeLog {
         if (server != null) {
             return;
         }
-        // One log for as long as the port is bound, from before the first table
+        // One log for the whole time the port is bound, starting before the first table
         NetworkLogConfig.activateNetworkLogging();
         final WebSessions fresh = new WebSessions(ui, idleMillis, onQuit);
         final WebServer bound;
         try {
             bound = new WebServer(fresh, hostToken, guestToken);
         } catch (final Exception e) {
-            // The sessions' idle timer would otherwise quit Forge a few seconds after the port could not be bound
+            // Otherwise the sessions' idle timer would quit Forge a few seconds after the port failed to bind
             fresh.shutdown();
             throw e;
         }
@@ -72,7 +72,7 @@ public final class WebService implements IHasForgeLog {
         fresh.quitWhenEmpty(quitWhenEmpty);
         sessions = fresh;
         server = bound;
-        // The address carries the host's token, so it stays out of the log that players send on
+        // The address carries the host's token. netLog also writes this line to the network log file.
         netLog.info("Forge web UI: {}", bound.url());
         netLog.info("The web server has started on port {}.", bound.port());
         if (throughCloudflare()) {
@@ -121,7 +121,7 @@ public final class WebService implements IHasForgeLog {
         }
     }
 
-    /** Told of every change in where forwarding stands, on whatever thread the router's answer arrives. */
+    /** The listener is called on every change in the forwarding state, on whichever thread the router's answer arrives. */
     public synchronized void onForwarding(final Consumer<Forwarding> listener) {
         onForwarding = listener;
         listener.accept(forwarding);
@@ -139,7 +139,7 @@ public final class WebService implements IHasForgeLog {
         final PortForward asking = new PortForward(port);
         forward = asking;
         setForwarding(Forwarding.ASKING);
-        // The answer takes no lock, because it arrives on a UPnP thread that stop() may wait on while holding this object's lock
+        // The answer takes no lock. It arrives on a UPnP thread, and stop() may wait for that thread while holding this object's lock.
         asking.open(accepted -> {
             if (forward == asking) {
                 if (accepted) {
@@ -160,12 +160,12 @@ public final class WebService implements IHasForgeLog {
         setForwarding(Forwarding.OFF);
     }
 
-    /** Whether players on the internet come in through Cloudflare, with the router left alone. Kept between runs. */
+    /** Whether players on the internet connect through Cloudflare, with no change to the router. Kept between runs. */
     public boolean throughCloudflare() {
         return Boolean.parseBoolean(FModel.getNetPreferences().getPref(FNetPref.WEB_CLOUDFLARE));
     }
 
-    /** Only one way in is open at a time, so choosing one closes the other; the port forwarding choice is kept for the way back. */
+    /** Only one way in is open at a time, so choosing one closes the other. The port forwarding choice is kept for when Cloudflare is turned off. */
     public synchronized void throughCloudflare(final boolean value) {
         FModel.getNetPreferences().setPref(FNetPref.WEB_CLOUDFLARE, String.valueOf(value));
         FModel.getNetPreferences().save();
@@ -182,13 +182,13 @@ public final class WebService implements IHasForgeLog {
         }
     }
 
-    /** Told of every change in where the connection through Cloudflare stands, on the thread that runs it. */
+    /** The listener is called on every change in the Cloudflare connection's state, on the thread that runs the connection. */
     public synchronized void onTunnel(final Consumer<CloudflareTunnel.State> listener) {
         onTunnel = listener;
         listener.accept(tunnelling);
     }
 
-    /** The host has said where Cloudflare's program is, which a wait for it to be installed then finds. Kept between runs. */
+    /** The host has chosen where Cloudflare's program is. A tunnel still searching for the program looks there. Kept between runs. */
     public void cloudflaredAt(final File program) {
         FModel.getNetPreferences().setPref(FNetPref.WEB_CLOUDFLARED_PATH, program.getAbsolutePath());
         FModel.getNetPreferences().save();
@@ -211,7 +211,7 @@ public final class WebService implements IHasForgeLog {
         }
         final String path = FModel.getNetPreferences().getPref(FNetPref.WEB_CLOUDFLARED_PATH);
         final CloudflareTunnel[] opening = new CloudflareTunnel[1];
-        // The answer takes no lock, for the reason the router's does not
+        // The answer takes no lock, for the same reason as the router's answer
         opening[0] = new CloudflareTunnel(server.port(), path.isEmpty() ? null : new File(path), state -> {
             if (tunnel == opening[0]) {
                 setTunnelling(state);
@@ -262,13 +262,13 @@ public final class WebService implements IHasForgeLog {
         return server == null ? null : server.traffic();
     }
 
-    /** Takes no lock, so the console can ask on the event thread while a stop is under way. */
+    /** Takes no lock, so the console can call it on the event thread while a stop is in progress. */
     public int playersHere() {
         final WebSessions now = sessions;
         return now == null ? 0 : now.playersHere();
     }
 
-    /** The port the browser connects on, or the one that will be asked for while stopped. */
+    /** The port the browser connects on. While stopped, the port that the next start will use. */
     public synchronized int port() {
         return server == null ? WebServer.configuredPort() : server.port();
     }

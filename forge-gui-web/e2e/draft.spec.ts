@@ -34,14 +34,14 @@ test('an offline draft is picked, saved, built and played as a gauntlet', async 
   await page.click('.draft-save button:has-text("Save")');
 
   await expect(page.locator('#editor')).toBeVisible({ timeout: 60_000 });
-  // The check is drawn again in the deck's summary, which only a phone shows
+  // A second copy of the check is in the deck's summary, which only a phone shows. So look in the header
   await expect(page.locator('.editor-head .check-fixed')).toHaveText('Limited · 40 cards');
-  // A click picks into the main deck, so the deck opens already holding every pick
+  // A click adds the pick to the main deck, so the deck opens with every pick in it
   await expect(page.locator('.deck-head .sizes')).toContainText('45 cards');
   await page.click('.editor-head button.primary');
 
   await expect(page.locator('.opponents')).toBeVisible();
-  // The deck saved in the editor is the one the opponents screen reads
+  // The opponents screen shows the deck saved in the editor
   await expect(page.locator('.your-deck')).toContainText('45 cards');
   await page.click('.opp-foot button:has-text("Start the gauntlet")');
   await expect(page.locator('#match')).toBeVisible({ timeout: 60_000 });

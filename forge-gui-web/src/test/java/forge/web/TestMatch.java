@@ -8,7 +8,7 @@ import forge.web.protocol.BrowserChannel;
 
 import java.util.function.Function;
 
-/** A match between the web seat, played by a test's browser, and the computer; shut down once the test is done. */
+/** A match between the web seat, played by a test's browser, and the computer. It is shut down when the test ends. */
 final class TestMatch {
     private TestMatch() {
     }

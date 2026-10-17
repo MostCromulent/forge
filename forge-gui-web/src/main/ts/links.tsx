@@ -1,4 +1,4 @@
-// The ways to Forge's project page and its players, shown where a player looks for help: the options list and the start pages
+// Links to Forge's project page and its player community. They are shown where a player looks for help: the options list and the start pages
 
 // Simple Icons' github and discord (CC0, see forge-gui/res/licenses/simple-icons-license.txt)
 const LINKS = [
@@ -8,12 +8,12 @@ const LINKS = [
 
 let version: string | undefined;
 
-/** The server's build, which only a packaged server knows. */
+/** Stores the server's build version. Only a packaged server has one. */
 export function setVersion(value?: string): void {
   version = value;
 }
 
-/** A link to each, opened in a new tab so a game under way is never left. */
+/** A link to each site. Each link opens in a new tab so the player never leaves a game in progress. */
 export function ForgeLinks({ foot }: { foot?: boolean }) {
   return (
     <div class={foot ? 'forge-links foot' : 'forge-links'}>

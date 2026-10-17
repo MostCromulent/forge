@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
-/** The game log as the browser sees it: the entries this seat may read, sent as they arrive and replayed on connect. */
+/** The game log for the browser. It holds the entries this seat may read, sends each as it arrives, and resends them all on connect. */
 final class WebGameLog {
     private final Predicate<CardView> mayView;
     private final PlayerSettings settings;
@@ -31,7 +31,7 @@ final class WebGameLog {
         this.settings = settings;
     }
 
-    /** The entries added since the last call, or every entry when the match has moved to a new game. */
+    /** The entries added since the last call. When the match has moved to a new game, it is every entry. */
     LogMessage added(final GameLog log) {
         final List<GameLogEntry> all = log.getAllEntries();
         final boolean newGame = log != logged;
@@ -56,7 +56,7 @@ final class WebGameLog {
         return newGame || !fresh.isEmpty() ? message(fresh, newGame) : null;
     }
 
-    /** Everything this seat has seen so far, for a browser that has just connected. */
+    /** Every entry this seat has seen so far, for a browser that has just connected. */
     LogMessage all() {
         synchronized (entries) {
             return message(entries, true);
@@ -72,7 +72,7 @@ final class WebGameLog {
         return new LogEntry(entry.type(), entry.message(), null, null);
     }
 
-    // A custom list of entry types is chosen on desktop, so it is the host's; the web offers only the named levels
+    // A custom list of entry types is set on desktop, so it comes from the host's preferences. The web offers only the named levels
     private Set<GameLogEntryType> shownTypes() {
         final GameLogVerbosity verbosity = GameLogVerbosity.fromString(settings.get(FPref.DEV_LOG_ENTRY_TYPE));
         return verbosity == GameLogVerbosity.CUSTOM ? FModel.getPreferences().getCustomLogTypes() : verbosity.getIncludedTypes();

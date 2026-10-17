@@ -16,9 +16,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-/** The page's text in Forge's language, as patterns the page formats itself (text.ts) by the rules of {@link forge.util.Localizer}. */
+/** The page's text in Forge's language. It is sent as patterns that the page formats itself (text.ts), by the rules of {@link forge.util.Localizer}. */
 public final class PageText implements IHasForgeLog {
-    /** The keys the page uses, listed by {@link PageTextKeys} when it reads them from the TypeScript. */
+    /** The keys the page uses. {@link PageTextKeys} writes this list when it reads the keys from the TypeScript. */
     static final String KEYS_RESOURCE = "/forge/web/page-text.keys";
 
     private static byte[] json;
@@ -26,7 +26,7 @@ public final class PageText implements IHasForgeLog {
     private PageText() {
     }
 
-    /** The page's text as the page asks for it: {lang, text: {key: pattern}}. Worked out once, on first use. */
+    /** The page's text in the form the page asks for: {lang, text: {key: pattern}}. It is built once, on first use. */
     public static synchronized byte[] json() {
         if (json == null) {
             final String lang = FModel.getPreferences().getPref(FPref.UI_LANGUAGE);
@@ -47,7 +47,7 @@ public final class PageText implements IHasForgeLog {
         return json;
     }
 
-    /** The keys the page uses; every English key, if the list was never written, as when run without Maven. */
+    /** The keys the page uses. If the list was never written, as when run without Maven, it is every English key. */
     private static List<String> keys(final Properties english) {
         try (InputStream in = PageText.class.getResourceAsStream(KEYS_RESOURCE)) {
             if (in != null) {

@@ -54,26 +54,26 @@ import java.util.function.BiPredicate;
 
 /** The decks a seat may choose from, and what the browser shows about each one. */
 public final class DeckCatalog {
-    /** Where a deck came from, which the browser tags each row with. */
+    /** A deck's source, which the browser shows as a tag on each row. */
     static final String MINE = "yours";
-    /** A guest's decks, kept in the guest's browser and keyed by the id it keeps them under. */
+    /** A guest's decks, stored in the guest's browser and keyed by the id it stores them under. */
     static final String DEVICE = "device";
     static final String LINKED = "linked";
     static final String EVENT = "event";
     private static final String PRECON = "precons";
-    /** Sources that make a deck when you pick one, rather than loading a saved deck. */
+    /** Sources that build a deck when picked, instead of loading a saved deck. */
     private static final String GENERATED = "generated";
     private static final String COMMANDER_GEN = "gen:commander:";
     private static final String NET = "net";
-    /** A colour generator knows its own colour before it builds anything; the other generators do not. */
+    /** A colour generator's colour is known before it builds a deck. The other generators' colours are not. */
     private static final Map<String, String> COLOUR_LETTERS = Map.of(
             "White", "W", "Blue", "U", "Black", "B", "Red", "R", "Green", "G");
-    /** The finder lists a deck's cards as they are: its problems are the verdict line's to state. */
+    /** The finder lists a deck's cards without problem marks. The verdict line states the problems. */
     public static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), Map.of(), List.of());
 
     private final Map<String, Entry> byKey = new ConcurrentHashMap<>();
 
-    /** A generator's deck is built on demand and kept, so the panel and the match see the same cards. */
+    /** A generator's deck is built when first requested and then kept, so the panel and the match see the same cards. */
     private record Entry(DeckProxy proxy, boolean generated, Deck built) {
         Entry(final DeckProxy proxy) {
             this(proxy, false, null);
@@ -98,10 +98,10 @@ public final class DeckCatalog {
     /** Kept per deck object, not per contents, because working out a deck's formats reads every printing of its cards. */
     private static final Map<Deck, Facts> FACTS = new MapMaker().weakKeys().makeMap();
     private static final Map<Deck, Map<String, Optional<String>>> VERDICTS = new MapMaker().weakKeys().makeMap();
-    /** A Commander deck's bracket, kept the same way; worked out only for decks listed in Commander. */
+    /** A Commander deck's bracket, cached the same way. It is worked out only for decks listed in Commander. */
     private static final Map<Deck, Integer> BRACKETS = new MapMaker().weakKeys().makeMap();
 
-    /** Forgets what the list knew of a deck that was changed where it is stored. */
+    /** Clears the cached facts for a deck that was changed in storage. */
     static void changed(final Deck deck) {
         FACTS.remove(deck);
         VERDICTS.remove(deck);
@@ -113,12 +113,12 @@ public final class DeckCatalog {
         return BRACKETS.computeIfAbsent(deck, CommanderBracketCalculator::getBracket);
     }
 
-    /** The bracket a deck lists with: in Commander only, the one format brackets are for. */
+    /** The bracket shown in a deck's list row. Only Commander shows it, because brackets apply only to that format. */
     private static Integer listedBracket(final Deck deck, final GameType format) {
         return format == GameType.Commander ? bracketOf(deck) : null;
     }
 
-    /** The bracket and every kind of card behind it, for the panel beside the list. */
+    /** The bracket and every kind of card that raised it, for the panel next to the list. */
     public static Bracket bracket(final Deck deck) {
         final CommanderBracketCalculator.Result r = CommanderBracketCalculator.calculate(deck);
         final Localizer text = Localizer.getInstance();
@@ -157,7 +157,7 @@ public final class DeckCatalog {
             reasons.add(new BracketReason(BracketReasonKind.earlyCombos, combos + " · " + text.getMessage("lblCommanderBracketEarlyGame"),
                     text.getMessage("lblWebBracketBriefEarlyCombo"), early, r.getEarlyGameCombosBracket(), text.getMessage("lblCommanderBracketReasonEarlyGameCombo")));
         }
-        // What raised it most first
+        // The reasons that raised the bracket most come first
         reasons.sort(Comparator.comparingInt(BracketReason::raises).reversed());
         return new Bracket(r.getBracket(), reasons, clear);
     }
@@ -177,7 +177,7 @@ public final class DeckCatalog {
                 proxy == null ? null : proxy.getFormatsString(), d.getAverageCMC()));
     }
 
-    /** The same verdict as problem, kept for each deck until it is saved. */
+    /** The same verdict as problem, cached for each deck until it is saved. */
     public static String problemAt(final Deck deck, final GameType format, final GameFormat pool) {
         final String table = format.name() + "|" + (pool == null ? "" : pool.getName()) + "|"
                 + FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY);
@@ -185,15 +185,15 @@ public final class DeckCatalog {
                 .computeIfAbsent(table, t -> Optional.ofNullable(problem(deck, format, pool))).orElse(null);
     }
 
-    /** Categories the browser has asked for and core has downloaded, kept so a refresh does not lose them. */
+    /** The categories that the browser asked for and core downloaded. They are kept so a refresh does not lose them. */
     private final List<NetDeckCategory> netCategories = new ArrayList<>();
 
-    /** Held while anything reads or changes a deck, because a deck loads its sections on first read, which is not safe from two threads. */
+    /** Held while any code reads or changes a deck. A deck loads its sections on first read, and that is not safe from two threads. */
     public static final Object DECKS = new Object();
 
     /** Asks core for a net deck category. Core picks one through the browser and downloads it. */
     public void loadNetDecks(final GameType format) {
-        // Picking waits on the host's answer, so the decks are locked only to record what was picked
+        // Picking waits for the host's answer, so the decks are locked only to record the pick
         final NetDeckCategory category = NetDeckCategory.selectAndLoad(format);
         synchronized (DECKS) {
             if (category != null && !netCategories.contains(category)) {
@@ -202,22 +202,22 @@ public final class DeckCatalog {
         }
     }
 
-    /** The card pool the last refresh was for, which generators build from and every verdict checks. */
+    /** The card pool of the last refresh. Generators build from it, and every verdict checks against it. */
     private volatile GameFormat pool;
 
-    /** A deck a guest keeps in its browser, and the format it was built for. */
+    /** A deck that a guest stores in its browser, and the format it was built for. */
     public record OnDevice(Deck deck, GameType format) {
     }
 
-    /** Whether the browser this catalogue serves is a guest's, whose own decks are those on its device. */
+    /** Whether this catalogue serves a guest's browser. A guest's own decks are the ones on its device. */
     private boolean guest;
 
-    /** Rebuilds the catalogue and returns its decks. At a Draft table these are event pools, only event's own when it is not null. */
+    /** Rebuilds the catalogue and returns its decks. At a Draft table these are event pools. When event is not null, only that event's pools are listed. */
     public List<DeckSummary> refresh(final GameType format, final GameFormat pool, final boolean guest, final Map<String, OnDevice> device,
             final String event) {
         synchronized (DECKS) {
             this.guest = guest;
-            // A built generator stays built while the pool stands, so the seat that holds it and the list agree
+            // A built generator deck stays built while the pool is unchanged, so the list agrees with the seat that holds it
             final Map<String, Entry> built = new HashMap<>();
             if (pool == this.pool) {
                 byKey.forEach((key, e) -> {
@@ -246,7 +246,7 @@ public final class DeckCatalog {
                 });
                 return out;
             }
-            // Each commander format keeps its own decks; only Commander has precons of its own
+            // Each commander format has its own decks. Only Commander has its own precons.
             add(out, format, switch (format) {
                 case Commander -> DeckProxy.getAllCommanderDecks();
                 case Oathbreaker -> DeckProxy.getAllOathbreakerDecks();
@@ -285,7 +285,7 @@ public final class DeckCatalog {
             if (e == null) {
                 return null;
             }
-            // A generator has no deck until it is asked for one, and builds a different deck each time
+            // A generator has no deck until one is requested, and it builds a different deck each time
             if (e.built() != null) {
                 return e.built();
             }
@@ -297,7 +297,7 @@ public final class DeckCatalog {
         }
     }
 
-    /** Replaces the cached copy, because each save makes a new deck object and a seat must be given that one. */
+    /** Replaces the cached copy. Each save makes a new deck object, and a seat must be given that new object. */
     public String adopt(final String tag, final String path, final Deck deck) {
         final String key = DEVICE.equals(tag) ? DEVICE + ":" + path : tag + ":" + path + "/" + deck.getName();
         synchronized (DECKS) {
@@ -306,30 +306,30 @@ public final class DeckCatalog {
         return key;
     }
 
-    /** Whether the deck behind a key can't be changed in place. A guest may change only the decks in its own browser. */
+    /** Whether the deck behind a key cannot be changed in place. A guest may change only the decks in its own browser. */
     static boolean readOnly(final String key, final boolean guest) {
         final String tag = key.substring(0, Math.max(0, key.indexOf(':')));
         return guest ? !DEVICE.equals(tag) : !MINE.equals(tag);
     }
 
-    /** The folder path in a key, "" for a deck at the top of its format's folder. */
+    /** The folder path in a key, or "" for a deck at the top of its format's folder. */
     static String pathOf(final String key) {
         final int colon = key.indexOf(':');
         final int slash = key.lastIndexOf('/');
         return colon < 0 || slash <= colon ? "" : key.substring(colon + 1, slash);
     }
 
-    /** Builds a deck around a commander chosen at random, as desktop's Random button picks from its list of every legal one. */
+    /** Builds a deck around a random commander, as desktop's Random button picks from its list of every legal commander. */
     private static Deck buildCommander(final String key) {
         // gen:commander:<format>:<random or cardgen>
         final String[] parts = key.split(":");
-        // Built for the computer's sake, since the key does not say who will play it and a person can play anything it can
+        // Built so the computer can play it, because the key does not say who will play it. A person can play any deck the computer can.
         final List<DeckProxy> legends = CommanderDeckGenerator.getCommanderDecks(GameType.valueOf(parts[2]).getDeckFormat(), true,
                 "cardgen".equals(parts[3]));
         return legends.isEmpty() ? null : legends.get(MyRandom.getRandom().nextInt(legends.size())).getDeck();
     }
 
-    /** Builds the colour generator behind a "gen:color:" key, from the chosen card pool when there is one. */
+    /** Builds the colour generator deck for a "gen:color:" key, from the chosen card pool when there is one. */
     private static Deck buildColours(final String key, final GameFormat pool) {
         final List<String> selection = List.of(key.substring(key.lastIndexOf(':') + 1));
         return DeckgenUtil.colorCheck(selection)
@@ -351,7 +351,7 @@ public final class DeckCatalog {
         }
     }
 
-    /** The chosen deck's card list, grouped the way a decklist is read, for the panel beside the results. */
+    /** The chosen deck's card list, grouped as a decklist is read, for the panel next to the results. */
     public DeckDetails details(final String key, final GameType format) {
         synchronized (DECKS) {
             final Deck deck = deck(key);
@@ -366,7 +366,7 @@ public final class DeckCatalog {
         }
     }
 
-    /** The keys of listed decks holding a matching card, outside the sideboard or in it, or from a set, given by its code or name. */
+    /** The keys of listed decks that hold a matching card. A card matches by name outside or inside the sideboard, or by set code or set name. */
     public List<String> matching(final DeckQueryKind kind, final String value) {
         final String words = value.trim().toLowerCase();
         final CardEdition set = kind == DeckQueryKind.set ? edition(value.trim()) : null;
@@ -408,7 +408,7 @@ public final class DeckCatalog {
         return CardCatalog.letters(DeckProxy.getColorIdentity(deck));
     }
 
-    /** Stars a listed deck as desktop does, in the deck preferences both clients read. */
+    /** Stars a listed deck the way desktop does, in the deck preferences that both clients read. */
     public void setFavourite(final String key, final boolean on) {
         final Entry e = key == null ? null : byKey.get(key);
         if (e == null || e.proxy() == null) {
@@ -417,7 +417,7 @@ public final class DeckCatalog {
         DeckPreferences.getPrefs(e.proxy()).setStarCount(on ? 1 : 0);
     }
 
-    /** What the panel reports about a deck beside its card list. The types follow the editor's own headings, so the two agree. */
+    /** What the panel shows about a deck next to its card list. The types use the editor's own headings, so the two agree. */
     public static DeckStats stats(final Deck deck) {
         final CardPool main = deck.get(DeckSection.Main);
         final DeckStatistics shared = DeckStatistics.fromDeck(deck);
@@ -434,9 +434,9 @@ public final class DeckCatalog {
                 types.entrySet().stream().map(e -> new TypeCount(e.getKey(), e.getValue())).toList(), Ints.asList(shared.pips));
     }
 
-    /** Generators are listed by name only, because asking each for a deck to fill a row would build hundreds of them. */
+    /** Generators are listed by name only. Building a deck to fill each row would build hundreds of decks. */
     private void addGenerators(final List<DeckSummary> out) {
-        // The tokens the colour generator expects, shown under friendlier names
+        // The names the colour generator expects, shown with friendlier labels
         final Map<String, String> colours = new LinkedHashMap<>();
         final Localizer text = Localizer.getInstance();
         colours.put("Random 1", text.getMessage("lblWebDeckCatalogRandomOne"));
@@ -452,7 +452,7 @@ public final class DeckCatalog {
             byKey.put(key, new Entry(null, true, null));
             generated(out, key, c.getValue(), text.getMessage("lblWebDeckCatalogBuiltOnPick"), COLOUR_LETTERS.getOrDefault(c.getKey(), ""));
         }
-        // A theme deck is a fixed list and cannot be held to a card pool
+        // A theme deck is a fixed list, so it cannot be limited to a card pool
         if (pool == null) {
             for (final DeckProxy theme : DeckProxy.getAllThemeDecks()) {
                 byKey.put("gen:theme:" + theme.getName(), new Entry(theme, true, null));
@@ -476,7 +476,7 @@ public final class DeckCatalog {
     private void addCommanderGenerators(final List<DeckSummary> out, final GameType format) {
         final Localizer text = Localizer.getInstance();
         final List<String> kinds = new ArrayList<>(List.of("random"));
-        // The card-based generator reads what Forge learned from real decks, which loads at startup only when asked for
+        // The card-based generator reads data that Forge learned from real decks. That data loads at startup only when the settings ask for it.
         if (FModel.isdeckGenMatrixLoaded()) {
             kinds.add("cardgen");
         }
@@ -488,7 +488,7 @@ public final class DeckCatalog {
         }
     }
 
-    // Colours are empty where they are not known until the deck is built, which a colour filter treats as no match
+    // Colours are empty when they are not known until the deck is built. A colour filter treats empty colours as no match.
     private static void generated(final List<DeckSummary> out, final String key, final String name, final String note,
             final String colours) {
         out.add(new DeckSummary(key, name, GENERATED, colours, true, note, null, null, null, null, null, null, null, true,
@@ -501,7 +501,7 @@ public final class DeckCatalog {
             byKey.put(key, new Entry(proxy));
             final Deck deck = proxy.getDeck();
             final Facts facts = factsOf(deck, proxy);
-            // An illegal deck is shown and marked rather than hidden, so nobody hunts for a deck that is there
+            // An illegal deck is shown with a mark instead of hidden, so nobody searches for a deck that is there
             final boolean linked = LINKED.equals(tag);
             out.add(new DeckSummary(key, proxy.getName(), tag, facts.colors(), null, null, facts.played(),
                     facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), facts.formats(),
@@ -532,7 +532,7 @@ public final class DeckCatalog {
         return skipped == 0 ? null : skipped;
     }
 
-    /** The decks loaded from links that belong to this format: each keeps its format, or is Commander when it has a commander. */
+    /** The decks loaded from links that belong to this format. A deck uses the format it records, or Commander when it has a commander. */
     private static List<DeckProxy> linkedDecks(final GameType format) {
         final List<DeckProxy> out = new ArrayList<>();
         for (final DeckProxy proxy : DeckUrlLoader.getUrlDecks()) {
@@ -546,7 +546,7 @@ public final class DeckCatalog {
         return out;
     }
 
-    /** The site a linked deck came from, as its makers write its name. */
+    /** The site a linked deck came from, spelled as the site spells its own name. */
     static String site(final String url) {
         final String host = url == null ? "" : url.toLowerCase();
         if (host.contains("moxfield.com")) {
@@ -578,10 +578,10 @@ public final class DeckCatalog {
         return format.getDeckFormat().getDeckConformanceProblem(deck);
     }
 
-    /** Most cards a problem sentence names before counting the rest. */
+    /** The most cards a problem sentence names before it counts the rest. */
     private static final int NAMED_CARDS = 3;
 
-    /** The pool's verdict on a deck as one sentence, naming the cards it objects to by GameFormat's two checks, in its order. */
+    /** The pool's verdict on a deck as one sentence. It names the cards that fail GameFormat's two checks, in GameFormat's order. */
     static String poolProblem(final GameFormat pool, final Deck deck) {
         if (pool.getDeckConformanceProblem(deck) == null) {
             return null;
@@ -598,7 +598,7 @@ public final class DeckCatalog {
         return Localizer.getInstance().getMessage("lblWebDeckCatalogAllowsOneOf", pool.getName(), listOf(restricted));
     }
 
-    /** The names of the cards that match, each once though the pool holds it in several printings. */
+    /** The names of the matching cards. Each name appears once, even when the pool holds several printings. */
     private static List<String> namesIn(final CardPool cards, final BiPredicate<PaperCard, Integer> matches) {
         final Set<String> names = new LinkedHashSet<>();
         for (final Map.Entry<PaperCard, Integer> entry : cards) {
@@ -619,7 +619,7 @@ public final class DeckCatalog {
         return Lang.joinHomogenous(shown);
     }
 
-    /** The cards a deck plays with: its main deck and its commanders, which a Commander deck's 100 counts together. */
+    /** The cards a deck plays with: its main deck and its commanders. A Commander deck's 100 cards include both. */
     public static int played(final Deck deck) {
         return count(deck.get(DeckSection.Main)) + count(deck.get(DeckSection.Commander));
     }
@@ -649,7 +649,7 @@ public final class DeckCatalog {
         }
     }
 
-    /** Remembers a card-art sleeve alongside the ones desktop has saved, newest last. */
+    /** Saves a card-art sleeve with the ones desktop has saved, newest last. */
     public static void rememberSleeveArt(final String imageKey, final int offset) {
         if (imageKey == null || imageKey.isEmpty()) {
             return;
@@ -663,7 +663,7 @@ public final class DeckCatalog {
         prefs.save();
     }
 
-    /** Names starting with the text come first, shortest first, then names containing it. */
+    /** Card names that start with the text come first, shortest first, then names that contain it. */
     public static List<String> searchCardNames(final String query, final int limit) {
         final String text = CardCatalog.normalize(query == null ? "" : query);
         if (text.isEmpty()) {
@@ -684,7 +684,7 @@ public final class DeckCatalog {
         return new ArrayList<>(startsWith.subList(0, Math.min(limit, startsWith.size())));
     }
 
-    /** Every printing of one card, newest first as desktop's printing dialog lists them, so a specific one can be picked for a deck or a sleeve. */
+    /** Every printing of one card, newest first as in desktop's printing dialog. A specific printing can then be picked for a deck or a sleeve. */
     public static List<Printing> printings(final String name, final GameFormat pool) {
         final CardEdition.Collection editions = StaticData.instance().getEditions();
         final List<PaperCard> cards = new ArrayList<>(StaticData.instance().getCommonCards().getAllCardsNoAlt(name));

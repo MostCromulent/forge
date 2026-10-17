@@ -39,7 +39,7 @@ public final class LobbyEvents {
         this.local = local;
     }
 
-    /** Whether the table's event has begun: its packs are out, or a past event's decks were chosen for the match. */
+    /** Whether the table's event has begun. Either its packs are dealt, or a past event's decks were chosen for the match. */
     boolean eventStarted() {
         final GameLobby lobby = owner.view();
         final GameLobbyData data = lobby == null ? null : lobby.getData();
@@ -50,7 +50,7 @@ public final class LobbyEvents {
         return data.getActiveEventId() != null || (event != null && event.getPhase() != EventPhase.LOBBY_GATHER);
     }
 
-    /** Whether every seat's finder lists only the table's event's decks, as desktop's conformance switch sets. */
+    /** Sets whether every seat's finder lists only the decks of the table's event, as desktop's conformance switch does. */
     public void setEventDecksOnly(final boolean on) {
         final ServerGameLobby lobby = owner.host();
         if (lobby != null && lobby.getData().getActiveEventId() != null) {
@@ -58,7 +58,7 @@ public final class LobbyEvents {
         }
     }
 
-    /** The Limited part of the table, read from the lobby data so a guest reads the same; null at a Constructed table. */
+    /** The Limited part of the table, read from the lobby data so a guest sees the same values. Null at a Constructed table. */
     LimitedTable limitedTable(final GameLobby lobby) {
         if (!Lobby.limited(lobby)) {
             return null;
@@ -69,7 +69,7 @@ public final class LobbyEvents {
         // An event's product is blank until the event is set up
         String product = event == null || event.getProductDescription() == null || event.getProductDescription().isEmpty()
                 ? null : event.getProductDescription();
-        // A past event played again has no product of its own, so its pools' tag names it
+        // A past event that is played again has no product of its own, so the product is read from its pools' tag
         if (product == null && data.getActiveEventId() != null) {
             product = playedAgain(data.getActiveEventId());
         }
@@ -81,7 +81,7 @@ public final class LobbyEvents {
                 local.isHost() && data.getActiveEventId() == null && !eventStarted() ? pastEvents() : List.of());
     }
 
-    /** The events whose pools the host keeps, newest first, as desktop's past events list orders them. */
+    /** The events whose pools the host has stored, newest first, in the same order as desktop's past events list. */
     private static List<PastEvent> pastEvents() {
         final Map<String, PastEvent> events = new LinkedHashMap<>();
         synchronized (DeckCatalog.DECKS) {
@@ -96,7 +96,7 @@ public final class LobbyEvents {
         return events.values().stream().sorted(Comparator.comparing(PastEvent::date).reversed()).toList();
     }
 
-    /** The product of a past event, read from its pools; a pool saved without one still names an event rather than none. */
+    /** The product of a past event, read from its pools. A pool saved without a product is still named as an earlier event. */
     private static String playedAgain(final String eventId) {
         synchronized (DeckCatalog.DECKS) {
             for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
@@ -109,14 +109,14 @@ public final class LobbyEvents {
         return Localizer.getInstance().getMessage("lblWebEventAnEarlierEvent");
     }
 
-    /** A past event as one of its pools' tags describe it. */
+    /** A past event, as described by the tags on one of its pools. */
     private static PastEvent pastEvent(final String id, final Deck pool) {
         final boolean draft = EventFormat.BOOSTER_DRAFT.name().equals(DeckProxy.getEventTag(pool, "eventFormat"));
         return new PastEvent(id, draft ? EventKind.draft : EventKind.sealed, Objects.toString(DeckProxy.getEventTag(pool, "eventProduct"), ""),
                 Objects.toString(DeckProxy.getEventTag(pool, "eventDate"), ""));
     }
 
-    /** Plays an event's decks at this table, where type is Draft or Sealed, and answers why not, or null. */
+    /** Plays an event's decks at this table. type is Draft or Sealed. Returns the reason it cannot, or null. */
     public String playEvent(final String eventId, final GameType type, final boolean decksOnly) {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null || eventId == null) {
@@ -132,7 +132,7 @@ public final class LobbyEvents {
         return null;
     }
 
-    /** Hosts a past event again, its kind read from its pools as desktop reads it. */
+    /** Hosts a past event again. Its kind is read from its pools, as on desktop. */
     public String hostAgain(final String eventId) {
         Deck pool = null;
         synchronized (DeckCatalog.DECKS) {
@@ -149,7 +149,7 @@ public final class LobbyEvents {
         return playEvent(eventId, sealed ? GameType.Sealed : GameType.Draft, true);
     }
 
-    /** Starts a new event of the same kind and keeps the old one's pools so it can be played again, answering why not, or null. */
+    /** Starts a new event of the same kind. The old event's pools are kept so it can be played again. Returns the reason it cannot, or null. */
     public String newEvent() {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null || !Lobby.limited(lobby)) {
@@ -167,7 +167,7 @@ public final class LobbyEvents {
         return setLimited(kind);
     }
 
-    /** Deletes a past event's pools from the host's event decks. The event the table is playing stays. Answers why not, or null. */
+    /** Deletes a past event's pools from the host's event decks. The event the table is playing is kept. Returns the reason it cannot, or null. */
     public String forgetEvent(final String eventId) {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null || eventId == null) {
@@ -187,7 +187,7 @@ public final class LobbyEvents {
         return null;
     }
 
-    /** Switches the table to a kind of event, or to Constructed when kind is null, and answers why not, or null. */
+    /** Switches the table to a kind of event, or to Constructed when kind is null. Returns the reason it cannot, or null. */
     public String setLimited(final EventKind kind) {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null) {
@@ -202,7 +202,7 @@ public final class LobbyEvents {
             }
             lobby.clearCurrentEvent();
             lobby.selectEventForMatch(null, false);
-            // Sitting out is an event's matter; a Constructed table neither shows nor clears it
+            // Sitting out applies only to events. A Constructed table neither shows it nor clears it, so it is cleared here.
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 lobby.getSlot(i).setSittingOut(false);
             }
@@ -224,7 +224,7 @@ public final class LobbyEvents {
         return null;
     }
 
-    /** Answers why not, or null. Building the product can wait on a web site, so this runs off the host UI thread and sets the table up on it. */
+    /** Returns the reason it cannot, or null. Building the product can wait for a web site, so this runs off the host UI thread. It then sets up the table on that thread. */
     public String setUpEvent(final EventSetup s) {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null || !Lobby.limited(lobby)) {
@@ -247,7 +247,7 @@ public final class LobbyEvents {
             if (draft == null) {
                 return Localizer.getInstance().getMessage("lblWebLobbyDraftSetUpFailed");
             }
-            // As desktop's pod choice: never fewer than the seats at the table, and never more than a pod
+            // Pod size as desktop chooses it: never fewer than the seats at the table, and never more than a full pod
             final int wanted = s.podSize() > 0 ? s.podSize() : draft.getPodSize();
             draft.setPodSize(Math.min(Lobby.MAX_POD, Math.max(Math.max(2, lobby.getNumberOfSlots()), wanted)));
             if (s.pickRule() != null) {
@@ -263,7 +263,7 @@ public final class LobbyEvents {
         }
     }
 
-    /** Deals the packs or pools once every seat is ready, as desktop's Start Event does. Answers why not, or null. Runs on the host UI thread, which the dealing holds while it opens every pool. */
+    /** Deals the packs or pools once every seat is ready, as desktop's Start Event does. Returns the reason it cannot, or null. Runs on the host UI thread, which stays busy while every pool is opened. */
     public String startEvent() {
         final ServerGameLobby lobby = owner.host();
         final NetworkEvent event = lobby == null ? null : lobby.getCurrentEvent();
@@ -290,7 +290,7 @@ public final class LobbyEvents {
         return lobby != null && Lobby.limited(lobby) && !eventStarted();
     }
 
-    /** Sits a seat out of the next match, or brings it back. The host's to do, and not while the pod drafts. */
+    /** Sits a seat out of the next match, or brings it back. Only the host can do this, and not while the pod is drafting. */
     public void sitOut(final int index, final boolean sittingOut) {
         final ServerGameLobby lobby = owner.host();
         if (lobby != null && Lobby.limited(lobby) && !Lobby.drafting(lobby) && index >= 0 && index < lobby.getNumberOfSlots()) {

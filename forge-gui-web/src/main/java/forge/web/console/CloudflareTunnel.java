@@ -17,19 +17,19 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Runs Cloudflare's cloudflared, which calls out to Cloudflare and has it pass players' browsers back down that call,
- * so players on the internet reach this machine without the router letting anyone in.
+ * Runs Cloudflare's cloudflared program. It opens an outgoing connection to Cloudflare, and Cloudflare sends players' browser traffic
+ * back over that connection. Players on the internet can then reach this machine without an open port on the router.
  */
 public final class CloudflareTunnel implements IHasForgeLog {
-    /** Where the program is offered for each system, since Forge does not fetch it itself. */
+    /** The page that offers the program for each system. Forge does not download it itself. */
     static final String DOWNLOADS = "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/";
 
-    /** MISSING is waiting for the program to be installed, which is looked for again every few seconds. */
+    /** MISSING means the program is not installed yet. The search for it runs again every few seconds. */
     public enum State { OFF, MISSING, CONNECTING, CONNECTED, FAILED }
 
     private static final Pattern ADDRESS = Pattern.compile("https://[a-z0-9-]+\\.trycloudflare\\.com");
     private static final long LOOK_AGAIN_MILLIS = 3000;
-    /** Cloudflare names the address at once but can be slow to start answering at it, so it is given this long. */
+    /** Cloudflare gives the address at once but can be slow to start answering at it. This is how long the tunnel waits. */
     private static final long ANSWER_WITHIN_MILLIS = 120_000;
 
     private final int port;
@@ -47,7 +47,7 @@ public final class CloudflareTunnel implements IHasForgeLog {
         this.listener = listener;
     }
 
-    /** The program where the host said it is, on the path, or where its installers put it; null when it is in none of them. */
+    /** Finds the program where the host said it is, on the path, or where its installers put it. Returns null when it is in none of them. */
     static File find(final File chosen) {
         if (chosen != null && chosen.isFile()) {
             return chosen;
@@ -73,7 +73,7 @@ public final class CloudflareTunnel implements IHasForgeLog {
         return null;
     }
 
-    /** Starts on a thread of its own, since finding the program, starting it and waiting for Cloudflare all take their time. */
+    /** Starts on a separate thread, because finding the program, starting it and waiting for Cloudflare all take time. */
     public void open() {
         Runtime.getRuntime().addShutdownHook(closeWithForge);
         final Thread t = new Thread(this::run, "ForgeTunnel");
@@ -81,12 +81,12 @@ public final class CloudflareTunnel implements IHasForgeLog {
         t.start();
     }
 
-    /** The host has pointed at the program, so the wait for it to be installed looks there next. */
+    /** The host has chosen where the program is, so the search for it looks there next. */
     public void lookIn(final File program) {
         chosen = program;
     }
 
-    /** The address players open, without a token, or null until Cloudflare is answering at it. */
+    /** The address that players open, without a token. Null until Cloudflare answers at it. */
     public String address() {
         return address;
     }
@@ -97,7 +97,7 @@ public final class CloudflareTunnel implements IHasForgeLog {
         try {
             Runtime.getRuntime().removeShutdownHook(closeWithForge);
         } catch (final IllegalStateException e) {
-            // Forge is already closing, and the hook does this itself
+            // Forge is already closing, and the shutdown hook ends the program itself
         }
     }
 
@@ -129,7 +129,7 @@ public final class CloudflareTunnel implements IHasForgeLog {
                 return;
             }
             tell(State.CONNECTING);
-            // 127.0.0.1 and not localhost, which the program may take for an IPv6 address the server is not bound to
+            // Use 127.0.0.1, not localhost. The program may resolve localhost to an IPv6 address that the server is not bound to.
             process = new ProcessBuilder(program.getPath(), "tunnel", "--no-autoupdate", "--url", "http://127.0.0.1:" + port)
                     .redirectErrorStream(true).start();
             final String named = readAddress(process);
@@ -154,7 +154,7 @@ public final class CloudflareTunnel implements IHasForgeLog {
         }
     }
 
-    /** The program writes the address it was given among its start-up lines; null if it stops without one. */
+    /** Reads the address from the program's start-up lines. Returns null if the program stops without printing one. */
     private static String readAddress(final Process running) throws IOException {
         final BufferedReader lines = new BufferedReader(new InputStreamReader(running.getInputStream(), StandardCharsets.UTF_8));
         String found = null;
@@ -165,14 +165,14 @@ public final class CloudflareTunnel implements IHasForgeLog {
             }
         }
         if (found != null) {
-            // The program stops if nothing reads what it goes on to write
+            // The program stops if nothing reads its later output
             final Thread drain = new Thread(() -> {
                 try {
                     while (lines.readLine() != null) {
-                        // Nothing here is for the host
+                        // None of this output is for the host
                     }
                 } catch (final IOException e) {
-                    // The program has gone
+                    // The program has stopped
                 }
             }, "ForgeTunnelOutput");
             drain.setDaemon(true);
@@ -181,7 +181,7 @@ public final class CloudflareTunnel implements IHasForgeLog {
         return found;
     }
 
-    /** Waits until a request to the address comes back from this server, whose refusal for want of a token is answer enough. */
+    /** Waits until a request to the address gets a reply from this server. A refusal because the token is missing counts as a reply. */
     private boolean answers(final String named) throws InterruptedException {
         final long giveUp = System.currentTimeMillis() + ANSWER_WITHIN_MILLIS;
         while (!closed && process.isAlive() && System.currentTimeMillis() < giveUp) {

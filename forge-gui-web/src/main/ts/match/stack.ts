@@ -1,4 +1,4 @@
-// The stack: the spells and abilities waiting to resolve, as a pile beside the board, or as a chip under the phase strip on a phone
+// The stack holds the spells and abilities waiting to resolve. It is drawn as a pile beside the board, or as a chip under the phase strip on a phone.
 
 import { reconcile } from './reconcile';
 import { lastPicture } from './cards';
@@ -16,17 +16,17 @@ import { t } from '../text';
 import type { CardView, GameEvent, StackItemView } from '../protocol';
 import { oncePer } from '../sheet';
 
-// What resolves next is the card at the top of the pile, and the rest cascade down behind it
+// The item that resolves next is at the top of the pile. The other items are offset downward behind it.
 const STEP_MAX = 42;
 const STEP_MIN = 14;
 const PUSH_Y = 26;
 
 let actions: Actions | null = null;
 
-/** Your spells being cast, by card key, with a kept picture because the card is missing from the browser's game until its cost is paid. motion.ts flies each to the place drawn for it here. */
+/** Your spells being cast, by card key. The card is missing from the browser's game until its cost is paid, so its picture is kept here. motion.ts animates each one to the place drawn for it here. */
 const awaiting = new Map<string, { src: string; zoom: string; since: number; name: string }>();
 
-/** The model last drawn, and what the phone's chip remembers between draws: how many items it held, and the prompt it was folded during. */
+/** The model last drawn. The phone's chip also stores, between draws, how many items it held and the prompt during which it was folded. */
 let current: Model | null = null;
 let countSeen = 0;
 let foldedFor: object | null = null;
@@ -39,12 +39,12 @@ function fold(folded: boolean): void {
   changeUi(u => { u.stackCollapsed = folded; });
 }
 
-/** Opens the stack where it was folded, for the shortcut that shows it. */
+/** Opens the stack if it is folded. The keyboard shortcut that shows the stack calls this. */
 export function showStack(): void {
   if (ui.stackCollapsed) fold(false);
 }
 
-/** A tap on the board puts the phone's list away, so the cards under it can be reached. */
+/** A tap on the board folds the phone's list, so the cards under it can be reached. */
 export function foldStack(): void {
   if (isPortrait() && !ui.stackCollapsed) fold(true);
 }
@@ -66,7 +66,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     onRelayout(() => place(root));
   }
   const items: StackItemView[] = derefAll(model, game(model)?.Stack);
-  // Spells arrive by flying in, and anything else, an ability or a trigger, has no card move and grows into place instead
+  // A spell's card flies onto the stack. An ability or a trigger has no card move, so it grows into place instead.
   const flown = new Set([...awaiting.keys(), ...[...journeys(events)].filter(([, m]) => m.to?.zone === 'Stack').map(([k]) => k)]);
   noteAwaiting(model, items, events);
   if (ui.hoveredStackItem !== null && !items.some(i => i.$key === ui.hoveredStackItem)) {
@@ -77,23 +77,23 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   root.classList.toggle('chip', portrait);
   const count = items.length + awaiting.size;
   if (portrait) {
-    // The list opens for a new arrival while you may answer it, unless you folded it during this same prompt
+    // The list opens when a new item arrives and you have priority. It stays folded if you folded it during this same prompt.
     if (count > countSeen && model.prompt?.priority && foldedFor !== model.prompt) ui.stackCollapsed = false;
-    // A prompt answered on the board or from the hand needs the room the list would lie over
+    // The list folds for a prompt answered on the board or from the hand, because the list would cover those cards
     const asked = model.prompt;
     if (asked && !asked.priority && !asked.paying && (asked.selectable.length > 0 || asked.selectablePlayers.length > 0) && foldsForPick(asked)) {
       ui.stackCollapsed = true;
     }
     const top = items[0];
     const source = top ? deref(model, top.SourceCard) as CardView | undefined : undefined;
-    // A spell still being paid for has no item yet, and is named from the card it was cast from
+    // A spell still being paid for has no item yet. Its name comes from the card it was cast from.
     const paying = top ? '' : [...awaiting.values()][0]?.name ?? '';
     q(root, '.head b').textContent = top
       ? `${t('lblStack')} \u00b7 ${source ? stateOf(model, source).Name ?? '' : ''} (${deref(model, top.ActivatingPlayer)?.Name ?? ''})`
       : paying ? `${t('lblStack')} \u00b7 ${paying} (${me(model)?.Name ?? ''})` : t('lblStack');
-    // The dock is drawn after this and can change height, which moves the strip the chip sits on
+    // The dock is drawn after this and can change height. That moves the phase strip the chip is placed on.
     requestAnimationFrame(() => place(root));
-    // Over whichever half holds fewer of the top item's targets, so they stay in view, and over the opponent's on a tie
+    // The list opens over the half with fewer of the top item's targets, so they stay in view. On a tie it opens over the opponent's half.
     const targets = top ? stackTargets(model, top) : [];
     const mine = targets.filter(o => o.$key === me(model)?.$key || document.querySelector(`#me .card[data-key="${o.$key}"]`)).length;
     root.classList.toggle('over-them', mine >= targets.length - mine);
@@ -102,9 +102,9 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   }
   countSeen = count;
   const pick = stackPick(model);
-  // A spell is picked on the list, so a folded list opens once for the prompt
+  // A spell is picked on the list, so a folded list opens once for that prompt
   if (opensForPick(pick?.id ?? null)) ui.stackCollapsed = false;
-  // A target on the stack is clicked on the list too, while the prompt asks for it
+  // A target on the stack is also clicked on the list, so the list opens once while the prompt asks for one
   const offered = model.prompt?.selectableStack ?? [];
   if (opensForTargets(offered.length > 0 ? model.prompt : null)) ui.stackCollapsed = false;
   const collapsed = ui.stackCollapsed;
@@ -115,7 +115,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   collapse.textContent = t(collapsed ? 'lblShow' : 'lblWebStackHide');
   collapse.title = t(collapsed ? 'lblWebStackShowTitle' : 'lblWebStackHideTitle');
   const pile = q(root, '.pile');
-  // An awaiting spell stands where its item will appear, at the top, so paying for it moves nothing
+  // A spell awaiting payment is placed at the top, where its item will appear. So paying for it moves nothing.
   const entries: (StackItemView | string)[] = [...awaiting.keys(), ...items];
   showLeaving(pile, new Set(entries.map(e => typeof e === 'string' ? `awaiting-${e}` : String(e.$key))), events);
   const arriving: { el: HTMLElement; source: string }[] = [];
@@ -137,12 +137,12 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     });
   place(root);
   layout(pile, entries.length);
-  // Measured now that every item has its place in the pile
+  // Measured here, after every item has its position in the pile
   for (const { el, source } of arriving) arrive(el, source, collapsed);
   renderStorm(root, game(model)?.StormCount ?? 0, entries.length > 0);
 }
 
-/** The panel fading out as its last item leaves, so a render meanwhile does not bring it back or hide it at once. */
+/** The fade-out that runs when the last item leaves. It is kept so a render during the fade does not show the panel again or hide it at once. */
 let closing: Animation | null = null;
 
 /** Fades the panel in or out by opacity only, because a scale or slide would move the slot a flying spell is aimed at. */
@@ -174,7 +174,7 @@ function showPanel(root: HTMLElement, shown: boolean): void {
 
 const PANEL_FADE_MS = 150;
 
-/** The count of spells cast this turn, shown under the stack while something is on it and otherwise beside the foot of the prompt. */
+/** Shows the count of spells cast this turn. It is under the stack while the stack has items, and otherwise beside the bottom of the prompt. */
 function renderStorm(stack: HTMLElement, count: number, stacked: boolean): void {
   let chip = document.getElementById('storm');
   if (!chip) {
@@ -184,11 +184,11 @@ function renderStorm(stack: HTMLElement, count: number, stacked: boolean): void 
   chip.hidden = count <= 0;
   if (chip.hidden) return;
   chip.textContent = t('lblWebStackStorm', count);
-  // Measured to where the pile's height is going, not where its transition has got to
+  // Measured against the pile's target height, not its height partway through the transition
   const pile = q(stack, '.pile');
   const going = parseFloat(pile.style.height);
   const easing = pile.offsetParent && Number.isFinite(going) ? going - pile.offsetHeight : 0;
-  // Read from what is on the stack, not whether the panel shows, since the panel is still fading as it empties
+  // Checks whether the stack has items, not whether the panel shows. The panel is still fading out after it empties.
   const prompt = document.getElementById('prompt');
   if (!stacked && prompt) {
     const at = prompt.getBoundingClientRect();
@@ -200,13 +200,13 @@ function renderStorm(stack: HTMLElement, count: number, stacked: boolean): void 
   chip.style.top = stack.hidden ? '' : `${stack.getBoundingClientRect().bottom + easing + 8}px`;
 }
 
-// The panel hangs from the top of the board and stops short of the hand
+// The panel starts at the top of the board and ends above the hand
 function place(root: HTMLElement): void {
   if (isPortrait()) {
-    // It takes the phase strip's place while anything is on it, and its list opens down over your cards or up over theirs
+    // The chip covers the phase strip while the stack has items. Its list opens down over your cards or up over the opponent's.
     const strip = byId('phase-strip').getBoundingClientRect();
     const above = root.classList.contains('over-them') && !ui.stackCollapsed;
-    // The chip's head is taller than the strip, to take a finger, so it is centred on it
+    // The chip's head is taller than the strip so a finger can tap it. So the head is centred on the strip.
     const over = Math.max(0, (q(root, '.head').offsetHeight - strip.height) / 2);
     root.style.top = above ? 'auto' : `${Math.round(strip.top - over)}px`;
     root.style.bottom = above ? `${Math.round(innerHeight - strip.bottom - over)}px` : 'auto';
@@ -222,23 +222,23 @@ function noteAwaiting(model: Model, items: StackItemView[], events: readonly Gam
   for (const [key, move] of journeys(events)) {
     // As on desktop and mobile, another player's spell shows on the stack only once it is paid for
     const mine = !!move.caster && model.localPlayers.includes(move.caster.ref);
-    // Read before the zone it left is redrawn without it
+    // Read before the card's old zone is redrawn without it
     const img = document.querySelector<HTMLImageElement>(`.card[data-key="${key}"] img, .zone-tile img[data-key="${key}"]`);
-    // The card may already be gone or hidden when its move is seen, so the picture it last had stands in
+    // The card may already be gone or hidden when its move arrives, so the last picture it had is used
     const picture = img?.getAttribute('src') ? { src: img.getAttribute('src') as string, zoom: img.dataset.zoom ?? '' }
       : lastPicture(Number(key));
     if (move.to?.zone === 'Stack' && mine && !onStack.has(key) && picture) {
-      // Its name is kept too, for the phone's chip to say
+      // The name is kept too, for the phone's chip to show
       awaiting.set(key, { ...picture, since: Date.now(), name: lastPicture(Number(key))?.name ?? '' });
     } else {
       awaiting.delete(key);
     }
   }
   for (const [key, spell] of awaiting) {
-    // A cancelled cast is undone without an event, and the card is back in a zone the browser can see
+    // A cancelled cast is undone without an event. The card is then back in a zone the browser can see.
     const back = model.objects.get(Number(key)) as CardView | undefined;
     const given = model.prompt?.priority && Date.now() - spell.since > SETTLE_MS;
-    // A card revealed earlier in the game can say Hand while it is cast, so the zone it names must hold it too
+    // A card revealed earlier in the game can still name Hand while it is cast. So the zone it names must also contain it.
     const returned = !!back?.Zone && back.Zone !== 'Stack' && players(model).some(p => zone(model, p, back.Zone!).some(c => c.$key === back.$key));
     if (onStack.has(key) || returned || given) {
       awaiting.delete(key);
@@ -265,7 +265,7 @@ function createItem(model: Model): HTMLElement {
   el.innerHTML = '<img alt="" draggable="false"><div class="frame"></div><div class="caption"><div class="who"></div><div class="desc"></div><div class="targets"></div></div>';
   const img = q<HTMLImageElement>(el, 'img');
   noImageOnError(el, img);
-  // A spell being chosen is picked on the stack, where it already is
+  // When the prompt asks for a spell, it is picked here on the stack, where the spell already is
   el.addEventListener('click', () => {
     const pick = stackPick(model);
     const index = (pick?.stackKeys ?? []).indexOf(Number(el.dataset.key));
@@ -279,13 +279,13 @@ function createItem(model: Model): HTMLElement {
   el.addEventListener('pointerenter', e => {
     if (!hovers(e)) return;
     const pile = el.parentElement as HTMLElement;
-    // Lifted at once, rather than on the next frame, so the pile answers the pointer as it moves along it
+    // The item is lifted at once, not on the next frame, so the pile follows the pointer as it moves along it
     ui.hoveredStackItem = Number(el.dataset.key);
     layout(pile, pile.childElementCount);
     hoverCard(img);
   });
   el.addEventListener('pointerdown', e => longPress(e, () => inspectCard(img)));
-  // Desktop's stack menu: auto-yield, always accept or decline your optional trigger, yield to the stack
+  // The desktop stack menu. It offers auto-yield, always accept or decline your optional trigger, and yield to the stack.
   el.addEventListener('contextmenu', e => {
     e.preventDefault();
     const key = Number(el.dataset.key);
@@ -302,7 +302,7 @@ function createItem(model: Model): HTMLElement {
   return el;
 }
 
-/** An ability or a trigger comes out of the card it belongs to, where that card is on the board, and otherwise grows into place. */
+/** Animates a new ability or trigger out of its card on the board. If that card is not on the board, the item grows into place. */
 function arrive(el: HTMLElement, source: string, collapsed: boolean): void {
   const from = collapsed || !source ? null : document.querySelector(`.battlefield .card[data-key="${source}"]`)?.getBoundingClientRect();
   const to = el.getBoundingClientRect();
@@ -315,12 +315,12 @@ function arrive(el: HTMLElement, source: string, collapsed: boolean): void {
     { duration: 320, easing: 'cubic-bezier(.2, .7, .3, 1)' });
 }
 
-/** How long a resolved ability takes to go. */
+/** How long a resolved ability takes to fade out. */
 const GONE_MS = 140;
 
 /**
- * Shows what leaves the stack this frame, before its element goes. A resolving spell is carried off by its card's flight, so only
- * an ability fades. One that fizzled, or was taken off while something else resolved, is unwoven where it stands.
+ * Animates the items that leave the stack this frame, before their elements are removed. A resolving spell's card flies away, so only
+ * an ability fades. An item that fizzled, or was removed while something else resolved, comes apart in place.
  */
 function showLeaving(pile: HTMLElement, staying: Set<string>, events: readonly GameEvent[]): void {
   if (reducedMotion()) return;
@@ -340,7 +340,7 @@ function showLeaving(pile: HTMLElement, staying: Set<string>, events: readonly G
     document.body.append(ghost);
     if (failed) {
       unweave(ghost, box);
-      // Nothing is left of a failed spell to travel, so its card makes no trip (motion.ts)
+      // The failed spell's card is not animated to its next zone (motion.ts)
       if (!ability && source) noteFizzled(source);
     } else {
       ghost.animate([{ opacity: 1, scale: '1' }, { opacity: 0, scale: '.92' }], { duration: GONE_MS, easing: 'ease-in' })
@@ -352,8 +352,8 @@ function showLeaving(pile: HTMLElement, staying: Set<string>, events: readonly G
 let unwoven = 0;
 
 /**
- * A failed spell comes apart in patches, with a thin pale light along every edge as it goes, and a few motes drift up.
- * An SVG filter keeps the item only where a noise is above a level that rises, and lights the band just under that level.
+ * A failed spell disappears in patches, with a thin pale glow along each edge, and a few small dots drift up.
+ * An SVG filter keeps the item only where a noise value is above a rising level. It draws the glow in the band just below that level.
  */
 function unweave(ghost: HTMLElement, box: DOMRect): void {
   const id = `unweave-${++unwoven}`;
@@ -411,19 +411,19 @@ function updateItem(el: HTMLElement, model: Model, item: StackItemView): void {
   img.dataset.zoom = src;
   q(el, '.frame').textContent = state.Name ?? '';
   q(el, '.who').textContent = deref(model, item.ActivatingPlayer)?.Name ?? '';
-  // A spell's image says what it does; an ability needs its text
+  // A spell's image shows what it does. An ability needs its text.
   q(el, '.desc').textContent = item.Ability || !src ? (item.Description ?? '') : '';
   const targets = stackTargets(model, item).map(t => t.Name ?? stateOf(model, t).Name ?? '?');
   q(el, '.targets').textContent = targets.length ? `→ ${targets.join(', ')}` : '';
 }
 
-// Every item keeps a strip of itself visible, so a deep stack simply cascades more tightly
+// A strip of every item stays visible. A deep stack puts the items closer together.
 function layout(pile: HTMLElement, n: number): void {
   const items = [...pile.children] as HTMLElement[];
   if (!items.length) {
     return;
   }
-  // A phone lists the stack, each item saying its number; the cascade of cards is a desktop's
+  // A phone shows the stack as a numbered list. The offset pile of cards is for desktop only.
   if (isPortrait()) {
     pile.style.height = '';
     items.forEach((el, i) => {
@@ -446,7 +446,7 @@ function layout(pile: HTMLElement, n: number): void {
   });
 }
 
-/** Forgets the last game's stack: its spells awaiting payment, the count the phone's chip had, and the prompt it was folded during. */
+/** Clears the last game's stack state. That is the spells awaiting payment, the phone chip's item count, and the prompt during which it was folded. */
 export function resetStack(): void {
   awaiting.clear();
   countSeen = 0;

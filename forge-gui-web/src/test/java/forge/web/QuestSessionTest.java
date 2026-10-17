@@ -41,7 +41,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-/** A quest as a browser drives it, and its duels as netplay plays them. */
+/** Tests a quest driven from a browser, with its duels played over netplay. */
 public class QuestSessionTest extends SessionsTest {
     @Override
     WebGuiBase gui() {
@@ -57,7 +57,7 @@ public class QuestSessionTest extends SessionsTest {
         }
     }
 
-    /** How much of a balance the bar shows, by its icon. */
+    /** The amount the bar shows for the balance with this icon. */
     private static int balance(final JsonObject bar, final String icon) {
         for (final JsonElement b : bar.getAsJsonArray("balances")) {
             if (icon.equals(b.getAsJsonObject().get("icon").getAsString())) {
@@ -67,7 +67,7 @@ public class QuestSessionTest extends SessionsTest {
         throw new AssertionError("The bar has no balance of " + icon);
     }
 
-    /** The host on the list of saved quests, wherever the last test left the session. */
+    /** Connects the host and opens the list of saved quests, whatever state the last test left the session in. */
     private TestBrowser onTheShelf() throws InterruptedException {
         final TestBrowser host = connect("host");
         sessions.onMessage(host, JsonCodec.message("claimHost"));
@@ -88,7 +88,7 @@ public class QuestSessionTest extends SessionsTest {
 
     private TestBrowser editor;
 
-    // The session outlives a test, so an open editor or a quest the cleanup removes would be shown to the next one's browser
+    // The session lives longer than a test. Without this, the next test's browser would see an open editor or a removed quest
     @AfterMethod(alwaysRun = true)
     public void leaveTheQuest() throws InterruptedException {
         if (editor != null) {
@@ -116,7 +116,7 @@ public class QuestSessionTest extends SessionsTest {
         }
         if (str(host.hello, "campaignSave") != null) {
             send(host, JsonCodec.message("campaignLeave"));
-            // The shelf reads every save as it opens, and the cleanup must not remove one under that reading
+            // The shelf reads every save when it opens. The cleanup must not remove a save during that read
             if (host.awaitMatching("questSaves", saves -> true) == null) {
                 return;
             }
@@ -139,12 +139,12 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(str(bar, "name"), data.getName());
     }
 
-    /** The save as it is on disk, read as desktop would read it. */
+    /** The save on disk, read the same way desktop reads it. */
     private static QuestData saved(final QuestData data) throws IOException {
         return QuestDataIO.loadData(QuestGame.find(data.getName()));
     }
 
-    // Fails if the duels the page lists are not the duels manager's, in its order, with the random opponent's title hidden
+    // Fails if the page does not list the duels manager's duels in its order, with the random opponent's title hidden
     @Test(timeOut = 120_000)
     public void theDuelsAreTheManagers() throws Exception {
         final QuestData data = QuestFixture.install();
@@ -173,7 +173,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(page.get("matchLength").getAsInt(), 3);
     }
 
-    // Fails if choosing no plant does not empty its slot in the save, or choosing the Wolf does not fill the pet slot
+    // Fails if choosing no plant does not empty its slot in the save, choosing the Wolf does not fill the pet slot, or an unowned pet is saved
     @Test(timeOut = 120_000)
     public void petChoicesAreSaved() throws Exception {
         final QuestData data = QuestFixture.install();
@@ -189,7 +189,7 @@ public class QuestSessionTest extends SessionsTest {
         final JsonObject page = host.awaitNewest("questDuels", "the page was not sent again");
         Assert.assertEquals(saved(data).getPetSlots().get(1), "Wolf");
         Assert.assertEquals(page.getAsJsonArray("pets").get(1).getAsJsonObject().get("chosen").getAsString(), "Wolf");
-        // A pet the quest does not own is not summoned
+        // A pet the quest does not own cannot be chosen
         send(host, message("questPet", "slot", 1, "name", "Bird"));
         host.awaitNewest("questDuels", "the page was not sent again");
         Assert.assertEquals(saved(data).getPetSlots().get(1), "Wolf");
@@ -209,7 +209,7 @@ public class QuestSessionTest extends SessionsTest {
         FModel.getPreferences().setPref(FPref.DEV_MODE_ENABLED, devModeBefore);
     }
 
-    /** The host in the first duel of the quest, at its first priority. */
+    /** Starts the quest's first duel for the host and waits for the host's first priority. */
     private TestBrowser inDuel(final QuestData data) throws InterruptedException {
         final TestBrowser host = hostInQuest(data);
         host.awaitNewest("questDuels", "the duels were not sent");
@@ -227,7 +227,7 @@ public class QuestSessionTest extends SessionsTest {
         sessions.onMessage(host, reply);
     }
 
-    /** Answers each question the reward script asks with its first option until the reward arrives. */
+    /** Gives the first option to each question the reward script asks, until the reward arrives. */
     private JsonObject untilRewarded(final TestBrowser host) throws InterruptedException {
         final Set<Integer> asked = new HashSet<>();
         final long end = System.currentTimeMillis() + 60_000;
@@ -256,7 +256,7 @@ public class QuestSessionTest extends SessionsTest {
         throw new AssertionError("no " + kind + " step titled " + title + " in " + reward);
     }
 
-    // Fails if a won duel is not recorded once, or its credits are not in the save when the reward is shown
+    // Fails if a won duel is not recorded exactly once, or its credits are not in the save when the reward is shown
     @Test(timeOut = 240_000)
     public void aWonDuelIsRecordedOnce() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -307,7 +307,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(after.getAssets().getCredits(), 250 - FModel.getQuestPreferences().getPrefInt(QPref.PENALTY_LOSS));
     }
 
-    /** The deck of a name in the quest as its file holds it, or null. */
+    /** The named deck as stored in the quest's save file, or null. */
     private static Deck savedDeck(final QuestData data, final String name) throws IOException {
         return saved(data).getAssets().getDeckStorage().get(name);
     }
@@ -326,7 +326,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(QuestUtil.getCurrentDeck().getName(), "Green deck");
     }
 
-    // Fails if a deck edited on the web cannot be read back by Quest's own reader with the same cards, or takes a card the quest does not own
+    // Fails if Quest's own reader does not read back a web-edited deck with the same cards, or the editor adds a card the quest does not own
     @Test(timeOut = 120_000)
     public void anEditedDeckReadsBackInQuest() throws Exception {
         final QuestData data = QuestFixture.install();
@@ -345,7 +345,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(back.getMain().countByName("Black Lotus"), 0);
     }
 
-    /** A page of one of the quest's lists, as the trade page asks for it. */
+    /** Requests a page of one of the quest's lists, as the trade page does. */
     private JsonObject listed(final TestBrowser host, final String source) throws InterruptedException {
         send(host, message("catalogue", "request", 1, "text", "", "colours", "", "type", "any", "filters", "", "sort", "name",
                 "offset", 0, "showAll", true, "source", source));
@@ -376,7 +376,7 @@ public class QuestSessionTest extends SessionsTest {
         return ImageUtil.getPaperCardFromImageKey(row.get("image").getAsString());
     }
 
-    // Fails if a bought card is not taken from the stock once and added to the pool once
+    // Fails if a bought card is not removed from the stock once and added to the pool once
     @Test(timeOut = 120_000)
     public void aBoughtCardMovesOnceFromStockToPool() throws Exception {
         final QuestData data = QuestFixture.install();
@@ -394,7 +394,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(saved(data).getAssets().getCredits(), 100_000 - card.get("value").getAsInt());
     }
 
-    // Fails if selling one of two copies leaves the lists' sizes as they were, which is what tells the page to read its lists again
+    // Fails if selling one of two copies leaves the lists' sizes unchanged. A size change is what makes the page reload its lists
     @Test(timeOut = 120_000)
     public void aPartialSaleChangesTheListsSizes() throws Exception {
         final QuestData data = QuestFixture.install();
@@ -409,7 +409,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(FModel.getQuest().getCards().getCardpool().count(printing(card)), 1);
     }
 
-    // Fails if a foil and a plain copy of one printing cannot be told apart, so selling one sells the other or pays the other's price
+    // Fails if a foil and a plain copy of one printing share a key, so that selling one sells the other or pays the other's price
     @Test(timeOut = 120_000)
     public void aFoilTradesApartFromItsPlainCopy() throws Exception {
         final QuestData data = QuestFixture.install();
@@ -429,7 +429,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(FModel.getQuest().getAssets().getCredits(), credits + foilRow.get("value").getAsInt());
     }
 
-    // Fails if a quest made from the form is not opened and made current, or the form's options are not sent or leave out a world's format or a casual format
+    // Fails if a quest made from the form is not opened and made current, or the form's options are not sent or miss a world's format or a casual format
     @Test(timeOut = 120_000)
     public void aQuestMadeFromTheFormOpens() throws Exception {
         final TestBrowser host = onTheShelf();
@@ -437,7 +437,7 @@ public class QuestSessionTest extends SessionsTest {
         final JsonObject options = host.awaitMatching("questOptions", o -> true, "the form's options were not sent");
         Assert.assertTrue(options.getAsJsonArray("worlds").contains(new JsonPrimitive("Main world")));
         Assert.assertEquals(options.getAsJsonArray("difficulties").size(), 4);
-        // A world with sets of its own replaces the starting pool, and the casual formats are mobile's whole list, less those of only unselectable sets
+        // A world with its own sets replaces the starting pool. The casual formats are mobile's full list, minus formats made only of unselectable sets
         Assert.assertTrue(options.getAsJsonArray("formatWorlds").contains(new JsonPrimitive("Ravnica")));
         Assert.assertFalse(options.getAsJsonArray("formatWorlds").contains(new JsonPrimitive("Main world")));
         Assert.assertTrue(options.getAsJsonArray("casual").contains(new JsonPrimitive("Premodern")));
@@ -452,7 +452,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(FModel.getQuest().getAchievements().getDifficulty(), 1);
     }
 
-    // Fails if deleting a quest leaves its file or its backup, or the current quest naming it
+    // Fails if deleting a quest leaves its file or its backup, or leaves it set as the current quest
     @Test(timeOut = 120_000)
     public void deletingAQuestRemovesBothFiles() throws Exception {
         final QuestData data = QuestFixture.install();
@@ -469,7 +469,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertNotEquals(FModel.getQuestPreferences().getPref(QPref.CURRENT_QUEST), data.getName() + ".dat");
     }
 
-    /** The fixture with enough wins for challenges to be offered, and one game a match. */
+    /** The fixture with enough wins to be offered challenges, and one game per match. */
     private static QuestData withChallenges() throws IOException {
         final QuestData data = QuestFixture.install();
         for (int i = 0; i < 40; i++) {
@@ -480,7 +480,7 @@ public class QuestSessionTest extends SessionsTest {
         return data;
     }
 
-    // Fails if a won challenge is not taken off the list and its bounty paid
+    // Fails if a won challenge is not removed from the list, or its bounty is not paid
     @Test(timeOut = 240_000)
     public void aWonChallengeIsPaidAndGone() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -516,7 +516,7 @@ public class QuestSessionTest extends SessionsTest {
         return null;
     }
 
-    /** The fixture with QuestFixture's tournament in it, changed as a test needs, and saved. */
+    /** The fixture with QuestFixture's tournament added, changed as the test needs, and saved. */
     private static QuestData withTournament(final Consumer<QuestEventDraft> change) throws IOException {
         final QuestData data = QuestFixture.install();
         final QuestController quest = FModel.getQuest();
@@ -539,7 +539,7 @@ public class QuestSessionTest extends SessionsTest {
         return saved(data).getAchievements().getDraftEvents().stream().filter(d -> "Test tournament".equals(d.getTitle())).findFirst().orElse(null);
     }
 
-    /** The player's tournament match, from the tournaments page. */
+    /** Starts the player's tournament match from the tournaments page and waits for priority. */
     private TestBrowser inTournamentMatch(final QuestData data) throws InterruptedException {
         final TestBrowser host = hostInQuest(data);
         host.awaitNewest("questTournaments", "the tournaments were not sent");
@@ -549,7 +549,7 @@ public class QuestSessionTest extends SessionsTest {
         return host;
     }
 
-    // Fails if entering a tournament does not take its fee and open its draft, or its tile has no picture of each pack
+    // Fails if entering a tournament does not charge its fee and open its draft, or its tile lacks a picture for each pack
     @Test(timeOut = 180_000)
     public void enteringATournamentTakesItsFeeAndOpensItsDraft() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -574,7 +574,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(after.getAchievements().getCurrentDraft().getTitle(), row.get("title").getAsString());
     }
 
-    // Fails if the computer's matches are not decided before the player's, so the bracket's next match is the player's
+    // Fails if the computer's matches are not decided before the player's match, which must be the bracket's next match
     @Test(timeOut = 240_000)
     public void theComputersMatchesComeBeforeThePlayers() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -611,7 +611,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertTrue(second.get(1).getAsJsonObject().get("you").getAsBoolean(), "the bracket does not show the player in the second round: " + page);
     }
 
-    // Fails if a finished tournament's prizes are not in the save and sent to reveal, the tournament stays open, or the rare is asked for without pictures
+    // Fails if a finished tournament's prizes are not saved and sent to reveal, the tournament stays open, or the rare choice has no pictures
     @Test(timeOut = 240_000)
     public void aFinishedTournamentsPrizesAreSavedAndShown() throws Exception {
         final QuestData data = withTournament(d -> {
@@ -623,7 +623,7 @@ public class QuestSessionTest extends SessionsTest {
         final TestBrowser host = hostInQuest(data);
         host.awaitNewest("questTournaments", "the tournaments were not sent");
         send(host, JsonCodec.message("questTournamentLeave"));
-        // The rare is the first offered, and the draft is not copied to the regular drafts
+        // Take the first rare offered, and do not copy the draft to the regular drafts
         JsonObject reward = null;
         final Set<Integer> asked = new HashSet<>();
         final long end = System.currentTimeMillis() + 60_000;
@@ -651,7 +651,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertNull(after.getAchievements().getCurrentDraft(), "the tournament is still open");
     }
 
-    // Fails if the computer's matches are decided for ever once the player is out
+    // Fails if asking for the next match hangs once the player is out, starts a match, or still offers one
     @Test(timeOut = 120_000)
     public void nothingIsDecidedOnceThePlayerIsOut() throws Exception {
         final QuestData data = withTournament(d -> {
@@ -667,7 +667,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertTrue(!bracket.has("next") || bracket.get("next").isJsonNull(), "a next match is offered: " + page);
     }
 
-    // Fails if a tournament match adds a quest win or loss, its early quit is not the forfeit the browser asks about first, or the forfeit does not lose it
+    // Fails if a tournament match adds a quest win or loss, quitting it early is not offered as a forfeit, or the forfeit does not lose the match
     @Test(timeOut = 240_000)
     public void aTournamentMatchIsNoQuestWinOrLoss() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -683,17 +683,17 @@ public class QuestSessionTest extends SessionsTest {
         final QuestData after = saved(data);
         Assert.assertEquals(after.getAchievements().getWin(), won);
         Assert.assertEquals(after.getAchievements().getLost(), lost);
-        // Seat 3 holds the computer numbered 3, who goes on in the player's place
+        // Computer 3, the player's opponent, advances in the player's place
         Assert.assertEquals(draftOf(data).getStandings()[9], "3");
     }
 
-    /** Sets a quest preference from the browser and answers the page that comes back. */
+    /** Sets a quest preference from the browser and returns the preferences page sent back. */
     private JsonObject setQuestPref(final TestBrowser host, final String key, final String value) throws InterruptedException {
         send(host, message("campaignPref", "key", key, "value", value));
         return host.awaitMatching("campaignPrefs", p -> true, "the preferences were not sent again");
     }
 
-    // Fails if one of the two decimal preferences is refused, or a value Quest's validation refuses is saved
+    // Fails if a decimal preference refuses a decimal value, or a value that Quest's validation refuses is saved
     @Test(timeOut = 120_000)
     public void theDecimalPreferencesAreTakenAndARefusedValueIsNot() throws Exception {
         final QuestPreferences prefs = FModel.getQuestPreferences();
@@ -713,10 +713,10 @@ public class QuestSessionTest extends SessionsTest {
         }
     }
 
-    /** The fixture with a format that allows Magic 2010 and unlocks the rest, 40 wins for its unlock tokens, and credits as given. */
+    /** The fixture with a format that allows Magic 2010 and can unlock other sets, 40 wins for unlock tokens, and the given credits. */
     private static QuestData withUnlocks(final long credits) throws Exception {
         final QuestData data = QuestFixture.install();
-        // The fixture has no format, which offers no unlocks, and QuestData has no setter for one
+        // The fixture has no format, so it offers no unlocks. QuestData has no setter for the format
         final Field format = QuestData.class.getDeclaredField("format");
         format.setAccessible(true);
         format.set(data, new GameFormatQuest("Test format", List.of("M10"), List.of(), true));
@@ -743,7 +743,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(saved(data).getFormat().getAllowedSetCodes().size(), 2);
     }
 
-    // Fails if a pet bought is not owned at its first level and offered in the Duels page's pet slot, or one the credits cannot pay for is bought
+    // Fails if a bought pet is not owned at level 1 and offered in the Duels page's pet slot, or a pet the credits cannot pay for is bought
     @Test(timeOut = 120_000)
     public void aPetBoughtIsOfferedForDuels() throws Exception {
         final QuestData data = QuestFixture.install();
@@ -761,7 +761,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertTrue(duels.getAsJsonArray("pets").toString().contains("Bird"));
     }
 
-    // Fails if a name with a path in it reaches a file that is not one of the saves
+    // Fails if a name containing a path finds a file outside the saves
     @Test
     public void aNameWithAPathInItFindsNothing() throws Exception {
         final QuestData data = QuestFixture.install();

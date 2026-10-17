@@ -1,4 +1,4 @@
-// The deck finder's ways to start a new deck: a link to a deck site, building one, pasting a list, or a deck file
+// The deck finder's options for starting a new deck. They are a deck site link, building from scratch, pasting a list, or a deck file.
 
 import { useEffect, useRef } from 'preact/hooks';
 import { SITES } from './importer';
@@ -10,7 +10,7 @@ export function NewDeck({ link, setLink, fetchLink, build, pasteList, addFile, c
   build: () => void; pasteList: () => void; addFile: () => void; close: () => void;
 }) {
   const linkField = useRef<HTMLInputElement>(null);
-  // Escape reaches the dialog before the finder only while the focus is inside it
+  // Focus starts in the dialog. Escape reaches the dialog before the finder only while the focus is inside it.
   useEffect(() => {
     linkField.current?.focus();
   }, []);

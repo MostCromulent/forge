@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/** Blocking prompts waiting on the browser. A request survives a browser reload because only its thread waits on it. */
+/** Blocking prompts that wait for the browser's answer. A request stays open when the browser reloads, because only the asking thread waits on it. */
 public final class PendingRequests implements IHasForgeLog {
     private record Pending(JsonObject request, JsonElement defaultAnswer, Predicate<JsonElement> valid, CompletableFuture<JsonElement> answer) {}
 
@@ -26,13 +26,13 @@ public final class PendingRequests implements IHasForgeLog {
     private final Map<Integer, Pending> open = new LinkedHashMap<>();
     private int nextId = 1;
 
-    /** who names the player asked, for the log. */
+    /** {@code who} gives the name of the player asked, for the log. */
     public PendingRequests(final Consumer<JsonObject> send, final Supplier<String> who) {
         this.send = send;
         this.who = who;
     }
 
-    /** A request as the log tells it: its kind, what it asks, and how much it offers. */
+    /** Describes a request for the log: its kind, its message, and how many options it offers. */
     private static String described(final JsonObject request) {
         final StringBuilder out = new StringBuilder(request.get("kind").getAsString());
         if (request.has("message") && request.get("message").isJsonPrimitive()) {
@@ -47,7 +47,7 @@ public final class PendingRequests implements IHasForgeLog {
         return out.toString();
     }
 
-    /** Sends one of the requests in {@link ToBrowser} and waits for its answer, or for its default when the game gives up waiting. */
+    /** Sends one of the requests in {@link ToBrowser} and waits for its answer. If the game stops waiting, the default answer is returned. */
     public JsonElement await(final Record payload, final Predicate<JsonElement> valid) {
         final int id;
         final Pending pending;
@@ -64,7 +64,7 @@ public final class PendingRequests implements IHasForgeLog {
         send.accept(pending.request());
         try {
             final JsonElement answer = pending.answer().get();
-            // The default is handed back as itself when the game stops waiting
+            // When the game stops waiting, the answer is the default object itself
             netLog.info("#{} {} after {} ms: {}", id, answer == pending.defaultAnswer() ? "took its default" : "answered",
                     (System.nanoTime() - asked) / 1_000_000, LogSafe.forLog(String.valueOf(answer), 200));
             return answer;

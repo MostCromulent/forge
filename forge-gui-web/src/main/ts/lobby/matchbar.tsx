@@ -1,4 +1,4 @@
-// The bar above the seats: what is played and by how many, as labelled fields that each open their own control
+// The bar above the seats. It shows what is played and by how many players, as labelled fields that each open their own control
 
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
@@ -9,7 +9,7 @@ import type { Model } from '../model';
 import { Dropdown } from '../dialog';
 import type { Address, Format, LobbyTable } from '../protocol';
 
-/** A field's popup: opened by its button, closed by Escape or a press anywhere outside it. */
+/** A field's popup. Its button opens it. Escape or a press anywhere outside it closes it. */
 function Popup({ label, disabled, children, wide, onOpen }: {
   label: ComponentChildren; disabled?: boolean; children: (close: () => void) => ComponentChildren; wide?: boolean; onOpen?: () => void;
 }) {
@@ -32,7 +32,7 @@ function Field({ name, grow, children }: { name: string; grow?: boolean; childre
   );
 }
 
-/** Draft and Sealed, in the shape the server gives a format, so the menu's card reads the same for them. */
+/** Draft and Sealed in the same shape the server uses for a format, so the menu's card shows them the same way. */
 function limitedFormats(): (Format & { kind: 'draft' | 'sealed' })[] {
   return [
     { id: 'Draft', kind: 'draft', name: t('lblDraft'), group: 'Limited', desc: t('lblWebMatchBarDescDraft'),
@@ -42,13 +42,13 @@ function limitedFormats(): (Format & { kind: 'draft' | 'sealed' })[] {
   ];
 }
 
-/** A game's deck size in a few words, read from its first fact: "60+ cards", "100 cards", or "no deck" when it is dealt. */
+/** A game's deck size in a few words, read from its first fact. It is "60+ cards", "100 cards", or "no deck" when the deck is dealt. */
 function deckMark(format: Format): string {
   const size = /^(\d+\+?)/.exec(format.facts[0] ?? '')?.[1];
   return size ? t('lblWebNCards', size) : t('lblNoDeck');
 }
 
-/** A mark for each family of games: a deck for Constructed, a crown for the commander games, a die for the Momir games and a pack for Limited. */
+/** An icon for each family of games: a deck for Constructed, a crown for the commander games, a die for the Momir games and a pack for Limited. */
 const GROUP_ICONS: Record<string, ComponentChildren> = {
   Constructed: <svg viewBox="0 0 16 16"><rect x="3" y="2" width="9" height="12" rx="1.5" /><path d="M5 4.5v10.5h8V5" opacity=".6" /></svg>,
   Commander: <svg viewBox="0 0 16 16"><path d="M2 12 L3 5 L6 8 L8 3 L10 8 L13 5 L14 12 Z" /></svg>,
@@ -57,18 +57,18 @@ const GROUP_ICONS: Record<string, ComponentChildren> = {
   Limited: <svg viewBox="0 0 16 16"><path d="M4 2h8l1 3v9H3V5z" /><path d="M3 5h10" /></svg>,
 };
 
-/** What each family of games is called; the server names a format's family by these words. */
+/** The name of each family of games. The server names a format's family with these keys. */
 const GROUP_NAMES: Record<string, TextKey> = {
   Constructed: 'lblConstructed', Commander: 'lblCommander', Other: 'lblOther', Limited: 'lblLimited',
 };
 
-/** A list of every game beside a card that explains the chosen one, or the one last pointed at. */
+/** A list of every game, beside a card that explains the chosen game or the one last under the pointer. */
 export function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   const lim = lobby.limited;
   const LIMITED = limitedFormats();
   const chosen: Format | undefined = lim ? LIMITED.find(l => l.kind === lim.kind) : lobby.formats.find(f => f.id === lobby.format);
   const [pointed, setPointed] = useState<Format | null>(null);
-  // A new kind of event waits until the one begun is over; a format waits out a draft
+  // A new kind of event must wait until the started one is over. Other formats must wait until the draft ends
   const drafting = lim?.phase === 'DRAFTING' && !lim.activeEventId;
   const limitedOffered = lobby.shareable || !!lim;
   const shown = pointed ?? chosen ?? null;
@@ -153,7 +153,7 @@ function VariantsMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions 
   );
 }
 
-/** Seats a lower count takes away, as the server takes them: open seats, then computers, from the end; never a person's. */
+/** The seats a lower count removes, in the server's order: open seats, then computers, from the end. A person's seat is never removed. */
 export function seatsLeaving(lobby: LobbyTable, count: number): Set<number> {
   const out = new Set<number>();
   let extra = lobby.seats.length - count;
@@ -168,7 +168,7 @@ export function seatsLeaving(lobby: LobbyTable, count: number): Set<number> {
   return out;
 }
 
-/** The fewest seats a table can have: two, or everyone who is seated. */
+/** The fewest seats a table can have: two, or the number of seated people if that is more. */
 function fewestSeats(lobby: LobbyTable): number {
   return Math.max(2, lobby.seats.filter(s => s.mine || s.type === 'LOCAL' || s.type === 'REMOTE').length);
 }
@@ -189,7 +189,7 @@ export function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; ac
   );
 }
 
-/** The highest Commander bracket the table plays at, as the host's own Forge keeps it; 5 is any. Only the host may change it. */
+/** The highest Commander bracket the table plays at, stored in the host's own preferences. 5 means any. Only the host may change it. */
 function MaxBracket({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   return (
     <span class="count" role="group" aria-label={t('lblBracket')}>
@@ -201,7 +201,7 @@ function MaxBracket({ lobby, actions }: { lobby: LobbyTable; actions: Actions })
   );
 }
 
-/** Free-for-all, or the seats dealt into teams. A guest reads it; only the host has choices to pick from. */
+/** Free-for-all, or the seats split into teams. A guest can only read it. Only the host has choices to pick from. */
 function Teams({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   const name = (n: number) => (n ? t('lblWebMatchBarNTeams', n) : t('lblWebMatchBarFreeForAll'));
   return (
@@ -219,7 +219,7 @@ function Teams({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
 
 const MATCH_LENGTHS = [[1, 'lblWebMatchBarBestOfOne'], [3, 'lblWebMatchBarBestOfThree'], [5, 'lblWebMatchBarBestOfFive']] as const;
 
-/** Best-of-one, three or five, as the host's own Forge keeps it; only the host may change it. */
+/** Best-of-one, three or five, stored in the host's own preferences. Only the host may change it. */
 function MatchLength({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   return (
     <span class="count" role="group" aria-label={t('lblMatch')}>
@@ -231,7 +231,7 @@ function MatchLength({ lobby, actions }: { lobby: LobbyTable; actions: Actions }
   );
 }
 
-/** Which cards a Constructed game allows, with where each format's cards come from asked for when it first opens. */
+/** Which cards a Constructed game allows. The line saying where each format's cards come from is requested when the picker first opens. */
 function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
   const details = model.cardPoolDetails;
   const lines = new Map((details?.lines ?? []).map(l => [l.name, l.line]));
@@ -278,7 +278,7 @@ function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyT
   );
 }
 
-/** The field names are the tournament rules' own: a format says which cards are allowed, and a match is the games played between decks. */
+/** The field names follow the tournament rules. A format says which cards are allowed. A match is the games played between decks. */
 export function MatchBar({ model, lobby, actions, preview }: {
   model: Model; lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void;
 }) {
@@ -297,7 +297,7 @@ export function MatchBar({ model, lobby, actions, preview }: {
   );
 }
 
-/** How others join, the sound and the options. Who is here is the dock's to say. */
+/** How others join, the sound and the options. The dock shows who is here. */
 export function TableHeader({ model, lobby }: { model: Model; lobby: LobbyTable }) {
   return (
     <PageHeader>
@@ -312,7 +312,7 @@ export function TableHeader({ model, lobby }: { model: Model; lobby: LobbyTable 
             )}
           </Popup>
         )}
-        {/* The way out is the trail over the table (lobby.tsx), which also says where it leads */}
+        {/* The way out is the trail above the table (lobby.tsx), which also shows where it leads */}
         <HeadControls />
       </div>
     </PageHeader>

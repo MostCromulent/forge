@@ -18,7 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/** What the zoom panel shows for a card or a player: the text the desktop client composes (CardDetailUtil). */
+/** What the zoom panel shows for a card or a player. The text is what the desktop client builds with CardDetailUtil. */
 final class CardDetails {
     private CardDetails() {
     }
@@ -26,14 +26,14 @@ final class CardDetails {
     static PlayerDetail player(final PlayerView player) {
         final List<String> lines = new ArrayList<>();
         final String[] parts = player.getDetails().split("\n");
-        // The browser draws commander damage itself, so those lines, which follow the cast counts in the engine's list, are left out
+        // The browser draws commander damage itself, so those lines are left out. In the engine's list they follow the cast counts
         final List<String> commander = player.getPlayerCommanderInfo();
         final int casts = player.getCommanders() == null ? 0 : 1 + player.getCommanders().size();
         final Set<String> damage = new HashSet<>();
         for (int i = casts; i < commander.size(); i++) {
             damage.add(commander.get(i).trim());
         }
-        // The first line is the player's name, which travels separately
+        // The first line is the player's name, which is sent separately
         for (int i = 1; i < parts.length; i++) {
             if (!parts[i].isBlank() && !damage.contains(parts[i].trim())) {
                 lines.add(parts[i]);
@@ -42,7 +42,7 @@ final class CardDetails {
         return new PlayerDetail(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_PLAYER_VIEW, player.getId()), player.getName(), lines);
     }
 
-    /** A card's faces as far as this viewer may see them, where mayFlip shows the other face only to a viewer allowed to see it. */
+    /** The faces of a card that this viewer may see. mayFlip adds the other face, and is true only for a viewer allowed to see it. */
     static Detail card(final CardView card, final GameView game, final boolean mayView, final boolean mayFlip) {
         final List<CardFace> faces = new ArrayList<>();
         if (mayView) {

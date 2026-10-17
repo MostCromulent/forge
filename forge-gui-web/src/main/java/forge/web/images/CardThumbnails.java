@@ -21,9 +21,9 @@ import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.MemoryCacheImageOutputStream;
 
-/** Card images the browser cannot use as stored: shrunk with a proper filter, because a browser shrinking a full scan on a rotated or animated layer breaks up the text, or painted as a foil. */
+/** Makes card images the browser cannot use as stored. It shrinks them with a proper filter, or paints them as a foil. A browser that shrinks a full scan on a rotated or animated layer breaks up the text. */
 public final class CardThumbnails {
-    /** About twice the widest a board card is drawn (88px at a fit of 1.4), so it stays sharp on a screen at twice normal scale. */
+    /** About twice the widest size a board card is drawn at (88px at a fit of 1.4). So it stays sharp on a screen at twice normal scale. */
     public static final int WIDTH = 256;
     private static final int MOST_KEPT = 600;
     private static final float JPEG_QUALITY = 0.88f;
@@ -33,7 +33,7 @@ public final class CardThumbnails {
         t.setDaemon(true);
         return t;
     });
-    /** Each card's thumbnail as it is being made or once made, so browsers asking at once share one making of it. */
+    /** Each card's thumbnail, while it is being made or after. Browsers that ask at the same time share one render. */
     private static final Map<String, CompletableFuture<byte[]>> KEPT = Collections.synchronizedMap(new LinkedHashMap<>(64, 0.75f, true) {
         @Override
         protected boolean removeEldestEntry(final Map.Entry<String, CompletableFuture<byte[]>> eldest) {
@@ -44,7 +44,7 @@ public final class CardThumbnails {
     private CardThumbnails() {
     }
 
-    /** The image in its own format, shrunk to WIDTH when small and painted as a foil when foil is a seed above 0; one that needs neither comes back as it is. */
+    /** The image in its own format. It is shrunk to WIDTH when small is true, and painted as a foil when foil is a seed above 0. An image that needs neither is returned unchanged. */
     public static CompletableFuture<byte[]> of(final File file, final boolean small, final int foil) {
         final String key = file.getAbsolutePath() + ':' + file.lastModified() + ':' + small + ':' + foil;
         final CompletableFuture<byte[]> made = KEPT.computeIfAbsent(key, k -> CompletableFuture.supplyAsync(() -> {
@@ -74,7 +74,7 @@ public final class CardThumbnails {
         }
         final boolean png = file.getName().toLowerCase(Locale.ROOT).endsWith(".png");
         BufferedImage image = source;
-        // Halving at a time with bilinear sampling reads every source pixel, which one large step would skip
+        // Halving the size each step with bilinear sampling reads every source pixel. One large step would skip pixels
         while (shrink && image.getWidth() > WIDTH) {
             final int w = Math.max(WIDTH, image.getWidth() / 2);
             final int h = Math.max(1, Math.round(image.getHeight() * (float) w / image.getWidth()));

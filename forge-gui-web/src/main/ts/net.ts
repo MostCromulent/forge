@@ -1,12 +1,12 @@
-// The page's one connection to the server, which it opens again whenever it drops
+// The page's single connection to the server. It reconnects whenever the connection drops
 
 import type { ClientMessage, Send, ServerMessage } from './protocol';
 import { store, stored } from './storage';
 
-// The id says which browser this is, so a reload returns to the seat it left instead of taking another one
+// The id identifies this browser, so a reload returns to the same seat instead of taking another one
 const ID_KEY = 'forge.clientId';
 
-/** This browser's id. Where storage is blocked, a new one each page load, so the seat lasts until the page is reloaded. */
+/** This browser's id. If storage is blocked, each page load gets a new id, so the seat is kept only until a reload. */
 export function clientId(): string {
   let id = stored(ID_KEY);
   if (!id) {
@@ -17,7 +17,7 @@ export function clientId(): string {
   return id;
 }
 
-// The server replays full state, prompt, zones and open requests on every connect, so a reconnect needs no bookkeeping here
+// The server resends the full state, prompt, zones and open requests on every connect, so a reconnect needs no extra state here
 export function connect(onMessage: (msg: ServerMessage) => void, onStatus: (online: boolean) => void): Send {
   let socket: WebSocket | undefined;
   let retry = 250;
@@ -25,7 +25,7 @@ export function connect(onMessage: (msg: ServerMessage) => void, onStatus: (onli
   let everOpen = false;
   const id = clientId();
   const open = () => {
-    // A page served over https may only open a secure socket, because ws:// is blocked there as mixed content
+    // A page served over https can only open a secure socket, because the browser blocks ws:// there as mixed content
     const scheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
     socket = new WebSocket(`${scheme}//${location.host}/ws?client=${encodeURIComponent(id)}`);
     socket.onopen = () => {
@@ -41,7 +41,7 @@ export function connect(onMessage: (msg: ServerMessage) => void, onStatus: (onli
     };
   };
   open();
-  // A phone back from sleep finds its socket dead, and should not wait out the backoff to try again
+  // A phone that wakes from sleep has a dead socket. It reconnects at once instead of waiting for the backoff
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible' || socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) return;
     clearTimeout(waiting);
@@ -50,7 +50,7 @@ export function connect(onMessage: (msg: ServerMessage) => void, onStatus: (onli
   });
   return (msg: ClientMessage) => {
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg));
-    // Said, not swallowed: a tap that went nowhere looks like a game that has stopped
+    // Show the offline banner instead of dropping the message silently. A tap with no effect looks like a stopped game
     else if (everOpen) onStatus(false);
   };
 }

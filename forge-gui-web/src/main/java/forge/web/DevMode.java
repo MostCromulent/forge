@@ -20,12 +20,12 @@ import forge.web.protocol.ToBrowser.Notice;
 
 import java.util.Arrays;
 
-/** Carries out the host's dev mode actions on the running game, such as making mana or setting up a board. Forge gives a netplay client no cheats, but the host shares its process with the server, so only the host's own seat can cheat. */
+/** Runs the host's dev mode actions on the running game, such as making mana or setting up a board. Forge gives a netplay client no cheats. The host shares its process with the server, so only the host's own seat can cheat. */
 final class DevMode implements IHasForgeLog {
     private DevMode() {
     }
 
-    /** Why the host can't cheat in the game now, or null when it can. */
+    /** Why the host cannot cheat in the game now, or null when it can. */
     static String refusal(final LocalGame local) {
         if (!FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {
             return Localizer.getInstance().getMessage("lblWebDevOff");
@@ -33,7 +33,7 @@ final class DevMode implements IHasForgeLog {
         return local.ownPlayer() == null ? Localizer.getInstance().getMessage("lblWebDevNeedsOwnGame") : null;
     }
 
-    /** Runs one cheat. Call off the socket and interface threads: a cheat waits on the browser's answers. */
+    /** Runs one cheat. Do not call it on the socket or interface threads, because a cheat waits for the browser's answers. */
     static void run(final LocalGame local, final Dev dev, final BrowserChannel channel) {
         final String refused = refusal(local);
         if (refused != null) {
@@ -74,7 +74,7 @@ final class DevMode implements IHasForgeLog {
         channel.send(new DevState(controller.canPlayUnlimitedLands(), controller.mayLookAtAllCards()));
     }
 
-    // Desktop reads the state from a file on the machine running Forge; here the browser sends its text
+    // Desktop reads the state from a file on the machine running Forge. Here the browser sends the text.
     private static void setUp(final Game game, final IGuiGame gui, final String text, final BrowserChannel channel) {
         if (game.getPhaseHandler().getPriorityPlayer() == null) {
             channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDevStateNotSetUp"), Localizer.getInstance().getMessage("lblWebDevWaitPriority"), false));
@@ -96,7 +96,7 @@ final class DevMode implements IHasForgeLog {
                 channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDevStateNotSetUp"), String.valueOf(e.getMessage()), true));
                 return;
             }
-            // Placing cards fires no game event, and a second task could run at once and send the board unchanged, so this one sends it
+            // Placing cards fires no game event. Another task could run at the same time and send the old board, so this task sends it.
             if (gui instanceof RemoteClientGuiGame remote) {
                 remote.updateGameView();
             }

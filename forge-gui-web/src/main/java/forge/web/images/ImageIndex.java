@@ -8,25 +8,25 @@ import java.io.File;
 import java.util.function.Consumer;
 
 /**
- * Scryfall's card data file, which holds the direct address of every card picture on its image servers. With it Forge
- * fetches from those servers, which have no rate limit, in place of Scryfall's API, which has one.
+ * Downloads Scryfall's card data file. It holds the direct address of every card picture on Scryfall's image servers. With it Forge
+ * fetches from those servers, which have no rate limit, instead of from Scryfall's API, which has one.
  */
 public final class ImageIndex {
-    /** percent is how far a download has got, or -1 when none is running or its size is not yet known. */
+    /** percent is how far a download has got. It is -1 when no download is running or its size is not yet known. */
     public record State(boolean downloading, int percent, boolean failed) { }
 
     private final Consumer<State> listener;
     private volatile boolean cancelled;
     private volatile boolean downloading;
 
-    /** The listener is told of every change: the start on the thread that calls download, the rest on the download's thread. */
+    /** The listener is told of every change. The start is reported on the thread that calls download, the rest on the download's thread. */
     public ImageIndex(final Consumer<State> listener) {
         this.listener = listener;
     }
 
-    /** When the data was last downloaded, from its newest set file, or 0 when it never was. */
+    /** When the data was last downloaded, read from its newest set file. 0 if it was never downloaded. */
     public static long updated() {
-        // The set files only: the folder also holds a marker saying the offer to download it was answered
+        // Only the set files count. The folder also holds a marker that records the answer to the download offer
         final File[] files = new File(CdnUuidCache.cacheDir()).listFiles((dir, name) -> name.endsWith(".json.gz"));
         long newest = 0;
         for (final File f : files == null ? new File[0] : files) {

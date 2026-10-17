@@ -1,4 +1,4 @@
-// A quest's Spell Shop: the cards for sale and the player's own on the trade page, in Quest's words, with the packs and decks for sale above the cards
+// A quest's Spell Shop. The trade page shows the cards for sale and the player's own cards, in Quest's words. The packs and decks for sale go above the cards
 
 import { TYPES } from '../deck/catalogue';
 import { TradePage, pickOf, type Pick, type TradeWords } from '../campaign/trade';
@@ -9,10 +9,10 @@ import type { Product } from '../protocol';
 import { t } from '../text';
 import { CREDITS, Price } from './credits';
 
-/** Where a sentence puts the credits' coin. */
+/** The token that marks where a sentence shows the credits coin. */
 const COIN = '{CR}';
 
-/** The shop's packs, boxes and decks, each picked whole as a card is. */
+/** The shop's packs, boxes and decks. Each one is picked whole, the same way as a card. */
 function Products({ products, picked, toggle }: { products: Product[]; picked: Map<string, Pick>; toggle: (pick: Pick) => void }) {
   if (!products.length) return null;
   return (

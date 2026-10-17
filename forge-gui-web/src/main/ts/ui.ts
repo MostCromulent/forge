@@ -1,10 +1,10 @@
-// What this browser has arranged and the server never hears of: the match table, which a new match clears at once (resetMatchUi),
-// and the menu pages' tabs and open panels, which it keeps
+// Page layout state that stays in this browser and is never sent to the server. The match table state is cleared by each new match (resetMatchUi).
+// The menu pages' tabs and open panels are kept across matches
 
 import { storeJson, storedJson } from './storage';
 import { reducedMotion } from './dom';
 
-/** The card or player the pointer is over, where src is empty when the viewer may not see the card and at is the element hovered in. */
+/** The card or player under the pointer. src is empty when the viewer may not see the card. at is the hovered element. */
 type Hover = { card: number | null; src: string; from?: string; at?: HTMLElement } | { player: number };
 
 /** A picker open over match setup, for one seat. */
@@ -13,69 +13,69 @@ export interface Picker {
   seat: number;
 }
 
-/** How an open zone is ordered: as the zone holds them, by name, by card type, or by mana value. */
+/** How an open zone is sorted: in zone order, by name, by card type, or by mana value. */
 export type ZoneSort = 'order' | 'name' | 'type' | 'mana';
 
-/** A field that belongs to one match is cleared in resetMatchUi, and one that only one layout draws when the layout changes (main.ts). */
+/** resetMatchUi clears the fields that belong to one match. main.ts clears the fields used by only one layout when the layout changes. */
 export interface UiState {
-  /** Battlefield piles the player has laid out card by card, by the pile's signature. */
+  /** Battlefield piles the player has expanded to show each card, keyed by the pile's signature. */
   openPiles: Set<string>;
   /** Zone panels the player has opened by clicking a tile, as `${playerKey}/${zone}`. */
   openZones: Set<string>;
-  /** The open zones are folded to a bar so the board can be read; they are still open. */
+  /** The open zones are collapsed to a bar so the board is visible. They are still open. */
   zonesMinimised: boolean;
-  /** The question folded to a bar so the board can be read, by its id; it is still open. */
+  /** The id of the request collapsed to a bar so the board is visible. It is still open. */
   requestFolded: number | null;
-  /** Narrows the open zone to cards whose name contains this, lower case. */
+  /** Filters the open zone to cards whose name contains this text, in lower case. */
   zoneSearch: string;
   zoneSort: ZoneSort;
   stackCollapsed: boolean;
-  /** The stack item under the pointer, whose targets get arrows. */
+  /** The stack item under the pointer. Arrows are drawn to its targets. */
   hoveredStackItem: number | null;
-  /** Where a right-click on a stack item happened, until the server's answer opens the menu there. */
+  /** The position of a right-click on a stack item. It is kept until the server answers and the menu opens there. */
   stackMenuAt: { key: number; x: number; y: number } | null;
   stopsOpen: boolean;
   optionsOpen: boolean;
-  /** Asking whether to concede, from the game menu or its shortcut. */
+  /** The concede confirmation is open, from the game menu or its shortcut. */
   concedeAsk: boolean;
   /** The game menu behind the prompt's ⋯ button, or a dialog opened from it. */
   gameMenu: 'menu' | 'stops' | 'decisions' | 'dev' | 'devSetup' | null;
-  /** The host keeps the macro and does not report on it, so the page remembers whether it is recording one or has one. */
+  /** The host stores the macro but does not report its state. The page tracks whether one is being recorded or is ready. */
   macro: 'none' | 'recording' | 'recorded';
   /** The volume control beside the options button is open. */
   volumeOpen: boolean;
-  /** The menu is asking for a new name and face, as the dock's edit button asked. */
+  /** The menu shows the name and avatar form, opened by the dock's edit button. */
   renaming: boolean;
-  /** Which way to play the start page is showing the kinds of game for, kept so a step back from a table lands there. */
+  /** The play choice whose game kinds the start page shows. It is kept so that going back from a table returns there. */
   menuChoice: 'play' | 'friends' | null;
   picker: Picker | null;
-  /** The deck finder opened from the start page, with no seat, and the format it lists. A hello does not close it. */
+  /** The deck finder opened from the start page with no seat, and the format it lists. A hello does not close it. */
   browse: { format: string } | null;
-  /** The importer, and where it was opened from: a seat's finder, the start page, or the editor. */
+  /** The open importer, and where it was opened from: a seat's deck finder, the start page, or the editor. */
   importer: { from: 'seat' | 'start' | 'editor'; seat?: number; text?: string; url?: string; sync?: boolean } | null;
   /** The host has chosen to watch the computer play its seat. */
   spectate: boolean;
   hover: Hover | null;
   /** Which face of the hovered card the zoom panel shows. */
   faceIndex: number;
-  /** The zoom panel shows the hovered card's rules text instead of its image. Its key, T by default, swaps them. */
+  /** The zoom panel shows the hovered card's rules text instead of its image. Its key, T by default, toggles this. */
   cardText: boolean;
-  /** The side column's panels. Kept in the browser across sessions. */
+  /** Which side column panels are open. Stored in the browser across sessions. */
   sidePanels: { log: boolean; chat: boolean };
   draftHidden: boolean;
-  /** The hovered card or player is pinned open as a sheet, as a rested finger asks on a phone. */
+  /** The hovered card or player is pinned open as a sheet, after a long press on a phone. */
   inspect: boolean;
   /** The hand is open as a drawer over the board, on a phone. */
   handOpen: boolean;
-  /** Where one opponent shows at a time: whose seat it is, the turn in which the player last chose one, and whether a phone's list of them is open. */
+  /** For layouts that show one opponent at a time. These hold the shown seat, the turn the player last chose one, and whether the phone's seat list is open. */
   openSeat: number | null;
   seatChosenTurn: number;
   seatsOpen: boolean;
-  /** The permanents each opponent had when their seat was last showing, by player key. */
+  /** The permanents each opponent had when their seat was last shown, keyed by player. */
   seenOnField: Map<number, Set<number>>;
-  /** On a phone, the player whose zones are open from their bar, where only the counts are kept on show. */
+  /** On a phone, the player whose zones are opened from their bar. The bar itself shows only the counts. */
   zonesFor: number | null;
-  /** The phone's menu sheet, and which of its tabs shows. */
+  /** The phone's menu sheet, and which of its tabs is shown. */
   menuSheet: 'log' | 'chat' | 'players' | null;
 }
 
@@ -116,7 +116,7 @@ export const ui: UiState = {
   seatsOpen: false,
   seenOnField: new Map(),
   menuSheet: null,
-  // The campaigns add their own fields as they load (campaign/register.tsx)
+  // The campaigns add their own fields when they load (campaign/register.tsx)
 } as UiState;
 
 let redraw: () => void = () => {};
@@ -127,25 +127,25 @@ export function initUi(schedule: () => void, now: () => void): void {
   drawNow = now;
 }
 
-/** Changes the arrangement and draws it at once, for a view transition, which shows no frames until it is drawn. */
+/** Changes the UI state and draws it at once. A view transition shows no frames until the new state is drawn. */
 function changeUiNow(change: (state: UiState) => void): void {
   change(ui);
   drawNow();
 }
 
-/** How long a change waits for what it shows to arrive before it eases in anyway. */
+/** How long a transition waits for the new page's data before it animates anyway. */
 const READY_WAIT_MS = 500;
 
 /**
- * Changes the arrangement inside a view transition, which eases what CSS cannot, such as a change of grid areas or of page.
- * `mark` names, once the change is drawn, the attributes the root carries while it runs, which pick the animation in CSS.
- * `ready` says whether the new page has what it shows; until it does the old one stays, so a placeholder never slides in.
+ * Changes the UI state inside a view transition. It animates what CSS cannot, such as a change of grid areas or of page.
+ * `mark` returns the attributes set on the root while the transition runs. CSS uses them to pick the animation.
+ * `ready` says whether the new page has its data. The old page stays until then, so a placeholder never slides in.
  */
 export function eased(change: (state: UiState) => void, mark: () => Record<string, string> = () => ({}), ready?: () => boolean): void {
   transition(async () => {
     changeUiNow(change);
     const until = performance.now() + READY_WAIT_MS;
-    // Frames are held while a transition gets ready, so what arrives meanwhile is drawn here
+    // The browser holds frames while a transition prepares, so data that arrives meanwhile is drawn here
     while (ready && !ready() && performance.now() < until) {
       await new Promise(next => setTimeout(next, 16));
       drawNow();
@@ -153,7 +153,7 @@ export function eased(change: (state: UiState) => void, mark: () => Record<strin
   }, () => changeUi(change), mark);
 }
 
-/** As eased, for a change held in a component's own state, which Preact draws a moment after it is made rather than at once. */
+/** Like eased, for a change to a component's own state. Preact draws that change shortly after it is made, not at once. */
 export function easedLocal(change: () => void, mark: () => Record<string, string>): void {
   transition(async () => {
     change();
@@ -176,18 +176,18 @@ function transition(update: () => void | Promise<void>, still: () => void, mark:
   running.finished.finally(() => { for (const key of Object.keys(marks)) delete root.dataset[key]; });
 }
 
-/** Changes the arrangement and draws the table again. */
+/** Changes the UI state and schedules a redraw. */
 export function changeUi(change: (state: UiState) => void): void {
   change(ui);
   redraw();
 }
 
-/** Draws again for a change kept outside ui, such as a stored preference or a picture that failed to load. */
+/** Schedules a redraw for a change outside ui, such as a stored preference or an image that failed to load. */
 export function redrawUi(): void {
   redraw();
 }
 
-/** A new match: the cards the arrangement was about are gone, but how the player likes the side column stays. */
+/** Clears the match state for a new match, because its cards are gone. The side column panels and menu state are kept. */
 export function resetMatchUi(): void {
   ui.openPiles.clear();
   ui.openZones.clear();

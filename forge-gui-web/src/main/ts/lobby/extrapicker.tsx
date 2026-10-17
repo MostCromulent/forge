@@ -1,4 +1,4 @@
-// The server lists what a seat may bring beyond its deck, so a computer seat is only offered avatars the computer can play
+// The server lists the planar decks, scheme decks and avatars a seat may use. So a computer seat is only offered avatars the computer can play
 
 import { useEffect, useState } from 'preact/hooks';
 import { imageUrl } from '../images';
@@ -54,7 +54,7 @@ export function ExtraPicker({ model, actions, index, seat, kind, close }: {
   );
 }
 
-// An avatar is chosen by its effect and its two numbers, so each is shown as its card with the numbers under it
+// Players pick an avatar by its effect and its hand and life modifiers. So each is shown as its card with the modifiers under it
 function AvatarGrid({ choices, use }: { choices: ExtraChoice[]; use: (c: ExtraChoice) => void }) {
   return (
     <div class="avatar-grid">

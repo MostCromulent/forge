@@ -13,7 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-/** Finds the language keys the page uses, and fails the build on a page key en-US.properties lacks or one with a lone apostrophe. */
+/** Finds the language keys the page uses. The build fails if a page key is missing from en-US.properties or has a lone apostrophe. */
 final class PageTextKeys {
     private static final Pattern QUOTED_KEY = Pattern.compile("['\"]([A-Za-z][A-Za-z0-9]*)['\"]");
     private static final Pattern OWN_KEY = Pattern.compile("[a-z]+Web[A-Z][A-Za-z0-9]*");
@@ -33,7 +33,7 @@ final class PageTextKeys {
         try (Stream<Path> files = Files.walk(tsDir)) {
             files.filter(f -> f.toString().matches(".*\\.tsx?") && !f.toString().endsWith(".gen.ts")).sorted().forEach(sources::add);
         }
-        // The page's frame names some of its text too, by data-text
+        // The page's frame also names some of its text, by data-text
         sources.add(tsDir.resolve("../resources/web/index.html").normalize());
         for (final Path file : sources) {
             final Matcher m = QUOTED_KEY.matcher(Files.readString(file, StandardCharsets.UTF_8));
@@ -69,7 +69,7 @@ final class PageTextKeys {
         writeIfChanged(classesDir.resolve(PageText.KEYS_RESOURCE.substring(1)), String.join("\n", used) + "\n");
     }
 
-    /** Left alone when unchanged, so a watching build has nothing to rebuild. */
+    /** Does not rewrite a file whose text is unchanged, so a watching build has nothing to rebuild. */
     static void writeIfChanged(final Path file, final String text) throws IOException {
         if (!Files.isRegularFile(file) || !Files.readString(file, StandardCharsets.UTF_8).equals(text)) {
             Files.createDirectories(file.getParent());

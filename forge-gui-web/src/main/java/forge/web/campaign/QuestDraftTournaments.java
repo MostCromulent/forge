@@ -27,12 +27,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
-/** Quest's draft tournaments: the page that lists them, entering one, its bracket, starting it and its prizes. The match played in one is QuestGame's. */
+/** Quest's draft tournaments: the page that lists them, entering one, its bracket, starting it, and its prizes. QuestGame plays the tournament's matches. */
 final class QuestDraftTournaments {
     private QuestDraftTournaments() {
     }
 
-    /** The tournaments on offer, drawn again where old ones have aged out as desktop's screen does, or the one entered with its bracket. */
+    /** The tournaments on offer, or the entered one with its bracket. Expired offers are replaced, as on desktop's screen. */
     static QuestTournaments tournamentsPage() {
         final QuestAchievements record = QuestGame.quest().getAchievements();
         if (record.getCurrentDraft() == null) {
@@ -42,7 +42,7 @@ final class QuestDraftTournaments {
         final List<QuestTournamentRow> offered = new ArrayList<>();
         if (entered == null) {
             for (final QuestEventDraft d : record.getDraftEvents()) {
-                // canEnter is true when the credits are short of the fee
+                // canEnter is true when the credits are short of the fee, so its result is negated
                 final List<CardEdition> sets = Arrays.stream(d.getBoosterConfiguration()).map(FModel.getMagicDb().getEditions()::get).toList();
                 offered.add(new QuestTournamentRow(d.getTitle(), sets.stream().map(CardEdition::getName).toList(),
                         sets.stream().map(WebGuiBase::boosterImage).toList(), d.getEntryFee(), !d.canEnter()));
@@ -52,7 +52,7 @@ final class QuestDraftTournaments {
         return new QuestTournaments(offered, record.getDraftTokens(), placings, entered == null ? null : bracket(entered));
     }
 
-    /** The standings as rounds: places 0-7 are the first round's seats, 8-11 the second's, 12-13 the final's and 14 the winner's, and place p's winner goes to place 8 + p / 2. */
+    /** The standings as rounds. Places 0-7 are the first round's seats, 8-11 the second round's, 12-13 the final's, and 14 the winner's. The winner at place p moves to place 8 + p / 2. */
     private static QuestBracket bracket(final QuestEventDraft draft) {
         final String[] standings = draft.getStandings();
         final List<List<QuestSeat>> rounds = new ArrayList<>();
@@ -66,7 +66,7 @@ final class QuestDraftTournaments {
         String next = null;
         final int you = Arrays.asList(standings).lastIndexOf(QuestEventDraft.HUMAN);
         if (draft.isStarted() && draft.playerHasMatchesLeft() && you >= 0) {
-            // The seat paired with the player's, whose holder may still be decided by a computer match
+            // The seat paired with the player's. An AI match may still decide who holds it
             final String opponent = standings[you ^ 1];
             next = QuestEventDraft.UNDETERMINED.equals(opponent) ? "" : seat(draft, standings, you ^ 1).name();
         }
@@ -80,13 +80,13 @@ final class QuestDraftTournaments {
             return new QuestSeat(null, false, "open");
         }
         final boolean you = QuestEventDraft.HUMAN.equals(held);
-        // The player is named by the browser, which knows the name its matches are played under
+        // The browser fills in the player's name, because it knows the name the player's matches are played under
         final String name = you ? "" : draft.getAINames()[Integer.parseInt(held) - 1];
         final String after = place == 14 ? held : standings[8 + place / 2];
         return new QuestSeat(name, you, QuestEventDraft.UNDETERMINED.equals(after) ? "open" : after.equals(held) ? "won" : "out");
     }
 
-    /** Enters a tournament on offer, as desktop's Enter does: its fee is paid, its packs dealt, and its draft opened. Answers why it cannot, or null. */
+    /** Enters a tournament on offer, as desktop's Enter does. It pays the fee, deals the packs and opens the draft. Returns why it cannot, or null. */
     static String enter(final String title, final Campaign.Host host) {
         final QuestAchievements record = QuestGame.quest().getAchievements();
         if (title == null || record.getCurrentDraft() != null || record.getDraftEvents() == null) {
@@ -106,7 +106,7 @@ final class QuestDraftTournaments {
         return null;
     }
 
-    /** Spends a token on a tournament of a format the player chooses, as desktop's Spend Token asks it. */
+    /** Spends a token on a tournament of a format the player chooses, as desktop's Spend Token does. */
     static void spendToken() {
         final QuestAchievements record = QuestGame.quest().getAchievements();
         if (record.getDraftTokens() <= 0) {
@@ -122,7 +122,7 @@ final class QuestDraftTournaments {
         if (format == null) {
             return;
         }
-        // Made only to show its fee, as desktop does; the token makes the tournament itself
+        // Created only to show its fee, as desktop does. The token creates the tournament itself
         final QuestEventDraft shown = QuestEventDraft.getDraftOrNull(QuestGame.quest(), format);
         if (shown != null && SOptionPane.showConfirmDialog(text.getMessage("lblEntryFeeOfDraftTournament") + shown.getEntryFee()
                 + text.getMessage("lblWouldLikeCreateTournament"), text.getMessage("lblCreatingDraftTournament"))) {
@@ -130,7 +130,7 @@ final class QuestDraftTournaments {
         }
     }
 
-    /** Starts the tournament entered once its deck is legal, as desktop's Start Tournament does. Answers why it cannot, or null. */
+    /** Starts the entered tournament once its deck is legal, as desktop's Start Tournament does. Returns why it cannot, or null. */
     static String startTournament() {
         final QuestEventDraft draft = QuestGame.quest().getAchievements().getCurrentDraft();
         final DeckGroup decks = QuestGame.quest().getDraftDecks().get(QuestEventDraft.DECK_NAME);
@@ -148,7 +148,7 @@ final class QuestDraftTournaments {
         return null;
     }
 
-    /** The prizes for the player's placing, as desktop's endTournamentAndAwardPrizes gives them, shown as reward steps. */
+    /** Gives the prizes for the player's placing, as desktop's endTournamentAndAwardPrizes does, and shows them as reward steps. */
     static void prizes(final QuestEventDraft draft, final WebQuestView shown) {
         final Localizer text = Localizer.getInstance();
         final String placing = text.getMessage("lblForPlacing") + draft.getPlacementString();

@@ -1,4 +1,4 @@
-// Everything outside the board is drawn with Preact, and the board by hand (board.ts) because it is placed by measuring
+// Everything outside the board is drawn with Preact. The board is drawn by hand (board.ts) because its layout is measured
 
 import { render } from 'preact';
 import { Menu, NamePrompt } from './menu';
@@ -25,24 +25,24 @@ import { campaigns } from './campaigns';
 import type { Actions } from './actions';
 import type { Model } from './model';
 
-/** Whether the deck editor was open at the last frame, and how many times it has shut. */
+/** Whether the deck editor was open at the last render, and how many times it has closed. */
 let editing = false;
 let edits = 0;
 
-/** How far in each page is from the first one, so a move to a lower number is a move back. */
+/** The depth of each page from the first one. A move to a lower number is a move back. */
 const DEPTH = { name: 0, menu: 1, lobby: 2, limited: 2, drafting: 2, campaign: 2, editor: 3, match: 4 };
 let shown: keyof typeof DEPTH | null = null;
 
 export function renderScreens(model: Model, actions: Actions): void {
-  // A screen that is not showing is not drawn, so what it held (a picker, a half-typed search) goes with it
+  // A page that is not shown is not rendered, so its local state (a picker, a half-typed search) is lost
   const page = screenOf(model);
   const under = pageUnder(model);
   if (page !== shown) {
-    // Stays until the next change of page, because taking it off would start the arrival animation late
+    // The attribute stays until the next page change, because removing it earlier would start the arrival animation late
     document.documentElement.toggleAttribute('data-back', shown !== null && DEPTH[page] < DEPTH[shown]);
     shown = page;
   }
-  // The page under the editor is drawn afresh when the editor shuts, since what it shows may be what was edited
+  // The page under the editor is rebuilt when the editor closes, because it may show what was edited
   if (editing && page !== 'editor') edits++;
   editing = page === 'editor';
   render(under === 'name' ? <NamePrompt model={model} actions={actions} initial={rememberedName() ?? ''} />
@@ -53,7 +53,7 @@ export function renderScreens(model: Model, actions: Actions): void {
   render(under === 'drafting' ? <Drafting key={edits} model={model} actions={actions} /> : null, byId('drafting'));
   const Campaign = campaigns()?.Page;
   render(under === 'campaign' && Campaign ? <Campaign key={edits} model={model} actions={actions} /> : null, byId('campaign'));
-  // The dock has two homes: the bottom edge before a match, the side column under the log during one
+  // The dock is at the bottom edge before a match and in the side column under the log during one
   render(page === 'match' && model.networked ? <Dock model={model} actions={actions} /> : null, byId('match-chat'));
   render(page !== 'match' ? <Dock model={model} actions={actions}
     rename={page === 'menu' ? () => changeUi(u => { u.renaming = true; }) : undefined} /> : null, byId('dock'));
@@ -86,17 +86,17 @@ export function renderScreens(model: Model, actions: Actions): void {
   render(<Notices model={model} />, byId('notices'));
 }
 
-/** Which page is showing. A browser without a name is asked for one before it goes anywhere. */
+/** The page that is shown. A browser without a name is asked for one before any other page. */
 export function screenOf(model: Model): 'name' | 'menu' | 'lobby' | 'editor' | 'drafting' | 'limited' | 'campaign' | 'match' {
-  // The editor sits over the page it was opened from without leaving it, so closing it returns there
+  // The editor is drawn over the page it was opened from, and that page stays open, so closing the editor returns there
   return model.editor && model.screen !== 'playing' && model.playerName ? 'editor' : pageUnder(model);
 }
 
-/** The page the deck editor lies over as a panel, which is the page showing when it is shut. */
+/** The page under the deck editor panel. It is the page shown when the editor is closed. */
 export function pageUnder(model: Model): 'name' | 'menu' | 'lobby' | 'drafting' | 'limited' | 'campaign' | 'match' {
   if (model.screen === 'playing') return 'match';
   if (!model.playerName) return 'name';
-  // An online draft runs at a table, which the player may look at while it goes on
+  // An online draft runs at a table. The player can hide the draft to look at the table while the draft goes on
   if (model.drafting && !(model.screen === 'setup' && ui.draftHidden)) return 'drafting';
   switch (model.screen) {
     case 'event': return 'limited';

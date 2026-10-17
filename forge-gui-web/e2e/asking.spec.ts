@@ -1,9 +1,9 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { board, passUntil, probe, type Probe } from './probe';
 
-// A question about cards is laid out on the dimmed board, with the log, the stack and the prompt left to read
+// A question about cards is shown on the dimmed board. The log, the stack and the prompt stay readable
 
-// At the start of your upkeep Arms Scavenger offers three cards from outside the game to draft, which only the card choice can show
+// At the start of your upkeep Arms Scavenger offers three cards from outside the game to draft. Only the card choice can show them
 const DRAFT = ['activeplayer=ai', 'activephase=END_OF_TURN', 'humanbattlefield=Arms Scavenger;Mountain',
   'humanlibrary=Forest;Forest;Forest;Forest;Forest;Forest', 'aibattlefield=Mountain', 'ailibrary=Mountain;Mountain;Mountain;Mountain'].join('\n');
 
@@ -13,7 +13,7 @@ async function drafting(p: Probe): Promise<Locator> {
   return p.page.locator('.backdrop.on-board');
 }
 
-/** Whether a click at the middle of what the locator finds lands on it, rather than on something drawn over it. */
+/** Whether a click at the centre of the element hits it, and not something drawn over it. */
 function onTop(page: Page, selector: string): Promise<boolean> {
   return page.evaluate(sel => {
     const el = document.querySelector<HTMLElement>(sel);
@@ -28,11 +28,11 @@ probe('a card question dims the board, and the log, the stack and the prompt sta
   await expect(question).toBeVisible();
   for (const lit of ['#log-panel', '#stack', '#prompt']) await expect.poll(() => onTop(p.page, lit), { message: lit }).toBe(true);
   await expect.poll(() => onTop(p.page, '#opponent')).toBe(false);
-  // Centred in the board left of the stack, not in the window
+  // Centred in the board area left of the stack, not in the window
   const cards = (await question.locator('.options').boundingBox())!;
   const stack = (await p.page.locator('#stack').boundingBox())!;
   expect(Math.abs(cards.x + cards.width / 2 - stack.x / 2)).toBeLessThan(40);
-  // Three cards have room to be drawn well above the board's own size
+  // With only three cards there is room to draw them much larger than board cards
   expect((await question.locator('.options .card').first().boundingBox())!.width).toBeGreaterThan(150);
 });
 
@@ -63,6 +63,6 @@ probe('with the side column folded, the prompt still stays on top of a card ques
   for (const toggle of await p.page.locator('.side-toggle[aria-expanded="true"]').all()) await toggle.click();
   await expect(p.page.locator('#match')).toHaveClass(/side-folded/);
   await expect(question).toBeVisible();
-  // The column slides off as it folds
+  // The column slides out as it folds, so poll until it has gone
   await expect.poll(() => onTop(p.page, '#prompt')).toBe(true);
 });

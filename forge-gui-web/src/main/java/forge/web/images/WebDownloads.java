@@ -14,7 +14,7 @@ import forge.web.protocol.Wire;
 
 import java.util.function.Consumer;
 
-/** Runs a download through the shared service, with the browser in place of the progress dialog desktop and mobile show. */
+/** Runs a download through the shared service. The browser shows the progress instead of the dialog that desktop and mobile use. */
 public final class WebDownloads implements IHasForgeLog {
     private WebDownloads() {
     }
@@ -23,7 +23,7 @@ public final class WebDownloads implements IHasForgeLog {
             final Consumer<JsonObject> toBrowser) {
         final Progress progress = new Progress(service.getTitle(), toBrowser);
         try {
-            // No dialog waits for Start and Close here, so the service is set up and then run on this thread to completion
+            // No dialog waits for Start and Close here. So the service is set up, then run to completion on this thread
             service.initialize(new Text(""), new Text(""), progress, new StartButton(), () -> { }, null, () -> { });
             service.run();
         } catch (final RuntimeException e) {
@@ -36,7 +36,7 @@ public final class WebDownloads implements IHasForgeLog {
         callback.accept(true);
     }
 
-    /** Reports where a download has got to, as a notice the browser already knows how to show. */
+    /** Reports a download's progress as a notice, which the browser already knows how to show. */
     private static final class Progress implements IProgressBar {
         private final String title;
         private final Consumer<JsonObject> toBrowser;
@@ -85,7 +85,7 @@ public final class WebDownloads implements IHasForgeLog {
         }
     }
 
-    /** The dialog's Start button. Nothing presses it here: the service is run directly. */
+    /** The dialog's Start button. Nothing presses it here, because the service is run directly. */
     private static final class StartButton implements IButton {
         private boolean enabled;
 

@@ -1,4 +1,4 @@
-// Stickers drawn on a card as pieces cut from the picture of the sheet they were peeled from
+// Draws stickers on a card as pieces cut from the image of the sheet they came from
 
 import { cardImageSrc } from '../images';
 import { deref, derefAll, type Model } from '../model';
@@ -6,13 +6,13 @@ import type { CardView, PlayerView } from '../protocol';
 
 type Kind = 'name' | 'art' | 'ability' | 'pt';
 
-/** A sticker on a card, as the host describes it: a word, "art sticker 4", the ability's text, or "1/4". */
+/** A sticker on a card, as the host describes it. The text is a word, "art sticker 4", the ability's text, or "1/4". */
 interface Applied {
   text: string;
   kind: Kind;
 }
 
-/** Where each sticker lies on a printed sheet, as x, y, width and height in its 488 × 680 picture, by its place in the sheet's list. Every sheet shares the frame; an ability's box grows with its text, so abilities are drawn as words. */
+/** Where each sticker is on a printed sheet, as x, y, width and height in its 488 × 680 image, keyed by its place in the sheet's list. Every sheet uses the same layout. An ability's box grows with its text, so abilities are drawn as text instead. */
 const SHEET_W = 488;
 const SHEET_H = 680;
 const CUTS: Record<number, readonly [number, number, number, number]> = {
@@ -22,7 +22,7 @@ const CUTS: Record<number, readonly [number, number, number, number]> = {
 };
 /** A sheet lists three names, three pieces of art, two abilities and two power/toughness boxes, in that order. */
 const KIND_AT: Kind[] = ['name', 'name', 'name', 'art', 'art', 'art', 'ability', 'ability', 'pt', 'pt'];
-/** Where art lands on the card it is stuck to, by the sheet slot it came from: left and top, as percentages of the card. */
+/** Where an art sticker goes on the card, keyed by the sheet slot it came from. The values are left and top, as percentages of the card. */
 const ART_AT: Record<number, readonly [number, number]> = { 3: [52, 13], 4: [10, 22], 5: [32, 32] };
 
 export function applied(text: string | undefined): Applied[] {
@@ -31,7 +31,7 @@ export function applied(text: string | undefined): Applied[] {
     .filter((m): m is RegExpExecArray => !!m).map(m => ({ text: m[1], kind: m[2] as Kind }));
 }
 
-/** A sheet's own list: each sticker's text, and whether it has been used. */
+/** A sheet's own list of each sticker's text and whether it has been used. */
 function sheetLines(text: string | undefined): { text: string; used: boolean }[] {
   if (!text) return [];
   return text.split(/\r?\n/).slice(1).map(line => {
@@ -40,7 +40,7 @@ function sheetLines(text: string | undefined): { text: string; used: boolean }[]
   });
 }
 
-/** The sheet a sticker came from and its place on it. Art reads the same on every sheet, so a sheet whose copy is used is preferred. */
+/** The sheet a sticker came from and its slot on it. Art stickers have the same text on every sheet, so a sheet where that sticker is used is preferred. */
 function source(model: Model, owner: PlayerView | undefined, sticker: Applied): { src: string; slot: number } | null {
   let fallback: { src: string; slot: number } | null = null;
   for (const sheet of derefAll(model, owner?.StickerSheets) as CardView[]) {
@@ -55,7 +55,7 @@ function source(model: Model, owner: PlayerView | undefined, sticker: Applied): 
   return fallback;
 }
 
-/** The background that shows one sticker's piece of its sheet's picture. */
+/** The CSS background that shows one sticker's part of its sheet's image. */
 function cut(src: string, slot: number): string {
   const [x, y, w, h] = CUTS[slot];
   const size = `${((SHEET_W / w) * 100).toFixed(1)}% ${((SHEET_H / h) * 100).toFixed(1)}%`;
@@ -65,9 +65,9 @@ function cut(src: string, slot: number): string {
 
 const escape = (s: string) => s.replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
 
-/** The stickers on a card as markup for a layer over its picture: names along the name line, art on the art, abilities across the text box and numbers on the corner. */
+/** The markup for a layer of stickers over a card's image. Names go along the name line, art on the art, abilities across the text box and power/toughness in the corner. */
 function stickersHtml(model: Model, card: CardView | undefined): string {
-  // A sheet shows where each sticker it has given away was, as the peeled paper does
+  // A sheet marks the place of each sticker that has been used, as a real peeled sheet does
   if (card?.Stickers?.startsWith('Stickers on this sheet')) {
     return sheetLines(card.Stickers).map((line, slot) => {
       if (!line.used || !CUTS[slot]) return '';
@@ -79,7 +79,7 @@ function stickersHtml(model: Model, card: CardView | undefined): string {
   const stickers = applied(card?.Stickers);
   if (!card || !stickers.length) return '';
   const owner = deref(model, card.Owner) as PlayerView | undefined;
-  // A card's height is 88/63 of its width, so a box a share of the height tall is this many widths wide per unit of its shape
+  // A card's height is 88/63 of its width. This factor converts a share of the card's height into a share of its width
   const tall = 88 / 63;
   let nameLeft = 8;
   let abilities = 0;
@@ -107,7 +107,7 @@ function stickersHtml(model: Model, card: CardView | undefined): string {
   return out.join('');
 }
 
-/** The picture of the sticker a choice names, as "{TK}{TK} - 1/4" or "Ancestral" name it, cut from the sheet in play that holds it; null for any other choice. */
+/** The CSS style that shows the sticker a choice names, such as "{TK}{TK} - 1/4" or "Ancestral". It is cut from the sheet in play that holds it. Returns null for any other choice. */
 export function cutFor(model: Model, label: string | undefined): string | null {
   const text = (label ?? '').replace(/^(?:\{TK\})+ - /, '').trim();
   if (!text) return null;
@@ -120,7 +120,7 @@ export function cutFor(model: Model, label: string | undefined): string | null {
   return null;
 }
 
-/** Fills a card's sticker layer, touching the page only when the stickers change. */
+/** Fills a card's sticker layer. The page is changed only when the stickers change. */
 export function drawStickers(layer: HTMLElement, model: Model, card: CardView | undefined): void {
   const html = stickersHtml(model, card);
   if (layer.dataset.html === html) return;

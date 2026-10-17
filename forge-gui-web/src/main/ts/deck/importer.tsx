@@ -1,6 +1,6 @@
-// The deck importer: a pasted or loaded list, checked line by line before it becomes a deck
+// The deck importer. A pasted or loaded list is checked line by line before it becomes a deck.
 
-// The server marks every line of the list, each fix edits the text, and nothing is saved until the player presses Import
+// The server marks every line of the list. Each fix edits the text. Nothing is saved until the player presses Import.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CheckSelect } from './editor';
@@ -20,7 +20,7 @@ const READ_DELAY_MS = 300;
 const LINE_PX = 22;
 const MARKS: Record<string, string> = { read: '✓', problem: '!', ignored: '–', heading: '' };
 export const SITES = 'Moxfield, Archidekt, TappedOut, MTGGoldfish';
-/** Where the text is kept while it is not yet imported, so closing the dialog by mistake loses nothing. */
+/** The storage key for text not yet imported, so closing the dialog by mistake loses nothing. */
 const DRAFT_KEY = 'forge.importDraft';
 
 interface ImporterProps {
@@ -29,9 +29,9 @@ interface ImporterProps {
   from: 'seat' | 'start' | 'editor';
   seat?: number;
   initialText?: string;
-  /** A link to fetch as the dialog opens, from the finder's link field or its Sync now button. */
+  /** A link to fetch when the dialog opens. It comes from the finder's link field or its Sync now button. */
   initialUrl?: string;
-  /** Syncing a linked deck: importing replaces the deck of the same name without asking. */
+  /** Set when syncing a linked deck. Importing then replaces the deck of the same name without asking. */
   sync?: boolean;
   close: () => void;
 }
@@ -51,7 +51,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   const result = model.importResult;
   const fetched = result?.fetched ?? null;
 
-  // The list is read again once typing pauses; a change of check reads it again at once
+  // The list is read again once the text or the check has not changed for READ_DELAY_MS
   useEffect(() => {
     if (fetching) return;
     const timer = setTimeout(() => {
@@ -60,18 +60,18 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
     }, READ_DELAY_MS);
     return () => clearTimeout(timer);
   }, [text, check]);
-  // A fetched list fills the box, and it is read with the format the site gave
+  // A fetched list fills the box and is read with the format the site gave
   useEffect(() => {
     if (fetching && result) {
       setFetching(false);
       if (result.fetched) {
         setText(result.fetched.text);
-        // The site says what format the deck is for, which also decides where it is saved
+        // The site gives the deck's format, which also decides where the deck is saved
         setCheck(`${result.fetched.format}|`);
       }
     }
   }, [result]);
-  // After Import the dialog waits for the server: a taken name asks what to do, anything else means it is done
+  // After Import the dialog waits for the server. A taken name asks what to do. Any other reply means the import is done.
   useEffect(() => {
     if (sent && !model.nameTaken && (model.decks !== sent.decks || model.editor !== sent.editor)) {
       store(DRAFT_KEY, null);
@@ -132,7 +132,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
           <label class="namefield">{t('lblDeckName')}
             <input value={name} maxLength={60} onInput={e => setTypedName(e.currentTarget.value)} />
           </label>
-          {/* A deck built from a collection is of one format, which the server reads the list as */}
+          {/* A deck built from a collection has one fixed format, and the server reads the list in that format */}
           {from === 'editor' && model.editor?.collection
             ? <span class="check-fixed">{model.editor.check}</span>
             : <CheckSelect model={model} value={check} change={(format, pool, none) => setCheck(none ? 'none' : `${format}|${pool ?? ''}`)} />}
@@ -166,7 +166,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
                       placeholder={'4 Lightning Bolt\n1 Sol Ring (C21) 263\n\nSideboard\n2 Duress'}
                       onInput={e => typed(e.currentTarget.value)}
                       onScroll={e => {
-                        // The marks and the washes sit beside and behind the text, so they follow its scrolling
+                        // The gutter marks and the washes are drawn beside and behind the text, so they must scroll with it
                         const { scrollTop, scrollLeft } = e.currentTarget;
                         if (gutter.current) gutter.current.scrollTop = scrollTop;
                         if (washes.current) washes.current.style.transform = `translate(${-scrollLeft}px, ${-scrollTop}px)`;
@@ -230,7 +230,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   );
 }
 
-/** What the result side shows before anything is pasted: the forms a list can take. */
+/** Shown on the result side before anything is pasted. It lists the forms a list can take. */
 function Guide() {
   return (
     <div class="guide">
@@ -242,7 +242,7 @@ function Guide() {
   );
 }
 
-/** Where "Check legality against" starts, which also decides where the deck is saved. */
+/** The starting value of "Check legality against". It also decides where the deck is saved. */
 function startingCheck(model: Model, from: 'seat' | 'start' | 'editor', browseFormat?: string): string {
   if (from === 'editor' && model.editor) {
     return model.editor.unrestricted ? 'none' : `${model.editor.format}|${model.editor.cardPool ?? ''}`;

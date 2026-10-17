@@ -1,4 +1,4 @@
-// A guest's decks are kept in this browser's storage, which belongs to one address, so a host reached by another finds none of them
+// A guest's decks are stored in this browser per site address. The same host reached by a different address shows none of them.
 
 export interface DeviceDeck {
   id: string;
@@ -18,7 +18,7 @@ function open(): Promise<IDBDatabase> {
   });
 }
 
-// Storage can be missing or refused (a private window, blocked site data); the decks are then simply not kept
+// Storage can be missing or blocked, for example in a private window. The decks are then not saved and the fallback is returned.
 async function run<T>(mode: IDBTransactionMode, act: (store: IDBObjectStore) => IDBRequest, fallback: T): Promise<T> {
   try {
     const db = await open();

@@ -1,4 +1,4 @@
-// A card-art sleeve belongs to the deck rather than the player, so choosing one writes it onto the deck for every Forge client
+// A card-art sleeve belongs to the deck, not the player. Choosing one writes it to the deck, so every Forge client uses it
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { sleeveUrl } from './looks';
@@ -11,14 +11,14 @@ import type { Printing, Seat } from './protocol';
 const SEARCH_DEBOUNCE_MS = 250;
 export const CENTRE = 500;
 
-/** The stored 0-1000 crop offset as a CSS position along whichever axis the art overflows. */
+/** Converts the stored 0-1000 crop offset to a CSS position. It moves the art along whichever axis overflows. */
 export const objectPosition = (value: number | undefined): string => `${(value ?? CENTRE) / 10}% ${(value ?? CENTRE) / 10}%`;
 export const artUrl = (key: string): string => `/sleeveart?key=${encodeURIComponent(key)}`;
 
 export function SleevePicker({ model, actions, index, seat, close }: {
   model: Model; actions: Actions; index: number; seat: Seat; close: () => void;
 }) {
-  // Choosing a card is a step of its own, so the sleeve grid gives way to it rather than sitting above it
+  // Choosing a card is a separate step, so the card picker replaces the sleeve grid instead of appearing above it
   const [picking, setPicking] = useState(false);
   const choose = (key: string, offset: number) => {
     actions.setSleeveArt(index, key, offset);
@@ -32,7 +32,7 @@ export function SleevePicker({ model, actions, index, seat, close }: {
           <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
         </header>
         <div class="sleeves-body">
-          {/* Every card-art route writes to the seat's deck; with no deck the choice would be silently dropped */}
+          {/* Every card-art choice is written to the seat's deck. Without a deck the choice would be silently dropped */}
           <section class={seat.deck ? 'saved' : 'saved no-deck'}>
             <h3>{t('lblWebSleevesCardArt')}</h3>
             <div class="art-grid">
@@ -41,7 +41,7 @@ export function SleevePicker({ model, actions, index, seat, close }: {
                   <button class="art-tile" aria-pressed={art.key === seat.sleeveArt} onClick={() => choose(art.key, art.offset)}>
                     <img alt="" src={artUrl(art.key)} style={{ objectPosition: objectPosition(art.offset) }} />
                   </button>
-                  {/* The saved sleeves are the host's, so only the host takes one away */}
+                  {/* The saved sleeves belong to the host, so only the host can remove one */}
                   {model.host && (
                     <button class="drop" title={t('lblWebSleevesRemoveArt')} aria-label={t('lblWebSleevesRemoveArt')}
                       onClick={() => actions.forgetSleeveArt(art.key)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
@@ -57,7 +57,7 @@ export function SleevePicker({ model, actions, index, seat, close }: {
             <div class="sleeve-grid">
               {Array.from({ length: model.looks?.sleeveCount ?? 0 }, (_, i) => (
                 <button key={i} class="sleeve-tile" aria-pressed={!seat.sleeveArt && i === seat.sleeve} onClick={() => {
-                  // Clearing the card art falls back to this numbered sleeve, which the deck no longer overrides
+                  // Clear the deck's card art so it no longer overrides the numbered sleeve, then set this sleeve
                   actions.setSleeveArt(index, '', CENTRE);
                   actions.setSeat(index, { sleeve: i });
                   close();
@@ -88,11 +88,11 @@ function ArtPicker({ model, actions, back, use }: {
     const timer = setTimeout(() => actions.searchCards(typed), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [typed]);
-  // Only the printings of the name asked about; an answer for an earlier name is not this card's
+  // Use only the printings of the chosen name. A reply for an earlier name belongs to a different card
   const printings = name !== null && model.printings?.name === name ? model.printings.list : [];
   const pick = (print: Printing) => {
     setPicked(print);
-    // Each newly chosen card starts centred; dragging re-frames it
+    // Each newly chosen card starts centred. Dragging moves the crop
     setOffset(CENTRE);
   };
   useEffect(() => {
@@ -131,7 +131,7 @@ function ArtPicker({ model, actions, back, use }: {
   );
 }
 
-// The art is cover-cropped, so only one axis has slack; dragging moves the crop along it
+// The art is cover-cropped, so it overflows on one axis only. Dragging moves the crop along that axis
 function Crop({ art, offset, setOffset }: { art: Printing | null; offset: number; setOffset: (offset: number) => void }) {
   const drag = useRef({ x: 0, y: 0, from: CENTRE });
   return (
@@ -151,7 +151,7 @@ function Crop({ art, offset, setOffset }: { art: Printing | null; offset: number
         setOffset(Math.max(0, Math.min(1000, Math.round(from - (moved * 1000) / travel))));
       }}
       onPointerUp={e => e.currentTarget.releasePointerCapture(e.pointerId)}>
-      {/* Not draggable, or the browser's own image drag takes the pointer and the crop never moves */}
+      {/* The image is not draggable. Otherwise the browser's own image drag takes the pointer and the crop never moves */}
       <img alt="" draggable={false} src={art ? artUrl(art.key) : undefined} style={{ objectPosition: objectPosition(offset) }} />
     </div>
   );

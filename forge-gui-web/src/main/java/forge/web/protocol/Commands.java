@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-/** One owner's handlers for the browser's commands, found by the name each command is sent under. */
+/** One owner's handlers for the browser's commands. Each handler is found by the name its command is sent under. */
 public final class Commands<O> {
     /** Runs one command for its owner. channel is the browser that sent it. */
     @FunctionalInterface
@@ -14,7 +14,7 @@ public final class Commands<O> {
 
     private final Map<String, Handler<O, Record>> handlers = new HashMap<>();
 
-    /** Handles every command the record reads: its one name, or each constant of its t component. */
+    /** Handles every command name the record covers: its one name, or each constant of its t component. */
     public <T extends Record> Commands<O> on(final Class<T> type, final Handler<O, T> handler) {
         for (final String name : Wire.commandNames(type)) {
             add(name, handler);
@@ -22,7 +22,7 @@ public final class Commands<O> {
         return this;
     }
 
-    /** Handles one of the commands that are only their name, such as a {@link FromBrowser.Plain} constant. */
+    /** Handles one of the commands that are only a name, such as a {@link FromBrowser.Plain} constant. */
     public Commands<O> on(final Enum<?> name, final Handler<O, Record> handler) {
         add(name.name(), handler);
         return this;
@@ -39,7 +39,7 @@ public final class Commands<O> {
         return handlers.containsKey(Wire.commandName(command));
     }
 
-    /** Runs the command's handler. Answers false when this owner has none. */
+    /** Runs the command's handler. Returns false when this owner has no handler for it. */
     public boolean run(final O owner, final BrowserChannel channel, final Record command) {
         final Handler<O, Record> handler = handlers.get(Wire.commandName(command));
         if (handler == null) {

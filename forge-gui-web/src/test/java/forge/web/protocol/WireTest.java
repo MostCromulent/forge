@@ -5,7 +5,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 
-/** The rules every protocol record is written and read by. The tests run with assertions on, as surefire does. */
+/** Tests the rules used to write and read every protocol record. The tests run with assertions on, as surefire does. */
 public class WireTest {
 
     @Test
@@ -13,7 +13,7 @@ public class WireTest {
         Assert.expectThrows(AssertionError.class, () -> Wire.encode(new ErrorMessage(null)));
     }
 
-    // Fails if two records read one name, as the second would take every message meant for the first
+    // Fails if two records read the same name. The second would then take every message meant for the first
     @Test
     public void eachNameIsReadByItsOwnRecord() {
         for (final Class<? extends Record> c : FromBrowser.COMMANDS) {

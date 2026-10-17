@@ -20,7 +20,7 @@ import java.util.UUID;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertSame;
 
-/** A limited gauntlet whose rounds a frontend other than desktop's starts. */
+/** Tests a limited gauntlet whose rounds are started by a frontend other than desktop. */
 public class GauntletTest {
     private String pool;
     private IStorage<DeckGroup> storage;
@@ -40,7 +40,7 @@ public class GauntletTest {
         storage = null;
     }
 
-    // Fails if any gauntlet path starts a round through getNewGuiGame, which a web seat cannot give
+    // Fails if any gauntlet path starts a round through getNewGuiGame, which a web seat cannot provide
     @Test
     public void aSetStarterRunsEveryRound() {
         pool = "Gauntlet test " + UUID.randomUUID().toString().substring(0, 8);

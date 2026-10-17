@@ -1,5 +1,5 @@
-// What every campaign mode shares: the page that holds its shelf of saves or an open save, the bar over an open one's pages, a balance of one
-// of its currencies, its statistics, its preferences and the reveal of a reward
+// Parts shared by every campaign mode. These are the page that lists the saves or shows an open save, the bar above an open save's pages,
+// a currency balance, the statistics, the preferences and the reward reveal.
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
@@ -14,18 +14,18 @@ import { changeUi, eased, type UiState } from '../ui';
 import { Reveal, type Owed } from './reward';
 import { Backdrop } from '../dialog';
 
-/** A balance: its icon, its number, and its name for a reader that cannot see the icon. */
+/** A currency balance shown as its icon and amount. The currency's name is the icon's alt text and tooltip. */
 export function Purse({ icon, n, label }: { icon: string; n: number; label: string }) {
   return <span class="cq-coin" title={label}><img alt={label} src={skinIconUrl(icon)} /><b>{formatNumber(n)}</b></span>;
 }
 
-/** How much of a currency the bar says the player has, by the currency's icon. */
+/** The amount of a currency the bar reports for the player, looked up by the currency's icon. */
 export const balance = (bar: Bar | null, icon: string): number => bar?.balances.find(b => b.icon === icon)?.amount ?? 0;
 
-/** The bar every page of a campaign shares: its name and a line, the mode's tabs, the balances, and the way out. */
+/** The bar shared by every page of a campaign. It shows the save's name and line, the mode's tabs, the balances and the back button. */
 export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, extra, prefs, leave, under }: {
   bar: Bar; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void;
-  /** What a reward being revealed has yet to show, by balance icon: the server's balances already hold it all, so the bar shows less. */
+  /** The amounts a reward reveal has not shown yet, by balance icon. The server's balances already include them, so the bar subtracts them. */
   held: Record<string, number>;
   extra?: ComponentChildren; prefs?: () => void; leave: () => void; under: boolean;
 }) {
@@ -50,7 +50,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
   );
 }
 
-/** The panel beside a page's list: what is chosen, its picture, what it says, and under it what the player brings. A picture pressed is shown large. */
+/** The panel beside a page's list. It shows the chosen item's title, picture and text, and the player's own items in the foot. A pressed picture is shown large. */
 export function SidePanel({ kicker, where, title, art, label, zoom, setZoom, children, foot }: {
   kicker: string; where?: ComponentChildren; title?: string; art?: string | null; label?: string;
   zoom: string | null; setZoom: (image: string | null) => void; children: ComponentChildren; foot: ComponentChildren;
@@ -72,7 +72,7 @@ export function SidePanel({ kicker, where, title, art, label, zoom, setZoom, chi
   );
 }
 
-/** The deck a match is fought with, and the way to another. */
+/** The deck a match is played with, and a button to change it. */
 export function DeckRow({ image, name, line, problem, zoom, change }: {
   image?: string | null; name: string; line: string; problem: boolean; zoom: (image: string) => void; change?: () => void;
 }) {
@@ -88,7 +88,7 @@ export function DeckRow({ image, name, line, problem, zoom, change }: {
   );
 }
 
-/** A campaign's statistics: figures, and whatever tables the mode sends. first is the scope asked for as the page opens. */
+/** A campaign's statistics. It shows figures and any tables the mode sends. first is the scope requested when the page opens. */
 export function Stats({ model, actions, first }: { model: Model; actions: Actions; first?: string }) {
   const s = model.campaignStats;
   useEffect(() => { actions.campaignStats(first); }, []);
@@ -127,30 +127,30 @@ export function Stats({ model, actions, first }: { model: Model; actions: Action
   );
 }
 
-/** A mode's preferences, each saved as it is changed, since the server checks one against the others as they stand. */
+/** A mode's preferences. Each value is saved when it changes, because the server checks it against the current values of the others. */
 function Prefs({ model, actions, close }: { model: Model; actions: Actions; close: () => void }) {
   const p = model.campaignPrefs;
-  /** What has been typed and not yet accepted, by key. A refused value stays in its field for the player to mend. */
+  /** Text typed but not yet accepted, by key. A refused value stays in its field so the player can correct it. */
   const [typed, setTyped] = useState<Record<string, string>>({});
   const [last, setLast] = useState<string | null>(null);
   useEffect(() => { actions.campaignPrefs(); }, []);
-  // An accepted value leaves its own field to the server's; whatever is being typed in another stays
+  // Once a value is accepted, its field shows the server's value again. Text typed in other fields is kept
   useEffect(() => {
     if (p && !p.problem && last) setTyped(({ [last]: _, ...rest }) => rest);
   }, [p]);
   if (!p) return null;
-  // A group drawn as a table spans the dialog, so it comes after the groups that share its two columns
+  // A group drawn as a table spans both columns of the dialog, so it is placed after the other groups
   const tabled = (g: string) => p.rows.some(r => r.group === g && r.column);
   const named = [...new Set(p.rows.map(r => r.group))];
   const groups = [...named.filter(g => !tabled(g)), ...named.filter(tabled)];
-  // The field's own text, since a blur can come before the typing has been drawn
+  // save takes the field's own text, because a blur can happen before the typed text has been rendered
   const save = (key: string, text: string, was: string) => {
-    // What a value may be is the mode's to say, and its refusal comes back as the problem line
+    // The mode decides which values are allowed. A refused value comes back as the problem line
     if (text.trim() === '' || Number(text) === Number(was)) return;
     setLast(key);
     actions.campaignPref(key, text.trim());
   };
-  // A value written as a decimal may be stepped as one; whether it may be one is still the mode's to say
+  // A value written as a decimal can be entered as any decimal. The mode still decides whether the value is allowed
   const field = (r: PrefRow, label?: string) => (
     <input type="number" min={0} step={r.value.includes('.') ? 'any' : 1} value={typed[r.key] ?? r.value} aria-label={label}
       onInput={e => setTyped({ ...typed, [r.key]: e.currentTarget.value })}
@@ -165,7 +165,7 @@ function Prefs({ model, actions, close }: { model: Model; actions: Actions; clos
         <div class="cq-prefs-body">
           {groups.map(g => {
             const rows = p.rows.filter(r => r.group === g);
-            // Rows that carry a column are one value of a row of several, drawn as a table with a column each
+            // Rows with a column are cells of a row that holds several values. They are drawn as a table with one column per name
             const columns = [...new Set(rows.flatMap(r => (r.column ? [r.column] : [])))];
             const lines = [...new Set(rows.filter(r => r.column).map(r => r.label))];
             return (
@@ -208,8 +208,8 @@ function Prefs({ model, actions, close }: { model: Model; actions: Actions; clos
 }
 
 /**
- * A campaign mode's page: its saved games as a shelf, which a form that starts one takes the place of, and an open save's pages.
- * icons are the balances' icons, asked for as the mode opens, since on a first visit they would wait behind every picture of its first page.
+ * A campaign mode's page. It shows the saved games, the form that starts a new one in their place, or an open save's pages.
+ * icons are the balance icons. They are loaded when the mode opens, because on a first visit they would otherwise load after every picture on the first page.
  */
 export function CampaignShell({ model, actions, icons, shelf, open }: {
   model: Model; actions: Actions; icons: string[];
@@ -217,12 +217,12 @@ export function CampaignShell({ model, actions, icons, shelf, open }: {
 }) {
   const inside = model.campaignSave !== null;
   useEffect(() => { for (const icon of icons) new Image().src = skinIconUrl(icon); }, []);
-  // The form that starts a save gives the shelf back when left or when its save opens
+  // The new-save form closes and the saves list returns when the player goes back or the new save opens
   const [creating, setCreating] = useState(false);
   useEffect(() => { if (inside) setCreating(false); }, [inside]);
   return (
     <div key={inside ? 'open' : 'shelf'} class={inside ? 'cq-shell' : 'limited-page'}>
-      {/* An open save's way out is on its bar */}
+      {/* An open save has its back button on its bar */}
       {!inside && (
         <PageHeader class="limited-head">
           <div class="head-right">
@@ -236,7 +236,7 @@ export function CampaignShell({ model, actions, icons, shelf, open }: {
   );
 }
 
-/** The saved games under the way back to the start page, or the form that starts one. saves is null while they are being read. */
+/** The saved games under a breadcrumb trail back to the start page, or the form that starts one. saves is null while they load. */
 export function CampaignShelf({ model, actions, creating, setCreating, words, form, saves }: {
   model: Model; actions: Actions; creating: boolean; setCreating: (on: boolean) => void;
   words: { mode: string; new: string; yours: string; reading: string }; form: ComponentChildren; saves: ComponentChildren | null;
@@ -254,21 +254,21 @@ export function CampaignShelf({ model, actions, creating, setCreating, words, fo
   </>;
 }
 
-/** A change of tab slides the page the way the tabs run (dialogs.css). */
+/** A tab change slides the page in the direction of the new tab in the tab order (dialogs.css). */
 export function slideTab<Tab extends string>(tabs: [Tab, TextKey][], from: Tab, to: Tab, set: (u: UiState) => void): void {
   const order = tabs.map(([id]) => id);
   if (to !== from) eased(set, () => ({ way: order.indexOf(to) > order.indexOf(from) ? 'on' : 'back' }), () => !document.querySelector('.cq-main .pools-wait'));
 }
 
 /**
- * An open save: the bar, the open tab's page, the preferences and a reward's reveal. page draws the tab's page under a key that
- * changes when the preferences close, since they set the prices the pages show, so the page asks again.
+ * An open save: the bar, the open tab's page, the preferences and a reward reveal. page draws the tab's page under a key that
+ * changes when the preferences close. The preferences set the prices the pages show, so the page must request its data again.
  */
 export function CampaignPages<Tab extends string>({ model, actions, tabs, tab, setTab, extra, page }: {
   model: Model; actions: Actions; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void; extra?: ComponentChildren;
   page: (key: number) => ComponentChildren;
 }) {
-  // What a reward being revealed has yet to show, which the bar takes off the server's balances
+  // The amounts the reward reveal has not shown yet. The bar subtracts them from the server's balances
   const [owed, setOwed] = useState<Owed>({});
   const reward = model.reward;
   const [prefs, setPrefs] = useState(false);

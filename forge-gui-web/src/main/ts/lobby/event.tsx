@@ -1,4 +1,4 @@
-// A table's draft or sealed event, as desktop's lobby runs one: the host sets it up and deals the packs once every seat is ready
+// A table's draft or sealed event, run as desktop's lobby runs one. The host sets it up and deals the packs once every seat is ready
 
 import { useState } from 'preact/hooks';
 import { StepForm } from '../stepform';
@@ -11,16 +11,16 @@ import { GameMenu, PlayerCount } from './matchbar';
 import { t, shortDay } from '../text';
 import { Backdrop, Confirm } from '../dialog';
 
-/** What the setup dialog shows: the choice between a new event and an earlier one, or either of those. */
+/** What the setup dialog shows. 'choose' asks for a new event or an earlier one. The other two show that choice's form. */
 type SetupView = 'choose' | 'new' | 'earlier';
 
-/** The event as the head of the table, with the host's setup dialog opening by itself on a table that has no event yet. */
+/** The event panel at the head of the table. On a table with no event yet, the host's setup dialog opens by itself. */
 export function EventHead({ model, lobby, actions, preview, start }: {
   model: Model; lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void; start: () => void;
 }) {
   const lim = lobby.limited!;
   const [setting, setSetting] = useState(!lim.product);
-  // With earlier events kept, the host first says whether to set up a new one or play one of those again
+  // When earlier events are kept, the host first chooses between a new event and playing an earlier one again
   const firstView = (): SetupView => (lim.pastEvents.length && !lim.product ? 'choose' : 'new');
   const [view, setView] = useState<SetupView>(firstView);
   const [leaving, setLeaving] = useState(false);
@@ -31,7 +31,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
   const stages = [t('lblWebEventStageReady'), draft ? t('lblDraft') : t('lblWebEventStageOpen'), t('lblWebEventStageBuild'), t('lblPlay')];
   const at = eventStage(lobby);
   const players = lobby.seats.length;
-  // Computers draft the seats the table's players do not fill; they draft but don't play
+  // Computers fill the pod seats that the table's players leave empty. They draft but do not play
   const ai = draft ? Math.max(0, lim.podSize - players) : 0;
   const slim = lim.started;
   let button = null;
@@ -82,7 +82,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
         <div class="eh-title">
           <span class="event-product">{lim.product ?? t('lblWebEventNotSetUp')}</span>
           {lobby.host && !lim.started && <button class="link" onClick={openSetup}>{lim.product ? t('lblEdit') : t('lblWebEventSetUp')}</button>}
-          {/* An event under way, or one played again, is left for a new one here; its pools stay among the earlier events */}
+          {/* Here the host leaves a started or replayed event for a new one. Its pools stay in the earlier events */}
           {lobby.host && lim.started && !model.drafting && <button class="link" onClick={() => setLeaving(true)}>{t('lblWebEventNewEvent')}</button>}
           {slim && <span class="eh-facts">{facts}</span>}
         </div>
@@ -113,7 +113,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
   );
 }
 
-/** Where the event has got to: ready up, the draft or the opening, building, then playing once every seat that plays has a deck. */
+/** The event's stage: 0 ready up, 1 draft or opening, 2 building, 3 playing. It is 3 once every seat that plays has a deck. */
 function eventStage(lobby: LobbyTable): number {
   const lim = lobby.limited!;
   if (!lim.started) return 0;
@@ -122,7 +122,7 @@ function eventStage(lobby: LobbyTable): number {
   return playing.every(s => s.deck != null || s.deckName != null) ? 3 : 2;
 }
 
-/** The line under the bar at a Draft or Sealed table: who or what the table is waiting on. */
+/** The line under the bar at a Draft or Sealed table. It says who or what the table is waiting on. */
 function eventStatus(lobby: LobbyTable): string {
   const lim = lobby.limited!;
   if (!lim.product) return lobby.host ? t('lblWebEventSetUpThenReady') : t('lblWebEventHostSettingUp');
@@ -152,12 +152,12 @@ function SetupChoice({ draft, count, choose }: { draft: boolean; count: number; 
   );
 }
 
-/** "26 Sept, 09:46" from the "yyyy-MM-dd HH:mm" an event is saved with. */
+/** Turns an event's saved "yyyy-MM-dd HH:mm" date into "26 Sept, 09:46". */
 function playedOn(date: string): string {
   return date ? `${shortDay(date.slice(0, 10))}, ${date.slice(11, 16)}` : '';
 }
 
-/** The earlier events, newest first, each played again or deleted from here. Deleting asks first, in its row. */
+/** The earlier events, newest first. Each can be played again or deleted from here. A delete asks first, in the event's row. */
 function PastEvents({ events, actions, back }: { events: PastEvent[]; actions: Actions; back: () => void }) {
   const [deleting, setDeleting] = useState<string | null>(null);
   return (
@@ -191,7 +191,7 @@ function PastEvents({ events, actions, back }: { events: PastEvent[]; actions: A
 function SealedForm({ model, actions, done }: { model: Model; actions: Actions; done: () => void }) {
   const options = model.limitedOptions!;
   const [value, setValue] = useState<SealedValue>({});
-  // The pool is named after its event, as desktop names it, so there is no name to ask for
+  // The pool is named after its event, as on desktop, so the form does not ask for a name
   const steps = sealedSteps(options).filter(s => s.id !== 'name');
   return (
     <StepForm title={t('lblWebEventSetUpSealed')} steps={steps} value={value} onChange={setValue}

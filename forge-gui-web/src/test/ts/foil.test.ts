@@ -3,7 +3,7 @@ import { imageUrl, smallImage } from '../../main/ts/images';
 import { foilSeed } from '../../main/ts/match/foil';
 
 describe('a foil picture', () => {
-  // The server paints the board's cards and the browser draws the preview, so both must pick the same streaks; WebServerTest pins the same number
+  // The server renders the board's cards and the browser renders the preview, so both must use the same foil seed. WebServerTest checks the same number
   it('has the seed the server gives it, at either size', () => {
     const src = imageUrl('c:Shivan Dragon+|M14|1');
     expect(foilSeed(src)).toBe(28);

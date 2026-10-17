@@ -17,12 +17,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
- * Questions the host asks outside a match, where the calling thread waits for the browser's answer as desktop waits for its dialog.
- * Kept apart from {@link PendingRequests}, which holds one seat's questions during its game: these go to whichever browser holds
- * the host's seat at the time, are drawn on any screen, and give up after a while because no game ends them.
+ * Questions the host asks outside a match. The calling thread waits for the browser's answer, as desktop waits for its dialog.
+ * These are kept apart from {@link PendingRequests}, which holds one seat's questions during its game. These questions go to the
+ * browser that holds the host's seat at the time. They are shown on any screen, and they time out because no game ends them.
  */
 final class HostRequests implements IHasForgeLog {
-    /** Long enough for someone to read the list and decide, short enough that a closed browser gives up. */
+    /** Long enough for someone to read the list and decide. Short enough that a question to a closed browser times out. */
     private static final long ANSWER_TIMEOUT_MINUTES = 5;
 
     private final Map<Integer, CompletableFuture<List<Integer>>> open = new ConcurrentHashMap<>();
@@ -42,7 +42,7 @@ final class HostRequests implements IHasForgeLog {
         }
     }
 
-    /** Asks the browser to pick from a list and waits. images, when given, picture each option, as cards or as packs as pictured says. Returns the indices chosen, or null when nobody answers. */
+    /** Asks the browser to pick from a list and waits. images, when given, show each option as a card or a pack, as pictured says. Returns the chosen indices, or null when nobody answers. */
     List<Integer> ask(final HostChoiceKind kind, final String title, final String message, final List<String> options, final int min, final int max,
             final List<String> images, final String pictured) {
         final int id = nextId.incrementAndGet();

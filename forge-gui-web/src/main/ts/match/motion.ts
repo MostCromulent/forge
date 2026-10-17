@@ -1,4 +1,4 @@
-// Decides how each cardMoved event looks, from where a card stood before the board was drawn to where it stands now
+// Animates each cardMoved event. A card moves from where it was before the board was redrawn to where it is now
 
 import { hoverable } from '../preview';
 import type { CardMoved, GameEvent, Place } from '../protocol';
@@ -11,40 +11,40 @@ import { make } from '../dom';
 import { cardImageSrc } from '../images';
 import { lastPicture } from './cards';
 
-/** Where a card stood, and a copy of how it looked there, for a trip after its own element has gone. */
+/** Where a card was drawn and its old element, so a trip can still run after the element has left the page. */
 interface Snapshot {
   rect: DOMRect;
   ghost: HTMLElement | null;
-  /** Its centre as laid out, before any transform: where a row put it, not where a tilt or a step forward shows it. */
+  /** Its centre in the layout, before any transform. A tilt or an attacker's step forward does not change it. */
   laid?: { x: number; y: number };
-  /** Its size as laid out, before any transform, so a copy of a tapped card is turned as the card was. */
+  /** Its size in the layout, before any transform, so a copy of a tapped card is rotated as the card was. */
   size?: { w: number; h: number };
-  /** How far a slide or flight still under way has it from where it will rest. */
+  /** How far a slide or flight in progress has moved it from its resting place. */
   drift?: { x: number; y: number };
-  /** Whether it was tapped, kept because the ghost is the live element and goes on updating after this was taken. */
+  /** Whether it was tapped. It is stored because the ghost is the live element and keeps changing after the snapshot. */
   tapped?: boolean;
 }
 
-/** A spell waiting for its cost, and the trip it is making to where it waits. */
+/** A spell waiting for its cost to be paid, and its flight to the place where it waits. */
 interface Waiting {
   rect: DOMRect;
   ghost: HTMLElement | null;
   since: number;
-  /** Where the trip to the waiting place set off from, for a spell paid for before it has arrived. */
+  /** Where the flight to the waiting place started. It is used when the spell is paid for before the flight ends. */
   from?: DOMRect;
 }
 
-/** Every card drawn just before this frame (hand, board, stack, open zones, the tops of zone tiles), by its key. */
+/** Every card drawn just before the board was redrawn, by key. This covers the hand, board, stack, open zones and zone tile tops. */
 const lastSeen = new Map<string, Snapshot>();
-/** Spells that have gone onto the stack and are waiting for their cost, by card key: where each flies to. Any player's; stack.ts draws your own in their place. */
+/** Spells on the stack that wait for their cost, by card key, with the place each flies to. It holds any player's spells. stack.ts draws your own in their place. */
 const waiting = new Map<string, Waiting>();
 const fromHint = new Map<string, DOMRect>();
 const intoHint = new Map<string, DOMRect>();
 
-/** Where a card will rest once its flight ends, since a flight's transform changes what the element measures. */
+/** Where a card will rest when its flight ends. It is stored because a flight's transform changes what the element measures. */
 const resting = new Map<string, DOMRect>();
 
-/** Whether a card is part way through a move. An endless effect, such as a flyer's hover, is not one. */
+/** Whether a card is in the middle of a move. An endless animation, such as a flyer's hover, does not count. */
 function moving(el: HTMLElement): boolean {
   return el.getAnimations().some(a => a.effect?.getTiming().iterations !== Infinity);
 }
@@ -59,39 +59,39 @@ function restingRect(el: HTMLElement): DOMRect {
   return el.getBoundingClientRect();
 }
 
-/** Every card's trip from one place to another takes this long: a play, a draw, a discard, a paid spell's landing. */
+/** The usual time for a card's flight between places, such as a play, a draw, a discard or a paid spell's landing. */
 const FLIGHT_MS = 500;
-/** A card put onto the battlefield from the hand (a land, a permanent that resolves at once) travels this fast. */
+/** How long a card put onto the battlefield from the hand takes, such as a land or a permanent that resolves at once. */
 const PLAY_MS = 260;
-/** How long a move within the battlefield takes, such as a land tapped from one pile onto another. */
+/** How long a move within the battlefield takes, such as a tapped land moving from one pile to another. */
 const SHIFT_MS = 340;
-/** Cards moving together (a deal, a mulligan, a discard) set off this far apart, so each can be followed. */
+/** Cards that move together (a deal, a mulligan, a discard) start this far apart, so the eye can follow each one. */
 const STAGGER_MS = 110;
-/** A hand swapped for another (a mulligan) is two runs of cards, so each card's trip and the gap between them are shorter. */
+/** A mulligan moves one hand out and another hand in. So each card's flight and the gap between cards are shorter. */
 const SWAP_MS = 350;
 const SWAP_STAGGER_MS = 70;
-/** How long a spell may wait once no cost is being paid for it; past this its stack item is not coming. The stack's placeholder for it goes by the same. */
+/** How long a spell can wait after no cost is being paid for it. After this its stack item is not coming. The stack's placeholder uses the same limit. */
 export const SETTLE_MS = 900;
 const POP_MS = 220;
 const EASE = 'cubic-bezier(.2,.7,.3,1)';
-/** Names a card's own trip among its animations, so a second trip replaces the first rather than stacking on it. */
+/** The id of a card's own flight animation, so a second flight replaces the first instead of adding to it. */
 const FLIGHT = 'flight';
 
-/** The cards of a pile that has just been laid out all start where the pile stood. */
+/** The cards of a pile that was just spread out all start from where the pile was. */
 export function spreadFrom(keys: string[], rect: DOMRect): void {
   for (const key of keys) {
     fromHint.set(key, rect);
   }
 }
 
-/** The cards of a pile being put back together end where its top card stands. */
+/** The cards of a pile being merged back all end where its top card is. */
 export function mergeInto(keys: string[], rect: DOMRect): void {
   for (const key of keys) {
     intoHint.set(key, rect);
   }
 }
 
-/** A new table: what the last one showed says nothing about where this one's cards, which reuse its keys, come from. */
+/** Set for a new table. Its cards reuse the old table's keys, so the old positions say nothing about where they come from. */
 let fresh = false;
 
 export function resetMotion(): void {
@@ -105,7 +105,7 @@ export function resetMotion(): void {
   fresh = true;
 }
 
-/** Remembers where every card stands just before the board is redrawn, because the board can move between frames on its own. */
+/** Records where every card is just before the board is redrawn, because the board can also move between frames without an event. */
 export function noteBoard(): void {
   if (fresh) {
     fresh = false;
@@ -120,27 +120,27 @@ export function noteBoard(): void {
   note();
 }
 
-/** Animates what happened since the last frame. Runs after the board is drawn, so both ends can be measured. */
+/** Animates what happened since the last frame. It runs after the board is drawn, so both ends of each move can be measured. */
 export function animateCardMoves(model: Model, events: readonly GameEvent[]): void {
   const dealt: { el: HTMLElement; start: DOMRect }[] = [];
   const leavingHand: { was: Snapshot; target: DOMRect | null; tile?: boolean; key?: string; onto?: HTMLElement | null }[] = [];
   const trips = journeys(events);
-  // A card put back into the zone it is shown in, as cards looked at go back on the library, has only changed places there, so it slides
+  // A card put back into the zone it is shown in only changed place there, so it slides. An example is a looked-at card put back on the library
   for (const [key, move] of trips) {
     const sameZone = move.from?.zone === move.to?.zone && move.from?.player?.ref === move.to?.player?.ref && !move.via;
     if (sameZone && lastSeen.get(key)?.ghost?.closest('#zones') && cardElement(key)?.closest('#zones')) trips.delete(key);
   }
-  // Hand icons already swelling this frame, so several cards drawn at once swell it once
+  // Hand icons that already swell this frame, so several cards drawn at once swell an icon only once
   const swelled = new Set<HTMLElement>();
-  // Zone tiles cards are landing on this frame: how many, and when the first arrives
+  // The zone tiles that cards land on this frame, with the number of cards and the time the first one arrives
   const landings = new Map<HTMLElement, { cards: number; at: number }>();
   let fromLibrary = 0;
-  /** How long until the last permanent being unmade where it stood has gone, so the row does not close over it. */
+  /** How long until the last permanent being unmade in place is gone, so its row does not close up before then. */
   let unmaking = 0;
   for (const [key, move] of trips) {
     const seen = lastSeen.get(key);
     const start = waiting.get(key)?.rect ?? seen?.rect ?? placeRect(move.from);
-    // A spell on the stack with no item yet is having its cost paid, in the slot the stack keeps for it
+    // A spell on the stack with no item yet is being paid for. It flies to the slot the stack keeps for it
     const slot = move.to?.zone === 'Stack' ? awaitingSlot(key) : null;
     if (slot) {
       const to = restingRect(slot);
@@ -150,7 +150,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       }
       continue;
     }
-    // A stack item carries its source card's key, so only a card that went to the stack is looked for there, not one whose ability is on it
+    // A stack item has its source card's key. So only a card that moved to the stack is looked for there, not a card whose ability is on it
     const el = move.to?.zone === 'Stack' ? elementFor(key) : cardElement(key) ?? pileTopFor(key);
     if (move.to?.zone === 'Stack' && !el) {
       if (start) {
@@ -158,7 +158,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       }
       continue;
     }
-    // A card that went somewhere and came straight back (a mulligan's shuffle and redraw) makes both trips
+    // A card that moved away and straight back (a mulligan's shuffle and redraw) makes both trips
     if (el && move.via && seen?.ghost) {
       const away = tileImageRect(key) ?? placeRect(move.via);
       if (move.from?.zone === 'Hand') leavingHand.push({ was: seen, target: away });
@@ -166,17 +166,17 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       const back = away ?? start;
       if (back) {
         if (move.via.zone === 'Library' && move.to?.zone === 'Hand') dealt.push({ el, start: back });
-        // A card that leaves and returns in one update goes out before it comes back
+        // A card that leaves and returns in one update flies out first and then back
         else fly(el, back, FLIGHT_MS, away ? FLIGHT_MS : 0);
       }
       continue;
     }
     if (el) {
       const drawn = move.from?.zone === 'Library' && move.to?.zone === 'Hand';
-      // A card put straight down from the hand, such as a land, is a short trip and makes it quicker
+      // A card put straight down from the hand, such as a land, has a short trip, so its flight is quicker
       const ms = move.from?.zone === 'Hand' && move.to?.zone === 'Battlefield' ? PLAY_MS : FLIGHT_MS;
       land(key);
-      // Flying a pile's top element would carry the whole pile in, so a copy of the joining card makes the trip instead
+      // Flying a pile's top element would move the whole pile, so a copy of the joining card flies instead
       const pile = el.closest<HTMLElement>('.slot[data-members]');
       if (start && pile && (pile.dataset.members ?? '').split(',').length > 1) {
         const to = restingRect(el);
@@ -189,7 +189,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
         if (drawn) dealt.push({ el, start });
         else fly(el, start, ms, 0);
       } else if (pile && (pile.dataset.members ?? '').split(',').length > 1) {
-        // A token joining a pile of its kind: a copy grows onto the pile as it opens
+        // A token joins a pile of the same tokens. A copy grows onto the pile while the pile opens
         const to = restingRect(el);
         openPile(el);
         const copy = place(el, to, { w: el.offsetWidth, h: el.offsetHeight });
@@ -197,15 +197,15 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
         copy.getAnimations()[0]?.finished.then(() => copy.remove(), () => copy.remove());
         holdCount(el, POP_MS);
       } else {
-        // A token, or anything else that comes into being, grows into place rather than blinking on
+        // A token, or any other card that appears from nowhere, grows into place instead of appearing at once
         pop(el);
       }
       continue;
     }
-    // Somewhere not drawn card by card (a library, a graveyard's pile, an opponent's hand): a copy makes the trip
+    // A place not drawn card by card (a library, a graveyard tile, an opponent's hand) has no element, so a copy makes the trip
     let ghost = waiting.get(key)?.ghost ?? seen?.ghost ?? null;
     let was = waiting.get(key)?.ghost ? { rect: waiting.get(key)!.rect, ghost, size: seen?.size } : seen;
-    // Another player's hand is only an icon, so a card drawn into it makes no trip and the icon swells once instead
+    // Another player's hand is only an icon. So a card drawn into it makes no trip, and the icon swells once instead
     const intoFan = move.from?.zone === 'Library' && move.to?.zone === 'Hand' ? handFanOf(move.to) : null;
     if (!ghost && intoFan) {
       if (!swelled.has(intoFan)) {
@@ -215,11 +215,11 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       land(key);
       continue;
     }
-    // The tile the card came to rest on swells as it lands, or at once when nothing is seen to travel there
+    // The tile the card lands on swells when the card arrives, or at once when no flight to it is shown
     const onto = landedTile(model, key, move.to);
     let arrives = 0;
     if (!ghost && start && move.from?.zone === 'Library') {
-      // The library shows no card to copy, so a back in the owner's sleeve makes the trip, staggered when several go together
+      // The library shows no card to copy, so a card back in the owner's sleeve flies instead. Several cards start staggered
       const target = tileImageRect(key) ?? placeRect(move.to);
       if (target) {
         arrives = FLIGHT_MS + fromLibrary * STAGGER_MS;
@@ -228,11 +228,11 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       }
     }
     if (fizzled.has(key)) {
-      // A spell that failed comes apart on the stack (stack.ts), so nothing of it travels: its tile waits, and then shows it
+      // A spell that failed breaks apart on the stack (stack.ts), so nothing flies. Its tile waits and then shows it
       if (tileImageRect(key)) holdTile(key, FIZZLE_MS - FLIGHT_MS);
       arrives = FIZZLE_MS;
     } else if (!ghost && start && move.from?.zone !== 'Library' && (tileImageRect(key) ?? placeRect(move.to))) {
-      // A spell on the stack, a tile's top card and a card in a hand drawn as an icon have no card to copy, so one is made
+      // A spell on the stack, a tile's top card and a card in a hand drawn as an icon have no element to copy, so one is made
       ghost = standIn(model, key);
       const h = start.height, w = Math.min(start.width, h * CARD_ASPECT);
       was = { rect: start, ghost, size: { w, h } };
@@ -245,10 +245,10 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
         land(key);
         continue;
       } else {
-        // A permanent destroyed or exiled is unmade where it stood; the tile's picture of it waits until it has gone
+        // A destroyed or exiled permanent is unmade in place. The tile's picture of it stays hidden until it is gone
         const leaving = move.from?.zone === 'Battlefield' && (move.to?.zone === 'Graveyard' || move.to?.zone === 'Exile')
           ? unmake(ghost, start, was.size, !!was.tapped, move.to.zone) : 0;
-        // A card landing on a zone tile ends on the tile's picture, which is held back until it arrives
+        // A card landing on a zone tile ends on the tile's picture, which stays hidden until the card arrives
         if (tile) holdTile(key, leaving ? leaving - FLIGHT_MS : 0);
         unmaking = Math.max(unmaking, leaving);
         if (!leaving) sendTo({ ...was, rect: start }, target ?? start, tile ? 1 : target ? 0.25 : 0);
@@ -258,17 +258,17 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     swell(onto, arrives, landings);
     land(key);
   }
-  // A hand that leaves as another is dealt (a mulligan) has gone before the first new card sets off, and both go quicker
+  // In a mulligan the old hand leaves before the first new card starts. Both hands move faster
   const swap = dealt.length > 0 && leavingHand.length > 0;
   const ms = swap ? SWAP_MS : FLIGHT_MS;
   const apart = swap ? SWAP_STAGGER_MS : STAGGER_MS;
   const afterLeaving = swap ? (leavingHand.length - 1) * apart + ms : 0;
-  // Cards drawn together land from left to right, wherever the hand's sort puts each one
+  // Cards drawn together land from left to right, in the order the hand's sort puts them
   dealt.sort((a, b) => restingRect(a.el).left - restingRect(b.el).left).forEach(({ el, start }, i) =>
     fly(el, start, ms, afterLeaving + i * apart));
-  // The host's draw sound is heard as the first card sets off; each card after it makes its own as it follows
+  // The host's draw sound plays as the first card starts. Each later card plays its own sound when it starts
   echoSound('draw', dealt.slice(swap ? 0 : 1).map((_, i) => afterLeaving + (swap ? i : i + 1) * apart));
-  // Cards leaving the hand together (a mulligan, a discard) go one after another from the right, as a deal arrives
+  // Cards leaving the hand together (a mulligan, a discard) go one after another from the right, the way a deal arrives
   leavingHand.sort((a, b) => b.was.rect.left - a.was.rect.left).forEach(({ was, target, tile, key, onto }, i) => {
     swell(onto, i * apart + ms, landings);
     if (tile) holdTile(key, i * apart);
@@ -288,13 +288,13 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   layOutPiles();
 }
 
-/** Slides cards that changed place on the battlefield with no event from the game, once any card being unmade there has gone. */
+/** Slides cards that changed place on the battlefield without a game event. It waits until any card being unmade there is gone. */
 function shiftBoard(travelled: Set<string>, wait: number): void {
-  // Only a change in what the rows hold slides cards, or a resize would make every card on the table drift
+  // Only a change in what the rows hold slides cards. Otherwise a resize would make every card on the table slide
   if (boardShape() === lastShape) {
     return;
   }
-  // A card folded into a pile slides onto the pile's top card, and the pile is held as it was before anything is measured
+  // A card folded into a pile slides onto the pile's top card. The pile is drawn in its old shape and then opens
   const joining: { was: Snapshot; top: HTMLElement }[] = [];
   const newcomers = new Set<string>();
   for (const { keys, top } of pileSlots()) {
@@ -304,21 +304,21 @@ function shiftBoard(travelled: Set<string>, wait: number): void {
         joining.push({ was, top });
       }
     }
-    // When the pile's top is the card that just joined, the pile stays put and a copy of that card flies in
+    // When the pile's top card is the one that just joined, the pile stays in place and a copy of that card flies in
     const topKey = top.dataset.key as string;
     const topWas = lastSeen.get(topKey);
-    // Compared with a card that was already in the pile, not one arriving this frame, which set off from elsewhere
+    // Compare with a card that was already in the pile. A card arriving this frame started from somewhere else
     const stayed = keys.filter(k => k !== topKey && !travelled.has(k)).map(k => lastSeen.get(k)).find(s => s);
     if (topWas && stayed && !travelled.has(topKey) && !intoHint.has(topKey) && apart(topWas.rect, stayed.rect)) {
       joining.push({ was: topWas, top });
       newcomers.add(topKey);
-      // Its own turn (a tap) would play at the pile while the copy is still on its way, so it is settled at once
+      // Its own transition (a tap) would play at the pile while the copy is still flying, so it is finished at once
       for (const a of top.getAnimations()) {
         if (a instanceof CSSTransition) a.finish();
       }
     }
   }
-  // Measured before the piles are put back to their old shape, which is where each will be once it has opened
+  // Measure before the piles are reset to their old shape. This is where each top card will be once its pile has opened
   const tops = joining.map(({ top }) => top.getBoundingClientRect());
   for (const { top } of joining) openPile(top);
   slide(document.querySelectorAll<HTMLElement>(BOARD_CARDS), new Set([...travelled, ...newcomers]), SHIFT_MS, wait);
@@ -330,7 +330,7 @@ function apart(a: DOMRect, b: DOMRect): boolean {
   return Math.hypot(a.left + a.width / 2 - b.left - b.width / 2, a.top + a.height / 2 - b.top - b.height / 2) > 4;
 }
 
-/** Cards left in an open zone, as one is picked from a search, slide into the gap rather than jumping. */
+/** Cards left in an open zone, such as after one is picked in a search, slide into the gap instead of jumping. */
 function shiftZones(travelled: Set<string>): void {
   if (zonesShape() === lastZones) {
     return;
@@ -353,16 +353,16 @@ function slide(cards: Iterable<HTMLElement>, travelled: Set<string>, duration = 
     if (!was?.laid || travelled.has(key) || fromHint.has(key)) {
       continue;
     }
-    // Compared as laid out, since a transform still under way (an attacker stepping forward) is not a move
+    // Compare layout positions, because a transform in progress (an attacker stepping forward) is not a move
     const laid = laidCentre(el);
-    // A card redrawn as a new element starts from where the old one was showing mid-slide, not where it would have rested
+    // A card redrawn as a new element starts where the old element was shown mid-slide, not at its resting place
     const carried = was.ghost !== el ? was.drift : undefined;
     const dx = was.laid.x + (carried?.x ?? 0) - laid.x;
     const dy = was.laid.y + (carried?.y ?? 0) - laid.y;
     if (Math.abs(dx) + Math.abs(dy) > 2) {
-      // Measured mid-slide the card is still near where it came from, which a flight would set off from
+      // During the slide the card measures near its old place, so its resting place is stored for any later flight
       resting.set(key, restingRect(el));
-      // On translate, because animating transform would override the transition that turns a card as it taps
+      // Animate translate, because animating transform would override the transition that rotates a card as it taps
       el.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0px 0px' }],
         { duration, delay, easing: EASE, composite: 'add', fill: 'backwards' });
     }
@@ -372,20 +372,20 @@ function slide(cards: Iterable<HTMLElement>, travelled: Set<string>, duration = 
   }
 }
 
-/** How long a redrawn card takes to turn or resize from how its old element looked; a little longer than a tap's turn. */
+/** How long a redrawn card takes to rotate or resize from its old element's look. It is a little longer than a tap's rotation. */
 const MORPH_MS = 220;
 
-/** Starts a card redrawn as a new element from the old element's turn and size, since it has no earlier look to transition from. */
+/** Starts a card redrawn as a new element from the old element's rotation and size. The new element has no earlier state to transition from. */
 function morph(el: HTMLElement, wasTapped: boolean, oldSize: { w: number; h: number } | undefined): void {
   const isTapped = el.classList.contains('tapped');
   const turn = (wasTapped ? 90 : 0) - (isTapped ? 90 : 0);
-  // A tapped card is also drawn at nine tenths its size
+  // A tapped card is also drawn at nine tenths of its size
   const size = (oldSize?.w && el.offsetWidth ? oldSize.w / el.offsetWidth : 1) * (wasTapped ? .9 : 1) / (isTapped ? .9 : 1);
   if (!turn && Math.abs(size - 1) < 0.02) return;
   el.animate([{ rotate: `${turn}deg`, scale: String(size) }, { rotate: '0deg', scale: '1' }], { duration: MORPH_MS, easing: EASE });
 }
 
-/** A card playable from another zone joins the hand strip with no move event, so it flies out of that zone's tile. */
+/** A card playable from another zone joins the hand strip without a move event. So it flies out of that zone's tile. */
 function arriveElsewhere(travelled: Set<string>): void {
   if (!lastSeen.size) {
     return;
@@ -403,7 +403,7 @@ function arriveElsewhere(travelled: Set<string>): void {
   }
 }
 
-/** Where the page's layout puts an element's centre; offsets, unlike a bounding box, leave out every transform. */
+/** Where the page layout puts an element's centre. Offsets ignore every transform, but a bounding box does not. */
 function laidCentre(el: HTMLElement): { x: number; y: number } {
   let x = el.offsetWidth / 2;
   let y = el.offsetHeight / 2;
@@ -414,10 +414,10 @@ function laidCentre(el: HTMLElement): { x: number; y: number } {
   return { x, y };
 }
 
-/** A card's journey this frame: where it set off, where it ended, and where it turned back if it came home. */
+/** A card's trip this frame: where it started, where it ended, and the zone where it turned back if it came back. */
 type Journey = CardMoved & { via?: Place };
 
-/** Each card's first origin and last destination this frame, with the zone it turned back in if it went out and came home. */
+/** Each card's first origin and last destination this frame. It also has the zone where the card turned back if it left and came back. */
 export function journeys(events: readonly GameEvent[]): Map<string, Journey> {
   const out = new Map<string, Journey>();
   for (const e of events) {
@@ -436,7 +436,7 @@ export function journeys(events: readonly GameEvent[]): Map<string, Journey> {
   return out;
 }
 
-// Forge undoes a cancelled cast without an event, so a waiting card drawn in a zone again flies home from beside the stack
+// Forge undoes a cancelled cast without an event. So a waiting card that is drawn in a zone again flies back from beside the stack
 function settleWaiting(paying: boolean): void {
   for (const [key, held] of waiting) {
     const arrived = stackItemFor(key) ?? cardElement(key);
@@ -450,7 +450,7 @@ function settleWaiting(paying: boolean): void {
   }
 }
 
-/** Where a waiting spell is drawn now, which is short of its waiting place while it is still on its way there. */
+/** Where a waiting spell is drawn now. While it is still flying, this is short of its waiting place. */
 function whereNow(held: Waiting): DOMRect {
   if (held.ghost?.isConnected) {
     return held.ghost.getBoundingClientRect();
@@ -459,14 +459,14 @@ function whereNow(held: Waiting): DOMRect {
   if (!held.from || t >= 1) {
     return held.rect;
   }
-  // The flight eases out, so it is most of the way there early on
+  // The flight eases out, so it covers most of the distance early
   const p = 1 - (1 - t) ** 3;
   const mix = (a: number, b: number) => a + (b - a) * p;
   return new DOMRect(mix(held.from.left, held.rect.left), mix(held.from.top, held.rect.top),
     mix(held.from.width, held.rect.width), mix(held.from.height, held.rect.height));
 }
 
-// Opening or closing a pile is the player's doing, not the game's, so it is animated from the hints it left
+// The player opens or closes a pile, not the game. So it is animated from the hints stored by spreadFrom and mergeInto
 function layOutPiles(): void {
   for (const [key, from] of fromHint) {
     const el = cardElement(key);
@@ -497,7 +497,7 @@ export function cardElement(key: string): HTMLElement | null {
     + `#hand .card[data-key="${key}"], #zones .card[data-key="${key}"]`);
 }
 
-// A stack item is keyed by the item, not the card, so the card's own key comes off its picture
+// A stack item is keyed by the item, not the card, so the card's key is read from its picture
 function stackItemFor(key: string): HTMLElement | null {
   return stackItems().find(el => el.querySelector('img')?.dataset.key === key) ?? null;
 }
@@ -516,7 +516,7 @@ export function pileTopFor(key: string): HTMLElement | null {
   return null;
 }
 
-/** A face-down card in its owner's sleeve, to stand in for a card no one can see. */
+/** A face-down card in its owner's sleeve. It is used for a card that no one can see. */
 function cardBack(model: Model, key: string): HTMLElement {
   const card = model.objects.get(Number(key)) as CardView | undefined;
   const owner = card?.Owner ? model.objects.get(card.Owner.ref) as PlayerView | undefined : undefined;
@@ -525,7 +525,7 @@ function cardBack(model: Model, key: string): HTMLElement {
   return back;
 }
 
-/** Opens a pile out from its old depth and room while the card joining it is on its way, so nothing moves once it lands (board.css). */
+/** Opens a pile from its old depth and width while the joining card flies, so nothing moves once it lands (board.css). */
 function openPile(top: HTMLElement): void {
   const slot = top.closest<HTMLElement>('.slot');
   if (!slot) return;
@@ -535,7 +535,7 @@ function openPile(top: HTMLElement): void {
   top.dataset.heldDepth = String(was);
   slot.style.setProperty('--held-behind', String(was));
   slot.classList.add('holding');
-  // Laid out once as it was, so the room and the new edge ease out from there
+  // Lay it out once in the old shape, so the width and the new edge animate from there
   void slot.offsetWidth;
   delete top.dataset.heldDepth;
   slot.classList.replace('holding', 'opening');
@@ -546,18 +546,18 @@ function openPile(top: HTMLElement): void {
   }, 300);
 }
 
-/** Keeps a pile's count at what it was until the copy joining it arrives, then shows the new one. */
+/** Hides a pile's count until the copy joining it arrives, then shows the new count. */
 function holdCount(el: HTMLElement, duration: number): void {
   el.querySelector<HTMLElement>('.count')?.animate([{ opacity: 0 }, { opacity: 0, offset: 0.9 }, { opacity: 1 }], { duration, easing: 'linear' });
 }
 
-/** Keeps a zone tile's picture of a card hidden until the copy flying to it arrives, rather than showing it at once. */
+/** Keeps a zone tile's picture of a card hidden until the copy flying to it arrives. */
 function holdTile(key: string | undefined, delay: number): void {
   const img = key ? document.querySelector<HTMLElement>(`.zone-tile img[data-key="${key}"]`) : null;
   img?.animate([{ opacity: 0 }, { opacity: 0, offset: 0.92 }, { opacity: 1 }], { duration: FLIGHT_MS + delay, easing: 'linear' });
 }
 
-/** The zone tile a card has come to rest on. A card that went anywhere else has none, nor has a token, which is gone by now. */
+/** The zone tile a card has landed on. A card that went anywhere else has none. A token has none either, because it no longer exists. */
 function landedTile(model: Model, key: string, to: Place | undefined): HTMLElement | null {
   const card = model.objects.get(Number(key)) as CardView | undefined;
   if (!to?.player || card?.Zone !== to.zone) {
@@ -566,7 +566,7 @@ function landedTile(model: Model, key: string, to: Place | undefined): HTMLEleme
   return document.querySelector<HTMLElement>(`.seat[data-player="${to.player.ref}"] .zone-tile[data-zone="${to.zone}"]`);
 }
 
-/** Swells a zone tile once as a card lands on it, however many land together. */
+/** Swells a zone tile once when a card lands on it, however many cards land together. */
 function swell(tile: HTMLElement | null | undefined, delay: number, landings: Map<HTMLElement, { cards: number; at: number }>): void {
   if (!tile) {
     return;
@@ -580,7 +580,7 @@ function swell(tile: HTMLElement | null | undefined, delay: number, landings: Ma
   tile.animate([{ scale: '1' }, { scale: '1.12', filter: 'brightness(1.5)', offset: 0.35 }, { scale: '1' }], { duration: 480, delay, easing: EASE });
 }
 
-/** Keeps a tile's count short of the cards still on their way to it, until the first of each batch lands, as its picture is kept. */
+/** Leaves the cards still flying to a tile out of its count until the first card of the batch lands. The tile's picture is held back the same way. */
 function holdCounts(landings: Map<HTMLElement, { cards: number; at: number }>): void {
   for (const [tile, { cards, at }] of landings) {
     if (!at || tile.dataset.count === undefined) continue;
@@ -593,7 +593,7 @@ function holdCounts(landings: Map<HTMLElement, { cards: number; at: number }>): 
   }
 }
 
-/** Writes a zone tile's count, less any cards that have not landed on it yet. The board is redrawn many times while one is in flight. */
+/** Writes a zone tile's count, minus any cards that have not landed on it yet. The board is redrawn many times during one flight. */
 export function showCount(tile: HTMLElement): void {
   const count = tile.querySelector<HTMLElement>('.zone-count');
   if (count) count.textContent = String(Math.max(0, Number(tile.dataset.count ?? 0) - Number(tile.dataset.pending ?? 0)));
@@ -601,7 +601,7 @@ export function showCount(tile: HTMLElement): void {
 
 /** Spells that failed on the stack this frame, by card key (stack.ts). */
 const fizzled = new Set<string>();
-/** How long a spell that failed takes to come apart on the stack. */
+/** How long a spell that failed takes to break apart on the stack. */
 export const FIZZLE_MS = 520;
 /** A card's width over its height. */
 const CARD_ASPECT = 5 / 7;
@@ -610,7 +610,7 @@ export function noteFizzled(key: string): void {
   fizzled.add(key);
 }
 
-/** A card made to make a trip nothing on the page can be copied for: its picture if the viewer may see it, or its back. */
+/** A card element made for a trip when nothing on the page can be copied. It shows the card's picture if the viewer may see it, or else its back. */
 function standIn(model: Model, key: string): HTMLElement {
   const card = model.objects.get(Number(key)) as CardView | undefined;
   const src = lastPicture(Number(key))?.src || (card ? cardImageSrc(model, card) : '');
@@ -625,7 +625,7 @@ function standIn(model: Model, key: string): HTMLElement {
   return el;
 }
 
-/** A library is seen to be shuffled: its tile shakes from side to side. */
+/** Shakes a library's tile from side to side when the library is shuffled. */
 function riffle(player: number): void {
   document.querySelector(`.seat[data-player="${player}"] .zone-tile[data-zone="Library"]`)?.animate([
     { translate: '0 0', rotate: '0deg' }, { translate: '-4px 0', rotate: '-3deg', offset: 0.2 }, { translate: '4px 0', rotate: '3deg', offset: 0.45 },
@@ -633,21 +633,21 @@ function riffle(player: number): void {
   ], { duration: 380, easing: 'ease-in-out' });
 }
 
-// A face-down top card is not drawn on its tile, and its hidden picture measures nothing
+// A face-down top card is not drawn on its tile, and its hidden picture has zero size
 function tileImageRect(key: string): DOMRect | null {
   const img = document.querySelector(`.zone-tile img[data-key="${key}"]`);
   const rect = img?.getBoundingClientRect();
   return rect?.width ? rect : null;
 }
 
-/** The icon standing for another player's hand, if that is what the hand is drawn as. */
+/** The icon that shows another player's hand, if the hand is drawn as an icon. */
 function handFanOf(place: Place): HTMLElement | null {
   const seat = place.player ? document.querySelector<HTMLElement>(`.seat[data-player="${place.player.ref}"]`) : null;
   const fan = seat && seat.id !== 'me' ? seat.querySelector<HTMLElement>('.hand-fan') : null;
   return fan && !fan.hidden ? fan : null;
 }
 
-/** Roughly where a zone is drawn, for a card with no element of its own at one end of its trip. */
+/** Roughly where a zone is drawn. It is used for a card that has no element at one end of its trip. */
 function placeRect(place: Place | undefined): DOMRect | null {
   if (!place) {
     return null;
@@ -663,21 +663,21 @@ function placeRect(place: Place | undefined): DOMRect | null {
       return stack && !stack.hidden ? stack.getBoundingClientRect() : null;
     }
     case 'Hand':
-      // Your own hand is laid out along the bottom; everyone else's is the fan of backs under their name
+      // Your own hand is laid out along the bottom. Every other hand is the fan of card backs under the player's name
       return seat?.id === 'me' ? rectOf(document.getElementById('hand')) : rectOf(seat?.querySelector('.hand-fan'));
     case 'Battlefield':
       return rectOf(seat?.querySelector('.battlefield'));
     case 'Command':
-      // A commander has its tile among the zones; the rest of the command zone sits by the portrait
+      // A commander has its own tile among the zones. The rest of the command zone is shown by the portrait
       return rectOf(seat?.querySelector('.zone-tile[data-zone="Command"]')) ?? rectOf(seat?.querySelector('.emblems'));
     default:
       return rectOf(seat?.querySelector(`.zone-tile[data-zone="${place.zone}"]`));
   }
 }
 
-/** The keys a pile is holding behind its top card. They have no element, and they have not gone anywhere. */
+/** The keys of the cards a pile holds behind its top card. They have no element, but they have not moved. */
 let covered = new Set<string>();
-/** The cards drawn last frame with an element of their own, rather than folded into a pile. */
+/** The cards drawn last frame with their own element, not folded into a pile. */
 const ownPlace = new Set<string>();
 
 function notePiles(): void {
@@ -702,9 +702,9 @@ function pileSlots(): { keys: string[]; top: HTMLElement }[] {
   return out;
 }
 
-/** The battlefields' slots in order, each with the cards it holds, which changes only when a row's contents do. */
+/** The battlefields' slots in order, each with its cards. The result changes only when what a row holds changes. */
 function boardShape(): string {
-  // A zone switching between one line and two moves its cards as much as a card coming or going
+  // A zone that switches between one line and two moves its cards as much as a card arriving or leaving
   const lines = [...document.querySelectorAll<HTMLElement>('.battlefield .group')].map(g => g.dataset.lines ?? '').join('');
   return lines + '#' + [...document.querySelectorAll<HTMLElement>('#me .battlefield .slot, #opponent .battlefield .slot')]
     .map(slot => `${slot.dataset.members ?? ''}:${[...slot.querySelectorAll<HTMLElement>('.card')].map(c => c.dataset.key).join('+')}`)
@@ -718,12 +718,12 @@ let lastHand = '';
 let lastZones = '';
 const zonesShape = () => [...document.querySelectorAll<HTMLElement>(ZONE_CARDS)].map(c => c.dataset.key).join(',');
 
-/** Where a hovered hand card rests, worked out from its resting transform (hand.css) because setting it would cut short a rise. */
+/** Where a hovered hand card rests. It is computed from the resting transform (hand.css), because setting that transform would cut the hover rise short. */
 function unhovered(el: HTMLElement): DOMRect {
   const style = getComputedStyle(el);
   const [ox, oy] = style.transformOrigin.split(' ').map(parseFloat);
   const w = el.offsetWidth, h = el.offsetHeight;
-  // The box the card's corners reach under a transform, measured from its transform origin
+  // The box that holds the card's corners under a transform, measured from its transform origin
   const reach = (m: DOMMatrix) => {
     const corners = [[0, 0], [w, 0], [0, h], [w, h]].map(([x, y]) => m.transformPoint(new DOMPoint(x - ox, y - oy)));
     const xs = corners.map(p => p.x), ys = corners.map(p => p.y);
@@ -738,7 +738,7 @@ function unhovered(el: HTMLElement): DOMRect {
   return new DOMRect(x + rest.left, y + rest.top, rest.right - rest.left, rest.bottom - rest.top);
 }
 
-/** Remembers where every card stands now, for the moves the next frame brings. */
+/** Records where every card is now, for the moves in the next frame. */
 function note(): void {
   lastShape = boardShape();
   lastHand = handShape();
@@ -746,7 +746,7 @@ function note(): void {
   lastSeen.clear();
   ownPlace.clear();
   for (const el of document.querySelectorAll<HTMLElement>(CARDS)) {
-    // The element itself: one that leaves the page is dropped, never reused, so it keeps this frame's look for a ghost
+    // Store the element itself. An element that leaves the page is never reused, so it keeps this frame's look for a ghost
     const rest = el.matches('#hand .card:hover') ? unhovered(el) : restingRect(el);
     const now = moving(el) ? el.getBoundingClientRect() : rest;
     lastSeen.set(el.dataset.key as string, {
@@ -761,7 +761,7 @@ function note(): void {
       lastSeen.set(key, { rect: el.getBoundingClientRect(), ghost: null });
     }
   }
-  // The top of a zone tile, such as a commander waiting in its tile, sets off from its picture there
+  // The top card of a zone tile, such as a commander in its tile, starts from its picture there
   for (const img of document.querySelectorAll<HTMLElement>('.zone-tile img[data-key]:not([hidden])')) {
     const key = img.dataset.key as string;
     const rect = img.getBoundingClientRect();
@@ -769,7 +769,7 @@ function note(): void {
       lastSeen.set(key, { rect, ghost: null });
     }
   }
-  // A copy folded into a pile stands where the pile's top card stands, so it leaves from there if it leaves
+  // A copy folded into a pile is at the pile's top card, so if it leaves, it leaves from there
   for (const { keys, top } of pileSlots()) {
     const shown = lastSeen.get(top.dataset.key as string);
     for (const key of keys) {
@@ -780,7 +780,7 @@ function note(): void {
   }
 }
 
-// A spell waits beside the stack, where it is about to go, rather than over the cards on the table
+// A spell waits beside the stack, where it is about to go, instead of over the cards on the table
 function waitingSpot(rect: DOMRect): DOMRect {
   const stack = document.getElementById('stack');
   const panel = stack && !stack.hidden ? stack.getBoundingClientRect() : null;
@@ -795,13 +795,13 @@ function waitingSpot(rect: DOMRect): DOMRect {
 function hold(key: string, from: DOMRect, seen: Snapshot | null): void {
   const spot = waitingSpot(from);
   if (!seen?.ghost) {
-    // Nothing to show waiting (an opponent's card), but its item still flies in from where it came
+    // Nothing is shown while it waits (an opponent's card), but its item still flies in from where the card was
     waiting.set(key, { rect: from, ghost: null, since: Date.now() });
     return;
   }
   const shown = place(seen.ghost, from, seen.size);
   shown.classList.add('paying');
-  // A card waiting to be paid for is still a card you want to read, so it answers the pointer
+  // The player may still want to read a card waiting to be paid for, so it takes pointer events
   shown.style.pointerEvents = 'auto';
   hoverable(shown, shown.querySelector('img') ?? shown);
   shown.animate([
@@ -816,9 +816,9 @@ function land(key: string): void {
   waiting.delete(key);
 }
 
-/** A copy of a card at its laid-out size, centred where the card was seen, so a tapped card's copy is turned and not squeezed. */
+/** A copy of a card at its layout size, centred where the card was. So a tapped card's copy is rotated, not squeezed. */
 function place(from: HTMLElement, rect: DOMRect, size?: { w: number; h: number }): HTMLElement {
-  // Copied only now, when a ghost is actually shown, rather than for every card on every frame
+  // Copy the element only when a ghost is shown, not for every card on every frame
   const ghost = from.cloneNode(true) as HTMLElement;
   const w = size?.w || rect.width;
   const h = size?.h || rect.height;
@@ -830,7 +830,7 @@ function place(from: HTMLElement, rect: DOMRect, size?: { w: number; h: number }
   return ghost;
 }
 
-/** The shift that centres a scaled element on a place, measured with the scale applied since cards grow about different points. */
+/** The shift that centres a scaled element on a place. It is measured with the scale applied, because cards scale about different origins. */
 function shiftTo(el: HTMLElement, scale: number, to: DOMRect): string {
   el.style.scale = String(scale);
   const now = el.getBoundingClientRect();
@@ -838,7 +838,7 @@ function shiftTo(el: HTMLElement, scale: number, to: DOMRect): string {
   return `${to.left + to.width / 2 - (now.left + now.width / 2)}px ${to.top + to.height / 2 - (now.top + now.height / 2)}px`;
 }
 
-// Scale is its own property, so the card's own transform (a tap's turn, a tilt in hand) stays as it is
+// Scale is a separate property, so the card's own transform (a tap's rotation, a tilt in hand) does not change
 function pop(el: HTMLElement): void {
   el.animate([
     { scale: '.7', opacity: 0 },
@@ -859,28 +859,28 @@ function fly(el: HTMLElement, from: DOMRect, duration: number, delay: number): v
   }
   const scale = from.width / to.width;
   const start = { translate: shiftTo(el, scale, from), scale: String(scale) };
-  // A card waiting its turn in a deal is not shown until it sets off; it appears where it starts as it leaves
+  // A card that waits its turn in a deal is hidden until its flight starts. It then appears at its start point
   const flight = el.animate([
     ...(delay ? [{ ...start, opacity: 0 }, { ...start, opacity: 1, offset: 0.001 }] : [{ ...start, opacity: 1 }]),
     { translate: '0px 0px', scale: '1', opacity: 1 },
   ], { duration, delay, easing: EASE, fill: 'backwards' });
   flight.id = FLIGHT;
-  // A ring marks a card where it rests, so a card in the air wears none until it lands (board.css)
+  // A ring marks a card at rest, so a card in flight has no ring until it lands (board.css)
   el.classList.add('landing');
   const landed = () => { if (!el.getAnimations().some(a => a.id === FLIGHT)) el.classList.remove('landing'); };
   flight.finished.then(landed, landed);
 }
 
-// A copy of the card makes the trip, so the card's own element, where it still has one, stays put
+// A copy of the card makes the trip, so the card's own element, if it still has one, does not move
 function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0, onto?: HTMLElement, duration = FLIGHT_MS): void {
   if (!was.ghost) {
     return;
   }
   const ghost = place(was.ghost, was.rect, was.size);
-  // One card makes the trip, looking as it did when it set off, even when it was the top of a pile
+  // A single card makes the trip and looks as it did when it started, even if it was the top of a pile
   ghost.classList.remove('pile');
   if (was.tapped !== undefined) ghost.classList.toggle('tapped', was.tapped);
-  // A copy joining a pile turned the other way turns as it goes, so its scale is measured along the card
+  // A copy joining a pile that is rotated the other way rotates as it flies, so its scale is measured along the card
   const tapped = (el: HTMLElement) => el.classList.contains('tapped');
   const turn = onto ? Number(tapped(onto)) - Number(tapped(ghost)) : 0;
   const along = (el: HTMLElement) => el.offsetWidth * (tapped(el) ? TAPPED_SCALE : 1);
@@ -888,6 +888,6 @@ function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0, o
   ghost.animate([
     { translate: '0px 0px', scale: '1', rotate: '0deg', opacity: 1 },
     { translate: shiftTo(ghost, scale, target), scale: String(scale), rotate: `${turn * 90}deg`, opacity: endOpacity },
-  // A copy joining a pile on the board slows as it lands; one swallowed by a tile or a hand speeds into it
+  // A copy joining a pile on the board slows as it lands. A copy going into a tile or a hand speeds up at the end
   ], { duration, delay, easing: onto ? EASE : 'cubic-bezier(.4,0,.8,.4)', fill: 'backwards' }).finished.then(() => ghost.remove(), () => ghost.remove());
 }

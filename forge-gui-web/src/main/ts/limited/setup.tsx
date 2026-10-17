@@ -1,4 +1,4 @@
-// Desktop asks the same questions as a chain of dialogs, and here as there the answers decide which questions are asked
+// Desktop asks the same questions as a chain of dialogs. Here, as on desktop, the answers decide which questions come next
 
 import { useState } from 'preact/hooks';
 import type { LimitedOptions, SealedBlock } from '../protocol';
@@ -16,7 +16,7 @@ export interface SealedValue {
   name?: string;
 }
 
-/** The sealed products desktop offers, with a line each; LimitedPoolType's names are the ids. */
+/** The sealed products desktop offers, each with a one-line description. The ids are LimitedPoolType's names. */
 const PRODUCTS: [string, TextKey, TextKey][] = [
   ['Full', 'lblLimitedPoolFull', 'lblWebSetupProductFullLine'],
   ['Block', 'lblBlock', 'lblWebSetupProductBlockLine'],
@@ -38,7 +38,7 @@ function blockOf(options: LimitedOptions, v: SealedValue): SealedBlock | undefin
   return blocksFor(options, v.product).find(b => b.name === v.block);
 }
 
-/** Choosing a block: a block with one set combination has it filled in, since there is nothing to ask. */
+/** Sets the chosen block. A block with only one set combination gets it filled in, because there is nothing to ask. */
 function sealedBlockChoice(options: LimitedOptions, product: string, name: string): Partial<SealedValue> {
   const combos = blocksFor(options, product).find(b => b.name === name)?.combos ?? [];
   return combos.length === 1 ? { block: name, combo: combos[0] } : { block: name };
@@ -119,7 +119,7 @@ export function sealedSentence(options: LimitedOptions, v: SealedValue): string 
   }
 }
 
-/** How many packs a sealed pool opens, where the form asks; a CubeCobra pool opens one more than it asks for. */
+/** How many packs a sealed pool opens, for products where the form asks. A CubeCobra pool opens one more than the number asked for. */
 function packCount(v: SealedValue): number | undefined {
   return hasPackCount(v) && v.packs !== undefined ? v.packs + (v.product === 'Import' ? 1 : 0) : undefined;
 }
@@ -140,7 +140,7 @@ function sealedPacks(v: SealedValue): string | null {
   return n === undefined ? null : String(n);
 }
 
-/** The offline sealed event beside its questions. Desktop builds seven opponents from the same packs. */
+/** The summary of the offline sealed event, shown beside its questions. Desktop builds seven opponents from the same packs. */
 export function sealedTicket(options: LimitedOptions): Ticket<SealedValue> {
   return {
     title: t('lblSealed'),
@@ -155,7 +155,7 @@ export function sealedTicket(options: LimitedOptions): Ticket<SealedValue> {
   };
 }
 
-/** What opening the pool says it does: the number of packs when the form asked for it. */
+/** The label of the button that opens the pool. It gives the number of packs when the form asked for it. */
 export function sealedAction(v: SealedValue): string {
   const n = packCount(v);
   return n ? t('lblWebSetupOpenNPacks', n) : v.product === 'Prerelease' ? t('lblWebSetupOpenKit') : t('lblWebSetupOpenPacks');
@@ -178,29 +178,29 @@ export interface DraftValue {
   grace?: number;
 }
 
-/** An online draft's table: how many players are seated, which the pod can never be smaller than. */
+/** An online draft's table: how many players are seated. The pod can never be smaller than this. */
 interface DraftTable {
   seated: number;
 }
 
-/** The pod sizes on offer: from the players seated, and never under two, up to eight. */
+/** The pod sizes on offer: from the number of players seated, but at least two, up to eight. */
 function podChoices(seated: number): number[] {
   const out: number[] = [];
   for (let n = Math.max(2, seated); n <= 8; n++) out.push(n);
   return out;
 }
 
-/** Where the seats start: the product's own pod, raised to the players seated, as desktop's pod choice starts. */
+/** The starting pod size: the product's own pod, raised to the number of players seated, as on desktop. */
 function podStart(recommended: number, seated: number): number {
   return Math.min(8, Math.max(recommended, Math.max(2, seated)));
 }
 
-/** The pod a product drafts at: a single-set block's own, and a full pod of eight for everything else. */
+/** The pod a product drafts at: a single-set block's recommended pod, or a full pod of eight for everything else. */
 function productPod(options: LimitedOptions, v: DraftValue): number {
   return (v.product === 'Block' || v.product === 'FantasyBlock') ? draftBlockOf(options, v)?.podSize ?? 8 : 8;
 }
 
-/** Each pick rule's name, and the same in the middle of a line. */
+/** Each pick rule's name, on its own and in the form used in the middle of a line. */
 const PICK_RULES: [string, TextKey, TextKey][] = [
   ['NEVER', 'lblWebSetupPickOne', 'lblWebSetupPickOneInline'],
   ['FIRST_PICK', 'lblWebSetupPickFirstTwo', 'lblWebSetupPickFirstTwoInline'],
@@ -210,7 +210,7 @@ const TIMERS = [0, 30, 45, 60, 90];
 const GRACES = [0, 60, 120, 300];
 const seconds = (n: number, none: string) => (n === 0 ? none : t('lblWebEventSeconds', n));
 
-/** The draft products desktop offers; LimitedPoolType's names are the ids. */
+/** The draft products desktop offers. The ids are LimitedPoolType's names. */
 const DRAFT_PRODUCTS: [string, TextKey, TextKey][] = [
   ['Full', 'lblLimitedPoolFull', 'lblWebSetupDraftFullLine'],
   ['Block', 'lblBlock', 'lblWebSetupProductBlockLine'],
@@ -228,18 +228,18 @@ const draftProductName = (id?: string) => {
 const draftBlocksFor = (options: LimitedOptions, product?: string) => product === 'FantasyBlock' ? options.draftFantasyBlocks : options.draftBlocks;
 const draftBlockOf = (options: LimitedOptions, v: DraftValue) => draftBlocksFor(options, v.product).find(b => b.name === v.block);
 
-/** Choosing a block to draft: a single-set block needs no more questions, since there is nothing to choose. */
+/** Sets the chosen block to draft. A single-set block gets its set filled in, because there is nothing to choose. */
 function draftBlockChoice(options: LimitedOptions, product: string, name: string): Partial<DraftValue> {
   const sets = draftBlocksFor(options, product).find(b => b.name === name)?.sets ?? [];
   return sets.length === 1 ? { block: name, combo: sets[0] } : { block: name };
 }
 
-/** The packs' sets as the server takes them: "A/B/C", or a single set's code. */
+/** The packs' sets in the form the server expects: "A/B/C", or a single set's code. */
 export function draftCombo(v: DraftValue): string | undefined {
   return v.combo ?? v.packs?.join('/');
 }
 
-/** The draft's questions; an online draft adds the table rules desktop's host sets before dealing. */
+/** The draft's questions. An online draft adds the table rules that desktop's host sets before dealing. */
 export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<DraftValue>[] {
   const isBlock = (v: DraftValue) => (v.product === 'Block' || v.product === 'FantasyBlock') && !!v.block;
   return [
@@ -305,13 +305,13 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
   ];
 }
 
-/** A pick rule's name, as the form and the event panel say it: on its own, or in the middle of a line. */
+/** A pick rule's name as the form and the event panel show it, either on its own or for the middle of a line. */
 export function pickRuleName(rule?: string, inline = false): string {
   const names = PICK_RULES.find(p => p[0] === rule) ?? PICK_RULES[0];
   return t(inline ? names[2] : names[1]);
 }
 
-/** The table rules as the folded step and the event panel say them. */
+/** The table rules as one line, shown on the folded step. */
 function rulesLine(v: DraftValue): string {
   const picks = pickRuleName(v.pickRule, true);
   return t('lblWebSetupRulesLine', v.podSize ?? 0, picks, v.timer ? t('lblWebSetupSecondsToPick', v.timer) : t('lblWebEventNoPickTimer'));
@@ -381,7 +381,7 @@ function draftProduct(v: DraftValue): string | null {
   }
 }
 
-/** The offline draft beside its questions: seven computers draft beside you, and their decks are your opponents. */
+/** The summary of the offline draft, shown beside its questions. Seven computers draft with you, and their decks are your opponents. */
 export function draftTicket(): Ticket<DraftValue> {
   return {
     title: t('lblBoosterDraft'),

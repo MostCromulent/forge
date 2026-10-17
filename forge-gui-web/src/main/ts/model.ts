@@ -1,4 +1,4 @@
-// The browser's copy of the game, which server messages change here and everything on the page is drawn from
+// The browser's copy of the game. Server messages update it here, and everything on the page is drawn from it
 
 import type { EventKind, Screen, CardPoolDetails, CardPoolGroup, DeckGenOptions, LimitedEdition, DeckMatches, DevState, MatchScore } from './protocol';
 import { campaigns } from './campaigns';
@@ -10,10 +10,10 @@ interface Looks {
   sleeveCount: number;
 }
 
-/** A line of chat, where from is empty for a netplay announcement and earlier marks a line said before this browser arrived. */
+/** A line of chat. from is empty for a netplay announcement. earlier marks a line sent before this browser joined. */
 export interface ChatEntry { from: string; text: string; earlier: boolean }
 
-// Everything the browser knows. objects is its copy of the game's table, which forge.web.match.BrowserModel applies and prunes by the same rules
+// All the state the browser holds. objects is its copy of the game's objects. forge.web.match.BrowserModel applies and prunes them by the same rules
 export interface Model {
   objects: Map<number, TrackedObject>;
   root: number;
@@ -23,13 +23,13 @@ export interface Model {
   zones: ShownZone[];
   requests: Map<number, Request>;
   gameOver: boolean;
-  /** Each player's games won in the match, told with the end of a game; empty until then. */
+  /** Each player's games won in the match. It is sent when a game ends and is empty until then. */
   matchScore: MatchScore[];
   controls: Controls | null;
   playable: Playable | null;
   looks: Looks | null;
   spectating: boolean;
-  /** The page the server has the browser on. While it is opening, a seat is being taken: the server is between the menu and the table. */
+  /** The page the server shows the browser. 'opening' means a seat is being taken, between the menu and the table. */
   screen: Screen;
   playerName: string;
   decks: DeckSummary[];
@@ -38,79 +38,79 @@ export interface Model {
   addresses: Address[] | null;
   host: boolean;
   canClaimHost: boolean;
-  /** What the game did since the board was last drawn, oldest first, emptied by the render so each is shown once. */
+  /** Game events since the board was last drawn, oldest first. The render empties it so each event is shown once. */
   events: GameEvent[];
-  /** Rules text the server composed for cards and players the pointer has been over, kept for the match. */
+  /** Rules text the server built for hovered cards and players. It is kept for the rest of the match. */
   cardDetails: Map<number, Detail>;
   playerDetails: Map<number, PlayerDetail>;
-  /** What a right-click on a stack item may do, as the server last answered it. */
+  /** The options for a right-click on a stack item, from the server's last answer. */
   stackMenu: StackMenu | null;
-  /** The conversation with the other players, in the lobby and beside the board. */
+  /** Chat with the other players, shown in the lobby and beside the board. */
   chat: ChatEntry[];
-  /** Everyone on this server who has named themselves. */
+  /** Everyone on this server who has set a name. */
   presence: Person[];
-  /** Someone else is at the table, so there is someone to talk to. */
+  /** Another person is at the table, so chat is useful. */
   networked: boolean;
-  /** The formats a deck's cards can be checked against, for narrowing the deck list. */
+  /** The formats a deck can be checked against. The deck list uses them as filters. */
   cardFormats: string[];
-  /** How the host's generators build decks; null for a guest, who cannot change them. */
+  /** The host's deck generator settings. It is null for a guest, who cannot change them. */
   deckGen: DeckGenOptions | null;
-  /** The card pool the lobby holds decks to, which the deck finder pins. */
+  /** The card pool the lobby limits decks to. The deck finder pins it as a filter. */
   deckCardPool: string | null;
   /** What the seat being edited may choose for a planar deck, scheme deck or avatar. */
   extraChoices: ExtraChoices | null;
-  /** The deck last asked about, with its card list and statistics. */
+  /** The deck last requested, with its card list and statistics. */
   deckDetails: DeckDetails | null;
-  /** The decks the server last found for each kind of card or set filter, and for which words. */
+  /** The server's last deck search result for each kind of card or set filter, with the search words. */
   deckMatches: Partial<Record<string, DeckMatches>>;
-  /** Card names matching the last search, and the printings of the last name asked about, for picking sleeve art. */
+  /** For picking sleeve art: card names that match the last search, and the printings of the last name requested. */
   cardNames: string[];
   printings: { name: string; list: Printing[] } | null;
-  /** Card art this installation has already sleeved a deck in. */
+  /** Card art this installation has already used as a deck sleeve. */
   savedSleeveArt: SavedSleeveArt[];
-  /** A question the host is waiting on outside a match. */
+  /** A question outside a match that the host is waiting for an answer to. */
   hostChoice: HostChoice | null;
-  /** A name this browser remembered has been offered to the server, whose answer is not in yet. */
+  /** This browser has sent its saved name to the server, and the answer has not arrived yet. */
   nameSent: boolean;
-  /** Messages from the server, each until it is dismissed or times out. */
+  /** Messages from the server. Each stays until it is dismissed or times out. */
   notices: { id: number; notice: Notice; view?: () => void; label?: string; leaving?: boolean }[];
   drawOffer: DrawOffer | null;
-  /** The auto-yields and trigger answers the player has set, as last asked for. */
+  /** The player's auto-yields and trigger answers, from the last request. */
   autoDecisions: AutoDecisions | null;
-  /** Where dev mode's switches stand for the host's seat, once asked. */
+  /** The dev mode switch settings for the host's seat, once requested. */
   devState: DevState | null;
-  /** The deck open in the editor; the editor page shows while there is one. */
+  /** The deck open in the editor. The editor page is shown while this is set. */
   editor: EditorState | null;
-  /** The catalogue's rows so far: the pages asked for since the query last changed. */
+  /** The catalogue rows loaded so far. These are the pages requested since the query last changed. */
   catalogue: CataloguePage | null;
-  /** What reading the importer's list last found. */
+  /** The result of the last parse of the importer's list. */
   importResult: ImportResult | null;
-  /** An import's or a pool's name belongs to one already, and the page asks what to do. */
+  /** An import or pool name that is already in use. The page asks the player what to do. */
   nameTaken: string | null;
-  /** On the Limited pages, the pool whose opponents screen shows. */
+  /** On the Limited pages, the pool whose opponents screen is shown. */
   eventPool: string | null;
   /** How many sealed pools are saved, for the menu. */
   sealedPools: number;
   draftPools: number;
   /** Which Limited pages are open: 'sealed' or 'draft'. */
   eventKind: EventKind | null;
-  /** A draft is running, and draft is its latest state. */
+  /** Whether a draft is running. draft holds its latest state. */
   drafting: boolean;
   draft: DraftState | null;
-  /** Where a limited gauntlet stands after its last game; null outside a gauntlet. */
+  /** The state of a limited gauntlet after its last game. It is null outside a gauntlet. */
   limitedResult: LimitedResult | null;
   limitedOptions: LimitedOptions | null;
-  /** The card pools on offer, under Forge's headings; the same all run, so sent once per connection. */
+  /** The card pools on offer, under Forge's headings. They do not change while the server runs, so they are sent once per connection. */
   cardPools: CardPoolGroup[];
-  /** The card pool picker's lines and old snapshots, asked for the first time it opens. */
+  /** The card pool picker's lines and old snapshots. They are requested the first time the picker opens. */
   cardPoolDetails: CardPoolDetails | null;
-  /** Every edition, newest first, asked for the first time the catalogue's set filter opens. */
+  /** Every edition, newest first. They are requested the first time the catalogue's set filter opens. */
   cardSets: LimitedEdition[] | null;
   limitedPools: LimitedPools | null;
-  /** The campaign mode whose pages are showing, and the save open in it, which its matches name too. */
+  /** The campaign mode whose pages are shown, and the save open in it. Its matches also name this save. */
   campaign: string | null;
   campaignSave: string | null;
-  /** The save each campaign mode resumes, by mode, which the start page offers. */
+  /** The save each campaign mode resumes, keyed by mode. The start page offers it. */
   campaignResume: Record<string, string>;
 }
 
@@ -135,7 +135,7 @@ export function applyState(model: Model, msg: StateMessage): void {
   if (msg.full) {
     model.objects.clear();
     model.root = msg.root;
-    // A whole new table has nothing to move from
+    // A full state replaces every object, so older events have nothing left to animate from
     model.events = [];
   }
   model.events.push(...msg.events);
@@ -150,7 +150,7 @@ export function applyState(model: Model, msg: StateMessage): void {
       else target[name] = value;
     }
   }
-  // Only a new object, or a property cleared or given an object or list, can leave something unreachable, so other packets skip the walk
+  // Only a new object, or a property set to null, an object or a list, can orphan an object. Other packets skip the walk
   const mayOrphan = msg.full || Object.keys(msg.newObjects).length > 0
     || Object.values(msg.deltas).some(props => Object.values(props).some(v => v === null || typeof v === 'object'));
   if (mayOrphan) prune(model);
@@ -158,12 +158,12 @@ export function applyState(model: Model, msg: StateMessage): void {
   model.localPlayers = msg.localPlayers;
 }
 
-/** A property still at its default is left out of an object, so a null in a new one means the same. */
+/** A property at its default is left out of an object. A null in a new object means the same, so it is dropped. */
 function withoutNulls<T extends object>(props: T): T {
   return Object.fromEntries(Object.entries(props).filter(([, v]) => v !== null)) as T;
 }
 
-// Packets carry no removal signal, so anything the game no longer reaches is dropped here
+// Packets do not mark removed objects, so any object no longer reachable from the root is dropped here
 function prune(model: Model): void {
   if (!model.objects.has(model.root)) return;
   const reachable = new Set<number>();
@@ -195,7 +195,7 @@ function collectRefs(value: unknown, out: number[]): void {
   }
 }
 
-/** The game's oldest open question, which is the one shown. */
+/** The game's oldest open request. This is the one shown. */
 export function oldestRequest(model: Model): Request | undefined {
   let oldest: Request | undefined;
   for (const r of model.requests.values()) {
@@ -204,14 +204,14 @@ export function oldestRequest(model: Model): Request | undefined {
   return oldest;
 }
 
-/** The open question when it is which of one clicked card's abilities to use, answered from a menu at the pointer. */
+/** The open request when it asks which ability of a clicked card to use. It is answered from a menu at the pointer. */
 export function cardMenu(model: Model): ChoicesRequest | null {
   const oldest = oldestRequest(model);
   return oldest?.kind === 'choices' && oldest.max === 1 && (oldest.atX != null || oldest.atY != null)
     && oldest.options.every(o => !o.card && !o.imageKey && !o.player) ? oldest : null;
 }
 
-/** A question about cards, which is laid out on the dimmed board rather than in a box: words, numbers and colours keep their dialog. */
+/** Whether a request is about cards. It is laid out on the dimmed board, not in a dialog. Words, numbers and colours still use a dialog. */
 export function cardPrompt(req: Request): boolean {
   if (req.kind === 'order' || req.kind === 'manipulate' || req.kind === 'distribute') return true;
   return req.kind === 'choices' && !req.atX && !req.atY && !req.stackKeys && req.options.some(o => o.card || o.imageKey || o.name || o.player);
@@ -223,13 +223,13 @@ export function stackTopSource(model: Model): Ref | undefined {
   return top?.SourceCard ?? undefined;
 }
 
-/** The card a question comes from: the one it names, or for scry, which is only asked as its spell resolves, the top of the stack. */
+/** The card a request comes from. This is the card it names. A scry names none, but is only asked while its spell resolves, so it is the top of the stack. */
 export function askingCard(model: Model, req: Request): Ref | undefined {
   const named = 'card' in req ? req.card : undefined;
   return named ?? (req.kind === 'manipulate' ? stackTopSource(model) : undefined);
 }
 
-/** The open question when it is which spell on the stack to choose, answered by clicking the spell where it already is. */
+/** The open request when it asks which spell on the stack to choose. It is answered by clicking the spell on the stack. */
 export function stackPick(model: Model): ChoicesRequest | null {
   const oldest = oldestRequest(model);
   return oldest?.kind === 'choices' && oldest.stackKeys ? oldest : null;
@@ -240,13 +240,13 @@ export const deref = (model: Model, v: Ref | null | undefined): TrackedObject | 
 export const derefAll = (model: Model, list: Refs | null | undefined): TrackedObject[] =>
   (list ?? []).map(v => deref(model, v)).filter((o): o is TrackedObject => !!o);
 export const game = (model: Model): GameView | undefined => model.objects.get(model.root);
-/** What casting a commander from the command zone costs beyond its printed cost: two for each earlier cast. */
+/** The extra cost to cast a commander from the command zone. It is two for each earlier cast. */
 export function commanderTax(player: PlayerView | undefined, card: CardView): number {
   const cast = (player?.CommanderCast ?? []).find(c => c.card.ref === card.$key);
   return (cast?.value ?? 0) * 2;
 }
 
-/** The steps the board shows a combat in. Forge keeps the combat through the end of combat step, after its damage. */
+/** The steps in which the board shows combat. Forge keeps the combat until the end of combat step, which comes after damage. */
 const COMBAT_SHOWN = new Set(['COMBAT_DECLARE_ATTACKERS', 'COMBAT_DECLARE_BLOCKERS', 'COMBAT_FIRST_STRIKE_DAMAGE', 'COMBAT_DAMAGE']);
 export const combatShown = (model: Model): boolean => COMBAT_SHOWN.has(game(model)?.Phase ?? '');
 export const players = (model: Model): PlayerView[] => derefAll(model, game(model)?.Players);
@@ -257,7 +257,7 @@ const PLAYER_ZONES: ReadonlySet<string> = new Set<PlayerZone>(['Hand', 'Library'
   'Flashback', 'Command', 'Sideboard', 'Ante', 'SchemeDeck', 'PlanarDeck', 'AttractionDeck', 'Junkyard', 'ContraptionDeck', 'StickerSheets']);
 const isPlayerZone = (name: ZoneType): name is PlayerZone => PLAYER_ZONES.has(name);
 
-/** The cards in one of a player's zones. A zone that is not a player's (the stack, a merged pile) holds none. */
+/** The cards in one of a player's zones. A zone that is not a player's, such as the stack or a merged pile, returns none. */
 export const zone = (model: Model, player: PlayerView | undefined, name: ZoneType): CardView[] =>
   isPlayerZone(name) ? derefAll(model, player?.[name]) : [];
 export const stateOf = (model: Model, card: CardView): Partial<CardStateView> => deref(model, card.CurrentState) ?? {};

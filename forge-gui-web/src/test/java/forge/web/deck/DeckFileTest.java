@@ -14,7 +14,7 @@ public class DeckFileTest {
         WebTestSupport.initModel();
     }
 
-    // Fails if a deck file loses a card, its printing or its foil, in any of the forms Forge has written a card line
+    // Fails if a deck file loses a card, its printing or its foil, in any card line format Forge has written
     @Test
     public void everyCardLineFormIsRead() {
         final DeckSession.FileDeck read = DeckSession.readFile("[metadata]\nName=Mini\n[Main]\n4 Lightning Bolt|M10\n3 Shock|M10|1\n"
@@ -29,7 +29,7 @@ public class DeckFileTest {
         Assert.assertTrue(read.deck().getMain().toFlatList().stream().anyMatch(c -> c.getName().equals("Counterspell") && c.isFoil()));
     }
 
-    // Fails if a card Forge does not have stops the deck being read, or goes missing without being counted
+    // Fails if a card unknown to Forge stops the deck from being read, or is dropped without being counted
     @Test
     public void unknownCardsAreCounted() {
         final DeckSession.FileDeck read = DeckSession.readFile("[metadata]\nName=Mini\n[Main]\n4 Lightning Bolt|M10\n3 No Such Card Anywhere|M10\n");
@@ -37,13 +37,13 @@ public class DeckFileTest {
         Assert.assertEquals(read.leftOut(), 3);
     }
 
-    // Fails if a pasted list is taken for a deck file, which would save it without the importer reading it
+    // Fails if a pasted list is treated as a deck file. It would then be saved without the importer reading it
     @Test
     public void plainListIsNotADeckFile() {
         Assert.assertNull(DeckSession.readFile("4 Lightning Bolt\n20 Mountain\n"));
     }
 
-    // Fails if the importer loses a card, its printing or its foil when the list it is given is a deck file
+    // Fails if the importer loses a card, its printing or its foil when it is given a deck file
     @Test
     public void importerReadsADeckFile() {
         final DeckImport.Read read = DeckImport.read("[metadata]\nName=Mini\n[Main]\n4 Lightning Bolt|M10\n3 Shock|M10|1\n"
@@ -59,7 +59,7 @@ public class DeckFileTest {
         Assert.assertTrue(read.deck().getMain().toFlatList().stream().anyMatch(c -> c.getName().equals("Counterspell") && c.isFoil()));
     }
 
-    // Fails if a deck file's card that Forge does not have is imported as a stand-in, or dropped without a problem to show for it
+    // Fails if a deck file's card unknown to Forge is imported as a stand-in, or dropped without a problem being reported
     @Test
     public void importerMarksADeckFilesUnknownCard() {
         final DeckImport.Read read = DeckImport.read("[metadata]\nName=Mini\n[Main]\n4 Lightning Bolt|M10\n3 No Such Card Anywhere|M10\n",

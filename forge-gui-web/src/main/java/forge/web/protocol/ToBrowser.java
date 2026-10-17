@@ -24,7 +24,7 @@ import forge.web.protocol.Wire.Ts;
 import java.util.List;
 import java.util.Map;
 
-/** Every message the server sends the browser, as records. The build generates src/main/ts/protocol.gen.ts from this file, so a changed record fails the build where the browser reads it. */
+/** Every message the server sends the browser, as records. The build generates src/main/ts/protocol.gen.ts from this file. So a changed record fails the build at each place the browser reads it. */
 public final class ToBrowser {
     private ToBrowser() {
     }
@@ -40,7 +40,7 @@ public final class ToBrowser {
         }
     }
 
-    /** The page the browser shows: the start page, a seat being taken, match setup, the Limited pages, a campaign's, or a match. */
+    /** The page the browser shows: the start page, a seat being taken, match setup, the Limited pages, a campaign page, or a match. */
     public enum Screen { menu, opening, setup, event, campaign, playing }
 
     /** eventKind is set on the event screen, and campaign on the campaign screen. campaignResume is the save each campaign mode resumes, for the host. */
@@ -55,14 +55,14 @@ public final class ToBrowser {
     public record SavedSleeveArt(String key, int offset) {
     }
 
-    /** Everyone on this server who has named themselves, for the panel that says who is here. */
+    /** Everyone on this server who has set a name, for the panel that shows who is here. */
     @Message("presence")
     public record Presence(List<Person> people) {
     }
 
     public enum Doing { waiting, joining, table, playing, watching }
 
-    /** disconnected is a guest whose browser has gone while it holds a seat. */
+    /** disconnected is true for a guest whose browser has disconnected while the guest holds a seat. */
     public record Person(String name, int avatar, Doing doing, boolean host, boolean disconnected) {
     }
 
@@ -85,7 +85,7 @@ public final class ToBrowser {
 
     public enum AutoDecisionKind { yield, accept, decline }
 
-    /** A draw offer while it is open: who made it, and whether this player still has to answer. Closed, it is absent. */
+    /** A draw offer: who made it, whether it is still open, and whether this player still has to answer. The browser clears its offer when it closes. */
     @Message("drawOffer")
     public record DrawOffer(@Nullable Ref offerer, boolean open, boolean mine, boolean waitingOnMe) {
     }
@@ -94,13 +94,13 @@ public final class ToBrowser {
     public record Decks(List<DeckSummary> decks, List<String> cardFormats, @Nullable String cardPool, @Nullable DeckGenOptions deckGen) {
     }
 
-    /** How the host's generators build their decks, as desktop's lobby sets it; sent to the host only, whose preferences they are. */
+    /** How the host's generators build their decks, as desktop's lobby sets it. Sent only to the host, because these are the host's preferences. */
     public record DeckGenOptions(boolean singletons, boolean noArtifacts) {
     }
 
     /**
      * A deck in the finder. A generator's entry is only a name until it is picked, so it has no counts.
-     * aiSkips counts the main deck's cards the computer will not play, and is left out when there are none.
+     * aiSkips counts the main deck's cards the AI will not play. It is left out when there are none.
      */
     public record DeckSummary(String key, String name, String source, String colors, @Nullable Boolean generated,
             @Nullable String note, @Nullable Integer main, @Nullable Integer sideboard, @Nullable String problem,
@@ -110,7 +110,7 @@ public final class ToBrowser {
             @Nullable Integer aiSkips) {
     }
 
-    /** The keys of the listed decks a card or set filter lets through, for the query it answers. */
+    /** The keys of the listed decks that a card or set filter matches, for the query it answers. */
     @Message("deckMatches")
     public record DeckMatches(DeckQueryKind kind, String value, List<String> keys) {
     }
@@ -119,7 +119,7 @@ public final class ToBrowser {
     public record DeckDetailsMessage(DeckDetails deck) {
     }
 
-    /** aiSkips names the main deck's cards the computer will not play, and is left out when it plays them all. */
+    /** aiSkips names the main deck's cards the AI will not play. It is left out when the AI plays them all. */
     public record DeckDetails(String key, String name, @Nullable String problem, String colors, DeckStats stats,
             List<EditorGroup> main, List<EditorCard> sideboard, @Nullable String sleeveArt, int sleeveOffset,
             @Nullable Bracket bracket, @Nullable List<String> aiSkips) {
@@ -130,20 +130,20 @@ public final class ToBrowser {
         }
     }
 
-    /** A Commander deck's suggested minimum bracket, where clear names the kinds of card the deck has none of. */
+    /** A Commander deck's suggested minimum bracket. clear names the kinds of card the deck has none of. */
     public record Bracket(int level, List<BracketReason> reasons, List<String> clear) {
     }
 
     public enum BracketReasonKind { gameChangers, massLandDenial, extraTurns, chainedExtraTurns, lateCombos, earlyCombos }
 
-    /** One kind of card that bears on the bracket, where raises is the bracket it makes the deck, or 0 when it raises nothing on its own. */
+    /** One kind of card that affects the bracket. raises is the bracket it puts the deck in, or 0 when it does not raise the bracket by itself. */
     public record BracketReason(BracketReasonKind kind, String title, String brief, List<String> cards, int raises, @Nullable String why) {
     }
 
     /**
      * Forge's DeckStatistics for the main deck and commanders, as mobile shows them. total counts the commanders with the main deck.
-     * curve counts the nonland cards by mana value, the last entry holding that value and above, and spells is the part of each that is
-     * instants and sorceries. symbols counts the mana symbols in their costs as W, U, B, R, G and C.
+     * curve counts the nonland cards by mana value, and its last entry holds that value and above. spells is the part of each entry
+     * that is instants and sorceries. symbols counts the mana symbols in their costs as W, U, B, R, G and C.
      */
     public record DeckStats(int total, int main, int sideboard, int lands, float averageMana, List<Integer> curve, List<Integer> spells,
             List<TypeCount> types, List<Integer> symbols) {
@@ -164,7 +164,7 @@ public final class ToBrowser {
             List<String> overBracket, int teams, List<Integer> teamChoices, List<String> aiProfiles) {
     }
 
-    /** A Limited table's event, where phase is an EventPhase name. */
+    /** A Limited table's event. phase is an EventPhase name. */
     public record LimitedTable(EventKind kind, @Nullable String product, int podSize, @Nullable String pickRule, int timer,
             @Nullable String phase, @Nullable String activeEventId, boolean eventDecksOnly, boolean started,
             List<PastEvent> pastEvents) {
@@ -174,12 +174,12 @@ public final class ToBrowser {
     public record PastEvent(String id, EventKind kind, String product, String date) {
     }
 
-    /** Card pools the card pool control offers, under the heading Forge files them by. Sent once per browser. */
+    /** The card pools the card pool control offers, grouped under Forge's headings. Sent once per browser. */
     @Message("cardPools")
     public record CardPools(List<CardPoolGroup> groups) {
     }
 
-    /** Every edition, newest first, for the catalogue's set filter. Asked for the first time that filter opens. */
+    /** Every edition, newest first, for the catalogue's set filter. The browser asks for it the first time that filter opens. */
     @Message("cardSets")
     public record CardSets(List<LimitedEdition> sets) {
     }
@@ -196,11 +196,11 @@ public final class ToBrowser {
     public record CardPoolGroup(String name, List<String> formats) {
     }
 
-    /** A format as the lobby offers it: its group, what it is, its deck and life at a glance, and what changes in a match. */
+    /** A format as the lobby offers it: its group, a description, short facts about its deck and life, and what changes in a match. */
     public record Format(String id, String name, String group, String desc, List<String> facts, String play) {
     }
 
-    /** sittingOut says the seat sits the next match out, and aiProfile is how a computer seat plays. */
+    /** sittingOut means the seat sits out the next match. aiProfile is how an AI seat plays. */
     public record Seat(@Nullable String name, LobbySlotType type, boolean mine, boolean mayEdit, boolean ready, int avatar,
             int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
             @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
@@ -209,16 +209,16 @@ public final class ToBrowser {
             @Nullable String aiProfile) {
     }
 
-    /** Who else can lead a seat's deck, as desktop's lobby offers it: the leader's name (two joined by +), the first one's picture,
-     *  whether it is the deck's own, one its file suggests or another in it, and whether it leads now. */
+    /** A commander that can lead a seat's deck, as desktop's lobby offers it. name is the leader's name, two joined by +. image is the first one's picture.
+     *  kind says whether it is the deck's own, one its file suggests, or another card in the deck. chosen says whether it leads now. */
     public record CommanderChoice(String name, String image, String kind, boolean chosen) {
     }
 
-    /** A planar deck, scheme deck or avatar a seat brings: its name, its size, a detail such as modifiers, a fault. */
+    /** A planar deck, scheme deck or avatar a seat brings: its name, its size, a detail such as modifiers, and a problem. */
     public record SeatExtra(String label, int count, @Nullable String detail, @Nullable String problem) {
     }
 
-    /** What a seat may choose for one extra section. An avatar carries its image and its two modifiers. */
+    /** What a seat may choose for one extra section. An avatar choice includes its image and its two modifiers. */
     @Message("extraChoices")
     public record ExtraChoices(String section, int index, List<ExtraChoice> choices) {
     }
@@ -234,16 +234,16 @@ public final class ToBrowser {
     public record Address(String label, String url) {
     }
 
-    /** A line with no sender is one of netplay's own announcements, and earlier marks a line replayed from before this browser arrived. */
+    /** A line with no sender is an announcement from netplay itself. earlier marks a line replayed from before this browser connected. */
     @Message("chat")
     public record ChatLine(@Nullable String from, String text, boolean earlier) {
     }
 
-    /** hiddenBySwitch counts the matching cards the deck can't use, sent only when nothing else matched. */
+    /** hiddenBySwitch counts the matching cards the deck can't use. It is sent only when nothing else matched. */
     @Message("catalogue")
     public record CataloguePage(int request, List<CatalogueRow> rows, int total, int offset, int hiddenBySwitch, boolean ranked,
             @Nullable String source) {
-        /** The same page, saying which of a mode's lists it is of, so the browser never shows one list's cards as another's. */
+        /** The same page, marked with the mode's list it belongs to. So the browser never shows one list's cards as another's. */
         public CataloguePage from(final String list) {
             return new CataloguePage(request, rows, total, offset, hiddenBySwitch, ranked, list);
         }
@@ -255,8 +255,8 @@ public final class ToBrowser {
     }
 
     /**
-     * target is storage (the host's decks) or device (a guest's browser), and copyOf names a read-only deck the first change will copy.
-     * commanderZone says the format has a commander, and copyLimit is its most copies of a card other than a basic land, null for no limit.
+     * target is storage (the host's decks) or device (a guest's browser). copyOf names a read-only deck that the first change will copy.
+     * commanderZone says the format has a commander. copyLimit is the most copies allowed of a card other than a basic land, or null for no limit.
      */
     public record EditorState(String name, String check, String format, @Nullable String cardPool, boolean unrestricted,
             String target, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderZone, boolean commanderWanted,
@@ -267,7 +267,7 @@ public final class ToBrowser {
             List<EditorSection> sections) {
     }
 
-    /** A section beyond the main deck, sideboard and commander, such as planes or schemes, which a deck may carry. */
+    /** A section a deck may have beyond the main deck, sideboard and commander, such as planes or schemes. */
     public record EditorSection(DeckSection section, String name, List<EditorCard> cards) {
     }
 
@@ -278,7 +278,7 @@ public final class ToBrowser {
     public record EditorGroup(String heading, List<EditorCard> cards) {
     }
 
-    /** One name in a section, however many printings it is split over. mv and colors let the browser group it differently. */
+    /** One card name in a section, however many printings it is split over. mv and colors let the browser group it in other ways. */
     public record EditorCard(String name, int count, String image, String cost, int mv, String colors, int printings,
             List<EditorPrinting> split, @Nullable String problem, boolean foil) {
     }
@@ -291,7 +291,7 @@ public final class ToBrowser {
     public record EditorLand(String name, String letter, int count, boolean allowed) {
     }
 
-    /** What reading a pasted, fetched or dropped list found: a mark per line, the problems with their fixes, and the deck it makes. */
+    /** What reading a pasted, fetched or dropped list found: a mark for each line, the problems with their fixes, and the resulting deck. */
     @Message("importResult")
     public record ImportResult(int request, List<ImportLine> lines, List<ImportProblem> problems, ImportSummary summary,
             @Nullable String name, @Nullable Fetched fetched) {
@@ -303,7 +303,7 @@ public final class ToBrowser {
     public record ImportLine(ImportLineKind kind) {
     }
 
-    /** line counts from 0, and is -1 for a problem no one line has, such as a missing commander. */
+    /** line counts from 0. It is -1 for a problem that belongs to no single line, such as a missing commander. */
     public record ImportProblem(int line, String title, String detail, List<ImportFix> fixes) {
     }
 
@@ -321,12 +321,12 @@ public final class ToBrowser {
     public record Fetched(String site, String url, String text, String format) {
     }
 
-    /** An import's name is already a deck's, and the browser asks whether to replace it or keep both. */
+    /** An import's name is already used by a deck. The browser asks whether to replace that deck or keep both. */
     @Message("nameTaken")
     public record NameTaken(String name) {
     }
 
-    /** In a collection, value is what exiling or retrieving the card is worth and problem is why it can't be exiled. */
+    /** In a collection, value is what exiling or retrieving the card is worth. problem is why it can't be exiled. */
     public record CatalogueRow(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
             String heading, int inDeck, @Nullable String problem, @Nullable Boolean isNew, @Nullable Integer value, @Nullable Integer count,
             @Nullable Integer owned, @Nullable String note, @Nullable String key) {
@@ -340,11 +340,11 @@ public final class ToBrowser {
     public record Printings(String name, List<Printing> printings) {
     }
 
-    /** One printing of a card: its set's code and name, the year it came out, the part of the set it is in (cards, borderless, showcase and so on), and why it can't be used, when it can't. */
+    /** One printing of a card: its set's code and name, its year, the part of the set it is in (cards, borderless, showcase and so on), and why it can't be used, if it can't. */
     public record Printing(String name, String edition, String key, String setName, int year, @Nullable String style, @Nullable String problem) {
     }
 
-    /** A guest's deck changed: the deck as .dck text to keep in its browser, or no text when it was deleted. */
+    /** A guest's deck changed. text is the deck as .dck text to store in its browser, or null when the deck was deleted. */
     @Message("deviceDeck")
     public record DeviceDeck(String id, @Nullable String text, String format) {
     }
@@ -363,7 +363,7 @@ public final class ToBrowser {
             @Nullable List<String> images, @Nullable String pictured) {
     }
 
-    /** A property set to null in a delta has gone back to its default, and events are in the order the game fired them. */
+    /** A property set to null in a delta has returned to its default. events are in the order the game fired them. */
     @Message("state")
     public record StateMessage(boolean full, long seq, int root,
             @Ts("Record<string, TrackedProps>") Map<String, JsonObject> newObjects,
@@ -371,13 +371,13 @@ public final class ToBrowser {
             List<Integer> visible, List<Integer> localPlayers, @Ts("GameEvent[]") List<Record> events) {
     }
 
-    // Game events say what happened, never how to show it
+    // Game events describe what happened, never how to show it
 
-    /** A zone of one player's, or of nobody's (the stack). */
+    /** A zone that belongs to one player, or to nobody (the stack). */
     public record Place(ZoneType zone, @Nullable Ref player) {
     }
 
-    /** No from means the card came into being there, and caster is set for a card put on the stack, which the browser does not have yet. */
+    /** A null from means the card was created there. caster is set for a card put on the stack, because the browser does not have that card yet. */
     @Event("cardMoved")
     public record CardMoved(Ref card, @Nullable Place from, @Nullable Place to, @Nullable Ref caster) {
     }
@@ -400,7 +400,7 @@ public final class ToBrowser {
     public record Block(Ref blocker, Ref attacker) {
     }
 
-    /** The blocks one defending player made, which is none when that player let every attacker through. */
+    /** The blocks one defending player made. It is empty when that player blocked no attacker. */
     @Event("blockersDeclared")
     public record BlockersDeclared(Ref player, List<Block> blocks) {
     }
@@ -410,7 +410,7 @@ public final class ToBrowser {
     public record StackAdded(@Nullable Ref player) {
     }
 
-    /** The card a spell or an ability came from, and whether it did nothing because its targets had gone. */
+    /** The card a spell or an ability came from, and whether it did nothing because its targets were gone. */
     @Event("stackResolved")
     public record StackResolved(@Nullable Ref player, @Nullable Ref source, boolean fizzled) {
     }
@@ -428,7 +428,7 @@ public final class ToBrowser {
     public record CardCounters(Ref card) {
     }
 
-    /** No to means the card came off what it was attached to. */
+    /** A null to means the card was removed from what it was attached to. */
     @Event("cardAttached")
     public record CardAttached(Ref card, @Nullable Ref to) {
     }
@@ -437,12 +437,12 @@ public final class ToBrowser {
     public record Shuffled(Ref player) {
     }
 
-    /** A game began. Who takes the first turn is settled before anyone looks at a hand, so it is said here. */
+    /** A game began. The first player is decided before anyone looks at a hand, so it is sent here. */
     @Event("gameStarted")
     public record GameStarted(Ref first) {
     }
 
-    /** The toss before a match's first game, which the player it names won. */
+    /** The coin toss before a match's first game. winner is the player who won it. */
     @Event("coinTossed")
     public record CoinTossed(Ref winner) {
     }
@@ -450,7 +450,7 @@ public final class ToBrowser {
     static final List<Class<? extends Record>> EVENTS = Wire.marked(Event.class);
 
 
-    /** Why this player chooses who goes first: it won the coin toss, or lost the last game. */
+    /** Why this player chooses who goes first: the player won the coin toss, or lost the last game. */
     public enum StarterChoice { toss, lastGame }
 
     @Message("prompt")
@@ -473,7 +473,7 @@ public final class ToBrowser {
     public record ShownZone(Ref player, ZoneType zone) {
     }
 
-    /** Where dev mode's two switches stand for the host's seat. */
+    /** The values of dev mode's two switches for the host's seat. */
     @Message("devState")
     public record DevState(boolean unlimitedLands, boolean viewAll) {
     }
@@ -517,7 +517,7 @@ public final class ToBrowser {
     public record Detail(int key, List<CardFace> faces) {
     }
 
-    /** One face of a card as the preview shows it. colors is the face's colour mask, as the Colors property carries it. */
+    /** One face of a card as the preview shows it. colors is the face's colour mask, in the same form as the Colors property. */
     public record CardFace(@Nullable String name, String cost, String type, @Nullable String pt, String text,
             @Nullable String imageKey, int colors, @Nullable String set, @Nullable CardRarity rarity) {
     }
@@ -526,7 +526,7 @@ public final class ToBrowser {
     public record PlayerDetail(int key, @Nullable String name, List<String> lines) {
     }
 
-    /** What a right-click on a stack item offers; a field is there only when that choice applies. */
+    /** What a right-click on a stack item offers. A field is present only when that choice applies. */
     @Message("stackMenu")
     public record StackMenu(int key, @Nullable Boolean autoYield, @Nullable TriggerDecision trigger) {
     }
@@ -547,11 +547,11 @@ public final class ToBrowser {
     public record MatchScore(Ref player, int won) {
     }
 
-    // Requests are questions the game waits on, answered with {t: 'reply', id, value}
+    // Requests are questions the game waits on. The browser answers with {t: 'reply', id, value}
 
     /**
-     * Which fields are set depends on what it is: a card on the table, one that is not (a split pile, a card face), or a player.
-     * An ability names the card it comes from as its source, and a colour its mana symbol's letter.
+     * Which fields are set depends on the option: a card on the table, a card that is not (a split pile, a card face), or a player.
+     * An ability gives the card it comes from as its source. A colour gives its mana symbol's letter.
      */
     public record RequestOption(String label, @Nullable Ref card, @Nullable String name, @Nullable String imageKey,
             @Nullable Ref player, @Nullable Ref source, @Nullable String symbol) {
@@ -563,8 +563,8 @@ public final class ToBrowser {
     public enum ChoiceKind { choices, reveal }
 
     /**
-     * A reveal only shows the list, and stackKeys is set when every option is a spell on the stack, so the browser picks it there.
-     * aiSkipsOf is set on the reveal that warns a computer will not play some of its deck, and names that player.
+     * A reveal only shows the list. stackKeys is set when every option is a spell on the stack, so the browser picks it there.
+     * aiSkipsOf is set on the reveal that warns the AI will not play some of its deck. It names that player.
      */
     @Request
     public record ChoicesRequest(ChoiceKind kind, @Nullable String message, int min, int max, List<RequestOption> options,
@@ -589,13 +589,13 @@ public final class ToBrowser {
             List<Integer> selected, boolean remember, @Nullable Ref card, @Name("default") OrderAnswer defaultAnswer) {
     }
 
-    /** Scry and friends: the whole library, with only the top cards movable. */
+    /** Scry and similar effects: the whole library, with only the top cards movable. */
     @Request("manipulate")
     public record ManipulateRequest(@Nullable String title, List<RequestOption> options, List<Integer> movable, boolean toTop,
             boolean toBottom, @Name("default") List<Integer> defaultAnswer) {
     }
 
-    /** A row of buttons; the answer is the index of the one pressed. */
+    /** A row of buttons. The answer is the index of the button pressed. */
     @Request("option")
     public record OptionRequest(@Nullable String title, @Nullable String message, @Nullable Ref card, List<String> labels,
             @Name("default") int defaultAnswer) {
@@ -606,13 +606,13 @@ public final class ToBrowser {
             @Name("default") @Nullable String defaultAnswer) {
     }
 
-    /** A whole number from min up, to max when there is one; null picks none when maySkip allows it. */
+    /** A whole number from min up, and up to max when there is one. When maySkip allows it, null picks no number. */
     @Request("number")
     public record NumberRequest(@Nullable String message, int min, @Nullable Integer max, boolean maySkip,
             @Name("default") @Nullable Integer defaultAnswer) {
     }
 
-    /** Divide an amount among the options; null skips when maySkip allows it. For combat damage, lethal is what each option takes to destroy it. */
+    /** Divide an amount among the options. When maySkip allows it, null skips. For combat damage, lethal is the damage that destroys each option. */
     @Request("distribute")
     public record DistributeRequest(@Nullable String message, int amount, int perMin, List<RequestOption> options, @Nullable Ref card,
             boolean maySkip, @Name("default") List<Integer> defaultAnswer, @Nullable List<Integer> lethal) {
@@ -634,7 +634,7 @@ public final class ToBrowser {
             List<String> themes, @Nullable String lastCube) {
     }
 
-    /** A draftable block, which has no combos when each pack's set is chosen, and whose podSize is what a draft of it starts at. */
+    /** A draftable block. It has no combos when the set of each pack is chosen. podSize is the pod size a draft of it starts with. */
     public record DraftBlockOption(String name, int packs, List<String> sets, List<String> combos, int podSize) {
     }
 
@@ -650,42 +650,42 @@ public final class ToBrowser {
     public record LimitedPools(List<PoolRow> sealed, List<PoolRow> draft) {
     }
 
-    /** One saved pool, where changed is the day it was last saved or played, as yyyy-MM-dd. */
+    /** One saved pool. changed is the day it was last saved or played, as yyyy-MM-dd. */
     public record PoolRow(String name, boolean built, int deckSize, String colors, @Nullable String changed, List<Opponent> opponents) {
     }
 
     public record Opponent(String name, String colors) {
     }
 
-    /** pick counts from 1 within the pack, and direction is 1 while packs go to the next seat and -1 while they go to the previous one. */
+    /** pick counts from 1 within the pack. direction is 1 while packs pass to the next seat and -1 while they pass to the previous one. */
     @Message("draft")
     public record DraftState(int step, String product, int pack, int packs, int pick, int packSize, int direction, List<DraftSeat> seats,
             List<DraftCard> cards, List<DraftCard> picks, List<Integer> moved, int clockSeconds, int clockLeftMillis,
             List<String> log, boolean done) {
     }
 
-    /** A seat in pass order, seat 0 being the player: how many packs it holds, and whether its player has gone away. */
+    /** A seat in pass order, where seat 0 is the player: how many packs it holds, and whether its player has left. */
     public record DraftSeat(String name, boolean ai, int packs, boolean held) {
     }
 
-    /** rank is desktop's draft score to 99, higher being better, and text is the rules text drawn when there is no picture. */
+    /** rank is desktop's draft score, up to 99, where higher is better. text is the rules text drawn when there is no picture. */
     public record DraftCard(String name, String image, String cost, int mv, String colors, String type, String text, @Nullable String pt,
             String rarity, @Nullable Integer rank, int pack, int pick, boolean sideboard) {
     }
 
-    /** A gauntlet game's result, where nextRound says the match was won with rounds still to play. */
+    /** A gauntlet game's result. nextRound means the match was won and rounds are still left to play. */
     @Message("limitedResult")
     public record LimitedResult(int round, int rounds, int wins, int losses, boolean matchOver, boolean nextRound) {
     }
 
-    /** Every message record, which is what the TypeScript is generated from. */
+    /** Every message record. The TypeScript is generated from these. */
     static final List<Class<? extends Record>> MESSAGES = Wire.marked(Message.class);
 
 
 
     static final List<Class<? extends Record>> REQUESTS = Wire.marked(Request.class);
 
-    /** The answer a request takes when nobody gives one, read back off its JSON. */
+    /** The answer a request takes when nobody answers, read from its JSON. */
     public static JsonElement defaultOf(final JsonObject request) {
         return request.has("default") ? request.get("default") : JsonNull.INSTANCE;
     }

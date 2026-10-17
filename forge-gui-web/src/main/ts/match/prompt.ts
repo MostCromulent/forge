@@ -1,4 +1,4 @@
-// The prompt: the game's question and its buttons, at the foot of the side column or in the dock on a phone, whose rim lights while the game waits on you
+// The prompt shows the game's question and its buttons. It is at the bottom of the side column, or in the dock on a phone. Its border glows while the game waits on you.
 
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from '../images';
 import { askingCard, cardPrompt, deref, game, me, oldestRequest, stackPick, stackTopSource, stateOf, type Model } from '../model';
@@ -21,13 +21,13 @@ import { t } from '../text';
 import { ICONS, iconSvg } from '../icons';
 
 let built = false;
-/** The row of tools, which a phone moves out of the prompt and onto the player's bar. */
+/** The row of tools. On a phone it is moved out of the prompt and onto the player's bar. */
 let tools: HTMLElement;
-/** The prompt last drawn, and how many have arrived: a script waits for a newer one rather than for time to pass. */
+/** The prompt last drawn, and how many prompts have arrived. A test script waits for a higher count instead of a fixed time. */
 let shown: Model['prompt'] = null;
 let arrived = 0;
 
-/** The glints are dashes along an outline of the box, not a turning gradient, so they keep one speed along long and short edges. */
+/** The glints are dashes along an outline of the box, not a rotating gradient. So they move at one speed on long and short edges. */
 const GLINT_LAYERS = ['halo', 'mid', 'core'];
 function buildGlints(root: HTMLElement): void {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -40,7 +40,7 @@ function buildGlints(root: HTMLElement): void {
     const h = root.offsetHeight;
     svg.setAttribute('width', String(w));
     svg.setAttribute('height', String(h));
-    // Centred on the 1px border, whose outer corners round at 12px
+    // Centred on the 1px border, which has a 12px outer corner radius
     for (const r of svg.querySelectorAll('rect')) {
       r.setAttribute('x', '0.5');
       r.setAttribute('y', '0.5');
@@ -51,28 +51,28 @@ function buildGlints(root: HTMLElement): void {
   }).observe(root);
 }
 
-/** Dips an enabled prompt button dark for a moment, so a press by click or by key is seen to land. */
+/** Darkens an enabled prompt button for a moment, so the player sees that a click or key press was taken. */
 function showPressed(button: Element | null): void {
   if (!(button instanceof HTMLButtonElement) || button.disabled) return;
-  // An answer given while newer boards wait their turn is not sent, so it is not shown as taken either
+  // An answer given while newer boards are still held back is not sent, so the press is not shown either
   if (boardBehind() && button.closest('.buttons')) return;
   replay(button, 'pressed');
 }
 
-/** The same feedback for a key that stands in for a prompt button: "ok", "cancel", "end-turn" or "undo". */
+/** Shows the same feedback for a key bound to a prompt button: "ok", "cancel", "end-turn" or "undo". */
 export function pressPromptButton(name: string): void {
   showPressed(document.querySelector(`#match :is(#prompt, .tools) .${name}`));
 }
 
-/** How long the console takes to grow or shrink to a new prompt. */
+/** How long the prompt takes to grow or shrink to a new prompt's height. */
 const RESIZE_MS = 160;
 
-/** Eases the console to a new prompt's height, anchored at its foot so any clipping while it does falls on the tools. */
+/** Draws the prompt and animates it to its new height. Content is aligned to the bottom, so any clipping during the animation hides the tools first. */
 export function renderPrompt(model: Model, actions: Actions): void {
   const root = byId('prompt');
   const before = built ? root.offsetHeight : 0;
   drawPrompt(model, actions);
-  // On a phone, while a dialog or a zone asks the question and neither button can answer it, the buttons give up their room
+  // On a phone, the buttons are hidden while a dialog or zone asks the question and neither button can answer it
   const asking = !!oldestRequest(model) || (model.zones.length > 0 && !ui.zonesMinimised);
   root.classList.toggle('blocked', isPortrait() && asking && !model.prompt?.selectablePlayers?.length
     && q<HTMLButtonElement>(root, '.ok').disabled && q<HTMLButtonElement>(root, '.cancel').disabled);
@@ -117,7 +117,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     root.addEventListener('click', e => showPressed((e.target as Element).closest('button')));
     tools.addEventListener('click', e => { if (!root.contains(tools)) showPressed((e.target as Element).closest('button')); });
     buildGlints(root);
-    // Long text is cut to two lines in the phone's dock, and a tap shows the rest
+    // Long text is cut to two lines in the phone's dock. A tap shows the rest.
     q(root, '.message').onclick = () => root.classList.toggle('open');
     q(root, '.message').addEventListener('pointerdown', e => longPress(e, () => {
       const about = q<HTMLImageElement>(root, '.prompt-card');
@@ -128,10 +128,10 @@ function drawPrompt(model: Model, actions: Actions): void {
     hoverable(card);
     built = true;
   }
-  // On a phone the tools ride on the player's own bar, which leaves the dock one row
+  // On a phone the tools are moved to the player's own bar, so the dock keeps one row
   if (isPortrait() && tools.parentElement === root) byId('match').append(tools);
   else if (!isPortrait() && tools.parentElement !== root) q(root, '.step').before(tools);
-  // The player can choose these keys in the options, so the labels follow whatever they chose
+  // The player can change these keys in the options, so the labels show the current bindings
   const keys = boundKeys();
   const shortcuts = shortcutKeys();
   const shortcut = (pref: string) => shortcutName(shortcuts[pref] ?? '') || t('lblNone');
@@ -157,7 +157,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   const autoPassButton = q(tools, '.auto-pass');
   autoPassButton.classList.toggle('on', autoPass);
   autoPassButton.title = t(autoPass ? 'lblWebPromptAutoPassOnTip' : 'lblWebPromptAutoPassOffTip', shortcut('SHORTCUT_YIELD_AUTO_PASS'));
-  // Lit while the turn is being passed through, as auto-pass is while it is on
+  // Highlighted while the rest of the turn is being passed, as the auto-pass button is while it is on
   const endingTurn = !!model.controls?.untilEndOfTurn;
   const endTurnButton = q(tools, '.end-turn');
   endTurnButton.classList.toggle('on', endingTurn);
@@ -166,7 +166,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   endTurnButton.title = endingTurn ? t('lblWebPromptEndingTurnTip')
     : t('lblWebPromptEndTurnTip', shortcut('SHORTCUT_ENDTURN'));
   q(tools, '.more').classList.toggle('open', !!ui.gameMenu);
-  // While a macro is recorded it is one press from the prompt: a press stops the recording, or plays the macro again
+  // While a macro is recording or recorded, the prompt has a button for it. A press stops the recording or plays the macro again.
   const macro = q<HTMLButtonElement>(tools, '.macro');
   macro.hidden = ui.macro === 'none';
   macro.classList.toggle('recording', ui.macro === 'recording');
@@ -186,7 +186,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   const req = oldestRequest(model);
   const onBoard = !!req && cardPrompt(req);
   root.classList.toggle('answering', onBoard);
-  // A spell picked on the stack has no dialog, so what it asks, and the way out of it, are shown here
+  // A pick of a spell on the stack has no dialog. So its question and its cancel button are shown here.
   const pick = stackPick(model);
   if (pick) {
     setSymbolText(q(root, '.message'), pick.message ?? '');
@@ -199,7 +199,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     root.classList.remove('priority', 'attack', 'strike', 'blocks', 'no-blocks');
     return;
   }
-  // A question about cards is answered on the board, so the prompt says what it comes from, or, folded away, that the question waits
+  // A question about cards is answered on the board. The prompt names its source, or says the question is waiting if it is folded away.
   if (req && onBoard) {
     const folded = ui.requestFolded === req.id;
     const ref = askingCard(model, req);
@@ -207,7 +207,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     const asked = splitQuestion(('title' in req ? req.title : 'message' in req ? req.message : '') ?? '');
     const source = asked.source || (card ? stateOf(model, card).Name ?? '' : '');
     q(root, '.step').textContent = folded ? t('lblWebPromptQuestionWaits') : source ? t('lblWebPromptResolving') : stepName(game(model)?.Phase);
-    // With no card to name, the question itself is what the prompt says
+    // With no source to name, the prompt shows the question itself
     setSymbolText(q(root, '.message'), source || asked.ask);
     renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, ref);
     renderPlayerChoices(root, model, [], actions);
@@ -219,21 +219,21 @@ function drawPrompt(model: Model, actions: Actions): void {
   }
   const p = model.prompt;
   if (!p) return;
-  // Several prompts open with a short line naming the phase, which becomes the title rather than repeating under it
+  // Several prompts start with a short line naming the phase. It becomes the title instead of being repeated under it.
   const lines = (p.message ?? '').trim().split('\n');
-  // A heading, not a sentence: short, with nothing that ends a sentence, and not a card named with its number
+  // A heading is short, has no sentence-ending punctuation, and is not a card name followed by its number
   const heading = lines.length > 1 && lines[0].length <= 24 && !/[.!?]$/.test(lines[0]) && !/\(\d+\)$/.test(lines[0]);
   const step = heading ? lines[0] : p.priority ? t('lblPriority') : stepName(game(model)?.Phase);
-  // A pick of several cards says how far along it is, since OK waits until enough are picked
+  // A pick of several cards shows how many are picked, because OK is not enabled until enough are
   q(root, '.step').textContent = !p.priority && !p.paying && p.selectableMin > 1 ? `${step} · ${t('lblWebPromptPickedOf', p.highlighted.length, p.selectableMin)}` : step;
-  // The host's lines stay lines, as each is a part of its own: the source, what it does, what to do
+  // The host's line breaks are kept, because each line is a separate part: the source, what it does, what to do
   const body = (heading ? lines.slice(1) : lines).map(line => line.trim()).filter(line => line).join('\n');
   setSymbolText(q(root, '.message'), body || (p.priority && p.ok.enabled ? priorityLine(model, p.ok.label) : ''));
   renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, p.card);
   renderPlayerChoices(root, model, p.selectablePlayers ?? [], actions);
   setButton(q<HTMLButtonElement>(root, '.ok'), p.ok);
   setButton(q<HTMLButtonElement>(root, '.cancel'), p.cancel);
-  // Declaring attackers, each button says what it will do: the host's OK reads the same whether nothing attacks or everything does
+  // When declaring attackers, each button says what it will do. The host's OK label is the same whether nothing attacks or everything does.
   const strike = p.ok.enabled && p.cancel.label === t('lblAlphaStrike');
   const attackers = p.ok.enabled && p.cancel.label === t('lblCallBack')
     ? countAttacking(model) : 0;
@@ -245,7 +245,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     setButton(ok, { label: t('lblWebPromptAttackWith', attackers), enabled: true });
     setButton(cancel, { label: t('lblWebPromptClearAttackers'), enabled: p.cancel.enabled });
   }
-  // Declaring blockers has the one answer, which says what it will do as the attack's does
+  // Declaring blockers has only the OK button. Its label says what it will do, as for attackers.
   const blocks = declaringBlocks(model) && !p.priority && p.ok.enabled && !p.cancel.enabled && p.ok.label === t('lblOK');
   const mine = me(model)?.$key;
   const blockers = blocks ? new Set((game(model)?.CombatView ?? []).flatMap(b => [...b.blockers ?? [], ...b.plannedBlockers ?? []])
@@ -259,7 +259,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   root.classList.toggle('priority', waiting && !!p.priority);
 }
 
-/** What having priority asks, which the host says only as the turn, phase and stack the page shows elsewhere. */
+/** Counts the cards that are attacking. */
 function countAttacking(model: Model): number {
   let n = 0;
   for (const o of model.objects.values()) {
@@ -274,10 +274,10 @@ function priorityLine(model: Model, pass: string): string {
   return name ? t('lblWebPromptRespond', name, pass) : t('lblWebPromptAct', pass);
 }
 
-/** Offers as buttons the players a prompt lets you pick who have no seat on the board, which draws only one opponent. */
+/** Shows buttons for pickable players whose seat is not visible on the board. */
 function renderPlayerChoices(root: HTMLElement, model: Model, choices: readonly Ref[], actions: Actions): void {
   const box = q(root, '.choose-players');
-  // A seat in a hidden tab cannot be tapped, so its player is offered here as one with no seat is
+  // A seat in a hidden tab cannot be tapped, so its player gets a button here too
   const offBoard = choices.filter(r => !document.querySelector(`.seat[data-player="${r.ref}"]:not([hidden])`));
   const key = offBoard.map(r => r.ref).join(',');
   if (box.dataset.key === key) {
@@ -316,7 +316,7 @@ function renderPromptCard(img: HTMLImageElement, model: Model, ref: Ref | null |
 
 function setButton(button: HTMLButtonElement, spec: PromptButton | undefined): void {
   setSymbolText(q(button, '.label'), spec?.label);
-  // The console cuts a long label short, so the whole of it is kept where hovering finds it
+  // The prompt cuts off a long label, so the full label is put in the title for hover
   button.title = spec?.label ?? '';
   button.disabled = !spec?.enabled;
   button.hidden = !spec?.label;

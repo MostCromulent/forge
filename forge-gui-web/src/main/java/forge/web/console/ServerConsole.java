@@ -83,30 +83,30 @@ import static forge.web.console.ConsoleWidgets.stack;
 import static forge.web.console.ConsoleWidgets.warning;
 import static forge.web.console.ConsoleWidgets.wrapped;
 
-/** The desktop window that starts and stops the server, without which a player who closes their tab has no sign Forge still runs. */
+/** The desktop window that starts and stops the server. Without it, a player who closes their tab has no sign that Forge is still running. */
 public final class ServerConsole implements IProgressBar, IHasForgeLog {
     private static final Localizer TEXT = Localizer.getInstance();
-    /** Card loading prints tens of thousands of lines, so the text is fed on a timer rather than per line. */
+    /** Card loading prints tens of thousands of lines, so the text is added on a timer instead of line by line. */
     private static final int FLUSH_MILLIS = 250;
-    /** How wide a line of text runs before it wraps, which sets the width of the window. */
+    /** How wide a line of text can be before it wraps. This sets the width of the window. */
     private static final int TEXT_WIDTH = 480;
     private static final int HELP_WIDTH = TEXT_WIDTH - 26;
     private static final String GUIDE = "https://github.com/Card-Forge/forge/wiki/Network-Play#network-configuration";
-    /** Adapters the rest of the home network cannot reach, though one may be this machine's route to the internet and so be listed first. */
+    /** Adapters that the rest of the home network cannot reach. One of them may still be this machine's route to the internet, and so be listed first. */
     private static final Pattern NOT_HOME = Pattern.compile("vpn|virtual|hamachi|zerotier|tailscale|wireguard|hyper-v|vmware|wsl|bluetooth",
             Pattern.CASE_INSENSITIVE);
 
-    /** Running is a filled lamp, stopped an empty ring: the shape carries it, so the colour need not. */
+    /** Running shows a filled lamp and stopped shows an empty ring. The shape shows the state, so the colour does not have to. */
     private static final Color LIT = new Color(0x3f, 0xb9, 0x50);
     private static final Color DARK = new Color(0xd0, 0x57, 0x4e);
 
     private final WebGuiBase ui;
     private final Runnable onQuit;
     private WebService service;
-    /** Whether the server is up and the console is not in the middle of starting or stopping it. */
+    /** Whether the server is up and the console is not starting or stopping it. */
     private boolean up;
     private Map<String, String> homes = Map.of();
-    /** The adapter and address the network link is made from, or null when this machine has none. */
+    /** The adapter and address that the network link uses, or null when this machine has none. */
     private Map.Entry<String, String> home;
     private String internet;
     private int unseenErrors;
@@ -175,7 +175,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         this.onQuit = onQuit;
     }
 
-    /** Opens the console, or returns null when there is no display or the flag turns it off. */
+    /** Opens the console. Returns null when there is no display or the flag turns the console off. */
     public static ServerConsole open(final WebGuiBase ui, final Runnable onQuit) {
         if (Boolean.getBoolean("forge.web.noConsole") || GraphicsEnvironment.isHeadless()) {
             return null;
@@ -196,12 +196,12 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         return console;
     }
 
-    /** Names the step of the start-up that is running. */
+    /** Shows the name of the start-up step that is running. */
     public void starting(final String what) {
         SwingUtilities.invokeLater(() -> busy(what));
     }
 
-    /** The server has been started, and this is what the buttons drive from here on. failure is why it could not be, or null. */
+    /** The server has been started, and the buttons control it from now on. failure is the reason it could not start, or null. */
     public void attach(final WebService driven, final Exception failure) {
         service = driven;
         images.ready();
@@ -212,7 +212,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             byRouter.setEnabled(true);
             byCloudflare.setEnabled(true);
             picturesButton.setEnabled(true);
-            // Asked once, as desktop and mobile ask, and only of a host who has never had the data
+            // Asked only once, as on desktop and mobile, and only of a host who has never downloaded the data
             picturesAsk.setVisible(CdnUuidCache.shouldPromptForBulkSync());
             showPictures(new ImageIndex.State(false, -1, false));
         });
@@ -239,7 +239,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         copyNet.setEnabled(false);
     }
 
-    /** The port is bound: the lamp is lit and the links are worth copying. */
+    /** The port is bound. The lamp is lit and the links can be copied. */
     private void running() {
         traffic = service.traffic();
         SwingUtilities.invokeLater(() -> {
@@ -272,21 +272,21 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         });
     }
 
-    /** For work that waits on the network or the router, which the event thread must not do. */
+    /** Runs work that waits for the network or the router. The event thread must not do that work. */
     private static void inBackground(final String name, final Runnable work) {
         final Thread t = new Thread(work, name);
         t.setDaemon(true);
         t.start();
     }
 
-    /** Shows where asking the router stands, in the words a router's own settings use. */
+    /** Shows the state of the request to the router, in the words a router's own settings use. */
     private void forwarding(final WebService.Forwarding now) {
         SwingUtilities.invokeLater(() -> {
             final boolean wanted = service.forwardPort();
             final boolean viaRouter = !service.throughCloudflare();
             forwardPort.setSelected(wanted);
             forwardLight.lit(now == WebService.Forwarding.FORWARDED);
-            // A refusal only says UPnP did not do it; the port may still be forwarded by hand, so the link stays usable
+            // A refusal only means UPnP did not forward the port. It may still be forwarded by hand, so the link stays usable.
             refused.setText(TEXT.getMessage("lblWebConsoleRefused", service.port()));
             forwardHelp.setVisible(viaRouter && now == WebService.Forwarding.REFUSED);
             final String words = switch (now) {
@@ -295,7 +295,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 case FORWARDED -> TEXT.getMessage("lblWebConsoleForwarded", service.port());
                 case REFUSED -> "";
             };
-            // Forwarding is off until the host asks for it, so the line that says so stands out
+            // Forwarding is off until the host turns it on, so the line that says so is highlighted
             final boolean off = now == WebService.Forwarding.OFF;
             forwardState.setForeground(off ? WARN : UIManager.getColor("Label.foreground"));
             forwardState.setFont(UIManager.getFont("Label.font").deriveFont(off ? Font.BOLD : Font.PLAIN));
@@ -306,7 +306,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         });
     }
 
-    /** Shows where the connection through Cloudflare stands, and puts its address where the router's would be. */
+    /** Shows the state of the Cloudflare connection, and shows its address in place of the router's. */
     private void tunnelling(final CloudflareTunnel.State now) {
         SwingUtilities.invokeLater(() -> {
             tunnelling = now;
@@ -327,7 +327,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             tunnelStateRow.setVisible(!words.isEmpty());
             if (cloudflare && up) {
                 final String url = now == CloudflareTunnel.State.CONNECTED ? service.tunnelUrl() : null;
-                // The address without its token, as the other links are shown
+                // Show the address without its token, like the other links
                 showInternet(url == null ? null : url.substring(0, url.indexOf("/?")), TEXT.getMessage("lblWebConsoleCloudflareConnecting"), false);
             } else if (up) {
                 showInternet(null, TEXT.getMessage("lblWebMatchBarWorkingOutAddress"), false);
@@ -337,7 +337,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         });
     }
 
-    /** Chooses how players on the internet get in, off the event thread because closing either way waits on it. */
+    /** Chooses how players on the internet connect. The switch runs off the event thread, because closing either connection method waits. */
     private void choose(final boolean cloudflare) {
         byRouter.setSelected(!cloudflare);
         byCloudflare.setSelected(cloudflare);
@@ -355,7 +355,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         });
     }
 
-    /** Asks where Cloudflare's program is, for a host who did not put it where its installer does. */
+    /** Asks where Cloudflare's program is, for a host who did not install it in the default place. */
     private void locateCloudflared() {
         final JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle(TEXT.getMessage("lblWebConsoleCloudflareLocate"));
@@ -364,7 +364,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         }
     }
 
-    /** Says where card pictures come from, which is Scryfall's image servers once its card data has been downloaded. */
+    /** Shows where card pictures come from. They come from Scryfall's image servers once its card data has been downloaded. */
     private void showPictures(final ImageIndex.State now) {
         final long updated = ImageIndex.updated();
         picturesBar.setVisible(now.downloading());
@@ -388,9 +388,9 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             action = TEXT.getMessage("lblWebConsolePicturesSpeedUp");
         }
         picturesButton.setText(action);
-        // The words take what the button leaves, so the row is as wide as the rest whatever the button says
+        // The text takes the space the button leaves, so the row is as wide as the others whatever the button says
         picturesState.setText("<html>" + words + "</html>");
-        // A label wraps HTML only when told how wide it is, and a width given in the HTML itself is not in screen pixels
+        // A label wraps HTML only when it is given a width, and a width set in the HTML itself is not in screen pixels
         final View laidOut = (View) picturesState.getClientProperty(BasicHTML.propertyKey);
         final int room = TEXT_WIDTH - 60 - picturesButton.getPreferredSize().width;
         laidOut.setSize(room, 0);
@@ -403,7 +403,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         refit();
     }
 
-    /** The host's answer to the one-time offer, which is not made again whichever it is. */
+    /** Records the host's answer to the one-time offer. The offer is not made again, whatever the answer. */
     private void answerPictures(final boolean download) {
         CdnUuidCache.markBulkSyncPromptAnswered();
         picturesAsk.setVisible(false);
@@ -413,7 +413,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         refit();
     }
 
-    /** The port is closed: there is nothing to link to until it is started again. failure is why a start did not work, or null. */
+    /** The port is closed, so there is nothing to link to until the server starts again. failure is the reason a start failed, or null. */
     private void stopped(final Exception failure) {
         traffic = null;
         SwingUtilities.invokeLater(() -> {
@@ -430,7 +430,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             netField.setVisible(true);
             startHelp.setVisible(failure != null);
             if (failure != null) {
-                // All a failed bind says is that the port is taken; another Forge is the likely holder, since desktop Forge hosts on the same port
+                // A failed bind only says that the port is taken. Another Forge is the likely holder, because desktop Forge hosts on the same port.
                 reword(startFailure, failure instanceof BindException ? TEXT.getMessage("lblWebConsolePortInUse", service.port())
                         : TEXT.getMessage("lblWebConsoleStartFailed"), HELP_WIDTH);
                 details.setVisible(true);
@@ -442,7 +442,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         });
     }
 
-    /** Start or stop, off the event thread because binding a port and closing one both take their time. */
+    /** Starts or stops the server off the event thread, because binding a port and closing one both take time. */
     private void toggle() {
         final boolean stopping = up;
         if (stopping && service.playersHere() > 0 && !confirmed("lblWebConsoleStopAsk", "lblWebConsoleStopServer")) {
@@ -474,12 +474,12 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
 
     /** Zips the network logs and what this window shows into the Downloads folder, as desktop's Help menu does. */
     private void exportLogs() {
-        // The links carry the tokens that let a browser in, and a log is sent on to other people
+        // The links contain the tokens that let a browser in, and a log may be sent to other people
         final String shown = text.getText().replaceAll("token=\\w+", "token=...");
         inBackground("WebExportLogs", () -> {
             String outcome;
             try {
-                // This window's output is in no file, and the exporter takes every forge*.log in the user folder
+                // This window's output is not in any file, and the exporter collects every forge*.log in the user folder
                 Files.writeString(Path.of(ForgeProfileProperties.getUserDir(), "forge-server-console.log"), shown);
                 File downloads = new File(System.getProperty("user.home"), "Downloads");
                 if (!downloads.isDirectory()) {
@@ -495,7 +495,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         });
     }
 
-    /** Asks before something that drops players who are connected. */
+    /** Asks before an action that drops connected players. */
     private boolean confirmed(final String question, final String yes) {
         final String[] answers = {TEXT.getMessage(yes), TEXT.getMessage("lblCancel")};
         return JOptionPane.showOptionDialog(frame, TEXT.getMessage(question), frame.getTitle(), JOptionPane.DEFAULT_OPTION,
@@ -516,7 +516,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         copyHome.setToolTipText(home == null ? null : service.inviteUrl(home.getValue()));
     }
 
-    /** address is null while it is being found, when it could not be, and while stopped; shown is what to say in its place. */
+    /** address is null while it is being found, when it could not be found, and while stopped. shown is the text to show in its place. */
     private void showInternet(final String address, final String shown, final boolean mayRetry) {
         internet = address;
         netAddress.setText(address == null ? shown : address);
@@ -525,7 +525,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         retryNet.setVisible(mayRetry);
     }
 
-    /** Asked off the event thread, because the address the internet sees is a web request of its own. */
+    /** Call it off the event thread, because finding the address the internet sees needs its own web request. */
     private void findInternet() {
         final String found = FServerManager.getExternalAddress();
         SwingUtilities.invokeLater(() -> {
@@ -662,11 +662,11 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 stack(picturesState, stack(picturesBar, row(picturesUpdated, imagesButton))),
                 Box.createHorizontalGlue(), picturesButton));
         final JPanel foot = row(quitWhenEmpty, Box.createHorizontalGlue(), detailsToggle);
-        // A row left centred would push every left-aligned one in by half its width
+        // A row left centred would push every left-aligned row in by half its width
         foot.setAlignmentX(0f);
         main.add(foot);
 
-        // A styled pane so errors and warnings can stand out, and it wraps long lines because a stack trace is wider than the window
+        // A styled pane, so errors and warnings can be coloured. It wraps long lines, because a stack trace is wider than the window.
         text = new JTextPane();
         text.setEditable(false);
         text.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
@@ -709,7 +709,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 quit();
             }
         });
-        // Held at the top of a scrolling pane, so the rows keep their own heights and a screen too short for them can still reach them all
+        // The rows sit at the top of a scrolling pane. They keep their own heights, and a screen that is too short can still scroll to them all.
         final JPanel top = new JPanel(new BorderLayout());
         top.add(main, BorderLayout.NORTH);
         final JScrollPane scroll = new JScrollPane(top, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -734,19 +734,19 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         }).start();
     }
 
-    /** The window is as tall as what it shows, which changes as help and the details come and go. */
+    /** Sizes the window to fit what it shows. That changes as the help and the details are shown and hidden. */
     private void refit() {
         fit();
-        // The space under a part is shown by an event that follows the part's own, so the fit is made again once that has run
+        // The gap under a part is shown by an event that runs after the part's own event, so the window is fitted again after it
         SwingUtilities.invokeLater(this::fit);
     }
 
     private void fit() {
-        // As wide as its widest part, shown or not, so the window keeps one width as help comes and goes
+        // Use the width of the widest part, shown or not, so the window keeps one width as help is shown and hidden
         for (final Component part : main.getComponents()) {
             widest = Math.max(widest, part.getPreferredSize().width + main.getInsets().left + main.getInsets().right);
         }
-        // The details stand beside the main column at its width
+        // The details panel sits next to the main column, at the same width
         details.setPreferredSize(new Dimension(main.getPreferredSize().width, 480));
         frame.pack();
         frame.setSize(frame.getWidth(), Math.min(frame.getHeight(), GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds().height));
@@ -759,7 +759,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         refit();
     }
 
-    /** While the log is out of sight, the way to it says how many errors have been written there. */
+    /** While the log is hidden, the button that shows it says how many errors have been written to it. */
     private void labelDetails() {
         if (details.isVisible()) {
             detailsToggle.setText("« " + TEXT.getMessage("lblWebConsoleHideDetails"));
@@ -791,7 +791,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             this(DARK);
         }
 
-        /** off is the colour of the empty ring, for a lamp whose unlit state is not a fault. */
+        /** off is the colour of the empty ring. Use it for a lamp whose unlit state is not an error. */
         Light(final Color off) {
             this.off = off;
             final Dimension size = new Dimension(SIZE, SIZE);

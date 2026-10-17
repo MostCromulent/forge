@@ -46,18 +46,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/** The game events the browser can animate, which travel with the state change they caused. */
+/** The game events the browser can animate. Each is sent with the state change it caused. */
 final class BrowserEvents {
     private BrowserEvents() {
     }
 
-    /** Returns null for an event the browser has nothing to show for, which the state covers. */
+    /** Returns null for an event the browser does not animate. The state update already shows its result. */
     static Record forwarded(final GameEvent event, final Tracker tracker) {
         if (event instanceof GameEventCardChangeZone e && e.card() != null) {
             PlayerView caster = null;
             if (e.to() != null && e.to().zoneType() == ZoneType.Stack) {
                 caster = e.card().getController();
-                // A card the game copied as it moved arrives without its controller, so the tracker's copy gives it
+                // A card the game copied as it moved has no controller, so the controller is read from the tracker's copy
                 final CardView tracked = caster == null && tracker != null ? tracker.getObj(TrackableTypes.CardViewType, e.card().getId()) : null;
                 caster = tracked == null ? caster : tracked.getController();
             }
@@ -104,7 +104,7 @@ final class BrowserEvents {
         if (event instanceof GameEventPlayerLivesChanged e && e.player() != null) {
             return new LifeChanged(Ref.player(e.player().getId()), e.oldLives(), e.newLives());
         }
-        // The engine also fires this with no counter type when it only clears a player's counters
+        // The engine also fires this with no counter type when it only clears a player's counters. That case is skipped
         if (event instanceof GameEventPlayerCounters e && e.receiver() != null && e.type() != null) {
             return new PlayerCounters(Ref.player(e.receiver().getId()));
         }

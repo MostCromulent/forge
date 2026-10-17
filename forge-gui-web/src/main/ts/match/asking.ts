@@ -1,6 +1,6 @@
-// What a question asks, as one short line: the engine's prompt text carries the source card's rules, its id and its own bookkeeping
+// Shortens a question to one line. The engine's prompt text also holds the source card's rules text, its id and the engine's own notes.
 
-/** A question's text split into the card it comes from, when it names one, and what it asks. */
+/** A question's text, split into the source card (when the text names one) and what it asks. */
 export interface Asked {
   source: string;
   ask: string;
@@ -8,16 +8,16 @@ export interface Asked {
 
 // "Gravedigger (121) - When Gravedigger enters, ...": the source card, its id, and its rules text
 const SOURCE = /^(.+?) \(\d+\) - (.*)$/;
-// A later step of the same effect names the source and its id alone, without the rules text again
+// A later step of the same effect names only the source and its id, without the rules text
 const BARE_SOURCE = /^(.+?) \(\d+\)$/;
-// The engine's own notes ride along in square brackets, such as the trigger that holds an ability
+// The engine adds its own notes in square brackets, such as the trigger an ability belongs to
 const BRACKETED = /\s*\[[^\]]*\]/g;
 const CARD_ID = / \(\d+\)/g;
 
-/** Splits the engine's text: the source card's name, and the instruction its last line gives, without ids or bracketed notes. */
+/** Splits the engine's text into the source card's name and the instruction on its last line. Ids and bracketed notes are removed. */
 export function splitQuestion(text: string): Asked {
   const lines = text.split('\n').map(line => line.trim());
-  // The targets picked so far follow the instruction, and the board shows them already
+  // The targets picked so far come after the instruction. They are dropped because the board already shows them
   const targeted = lines.findIndex(line => line.startsWith('Targeted:'));
   const kept = (targeted < 0 ? lines : lines.slice(0, targeted)).filter(line => line);
   if (!kept.length) return { source: '', ask: '' };
@@ -25,7 +25,7 @@ export function splitQuestion(text: string): Asked {
   if (kept.length > 1 && kept[1].startsWith('- ')) kept.splice(0, 2, `${kept[0]} ${kept[1]}`);
   const named = SOURCE.exec(kept[0]) ?? (kept.length > 1 ? BARE_SOURCE.exec(kept[0]) : null);
   const source = named ? named[1] : '';
-  // After a source and its rules text, which the stack and the prompt show, the question keeps only what it asks
+  // When the text names a source, only what it asks is kept. The stack and the prompt already show the source and its rules text
   const ask = !named ? kept.join(' ') : kept.length > 1 ? kept[kept.length - 1] : named[2];
   return { source, ask: ask.replace(BRACKETED, '').replace(CARD_ID, '').trim() };
 }

@@ -37,7 +37,7 @@ final class QuestShop {
     private QuestShop() {
     }
 
-    /** The bazaar with one stall open: Fantasy mode's only, as desktop and mobile offer it. */
+    /** The bazaar with one stall open. Only Fantasy mode has a bazaar, as on desktop and mobile. */
     static QuestBazaar bazaar(final String wanted) {
         final QuestController quest = QuestGame.quest();
         if (quest.getMode() != QuestMode.Fantasy) {
@@ -67,7 +67,7 @@ final class QuestShop {
             if (image.prop() != null) {
                 icon = image.prop().name();
             } else if (image.path() != null) {
-                // A pet's picture is its token's, which the image route serves by the token's key
+                // A pet's picture is its token's picture. The image route serves it by the token's key
                 final String file = new File(image.path()).getName();
                 card = "t:" + (file.contains(".") ? file.substring(0, file.lastIndexOf('.')) : file);
             }
@@ -75,7 +75,7 @@ final class QuestShop {
         // The description is written for desktop's label, with line breaks as markup
         final String description = item.getPurchaseDescription(assets).replaceAll("(?i)<br\\s*/?>", "\n").replaceAll("<[^>]+>", "").trim();
         if (item instanceof QuestPetController pet) {
-            // A pet's purchase description repeats its stats, which the row carries as now and next
+            // A pet's purchase description repeats its stats. The row sends them as now and next instead
             return new QuestItemRow(item.getPurchaseName(), pet.getDescription(), icon, card, item.getBuyingPrice(assets), assets.getPetLevel(pet.getSaveFileKey()),
                     pet.getMaxLevel(), pet.getStats(assets), pet.getUpgradedStats(assets));
         }
@@ -84,7 +84,7 @@ final class QuestShop {
                 basic.getMaxLevel(), null, null);
     }
 
-    /** Buys an item of a stall, refusing first when the credits are short, since Quest's own purchase then does nothing. */
+    /** Buys an item from a stall. It refuses first when the credits are short, because Quest's own purchase then does nothing. */
     static String buy(final String stall, final String name) {
         final QuestController quest = QuestGame.quest();
         if (quest.getMode() != QuestMode.Fantasy || stall == null || !quest.getBazaar().getStallNames().contains(stall)) {
@@ -107,7 +107,7 @@ final class QuestShop {
         return null;
     }
 
-    /** What a card sells for, as the shop's own sale works it out. */
+    /** What a card sells for, computed the same way as the shop's own sale. */
     private static int salePrice(final PaperCard card, final double multiplier) {
         return Math.max(Math.min((int) (multiplier * QuestSpellShop.getCardValue(card)), QuestGame.quest().getCards().getSellPriceLimit()), 1);
     }
@@ -126,7 +126,7 @@ final class QuestShop {
         return using;
     }
 
-    /** A card's key in a trade: its printing, and whether it is foil, which the image key does not say and the price does. */
+    /** A card's key in a trade: its printing, and whether it is foil. The image key does not show foil, but the price depends on it. */
     private static String key(final PaperCard card) {
         return card.getImageKey(false) + (card.isFoil() ? "|foil" : "");
     }
@@ -151,7 +151,7 @@ final class QuestShop {
         return cards;
     }
 
-    /** A page of the shop's cards for sale, each with its price, stock and copies owned, or of the player's cards, each with its sale price, copies and decks. */
+    /** A page of cards. A shop card has its price, stock and copies owned. One of the player's cards has its sale price, copies and decks. */
     static CataloguePage cards(final CatalogueQuery q) {
         final boolean shop = "shop".equals(q.source());
         final ItemPool<InventoryItem> stock = QuestGame.quest().getCards().getShopList();
@@ -175,7 +175,7 @@ final class QuestShop {
         final ItemPool<PaperCard> owned = QuestGame.quest().getCards().getCardpool();
         final double multiplier = QuestSpellShop.updateMultiplier();
         final int limit = QuestGame.quest().getCards().getSellPriceLimit();
-        // Mobile's line, on one line
+        // Mobile's text, joined into one line
         final String note = (text.getMessage("lblSellCardsAt") + " " + new DecimalFormat("#.##").format(multiplier * 100) + text.getMessage("lblTheirValue")
                 + (limit < Integer.MAX_VALUE ? String.format(text.getMessage("lblMaximumSellingCredits"), limit) : "")).replace('\n', ' ').trim();
         final List<Product> products = new ArrayList<>();
@@ -190,12 +190,12 @@ final class QuestShop {
         final ItemPool<InventoryItem> extras = QuestSpellShop.extras(ownedItems);
         final List<CatalogueRow> extraRows = CardCatalog.rows(cardsIn(extras),
                 c -> new CardCatalog.Extra(null, salePrice(c, multiplier), extras.count(c), null, null, key(c)));
-        // Copies, not cards, so that a trade of part of a stack changes them, which is what tells the page its lists changed
+        // Count copies, not cards, so a trade of part of a stack changes the count. A changed count tells the page its lists changed
         return new Trading(List.of(new TradeList("shop", copies(stock)), new TradeList("inventory", copies(owned))), note, null,
                 products, extraRows);
     }
 
-    /** Buys picks from the shop, or sells picks of the player's cards, each up to what its list holds. Answers why a purchase cannot be made, or null. */
+    /** Buys picks from the shop, or sells picks from the player's cards, each limited to what its list holds. Returns why a purchase cannot be made, or null. */
     static String trade(final String source, final List<TradePick> picks) {
         final boolean buying = "shop".equals(source);
         final ItemPool<InventoryItem> stock = QuestGame.quest().getCards().getShopList();
@@ -218,19 +218,19 @@ final class QuestShop {
                         + SItemManagerUtil.getItemDisplayString(chosen.toFlatList(), 1, true).toLowerCase() + ".\n" + SItemManagerUtil.buildDisplayList(chosen);
             }
             QuestSpellShop.buyItems(chosen);
-            // The shop's list widget takes what was bought out of the stock on desktop and mobile
+            // On desktop and mobile, the shop's list widget removes bought items from the stock
             stock.removeAll(chosen);
         } else {
             QuestSpellShop.updateMultiplier();
             QuestSpellShop.sellItems(chosen);
-            // As the shop's list widget puts what was sold back on sale
+            // On desktop and mobile, the shop's list widget puts sold items back on sale
             stock.addAll(chosen);
         }
         QuestGame.quest().save();
         return null;
     }
 
-    /** A card of a list by its key, or a product by "p:" and its name. */
+    /** Finds a card in a list by its key, or a product by "p:" plus its name. */
     private static InventoryItem find(final ItemPool<? extends InventoryItem> pool, final String key) {
         if (key == null) {
             return null;

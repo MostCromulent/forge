@@ -1,4 +1,4 @@
-// Messages from the server in the corner of the screen. An error stays until clicked; anything else goes by itself.
+// Messages from the server in the corner of the screen. An error stays until clicked. Any other notice closes by itself.
 
 import { t } from './text';
 import type { Model } from './model';
@@ -8,16 +8,16 @@ let model: Model | null = null;
 let redraw = (): void => {};
 let noticeId = 0;
 const NOTICE_MS = 6000;
-/** As long as a notice's way out (theme.css). */
+/** The length of a notice's exit animation (theme.css). */
 const NOTICE_OUT_MS = 180;
 
-/** Gives the notices the model they are kept in and the way to draw it again. */
+/** Sets the model that holds the notices and the function that redraws the page. */
 export function initNotices(into: Model, schedule: () => void): void {
   model = into;
   redraw = schedule;
 }
 
-/** Shows a notice, from the server or from a screen, such as a removal it offers to undo. An error stays until dismissed; anything else goes by itself. */
+/** Shows a notice from the server or from a screen, such as a removal the screen offers to undo. An error stays until dismissed. Any other notice closes by itself. */
 export function showNotice(notice: Notice, view?: () => void, label?: string): void {
   if (!model) return;
   const id = ++noticeId;
@@ -26,7 +26,7 @@ export function showNotice(notice: Notice, view?: () => void, label?: string): v
   redraw();
 }
 
-/** A notice slides out before it goes (theme.css); dismissed again on its way out, it goes at once. */
+/** A notice slides out before it is removed (theme.css). A notice dismissed again while sliding out is removed at once. */
 function dismissNotice(id: number): void {
   if (!model) return;
   const going = model.notices.find(n => n.id === id);

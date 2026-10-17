@@ -1,4 +1,4 @@
-// Which layout the page uses. Portrait is a phone or tablet held upright; everything else is the desktop layout.
+// Which layout the page uses. Portrait is a phone or tablet held upright. Everything else uses the desktop layout.
 
 const QUERY = '(orientation: portrait) and (max-width: 899px)';
 
@@ -12,7 +12,7 @@ const typing = () => {
 export function initForm(onChange: () => void): void {
   const media = matchMedia(QUERY);
   const apply = () => {
-    // An on-screen keyboard can make a portrait phone look landscape, so the form holds while something is typed in
+    // An on-screen keyboard can make a portrait phone look landscape, so the layout does not change while a field has focus
     if (typing() || media.matches === portrait) return false;
     portrait = media.matches;
     if (portrait) document.documentElement.dataset.form = 'portrait';
@@ -22,7 +22,7 @@ export function initForm(onChange: () => void): void {
   const changed = () => { if (apply()) onChange(); };
   media.addEventListener('change', changed);
   document.addEventListener('focusout', () => setTimeout(changed));
-  // The page is not drawn yet, so the first answer changes nothing that needs drawing again
+  // The page is not drawn yet, so the first check does not need a redraw
   apply();
 }
 

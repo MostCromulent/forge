@@ -41,21 +41,21 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/** One deck open in the browser's editor, where every change is checked against the engine's limits, applied and saved at once. */
+/** One deck open in the browser's editor. Every change is checked against the engine's limits, applied and saved at once. */
 public final class DeckEditor {
-    /** The name a new deck starts with, until its commander names it or the player does. */
+    /** The name a new deck starts with, until its commander or the player names it. */
     static String newDeckName() {
         return Localizer.getInstance().getMessage("lblNewDeck");
     }
 
     private static final int MOST_UNDO = 100;
-    /** The key of the answer to renaming, duplicating or deleting a pool's deck. */
+    /** The message key for the reply to renaming, duplicating or deleting a pool's deck. */
     private static final String GROUP_OWNS_IT = "lblWebEditorPoolOwnsDeck";
-    /** The keys of the answers to changing what a deck built from a collection keeps as it is. */
+    /** The message keys for the replies to changing what a collection's deck keeps fixed. */
     private static final String DECK_FIXED = "lblWebCollectionDeckFixed";
     private static final String MAIN_ONLY = "lblWebCollectionMainOnly";
     static final String NOT_OWNED = "lblWebCollectionNotOwned";
-    /** The basics the land row offers, with the colour each needs; Wastes needs none. */
+    /** The basics the land row offers, with the colour each needs. Wastes needs none. */
     private static final Map<String, String> BASICS = new LinkedHashMap<>();
 
     static {
@@ -74,20 +74,20 @@ public final class DeckEditor {
     record Stored(IStorage<Deck> storage) implements Target {
     }
 
-    /** A guest's browser, which keeps the deck under this id. */
+    /** A guest's browser, which stores the deck under this id. */
     record Device(String id) implements Target {
     }
 
-    /** A sealed or draft pool: the deck is the human deck of the group of its name, whose opponents stay as they are. */
+    /** A sealed or draft pool. The deck is the human deck of the group with its name, and the group's opponents stay unchanged. */
     record Group(IStorage<DeckGroup> storage) implements Target {
     }
 
-    /** A game mode's own cards, which a deck of that mode is built from, with cards read at each use and saved run after each save. mainOnly fixes every section but the main deck. */
+    /** A game mode's own cards, which a deck of that mode is built from. cards is read at each use, and saved runs after each save. mainOnly keeps every section except the main deck unchanged. */
     public record Collection(String owner, Supplier<CardPool> cards, Predicate<PaperCard> isNew,
             Function<Deck, List<CardEdition>> landSets, Runnable saved, boolean mainOnly) {
     }
 
-    /** Tells a guest's browser its deck changed: the deck as .dck text, or null when it was deleted. */
+    /** Tells a guest's browser that its deck changed. text is the deck as .dck text, or null when it was deleted. */
     interface DeviceSink {
         void deviceDeck(String id, String text, GameType format);
     }
@@ -105,20 +105,20 @@ public final class DeckEditor {
     private Deck deck;
     private Target target;
     private Check check;
-    /** Names the deck this can't change in place, until the first change copies it. */
+    /** The name of the deck that this editor cannot change in place, until the first change copies it. */
     private String copyOf;
     /** The name this editor has saved the deck under, or null before its first save. */
     private String owned;
-    /** Whether the deck exists where this editor saves it: opened from there, or saved there since. */
+    /** Whether the deck exists where this editor saves it: it was opened from there, or saved there since. */
     private boolean saved;
     private String landed;
     /** The edition new basic lands come from, or null for the usual printing. */
     private String landSet;
 
-    /** saved says the deck was opened from where target saves it; a new deck, or one that is only being read, was not. */
+    /** saved says the deck was opened from where target saves it. A new deck, or one that is only being viewed, was not. */
     DeckEditor(final Deck deck, final boolean readOnly, final boolean saved, final Target target, final Check check,
             final DeckStore.Storages storages, final boolean guest, final DeviceSink sink, final Collection collection) {
-        // Edited as a copy, so a deck another screen holds (a catalogue entry, a seat) never changes under it
+        // Edit a copy, so a deck that another screen holds (a catalogue entry, a seat) never changes under that screen
         this.deck = new Deck(deck, deck.getName());
         this.target = target;
         this.check = check;
@@ -136,12 +136,12 @@ public final class DeckEditor {
         return collection;
     }
 
-    /** A sealed or draft deck: the pool is the catalogue, and cards move between it and the deck rather than appear. */
+    /** Whether this is a sealed or draft deck. The pool is the catalogue, and cards move between the pool and the deck instead of being created. */
     boolean limited() {
         return !check.unrestricted() && (check.deckFormat() == DeckFormat.Limited || commanderDraft());
     }
 
-    /** A Commander Draft pool, whose commander comes from the pool or from the few every player may use without drafting them. */
+    /** Whether this is a Commander Draft pool. Its commander comes from the pool, or from the few that every player may use without drafting them. */
     private boolean commanderDraft() {
         return !check.unrestricted() && check.deckFormat() == DeckFormat.CommanderDraft;
     }
@@ -212,7 +212,7 @@ public final class DeckEditor {
         return copyOf;
     }
 
-    /** Whether the deck exists where it is saved, so Done has a deck of its own to put on a seat. */
+    /** Whether the deck exists where it is saved, so Done has a deck to put on a seat. */
     boolean saved() {
         return saved;
     }
@@ -235,7 +235,7 @@ public final class DeckEditor {
         return change(name, () -> addOwned(deck.getOrCreate(to), card, count));
     }
 
-    /** Adds one copy in the printing chosen by its image key. A pool or a collection holds its own printings, so there the card is added as any other. */
+    /** Adds one copy of the printing chosen by its image key. A pool or a collection holds its own printings, so there the card is added like any other. */
     String addPrinting(final String name, final DeckSection to, final String imageKey) {
         if (limited() || collection != null) {
             return add(name, to, 1);
@@ -254,7 +254,7 @@ public final class DeckEditor {
         return change(name, () -> addOwned(deck.getOrCreate(to), card, 1));
     }
 
-    /** Makes every copy of a card in a section foil, or plain again when they all are, as desktop's editor converts them. */
+    /** Makes every copy of a card in a section foil, or plain again when all copies are foil, as desktop's editor does. */
     String toggleFoil(final String name, final DeckSection in) {
         if (limited() || collection != null) {
             return Localizer.getInstance().getMessage(DECK_FIXED);
@@ -298,7 +298,7 @@ public final class DeckEditor {
         if (have == 0 || from == to) {
             return Localizer.getInstance().getMessage("lblWebEditorNoneToMove", String.valueOf(name));
         }
-        // A drafted commander that stands down goes back to the pool, and one that was never drafted goes nowhere
+        // A drafted commander that is removed goes back to the pool. A commander that was never drafted is dropped.
         final boolean leaving = commanderDraft() && from == DeckSection.Commander;
         final DeckSection home = leaving ? DeckSection.Sideboard : to;
         return change(name, () -> {
@@ -309,7 +309,7 @@ public final class DeckEditor {
         });
     }
 
-    /** Makes a card the commander, from a section of the deck or (from null) the catalogue. A commander it replaces goes to the main deck, or back to the pool in Commander Draft. */
+    /** Makes a card the commander, from a section of the deck or, when from is null, from the catalogue. A commander it replaces goes to the main deck, or back to the pool in Commander Draft. */
     String makeCommander(final String name, final DeckSection from) {
         if (fixedSection(DeckSection.Commander)) {
             return Localizer.getInstance().getMessage(MAIN_ONLY);
@@ -356,7 +356,7 @@ public final class DeckEditor {
         });
     }
 
-    /** Sets how many copies of each printing a section holds of one card. The total can't change. */
+    /** Sets how many copies of each printing of one card a section holds. The total cannot change. */
     String setPrintings(final String name, final DeckSection in, final Map<String, Integer> countsByImageKey) {
         final CardPool pool = deck.get(in);
         final int have = pool == null ? 0 : pool.countByName(name);
@@ -372,7 +372,7 @@ public final class DeckEditor {
             }
             wanted.merge(printing, e.getValue(), Integer::sum);
         }
-        // With a collection, each printing only as many times as it is owned and not used elsewhere in the deck
+        // With a collection, each printing may be used only as many times as it is owned and not used elsewhere in the deck
         if (collection != null && !BASICS.containsKey(name)) {
             for (final Map.Entry<PaperCard, Integer> e : wanted.entrySet()) {
                 final int here = pool == null ? 0 : pool.count(e.getKey());
@@ -404,7 +404,7 @@ public final class DeckEditor {
                     addLands(e.getKey(), e.getValue() - have);
                 } else if (e.getValue() < have) {
                     final CardPool taken = take(deck.getMain(), e.getKey(), have - e.getValue());
-                    // A pool's lands are part of the pool, and desktop's limited editor moves them back to it
+                    // A pool's lands belong to the pool, and desktop's limited editor moves them back to it
                     if (limited()) {
                         deck.getOrCreate(DeckSection.Sideboard).addAll(taken);
                     }
@@ -473,16 +473,16 @@ public final class DeckEditor {
         landed = null;
         moveTo(previous.check());
         if (!previous.deck().getName().equals(deck.getName())) {
-            // Another deck may have taken the old name since, and storage would overwrite it
+            // Another deck may have taken the old name since then, and storage would overwrite that deck
             final String name = previous.deck().getName();
             renameTo(target instanceof Stored s ? DeckStore.freeName(s.storage(), name, owned) : name);
         }
-        // Every section, since a limited deck's Attractions and Contraptions move there from the pool
+        // Replace every section, because a limited deck's Attractions and Contraptions move there from the pool
         replaceCards(previous.deck(), List.of(DeckSection.values()));
         return save();
     }
 
-    /** Saves a copy under a free name, and carries on editing the copy. */
+    /** Saves a copy under a free name, and continues editing the copy. */
     String duplicate() {
         if (collection != null) {
             return Localizer.getInstance().getMessage(DECK_FIXED);
@@ -515,7 +515,7 @@ public final class DeckEditor {
         if (target instanceof Group) {
             return Localizer.getInstance().getMessage(GROUP_OWNS_IT);
         }
-        // A precon, or someone else's deck, being looked at: nothing of the player's is saved to delete
+        // The player is only viewing a precon or another player's deck, so there is no saved deck of theirs to delete
         if (copyOf != null) {
             return Localizer.getInstance().getMessage("lblWebEditorOnlyOwnDelete");
         }
@@ -553,10 +553,10 @@ public final class DeckEditor {
         }
     }
 
-    /** Swaps the deck's cards for another deck's, keeping its name and where it is saved. */
+    /** Replaces the deck's cards with another deck's cards. The deck keeps its name and save location. */
     String replaceAll(final Deck other) {
         if (collection != null) {
-            // The sections the collection lets change are replaced, and by what it can supply
+            // Only the sections the collection allows to change are replaced, and only with cards it can supply
             return change(null, () -> {
                 deck.getMain().clear();
                 if (!collection.mainOnly()) {
@@ -570,7 +570,7 @@ public final class DeckEditor {
 
     EditorState state() {
         final DeckFormat df = check.deckFormat();
-        // A collection's deck has a commander its format knows nothing of, whose colours the catalogue starts narrowed to
+        // A collection's deck has a commander that its format does not know about. The catalogue starts filtered to that commander's colours.
         final List<PaperCard> leaders = collection != null ? deck.getCommanders() : Legality.commanders(deck, check);
         final Legality.Result legality = Legality.check(deck, check);
         final boolean wanted = df.hasCommander() && (leaders.isEmpty() || (df.hasSignatureSpell() && deck.getSignatureSpell() == null));
@@ -586,7 +586,7 @@ public final class DeckEditor {
                 collection == null ? null : collection.owner(), collection != null && collection.mainOnly(), sections(legality));
     }
 
-    /** Every section beyond the main deck a constructed deck can carry, as desktop's editor offers them. A pool or a collection has none. */
+    /** Every section beyond the main deck that a constructed deck can have, as desktop's editor offers them. A pool or a collection has none. */
     private List<EditorSection> sections(final Legality.Result legality) {
         if (limited() || collection != null) {
             return List.of();
@@ -612,7 +612,7 @@ public final class DeckEditor {
         return save();
     }
 
-    /** The first change to a deck that can't be changed in place: from now on the editor works on a copy of its own. */
+    /** The first change to a deck that cannot be changed in place. From now on the editor works on its own copy. */
     private void becomeCopy() {
         if (deck.getName().equals(copyOf)) {
             deck.setName(Localizer.getInstance().getMessage("lblWebEditorCopyName", copyOf));
@@ -643,12 +643,12 @@ public final class DeckEditor {
             }
             final IStorage<Deck> storage = ((Stored) target).storage();
             synchronized (DeckCatalog.DECKS) {
-                // Storage overwrites by file name, so a deck saved for the first time takes a name nobody else has
+                // Storage overwrites by file name, so a deck saved for the first time gets a name that no other deck uses
                 if (owned == null) {
                     deck.setName(DeckStore.freeName(storage, deck.getName(), null));
                 }
                 storage.add(deck);
-                // Storage keeps this very deck, which goes on being edited, so what the list knew of it is out of date
+                // Storage keeps this same deck object, which is still being edited, so the list's cached facts about it are out of date
                 DeckCatalog.changed(deck);
                 owned = deck.getName();
             }
@@ -662,7 +662,7 @@ public final class DeckEditor {
         }
     }
 
-    /** Gives the deck a new name, and its file with it. */
+    /** Renames the deck, and its file with it. */
     private void renameTo(final String name) {
         if (!(target instanceof Stored s) || owned == null) {
             deck.setName(name);
@@ -673,7 +673,7 @@ public final class DeckEditor {
         }
     }
 
-    /** Changes the check, and moves the deck when the new one's format keeps its decks in another folder. */
+    /** Changes the check. Moves the deck when the new format stores its decks in another folder. */
     private void moveTo(final Check wanted) {
         final boolean newFamily = DeckStore.family(wanted.format()) != DeckStore.family(check.format());
         check = wanted;
@@ -690,7 +690,7 @@ public final class DeckEditor {
         }
     }
 
-    /** Storage deletes by the deck's own name, so the old deck keeps its name until deleted, and goes first when both names are one file. */
+    /** Storage deletes by the deck's own name. So the old deck keeps its name until it is deleted, and it is deleted first when both names map to one file. */
     private void moveFile(final IStorage<Deck> from, final IStorage<Deck> to, final String name) {
         if (from == to && DeckStore.sameFile(owned, name)) {
             from.delete(owned);
@@ -715,7 +715,7 @@ public final class DeckEditor {
         }
     }
 
-    /** Puts a card in the command zone as desktop's editors do: a partner joins, anything else replaces, and in Oathbreaker each slot holds one. */
+    /** Puts a card in the command zone as desktop's editors do. A partner joins the commander, any other card replaces it, and in Oathbreaker each slot holds one card. */
     private void placeCommander(final PaperCard card, final CardPool commanders) {
         if (check.format() == GameType.Oathbreaker) {
             final boolean oathbreaker = card.getRules().canBeOathbreaker();
@@ -728,7 +728,7 @@ public final class DeckEditor {
             final List<PaperCard> existing = commanders.toFlatList();
             final boolean partner = existing.size() == 1 && (card.getRules().canBePartnerCommander()
                     && existing.get(0).getRules().canBePartnerCommanders(card.getRules())
-                    // A Commander Draft also pairs two that draft rules let partner, such as two one-colour legends
+                    // A Commander Draft also pairs two commanders that the draft rules allow as partners, such as two one-colour legends
                     || commanderDraft() && CommanderDraftUtil.isPartnerEligible(existing.get(0)) && CommanderDraftUtil.isPartnerEligible(card));
             if (!partner) {
                 final CardPool home = commanderDraft() ? deck.getOrCreate(DeckSection.Sideboard) : deck.getMain();
@@ -757,7 +757,7 @@ public final class DeckEditor {
         }
     }
 
-    /** Removes copies of one card from a pool, the printings with the fewest copies first, and returns what it took. */
+    /** Removes copies of one card from a pool, starting with the printings that have the fewest copies. Returns the removed copies. */
     private static CardPool take(final CardPool pool, final String name, final int count) {
         final CardPool taken = new CardPool();
         final List<Map.Entry<PaperCard, Integer>> printings = new ArrayList<>();
@@ -780,7 +780,7 @@ public final class DeckEditor {
         return taken;
     }
 
-    /** The section of a pool's deck that holds a card to make commander: the pool first, then the main deck. */
+    /** The section of a pool's deck that holds the card to make commander. The pool is checked first, then the main deck. */
     private CardPool holding(final String name) {
         for (final DeckSection section : List.of(DeckSection.Sideboard, DeckSection.Main)) {
             final CardPool pool = deck.get(section);
@@ -801,7 +801,7 @@ public final class DeckEditor {
         return move(name, DeckSection.Sideboard, to == DeckSection.Main ? DeckSection.matchingSection(card) : to, count);
     }
 
-    /** Adds basics to the main deck: the pool's own first in limited mode, then new ones. */
+    /** Adds basics to the main deck. In limited mode the pool's own basics are used first, then new ones. */
     private void addLands(final String name, final int count) {
         int wanted = count;
         if (limited()) {
@@ -818,7 +818,7 @@ public final class DeckEditor {
         }
     }
 
-    /** A random edition among the pool's that has basic lands, as desktop's limited editor chooses. */
+    /** A random edition with basic lands from among the pool's editions, as desktop's limited editor chooses. */
     private String poolLandSet() {
         final List<String> codes = new ArrayList<>();
         for (final Map.Entry<PaperCard, Integer> e : deck.getAllCardsInASinglePool(false, true)) {
@@ -831,7 +831,7 @@ public final class DeckEditor {
                 : codes.get(MyRandom.getRandom().nextInt(codes.size()));
     }
 
-    /** Built once here, because StaticData's sorted list is built lazily without a lock and two editors opening at once read it half sorted. */
+    /** Built once here. StaticData's sorted list is built lazily without a lock, so two editors opening at once could read it half sorted. */
     private static final class LandSets {
         static final List<LandSet> ALL = build();
 
@@ -847,7 +847,7 @@ public final class DeckEditor {
         }
     }
 
-    /** The printing a new copy takes: the one the deck already holds, if it holds only one, or the preferred art. */
+    /** The printing a new copy uses: the one the deck already holds if it holds only one, otherwise the preferred art. */
     private PaperCard printingFor(final String name) {
         PaperCard only = null;
         for (final Map.Entry<PaperCard, Integer> e : deck.getAllCardsInASinglePool(true, false)) {
@@ -862,33 +862,33 @@ public final class DeckEditor {
         if (only != null) {
             return only;
         }
-        // Planes, schemes and avatars are kept apart from every other card
+        // Planes, schemes and avatars are stored separately from all other cards
         final PaperCard common = StaticData.instance().getCommonCards().getCard(name);
         return common != null ? common : StaticData.instance().getVariantCards().getCard(name);
     }
 
-    /** How many more copies of a card the copy limit allows, counted by name across the deck, and a collection can supply. */
+    /** How many more copies of a card are allowed: by the copy limit, counted by name across the deck, and by what a collection can supply. */
     private int room(final PaperCard card) {
         final DeckFormat df = check.deckFormat();
         final int most = df.getMaxCardCopies(card);
         final int byLimit = most == Integer.MAX_VALUE ? Integer.MAX_VALUE
                 : most - deck.getAllCardsInASinglePool(df.hasCommander(), false).countByName(card.getName());
-        // A basic land is free; any other card, however many the rules allow, is only as many as are owned
+        // A basic land is unlimited. Any other card is limited to the number owned, however many the rules allow.
         if (collection == null || BASICS.containsKey(card.getName())) {
             return byLimit;
         }
-        // The Commander section holds an owned copy too
+        // Copies in the Commander section are owned copies too
         final int spare = collection.cards().get().countByName(card.getName())
                 - deck.getAllCardsInASinglePool(true, false).countByName(card.getName());
         return Math.min(byLimit, spare);
     }
 
-    /** How many more copies of this very printing the collection can supply, the whole deck counted. */
+    /** How many more copies of this exact printing the collection can supply, counting the whole deck. */
     private int spare(final PaperCard printing) {
         return collection.cards().get().count(printing) - deck.getAllCardsInASinglePool(true, false).count(printing);
     }
 
-    /** Adds copies of a card: as it is without a collection or for a basic land, otherwise as the printings owned, the one asked for first. */
+    /** Adds copies of a card. Without a collection, or for a basic land, the card is added as given. Otherwise the owned printings are used, the requested one first. */
     private void addOwned(final CardPool to, final PaperCard card, final int count) {
         if (collection == null || BASICS.containsKey(card.getName())) {
             to.add(card, count);
@@ -900,7 +900,7 @@ public final class DeckEditor {
                 printings.add(e.getKey());
             }
         });
-        // An imported list names a printing, which is taken first when it is owned
+        // An imported list names a printing, which is used first when it is owned
         printings.sort((a, b) -> Boolean.compare(!a.equals(card), !b.equals(card)));
         int left = count;
         for (final PaperCard printing : printings) {
@@ -912,7 +912,7 @@ public final class DeckEditor {
         }
     }
 
-    /** A section a collection's deck keeps as it is, or does not have. */
+    /** Whether a collection's deck keeps this section unchanged, or does not have it. */
     private boolean fixedSection(final DeckSection section) {
         return collection != null && collection.mainOnly() && section != DeckSection.Main;
     }

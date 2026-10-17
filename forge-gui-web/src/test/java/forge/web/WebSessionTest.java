@@ -18,13 +18,13 @@ public class WebSessionTest {
         return new WebSessions(new WebGuiBase(), 60_000, () -> { });
     }
 
-    /** Connects a browser and has it take the host's seat, which nobody gets by arriving. */
+    /** Connects a browser and has it claim the host's seat. No browser gets the seat just by connecting. */
     private static void connectAsHost(final WebSessions sessions, final TestBrowser r, final String id) {
         sessions.connected(r, id, true);
         sessions.onMessage(r, JsonCodec.message("claimHost"));
     }
 
-    /** Fails if the host's seat is handed out by arriving, or if two browsers can both end up holding it. */
+    /** Fails if a browser gets the host's seat just by connecting, or if two browsers can both hold it. */
     @Test
     public void theFirstBrowserToAskGetsTheHostSeat() throws Exception {
         final WebSessions sessions = opened();
@@ -43,7 +43,7 @@ public class WebSessionTest {
         Assert.assertNotNull(second.awaitMatching("error", m -> true), "the second browser was not told why");
     }
 
-    /** Fails if a browser on a guest's link can take the host's seat, which could stop the server or set the table. */
+    /** Fails if a browser on a guest's link can take the host's seat. The host's seat can stop the server or set up the table. */
     @Test
     public void aGuestLinkCannotTakeTheHostSeat() throws Exception {
         final WebSessions sessions = opened();
@@ -54,13 +54,13 @@ public class WebSessionTest {
         Assert.assertNotNull(guest.awaitMatching("error", m -> true), "a guest asking for the host's seat was not told no");
         Assert.assertFalse(guest.awaitNewest("hello").get("host").getAsBoolean(), "a guest took the host's seat");
 
-        // The same browser id on the host's link is a different browser, and may still take the seat
+        // The same browser id on the host's link counts as a different browser, and can still take the seat
         final TestBrowser host = new TestBrowser();
         connectAsHost(sessions, host, "guest");
         Assert.assertTrue(host.awaitNewest("hello").get("host").getAsBoolean());
     }
 
-    /** Fails if anyone with a link can make the server keep track of browsers without end. */
+    /** Fails if anyone with a link can make the server track an unlimited number of browsers. */
     @Test
     public void browsersBeyondTheLimitAreTurnedAwayUntilOthersLeave() {
         final WebSessions sessions = opened();
@@ -75,7 +75,7 @@ public class WebSessionTest {
         Assert.assertTrue(oneTooMany.closed, "a browser past the limit was let in");
         Assert.assertFalse(attached.get(0).closed);
 
-        // One that has gone and holds nothing makes room
+        // A browser that has disconnected and holds nothing frees a place
         sessions.disconnected(attached.get(0));
         final TestBrowser next = new TestBrowser();
         sessions.connected(next, "extra", false);

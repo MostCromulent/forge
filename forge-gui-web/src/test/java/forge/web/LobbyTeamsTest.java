@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LobbyTeamsTest extends SessionsTest {
-    /** Each seat's team, with -1 for a seat the table shows none for. */
+    /** Each seat's team, with -1 for a seat that the table shows no team for. */
     private static List<Integer> teams(final JsonObject table) {
         final List<Integer> out = new ArrayList<>();
         for (final JsonElement seat : table.getAsJsonArray("seats")) {
@@ -59,7 +59,7 @@ public class LobbyTeamsTest extends SessionsTest {
         Assert.assertFalse(oneSide.get("canStart").getAsBoolean(), "a table with one side can start");
     }
 
-    // Fails if a seat added to a table with teams lands on a team of its own, or on the larger team
+    // Fails if a seat added to a table with teams gets a team of its own, or joins the larger team
     @Test(timeOut = 120_000)
     public void aNewSeatJoinsTheSmallerTeam() throws Exception {
         final TestBrowser host = tableOfFour();

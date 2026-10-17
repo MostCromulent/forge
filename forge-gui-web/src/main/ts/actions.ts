@@ -1,29 +1,29 @@
-// Everything a player can do, which the controller alone turns into messages, so renderers and screens never see the protocol
+// Every action a player can take. Only the controller turns them into messages, so renderers and screens never use the protocol
 
 import type {
   AutoDecisionAction, CatalogueQuery, DeckOp, DeckQuery, DevAction, DeviceDeckText, EditorEdit, EventSetup, ImportCommit, PhaseType, SealedCreate, DraftStart, Send, SetSeat,
   EventKind, PoolPlayMode, YieldAction,
 } from './protocol';
 
-/** What a seat's owner can change about it. */
+/** The seat fields its owner can change. */
 type SeatChange = Omit<SetSeat, 't' | 'index'>;
 
-/** What the shared pages can do. A build with campaigns adds theirs to Actions (campaign/register.tsx). */
+/** The actions of the shared pages. A build with campaigns adds the campaign actions to Actions (campaign/register.tsx). */
 export interface PageActions {
-  /** A click on a card. menu is the right button, which asks for everything the card can do; x and y place that list. */
+  /** A click on a card. menu means a right-click, which asks for all the card's options. x and y position that menu. */
   selectCard(key: number, menu: boolean, x: number, y: number): void;
   selectPlayer(key: number): void;
   selectStackItem(key: number): void;
-  /** Pays with one colour of the pool, by its bit in the player's Mana property. */
+  /** Pays with one colour from the mana pool. color is that colour's bit in the player's Mana property. */
   useMana(color: number): void;
   ok(): void;
   cancel(): void;
   endTurn(): void;
-  /** Stops whichever pass is running: until end of turn, until the stack clears, or until a marked step. */
+  /** Stops the running pass, whether it is until end of turn, until the stack clears, or until a marked step. */
   stopYield(): void;
   toggleAutoPass(): void;
   undo(): void;
-  /** Starts recording a macro, or stops recording, when the host asks how many times to play it. */
+  /** Starts or stops recording a macro. When recording stops, the host asks how many times to play it. */
   macroRecord(): void;
   macroRepeat(): void;
   concede(): void;
@@ -35,14 +35,14 @@ export interface PageActions {
   quitMatch(): void;
   /** Leaves a finished match for the start page. */
   leave(): void;
-  /** Answers one of the game's open questions. */
+  /** Answers one of the game's open requests. */
   answer(requestId: number, value: unknown): void;
   toggleStop(phase: PhaseType, mine: boolean): void;
-  /** Every stop of one row at once; the rest of the row goes off. */
+  /** Sets all the stops of one row at once. Phases not listed are turned off. */
   setStops(mine: boolean, phases: PhaseType[]): void;
-  /** Pass priority until this phase, or stop doing so. */
+  /** Starts or stops passing priority until this phase. */
   toggleMarker(phase: PhaseType, mine: boolean): void;
-  /** Asks for a card's rules text, or a player's details, which arrive later in the model. */
+  /** Requests a card's rules text or a player's details. The answer arrives later in the model. */
   inspectCard(key: number): void;
   inspectPlayer(key: number): void;
   askStackMenu(itemKey: number): void;
@@ -53,30 +53,30 @@ export interface PageActions {
   dropPlayer(name: string): void;
   setSetting(key: string, value: string): void;
 
-  /** The name and face this browser plays under. The server refuses a name another player already has. */
+  /** Sets the name and avatar this browser plays under. The server refuses a name another player already has. */
   setName(name: string, avatar: number): void;
-  /** Opens a table against the computer, or one others can join by link. */
+  /** Opens a table against the computer, or a table others can join by link. */
   openLobby(invite: boolean): void;
   claimHost(): void;
-  /** Tries again for a seat after a join found none free. */
+  /** Tries again to take a seat after a join found no free seat. */
   join(): void;
 
   /** Opens the Limited pages for a kind of event. */
   limitedOpen(kind: EventKind, resume: boolean): void;
   draftStart(d: Omit<DraftStart, 't'>): void;
-  /** Picks the card at index of the pack shown in state step. */
+  /** Picks the card at index from the pack shown in draft state step. */
   draftPick(step: number, index: number, sideboard: boolean): void;
   draftMove(index: number, sideboard: boolean): void;
   draftSave(name: string, replace: boolean): void;
   draftDiscard(): void;
   limitedLeave(): void;
   sealedCreate(c: Omit<SealedCreate, 't'>): void;
-  /** A pool's opponents screen, and back from it. */
+  /** Opens and closes a pool's opponents screen. */
   poolOpen(name: string): void;
   poolClose(): void;
   poolEdit(name: string): void;
   poolDelete(name: string): void;
-  /** Plays a pool: mode is one, several or gauntlet; opponent counts from 0 and count is how many for several. */
+  /** Plays a pool. mode is one, several or gauntlet. opponent counts from 0. count is the number of opponents for several. */
   poolPlay(name: string, mode: PoolPlayMode, opponent: number, count: number, games: number): void;
   gauntletNext(): void;
   gauntletRestart(): void;
@@ -84,9 +84,9 @@ export interface PageActions {
   /** Starts a finished match again from its first game. */
   restartGame(): void;
 
-  /** Opens a table others can join by link and makes it a draft or sealed table once it is open. */
+  /** Opens a table others can join by link, then makes it a draft or sealed table. */
   openLimitedTable(kind: EventKind): void;
-  /** The table's Limited switch: a kind of event, or null for Constructed. */
+  /** Sets the table's Limited mode to a kind of event, or null for Constructed. */
   setLimited(kind: EventKind | null): void;
   eventSetup(s: Omit<EventSetup, 't'>): void;
   eventStart(): void;
@@ -100,11 +100,11 @@ export interface PageActions {
   leaveLobby(): void;
   setFormat(format: string): void;
   setCardPool(cardPool: string | null): void;
-  /** Where each format's cards come from, and the old snapshots, for the card pool picker; they arrive later in the model. */
+  /** Requests each format's card sources and the old snapshots for the card pool picker. They arrive later in the model. */
   askCardPoolDetails(): void;
-  /** Every edition, for the catalogue's set filter; it arrives later in the model. */
+  /** Requests every edition for the catalogue's set filter. The list arrives later in the model. */
   askCardSets(): void;
-  /** The host's generators: one of each card, and no artifacts. */
+  /** Sets the host's deck generator options: one copy of each card, and no artifacts. */
   setDeckGen(singletons: boolean, noArtifacts: boolean): void;
   setVariant(variant: string, on: boolean): void;
   setArchenemy(index: number): void;
@@ -112,33 +112,33 @@ export interface PageActions {
   setTeam(index: number, team: number): void;
   setSeatExtra(index: number, section: string, choice: string): void;
   askExtraChoices(index: number, section: string): void;
-  /** How many seats the table has; seats come and go at the end, and never one a person holds. */
+  /** Sets how many seats the table has. Seats are added or removed at the end, and a seat a person holds is never removed. */
   setPlayerCount(count: number): void;
   setMatchLength(games: number): void;
   /** The table's highest Commander bracket, 1 to 4, or 5 for any. */
   setMaxBracket(bracket: number): void;
   removeSeat(index: number): void;
-  /** Turns a seat between a computer and one someone can join. */
+  /** Switches a seat between a computer player and an open seat someone can join. */
   openSeat(index: number): void;
   aiSeat(index: number): void;
   setSeat(index: number, change: SeatChange): void;
-  /** Sleeves a seat's deck in a card's art, cropped at offset; an empty key goes back to the numbered sleeve. */
+  /** Uses a card's art, cropped at offset, as a seat's sleeve. An empty key returns to the numbered sleeve. */
   setSleeveArt(index: number, key: string, offset: number): void;
   forgetSleeveArt(key: string): void;
   startMatch(spectate: boolean): void;
-  /** Asks for a deck's card list and statistics, which arrive later in the model. */
+  /** Requests a deck's card list and statistics. They arrive later in the model. */
   askDeckDetails(key: string): void;
-  /** Asks which listed decks hold a card, in the sideboard or anywhere else, or cards from a set. */
+  /** Asks which listed decks contain a card, in the sideboard or anywhere, or contain cards from a set. */
   deckQuery(kind: DeckQuery['kind'], value: string): void;
   fetchNetDecks(): void;
-  /** Card names and their printings, for picking a card's art; both arrive later in the model. */
+  /** Searches card names for picking a card's art. The names arrive later in the model. */
   searchCards(query: string): void;
-  /** A card's printings; cardPool marks those outside it. They arrive later in the model. */
+  /** Requests a card's printings. cardPool marks the printings outside it. They arrive later in the model. */
   askPrintings(name: string, cardPool?: string | null): void;
-  /** Answers a question the host asked outside a match. An empty choice is a cancel. */
+  /** Answers a question the host asked outside a match. An empty choice cancels. */
   answerHostChoice(id: number, value: number[]): void;
 
-  /** The format the start page's deck finder lists. */
+  /** Sets the format the start page's deck finder lists. */
   browseFormat(format: string): void;
   openEditor(o: { key?: string; newFormat?: string; seat?: number; copy?: boolean }): void;
   closeEditor(): void;
@@ -150,17 +150,17 @@ export interface PageActions {
   /** Deletes one of your own decks by its finder key. */
   deleteDeck(key: string): void;
   favouriteDeck(key: string, on: boolean): void;
-  /** A page of the catalogue. */
+  /** Requests a page of the catalogue. */
   queryCatalogue(q: Omit<CatalogueQuery, 't' | 'request'>): void;
   readImport(text: string, format: string, cardPool: string | null, unrestricted: boolean): void;
   fetchImport(url: string): void;
   commitImport(c: Omit<ImportCommit, 't'>): void;
-  /** Saves a .dck file's deck under the format, with no importer. clash answers a name that is already taken. */
+  /** Saves the deck in a .dck file under the format, without the importer. clash says what to do if the name is taken. */
   addDeckFile(text: string, format: string, clash?: 'replace' | 'keep'): void;
   deviceDecks(decks: DeviceDeckText[]): void;
 }
 
-/** The newest catalogue and import queries, numbered as sent, so an answer to an older one is told apart and dropped. */
+/** The numbers of the newest catalogue and import queries. An answer to an older query has a lower number and is dropped. */
 export const asked = { catalogue: 0, import: 0 };
 
 export interface Actions extends PageActions {}

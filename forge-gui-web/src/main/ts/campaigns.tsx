@@ -1,4 +1,4 @@
-// Where the campaign modes plug into the page. campaign/register.tsx fills it in, so a build can leave the campaigns out
+// The hooks that connect the campaign modes to the page. campaign/register.tsx sets them, so a build can leave the campaigns out
 
 import type { FunctionComponent, VNode } from 'preact';
 import type { Actions, PageActions } from './actions';
@@ -8,45 +8,45 @@ import type { TextKey } from './text';
 
 /** How a campaign's game ends: what the result says and the buttons it offers. */
 export interface CampaignEnding {
-  /** Tells one result from another, so a panel drawn before it arrived is drawn again. Null while the result is still to come. */
+  /** Identifies the result, so a panel drawn before the result arrived is drawn again. Null until the result arrives. */
   key: string | null;
   line: string | null;
   buttons(panel: EndingPanel): void;
 }
 
-/** The result panel's foot, where an ending puts its buttons. */
+/** The bottom of the result panel, where an ending adds its buttons. */
 export interface EndingPanel {
   add(label: string, primary: boolean, onClick: () => void): void;
   /** A line above the buttons, such as a question they answer. */
   say(text: string): void;
-  /** Empties the foot, for another set of buttons. */
+  /** Empties the bottom of the panel so another set of buttons can be added. */
   clear(): void;
   /** Shows the battlefield in place of the result. */
   view(): void;
 }
 
-/** A draft played for a campaign, which ends its own way and says what leaving it costs. */
+/** A draft played for a campaign. It has its own end screen and its own text for what leaving it costs. */
 export interface CampaignDraft {
   Done: FunctionComponent<{ state: DraftState; actions: Actions }>;
   leaveText: TextKey;
 }
 
 export interface CampaignHooks {
-  /** The model fields the campaigns add to the page's, at their starting values. */
+  /** The fields the campaigns add to the page model, with their starting values. */
   fields(): Partial<Model>;
-  /** Every hello: a campaign clears what belongs to a page that is no longer showing. */
+  /** Runs on every hello. A campaign clears the state of any page that is no longer shown. */
   hello(model: Model, msg: Hello): void;
-  /** Stores a message of the campaigns'. Answers false for any other. */
+  /** Stores a campaign message in the model. Returns false for any other message. */
   message(model: Model, msg: ServerMessage): boolean;
-  /** The campaigns' actions, added to the page's. */
+  /** The campaign actions, added to the page actions. */
   actions(send: Send, model: Model, schedule: () => void): Omit<Actions, keyof PageActions>;
-  /** The open mode's pages. */
+  /** The pages of the campaign mode that is open. */
   Page: FunctionComponent<{ model: Model; actions: Actions }>;
   /** The start page's entries for the campaigns. */
   Menu: FunctionComponent<{ model: Model; actions: Actions }>;
-  /** The draft running for a campaign, or null when the draft is the Limited pages'. */
+  /** The draft running for a campaign, or null when the draft belongs to the Limited pages. */
   draft(model: Model): CampaignDraft | null;
-  /** How the game just ended ends for a campaign, or null when its match is not a campaign's. */
+  /** The campaign ending for the game that just ended, or null when the match is not part of a campaign. */
   ending(model: Model, actions: Actions): CampaignEnding | null;
 }
 

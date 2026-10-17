@@ -1,4 +1,4 @@
-// A booster pack over its cards, animated by hand with the Web Animations API, and the server decides which cards it holds
+// A booster pack above its cards, animated in code with the Web Animations API. The server decides which cards it holds
 
 import { skinIconUrl, imageUrl } from '../images';
 import { artUrl } from '../sleeves';
@@ -8,9 +8,9 @@ import { reducedMotion } from '../dom';
 
 interface PackSpec {
   name: string;
-  /** The line under the name: what kind of pack it is, or for a chaos pack the world its cards come from. */
+  /** The line under the name. It gives the kind of pack, or for a chaos pack the world its cards come from. */
   sub: string;
-  /** The art's image key, or null for a chaos pack, which carries the chaos mark instead. */
+  /** The art's image key, or null for a chaos pack, which shows the chaos symbol instead. */
   art: string | null;
   chaos: boolean;
   cards: PackCard[];
@@ -18,7 +18,7 @@ interface PackSpec {
 }
 
 interface PackHooks {
-  /** A card has turned face up, at this place on the screen. */
+  /** A card has turned face up at this position on the screen. */
   flipped(card: PackCard, at: DOMRect): void;
   /** The pack has been clicked and is opening. */
   opening(): void;
@@ -28,19 +28,19 @@ interface PackHooks {
 }
 
 export interface Pack {
-  /** Opens the pack; settles when every card is face up. */
+  /** Opens the pack. The promise resolves when every card is face up. */
   open(): Promise<void>;
-  /** Shows every card face up at once, whatever was under way. */
+  /** Shows every card face up at once, and ends any animation in progress. */
   finish(): void;
 }
 
-/** The pack's size, which the peel's arithmetic and the stylesheet share. */
+/** The pack's width. The peel calculation and the stylesheet both use it. */
 const PACK_W = 196;
 const SLICES = 16;
-/** The seal's height, as a share of the pack's. */
+/** The seal's height, as a percentage of the pack's height. */
 const SEAL = 9;
 const SOFT = 'cubic-bezier(.22,.8,.26,1)';
-/** How long before a card of each rarity turns over, after the one before it. */
+/** The delay before a card of each rarity flips, counted from the flip of the card before it. */
 const GAP: Record<string, number> = { Common: 70, BasicLand: 70, Uncommon: 200, Rare: 500, Special: 500, MythicRare: 900 };
 const isRare = (rarity: string): boolean => rarity === 'Rare' || rarity === 'Special' || rarity === 'MythicRare';
 
@@ -48,7 +48,7 @@ const isRare = (rarity: string): boolean => rarity === 'Rare' || rarity === 'Spe
 const teeth = (n: number, y0: string, y1: string): string[] => Array.from({ length: n + 1 }, (_, k) => `${(100 * k / n).toFixed(1)}% ${k % 2 ? y0 : y1}`);
 const TOP = `polygon(${teeth(40, '0%', '34%').join(', ')}, 100% 100%, 0 100%)`;
 const BODY = `polygon(0 0, 100% 0, ${teeth(40, '100%', '96.6%').reverse().join(', ')})`;
-// The pack whole, which is the shape its glow takes
+// The outline of the whole pack, used as the shape of its glow
 const OUTLINE = `polygon(${teeth(40, '0%', `${(SEAL * .34).toFixed(2)}%`).join(', ')}, ${teeth(40, '100%', `${(SEAL + (100 - SEAL) * .966).toFixed(2)}%`).reverse().join(', ')})`;
 
 function el(spec: string, style: Partial<CSSStyleDeclaration> = {}, ...kids: (Node | string | null)[]): HTMLElement {
@@ -117,14 +117,14 @@ export function mountPack(host: HTMLElement, spec: PackSpec, hooks: PackHooks): 
     up.add(i);
     const card = slots[i].firstElementChild as HTMLElement;
     card.classList.add('up');
-    // Face up and landed, it previews on hover as any card does
+    // Once the card is face up and landed, it shows a preview on hover like any other card
     card.dataset.image = cards[i].image;
     hooks.flipped(cards[i], slots[i].getBoundingClientRect());
   };
 
   function finish(): void {
     timers.splice(0).forEach(clearTimeout);
-    // The pack's idle animations never end, and those cannot be finished
+    // The pack's idle animations repeat forever and cannot be finished, so they are cancelled
     stage.getAnimations({ subtree: true }).forEach(a => { try { a.finish(); } catch { a.cancel(); } });
     cell.remove();
     slots.forEach(slot => slot.classList.add('shown'));
@@ -150,7 +150,7 @@ export function mountPack(host: HTMLElement, spec: PackSpec, hooks: PackHooks): 
     const n = cards.length, mid = (n - 1) / 2;
     const px = box.left + box.width / 2;
 
-    // Peeled from one corner: the tear runs across and the freed seal is pulled up and back in an arc behind it
+    // The seal peels from one corner. The tear runs across, and the freed seal is pulled up and back in an arc behind it
     const W = box.width, R = 84, D = 640, S = 30, w = W / SLICES;
     const prog = (u: number) => { const v = Math.max(0, (u - .14) / .86); return v < .5 ? 2 * v * v : 1 - (-2 * v + 2) ** 2 / 2; };
     const sample = <T>(fn: (xk: number) => T): T[] => Array.from({ length: S + 1 }, (_, j) => fn(prog(j / S) * (W + 8)));
@@ -191,7 +191,7 @@ export function mountPack(host: HTMLElement, spec: PackSpec, hooks: PackHooks): 
         { duration: FLIGHT, delay: start, fill: 'both' });
       y.animate([{ transform: `translateY(${mouthDy + 96}px)`, easing: 'cubic-bezier(.3,.7,.4,1)' }, { transform: `translateY(${mouthDy - 118}px)`, offset: .34, easing: 'cubic-bezier(.45,0,.3,1)' }, { transform: 'translateY(0px)' }],
         { duration: FLIGHT, delay: start, fill: 'both' });
-      // A card turns as it lands, but never sooner after the one before it than its rarity allows
+      // A card flips as it lands, but no sooner after the previous card than its rarity's delay allows
       const rare = isRare(cards[i].rarity);
       flipAt = Math.max(start + FLIGHT * .6, i ? flipAt + (GAP[cards[i].rarity] ?? 70) : 0);
       const turn = rare ? 700 : 440;

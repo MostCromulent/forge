@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** The game's objects as the browser holds them, changed by the same rules as src/main/ts/model.ts so the two copies stay equal. The server keeps it so a browser that reloads is sent the game as it stands. */
+/** The game's objects as the browser holds them. It applies the same rules as src/main/ts/model.ts, so the two copies stay equal. The server keeps this copy to send the current game to a browser that reloads. */
 public final class BrowserModel {
     private final Map<Integer, JsonObject> objects = new LinkedHashMap<>();
     private int root = -1;
@@ -32,7 +32,7 @@ public final class BrowserModel {
 
     public synchronized void apply(final Map<Integer, JsonObject> newObjects, final Map<Integer, JsonObject> deltas) {
         for (final Map.Entry<Integer, JsonObject> e : newObjects.entrySet()) {
-            // A property still at its default is left out of an object, so a null in a new one means the same
+            // A property at its default is left out of an object. A null in a new object means the same, so it is removed
             final JsonObject copy = e.getValue().deepCopy();
             copy.entrySet().removeIf(field -> field.getValue().isJsonNull());
             objects.put(e.getKey(), copy);
@@ -50,7 +50,7 @@ public final class BrowserModel {
                 }
             }
         }
-        // Only a new object, or a property cleared or given an object or list, can leave something unreachable
+        // Only a new object, a cleared property, or a property set to an object or list can make an object unreachable
         final boolean mayOrphan = !newObjects.isEmpty() || deltas.values().stream().anyMatch(props -> props.entrySet().stream()
                 .anyMatch(field -> field.getValue().isJsonNull() || field.getValue().isJsonObject() || field.getValue().isJsonArray()));
         if (mayOrphan) {
@@ -127,7 +127,7 @@ public final class BrowserModel {
         return out;
     }
 
-    // Packets carry no removal signal, so anything the game no longer reaches is dropped here
+    // Packets do not say when an object is removed. So any object the root no longer references is dropped here
     private void prune() {
         if (!objects.containsKey(root)) {
             return;

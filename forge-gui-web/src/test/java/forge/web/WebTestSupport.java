@@ -30,7 +30,7 @@ public final class WebTestSupport {
         FModel.getNetPreferences().setPref(ForgeNetPreferences.FNetPref.UPnP, "NEVER");
     }
 
-    /** The host's view of the web seat, which needs {@code updateGameView()} after a test seeds cards because seeding fires no event. */
+    /** The host's view of the web seat. Call {@code updateGameView()} on it after a test seeds cards, because seeding fires no event. */
     static RemoteClientGuiGame remoteGui(final HostedMatch match) {
         for (final Player p : match.getGame().getPlayers()) {
             if (p.getController() instanceof PlayerControllerHuman pch && pch.getGui() instanceof RemoteClientGuiGame r) {
@@ -40,7 +40,7 @@ public final class WebTestSupport {
         throw new AssertionError("no remote human seat");
     }
 
-    /** Skips a slow test unless -Drun.stress.tests=true, the switch Forge's other network tests use. */
+    /** Skips a slow test unless -Drun.stress.tests=true is set. Forge's other network tests use the same switch. */
     static void skipUnlessStress() {
         if (!"true".equalsIgnoreCase(System.getProperty("run.stress.tests"))) {
             throw new SkipException("Slow test skipped. Use -Drun.stress.tests=true to run.");

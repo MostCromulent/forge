@@ -1,4 +1,4 @@
-// The Aether, where the server decides what matches the filters, what a pull costs and which card comes
+// The Aether. The server decides which cards match the filters, what a pull costs and which card is pulled
 
 import { useEffect, useState } from 'preact/hooks';
 import { skinIconUrl, imageUrl } from '../images';
@@ -11,7 +11,7 @@ import type { ConquestAetherState, ConquestOption, PackCard } from '../protocol'
 import { t, formatNumber, type TextKey } from '../text';
 
 const RARITIES: TextKey[] = ['lblCommon', 'lblUncommon', 'lblRare', 'lblMythic'];
-/** How many of the cards pulled this visit stay in view. */
+/** The number of cards pulled this visit that stay in view. */
 const MOST_RECENT = 12;
 
 const shard = (size: number) => <img class="cq-shard" alt={t('lblAetherShards')} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl('IMG_AETHER_SHARD')} />;
@@ -26,7 +26,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
   const ask = (patch: Partial<Pick<ConquestAetherState, 'colors' | 'type' | 'rarity' | 'cmc'>>, pull = false) =>
     actions.conquestAether({ colors: a.colors, type: a.type, rarity: a.rarity, cmc: a.cmc, pull, ...patch });
   const toggle = (letter: string) => ask({ colors: [...'WUBRG'].filter(c => (c === letter) !== a.colors.includes(c)).join('') });
-  // The price is on the button, so a pull that cannot be paid for is not offered
+  // The price is on the button, so the button is disabled when the player cannot pay for a pull
   const short = a.cost > balance(model.campaignBar, 'IMG_AETHER_SHARD');
   const pull = <PricedButton label={t('lblWebConquestPull')} icon="IMG_AETHER_SHARD" iconLabel={t('lblAetherShards')} size={18} cost={a.cost}
     have={balance(model.campaignBar, 'IMG_AETHER_SHARD')} disabled={!a.cost || !a.strict} cls="cq-ae-pull" onClick={() => ask({}, true)} />;
@@ -70,7 +70,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
   );
 }
 
-/** One of the filters: its options as tiles, of which one is chosen. A rarity carries what a pull at it costs. */
+/** One of the filters, shown as tiles with one chosen. A rarity tile shows what a pull at that rarity costs. */
 function Options({ title, options, chosen, pick, two }: { title: string; options: ConquestOption[]; chosen: string; pick: (key: string) => void; two?: boolean }) {
   return (
     <div>

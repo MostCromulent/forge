@@ -38,7 +38,7 @@ public class DeckEditorTest {
         WebTestSupport.initModel();
     }
 
-    // Fails if a card's printings are not listed newest first, or do not say which are borderless, as the printing picker filters by
+    // Fails if a card's printings are not listed newest first, or do not carry the style that the printing picker filters by
     @Test
     public void printingsAreNewestFirstAndCarryTheirStyle() {
         final List<ToBrowser.Printing> printings = DeckCatalog.printings("Llanowar Elves", null);
@@ -91,7 +91,7 @@ public class DeckEditorTest {
         Assert.assertEquals(storages.of(GameType.Constructed).get(DeckEditor.newDeckName()).getMain().countByName("Swamp"), 30);
     }
 
-    // Fails if a card added in a chosen printing arrives in another, or a printing of a different card is taken for it
+    // Fails if a card added in a chosen printing is added in another, or a printing of a different card is accepted for it
     @Test
     public void aCardIsAddedInTheChosenPrinting() {
         final DeckEditor e = editor(new Deck("Printings"), GameType.Constructed);
@@ -117,7 +117,7 @@ public class DeckEditorTest {
         Assert.assertEquals(storages.of(GameType.Constructed).get("Zoo").getMain().countByName("Forest"), 1);
     }
 
-    // Fails if a guest's change reaches a host storage rather than the guest's browser
+    // Fails if a guest's change is saved to the host's storage and not sent to the guest's browser
     @Test
     public void guestReadOnlyCopyGoesToDevice() {
         final Deck host = new Deck("Host deck");
@@ -132,7 +132,7 @@ public class DeckEditorTest {
         Assert.assertFalse(storages.of(GameType.Constructed).contains("Host deck (copy)"));
     }
 
-    /** An editor over a collection of exactly these cards, by name and set. */
+    /** An editor for a collection of exactly these cards, given by name and set. */
     private DeckEditor collectionEditor(final GameType format, final boolean mainOnly, final Object... nameSetCount) {
         final CardPool owned = new CardPool();
         for (int i = 0; i < nameSetCount.length; i += 3) {
@@ -169,7 +169,7 @@ public class DeckEditorTest {
         Assert.assertEquals(e.deck().getCommanders().get(0).getEdition(), "CHK");
     }
 
-    // Fails if a Commander Draft deck replaces a one-colour commander with another, where desktop's draft editor pairs them
+    // Fails if a Commander Draft deck replaces a one-colour commander with another. Desktop's draft editor pairs them
     @Test
     public void aCommanderDraftPairsTwoOneColourLegends() {
         final Deck pool = new Deck("Draft");

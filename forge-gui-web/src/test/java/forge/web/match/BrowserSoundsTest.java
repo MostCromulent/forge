@@ -25,7 +25,7 @@ public class BrowserSoundsTest {
         WebTestSupport.initModel();
     }
 
-    // Fails if a land's own sound is not found because the host plays no sound itself, or has its own sounds off
+    // Fails if a land's sound is not found when the host plays no sound itself, or when the host has its own sounds off
     @Test
     public void aLandMakesItsColoursSound() {
         final CardView forest = CardView.getCardForUi(FModel.getMagicDb().getCommonCards().getCard("Forest"));
@@ -47,7 +47,7 @@ public class BrowserSoundsTest {
         final CardView attacker = new CardView(1, null);
         final CardView blocker = new CardView(2, null);
         final BrowserSounds sounds = new BrowserSounds(() -> null, p -> false);
-        // An attacker nobody blocked is listed against itself
+        // The engine lists an unblocked attacker as blocked by itself
         Assert.assertNull(sounds.soundFor(blocks(attacker, attacker)));
         Assert.assertEquals(sounds.soundFor(blocks(attacker, blocker)).name(), "block");
     }

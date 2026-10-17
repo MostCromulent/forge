@@ -1,20 +1,20 @@
-// A finger rested on something opens what a right-click or a hover opens for a mouse
+// A long press with a finger opens what a right-click or a hover opens for a mouse
 
 import { make } from './dom';
 
 const LONG_PRESS_MS = 500;
 const MOVE_LIMIT_PX = 8;
-/** How long after a finger lifts the browser's own context menu for that touch may still arrive. */
+/** How long after a finger lifts the browser's own context menu event for that touch can still arrive. */
 const AFTER_TOUCH_MS = 700;
 
 let touching = false;
 let touchEnded = -Infinity;
 let swallowClick = false;
 
-/** A pointer that can rest over something without pressing it. A phone has none, whatever events its browser makes up. */
+/** Whether the pointer can hover without pressing. A phone has no such pointer, whatever events its browser fires. */
 export const hovers = (e: PointerEvent): boolean => e.pointerType === 'mouse' && matchMedia('(any-hover: hover)').matches;
 
-/** A click says what made it on most browsers; where it does not, the press before it does. */
+/** Whether a click came from a touch. Most browsers report this on the click. Otherwise a recent touch end decides it. */
 export const isTouch = (e: Event | undefined): boolean => {
   const type = (e as PointerEvent | undefined)?.pointerType;
   return type ? type === 'touch' : !!e && performance.now() - touchEnded < AFTER_TOUCH_MS;
@@ -33,14 +33,14 @@ export function initPress(): void {
   }, true);
   document.addEventListener('pointerup', lifted, true);
   document.addEventListener('pointercancel', lifted, true);
-  // Android answers a long touch with its own context menu, which would do the right-click's job on top of the press's own
+  // Android fires its own context menu on a long touch. That would act as a right-click as well as the long press
   document.addEventListener('contextmenu', e => {
     if (e.isTrusted && (touching || performance.now() - touchEnded < AFTER_TOUCH_MS)) {
       e.preventDefault();
       e.stopPropagation();
     }
   }, true);
-  // The click that ends a press which opened something is not a click on what was pressed
+  // When a long press opened something, the click at its end is swallowed so it does not also click the element
   document.addEventListener('click', e => {
     if (swallowClick) {
       swallowClick = false;
@@ -50,7 +50,7 @@ export function initPress(): void {
   }, true);
 }
 
-/** Opens something after a finger rests on an element, with a ring filling while it waits. A touch that moves is a scroll or a drag. */
+/** Calls open after a long press on an element, and fills a ring while it waits. A touch that moves is a scroll or a drag, so it cancels. */
 export function longPress(e: PointerEvent, open: (x: number, y: number) => void): void {
   if (e.pointerType !== 'touch') {
     return;
@@ -83,9 +83,9 @@ export function longPress(e: PointerEvent, open: (x: number, y: number) => void)
 }
 
 /**
- * Follows a press that becomes a drag only once the pointer has moved threshold pixels: start is called then, and may answer
- * false to wait for the next move, move on each move from then on, and end when the press lifts or is cancelled. The click that
- * ends a drag is swallowed, so letting go over something does not also press it.
+ * Tracks a press that becomes a drag once the pointer has moved threshold pixels. start is called then, and can return
+ * false to wait for the next move. move is called on each later move, and end when the press lifts or is cancelled. The click
+ * that ends a drag is swallowed, so releasing over an element does not also click it.
  */
 export function trackDrag(e: PointerEvent, threshold: number, on: {
   start: (ev: PointerEvent) => boolean | void; move: (ev: PointerEvent) => void; end: (ev: PointerEvent, dragged: boolean) => void;
@@ -105,7 +105,7 @@ export function trackDrag(e: PointerEvent, threshold: number, on: {
     document.removeEventListener('pointerup', lifted);
     document.removeEventListener('pointercancel', lifted);
     if (dragging) {
-      // A click comes in the same task as the lift, or not at all, so the next one is not eaten later
+      // The click fires in the same task as the lift or not at all. Removing the listener after this task keeps later clicks working
       const swallow = (c: Event) => { c.stopPropagation(); c.preventDefault(); };
       document.addEventListener('click', swallow, true);
       setTimeout(() => document.removeEventListener('click', swallow, true));

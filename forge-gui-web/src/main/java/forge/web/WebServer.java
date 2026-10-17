@@ -86,30 +86,30 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
 
-/** The HTTP and WebSocket server on the web port: the page, card images, sounds, the browsers' sockets and the app tunnel. It listens on every interface so a player elsewhere can open a link, and the per-launch tokens in the links keep everyone else out. */
+/** The HTTP and WebSocket server on the web port. It serves the page, card images, sounds, the browsers' sockets and the app tunnel. It listens on every interface so that a player on another machine can open a link. The tokens in the links are new on each launch and keep everyone else out. */
 public final class WebServer implements AutoCloseable, IHasForgeLog {
     public interface Endpoint {
-        /** The id tells one browser from another across a reload, and mayHost says it came in on the host's link. */
+        /** The id tells browsers apart across a reload. mayHost says the browser connected through the host's link. */
         void connected(BrowserChannel channel, String clientId, boolean mayHost);
         void disconnected(BrowserChannel channel);
         void onMessage(BrowserChannel channel, JsonObject message);
     }
 
     private static final String COOKIE = "forge_token";
-    /** Which link a request came in on, kept on a socket's channel from the request that opened it. */
+    /** Which link a request came in on. It is stored on a socket's channel by the request that opened it. */
     private enum Access { NONE, GUEST, HOST }
     private static final AttributeKey<Access> ACCESS = AttributeKey.valueOf("forge.access");
     private static final AttributeKey<Boolean> KEEP_ALIVE = AttributeKey.valueOf("forge.keepAlive");
-    /** For what never changes at its address, a card picture of one printing or a hashed script chunk: kept for good. */
+    /** For content that never changes at its address, such as a card picture of one printing or a hashed script chunk. The browser keeps it permanently. */
     private static final String KEEP_FOREVER = "public, max-age=31536000, immutable";
-    /** For an avatar or sleeve, which asked for again would queue behind card pictures holding every connection the browser allows. */
+    /** For an avatar or sleeve. A repeat request for one would queue behind card pictures that use every connection the browser allows. */
     private static final String KEEP_AN_HOUR = "private, max-age=3600";
     private static final Pattern BYTE_RANGE = Pattern.compile("bytes=(\\d*)-(\\d*)");
-    /** The most one answer to a range of audio carries: about a minute of music at 128 kbps. */
+    /** The most bytes that one reply to an audio range request carries: about a minute of music at 128 kbps. */
     private static final int AUDIO_SLICE = 1 << 20;
-    /** Keys that failed are remembered so they are not fetched again; past this many, the list starts over. */
+    /** Keys that failed are stored so they are not fetched again. Past this many, the list is cleared. */
     private static final int MOST_UNAVAILABLE_IMAGES = 10_000;
-    /** Forge's own netplay port, so hosting from the desktop client at the same time needs {@code -Dforge.web.port}. */
+    /** The same port as Forge's own netplay. Hosting from the desktop client at the same time therefore needs {@code -Dforge.web.port}. */
     private static final int DEFAULT_PORT = 36743;
     /** How long a download is waited on before the browser is told there is no image. */
     private static final int FETCH_TIMEOUT_SECONDS = 15;
@@ -119,7 +119,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private final Endpoint endpoint;
     private final String hostToken;
     private final String guestToken;
-    // The shared fetcher tries a path once per run and never calls back again, so a key that failed is not retried
+    // The shared fetcher tries a path only once per run and does not call back again, so a key that failed is not retried
     private final Set<String> unavailableImages = ConcurrentHashMap.newKeySet();
     private final Channel channel;
 
@@ -131,7 +131,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return Integer.getInteger("forge.web.port", DEFAULT_PORT);
     }
 
-    /** A port of 0 takes whichever one is free, which is what a test wants. */
+    /** A port of 0 uses any free port, which is what a test needs. */
     WebServer(final Endpoint endpoint, final String hostToken, final String guestToken, final int port)
             throws InterruptedException {
         this.endpoint = endpoint;
@@ -143,7 +143,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(final SocketChannel ch) {
-                        // What follows the gate depends on who is calling, so the gate adds it at the first request
+                        // The handlers after the gate depend on who is calling, so the gate adds them at the first request
                         ch.pipeline().addLast(traffic, new HttpServerCodec(), new HttpObjectAggregator(1 << 20), new AccessGate());
                     }
                 });
@@ -164,12 +164,12 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return "http://127.0.0.1:" + port() + "/?token=" + hostToken;
     }
 
-    /** A guest's link, at whichever address they can reach this machine by. */
+    /** A guest's link, at whichever address the guest can reach this machine by. */
     public String inviteUrl(final String address) {
         return "http://" + address + ":" + port() + "/?token=" + guestToken;
     }
 
-    /** A link for another player by way of an address that leads here, such as the one Cloudflare gives. */
+    /** A link for another player through an address that leads to this machine, such as the one Cloudflare gives. */
     String inviteUrlThrough(final String origin) {
         return origin + "/?token=" + guestToken;
     }
@@ -182,7 +182,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
 
     private static final Pattern PARENT = Pattern.compile("(^|[/\\\\:|])\\.\\.([/\\\\|]|$)");
 
-    /** Refuses a key with ".." in it, because Forge joins a key onto a folder as it is and deletes a folder found where an image should be. */
+    /** Refuses a key that contains "..". Forge joins a key onto a folder path unchanged, and deletes a folder found where an image should be. */
     static boolean safeImageKey(final String key) {
         return !PARENT.matcher(key).find();
     }
@@ -212,7 +212,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return file != null && file.isFile() && isImage(file) ? file : null;
     }
 
-    /** The key whose art a card is drawn with: its own, or for a rebalanced card, which has no picture, that of the card it rebalances. */
+    /** The key of the art that a card is drawn with. A rebalanced card has no picture, so it uses the key of the card it rebalances. */
     static String artKey(final String imageKey) {
         if (!imageKey.startsWith(ImageKeys.CARD_PREFIX) || !safeImageKey(imageKey)) {
             return imageKey;
@@ -231,7 +231,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return f.isFile() ? f : null;
     }
 
-    /** Never waits on the download, or the thread that serves every other request waits with it. */
+    /** Never waits for the download. Otherwise the thread that serves every other request would wait too. */
     private void serveSleeveArt(final ChannelHandlerContext ctx, final String asked) throws IOException {
         final String key = artKey(asked);
         final File cached = sleeveArtFile(key);
@@ -239,7 +239,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             respondImage(ctx, cached);
             return;
         }
-        // Only a card has art to crop; the fetcher never answers for a token or an effect such as the Ring
+        // Only a card has art to crop. The fetcher never answers for a token or an effect such as the Ring.
         if (!key.startsWith(ImageKeys.CARD_PREFIX)) {
             notFound(ctx);
             return;
@@ -266,7 +266,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         }, FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
-    /** A missing image is downloaded and the request answered when it lands, and small asks for the card at the size the board draws it. */
+    /** Downloads a missing image and answers the request when it arrives. small asks for the card at the size the board draws it. */
     private void serveImage(final ChannelHandlerContext ctx, final String key, final boolean small) throws IOException {
         final int foil = Foil.seed(key);
         final File file = cardImage(key);
@@ -281,7 +281,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         }
         final AtomicBoolean answered = new AtomicBoolean();
         GuiBase.getInterface().invokeInEdtLater(() -> GuiBase.getInterface().getImageFetcher().fetchImage(key, () -> {
-            // Forge remembers a picture it could not find, and would go on saying so now that the picture is here
+            // Forge remembers a picture it could not find. Without this it would still report the picture as missing now that it exists.
             ImageKeys.clearMissingCards();
             final File fetched = cardImage(key);
             if (answered.compareAndSet(false, true)) {
@@ -345,7 +345,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return slashes >= 0 && host.equals(origin.substring(slashes + 2));
     }
 
-    /** The link a token belongs to. Compared in constant time, so the time a guess takes says nothing of the token. */
+    /** The link a token belongs to. The comparison takes constant time, so the time a guess takes reveals nothing about the token. */
     private Access accessOf(final String presented) {
         if (presented == null) {
             return Access.NONE;
@@ -366,7 +366,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return values == null ? null : values.get(0);
     }
 
-    /** Which link a request came in on: the token in it, or the one its page load kept. */
+    /** Which link a request came in on: the token in its query, or the token that the page load stored as a cookie. */
     private Access access(final FullHttpRequest req, final QueryStringDecoder q) {
         final Access fromQuery = accessOf(param(q, "token"));
         if (fromQuery != Access.NONE) {
@@ -395,7 +395,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain");
     }
 
-    /** Sends a picture drawn from the skin, kept for an hour as the avatars are, or says there was nothing. */
+    /** Sends a picture drawn from the skin, cached for an hour like the avatars, or a not-found reply. */
     private void respondOrNotFound(final ChannelHandlerContext ctx, final byte[] body, final String type) {
         if (body == null) {
             notFound(ctx);
@@ -405,8 +405,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     }
 
     /**
-     * Answers a request; a cookie, when given, is the token the page was loaded with. Holds the connection open when the
-     * browser asked, because a board of forty pictures would otherwise cost forty handshakes.
+     * Answers a request. A cookie, when given, is the token that the page was loaded with. The connection stays open when the
+     * browser asked for that, because a board of forty pictures would otherwise need forty handshakes.
      */
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
             final String cookieToken, final String cacheControl, final String etag) {
@@ -416,7 +416,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 .set(HttpHeaderNames.CONTENT_TYPE, type)
                 .set(HttpHeaderNames.CACHE_CONTROL, cacheControl)
                 .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
-        // A 304 has no body, and a length on it would claim the body the browser already holds is empty
+        // A 304 has no body. A length on it would say that the body the browser already has is empty.
         if (status != HttpResponseStatus.NOT_MODIFIED) {
             resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, body.length);
         }
@@ -433,7 +433,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         send(ctx, resp, keepAlive);
     }
 
-    /** Sends the browser on to another address, asked for afresh every time. */
+    /** Redirects the browser to another address. The redirect is never cached. */
     private void redirect(final ChannelHandlerContext ctx, final String location) {
         final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
         final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FOUND);
@@ -477,7 +477,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return "application/octet-stream";
     }
 
-    /** A playlist is answered with a redirect to one of its tracks by name, so the shuffle stays here and each track downloads once. */
+    /** A playlist request gets a redirect to one of its tracks by name. The shuffle then stays on the server, and each track is downloaded once. */
     private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name, final String track,
             final String range) throws IOException {
         if (sound) {
@@ -504,7 +504,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return name != null && !name.isEmpty() && !name.contains("/") && !name.contains("\\") && !name.contains("..");
     }
 
-    /** Answers a range a slice at a time, because a media player asks for the rest of a track and often lets the answer go. */
+    /** Answers a range one slice at a time, because a media player asks for the rest of a track and often abandons the request. */
     private void respondAudio(final ChannelHandlerContext ctx, final File file, final String range, final String cacheControl)
             throws IOException {
         if (file == null || !file.isFile()) {
@@ -587,9 +587,9 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 final QueryStringDecoder q = new QueryStringDecoder(req.uri());
                 final boolean socket = "/ws".equals(q.path());
                 final boolean netplay = WebSocketTunnel.PATH.equals(q.path());
-                // A netplay client is no page: it sends no origin to check, so a cookie must not let it in and only its link's token does
+                // A netplay client is not a page and sends no origin to check. So a cookie must not let it in, and only its link's token does.
                 final Access access = netplay ? accessOf(param(q, "token")) : access(req, q);
-                // The token keeps other pages out; the origin check keeps them from opening a socket with a stolen cookie
+                // The token keeps other pages out. The origin check stops them from opening a socket with a stolen cookie.
                 if (access == Access.NONE || (socket && !sameOrigin(req)) || (netplay && !HostingServer.isHosting())) {
                     req.release();
                     respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain");
@@ -607,7 +607,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
 
         private void route(final ChannelHandlerContext ctx, final boolean netplay) {
             if (netplay) {
-                // Desktop or mobile Forge: from here the connection is the host's netplay server's, as one made in this process is
+                // Desktop or mobile Forge. From here on the host's netplay server owns the connection, as it does for one made in this process.
                 ServerTraffic.carrying(ctx.channel(), ServerTraffic.Kind.GAME);
                 ctx.pipeline().addLast(
                         new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
@@ -629,7 +629,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     }
 
     private final class StaticFiles extends SimpleChannelInboundHandler<FullHttpRequest> {
-        /** What the browser last asked for, so a failure can say which file it was. */
+        /** The path the browser last asked for, so a failure message can name the file. */
         private String asked;
 
         @Override
@@ -639,7 +639,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             } else {
                 netLog.warn(cause, "Could not send a browser {}", asked);
             }
-            // The browser would otherwise wait on a request that is never answered
+            // Otherwise the browser would wait for a request that is never answered
             if (ctx.channel().isActive()) {
                 respond(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, new byte[0], "text/plain");
             }
@@ -710,12 +710,12 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 notFound(ctx);
                 return;
             }
-            // The page keeps the link's token as a cookie, so its later requests come in on the same link
+            // The page stores the link's token as a cookie, so its later requests come in on the same link
             final String token = param(q, "token");
-            // Any other page file keeps its name from one build to the next, so the browser asks whether it changed
+            // Other page files keep their names between builds, so the browser asks whether the file changed
             final String etag = etag(body);
             final boolean unchanged = etag.equals(req.headers().get(HttpHeaderNames.IF_NONE_MATCH));
-            // A chunk's name carries a hash of its contents, so a changed chunk is a new file and an old one never goes stale
+            // A chunk's name contains a hash of its contents. A changed chunk is a new file, so an old chunk never goes stale.
             respond(ctx, unchanged ? HttpResponseStatus.NOT_MODIFIED : HttpResponseStatus.OK, unchanged ? new byte[0] : body,
                     type, accessOf(token) == Access.NONE ? null : token,
                     resource.startsWith("js/chunks/") ? KEEP_FOREVER : "no-cache", etag);
@@ -749,7 +749,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 };
                 final String id = param(new QueryStringDecoder(done.requestUri()), "client");
                 endpoint.connected(browser, id == null ? "" : id, ch.attr(ACCESS).get() == Access.HOST);
-                // A proxy between here and the browser drops a socket that says nothing for long, as a player thinking does
+                // A proxy between the server and the browser drops a socket that stays silent too long, as it does while a player thinks
                 pings = ctx.executor().scheduleAtFixedRate(() -> ch.writeAndFlush(new PingWebSocketFrame()),
                         PING_SECONDS, PING_SECONDS, TimeUnit.SECONDS);
             } else {

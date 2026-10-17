@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
-/** Writes protocol.gen.ts, the TypeScript for the protocol's records and the game objects' properties as {@link JsonCodec} encodes them. */
+/** Writes protocol.gen.ts. It holds the TypeScript for the protocol's records, and for the game objects' properties as {@link JsonCodec} encodes them. */
 public final class ProtocolTypes {
     private final StringBuilder out = new StringBuilder();
     private final Map<Class<?>, String> declared = new LinkedHashMap<>();
@@ -30,7 +30,7 @@ public final class ProtocolTypes {
     private ProtocolTypes() {
     }
 
-    /** args[0] is the file to write, args[1] Forge's languages folder, and args[2] the compiled classes' folder for the page's key list. */
+    /** args[0] is the file to write. args[1] is Forge's languages folder. args[2] is the compiled classes' folder, where the page's key list goes. */
     public static void main(final String[] args) throws IOException {
         Localizer.getInstance().initialize("en-US", args[1]);
         final Path file = Path.of(args[0]);
@@ -77,7 +77,7 @@ public final class ProtocolTypes {
         out.append(j);
     }
 
-    /** A record as an interface; the records it uses are written after it. */
+    /** Writes a record as an interface. The records it uses are written after it. */
     private void record(final Class<?> type, final String head) {
         declared.put(type, type.getSimpleName());
         out.append("export interface ").append(type.getSimpleName()).append(" {\n").append(head);
@@ -92,7 +92,7 @@ public final class ProtocolTypes {
         out.append("}\n\n");
     }
 
-    /** Records and enums reached through components, written once each. */
+    /** Writes the records and enums reached through components, once each. */
     private void drain() {
         while (!pending.isEmpty()) {
             final Class<?> next = pending.remove(0);
@@ -166,7 +166,7 @@ public final class ProtocolTypes {
     }
 
     private void trackedProps() {
-        // The enum table fills as TrackableProperty's constants are made, so they are made first
+        // The enum table is filled as TrackableProperty's constants are created, so they are created first
         final TrackableProperty[] props = TrackableProperty.values();
         final Map<TrackableType<?>, Class<?>> enums = enumTypes();
         named(ToBrowser.Ref.class);
@@ -191,7 +191,7 @@ public final class ProtocolTypes {
                 .append("export type TrackedDelta = { [K in keyof TrackedProps]?: TrackedProps[K] | null };\n");
     }
 
-    /** Mirrors JsonCodec.encodeValue: the JSON each kind of property value becomes. */
+    /** Matches JsonCodec.encodeValue: the JSON that each kind of property value becomes. */
     private String tsOf(final TrackableProperty prop, final Map<TrackableType<?>, Class<?>> enums, final StringBuilder aliases) {
         final TrackableType<?> t = prop.getType();
         if (prop == TrackableProperty.CommanderDamage || prop == TrackableProperty.CommanderCast) {
@@ -253,7 +253,7 @@ public final class ProtocolTypes {
         throw new IllegalStateException("No TypeScript for property " + prop + ": add its JSON form to JsonCodec and here");
     }
 
-    /** Which enum each EnumType property holds, read by reflection from TrackableTypes' private table, and empty if that table has changed. */
+    /** Which enum each EnumType property holds. It is read by reflection from TrackableTypes' private table, and is empty if that table has changed. */
     private static Map<TrackableType<?>, Class<?>> enumTypes() {
         final Map<TrackableType<?>, Class<?>> out = new IdentityHashMap<>();
         try {
@@ -262,7 +262,7 @@ public final class ProtocolTypes {
             final Map<?, ?> table = (Map<?, ?>) f.get(null);
             table.forEach((k, v) -> out.put((TrackableType<?>) v, (Class<?>) k));
         } catch (final ReflectiveOperationException | RuntimeException e) {
-            // Typed as string below
+            // With an empty table, tsOf types every enum property as string
         }
         return out;
     }

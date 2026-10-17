@@ -1,6 +1,6 @@
 // The plane's map in Planar Conquest, where the planeswalker moves and battles
 
-// A tile's state is carried by its picture alone, and white is used only for where the player stands and what is selected
+// Only a tile's picture shows its state. White is used only for the player's place and the selected tile
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { artUrl } from '../sleeves';
@@ -15,7 +15,7 @@ import { t, type TextKey } from '../text';
 import { byId, reducedMotion } from '../dom';
 import { zoomIntoMatch } from '../match/entry';
 
-/** How long the marker takes over one step, as mobile's token does. */
+/** The time the marker takes for one step, the same as mobile's token. */
 const STEP_MS = 500;
 /** When the counts go up after a win, and when the win animation ends. They match the .cq-map.won rules in conquest.css. */
 const COUNT_MS = 2000;
@@ -47,7 +47,7 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
     if (!tile || reducedMotion()) return;
     setWon({ tile, opened: state.cells.filter(c => c.state !== 'fog' && before.get(key(c)) === 'fog').map(key), revealed: false, counted: false });
   }, [state]);
-  // The server sends the reward after the map, so wait until its reveal has opened and closed
+  // The server sends the reward after the map, so the animation waits until the reveal has opened and closed
   useEffect(() => { if (won && held && !won.revealed) setWon({ ...won, revealed: true }); }, [won, held]);
   const showing = !!won?.revealed && !held;
   useEffect(() => {
@@ -57,13 +57,13 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
     return () => { clearTimeout(count); clearTimeout(end); };
   }, [showing]);
   const skip = () => { if (showing) setWon(null); };
-  // The marker is first put at the walk's start with no movement, since the map that brings the path already has the player at its end
+  // The marker is first placed at the walk's start without moving. The map message with the path already puts the player at its end
   const [walk, setWalk] = useState<{ at: ConquestPlace; moving: boolean } | null>(null);
   const battleWanted = useRef(false);
   const pathKey = state.path.map(key).join('>');
   useLayoutEffect(() => {
     if (state.path.length < 2) {
-      // A map with no path, arriving mid-walk, ends the walk; whatever was to follow it is forgotten
+      // A map with no path ends a walk in progress. Any battle queued after the walk is dropped.
       battleWanted.current = false;
       setWalk(null);
       return;
@@ -82,7 +82,7 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
     let i = 0;
     let timer = 0;
     setWalk({ at: state.path[0], moving: false });
-    // Two frames: one for the marker to be drawn at the start, and the next to set it moving from there
+    // Wait two frames. The first draws the marker at the start, and the second starts it moving
     let frame = requestAnimationFrame(() => {
       frame = requestAnimationFrame(() => {
         const step = () => {
@@ -97,7 +97,7 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
     return () => { cancelAnimationFrame(frame); clearInterval(timer); };
   }, [pathKey]);
 
-  // The player's region and those the marker walks through are always open, and what the player chose is kept by plane
+  // The player's region and the regions on the walk are always open. The player's own open and fold choices are stored by plane
   const opened: Record<number, boolean> = {};
   state.regions.forEach((_, r) => {
     const chosen = ui.conquestOpened[`${state.plane}:${r}`];
@@ -120,7 +120,7 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
   const hovered = hover ? cells.get(hover) : undefined;
   const selected = cells.get(key(state.selected));
 
-  // Two places that touch are tied where at least one is conquered, along the road, into the next region and down to the next lane
+  // A line joins two adjacent places when at least one is conquered. Lines run along the road, into the next region and down to the next lane
   const ties: { a: ConquestCell; b: ConquestCell }[] = [];
   for (const c of state.cells) {
     const next = c.row + 1 < state.rows ? cells.get(key({ region: c.region, row: c.row + 1, col: c.col }))
@@ -191,7 +191,7 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
             {ties.map(({ a, b }) => {
               const p = l.at(a.region, a.row, a.col), q = l.at(b.region, b.row, b.col);
               const kind = a.state === 'won' && b.state === 'won' ? 'won' : 'open';
-              // A new tie grows out from the tile just won
+              // A new line is animated outward from the tile just won
               const far = won && (same(a, won.tile) ? b : same(b, won.tile) ? a : null);
               const drawn = !!far && far.state !== 'won';
               const cls = ['cq-tie', p.y !== q.y && 'down', kind, drawn && 'drawn', drawn && far === a && 'back'].filter(Boolean).join(' ');
@@ -219,7 +219,7 @@ function Record({ cell }: { cell: ConquestCell }) {
   return cell.wins || cell.losses ? <span class="cq-chip">{cell.wins}W / {cell.losses}L</span> : null;
 }
 
-/** What winning here gives: the emblem of a first conquest, and always a spin of the wheel. */
+/** The reward for winning here: an emblem for a first conquest, and always a spin of the wheel. */
 function Reward({ cell }: { cell: ConquestCell }) {
   return (
     <div class="cq-reward-line">
@@ -241,7 +241,7 @@ function Chips({ cell }: { cell: ConquestCell }) {
   );
 }
 
-/** What a tile says when pointed at. It opens on the side of the tile that has the room. */
+/** The card shown while the pointer is over a tile. It opens on the side of the tile that has room. */
 function HoverCard({ cell, at, width }: { cell: ConquestCell; at: { x: number; y: number }; width: number }) {
   const left = at.x + TW + 12 + HOVER_W > width;
   return (

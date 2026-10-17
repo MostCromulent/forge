@@ -1,4 +1,4 @@
-// The game menu behind the prompt's ⋯ button, which keeps how priority passes by itself one click from the prompt
+// The game menu behind the prompt's ⋯ button. It keeps the auto-pass settings one click from the prompt.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CloseIcon, OnOff, OptionsDialog, PlaymatChoice, Row, SectionHeading } from '../options';
@@ -14,7 +14,7 @@ import { Backdrop, Confirm } from '../dialog';
 import { ICONS, Icon } from '../icons';
 import { useTwoPress } from '../hooks';
 
-/** A menu item's icon, at its start or, with end, at its end. */
+/** A menu item's icon. It goes at the start of the item, or at the end when `end` is set. */
 export const MenuIcon = ({ d, end, cls }: { d: string; end?: boolean; cls?: string }) => <Icon d={d} cls={['menu-icon', end ? 'end' : '', cls ?? ''].filter(Boolean).join(' ')} />;
 
 /** Starts recording a macro, or stops the recording. */
@@ -23,14 +23,14 @@ export function recordMacro(actions: Actions): void {
   changeUi(u => { u.macro = u.macro === 'recording' ? 'recorded' : 'recording'; });
 }
 
-/** Asks whether to concede, as desktop does, before conceding. */
+/** Asks the player to confirm before conceding, as desktop does. */
 export function ConcedeQuestion({ actions }: { actions: Actions }) {
   const close = () => changeUi(u => { u.concedeAsk = false; });
   return <Confirm title={t('lblConcedeTitle')} text={t('lblConcedeCurrentGame')} back={close} backLabel={t('lblCancel')}
     go={() => { close(); actions.concede(); }} goLabel={t('lblConcede')} danger cls="concede-ask" />;
 }
 
-/** dev opens the menu at its dev items, for the shortcut that shows the dev panel. */
+/** The game menu. `dev` opens it at the dev items, for the shortcut that shows the dev panel. */
 export function GameMenu({ model, actions, close, open, dev: atDev }: {
   model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'devSetup') => void; dev?: boolean;
 }) {
@@ -38,7 +38,7 @@ export function GameMenu({ model, actions, close, open, dev: atDev }: {
   const [mats, setMats] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
   const { closing, shut, gone } = useClosing(close);
-  // Above the button that opened it, right edges aligned, since the prompt sits in the bottom-right corner
+  // The menu goes above the button that opened it, with right edges aligned, because the prompt is in the bottom-right corner
   useLayoutEffect(() => {
     const button = document.querySelector('#match .tools .more')?.getBoundingClientRect();
     const el = menu.current;
@@ -73,7 +73,7 @@ export function GameMenu({ model, actions, close, open, dev: atDev }: {
         }}>
           <MenuIcon d={ICONS.concede} />{t('lblConcede')}
         </button>
-        {/* The host's alone: its seat shares a process with the server, and a guest's does not */}
+        {/* Only the host gets dev mode. The host's seat runs in the same process as the server, and a guest's does not */}
         {setting('devMode') && model.host && !model.spectating && <>
           <div class="card-menu-sep" role="separator" />
           <button type="button" role="menuitem" class="card-menu-item dev-entry" onClick={() => setDev(true)}>
@@ -90,7 +90,7 @@ export function GameMenu({ model, actions, close, open, dev: atDev }: {
 /** The playmats beside the game menu. A choice changes the table at once, so the board behind it is the preview. */
 function PlaymatPicker({ beside }: { beside: { current: HTMLDivElement | null } }) {
   const panel = useRef<HTMLDivElement>(null);
-  // Placed from the button, as the menu is, since this runs before the menu has placed itself
+  // Placed from the button, as the menu is, because this runs before the menu has placed itself
   useLayoutEffect(() => {
     const button = document.querySelector('#match .tools .more')?.getBoundingClientRect();
     const el = panel.current;
@@ -106,7 +106,7 @@ function PlaymatPicker({ beside }: { beside: { current: HTMLDivElement | null } 
   );
 }
 
-/** Where auto-passing stops by itself, as the options dialog would list them. */
+/** The points where auto-passing stops, listed as the options dialog lists them. */
 export function AutoPassStops({ close }: { close: () => void }) {
   return (
     <OptionsDialog title={t('lblYieldSettings')} label={t('lblYieldSettings')} kind="stops-dialog" close={close}
@@ -125,13 +125,13 @@ const KIND_LABEL: Record<AutoDecision['kind'], TextKey> = {
   yield: 'lblWebGameMenuAlwaysYield', accept: 'lblWebGameMenuAlwaysAccept', decline: 'lblWebGameMenuAlwaysDecline',
 };
 
-/** The auto-yields and trigger answers set during play, each of which can be forgotten, as desktop's dialog lists them. */
+/** The auto-yields and trigger answers set during play, as desktop's dialog lists them. Each one can be removed. */
 export function AutoDecisionsDialog({ model, actions, close }: { model: Model; actions: Actions; close: () => void }) {
   const [forgetting, forgetAll] = useTwoPress();
   const [ordersReset, setOrdersReset] = useState(false);
   const all = model.autoDecisions;
   const entries = all?.entries ?? [];
-  // Asked for on opening, from the game menu or the options alike
+  // The list is requested on opening, from either the game menu or the options
   useEffect(() => { actions.autoDecisions('list'); }, []);
   return (
     <OptionsDialog title={t('lblAutoYieldsAndTriggers')} kind="decisions-dialog" close={close} footer={<>
@@ -162,7 +162,7 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
             <div>{t('lblWebGameMenuPauseTriggers')}</div>
             <OnOff on={all.triggersOff} label={t('lblWebGameMenuPauseTriggers')} change={on => actions.autoDecisions('disableTriggers', undefined, on)} />
           </div>
-          {/* The host keeps no list of saved orders to show, so the button only says that it has been pressed */}
+          {/* The host keeps no list of saved orders to show, so the button only shows that it has been pressed */}
           <div class="setting">
             <div>{t('lblResetSavedAbilityOrders')}</div>
             <button disabled={ordersReset} onClick={() => {
@@ -176,7 +176,7 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
   );
 }
 
-/** Another player's offer of a draw, which the game waits on this player to answer. */
+/** Another player's offer of a draw. The game waits for this player to answer it. */
 export function DrawOfferQuestion({ model, actions }: { model: Model; actions: Actions }) {
   const offer = model.drawOffer;
   if (!offer?.waitingOnMe) return null;

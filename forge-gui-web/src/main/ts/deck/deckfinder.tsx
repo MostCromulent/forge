@@ -1,4 +1,4 @@
-// Choosing a deck: one query runs across every source at once, and a panel beside the results shows the chosen deck's cards
+// Choosing a deck. One query searches every source at once, and a panel beside the results shows the chosen deck's cards.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { store, stored, storeJson, storedJson } from '../storage';
@@ -17,7 +17,7 @@ import { NewDeck } from './newdeck';
 import { NameTaken } from './nametaken';
 
 const SEARCH_DEBOUNCE_MS = 200;
-/** Every net-deck category is its own source, so they answer to one facet and list their categories under it. */
+/** Each net-deck category is a separate source. They share one source button, which lists the categories under it. */
 const NET = 'net';
 const isNet = (source: string) => source.startsWith(`${NET} `);
 const netName = (source: string) => source.slice(NET.length + 1);
@@ -25,27 +25,27 @@ type SortKey = 'name' | 'colors' | 'formats' | 'size' | 'legal' | 'bracket';
 const SORTS: [SortKey, TextKey][] = [['name', 'lblWebEditorSortName'], ['colors', 'lblWebEditorSortColour'], ['formats', 'lblWebFinderSortFormat'],
   ['size', 'lblWebFinderSortSize'], ['legal', 'lblWebFinderSortLegalFirst'], ['bracket', 'lblWebFinderSortBracket']];
 
-/** Numbers from and to, either left open; null is no limit at all. */
+/** A number range. Either end can be null for no limit at that end. A null range sets no limit. */
 type Range = { from: number | null; to: number | null } | null;
-/** The filters asked of the server, which alone reads every deck's cards. */
+/** The filters the server answers, because only the server reads every deck's cards. */
 type DeckQueryKind = DeckQuery['kind'];
 
 interface DeckFilter {
-  /** As typed. While there is one, it orders the list instead of the sort. */
+  /** The search text as typed. While it is set, it orders the list instead of the sort. */
   query: string;
   /** A source's name, or 'all'. */
   source: string;
-  /** Colour letters; a deck carrying all of them matches. None ticked matches every deck. */
+  /** Colour letters. A deck matches if it has all of them. With none ticked, every deck matches. */
   colours: ReadonlySet<string>;
   /** A card format the deck must be legal in, or 'any'. */
   cardFormat: string;
   legalOnly: boolean;
-  /** The highest Commander bracket let through, or null for any. */
+  /** The highest Commander bracket allowed, or null for any. */
   bracket: number | null;
   card: string | null;
   sideboard: string | null;
   set: string | null;
-  /** Colour identity letters, matched exactly or as the most a deck may have. */
+  /** Colour identity letters. A deck must match them exactly, or have no colours outside them. */
   identity: { letters: string; exactly: boolean } | null;
   colourCount: Range;
   main: Range;
@@ -53,12 +53,12 @@ interface DeckFilter {
   mana: Range;
   folder: string | null;
   favourites: boolean;
-  /** Only decks whose every main-deck card the computer will play. */
+  /** Only decks where the computer plays every main-deck card. */
   aiPlays: boolean;
   sort: SortKey;
 }
 
-/** How the finder opens: every source, and only decks the lobby would accept. */
+/** The finder's starting filter. It covers every source, and only decks the lobby would accept. */
 const FINDER_DEFAULTS: DeckFilter = {
   query: '', source: 'all', colours: new Set(), cardFormat: 'any', legalOnly: true, bracket: null, card: null, sideboard: null,
   set: null, identity: null, colourCount: null, main: null, side: null, mana: null, folder: null, favourites: false, aiPlays: false, sort: 'name',
@@ -66,13 +66,13 @@ const FINDER_DEFAULTS: DeckFilter = {
 
 const GUEST_STARS = 'forge.guestStars';
 
-/** The folder a deck's key places it in, "" for none. A key is source:folder/name. */
+/** The folder part of a deck's key, or "" for none. A key is source:folder/name. */
 const folderOf = (key: string) => key.slice(key.indexOf(':') + 1, Math.max(key.indexOf(':') + 1, key.lastIndexOf('/')));
 const within = (r: Range, n: number | null | undefined) =>
   !r || (n != null && (r.from === null || n >= r.from) && (r.to === null || n <= r.to));
 const identityLetters = (d: DeckSummary) => (d.colors ?? '').replace('C', '');
 
-/** The decks the filter lets through, in its order, where a generated deck has no cards yet so legality cannot rule it out. */
+/** The decks the filter lets through, in the filter's order. A generated deck has no cards yet, so legality filters cannot exclude it. */
 function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter,
   found: (kind: DeckQueryKind, value: string) => ReadonlySet<string> | undefined = () => undefined): DeckSummary[] {
   const asked = ([['card', f.card], ['sideboard', f.sideboard], ['set', f.set]] as const)
@@ -103,12 +103,12 @@ function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter,
   if (normalize(f.query)) {
     return rankByName(list.map(d => d.name), f.query).map(i => list[i]);
   }
-  // Starred decks lead whatever the order, so a favourite is never hunted for
+  // Starred decks come first in any sort order, so a favourite is always easy to find
   const order = by[f.sort] ?? byName;
   return list.sort((a, b) => Number(!!b.favourite) - Number(!!a.favourite) || order(a, b));
 }
 
-/** How many decks each source holds, with every net-deck category counted as the one source. */
+/** How many decks each source holds. All net-deck categories count as one source. */
 function sourceCounts(decks: readonly DeckSummary[]): Map<string, number> {
   const sources = new Map<string, number>([['all', decks.length]]);
   for (const d of decks) {
@@ -118,11 +118,11 @@ function sourceCounts(decks: readonly DeckSummary[]): Map<string, number> {
   return sources;
 }
 
-/** The deck finder, which chooses a seat's deck, or with no seat lists one format's decks and opens the editor instead. */
+/** The deck finder. It chooses a seat's deck. With no seat, it lists one format's decks and opens the editor instead. */
 export function DeckFinder({ model, actions, seat, close }: {
   model: Model; actions: Actions; seat?: { index: number; seat: Seat }; close: () => void;
 }) {
-  // A guest's stars are its own, kept in its browser, where the host's are kept with Forge's decks
+  // A guest's stars are stored in the guest's browser. The host's stars are stored with Forge's decks.
   const [guestStars, setGuestStars] = useState<string[]>(() => storedJson(GUEST_STARS, []));
   const decks = model.host ? model.decks ?? [] : (model.decks ?? []).map(d => ({ ...d, favourite: guestStars.includes(d.key) || undefined }));
   const star = (key: string, on: boolean) => {
@@ -135,7 +135,7 @@ export function DeckFinder({ model, actions, seat, close }: {
     setGuestStars(next);
   };
   const [chosen, setChosen] = useState<string | null>(seat?.seat.deck ?? null);
-  // A deck file on its way to being saved, kept until the list shows it, in case its name is taken
+  // A deck file being saved. It is kept until the list shows it, in case its name is taken.
   const [file, setFile] = useState<string | null>(null);
   const before = useRef<ReadonlySet<string>>(new Set());
   const picker = useRef<HTMLInputElement>(null);
@@ -144,15 +144,15 @@ export function DeckFinder({ model, actions, seat, close }: {
   const [deleting, setDeleting] = useState(false);
   const [typed, setTyped] = useState('');
   const format = model.lobby?.format ?? ui.browse?.format ?? 'Constructed';
-  // A Commander table's bracket limit is where the list starts, and can be lifted as its warning can be ignored
+  // A Commander table's bracket limit is the starting bracket filter. The player can remove it, as the table's warning can be ignored.
   const tableBracket = model.lobby?.format === 'Commander' && model.lobby.maxBracket < 5 ? model.lobby.maxBracket : null;
-  // A computer's finder opens on the decks it plays in full, which the player can widen as any other filter
+  // For a computer seat the finder opens on decks the computer plays in full. The player can widen this like any other filter.
   const forComputer = seat?.seat.type === 'AI';
   const [filter, setFilter] = useState<DeckFilter>(() => ({ ...FINDER_DEFAULTS, colours: new Set(), bracket: tableBracket, aiPlays: forComputer }));
   const change = (part: Partial<DeckFilter>) => setFilter(f => ({ ...f, ...part }));
   const find = useRef<HTMLInputElement>(null);
 
-  // A long list costs an image request per row, so typing waits for a pause
+  // Each row of a long list requests an image, so the search waits for a pause in typing
   useEffect(() => {
     const timer = setTimeout(() => change({ query: typed }), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
@@ -160,11 +160,10 @@ export function DeckFinder({ model, actions, seat, close }: {
   useEffect(() => {
     find.current?.focus();
   }, []);
-  // Only the server reads every deck's cards, and it is asked again once the list is rebuilt, since that renews the keys
+  // Only the server reads every deck's cards. It is asked again when the deck list is rebuilt, because that renews the keys.
   useEffect(() => { if (filter.card) actions.deckQuery('card', filter.card); }, [filter.card, model.decks]);
   useEffect(() => { if (filter.sideboard) actions.deckQuery('sideboard', filter.sideboard); }, [filter.sideboard, model.decks]);
   useEffect(() => { if (filter.set) actions.deckQuery('set', filter.set); }, [filter.set, model.decks]);
-  // The chosen deck's card list is the server's to read
   useEffect(() => {
     if (chosen) actions.askDeckDetails(chosen);
     setDeleting(false);
@@ -177,26 +176,26 @@ export function DeckFinder({ model, actions, seat, close }: {
     }
   };
   const summary = decks.find(d => d.key === chosen);
-  // Only your own saved decks can go; a precon, a generator or a net deck is only ever copied
+  // Only the player's own saved decks can be deleted. A precon, a generated deck or a net deck can only be copied.
   const deletable = !!summary && !summary.readOnly && !summary.generated;
   const edit = () => {
     if (!chosen) return;
     actions.openEditor({ key: chosen, seat: seat?.index, copy: !!summary?.readOnly });
     close();
   };
-  // From a seat the importer replaces the finder, but from the start page the finder stays beneath to show the saved deck
+  // From a seat the importer replaces the finder. From the start page the finder stays open under it to show the saved deck.
   const importer = (more: { text?: string; url?: string; sync?: boolean } = {}) => {
     if (seat) close();
     changeUi(u => { u.importer = { from: seat ? 'seat' : 'start', seat: seat?.index, ...more }; });
   };
-  // A deck file is a deck already, so it is saved as it stands; any other text is a list for the importer to read
+  // A deck file is already a deck, so it is saved unchanged. Any other text is a list for the importer to read.
   const take = (dropped: File) => void dropped.text().then(text => {
     if (!/^\s*\[metadata\]/im.test(text)) return importer({ text });
     before.current = new Set(decks.map(d => d.key));
     setFile(text);
     actions.addDeckFile(text, format);
   });
-  // The saved deck is the one the list did not have, or when it replaced a deck, the one of its name
+  // The saved deck is the one new to the list. If it replaced a deck, it is the deck with its name.
   useEffect(() => {
     if (!file || model.nameTaken) return;
     const name = /^Name=(.*)$/im.exec(file)?.[1].trim();
@@ -229,7 +228,7 @@ export function DeckFinder({ model, actions, seat, close }: {
     setTyped('');
     setFilter(f => ({ ...FINDER_DEFAULTS, colours: new Set(), sort: f.sort }));
   };
-  // A deck from those the filters let through, and a different one each press while there is another to give
+  // Picks a random deck from those the filters let through. Each press picks a different deck while there is another.
   const random = () => {
     const pool = list.length > 1 ? list.filter(d => d.key !== chosen) : list;
     if (!pool.length) return;
@@ -254,7 +253,7 @@ export function DeckFinder({ model, actions, seat, close }: {
               </select></span>
             </label>
           )}
-          {/* A Limited table plays event pools; the host chooses whether other events' pools may be played too */}
+          {/* A Limited table plays event pools. The host chooses whether pools from other events may also be played. */}
           {model.lobby?.limited?.activeEventId && (
             <label class="legality set">
               <input type="checkbox" checked={model.lobby.limited.eventDecksOnly} disabled={!model.lobby.host}
@@ -282,7 +281,7 @@ export function DeckFinder({ model, actions, seat, close }: {
                   <span>{sourceName(id)}</span><span class="dk-count">{count}</span>
                 </button>
               ))}
-              {/* The categories only appear once net decks are the ones being looked through */}
+              {/* The categories are shown only while the net decks source is selected */}
               {inNet && categories.size > 1 && (
                 <div class="net-cats">
                   <button class="source" aria-pressed={filter.source === NET} onClick={() => change({ source: NET })}>
@@ -295,14 +294,14 @@ export function DeckFinder({ model, actions, seat, close }: {
                   ))}
                 </div>
               )}
-              {/* Core asks which category through a dialog on the host's screen, so only the host can answer it */}
+              {/* Core asks for the category in a dialog on the host's screen, so only the host can answer it */}
               <button class="get-net" hidden={!model.host} onClick={() => actions.fetchNetDecks()}>{t('lblWebFinderDownloadNetDecks')}</button>
             </section>
-            {/* What the next generated deck is built with, as desktop's lobby offers under its generators */}
+            {/* Options for the next generated deck, as desktop's lobby offers them under its generators */}
             {filter.source === 'generated' && model.deckGen && (
               <section class="gen-options">
                 <h4>{t('lblWebFinderGeneratorOptions')}</h4>
-                {/* A commander deck is one of each card whatever this says, so it is offered beside the colour generators only */}
+                {/* A commander deck always has one of each card, so this option is offered only for the colour generators */}
                 {decks.some(d => d.key.startsWith('gen:color:')) && (
                   <label title={t('nlSingletons')}><input type="checkbox" checked={model.deckGen.singletons}
                     onChange={e => actions.setDeckGen(e.currentTarget.checked, model.deckGen!.noArtifacts)} /> {t('cbSingletons')}</label>
@@ -319,7 +318,7 @@ export function DeckFinder({ model, actions, seat, close }: {
               <ColourToggles label={t('lblColors')} colourless pressed={c => filter.colours.has(c)}
                 toggle={c => change({ colours: toggled(filter.colours, c) })}
                 title={(c, name) => t('lblWebFinderColourDecks', name, decks.filter(d => (d.colors ?? '').includes(c)).length)} />
-              {/* A search orders the list by how well each name matches, so the sort waits until it is cleared */}
+              {/* A search orders the list by how well each name matches, so the sort is disabled until the search is cleared */}
               {normalize(filter.query)
                 ? <select class="sort-by" aria-label={t('lblSort')} disabled><option>{t('lblWebEditorSortBestMatch')}</option></select>
                 : <select class="sort-by" aria-label={t('lblSort')} value={filter.sort} onChange={e => change({ sort: e.currentTarget.value as SortKey })}>
@@ -386,7 +385,7 @@ export function DeckFinder({ model, actions, seat, close }: {
 const KEY_SETS = new WeakMap<DeckMatches, ReadonlySet<string>>();
 const keySet = (m: DeckMatches) => KEY_SETS.get(m) ?? KEY_SETS.set(m, new Set(m.keys)).get(m)!;
 
-/** Everything the finder can be narrowed by beyond the bar, as desktop's deck filters have it. */
+/** Every finder filter beyond the bar, matching desktop's deck filters. */
 function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actions, commander: boolean): FilterKind<DeckFilter>[] {
   const legality = t('lblWebFilterGroupLegality');
   const contents = t('lblWebFilterGroupContents');
@@ -419,7 +418,7 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
     {
       id: 'legal', group: legality, label: t('lblWebFinderLegalIn'),
       chip: f => model.deckCardPool ?? (f.cardFormat === 'any' ? null : f.cardFormat),
-      // The lobby's card pool is the match's rule, so it is shown here but changed only there
+      // The lobby's card pool is a rule of the match. It is shown here but can only be changed in the lobby.
       from: () => (model.deckCardPool ? fromTable : null),
       fixed: () => !!model.deckCardPool,
       clear: f => ({ ...f, cardFormat: 'any' }),
@@ -482,11 +481,11 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
         pick={() => { set({ ...f, favourites: true }); done(); }} />,
     },
   ];
-  // Brackets are Commander's alone
+  // Brackets apply only to Commander
   return commander ? kinds : kinds.filter(k => k.id !== 'bracket');
 }
 
-/** Colour identity: the colours, and whether a deck must have exactly them or may have fewer. */
+/** The colour identity panel. It sets the colours, and whether a deck must have exactly them or may have fewer. */
 function IdentityPanel({ value, apply }: { value: DeckFilter['identity']; apply: (v: DeckFilter['identity']) => void }) {
   const [letters, setLetters] = useState(value?.letters ?? '');
   const [exactly, setExactly] = useState(value?.exactly ?? false);
@@ -507,12 +506,12 @@ const SOURCE_NAMES: Record<string, TextKey> = {
 };
 const sourceName = (id: string) => (SOURCE_NAMES[id] ? t(SOURCE_NAMES[id]) : id.charAt(0).toUpperCase() + id.slice(1));
 
-// The source is only worth a column while every source is listed; with one picked, the rail already says it
+// The source tag is shown only while every source is listed. With one source picked, the rail already shows it.
 function Hit({ deck: d, chosen, choose, use, source, forComputer, star }: {
   deck: DeckSummary; chosen: boolean; choose: () => void; use: () => void; source: boolean; forComputer: boolean;
   star: (on: boolean) => void;
 }) {
-  // A generator has nothing to measure until it has built something, so it says what it is instead
+  // A generator has no stats until it builds a deck, so its row shows a description instead
   if (d.generated) {
     return (
       <button class="dk-hit generated" aria-pressed={chosen} onClick={choose} onDblClick={use}>
@@ -522,10 +521,10 @@ function Hit({ deck: d, chosen, choose, use, source, forComputer, star }: {
       </button>
     );
   }
-  // Shown only when asked for, and then marked, so a deck that is here is never hunted for elsewhere
+  // A deck with cards the computer skips is listed only when the filter allows it, and is then marked
   return (
     <button class={forComputer && d.aiSkips ? 'dk-hit ai-poor' : 'dk-hit'} aria-pressed={chosen} title={d.problem ?? ''} onClick={choose} onDblClick={use}>
-      {/* A row is a button, so the star inside it is a span that keeps its click to itself */}
+      {/* A row is a button, so the star inside it is a span that stops its click from reaching the row */}
       {(
         <span class={d.favourite ? 'dk-star on' : 'dk-star'} role="button" aria-pressed={!!d.favourite}
           aria-label={t(d.favourite ? 'lblWebFinderUnstar' : 'lblWebFinderStar')} title={t(d.favourite ? 'lblWebFinderUnstar' : 'lblWebFinderStar')}
@@ -557,7 +556,7 @@ function Title({ deck }: { deck: DeckSummary }) {
 
 function Chosen({ details, formats, forComputer }: { details: DeckDetails; formats?: string; forComputer: boolean }) {
   const s = details.stats;
-  // Game changers are marked where they sit in the list, whether or not the bracket's reasons are open
+  // Game changers are marked in the card list, whether or not the bracket's reasons are open
   const changers = new Set(details.bracket?.reasons.find(r => r.kind === 'gameChangers')?.cards ?? []);
   const [cards, view] = useDeckView();
   return (
@@ -572,7 +571,7 @@ function Chosen({ details, formats, forComputer }: { details: DeckDetails; forma
         </div>
         <p class="sizes">{s.sideboard ? t('lblWebEditorSizes', s.total, s.sideboard, s.lands) : t('lblWebFinderSizesNoSideboard', s.total, s.lands)}</p>
         <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? t('lblWebFinderLegalForFormat')}</p>
-        {/* The formats the deck's cards are legal in, as the desktop chooser words it */}
+        {/* The formats the deck's cards are legal in, worded as in the desktop chooser */}
         {formats && <p class="deck-formats">{formats}</p>}
         {forComputer && details.aiSkips && (
           <p class="ai-skips-note">
@@ -603,7 +602,7 @@ export function BracketMark({ level }: { level: number }) {
 
 const BRACKET_OPEN_KEY = 'forge.bracketOpen';
 
-/** A Commander deck's bracket in one row that opens to each reason and its cards, remembering whether it was left open. */
+/** A Commander deck's bracket in one row. It expands to show each reason and its cards, and remembers whether it was left open. */
 function BracketPanel({ bracket }: { bracket: Bracket }) {
   const [open, setOpen] = useState(() => stored(BRACKET_OPEN_KEY) === 'open');
   const toggle = () => {
@@ -641,7 +640,7 @@ function BracketPanel({ bracket }: { bracket: Bracket }) {
   );
 }
 
-/** How long ago a time was, in the words a person uses: "just now", "3 days ago". */
+/** How long ago a time was, in plain words such as "just now" or "3 days ago". */
 function ago(millis: number): string {
   const minutes = Math.round((Date.now() - millis) / 60000);
   if (minutes < 2) return t('lblWebFinderJustNow');

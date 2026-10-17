@@ -20,7 +20,7 @@ async function ready(page: Page): Promise<void> {
   await expect(page.locator('.plate.mine .ready-toggle')).toContainText('Ready');
 }
 
-/** Builds forty cards from the pool in the limited editor, then puts the event deck on the seat. */
+/** Builds a forty-card deck from the pool in the limited editor, then chooses the event deck for the seat. */
 async function buildAndSit(page: Page): Promise<void> {
   await expect(page.locator('#editor')).toBeVisible({ timeout: 90_000 });
   await buildLimitedDeck(page);

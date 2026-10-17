@@ -1,20 +1,20 @@
-// A card is lifted as it looked when chosen, and flies once the place it lands on has been drawn
+// A copy of a card is taken as it looked when chosen. It flies to its new place once that place has been drawn
 
 import { reducedMotion } from './dom';
 
 const FLY_MS = 380;
 
-/** The card lifted, where it stood, and what it is flying for, until its place is drawn. */
+/** The lifted card copy, its start position, and a key that names the move. It is kept until the target is drawn. */
 let inFlight: { face: HTMLElement; from: DOMRect; key: string } | null = null;
 
 
-/** Lifts a card's image where it stands. A card showing only its text, or with no image yet, stays put. */
+/** Copies a card's image at its current position. A card that shows only text, or has no loaded image, does not fly. */
 export function lift(img: HTMLImageElement | null | undefined, key: string): void {
   inFlight = !reducedMotion() && img?.complete && img.naturalWidth
     ? { face: img.cloneNode() as HTMLElement, from: img.getBoundingClientRect(), key } : null;
 }
 
-/** Lifts a card from a line with no picture of it, such as a table row: its image, card-shaped, at the line's start. */
+/** Lifts a card from a line with no image, such as a table row. The card image starts at the line's start, at card size. */
 export function liftFromLine(src: string, line: DOMRect, key: string): void {
   if (reducedMotion()) {
     inFlight = null;
@@ -23,24 +23,24 @@ export function liftFromLine(src: string, line: DOMRect, key: string): void {
   const face = new Image();
   face.src = src;
   face.alt = '';
-  // An image still loading flies as a dark card rather than nothing
+  // An image that is still loading flies as a dark card, so something is visible
   face.style.background = '#1c1f26';
   const height = Math.max(line.height * 1.6, 56);
   const width = height * 63 / 88;
   inFlight = { face, from: new DOMRect(line.left, line.top + (line.height - height) / 2, width, height), key };
 }
 
-/** What the card in flight is flying for, if one is. */
+/** The key that names the current flight's move, or null if no card is lifted. */
 export function flyingFor(): string | null {
   return inFlight?.key ?? null;
 }
 
-/** Drops a lifted card that will not fly, such as one a drag has already carried. */
+/** Discards a lifted card that will not fly, such as one a drag has already moved. */
 export function cancelFlight(): void {
   inFlight = null;
 }
 
-/** A place out of sight in its scrolled list (view) is flown to the list's heading instead, fading as it goes in. */
+/** Flies the lifted card to place. If place is scrolled out of view, the card flies to the list heading and fades out. */
 export function land(place: HTMLElement | null, view: Element | null | undefined, heading: Element | null | undefined): void {
   const flight = inFlight;
   inFlight = null;
@@ -54,7 +54,7 @@ export function land(place: HTMLElement | null, view: Element | null | undefined
     height: `${from.height}px`, margin: '0', zIndex: '60', pointerEvents: 'none', transformOrigin: '0 0', borderRadius: '6px',
     boxShadow: '0 12px 28px #000b' });
   document.body.append(face);
-  // Scaled to fit its place, so a card shrinks into a line of a list
+  // The card scales to fit its target, so it shrinks into a list line
   const scale = Math.min(to.width / from.width, to.height / from.height);
   const dy = to.top - from.top + (to.height - from.height * scale) / 2;
   if (!hidden) place.style.visibility = 'hidden';

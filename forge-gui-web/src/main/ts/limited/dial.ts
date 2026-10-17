@@ -1,11 +1,11 @@
-// The pack dial's geometry, kept apart from drawing so it can be tested without a page, with angles in radians and y growing downwards
+// The pack dial's geometry. It is kept apart from the drawing code so it can be tested without a page. Angles are in radians and y grows downwards
 
-/** Seat i of n: seat 0 at the bottom, and the seats after it running anticlockwise on screen, towards the player's right. */
+/** The angle of seat i of n. Seat 0 is at the bottom, and later seats run anticlockwise on screen, towards the player's right. */
 export function seatAngle(i: number, n: number): number {
   return Math.PI / 2 - (i * 2 * Math.PI) / n;
 }
 
-/** The seat your next pack comes from: walking upstream from you, the first seat holding a pack; null when nobody holds one. */
+/** The seat your next pack comes from. It is the first seat upstream from you that holds a pack, or null when no seat holds one. */
 export function nextFrom(depths: number[], direction: 1 | -1): number | null {
   const n = depths.length;
   for (let k = 1; k < n; k++) {

@@ -1,10 +1,10 @@
-// Every message and field comes from protocol.gen.ts, and this file adds only the views the client reads objects through
+// Every message and field comes from protocol.gen.ts. This file only adds the view types the client uses to read objects
 
 import type { ClientMessage, Ref, TrackedProps, ZoneType } from './protocol.gen';
 
 export type * from './protocol.gen';
 
-/** Any object in the game's table. The table does not say which kind an object is. */
+/** Any object in the game's object table. The table does not record each object's kind. */
 export type TrackedObject = TrackedProps & { $key: number };
 
 // Each view is picked from TrackedProps, so a property Forge renames or retypes breaks the build here
@@ -28,10 +28,10 @@ export type GameView = View<'Players' | 'PlayerTurn' | 'Turn' | 'Phase' | 'Stack
 export type StackItemView = View<'SourceCard' | 'ActivatingPlayer' | 'Ability' | 'Description' | 'SubInstance'
   | 'TargetCards' | 'TargetPlayers'>;
 
-/** The zones a player holds cards in, each both a Forge zone and a player property listing its cards, which leaves out the stack. */
+/** The zones a player holds cards in. Each is a Forge zone and also a player property that lists its cards. The stack is not one. */
 export type PlayerZone = Exclude<Extract<ZoneType, keyof TrackedProps>, 'Stack'>;
 
-/** A list of references as the table holds them; an object Forge could not name is null. */
+/** A list of references as the table holds them. An object Forge could not name is null. */
 export type Refs = readonly (Ref | null)[];
 
 export type Send = (msg: ClientMessage) => void;

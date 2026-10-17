@@ -1,4 +1,4 @@
-// The reward is already in the save and its steps are the server's, so this only shows them and tells the bar what is yet to be shown
+// The reward is already in the save and the server sets its steps. This file only shows the steps and tells the bar what is not shown yet
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { skinIconUrl, imageUrl } from '../images';
@@ -10,7 +10,7 @@ import { t, formatNumber } from '../text';
 import { byId, make, reducedMotion } from '../dom';
 import { Backdrop } from '../dialog';
 
-/** What the reveal has yet to show, by the icon of the balance it was paid into. */
+/** The amounts the reveal has not shown yet, by the icon of the balance they were paid into. */
 export type Owed = Record<string, number>;
 
 export const wheelLabels = (): Record<WheelOutcome, string> => ({
@@ -18,15 +18,15 @@ export const wheelLabels = (): Record<WheelOutcome, string> => ({
   SHARDS: t('lblWebConquestWheelShards'), DOUBLE_SHARDS: t('lblWebConquestWheelDoubleShards'), PLANESWALK: t('lblWebConquestWheelEmblems'),
 });
 
-/** A step with nothing of its own to show: the packs before it have already said what their duplicates became. */
+/** A step with nothing of its own to show. The packs before it have already shown the shards their duplicates became. */
 const silent = (step: RewardStep): boolean => step.kind === 'DUPLICATE_SHARDS';
 
 export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed: Owed) => void; done: () => void }) {
   const steps = reward.steps;
-  // The emblem of a first conquest is shown over the wheel that follows it, so the two are one stop
+  // A first conquest's emblems are shown above the wheel that follows, so the two steps are shown as one
   const first = steps[0]?.kind === 'CONQUER_EMBLEMS' && steps[1]?.kind === 'WHEEL' ? 1 : 0;
   const [at, setAt] = useState(first);
-  /** The current pack's duplicate shards that have reached the bar. */
+  /** The shards from the current pack's duplicates that have reached the bar. */
   const [released, setReleased] = useState(0);
   const [zoom, setZoom] = useState<string | null>(null);
   const finished = useRef(false);
@@ -37,7 +37,7 @@ export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed
     while (i < steps.length && silent(steps[i])) i++;
     setReleased(0);
     setAt(i);
-    // Said at once, not after the next paint: a reload in between would be sent the same reward again
+    // Tell the server at once, not after the next paint. A reload in between would be sent the same reward again
     if (i >= steps.length) finish();
   };
   const finish = () => {
@@ -46,20 +46,20 @@ export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed
       done();
     }
   };
-  // A reward with nothing to show is over as soon as it arrives
+  // A reward with nothing to show ends as soon as it arrives
   useEffect(() => { if (at >= steps.length) finish(); }, []);
-  // The dock lies outside the campaign, so the reveal shuts it off itself while it is up
+  // The dock is outside the campaign page, so the reveal makes the dock inert itself while the reveal is open
   useEffect(() => {
     const dock = byId('dock');
     dock.inert = true;
     return () => { dock.inert = false; };
   }, []);
 
-  // The step on show has paid, except a pack, which pays card by card
+  // The current step's amount counts as shown. A pack is the exception, because its shards are added card by card
   const packShards = step?.kind === 'BOOSTER' ? (step.cards ?? []).reduce((sum, c) => sum + c.shards, 0) : 0;
   const owed = pendingAmounts(steps, at + 1);
   if (step?.kind === 'BOOSTER' && step.icon) owed[step.icon] = (owed[step.icon] ?? 0) + packShards - released;
-  // Before the first paint, or the bar would show for a frame everything the reveal is about to give
+  // Runs before the first paint. Otherwise the bar would show, for one frame, everything the reveal is about to give
   useLayoutEffect(() => onOwed(owed), [JSON.stringify(owed)]);
 
   if (!step) return null;
@@ -79,10 +79,10 @@ export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed
   );
 }
 
-/** A line of a message that ends in an amount of credits, as Quest's results write them: the words, and the amount set apart. */
+/** A message line that ends in an amount of credits, as Quest's results write them. It captures the words and the amount separately. */
 const CREDIT_LINE = /^(.*?):?\s+(-?\d+) credits?\.?$/;
 
-/** One of the wheel's plain outcomes, or a notice, as a small dialog of one shape. lines are a breakdown, each with its amount at its end. */
+/** One of the wheel's simple outcomes, or a notice, shown as a small dialog with one layout. lines are a breakdown, each ending in its amount. */
 function Gift({ icon, amount, title, text, lines, button, next }: {
   icon?: string; amount?: number; title: string; text?: string; lines?: string[]; button: string; next: () => void;
 }) {
@@ -104,7 +104,7 @@ function Gift({ icon, amount, title, text, lines, button, next }: {
   );
 }
 
-/** Cards a reward gave, face up as a pack ends, or cards lost to ante, drawn dimmed and grey. */
+/** Cards a reward gave, shown face up like an opened pack, or cards lost to ante, drawn dimmed and grey. */
 function CardsStop({ step, zoom, next }: { step: RewardStep; zoom: (image: string) => void; next: () => void }) {
   const lost = step.outcome === 'lost';
   return (
@@ -143,7 +143,7 @@ function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; n
   );
 }
 
-/** A duplicate's shards leave the card for the bar's balance, and are counted there when they arrive. */
+/** Animates a duplicate's shards from the card to the bar's balance. The bar counts them when they arrive. */
 function flyShards(from: DOMRect, arrived: () => void): void {
   const to = document.querySelector('.cq-purse .cq-coin')?.getBoundingClientRect();
   if (!to || reducedMotion()) {
@@ -164,7 +164,7 @@ function PackStop({ step, release, zoom, next }: { step: RewardStep; release: (s
   const host = useRef<HTMLDivElement>(null);
   const pack = useRef<Pack | null>(null);
   const [phase, setPhase] = useState<'sealed' | 'opening' | 'shown'>('sealed');
-  // Shards still in flight when the pack is left have been counted already, and are not the next pack's
+  // Shards still in flight when the pack closes are already counted. They must not count toward the next pack
   const here = useRef(true);
   useEffect(() => () => { here.current = false; }, []);
   const cards = step.cards ?? [];
@@ -182,7 +182,7 @@ function PackStop({ step, release, zoom, next }: { step: RewardStep; release: (s
   }, []);
   const title = step.total > 1 ? t('lblReceivedBoosterPackNOfTotal', step.number, step.total).replace('\n', ' ') : t('lblReceivedBoosterPack');
   return (
-    // A click anywhere while the cards are travelling or turning shows them all at once
+    // A click anywhere while the cards are moving or flipping shows them all at once
     <div class="cq-pack-stop" onClick={() => { if (phase === 'opening') pack.current?.finish(); }}>
       <h3>{title}</h3>
       <div class="cq-pack-host" ref={host} />

@@ -48,12 +48,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 
-/** Planar Conquest as one session plays it: the saves, the map, the party and its decks, aether, planeswalking and the battles. The conquest itself is Forge's, one for the whole process, so this holds only what the session knows that the save does not. */
+/** Planar Conquest as one session plays it: the saves, the map, the party and its decks, the Aether, planeswalking and the battles. The conquest itself is Forge's, with one per process. So this class holds only what the session knows that the save does not. */
 public final class ConquestGame implements Campaign {
     private ConquestLocation selection;
     /** The result of the game just ended, while its match is still open. */
     private volatile CampaignResult result;
-    /** What the last won battle gave, until the browser says it has shown it. */
+    /** What the last won battle gave. It is kept until the browser says it has shown it. */
     private volatile Reward reward;
     private volatile boolean chaosOwed;
     /** Dev mode's choice of where the next wheel stops. */
@@ -63,7 +63,7 @@ public final class ConquestGame implements Campaign {
         return FModel.getConquest().getModel();
     }
 
-    /** Reads every save, which loads the planes they stand on. Not for the socket thread. */
+    /** Reads every save, which loads the plane each save is on. Do not call this on the socket thread. */
     @Override
     public ConquestSaves saves() {
         final List<ConquestSave> rows = new ArrayList<>();
@@ -99,7 +99,7 @@ public final class ConquestGame implements Campaign {
         return data.getName();
     }
 
-    /** The save of a name, or null when there is none or it cannot be read. */
+    /** The save with this name, or null when there is none or it cannot be read. */
     public static ConquestData find(final String name) {
         final File dir = name == null ? null : saveDir(name);
         final ConquestData data = dir != null && dir.isDirectory() && Campaign.isSaveNamed(ForgeConstants.CONQUEST_SAVE_DIR, dir, name.replace(' ', '_'))
@@ -107,7 +107,7 @@ public final class ConquestGame implements Campaign {
         return data != null && readable(data) ? data : null;
     }
 
-    /** A save whose file could not be read to its end is left without its planes or with nothing at all, and has no page to show. */
+    /** A save whose file could not be read to the end has no planes, or no data at all. So it has no page to show. */
     private static boolean readable(final ConquestData data) {
         return data.getPlaneswalker() != null && data.getCurrentLocation() != null && data.getCurrentPlaneData() != null;
     }
@@ -116,7 +116,7 @@ public final class ConquestGame implements Campaign {
         return new File(ForgeConstants.CONQUEST_SAVE_DIR, name.replace(' ', '_'));
     }
 
-    /** The open conquest's commander of a name, or null. */
+    /** The open conquest's commander with this name, or null. */
     static ConquestCommander commander(final String name) {
         for (final ConquestCommander c : model().getCommanders()) {
             if (c.getName().equals(name)) {
@@ -134,13 +134,13 @@ public final class ConquestGame implements Campaign {
                 ConquestUtil::getBasicLandSets, commander::reloadDeck, true);
     }
 
-    /** A plane has no picture of its own, so it wears its first region's. */
+    /** A plane has no picture of its own, so it uses its first region's picture. */
     private static String art(final ConquestPlane plane) {
         final ConquestRegion.ArtCard picture = plane.getRegions().get(0).getArtCard();
         return picture.card().getImageKey(picture.backFace());
     }
 
-    /** A plane a conquest can be on, by the name the browser shows, or null. */
+    /** A plane a conquest can be on, found by the name the browser shows, or null. */
     private static ConquestPlane plane(final String name) {
         for (final ConquestPlane plane : FModel.getPlanes()) {
             if (!plane.isUnreachable() && planeName(plane).equals(name)) {
@@ -159,11 +159,11 @@ public final class ConquestGame implements Campaign {
         return null;
     }
 
-    /** By name, with the rebalanced cards last: nowhere has a picture of one, so they are not what a list opens on. */
+    /** Sorts by name, with the rebalanced cards last. No picture exists for them, so a list should not start with one. */
     private static final Comparator<ConquestCardOption> PICTURED_FIRST = Comparator
             .comparing((ConquestCardOption c) -> c.name().startsWith("A-")).thenComparing(ConquestCardOption::name);
 
-    /** What a new conquest may start with. Finding the planeswalkers reads every card, so this is not for the socket thread. */
+    /** What a new conquest may start with. Finding the planeswalkers reads every card, so do not call this on the socket thread. */
     static ConquestOptions options(final String planeName, final String commanderName) {
         final List<ConquestPlaneOption> planes = new ArrayList<>();
         for (final ConquestPlane p : FModel.getPlanes()) {
@@ -200,7 +200,7 @@ public final class ConquestGame implements Campaign {
                 plane == null ? null : planeName, commander == null ? null : commanderName);
     }
 
-    /** Starts a conquest and makes it the open one. Answers why it cannot, or null when it is made. */
+    /** Starts a conquest and makes it the open one. Returns why it cannot, or null when it is created. */
     static String create(final String name, final String planeName, final String commanderName, final String walkerName) {
         final String cleaned = QuestUtil.cleanString(name == null ? "" : name).trim();
         final String problem = ConquestUtil.nameProblem(cleaned);
@@ -288,7 +288,7 @@ public final class ConquestGame implements Campaign {
         final boolean chaos = battle instanceof ConquestChaosBattle;
         final Localizer text = Localizer.getInstance();
         final List<ResultButton> buttons = new ArrayList<>();
-        // As mobile ends a battle: a win is acknowledged, and a lost event can be fought again but a chaos battle cannot
+        // A battle ends as on mobile. A win is acknowledged. A lost event can be fought again, but a lost chaos battle cannot
         if (!over) {
             buttons.add(new ResultButton(text.getMessage("btnContinue"), "nextGame", true));
             buttons.add(new ResultButton(text.getMessage("lblQuit"), "quit", false));
@@ -310,7 +310,7 @@ public final class ConquestGame implements Campaign {
         result = null;
     }
 
-    /** A reward that ended in a chaos battle is followed by it, with no choice in the matter. */
+    /** When a reward ends in a chaos battle, that battle starts next. The player has no choice. */
     @Override
     public void claim(final Host host) {
         reward = null;
@@ -380,7 +380,7 @@ public final class ConquestGame implements Campaign {
         return new ConquestParty(commanders, walkers);
     }
 
-    /** Makes an owned planeswalker the one travelled as. False when the conquest owns none of that name. */
+    /** Makes an owned planeswalker the one the player travels as. Returns false when the conquest owns none with that name. */
     static boolean setPlaneswalker(final String name) {
         final ConquestData data = model();
         for (final PaperCard card : data.getSortedPlaneswalkers()) {
@@ -393,7 +393,7 @@ public final class ConquestGame implements Campaign {
         return false;
     }
 
-    /** A commander's deck as the deck finder's panel shows one. */
+    /** A commander's deck, in the form the deck finder's panel shows. */
     static DeckDetails deckDetails(final ConquestCommander commander) {
         final Deck deck = commander.getDeck();
         return new DeckDetails("conquest:" + commander.getName(), commander.getName(), commander.getDeckProblem(),
@@ -401,7 +401,7 @@ public final class ConquestGame implements Campaign {
                 DeckEditor.groups(deck.getMain(), DeckCatalog.NO_FLAGS), List.of(), null, 0, null);
     }
 
-    /** The cards owned and not exiled, or those exiled. */
+    /** The cards owned and not exiled, or the exiled cards. */
     private static List<PaperCard> cardsOf(final boolean exile) {
         final ConquestData data = model();
         final List<PaperCard> cards = new ArrayList<>();
@@ -423,7 +423,7 @@ public final class ConquestGame implements Campaign {
                 planes.add(planeName(plane));
             }
         }
-        // Mobile's line, on one line
+        // Mobile's text, joined into one line
         final String note = Localizer.getInstance().getMessage("lblExileRetrieveProportion",
                 Math.round(100 * prefs.getPrefInt(CQPref.AETHER_BASE_EXILE_VALUE) / base),
                 Math.round(100 * prefs.getPrefInt(CQPref.AETHER_BASE_RETRIEVE_COST) / base)).replace('\n', ' ');
@@ -431,7 +431,7 @@ public final class ConquestGame implements Campaign {
                 null, null);
     }
 
-    /** A page of the collection or of the exile, each card with what exiling or retrieving it is worth. */
+    /** A page of the collection or the exile. Each card shows what exiling or retrieving it is worth. */
     @Override
     public CataloguePage cards(final CatalogueQuery q) {
         final ConquestData data = model();
@@ -444,7 +444,7 @@ public final class ConquestGame implements Campaign {
                 }
             }
         }
-        // A card that cannot be exiled says why, and is listed all the same
+        // A card that cannot be exiled shows why, and is still listed
         final Function<PaperCard, String> problem = exile ? c -> null : c -> data.getExileProblem(List.of(c));
         final CataloguePage page = CardCatalog.of(cards).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
                 q.offset(), true), problem, null, name -> 0, c -> new CardCatalog.Extra(data.isNewCard(c) ? Boolean.TRUE : null,
@@ -452,7 +452,7 @@ public final class ConquestGame implements Campaign {
         return page.from(exile ? "exile" : "collection");
     }
 
-    /** Exiles cards of the collection, or from the exile brings them back. A conquest owns one of each card, so a pick's count says nothing. */
+    /** Exiles cards from the collection, or brings cards back from the exile. A conquest owns one of each card, so a pick's count is ignored. */
     @Override
     public String trade(final String source, final List<TradePick> picks) {
         final boolean retrieve = "exile".equals(source);
@@ -474,11 +474,11 @@ public final class ConquestGame implements Campaign {
         return null;
     }
 
-    /** The Aether under these filters, after a pull if one is asked for. */
+    /** The Aether with these filters, after a pull if one is asked for. */
     ConquestAetherState aether(final ConquestAetherQuery q) {
         final ConquestData data = model();
         final ConquestAether.Filter start = ConquestAether.Filter.startingFor(data.getSelectedCommander());
-        // A query that names no type is the visit's first, and takes the filters mobile starts with
+        // A query with no type is the first of a visit, so it uses the filters mobile starts with
         final boolean first = q.type() == null || q.type().isEmpty();
         final ConquestAether.Filter filter = first ? start : new ConquestAether.Filter(
                 ColorSet.fromNames((q.colors() == null ? "" : q.colors()).toCharArray()),
@@ -496,7 +496,7 @@ public final class ConquestGame implements Campaign {
             }
         }
         final ConquestAether.Pools pools = ConquestAether.pools(data, filter);
-        // A land of basic rarity is pulled as a common, and a special as a rare, as the pull itself counts them
+        // A land of basic rarity counts as a common and a special card as a rare, the same way the pull counts them
         final int[] byRarity = new int[4];
         for (final PaperCard card : pools.filtered()) {
             final CardRarity rarity = card.getRarity();
@@ -513,7 +513,7 @@ public final class ConquestGame implements Campaign {
         }
         final List<ConquestOption> cmcs = new ArrayList<>();
         for (final CMCFilter c : CMCFilter.values()) {
-            // The heading already says what the range is of
+            // The heading already says what the range measures
             cmcs.add(new ConquestOption(c.name(), c.toString().replace("Mana Value ", ""), null));
         }
         return new ConquestAetherState(pools.locked().size(), pools.filtered().size(), pools.strict().size(),
@@ -545,7 +545,7 @@ public final class ConquestGame implements Campaign {
         return plane.getDescription() == null ? "" : plane.getDescription().replace("\\n", " ");
     }
 
-    /** Travels to a plane, unlocking it first when that is asked for and paid. Answers why it cannot, or null when the player is there. */
+    /** Travels to a plane. If unlock is asked for and paid, the plane is unlocked first. Returns why it cannot, or null when the player has arrived. */
     String planeswalk(final String planeName, final boolean unlock) {
         final ConquestData data = model();
         final ConquestPlane plane = plane(planeName);
@@ -622,11 +622,11 @@ public final class ConquestGame implements Campaign {
                 l.getMessage("lblAllPlanes"));
     }
 
-    /** A preference of Conquest's as its page lists it, under mobile's label and group. */
+    /** A Conquest preference as its page lists it, with mobile's label and group. */
     private record PrefField(CQPref pref, String label, String group) {
     }
 
-    /** Mobile's preferences, in its order. The conquest played last is a preference too, and is not one of these. */
+    /** Mobile's preferences, in mobile's order. The conquest played last is also a preference, but it is not in this list. */
     private static final List<PrefField> PREFS = List.of(
             new PrefField(CQPref.AETHER_BASE_DUPLICATE_VALUE, "lblBaseDuplicateValue", "lblAetherShards"),
             new PrefField(CQPref.AETHER_BASE_EXILE_VALUE, "lblBaseExileValue", "lblAetherShards"),
@@ -660,7 +660,7 @@ public final class ConquestGame implements Campaign {
         return new CampaignPrefs(l.getMessage("lblConquestPreference"), rows, l.getMessage("lblWebConquestPrefsShared"), problem, true);
     }
 
-    /** Every one of Conquest's preferences is a whole number. */
+    /** Every Conquest preference is a whole number. */
     @Override
     public String setPref(final String key, final String text) {
         final int value;
@@ -693,7 +693,7 @@ public final class ConquestGame implements Campaign {
         prefs.save();
     }
 
-    /** The map as it stands. walked is the move just made, for the marker to walk, and is empty otherwise. */
+    /** The current map. walked is the move just made, for the marker to animate. It is empty otherwise. */
     ConquestState state(final List<ConquestLocation> walked) {
         final ConquestData data = model();
         final ConquestPlane plane = data.getCurrentPlane();
@@ -728,7 +728,7 @@ public final class ConquestGame implements Campaign {
                         commander.getDeck().getMain().countAll(), commander.getDeckProblem()));
     }
 
-    /** A place can be fought when it is the plane's first, is conquered, or touches a conquered one. */
+    /** A place can be fought when it is the plane's first place, is conquered, or is next to a conquered place. */
     private static boolean reachable(final ConquestLocation loc, final ConquestPlaneData planeData) {
         if (loc.isAt(0, 0, 0) || planeData.hasConquered(loc)) {
             return true;
@@ -759,7 +759,7 @@ public final class ConquestGame implements Campaign {
         return new ConquestPlace(loc.getRegionIndex(), loc.getRow(), loc.getCol());
     }
 
-    /** Selects a place the player could walk to; anything else is ignored. */
+    /** Selects a place the player could walk to. Any other place is ignored. */
     void select(final int region, final int row, final int col) {
         final ConquestData data = model();
         final ConquestPlane plane = data.getCurrentPlane();
@@ -786,7 +786,7 @@ public final class ConquestGame implements Campaign {
         return walked;
     }
 
-    /** Why a battle cannot start where the player stands, or null if it can. */
+    /** Why a battle cannot start at the player's position, or null if it can. */
     String battleProblem() {
         return model().getSelectedCommander().getDeckProblem();
     }
@@ -800,7 +800,7 @@ public final class ConquestGame implements Campaign {
         host.startMatch(() -> FModel.getConquest().prepareBattle(battle, null), () -> FModel.getConquest().cancelBattle());
     }
 
-    /** A command to this conquest, from the save that is open, or from the list of saves while save is null. */
+    /** A command to this conquest. save is the open save, or null when the command comes from the list of saves. */
     private record Call(ConquestGame game, String save, Host host) {
     }
 
@@ -821,7 +821,7 @@ public final class ConquestGame implements Campaign {
     }
 
     public static final Commands<Call> COMMANDS = new Commands<Call>()
-            // The new-conquest form is the only part of the list of saves that is Conquest's own
+            // The new-conquest form is the only part of the saves list that belongs to Conquest
             .on(ConquestOptionsQuery.class, onShelf((c, ch, q) -> ch.send(options(q.plane(), q.commander()))))
             .on(ConquestCreate.class, onShelf((c, ch, create) -> {
                 final String problem = create(create.name(), create.plane(), create.commander(), create.planeswalker());
@@ -837,14 +837,14 @@ public final class ConquestGame implements Campaign {
                 ch.send(c.game().state(List.of()));
             }))
             .on(CampaignPlain.conquestMove, inSave((c, ch, m) -> {
-                // A move with nowhere to go is not answered: a map with no path would end a walk under way
+                // A move with nowhere to go gets no answer. A map with no path would end a walk in progress
                 final List<ConquestLocation> walked = c.game().move();
                 if (walked != null) {
                     ch.send(c.game().state(walked));
                 }
             }))
             .on(CampaignPlain.conquestBattle, inSave((c, ch, b) -> {
-                // A reward still to be shown may end in a chaos battle, which comes before any other
+                // A reward still to be shown may end in a chaos battle, which must come before any other battle
                 if (c.game().reward != null) {
                     return;
                 }

@@ -1,4 +1,4 @@
-// Where card, mana symbol and ability icon images come from, and how text with {symbols} in it is drawn
+// The URLs of card, mana symbol and ability icon images, and the drawing of text that contains {symbols}
 
 import { stateOf, type Model } from './model';
 import type { CardView } from './protocol';
@@ -6,24 +6,24 @@ import { make } from './dom';
 
 export const imageUrl = (key: string): string => `img?key=${encodeURIComponent(key)}`;
 
-/** The image shrunk by the server to its one width, because a browser shrinking the full scan on a moving card breaks up the text. */
+/** The image scaled down by the server to a fixed width. A browser that scales the full scan on a moving card makes the text break up. */
 export const smallImage = (src: string): string => (src ? `${src}&w=256` : '');
 
-/** Forge's foil mark on the name in a card's image key, which is what tells the server to paint the foil onto the picture. */
+/** Adds Forge's foil mark to the name in a card's image key. The mark tells the server to draw the foil onto the image. */
 const foilKey = (key: string): string => key.replace(/^c:[^|$]*/, '$&+');
 
-// Empty for a card the viewer may not see, so the element falls back to its back or its frame
+// Empty for a card the viewer may not see, so the element shows its card back or its frame instead
 export function cardImageSrc(model: Model, card: CardView | null | undefined): string {
   if (!card || !model.visible.has(card.$key)) return '';
   const state = stateOf(model, card);
-  // A face-down card's picture is the card's own, which says how it came to be face down: a morph, a manifest, a foretold card
+  // A face-down card has its own image, which shows why it is face down, such as a morph, a manifest or a foretold card
   const key = card.Facedown && card.FacedownImageKey ? card.FacedownImageKey : state.ImageKey;
   if (!key) return '';
-  // Foil as the server's Foil.key has it: the paper card is one, or the match made this card one at random
+  // Same foil rule as the server's Foil.key. The paper card is foil, or the match made this card foil at random
   return imageUrl(card.PaperFoil || state.FoilIndex ? foilKey(key) : key);
 }
 
-// Assigning the same src again restarts the request; the answer says whether the image changed
+// Setting the same src again restarts the request, so it is skipped. Returns whether the image changed
 export function setImage(img: HTMLImageElement, src: string): boolean {
   if ((img.getAttribute('src') ?? '') === src) return false;
   if (src) img.src = src;
@@ -31,14 +31,14 @@ export function setImage(img: HTMLImageElement, src: string): boolean {
   return true;
 }
 
-// A card with no image keeps its frame, so the container carries the mark rather than the image
+// A card with no image still shows its frame, so the class goes on the container and not on the image
 export function noImageOnError(container: HTMLElement, img: HTMLImageElement): void {
   img.addEventListener('error', () => container.classList.add('noimg'));
 }
 
-// {2}{B} and {T} are drawn from the skin's icon sheet; a symbol the sheet has no image for keeps its text
+// Symbols such as {2}{B} and {T} are drawn from the skin's icon sheet. A symbol with no image on the sheet stays as text
 export function setSymbolText(el: HTMLElement, text: string | null | undefined): void {
-  // The prompt and preview set theirs on every frame, so an unchanged text keeps its nodes
+  // The prompt and preview set their text on every frame, so unchanged text keeps its nodes
   if (el.dataset.symbolText === (text ?? '')) return;
   el.dataset.symbolText = text ?? '';
   el.replaceChildren();
@@ -60,7 +60,7 @@ export function appendSymbolText(el: HTMLElement, text: string): void {
   }
 }
 
-/** Text cut into its plain runs and its {symbols}; symbol is the symbol's name for a symbol, null for text. */
+/** Text split into plain runs and {symbols}. symbol is the symbol's name for a symbol, and null for plain text. */
 export function symbolParts(text: string): { text: string; symbol: string | null }[] {
   return String(text).split(/(\{[^}]{1,6}\})/).filter(part => part).map(part => ({
     text: part,
@@ -68,7 +68,7 @@ export function symbolParts(text: string): { text: string; symbol: string | null
   }));
 }
 
-// A hybrid or Phyrexian shard is named without its slash, as the skin's icon sheet keys them
+// A hybrid or Phyrexian shard is named without its slash, to match the skin's icon sheet keys
 export const symbolUrl = (symbol: string): string => `mana?s=${encodeURIComponent(symbol.replace(/\//g, ''))}`;
 
 /** A keyword's icon, cut from the skin's ability sheet. The server names the icon (FSkinProp.iconFromKeyword). */
@@ -80,5 +80,5 @@ export function hideOnError(img: HTMLImageElement): void {
   img.addEventListener('error', hideBroken);
 }
 
-/** An image's error handler that hides it, so a missing picture leaves its place rather than a broken-image mark. */
+/** An error handler that hides the image, so a missing image leaves an empty space and not a broken-image icon. */
 export const hideBroken = (e: Event): void => { (e.currentTarget as HTMLImageElement).hidden = true; };

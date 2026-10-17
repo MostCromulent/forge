@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { drafting, finderWithOwnDeck, lobby, probe, settled, PHONE, WIDE_TOUCH, type Probe } from './probe';
 import { hold } from './steps';
 
-// Every page's cards share the match's preview: a mouse rests on a card for it, a finger holds one for it as a sheet
+// Cards on every page use the match's preview. A mouse hover opens it, and a held finger opens it as a sheet
 
 async function newDeck(p: Probe): Promise<void> {
   const page = p.page;
@@ -73,7 +73,7 @@ probe('on a phone a tap on a draft card opens its sheet, whose Pick picks it', a
   await drafting(p);
   const slot = page.locator('.draft-pack .draft-slot').first();
   await slot.waitFor();
-  // The pack slides in first, and a card still moving opens no preview
+  // The pack slides in first, and a tap on a moving card opens no preview
   await settled(page);
   await slot.tap();
   const zoom = page.locator('#zoom');

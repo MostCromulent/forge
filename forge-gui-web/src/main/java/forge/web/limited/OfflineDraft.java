@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
-/** One player's booster draft against the computer. BoosterDraft has no locks, so everything touching it runs on this draft's own thread. */
+/** One player's booster draft against the computer. BoosterDraft has no locks, so all code that uses it runs on this draft's own thread. */
 public final class OfflineDraft implements Draft {
     private final ExecutorService thread = Executors.newSingleThreadExecutor(r -> {
         final Thread t = new Thread(r, "Draft");
@@ -33,19 +33,19 @@ public final class OfflineDraft implements Draft {
     private final Consumer<DraftState> publish;
     private final Consumer<String> fail;
     private final List<DraftCard> picks = new ArrayList<>();
-    /** The cards behind picks, in the same order, to move between the deck's sections. */
+    /** The cards behind picks, in the same order. They are used to move a card between the deck's sections. */
     private final List<PaperCard> picked = new ArrayList<>();
     private BoosterDraft draft;
     private String product;
     private List<PaperCard> pack = List.of();
     private int round;
     private int packSize;
-    /** Picks made from the current round's packs, which numbers the pick; pack sizes can differ within a round. */
+    /** Picks made from the current round's packs. This count gives the pick number, because pack sizes can differ within a round. */
     private int roundPicks;
     private final DraftView view = new DraftView();
     static final String COMMANDER_DRAFT = "CommanderDraft";
 
-    /** make builds the draft, on the draft's thread, since importing a cube waits on a web site; dealt says its packs are already opened; fail hears why it could not. */
+    /** make builds the draft on the draft's thread, because importing a cube waits for a web site. dealt says the packs are already opened. fail receives the reason when the draft cannot start. */
     public OfflineDraft(final Supplier<BoosterDraft> make, final boolean dealt, final String playerName, final Consumer<DraftState> publish,
             final Consumer<String> fail) {
         this.playerName = playerName;
@@ -103,7 +103,7 @@ public final class OfflineDraft implements Draft {
             return;
         }
         final LimitedPlayer me = draft.getHumanPlayer();
-        // Desktop checks these two before taking the card, in this order
+        // Desktop checks these two cases before taking the card, in this order
         if (me.shouldSkipThisPick()) {
             advance(false);
             return;
@@ -116,7 +116,7 @@ public final class OfflineDraft implements Draft {
         advance(passed);
     }
 
-    /** The finished draft as desktop saves it: the player's picks and each computer's deck, all under name. */
+    /** The finished draft, saved the way desktop saves it: the player's picks and each computer's deck, all under name. */
     CompletableFuture<DeckGroup> save(final String name) {
         return CompletableFuture.supplyAsync(() -> {
             final Deck[] computer = draft.getComputerDecks();
@@ -127,7 +127,7 @@ public final class OfflineDraft implements Draft {
             final LimitedPlayer me = draft.getHumanPlayer();
             final Deck human = new Deck(me.getDeck(), name);
             human.setDraftNotes(me.getSerializedDraftNotes());
-            // The tag desktop gives the deck, which is how either client knows the pool again
+            // Desktop gives the deck this tag. Both clients use it to recognise the pool later.
             if (draft.isCommanderDraft()) {
                 human.getTags().add(COMMANDER_DRAFT);
             }
@@ -138,7 +138,7 @@ public final class OfflineDraft implements Draft {
         }, thread);
     }
 
-    /** The commander the drafted set gives every player, or null. Read once the draft is done, when nothing else touches it. */
+    /** The commander that the drafted set gives every player, or null. Read it only after the draft is done, when no other code uses the draft. */
     String freeCommander() {
         return draft == null ? null : draft.getFreeCommanderName();
     }
@@ -147,7 +147,7 @@ public final class OfflineDraft implements Draft {
         thread.shutdownNow();
     }
 
-    /** The next pack, as desktop's showPackToDraft finds it, or the end of the draft. */
+    /** Shows the next pack, found the same way as in desktop's showPackToDraft, or ends the draft. */
     private void advance(final boolean passed) {
         if (draft.hasNextChoice()) {
             final CardPool next = draft.nextChoice();
@@ -171,7 +171,7 @@ public final class OfflineDraft implements Draft {
         send(passed, done, true);
     }
 
-    /** newPack false keeps the step, so a pick the player has selected in the pack stays selected. */
+    /** When newPack is false the step stays the same, so a card the player has selected in the pack stays selected. */
     private void send(final boolean passed, final boolean done, final boolean newPack) {
         final List<DraftSeat> seats = new ArrayList<>();
         final List<LimitedPlayer> players = draft.getAllPlayers();
@@ -182,7 +182,7 @@ public final class OfflineDraft implements Draft {
         }
         final int pick = roundPicks + 1;
         final List<DraftCard> cards = pack.stream().map(c -> DraftView.card(c, round, pick)).toList();
-        // Offline every pack moves in lock step, so a pass moves every seat's pack
+        // Offline, all packs are passed at the same time, so a pass moves every seat's pack
         final List<Integer> moved = passed ? IntStream.range(0, seats.size()).boxed().toList() : List.of();
         publish.accept(view.state(newPack, step -> new DraftState(step, product, round, draft.getNumRounds(), pick, packSize,
                 DraftView.passDirection(round), seats, cards, List.copyOf(picks), moved, 0, 0, List.of(), done)));

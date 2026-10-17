@@ -4,39 +4,39 @@ import { symbolParts, symbolUrl } from './images';
 import { t, type TextKey } from './text';
 import { ICONS, Icon } from './icons';
 
-/** The mark of a computer player. */
+/** The icon for a computer player. */
 export const AI_ICON = <Icon d={ICONS.bot} />;
 
-/** Text with its {2}{B} and {T} drawn from the skin's icon sheet, as setSymbolText draws it on the board. */
+/** Text with symbols such as {2}{B} and {T} drawn from the skin's icon sheet, as setSymbolText does on the board. */
 export function SymbolText({ text, muted }: { text: string | null | undefined; muted?: boolean }) {
   return <>{symbolParts(text ?? '').map((part, i) => part.symbol
     ? <img key={i} class="sym" alt={part.text} src={symbolUrl(part.symbol)} />
     : <span key={i} class={muted ? 'muted' : undefined}>{part.text}</span>)}</>;
 }
 
-/** A deck's colours as the pips the lobby and the deck finder show. */
+/** A deck's colours as pips, as shown in the lobby and the deck finder. */
 export function Pips({ colors }: { colors: string | null | undefined }) {
   return <>{[...(colors ?? '')].map(c => <Pip key={c} letter={c} />)}</>;
 }
 
-/** One colour's pip: the mana symbol of W, U, B, R, G or C, from the skin as a card's cost draws it. */
+/** One colour's pip. It is the skin's mana symbol for W, U, B, R, G or C, the same image a card's cost uses. */
 export const Pip = ({ letter }: { letter: string }) => <img class="pip" alt={letter} src={symbolUrl(letter)} />;
 
-/** The colours in the order Magic writes them, then colourless, each with the key of its name. */
+/** The colours in Magic's usual order, then colourless. Each has the text key of its name. */
 export const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen'],
   ['C', 'lblColorless']];
 export const FIVE_COLOURS = COLOURS.slice(0, 5);
-/** The key of each colour's name, by its letter. */
+/** The text key of each colour's name, by its letter. */
 export const COLOUR_NAMES: Record<string, TextKey> = Object.fromEntries(COLOURS);
 
-/** A set with one item put in, or taken out if it was there. */
+/** A copy of the set with the item added, or removed if it was already there. */
 export function toggled<T>(set: ReadonlySet<T>, item: T): Set<T> {
   const next = new Set(set);
   if (!next.delete(item)) next.add(item);
   return next;
 }
 
-/** A row of colour buttons, each pressed or not. colourless adds C, and title says more about a colour on hover. */
+/** A row of colour buttons, each pressed or not. colourless adds C. title gives the hover text for a colour. */
 export function ColourToggles({ pressed, toggle, label, colourless, title }: {
   pressed: (letter: string) => boolean; toggle: (letter: string) => void; label: string; colourless?: boolean;
   title?: (letter: string, name: string) => string;

@@ -14,9 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/** Offline sealed as a browser drives it: a pool made, kept, opened, played and removed through the session's messages. */
+/** Tests offline sealed driven from a browser. A pool is made, kept, opened, played and removed through the session's messages. */
 public class OfflineSealedTest extends SessionsTest {
-    /** Core asks its questions through the installed GUI, so the sessions must share it for the browser to be asked. */
+    /** Core asks its questions through the installed GUI. The sessions must use the same GUI so the questions reach the browser. */
     @Override
     WebGuiBase gui() {
         return (WebGuiBase) GuiBase.getInterface();
@@ -45,7 +45,7 @@ public class OfflineSealedTest extends SessionsTest {
         return host;
     }
 
-    /** The editor opened on this pool; a session that kept an earlier test's editor resends that one on connecting. */
+    /** The editor opened on this pool. A session that kept an earlier test's editor resends that editor on connect. */
     private static JsonObject editorOn(final TestBrowser host, final String name) throws InterruptedException {
         return host.awaitMatching("editor", m -> m.has("state") && name.equals(m.getAsJsonObject("state").get("name").getAsString()));
     }
@@ -60,7 +60,7 @@ public class OfflineSealedTest extends SessionsTest {
         return message("sealedCreate", "product", "Full", "packs", 6, "name", name, "replace", replace);
     }
 
-    // Fails if a pool is overwritten without the player confirming, as desktop asks before replacing
+    // Fails if a pool is overwritten without the player confirming. Desktop asks before replacing a pool
     @Test(timeOut = 120_000)
     public void aTakenNameNeedsConfirming() throws Exception {
         final TestBrowser host = host();
@@ -76,7 +76,7 @@ public class OfflineSealedTest extends SessionsTest {
         Assert.assertNotNull(editorOn(host, name));
         Assert.assertNotSame(FModel.getDecks().getSealed().get(name).getHumanDeck(), first, "a confirmed replace did not replace");
     }
-    // Fails if a draft pool's free-for-all stops at three opponents
+    // Fails if a free-for-all from a draft pool seats no more than three opponents
     @Test(timeOut = 120_000)
     public void aDraftFreeForAllSeatsEveryOpponent() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -95,7 +95,7 @@ public class OfflineSealedTest extends SessionsTest {
             sessions.onMessage(host, message("limitedOpen", "kind", "draft"));
             host.awaitMatching("hello", h -> "event".equals(h.get("screen").getAsString()), "the Limited page never opened");
             sessions.onMessage(host, message("poolOpen", "name", name));
-            // No game count is sent, so the saved games-per-match is left as other tests expect it
+            // A game count of 0 is ignored, so the saved games-per-match stays as other tests expect it
             sessions.onMessage(host, message("poolPlay", "name", name, "mode", "several", "opponent", 0, "count", 7, "games", 0));
             awaitTrue(() -> sessions.hostLobby() != null && sessions.hostLobby().getHostedMatch() != null
                     && sessions.hostLobby().getHostedMatch().getGame() != null, "the free-for-all never started");

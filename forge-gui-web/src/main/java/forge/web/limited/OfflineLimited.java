@@ -42,16 +42,16 @@ public final class OfflineLimited implements IHasForgeLog {
     private final Lobby lobby;
     private final DeckSession decks;
     private final LocalGame local;
-    /** Whether a sealed pool is being opened, which takes seconds and may wait on a question to the player. */
+    /** Whether a sealed pool is being opened. Opening takes seconds and may wait for an answer from the player. */
     private final AtomicBoolean openingPacks = new AtomicBoolean();
-    /** A match seats at most eight players, so several opponents at once are at most seven. */
+    /** A match seats at most eight players, so a game against several opponents has at most seven. */
     private static final int MOST_OPPONENTS = 7;
     /** Whether this session is playing a limited gauntlet, and the result of its last game. */
     private volatile boolean gauntletRunning;
     public volatile LimitedResult lastResult;
     /** The draft against the computer, while one is being played. */
     private volatile OfflineDraft draft;
-    /** What the draft is played for when it is not the Limited pages', or null. */
+    /** What the draft is played for when the Limited pages did not start it, or null. */
     private volatile DraftOwner owner;
 
     public OfflineLimited(final WebSession session, final WebGuiBase ui, final Lobby lobby, final DeckSession decks, final LocalGame local) {
@@ -69,7 +69,7 @@ public final class OfflineLimited implements IHasForgeLog {
             .on(DraftStart.class, OfflineLimited::startDraft)
             .on(DraftSave.class, OfflineLimited::saveDraft)
             .on(Plain.draftDiscard, (l, ch, c) -> l.discardDraft())
-            // The gauntlet starts its rounds itself, which, like any match, happens on the host UI thread
+            // The gauntlet starts its own rounds. Like any match, a round starts on the host UI thread.
             .on(Plain.gauntletNext, (l, ch, c) -> l.ui.invokeInEdtLater(() -> {
                 final LimitedResult result = l.lastResult;
                 if (l.gauntletRunning && result != null && result.nextRound()) {
@@ -86,14 +86,14 @@ public final class OfflineLimited implements IHasForgeLog {
                     }
                 }
             }))
-            // A match is started on the host UI thread, as a table's is
+            // A match is started on the host UI thread, like a table's match
             .on(PoolPlay.class, (l, ch, play) -> l.ui.invokeInEdtLater(() -> l.playPool(ch, play)));
 
     public void onCommand(final BrowserChannel channel, final Record command) {
         COMMANDS.run(this, channel, command);
     }
 
-    /** The Limited pages are drawn from the pools and what the setup form offers. Reading the lists touches files, so not here. */
+    /** Sends the pools and the setup form's options, which the Limited pages are drawn from. Reading the lists reads files, so it runs as a background task. */
     public void sendLimited(final BrowserChannel channel) {
         ui.runBackgroundTask("Limited", () -> {
             channel.send(OfflineEvents.pools());
@@ -132,7 +132,7 @@ public final class OfflineLimited implements IHasForgeLog {
         channel.send(OfflineEvents.pools());
     }
 
-    /** Opens a sealed pool as desktop's sealed screen does, then its deck in the editor. Asking for a taken name comes first. */
+    /** Opens a sealed pool as desktop's sealed screen does, then opens its deck in the editor. The check for a name already in use comes first. */
     private void createSealed(final BrowserChannel channel, final SealedCreate create) {
         if (!session.hosting() || !(session.stage() instanceof Event e) || e.kind() != EventKind.sealed) {
             return;
@@ -147,12 +147,12 @@ public final class OfflineLimited implements IHasForgeLog {
             channel.send(new NameTaken(name));
             return;
         }
-        // A second request while the first is opening would pass the name check above and replace its pool
+        // A second request while the first is still opening would pass the name check above and replace the first pool
         if (!openingPacks.compareAndSet(false, true)) {
             channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionOpeningPacks")));
             return;
         }
-        // Opening can wait on a question to the player, so results go to whichever browser is attached when it is done
+        // Opening can wait for an answer from the player, so the results go to whichever browser is attached when it finishes
         ui.runBackgroundTask("Sealed", () -> {
             try {
                 final DeckGroup group;
@@ -201,7 +201,7 @@ public final class OfflineLimited implements IHasForgeLog {
         }
     }
 
-    /** Starts a draft against the computer unless one is running. dealt is true for packs already opened; owner, when not null, keeps the decks. */
+    /** Starts a draft against the computer unless one is running. dealt is true when the packs are already opened. owner, when not null, keeps the decks. */
     public boolean beginDraft(final Supplier<BoosterDraft> make, final boolean dealt, final DraftOwner owner) {
         synchronized (session) {
             if (draft != null) {
@@ -216,7 +216,7 @@ public final class OfflineLimited implements IHasForgeLog {
         }
     }
 
-    /** The draft against the computer being played, while there is one. */
+    /** The draft against the computer that is being played, or null. */
     public OfflineDraft draft() {
         return draft;
     }
@@ -241,7 +241,7 @@ public final class OfflineLimited implements IHasForgeLog {
         }
     }
 
-    /** Stops the draft unsaved, and tells its owner. */
+    /** Stops the draft without saving it, and tells its owner. */
     private void discardDraft() {
         final DraftOwner was = owner;
         endDraft();
@@ -250,7 +250,7 @@ public final class OfflineLimited implements IHasForgeLog {
         }
     }
 
-    /** Saves a finished draft as desktop does, asking before replacing one of the same name, then opens its deck. */
+    /** Saves a finished draft as desktop does, then opens its deck. It asks before replacing a draft of the same name. */
     private void saveDraft(final BrowserChannel channel, final DraftSave save) {
         final OfflineDraft draft = this.draft;
         if (!session.hosting() || draft == null || draft.latest() == null || !draft.latest().done()) {
@@ -258,7 +258,7 @@ public final class OfflineLimited implements IHasForgeLog {
         }
         final DraftOwner keeper = owner;
         if (keeper != null) {
-            // An owner keeps its drafts under the one name it gives them, so the browser's name is not used
+            // An owner keeps its drafts under the single name it chooses, so the name from the browser is not used
             draft.save(keeper.deckName()).whenCompleteAsync((group, ex) -> {
                 if (ex != null) {
                     session.tell(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionDraftSaveFailed", String.valueOf(ex.getMessage()))));
@@ -280,7 +280,7 @@ public final class OfflineLimited implements IHasForgeLog {
             channel.send(new NameTaken(name));
             return;
         }
-        // Off the draft's own thread, which closing the draft interrupts
+        // Run off the draft's own thread, because closing the draft interrupts that thread
         draft.save(name).whenCompleteAsync((group, ex) -> {
             if (ex != null) {
                 session.tell(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionDraftSaveFailed", String.valueOf(ex.getMessage()))));
@@ -297,7 +297,7 @@ public final class OfflineLimited implements IHasForgeLog {
         });
     }
 
-    /** A drafted pool is a Commander Draft when its deck carries desktop's tag or a commander, as desktop tells one. */
+    /** A drafted pool is a Commander Draft when its deck has desktop's tag or a commander. Desktop uses the same test. */
     private static GameType poolType(final GameType type, final Deck human) {
         return type == GameType.Draft && (human.getTags().contains(OfflineDraft.COMMANDER_DRAFT) || human.has(DeckSection.Commander))
                 ? GameType.CommanderDraft : type;
@@ -307,7 +307,7 @@ public final class OfflineLimited implements IHasForgeLog {
         return poolType(event.type(), human);
     }
 
-    /** Plays a pool's deck against one of its opponents, several at once, or every one in turn as a gauntlet, and returns to the pool after. */
+    /** Plays a pool's deck against one opponent, several at once, or each in turn as a gauntlet. Afterwards it returns to the pool. */
     private void playPool(final BrowserChannel channel, final PoolPlay play) {
         final Stage from = session.stage();
         final DeckGroup group = from instanceof Event e ? e.storage().get(play.name()) : null;
@@ -346,7 +346,7 @@ public final class OfflineLimited implements IHasForgeLog {
                     netLog.error(ex, "Could not start the gauntlet");
                     channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionGauntletFailed", String.valueOf(ex.getMessage()))));
                 }
-                // A first round that did not start leaves the pool showing, and no gauntlet to carry on
+                // If the first round did not start, the pool stays on screen and there is no gauntlet to continue
                 if (!(session.stage() instanceof Playing)) {
                     stopGauntlet();
                 }
@@ -357,7 +357,7 @@ public final class OfflineLimited implements IHasForgeLog {
                     channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionSeveralNeedsDraft")));
                     return;
                 }
-                // Chosen at random, as desktop's draft screen chooses them
+                // Opponents are chosen at random, as on desktop's draft screen
                 final List<Integer> indices = new ArrayList<>();
                 for (int i = 0; i < ai.size(); i++) {
                     indices.add(i);
@@ -383,7 +383,7 @@ public final class OfflineLimited implements IHasForgeLog {
         return new LocalGame.Seat(session.playerName(), false, session.avatarIndex(), LocalGame.storedIndex(FPref.UI_SLEEVES, 0), deck);
     }
 
-    /** An opponent named by its deck's place in the pool, as desktop numbers them, with the looks of seat. */
+    /** An opponent named by its deck's position in the pool, numbered as on desktop. seat selects its avatar and sleeve. */
     private static LocalGame.Seat opponentSeat(final int number, final int seat, final Deck deck) {
         return new LocalGame.Seat(Localizer.getInstance().getMessage("lblWebSessionOpponent", number), true, LocalGame.storedIndex(FPref.UI_AVATARS, seat),
                 LocalGame.storedIndex(FPref.UI_SLEEVES, seat), deck);
@@ -413,7 +413,7 @@ public final class OfflineLimited implements IHasForgeLog {
         }
     }
 
-    /** A gauntlet game ended: the win or loss is recorded after every game, as desktop's limited result does. */
+    /** A gauntlet game ended. The win or loss is recorded after every game, as in desktop's limited result. */
     private void recordGauntletGame(final Playing playing) {
         final GameView game = playing.gui().getGameView();
         if (!gauntletRunning || game == null) {

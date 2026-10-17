@@ -1,4 +1,4 @@
-// One card on the page, built here by every zone that shows one, so a card looks the same wherever it is
+// Builds and updates one card element. Every zone that shows a card uses this, so a card looks the same everywhere.
 
 import { combatShown, commanderTax, deref, game, stateOf, type Model } from '../model';
 import { hoverable, inspectCard } from '../preview';
@@ -13,7 +13,7 @@ import { drawStickers } from './stickers';
 import { ICONS, iconSvg } from '../icons';
 import { frameColour, ptShift } from './rules';
 
-/** What a card does when clicked: the board selects it, a dialog toggles an option. menu is a right-click. */
+/** What happens when a card is clicked. On the board it is selected, in a dialog it toggles an option. menu is true for a right-click. */
 export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void;
 
 const EYE = iconSvg(ICONS.eye);
@@ -26,7 +26,7 @@ export function createCard(onClick: CardClick): HTMLDivElement {
   q(el, '.block-tab').textContent = t('lblWebCardBlocking');
   noImageOnError(el, q<HTMLImageElement>(el, 'img'));
   el.addEventListener('click', e => onClick(el, false, e));
-  // The right button asks what else the card can do, as it does on desktop
+  // Right-click shows the card's other actions, as on desktop
   el.addEventListener('contextmenu', e => {
     e.preventDefault();
     onClick(el, true, e);
@@ -36,7 +36,7 @@ export function createCard(onClick: CardClick): HTMLDivElement {
   return el;
 }
 
-// Every card tests these lists on every frame, and each message replaces a list whole, so its Set is kept while the list lasts
+// Every card checks these lists on every render. Each message replaces a whole list, so a Set is cached per list object.
 const refSets = new WeakMap<readonly (Ref | number)[], Set<number>>();
 const has = (refs: readonly (Ref | number)[] | null | undefined, key: number): boolean => {
   if (!refs) return false;
@@ -49,15 +49,14 @@ const has = (refs: readonly (Ref | number)[] | null | undefined, key: number): b
 };
 
 
-/** The last picture each card was shown with, for a spell whose card is hidden by the time its cast is seen. */
+/** The last image shown for each card. It is used for a spell whose card is already hidden when its cast is shown. */
 const pictures = new Map<number, { src: string; zoom: string; name: string }>();
 
 export function lastPicture(key: number): { src: string; zoom: string; name: string } | undefined {
   return pictures.get(key);
 }
 
-/** A new table reuses card keys, so the pictures of the last one mean nothing. */
-/** Marks a card picked in a question with a mark as well as the ring, so being picked is told by shape, not colour alone. */
+/** Adds a mark as well as the ring to a card picked in a question. So a picked card is shown by shape, not only by colour. */
 export function markPicked(el: HTMLElement, picked: boolean): void {
   el.classList.toggle('picked', picked);
   const mark = el.querySelector(':scope > .pick-mark');
@@ -65,13 +64,14 @@ export function markPicked(el: HTMLElement, picked: boolean): void {
   else if (!picked) mark?.remove();
 }
 
+/** A new game reuses card keys, so the images kept from the last game are cleared. */
 export function forgetPictures(): void {
   pictures.clear();
 }
 
 export function updateCard(el: HTMLElement, model: Model, card: CardView): void {
   const state = stateOf(model, card);
-  // A card held face down in exile under a permanent shows its owner's sleeve, even when its owner may look at it
+  // A face-down card held in exile under a permanent shows its owner's sleeve, even when the owner may look at it
   const visible = model.visible.has(card.$key) && !(card.Facedown && el.classList.contains('ghost'));
   const selectable = has(model.prompt?.selectable, card.$key);
   const type = visible ? (state.Type ?? '') : '';
@@ -80,7 +80,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   el.style.setProperty('--sleeve', cssUrl(visible ? '' : playerSleeveUrl(owner)));
   el.classList.toggle('tapped', !!card.Tapped);
   el.classList.toggle('flying', visible && !!state.Keywords?.some(k => k.icon === 'IMG_ABILITY_FLYING'));
-  // Each flyer starts at its own point in its hover, so a row of them never moves together
+  // Each flyer starts its hover animation at a different point, so a row of flyers does not move in step
   el.style.setProperty('--hover-at', `${-(card.$key * 1.37 % 4.6).toFixed(2)}s`);
   el.classList.toggle('selectable', selectable);
   el.classList.toggle('playable', has(model.playable?.cards, card.$key));
@@ -88,19 +88,19 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   el.classList.toggle('highlighted', has(model.prompt?.highlighted, card.$key));
   const attacking = !!card.Attacking && combatShown(model);
   el.classList.toggle('attacking', attacking);
-  // On a phone the attacker a tap on your creature will block says so, since the game may have picked it for you
+  // On a phone, an attacker gets a tag when a tap on your creature will block it. The game may have picked that attacker for you.
   const blockThis = attacking && game(model)?.Phase === 'COMBAT_DECLARE_BLOCKERS' && (model.prompt?.highlighted ?? []).includes(card.$key);
   q(el, '.combat-tag').textContent = blockThis ? t('lblWebPortraitBlockingThis') : '';
   el.classList.toggle('blocking', !!card.Blocking);
   el.classList.toggle('phased', !!card.PhasedOut);
-  // The chains go on and come off as the card is detained and released, but a board drawn fresh just shows them
+  // The chains animate on and off when the card is detained or released. A newly drawn board shows them without animation.
   const detained = !!card.Detained;
   if (el.dataset.detained !== undefined && (el.dataset.detained === '1') !== detained && el.closest('.battlefield') && !reducedMotion()) {
     replay(el, detained ? 'detaining' : 'releasing', 'detaining', 'releasing');
   }
   el.dataset.detained = detained ? '1' : '';
   el.classList.toggle('detained', detained);
-  // The board shows a shrunk copy, while the preview (data-zoom) keeps the full image
+  // The board shows a small copy of the image. The preview (data-zoom) uses the full image.
   const src = cardImageSrc(model, card);
   const small = visible ? smallImage(src) : '';
   if (setImage(q<HTMLImageElement>(el, 'img'), small)) {
@@ -108,7 +108,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   }
   el.dataset.zoom = src;
   if (small) pictures.set(card.$key, { src: small, zoom: src, name: state.Name ?? '' });
-  // A card that shows another face where it stands (a transform, a morph turned up) unfolds to it
+  // A battlefield card that changes face (a transform, a morph turned face up) animates to the new face
   const face = card.Facedown ? 'down' : state.ImageKey ?? '';
   if (el.dataset.face !== undefined && el.dataset.face !== face && el.closest('.battlefield') && !reducedMotion()) {
     q(el, 'img').animate([{ scale: '0 1' }, { scale: '1 1' }], { duration: 220, easing: 'cubic-bezier(.2,.7,.3,1)' });
@@ -118,11 +118,11 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   drawStickers(q(el, '.stickers'), model, visible && small ? card : undefined);
   q(el, '.name').textContent = visible ? (state.Name ?? '') : '';
   setCost(q(el, '.cost'), visible ? state.ManaCost ?? '' : '');
-  // A commander waiting in the command zone costs its tax on top, so the cost to cast it says so
+  // A commander in the command zone costs its tax extra, so the cost badge includes the tax
   const tax = card.Zone === 'Command' ? commanderTax(deref(model, card.Owner) as PlayerView | undefined, card) : 0;
   const badge = q(el, '.cost-badge');
   setCost(badge, visible ? withTax(state.ManaCost ?? '', tax) : '', true);
-  // A perpetual effect or a commander's tax has changed what the card costs from what is printed on it
+  // Marks a cost changed from the printed cost by a perpetual effect or a commander's tax
   const perpetual = state.OriginalManaCost !== undefined && (state.ManaCost ?? '') !== state.OriginalManaCost;
   badge.classList.toggle('changed', visible && (tax > 0 || perpetual));
   q(el, '.type').textContent = type;
@@ -131,13 +131,13 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   const creature = /Creature/.test(type);
   const damage = card.Damage ?? 0;
   const power = creature ? `${state.Power ?? 0}/` : '';
-  // A battle lies on its side, as it is printed and as every other client draws it
+  // A battle is drawn sideways, as it is printed and as every other client draws it
   el.classList.toggle('battle', /Battle/.test(type));
-  // Damage comes off the toughness the way a player counts it, rather than being listed beside the card
+  // Damage is subtracted from the toughness shown, as a player counts it. It is not listed separately.
   const toughness = creature ? `${(state.Toughness ?? 0) - damage}`
     : /Planeswalker/.test(type) ? `${state.Loyalty ?? ''}`
     : /Battle/.test(type) ? `${state.Defense ?? ''}` : '';
-  // A pump, a counter or a loyalty change is a number the player must notice
+  // A changed number (a pump, a counter, a loyalty change) is animated so the player notices it
   if (pt.textContent && power + toughness && pt.textContent !== power + toughness) {
     replay(pt, 'changed');
   }
@@ -146,7 +146,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   p.dataset.shift = creature ? ptShift(state.Power ?? 0, state.BasePower) : '';
   const hurt = q(el, '.pt-t');
   hurt.textContent = toughness;
-  // Marked damage lowers the toughness's shift as it lowers the number above
+  // Marked damage counts in the toughness's shift as it does in the number above
   hurt.dataset.shift = creature ? ptShift((state.Toughness ?? 0) - damage, state.BaseToughness) : '';
   hurt.classList.toggle('hurt', creature && damage > 0);
   pt.classList.toggle('on', !!(power + toughness));
@@ -164,19 +164,19 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   showBlocking(el, card);
   const badges: string[] = [];
   if (card.IsRingBearer) badges.push(t('lblWebCardRingBearer'));
-  // The corner already gives a planeswalker's loyalty and a battle's defense, unless the card is a creature too
+  // The corner already shows a planeswalker's loyalty or a battle's defense, unless the card is also a creature
   const inCorner = creature ? null : /Planeswalker/.test(type) ? 'Loyalty' : /Battle/.test(type) ? 'Defense' : null;
-  // The count is marked with ×, so +1/+1 ×2 is never read as a change to the P/T
+  // The count has a × sign, so "+1/+1 ×2" is not read as a change to the P/T
   for (const [name, n] of Object.entries(card.Counters ?? {})) {
     if (name !== inCorner) badges.push(`${name} ×${n}`);
   }
   q(el, '.badges').textContent = badges.join(' · ');
 }
 
-/** Forge has no icon for a soulbond pair, so the page brings its own and lists it with the keywords. */
+/** Forge has no icon for a soulbond pair, so the page has its own. It is shown with the keywords. */
 const PAIRED = 'paired.svg';
 
-/** Only keywords the server names an icon for appear, so the page keeps no table of its own. */
+/** Shows only keywords the server sends an icon for, so the page needs no keyword table of its own. */
 function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined, shields: number | undefined, paired?: string): void {
   const shown = (keywords ?? []).filter(k => k.icon);
   if (paired) shown.push({ icon: PAIRED, title: paired, reminder: '' });
@@ -189,7 +189,7 @@ function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined, sh
     setImage(img as HTMLImageElement, k.icon === PAIRED ? PAIRED : abilityUrl(k.icon ?? ''));
     img.title = k.reminder ? `${k.title} — ${k.reminder}` : k.title;
   });
-  // A shield counter sits with the keywords because it is looked for when working out whether removal or a block kills
+  // A shield counter is shown with the keywords, because players check it to judge whether removal or a block kills the creature
   const had = root.querySelector('.shield');
   if (!shields) {
     had?.remove();
@@ -206,19 +206,19 @@ function shieldBadge(): HTMLElement {
   return el;
 }
 
-/** A mana cost with more generic mana added to it, as a tax adds it: {2}{G} with 2 more is {4}{G}. */
+/** Adds generic mana to a mana cost, as a tax does. {2}{G} with 2 more is {4}{G}. */
 function withTax(cost: string, tax: number): string {
   if (!tax) return cost;
   const generic = /^\{(\d+)\}/.exec(cost);
   return generic ? `{${Number(generic[1]) + tax}}${cost.slice(generic[0].length)}` : `{${tax}}${cost}`;
 }
 
-// Every card is updated on every frame, so its cost is rebuilt only when it changes
+// Every card is updated on every render, so its cost is rebuilt only when it changes
 function setCost(el: HTMLElement, text: string, pips = false): void {
   if (el.dataset.text !== text) {
     el.dataset.text = text;
     setSymbolText(el, text);
-    // An image cannot carry the light drawn round a changed cost, so each symbol gets a box of its own to hold it
+    // An image cannot show the glow round a changed cost, so each symbol is wrapped in its own span for it
     if (pips) {
       for (const sym of [...el.children]) {
         const pip = make('span', 'pip');
@@ -229,7 +229,7 @@ function setCost(el: HTMLElement, text: string, pips = false): void {
   }
 }
 
-/** Where a permanent has got to in its set's track, and a card has at most one such track, so one chip serves them all. */
+/** A permanent's progress on its set's track, such as class level or sprocket. A card has at most one such track, so one chip shows them all. */
 function mechanic(card: CardView, type: string): Node[] {
   const track = (now: number, of: number, text: string) => {
     const pips = make('span', 'pips');
@@ -252,7 +252,7 @@ function mechanic(card: CardView, type: string): Node[] {
     }
     return [pips, label(card.AttractionLights.join(' '))];
   }
-  // Intensity has no ceiling, so there is no track to draw and the number says it on its own
+  // Intensity has no maximum, so there is no track to draw. Only the number is shown.
   if (card.Intensity) return [label(t('lblWebCardIntensity', card.Intensity))];
   return [];
 }
@@ -263,7 +263,7 @@ function label(text: string): HTMLElement {
   return el;
 }
 
-/** A creature that must block something is lit, and one that may block more than one carries how many. */
+/** Highlights a creature that must block. A creature that may block more than one attacker shows how many. */
 function showBlocking(el: HTMLElement, card: CardView): void {
   const must = (card.MustBlockCards ?? []).filter(r => r).length > 0;
   const extra = card.BlockAny ? '∞' : card.BlockAdditional ? String(card.BlockAdditional + 1) : '';
@@ -274,7 +274,7 @@ function showBlocking(el: HTMLElement, card: CardView): void {
     : card.BlockAdditional ? t('lblWebCardMayBlockCount', card.BlockAdditional + 1) : '';
 }
 
-// New damage flashes the card white, jolts it and throws the number off it, so combat is legible without the log
+// New damage flashes the card white, shakes it and shows the amount flying off it. So combat can be followed without the log.
 function showDamage(el: HTMLElement, damage: number): void {
   const before = el.dataset.damage === undefined ? damage : Number(el.dataset.damage);
   el.dataset.damage = String(damage);
@@ -282,7 +282,7 @@ function showDamage(el: HTMLElement, damage: number): void {
     return;
   }
   replay(el, 'struck');
-  // The flash takes itself away when it ends, so it is only added where it will run
+  // The flash is removed on animationend, so it is added only when the animation will run
   if (!reducedMotion()) {
     const flash = make('span', 'hit-white');
     el.append(flash);
@@ -296,7 +296,7 @@ function showDamage(el: HTMLElement, damage: number): void {
 
 export function setPileCount(el: HTMLElement, count: number, opened: boolean): void {
   el.classList.toggle('pile', count > 1);
-  // Up to three copies show behind the top card, so a pile of four or more shows four cards and the badge counts the rest
+  // Up to three copies show behind the top card. A pile of four or more shows four cards, and the badge shows the full count.
   el.dataset.depth = String(Math.min(3, Math.max(0, count - 1)));
   const badge = q(el, '.count');
   badge.textContent = opened ? '×' : count > 1 ? `×${count}` : '';

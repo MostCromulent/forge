@@ -1,5 +1,5 @@
-// What the browser keeps between visits. Keys start with forge., which backup.ts saves and restores, apart from those it leaves out
-// localStorage throws when the browser blocks it, and then nothing is kept and every value starts from its default next time
+// Values the browser stores between visits. Keys start with forge. backup.ts saves and restores them, except the keys it leaves out
+// localStorage throws when the browser blocks it. Nothing is then stored, and every value starts from its default next time
 
 export function stored(key: string): string | null {
   try {
@@ -9,17 +9,17 @@ export function stored(key: string): string | null {
   }
 }
 
-/** Keeps a value, or forgets it when given null. */
+/** Stores a value, or removes it when given null. */
 export function store(key: string, value: string | null): void {
   try {
     if (value === null) localStorage.removeItem(key);
     else localStorage.setItem(key, value);
   } catch {
-    // Nowhere to keep it; the value lasts until the page is reloaded
+    // Storage is blocked, so the value is not saved
   }
 }
 
-/** A value kept as JSON, or the fallback when there is none or it no longer parses. */
+/** A value stored as JSON, or the fallback if there is none or it does not parse. */
 export function storedJson<T>(key: string, fallback: T): T {
   const text = stored(key);
   if (text === null) return fallback;

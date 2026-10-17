@@ -9,12 +9,12 @@ import java.awt.RenderingHints;
 import java.util.Locale;
 import javax.swing.JComponent;
 
-/** The server window's totals, under the traffic graph and in its colours: how long the server has been up, who is on it, and every byte so far. */
+/** The server window's totals, drawn under the traffic graph in its colours. It shows the uptime, the number of players and every byte so far. */
 final class StatsBox extends JComponent {
     private static final Localizer TEXT = Localizer.getInstance();
     private static final String[] NAMES = {TEXT.getMessage("lblWebConsoleUp"),
             TEXT.getMessage("lblPlayers"), TEXT.getMessage("lblWebConsoleReceived")};
-    /** Up, players and received, then what was sent of each kind, then everything sent. */
+    /** Uptime, players and bytes received, then bytes sent of each kind, then total bytes sent. */
     private String[] values = new String[NAMES.length + TrafficGraph.KIND_NAMES.length + 1];
 
     StatsBox() {

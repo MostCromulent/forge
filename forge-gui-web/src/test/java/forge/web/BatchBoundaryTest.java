@@ -17,7 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/** What one message to a client may hold, read from every message of ten turns the computer plays against itself. */
+/** Tests what one message to a client may contain. It reads every message from ten turns of the computer playing itself. */
 public class BatchBoundaryTest {
     @BeforeClass
     public void setUp() {
@@ -60,7 +60,7 @@ public class BatchBoundaryTest {
             }
             // The computer takes the web seat, so both sides cast spells and nobody is asked anything
             local.spectate();
-            // Ten turns of this deck hold every case below many times over, and a whole game takes far longer
+            // Ten turns of this deck cover every case below many times, and a whole game takes much longer
             for (int i = 0; i < 3000 && browser.gameOver.getCount() > 0 && turn(browser) < 10; i++) {
                 Thread.sleep(100);
             }
@@ -114,18 +114,18 @@ public class BatchBoundaryTest {
                 if (resolved && game != null && game.has("Turn")) resolvedIntoNextTurn++;
                 before = after;
             }
-            // Fails if the game never did what the claims below are about, so they would hold of nothing
+            // Fails if the game never did what the checks below test, which would make them pass on nothing
             Assert.assertTrue(left > 0 && resolutions > 0 && lands > 0 && casts > 0,
                     left + " cards left a battlefield, " + resolutions + " resolutions, " + lands + " lands, " + casts + " casts");
-            // Each is checked even when an earlier one fails, so one run says everything that is wrong
+            // Each check runs even when an earlier one fails, so one run reports every problem
             final SoftAssert pins = new SoftAssert();
-            // Fails if a card leaves a battlefield in one message and its move is told in a later one, so a client has nothing to show it leave by
+            // Fails if a card leaves a battlefield in one message but its move comes in a later one. The client then cannot animate the move
             pins.assertEquals(leftUnsaid, List.of(), "cards that left a battlefield without their move");
             // Fails if a spell is cast and resolves in one message, so a client never sees it on the stack
             pins.assertEquals(castThenResolved, 0, "messages holding a cast and then a resolution");
-            // Fails if a player's land waits for the next thing they do, so others see it late
+            // Fails if a land play is held until the player's next action, so others see it late
             pins.assertEquals(landThenCast, 0, "messages holding a land and then a cast");
-            // Fails if a resolution arrives with the turn after it, so a client shows the new turn with the spell still on the stack
+            // Fails if a resolution arrives with the next turn, so a client shows the new turn with the spell still on the stack
             pins.assertEquals(resolvedIntoNextTurn, 0, "messages holding a resolution and the next turn");
             pins.assertAll();
         });

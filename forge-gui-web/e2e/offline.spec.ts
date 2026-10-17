@@ -31,13 +31,13 @@ test('a new player names themselves, hosts a game against the computer, and play
   await expect(page.locator('#me')).toContainText('Alice');
   await expect(page.locator('#prompt .message')).not.toBeEmpty();
 
-  // A reload lands back in the same match, known by the same name, without being asked again
+  // A reload returns to the same match under the same name, without asking for the name again
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.locator('#match')).toBeVisible();
   await expect(page.locator('#player-name')).toHaveCount(0);
   await expect(page.locator('#me')).toContainText('Alice');
 
-  // Quitting a finished game goes back to a new table set as the last one was, so a second match starts from it with nothing chosen again
+  // Quitting a finished game opens a new table with the last table's settings. A second match starts without choosing anything again
   await concede(page);
   await page.locator('#game-over button', { hasText: 'Quit match' }).click();
   await expect(page.locator('#lobby')).toBeVisible();

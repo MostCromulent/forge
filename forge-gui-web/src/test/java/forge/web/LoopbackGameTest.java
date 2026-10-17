@@ -19,7 +19,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-/** A whole game on the web client's real path: loopback host, netplay client, dispatch executor, JSON forwarding. */
+/** Plays a whole game on the web client's real path: loopback host, netplay client, dispatch executor and JSON forwarding. */
 public class LoopbackGameTest {
     @BeforeClass
     public void setUp() {
@@ -64,14 +64,14 @@ public class LoopbackGameTest {
         TestMatch.play(islands, bears, gui -> new TestBrowser(gui, true), (local, gui, browser) -> {
             awaitGameStarted(local, browser);
 
-            // The host UI thread blocks on a client reply; the client must answer without that thread
+            // The host UI thread blocks while it waits for a client reply. The client must answer without that thread
             final RemoteClientGuiGame remote = WebTestSupport.remoteGui(local.hostedMatch());
             final CompletableFuture<Boolean> probe = new CompletableFuture<>();
             GuiBase.getInterface().invokeInEdtLater(() -> probe.complete(remote.showConfirmDialog("probe", "probe", "Yes", "No", true)));
             Assert.assertTrue(probe.get(20, TimeUnit.SECONDS));
 
             Assert.assertTrue(browser.gameOver.await(300, TimeUnit.SECONDS), "game did not finish");
-            // The score names both players by reference, with the one game won by its winner
+            // The score refers to both players by reference, and credits the one game to its winner
             final JsonObject scored = browser.awaitMatching("gameOver", m -> !m.getAsJsonArray("score").isEmpty(), "the game ended with no score");
             Assert.assertEquals(scored.getAsJsonArray("score").size(), 2);
             Assert.assertEquals(scored.getAsJsonArray("score").asList().stream().mapToInt(e -> e.getAsJsonObject().get("won").getAsInt()).sum(), 1);

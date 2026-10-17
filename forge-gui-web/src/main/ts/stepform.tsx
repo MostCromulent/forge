@@ -1,4 +1,4 @@
-// A form of questions asked one at a time, each answer deciding which come next, beside a ticket that sums up the answers
+// A form that asks one question at a time. Each answer decides which questions come next. A ticket beside it sums up the answers
 
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
@@ -7,14 +7,14 @@ import { t } from './text';
 export interface Step<V> {
   id: string;
   label: string;
-  /** What the step is called once it is folded or still to come, when the question is too long for a line's label. */
+  /** The step's name on a folded or upcoming line, for when the question is too long to be that line's label. */
   short?: string;
-  /** What the question is about, shown while it is still to come. */
+  /** A short description of the question, shown while the step is still to come. */
   hint: string;
-  /** The answers this step owns, cleared when it or an earlier step is answered again. */
+  /** The answers this step owns. They are cleared when an earlier step is answered, or when this or an earlier step is reopened. */
   fields: (keyof V)[];
   applies?(v: V): boolean;
-  /** The answer as the folded line shows it, or null while unanswered. */
+  /** The answer as shown on the folded line, or null while unanswered. */
   answer(v: V): string | null;
   render(v: V, set: (patch: Partial<V>) => void): JSX.Element;
 }
@@ -26,7 +26,7 @@ function openStep<V>(steps: Step<V>[], v: V): string | null {
   return steps.find(s => applies(s, v) && s.answer(v) === null)?.id ?? null;
 }
 
-/** Answers a step: every later step's answers are dropped, since they may no longer fit, then the patch applies. */
+/** Answers a step. The answers of every later step are dropped because they may no longer fit. Then the patch is applied. */
 export function choose<V>(steps: Step<V>[], v: V, id: string, patch: Partial<V>): V {
   const next = { ...v };
   const at = steps.findIndex(s => s.id === id);
@@ -36,7 +36,7 @@ export function choose<V>(steps: Step<V>[], v: V, id: string, patch: Partial<V>)
   return { ...next, ...patch };
 }
 
-/** Reopens a step: its answer and every later one are dropped. */
+/** Reopens a step. Its answer and the answers of every later step are dropped. */
 function reopen<V>(steps: Step<V>[], v: V, id: string): V {
   const next = { ...v };
   for (const step of steps.slice(steps.findIndex(s => s.id === id))) {
@@ -45,19 +45,19 @@ function reopen<V>(steps: Step<V>[], v: V, id: string): V {
   return next;
 }
 
-/** What the event will be, shown beside the questions and filled in as they are answered. */
+/** A summary of the event, shown beside the questions. It fills in as they are answered. */
 export interface Ticket<V> {
-  /** The small words over the title; "Your event" when left out. */
+  /** The small text above the title. It is "Your event" when left out. */
   kicker?: string;
   title: string | ((v: V) => string);
   /** A picture of the choices so far, between the title and the rows. */
   picture?: (v: V) => JSX.Element | null;
   rows: (v: V) => [string, string | null][];
-  /** What the button does, under it. */
+  /** A note under the button that says what it does. */
   note: string;
 }
 
-/** ready, when given, says the form can be sent although its last step is still open: a name typed but not yet entered. */
+/** ready, when given, lets the form be sent while its last step is still open, such as a name typed but not yet entered. */
 export function StepForm<V>({ title, steps, value, onChange, sentence, action, submit, problem, busy, ticket, ready }: {
   title?: string; steps: Step<V>[]; value: V; onChange: (v: V) => void; sentence?: (v: V) => string;
   action: string | ((v: V) => string); submit: () => void; problem?: JSX.Element | null; busy?: boolean; ticket?: Ticket<V>;
@@ -104,7 +104,7 @@ export function StepForm<V>({ title, steps, value, onChange, sentence, action, s
   );
 }
 
-/** The questions: answered ones folded to a line, the open one, then those still to come. */
+/** The questions. Answered ones are folded to a line, then comes the open one, then those still to come. */
 function Questions<V>({ steps, value, onChange, title }: { steps: Step<V>[]; value: V; onChange: (v: V) => void; title?: string }) {
   const open = openStep(steps, value);
   const shown = steps.filter(s => applies(s, value));
@@ -141,7 +141,7 @@ function Questions<V>({ steps, value, onChange, title }: { steps: Step<V>[]; val
   );
 }
 
-/** A list to choose from, narrowed by what is typed. */
+/** A list to choose from, filtered by the typed text. */
 export function Pick({ items, placeholder, pick }: { items: [string, string][]; placeholder: string; pick: (id: string) => void }) {
   const [filter, setFilter] = useState('');
   const shown = items.filter(([, label]) => label.toLowerCase().includes(filter.trim().toLowerCase()));

@@ -11,7 +11,7 @@ import forge.web.protocol.ToBrowser.Sound;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/** The sound a game event makes, which the browser plays, so only the name travels and two of them depend on whose view this is. */
+/** Picks the sound a game event makes. Only the sound's name is sent, and the browser plays it. Two of the sounds depend on whose view this is. */
 final class BrowserSounds {
     private final EventVisualizer sounds;
 
@@ -26,7 +26,7 @@ final class BrowserSounds {
 
             @Override
             public SoundEffectType visit(final GameEventBlockersDeclared event) {
-                // Your own blocks already made their sound as you declared them, and an attacker nobody blocked is listed against itself
+                // The local player's own blocks made their sound when declared. An unblocked attacker is listed as blocked by itself
                 final boolean blocked = event.blockers().values().stream()
                         .anyMatch(pairs -> pairs.entries().stream().anyMatch(pair -> !pair.getKey().equals(pair.getValue())));
                 return blocked && !isLocal.test(event.defendingPlayer()) ? SoundEffectType.Block : null;

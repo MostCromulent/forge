@@ -42,7 +42,7 @@ public class LegalityTest {
         }
     }
 
-    // Fails if a Commander ban is missed, which getDeckConformanceProblem does not check
+    // Fails if a Commander ban is missed. getDeckConformanceProblem does not check bans
     @Test
     public void commanderBanIsFlagged() {
         final Deck d = commanderDeck("Meren of Clan Nel Toth");
@@ -59,7 +59,7 @@ public class LegalityTest {
         Assert.assertNull(Legality.check(d, Check.none()).verdict());
     }
 
-    // Fails if a card pool's sentence stops naming the cards it rejects, or names a restricted card as illegal
+    // Fails if a card pool's message no longer names the cards it rejects, or names a restricted card as illegal
     @Test
     public void cardPoolNamesWhatItRejects() {
         final Deck d = new Deck("t");

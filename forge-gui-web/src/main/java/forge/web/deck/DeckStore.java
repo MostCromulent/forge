@@ -9,7 +9,7 @@ import forge.util.storage.IStorage;
 
 import java.util.Collection;
 
-/** Where the host keeps each format's decks, and the rules a deck's name has to follow to be saved there. */
+/** Where the host stores each format's decks, and the rules a deck name must follow to be saved there. */
 public final class DeckStore {
     static final int MAX_NAME = 60;
     private static final String FORBIDDEN = "\\/:*?\"<>|";
@@ -32,7 +32,7 @@ public final class DeckStore {
         };
     }
 
-    /** The format whose decks a deck is listed with, where limited decks are Draft's and are stored as their pools are. */
+    /** The format that a deck is listed under. Limited decks are listed under Draft and are stored the same way as their pools. */
     static GameType family(final GameType format) {
         return switch (format) {
             case Commander, Oathbreaker, Brawl, TinyLeaders -> format;
@@ -41,7 +41,7 @@ public final class DeckStore {
         };
     }
 
-    /** The same, for the format a deck file records. */
+    /** The same, for the format that a deck file records. */
     static GameType family(final DeckFormat format) {
         return switch (format) {
             case Commander -> GameType.Commander;
@@ -53,7 +53,7 @@ public final class DeckStore {
         };
     }
 
-    /** Why a name can't be a deck's, or null when it can. */
+    /** Why a name cannot be used for a deck, or null when it can. */
     public static String nameProblem(final String name) {
         if (name == null || name.isBlank()) {
             return Localizer.getInstance().getMessage("lblWebDeckStoreNameEmpty");
@@ -88,12 +88,12 @@ public final class DeckStore {
         return null;
     }
 
-    /** The wanted name, or "wanted (2)" and so on, whichever saves to a file that no deck other than mine uses. */
+    /** The wanted name, or "wanted (2)" and so on. Returns the first one whose file no deck other than mine uses. */
     static String freeName(final IStorage<Deck> storage, final String wanted, final String mine) {
         return freeName(storage.getItemNames(), wanted, mine);
     }
 
-    /** As above, among any names: a guest's decks are kept in its browser, not in storage. */
+    /** As above, for any list of names. A guest's decks are stored in its browser, not in storage. */
     static String freeName(final Collection<String> names, final String wanted, final String mine) {
         String candidate = wanted;
         for (int n = 2; ; n++) {

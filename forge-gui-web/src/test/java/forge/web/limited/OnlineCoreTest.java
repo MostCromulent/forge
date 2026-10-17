@@ -16,14 +16,14 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
-/** The core entry points online web events use, which desktop leaves at their defaults. */
+/** Tests the core entry points that online web events use and desktop leaves at their defaults. */
 public class OnlineCoreTest {
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
     }
 
-    // Fails if configuring a sealed event from a built pool runs the prompting constructor, which hangs until the time limit
+    // Fails if configuring a sealed event from a built pool runs the prompting constructor. That constructor hangs until the time limit
     @Test(timeOut = 30_000)
     public void configureWithABuiltGenerator() {
         final ServerGameLobby lobby = new ServerGameLobby();
@@ -33,7 +33,7 @@ public class OnlineCoreTest {
         assertSame(lobby.getCurrentEvent().getSealedGenerator(), gen);
     }
 
-    // Fails if startGame seats a slot that sits out: two ready seats with one sitting out are too few to play
+    // Fails if startGame seats a slot that sits out. Two ready seats with one sitting out are too few to play
     @Test
     public void aSeatSittingOutIsNotSeated() {
         final ServerGameLobby lobby = new ServerGameLobby();

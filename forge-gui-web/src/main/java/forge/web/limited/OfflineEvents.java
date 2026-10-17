@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-/** The host's offline sealed and draft pools, kept where desktop keeps them: what the setup form offers, making a pool or draft, and listing them. */
+/** The host's offline sealed and draft pools, stored where desktop stores them. This class lists the setup form's options, makes pools and drafts, and lists saved pools. */
 public final class OfflineEvents {
     private OfflineEvents() {
     }
@@ -48,7 +48,7 @@ public final class OfflineEvents {
         return FModel.getDecks().getSealed();
     }
 
-    /** Where pools of a kind are kept: desktop's drafts or its sealed pools. */
+    /** Where pools of a kind are stored: desktop's drafts or its sealed pools. */
     public static IStorage<DeckGroup> storage(final EventKind kind) {
         return kind == EventKind.draft ? FModel.getDecks().getDraft() : sealed();
     }
@@ -61,7 +61,7 @@ public final class OfflineEvents {
                 draftBlocks(draft.blocks()), draftBlocks(draft.fantasyBlocks()), draft.cubes(), draft.themes(), draft.lastCube());
     }
 
-    /** The pool of a kind saved or played most recently, by its files' times on disk; null if there is none. */
+    /** The pool of a kind that was saved or played most recently, judged by its file times on disk. Null if there is none. */
     public static String latest(final EventKind kind) {
         final String dir = kind == EventKind.draft ? ForgeConstants.DECK_DRAFT_DIR : ForgeConstants.DECK_SEALED_DIR;
         String latest = null;
@@ -112,7 +112,7 @@ public final class OfflineEvents {
         return rows;
     }
 
-    /** Builds the pool the form describes, or null if cancelled, and may ask the host's browser, so call it off the socket thread. */
+    /** Builds the pool that the form describes, or returns null if cancelled. It may ask the host's browser a question, so do not call it on the socket thread. */
     static DeckGroup create(final SealedCreate c, final String name) {
         final SealedCardPoolGenerator gen = generator(c);
         if (gen.isEmpty()) {
@@ -122,7 +122,7 @@ public final class OfflineEvents {
         return pool == null ? null : gen.buildDeckGroup(name, pool, false);
     }
 
-    /** What builds the draft the form describes, run later on the draft's own thread since importing a cube waits on a web site. */
+    /** Returns the code that builds the draft the form describes. It runs later on the draft's own thread, because importing a cube waits for a web site. */
     public static Supplier<BoosterDraft> draft(final DraftStart d) {
         final LimitedPoolType type = poolType(d.product());
         return switch (type) {
@@ -234,7 +234,7 @@ public final class OfflineEvents {
         return blocks.stream().map(b -> new DraftBlockOption(b.name(), b.packs(), b.sets(), b.combos(), podSize(b.sets()))).toList();
     }
 
-    /** As BoosterDraft.setupBlock sets it: a single set's recommended pod, and a full pod for anything else. */
+    /** The pod size, as BoosterDraft.setupBlock sets it: a single set's recommended pod size, or a full pod for anything else. */
     private static int podSize(final List<String> sets) {
         final CardEdition edition = sets.size() == 1 ? StaticData.instance().getEditions().get(sets.get(0)) : null;
         return edition == null ? BoosterDraft.N_PLAYERS : edition.getDraftOptions().getRecommendedPodSize();

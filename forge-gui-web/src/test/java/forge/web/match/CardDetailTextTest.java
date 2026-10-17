@@ -25,14 +25,14 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
-/** The page turns some of CardDetailUtil's English lines into chips (match/rulestext.ts), so their shapes are pinned here. */
+/** The page turns some of CardDetailUtil's English lines into chips (match/rulestext.ts), so this test fixes their format. */
 public class CardDetailTextTest {
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
     }
 
-    // Fails if a line rulestext.ts reads by its English prefix is reworded, which would show it as plain text again
+    // Fails if a line that rulestext.ts matches by its English prefix is reworded. The page would then show it as plain text
     @Test
     public void stateLinesKeepTheShapesThePageReads() {
         final List<RegisteredPlayer> players = Lists.newArrayList();

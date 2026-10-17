@@ -8,9 +8,9 @@ import forge.item.PaperCard;
 
 import java.awt.image.BufferedImage;
 
-/** Says which pictures are a foil's, by Forge's foil mark on the name in the image key, and paints the foil on them. */
+/** Finds which pictures are foil, from Forge's foil mark on the name in the image key. It also paints the foil on them. */
 public final class Foil {
-    // The look, under the names fragCardShaderHolo gives it in forge-gui-mobile's Shaders, which this follows line for line
+    // The look, with the names fragCardShaderHolo uses in forge-gui-mobile's Shaders. This code follows that shader line for line
     private static final double FOIL_STRENGTH = 0.85, INK_FLOOR = 0.02, VIVID = 0.35, STREAK_DENSITY = 1.15, STREAK_WIDTH = 0.27,
             ARCH = -2.9, KINK = 0.95, SERRATION = 0.04, HAIR = 0.75, WIDTH_VAR = 2.1, GLOW = 0.25, WHITE_MIX = 0.35,
             HUE_TOP = 0.55, HUE_SPAN = 0.95;
@@ -44,7 +44,7 @@ public final class Foil {
         return imageKey.length() - (imageKey.endsWith(ImageKeys.BACKFACE_POSTFIX) ? ImageKeys.BACKFACE_POSTFIX.length() : 0);
     }
 
-    /** Which streaks a foil's picture has, from 1, or 0 for a key that is not a foil's. The browser works out the same number for the preview it draws itself. */
+    /** Which streak pattern a foil's picture has, from 1, or 0 for a key that is not foil. The browser computes the same number for the preview it draws itself. */
     public static int seed(final String imageKey) {
         if (!imageKey.startsWith(ImageKeys.CARD_PREFIX) || !CardDb.CardRequest.isFoilCardName(imageKey.substring(0, nameEnd(imageKey)))) {
             return 0;
@@ -52,7 +52,7 @@ public final class Foil {
         return 1 + imageKey.chars().sum() % 50;
     }
 
-    /** Bright streaks in the colours of the spectrum, screened onto the picture; dark ink takes almost none, so text stays readable. */
+    /** Screens bright streaks in the colours of the spectrum onto the picture. Dark ink takes almost none, so text stays readable. */
     static void paint(final BufferedImage image, final int seed) {
         final int w = image.getWidth(), h = image.getHeight();
         final double seedA = fract(seed * 0.61803399), seedB = fract(seed * 0.75487767 + 0.31);

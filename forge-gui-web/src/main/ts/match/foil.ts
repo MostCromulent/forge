@@ -1,10 +1,10 @@
-// A foil card's preview, drawn here so its streaks move with the pointer; the server paints every other foil picture, still
+// Draws a foil card's preview here so its streaks move with the pointer. The server draws every other foil image, without motion
 
 import { imageUrl } from '../images';
 
-/** How far the streaks slide as the pointer crosses the card: a little under the gap from one streak to the next. */
+/** How far the streaks move as the pointer crosses the card. It is a little less than the gap between two streaks. */
 const REACH = 0.9;
-/** A foil's image key carries Forge's foil mark on the card's name. */
+/** A foil's image key has Forge's foil mark after the card's name. */
 const FOIL_NAME = /^(c:[^|$]*)\+(?![^|$])/;
 
 const VERTEX = `attribute vec2 a;
@@ -16,7 +16,7 @@ void main() {
   gl_Position = vec4(a.x * 2.0 - 1.0, 1.0 - a.y * 2.0, 0.0, 1.0);
 }`;
 
-/** The card shader of forge-gui-mobile, fragCardShaderHolo in its Shaders, as it stands there. */
+/** The card shader from forge-gui-mobile, fragCardShaderHolo in its Shaders class, copied unchanged. */
 const FRAGMENT = `#ifdef GL_ES
 precision mediump float;
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -111,7 +111,7 @@ void main() {
 
 const keyOf = (src: string): string => new URLSearchParams(src.slice(src.indexOf('?') + 1)).get('key') ?? '';
 
-/** Which streaks a foil's picture has, from 1, or 0 for a picture that is not a foil's; the server's Foil.seed gives the same number. */
+/** The streak pattern number of a foil's image, from 1, or 0 for an image that is not a foil. The server's Foil.seed gives the same number. */
 export function foilSeed(src: string): number {
   const key = keyOf(src);
   if (!FOIL_NAME.test(key)) return 0;
@@ -126,7 +126,7 @@ interface Painter {
   uniform: (name: string) => WebGLUniformLocation | null;
 }
 
-/** Null once the browser has refused WebGL, so it is asked only once. */
+/** Null once the browser has refused WebGL, so WebGL is requested only once. */
 let painter: Painter | null | undefined;
 let showing = '';
 let seed = 0;
@@ -151,7 +151,7 @@ function startPainter(canvas: HTMLCanvasElement): Painter | null {
   gl.enableVertexAttribArray(corner);
   gl.vertexAttribPointer(corner, 2, gl.FLOAT, false, 0, 0);
   gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
-  // A card's picture is no power of two across, which WebGL draws only clamped and unmipped
+  // A card image's width is not a power of two. WebGL draws such a texture only with clamping and no mipmaps
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -160,12 +160,12 @@ function startPainter(canvas: HTMLCanvasElement): Painter | null {
 
 function draw(): void {
   if (!painter || painter.canvas.hidden) return;
-  // The shader slides its streaks by the tilt it is given, and takes the seed on the same input, as mobile passes it
+  // The shader moves its streaks by the tilt it is given. The seed is passed in the same input, as mobile does
   painter.gl.uniform2f(painter.uniform('u_foilTilt'), pointer.x * REACH, seed + pointer.y * REACH);
   painter.gl.drawArrays(painter.gl.TRIANGLE_STRIP, 0, 4);
 }
 
-/** Draws the picture at src on the preview's canvas, over the picture, when it is a foil's and the browser has WebGL; otherwise the canvas hides and the server's picture shows. */
+/** Draws the image at src on the preview's canvas, over the image, when it is a foil and the browser has WebGL. Otherwise the canvas is hidden and the server's image shows. */
 export function showFoil(canvas: HTMLCanvasElement, src: string): void {
   if (src === showing) return;
   showing = src;
@@ -175,7 +175,7 @@ export function showFoil(canvas: HTMLCanvasElement, src: string): void {
   if (painter === undefined) painter = startPainter(canvas);
   if (!painter) return;
   const { gl, uniform } = painter;
-  // The shader paints the foil itself, so it is given the picture without one
+  // The shader draws the foil itself, so it is given the image without the foil
   const picture = new Image();
   picture.onload = () => {
     if (showing !== src) return;
@@ -191,7 +191,7 @@ export function showFoil(canvas: HTMLCanvasElement, src: string): void {
   picture.src = imageUrl(keyOf(src).replace(FOIL_NAME, '$1'));
 }
 
-/** Moves the streaks to where the pointer is on the hovered card, x and y each running from -0.5 to 0.5 across it. */
+/** Moves the streaks to match the pointer's place on the hovered card. x and y each run from -0.5 to 0.5 across the card. */
 export function tiltFoil(x: number, y: number): void {
   pointer = { x: Math.max(-0.5, Math.min(0.5, x)), y: Math.max(-0.5, Math.min(0.5, y)) };
   draw();

@@ -1,4 +1,4 @@
-// Every piece of text the player reads comes through t() from Forge's language files, in the language Forge is set to
+// All text the player reads comes through t() from Forge's language files, in Forge's selected language
 
 import type { ComponentChild } from 'preact';
 import type { TextKey } from './text.gen';
@@ -22,7 +22,7 @@ export async function loadText(): Promise<void> {
   }
 }
 
-/** Sets the page's text directly, as the tests do. */
+/** Sets the page's text directly. The tests use this. */
 export function setText(lang: string, text: Record<string, string>): void {
   patterns = text;
   language = lang;
@@ -34,12 +34,12 @@ export function textLanguage(): string {
   return language;
 }
 
-/** A number as Forge's language writes it, as t() writes its arguments. */
+/** Formats a number for Forge's language, the same way t() formats its arguments. */
 export function formatNumber(n: number): string {
   return numbers.format(n);
 }
 
-/** A day as Forge's language writes it shortly ("15 Oct"): iso's (yyyy-mm-dd, as the server sends a save's date), or today's. */
+/** A short date in Forge's language, such as "15 Oct". iso is yyyy-mm-dd, as the server sends a save's date. Without it, today is used. */
 export function shortDay(iso?: string): string {
   const [y, m, d] = iso ? iso.split('-').map(Number) : [];
   return (iso ? new Date(y, m - 1, d) : new Date()).toLocaleDateString(language, { day: 'numeric', month: 'short' });
@@ -50,7 +50,7 @@ export function t(key: TextKey, ...args: Arg[]): string {
   return pieces(key, args).join('');
 }
 
-/** The same, with markup for the arguments: an element can sit inside a sentence without splitting its words. */
+/** Like t(), but the arguments can be markup. An element can then go inside a sentence without splitting its words. */
 export function tNodes(key: TextKey, ...args: ComponentChild[]): ComponentChild[] {
   return pieces(key, args);
 }
@@ -61,7 +61,7 @@ function pieces<T>(key: TextKey, args: readonly T[]): (string | T)[] {
   return pattern === undefined ? [key] : format(pattern, args);
 }
 
-/** Splits a pattern at its arguments, following java.text.MessageFormat's quoting, which Forge's language files are written for. */
+/** Splits a pattern at its arguments. It follows java.text.MessageFormat's quoting rules, which Forge's language files use. */
 export function format<T>(pattern: string, args: readonly T[]): (string | T)[] {
   const out: (string | T)[] = [];
   let text = '';

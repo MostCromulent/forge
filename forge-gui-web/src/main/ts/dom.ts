@@ -1,4 +1,4 @@
-// Helpers for markup drawn by hand: lookups that treat a miss as a bug and say which, building, pointer and motion helpers, re-placing after a layout change, and a file to save
+// Helpers for hand-built markup. Lookups throw with the selector when an element is missing. Also element, pointer, motion, relayout and file-save helpers
 
 export function q<T extends HTMLElement = HTMLElement>(root: ParentNode, selector: string): T {
   const el = root.querySelector<T>(selector);
@@ -12,17 +12,17 @@ export function byId<T extends HTMLElement = HTMLElement>(id: string): T {
   return el as T;
 }
 
-/** A new element of one class list, which is how nearly every element the page builds by hand starts out. */
+/** Creates an element with a class list. Nearly every hand-built element on the page starts this way. */
 export function make<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): HTMLElementTagNameMap[K] {
   const el = document.createElement(tag);
   el.className = className;
   return el;
 }
 
-/** Whether the player has asked for less motion; the Motion option decides, and follows the system only when set to. */
+/** Whether the player wants less motion. The Motion option decides, and it follows the system setting only if set to do so. */
 export const reducedMotion = (): boolean => document.documentElement.dataset.motion === 'reduced';
 
-/** Where the pointer is over el, x and y each running from -0.5 to 0.5 across it. */
+/** The pointer position over el. x and y each run from -0.5 to 0.5 across it. */
 export function pointerOn(el: Element, e: PointerEvent): { x: number; y: number } {
   const box = el.getBoundingClientRect();
   return {
@@ -31,14 +31,14 @@ export function pointerOn(el: Element, e: PointerEvent): { x: number; y: number 
   };
 }
 
-/** Plays a class's CSS animation again from its start, first taking off the classes it replaces. */
+/** Restarts a class's CSS animation from the start. It first removes the classes listed in remove. */
 export function replay(el: HTMLElement, add: string, ...remove: string[]): void {
   el.classList.remove(add, ...remove);
   void el.offsetWidth;
   el.classList.add(add);
 }
 
-/** Places el gap away from a point, down and to the right, turned back where it would leave the window. */
+/** Places el gap pixels below and right of a point. It flips or moves back where it would leave the window. */
 export function placeBeside(el: HTMLElement, x: number, y: number, gap: number): void {
   const left = x + gap + el.offsetWidth > innerWidth - 8 ? x - gap - el.offsetWidth : x + gap;
   el.style.left = `${Math.round(Math.max(8, left))}px`;
@@ -53,7 +53,7 @@ export function onRelayout(place: () => void): void {
   window.addEventListener('resize', place);
 }
 
-/** Places again whatever is placed by measuring the board, after the board changed size while the window did not. */
+/** Re-runs every placement that measures the board. Call it when the board changes size but the window does not. */
 export function relayout(): void {
   for (const place of relayouts) place();
 }
@@ -67,8 +67,8 @@ export function saveText(text: string, fileName: string, type: string): void {
 }
 
 /**
- * Calls away for every press outside the elements matching inside, for a panel drawn by hand to close itself (hooks.ts's
- * useDismiss is the same for a component). On pointerdown, unless the press may choose something outside inside first, as a click.
+ * Calls away for every press outside the elements matching inside, so a hand-built panel can close itself. hooks.ts's
+ * useDismiss does the same for a component. It listens on pointerdown, or on click if the press must first act on what it hits.
  */
 export function onPressOutside(inside: string, away: () => void, on: 'pointerdown' | 'click' = 'pointerdown'): void {
   document.addEventListener(on, e => {

@@ -10,7 +10,7 @@ const fixture = join(dirname(fileURLToPath(import.meta.url)), '../src/test/resou
 
 let server: Server;
 test.beforeEach(async () => {
-  // Quest reads its saves gzipped. One game a match lets a concession end it, three copies of one card show a deck taking each one owned, and the credits buy a booster
+  // Quest reads gzipped saves. One game per match lets a concession end the match. Three copies of one card test the owned-copy limit. The credits pay for a booster
   const xml = readFileSync(fixture, 'utf8').replace('<matchLength>3</matchLength>', '<matchLength>1</matchLength>')
     .replace('<card c="Naya Hushblade" s="ARB" i="1" n="1"/>', '<card c="Naya Hushblade" s="ARB" i="1" n="3"/>')
     .replace('<credits>250</credits>', '<credits>5000</credits>');
@@ -18,7 +18,7 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server.stop(); });
 
-// Fails if a quest cannot be opened, a duel fought and conceded, and the page come back to the Duels with the loss shown
+// Fails if a quest cannot be opened and a duel fought and conceded, or the page does not return to the Duels page with the loss shown
 test('a quest duel is conceded and the loss is shown on the Duels page', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -34,12 +34,12 @@ test('a quest duel is conceded and the loss is shown on the Duels page', async (
   await gameStarted(page);
   await concede(page);
   await expect(page.locator('#game-over .word')).toHaveText('Defeat');
-  // Easy quests give a booster for a loss too, and its format is asked over the result screen
+  // Easy quests give a booster for a loss too. The booster's format is asked over the result screen
   await page.locator('.host-choice .host-option').first().click({ timeout: 30_000 });
   await answerDialogs(page);
   await page.locator('#game-over button', { hasText: 'OK' }).click();
 
-  // The match's results, then the booster, are revealed over the Duels page
+  // The match results and then the booster are shown over the Duels page
   const reveal = page.locator('.cq-reveal');
   await expect(reveal.locator('.cq-gift h3')).toHaveText('Gameplay Results');
   await reveal.getByRole('button', { name: 'OK', exact: true }).click();
@@ -49,7 +49,7 @@ test('a quest duel is conceded and the loss is shown on the Duels page', async (
   await expect(page.locator('.qu-status .cq-chip').nth(1)).toHaveText('1 Losses');
 });
 
-// Fails if a deck cannot be made, edited to forty cards and chosen as current from the Decks tab, or the editor does not take each copy owned and no more
+// Fails if a deck cannot be made, filled to forty cards and set as current from the Decks tab, or the editor does not accept every owned copy and no more
 test('a quest deck is made, filled and chosen as current', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -109,7 +109,7 @@ test('a booster is bought in the Spell Shop and its cards revealed', async ({ pa
   await expect(credits).toHaveText((before - price).toLocaleString('en-GB'));
 });
 
-// Fails if a quest cannot be started from the form and lands on its Duels page with the difficulty's credits
+// Fails if a quest cannot be started from the form, or it does not open on its Duels page with the difficulty's credits
 test('a quest is started from the new-quest form', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -132,7 +132,7 @@ test('a quest is started from the new-quest form', async ({ page }) => {
   await expect(page.locator('.cq-purse .cq-coin').first().locator('b')).toHaveText('200');
 });
 
-// Fails if a world with sets of its own still asks for a starting pool its sets replace
+// Fails if a world with its own sets still asks for a starting pool, which its sets replace
 test('a world with its own sets goes straight to the distribution', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -147,7 +147,7 @@ test('a world with its own sets goes straight to the distribution', async ({ pag
   await expect(page.locator('.ticket dd').nth(3)).toHaveText('Ravnica');
 });
 
-// Fails if a bazaar item cannot be bought from its stall and the credits do not fall by its price
+// Fails if a bazaar item cannot be bought from its stall, the credits do not fall by its price, or a bought pet is not offered for duels
 test('a bazaar item is bought from its stall', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -163,7 +163,7 @@ test('a bazaar item is bought from its stall', async ({ page }) => {
   const price = Number((await bird.locator('button.primary').innerText()).replace(/\D/g, ''));
   await bird.locator('button.primary').click();
   await expect(credits).toHaveText((5000 - price).toLocaleString('en-GB'));
-  // A pet bought is offered for duels; a level-0 quest may raise no pet past level 1, so it leaves the stall
+  // A bought pet is offered for duels. A level-0 quest cannot raise a pet past level 1, so the pet leaves the stall
   await page.locator('.cq-tab', { hasText: 'Duels' }).click();
   await expect(page.locator('.qu-row select option', { hasText: 'Bird' })).toHaveCount(1);
 });
@@ -181,7 +181,7 @@ test('a tournament is entered, drafted, built and its first match reached', asyn
   await page.locator('.qu-tourney').first().getByRole('button', { name: /^Enter/ }).click();
   await expect(page.locator('#drafting')).toBeVisible({ timeout: 60_000 });
 
-  // A set's packs need not hold fifteen cards, so picking goes on until the draft says it is complete
+  // A set's packs may not have fifteen cards, so keep picking until the draft says it is complete
   const done = page.locator('.draft-save');
   const picked = page.locator('.draft-picks .draft-panel-head b .muted');
   for (let i = 0; !(await done.isVisible()); i++) {

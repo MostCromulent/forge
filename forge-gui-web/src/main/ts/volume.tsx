@@ -1,4 +1,4 @@
-// The volume control, a small panel over the speaker button so the sound can be turned down without opening the options
+// The volume control. It is a small panel by the speaker button, so the sound can be turned down without opening the options
 
 import { SETTINGS, set, setting } from './settings';
 import { t } from './text';
@@ -6,12 +6,12 @@ import { Backdrop } from './dialog';
 
 const VOLUMES = SETTINGS.filter(def => def.volume);
 
-/** Nothing plays, which the speaker button shows crossed out. */
+/** Whether every volume is off. The speaker button is then drawn crossed out. */
 export const isSilent = (): boolean => VOLUMES.every(def => Number(setting(def.key)) <= 0);
 
 export function Volume({ close, anchor = '#side-tools .volume' }: { close: () => void; anchor?: string }) {
   const button = document.querySelector(anchor)?.getBoundingClientRect();
-  // Opens leftwards from the button's edge, and away from whichever screen edge the button sits nearer
+  // The panel's right edge lines up with the button's. It opens below a button in the top half of the screen and above one in the bottom half
   const below = !!button && button.top < window.innerHeight / 2;
   const at = !button ? {} : below ? { right: `${window.innerWidth - button.right}px`, top: `${button.bottom + 6}px` }
     : { right: `${window.innerWidth - button.right}px`, bottom: `${window.innerHeight - button.top + 6}px` };

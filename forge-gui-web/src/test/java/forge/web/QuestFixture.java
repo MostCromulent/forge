@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.zip.GZIPOutputStream;
 
-/** Quests copied in for a test in the test profile, and removed afterwards. */
+/** Copies quests into the test profile for a test, and removes them afterwards. */
 final class QuestFixture {
     private static final List<String> made = new ArrayList<>();
     private static String currentBefore;
@@ -33,7 +33,7 @@ final class QuestFixture {
     private QuestFixture() {
     }
 
-    /** The fixture save, gzipped as Quest writes it, under the name stored inside it. */
+    /** The fixture save with the given name stored inside it, gzipped as Quest writes it. */
     private static byte[] packed(final String name) throws IOException {
         final String xml;
         try (InputStream in = QuestFixture.class.getResourceAsStream("/quest/Fixture_quest.xml")) {
@@ -41,13 +41,13 @@ final class QuestFixture {
         }
         final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (OutputStream zip = new GZIPOutputStream(bytes)) {
-            // A save writes to the file its stored name gives, so a copy keeping the old name would write beside it
+            // A save writes to the file named by its stored name. A copy that kept the old name would write to another file next to it
             zip.write(xml.replace("<name>Fixture quest</name>", "<name>" + name + "</name>").getBytes(StandardCharsets.UTF_8));
         }
         return bytes.toByteArray();
     }
 
-    /** Copies the saved quest into the profile under a new name and reads it: Fantasy, Main world, 250 credits, a Plant and a Wolf at level 1, "Forest deck" current. */
+    /** Copies the saved quest into the profile under a new name and reads it. It has Fantasy, Main world, 250 credits, a Plant and a Wolf at level 1, and "Forest deck" as current. */
     static QuestData install() throws IOException {
         if (currentBefore == null) {
             currentBefore = FModel.getQuestPreferences().getPref(QPref.CURRENT_QUEST);
@@ -62,7 +62,7 @@ final class QuestFixture {
 
     static final String[] AI_NAMES = {"Ann", "Bob", "Cid", "Dee", "Eve", "Fay", "Gus"};
 
-    /** A tournament in progress in the quest open, of three Magic 2010 packs, with fixed seats: the player in seat 2, the first round's first match won by the computer in seat 0, so the player's match is next. Its decks are 40 Forests for the player and 40 Islands for each computer. */
+    /** A tournament in progress in the open quest, with three Magic 2010 packs and fixed seats. The player is in seat 2. The computer in seat 0 won the first round's first match, so the player's match is next. The player's deck is 40 Forests and each computer's is 40 Islands. */
     static QuestEventDraft tournament(final QuestController quest) {
         final QuestEventDraft draft = QuestEventDraft.getDraftOrNull(quest, new QuestEventDraft.QuestDraftFormat(FModel.getMagicDb().getEditions().get("M10")));
         draft.setTitle("Test tournament");
@@ -87,7 +87,7 @@ final class QuestFixture {
         return draft;
     }
 
-    /** A name a test is about to have a quest made or renamed to, whose files are removed afterwards. */
+    /** A name that a test will create or rename a quest to. Its files are removed afterwards. */
     static String expected() {
         if (currentBefore == null) {
             currentBefore = FModel.getQuestPreferences().getPref(QPref.CURRENT_QUEST);

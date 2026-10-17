@@ -2,9 +2,9 @@ package forge.web.limited;
 
 import forge.deck.DeckGroup;
 
-/** What a draft against the computer is played for when it is not the Limited pages', as a quest tournament's is. */
+/** The owner of a draft against the computer that the Limited pages did not start, such as a quest tournament. */
 public interface DraftOwner {
-    /** The one name the drafted decks are kept under. */
+    /** The single name that the drafted decks are saved under. */
     String deckName();
 
     /** The drafted decks were saved under deckName. */

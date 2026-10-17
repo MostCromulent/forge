@@ -1,4 +1,4 @@
-// The Limited pages against the computer: saved events, the setup form, and the opponents a pool's deck plays
+// The Limited pages for play against the computer: saved events, the setup form, and the opponents a pool's deck plays
 
 import { useEffect, useState } from 'preact/hooks';
 import { Shelf } from '../shelf';
@@ -12,7 +12,7 @@ import type { Model } from '../model';
 import type { PoolPlayMode, PoolRow } from '../protocol';
 import { t, tNodes, shortDay } from '../text';
 
-/** Desktop's limited deck is at least forty cards. */
+/** A limited deck needs at least forty cards, as on desktop. */
 const DECK_SIZE = 40;
 const GAMES = [1, 3, 5];
 
@@ -55,7 +55,7 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
   );
 }
 
-/** The saved pools on the shelf: one with a deck is played, one without is built first. */
+/** The saved pools on the shelf. A pool with a deck can be played. A pool without one must be built first. */
 function Events({ pools, draft, actions, create }: { pools: PoolRow[]; draft: boolean; actions: Actions; create: () => void }) {
   return (
     <Shelf rows={pools} cls={p => (p.built ? 'ev' : 'ev unbuilt')}
@@ -77,7 +77,7 @@ function Events({ pools, draft, actions, create }: { pools: PoolRow[]; draft: bo
 
 function SealedSetup({ model, actions }: { model: Model; actions: Actions }) {
   const [value, setValue] = useState<SealedValue>({});
-  // Opening packs takes seconds; until the editor, an error or a taken name answers, a second click would open them again
+  // Opening packs takes seconds. Until the editor opens or an error or taken name comes back, a second click would open them again
   const [busy, setBusy] = useState(false);
   useEffect(() => setBusy(false), [model.error, model.nameTaken]);
   const options = model.limitedOptions;
@@ -89,7 +89,7 @@ function SealedSetup({ model, actions }: { model: Model; actions: Actions }) {
       cubeId: value.cubeId, packs: value.packs ?? 0, name: value.name!, replace,
     });
   };
-  // The server names a pool it would replace, and waits for a yes, as desktop's sealed screen asks
+  // The server reports a pool it would replace and waits for a yes, as desktop's sealed screen does
   const taken = model.nameTaken !== null && model.nameTaken === value.name;
   return (
     <div class="setup">
@@ -123,12 +123,12 @@ function DraftSetup({ model, actions }: { model: Model; actions: Actions }) {
   );
 }
 
-/** How many opponents a free-for-all can seat: a match holds at most eight players, and a pool has so many decks. */
+/** How many opponents a free-for-all can seat. A match holds at most eight players, and a pool has only so many decks. */
 function severalCap(opponents: number): number {
   return Math.min(7, opponents);
 }
 
-/** A deck's colours in words: White–Green, or the count past three, or Colourless. */
+/** A deck's colours in words: White–Green, a phrase for four or five colours, or Colourless. */
 function colourName(colors: string): string {
   const names = [...colors].map(c => COLOUR_NAMES[c]).filter(Boolean).map(key => t(key));
   if (!names.length) return t('lblColorless');
@@ -136,7 +136,7 @@ function colourName(colors: string): string {
   return names.join('–');
 }
 
-/** Your deck by the heading: its colours, its size, and the way back to the editor. */
+/** Your deck beside the heading: its colours, its size, and a button back to the editor. */
 function YourDeck({ pool, actions }: { pool: PoolRow; actions: Actions }) {
   return (
     <span class="your-deck">
@@ -147,7 +147,7 @@ function YourDeck({ pool, actions }: { pool: PoolRow; actions: Actions }) {
   );
 }
 
-/** The opponents as one numbered list in the gauntlet's order, from which a draft's free-for-all is chosen at random. */
+/** The opponents as one numbered list in gauntlet order. A draft's free-for-all picks its opponents from this list at random. */
 function Opponents({ pool, draft, actions }: { pool: PoolRow; draft: boolean; actions: Actions }) {
   const cap = severalCap(pool.opponents.length);
   const [count, setCount] = useState(Math.min(3, cap));

@@ -1,11 +1,11 @@
-// Paces what the page shows: a board with another player's play on it stays up a moment before the next replaces it
+// Sets the pace of the page. A board that shows another player's play stays shown for a moment before the next board replaces it
 
 import type { Controls, GameEvent, Prompt, Ref } from '../protocol';
 
-/** Zones everyone can see into, where a card arriving or leaving is something to look at. */
+/** Public zones. A card that enters or leaves one of them is worth showing. */
 const OPEN = new Set(['Battlefield', 'Stack', 'Graveyard', 'Exile', 'Command']);
 
-/** Whether events show something the player would want to see before the game moves on: another player acting in the open, or a change to a player or a permanent. */
+/** Whether events show something the player should see before the game moves on. That is another player's public action, or a change to a player or a permanent. */
 export function worthSeeing(events: GameEvent[], localPlayers: number[]): boolean {
   const mine = (player?: Ref) => !!player && localPlayers.includes(player.ref);
   return events.some(e => {
@@ -32,14 +32,14 @@ export function worthSeeing(events: GameEvent[], localPlayers: number[]): boolea
   });
 }
 
-/** Whether the game is passing priority for the player until some point, as the chip beside the phase pill says. */
+/** Whether the game is passing priority for the player until some point. The chip beside the phase pill shows this. */
 export function passingFor(controls: Controls | null | undefined): boolean {
   return !!controls && (!!controls.marker || controls.untilEndOfTurn || controls.untilStackEmpty);
 }
 
 /**
- * Whether a prompt asks the player for something, so they are looking at the board and their answer must not wait.
- * While the game passes for them, Cancel only offers to stop that, which asks nothing.
+ * Whether a prompt asks the player for something. If it does, they are looking at the board and their answer must not be delayed.
+ * While the game passes priority for them, Cancel only stops the passing. That does not count as a question.
  */
 export function asksPlayer(prompt: Prompt, passing = false): boolean {
   return prompt.priority || prompt.ok.enabled || (prompt.cancel.enabled && !passing) || prompt.selectable.length > 0 || prompt.selectablePlayers.length > 0
@@ -48,7 +48,7 @@ export function asksPlayer(prompt: Prompt, passing = false): boolean {
 
 let behind = false;
 
-/** Whether boards the server has sent wait their turn to be shown, so the page is behind the game and no player is keeping it. */
+/** Whether boards the server has sent are waiting to be shown. The page is then behind the game, and no player is holding the game up. */
 export const boardBehind = (): boolean => behind;
 
 export function setBoardBehind(value: boolean): void {
@@ -56,9 +56,9 @@ export function setBoardBehind(value: boolean): void {
 }
 
 /**
- * The server sends a sound and a log line as their event happens, and the board that shows the event after them. This hands them on
- * after that board, so a sound is heard as its card moves, wherever the board is held up on the way (a turn banner, a pause on a play).
- * One no board follows within `wait` is handed on by itself.
+ * The server sends a sound or a log line when its event happens, and then the board that shows the event. This passes them on
+ * after that board, so a sound plays when its card moves, even if the board is delayed (by a turn banner or a pause on a play).
+ * A message that no board follows within `wait` is passed on by itself.
  */
 export function behindItsBoard<T extends { t: string }>(deliver: (msg: T) => void, wait: number): (msg: T) => void {
   let ahead: T[] = [];

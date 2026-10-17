@@ -2,16 +2,16 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { act, board, lobby, passUntil, probe, setState, settled, PHONE, SMALL_PHONE, WIDE_TOUCH, type Probe, type Table } from './probe';
 import { enterName, hold } from './steps';
 
-// A board set up through dev mode sometimes lands a moment late on a busy machine, and a tap or hold made meanwhile goes nowhere
+// On a busy machine a dev-mode board can arrive late. A tap or hold made before it arrives has no effect
 test.describe.configure({ retries: 2 });
 
-/** A board set up from a state arrives in pieces, and a card touched before the last piece lands is one about to be replaced. */
+/** A board set up from a state arrives in several updates. A card touched before the last update is about to be replaced. */
 async function settledBoard(p: Probe, state: string, table?: Table): Promise<void> {
   await board(p, state, table);
   await p.page.waitForTimeout(1500);
 }
 
-/** Plays the first card in hand, or the first with a name, as a tap on it would, again if the page was still showing a new turn's banner and held the tap back. */
+/** Plays the first card in hand, or the first with the given name, as a tap does. It retries if a new turn's banner blocked the tap. */
 async function castFromHand(p: Probe, name = ''): Promise<void> {
   for (let tries = 0; tries < 6; tries++) {
     const key = await p.page.evaluate(name => Number([...document.querySelectorAll<HTMLElement>('#hand .card')].find(c => c.textContent?.includes(name))?.dataset.key), name);
@@ -24,16 +24,16 @@ async function castFromHand(p: Probe, name = ''): Promise<void> {
   }
 }
 
-/** Where a panel sits once it has slid into place; it is visible from the first frame of its opening. */
+/** The panel's box after its slide-in ends. The panel is visible from the first frame, so a visibility check is too early. */
 async function settledBox(panel: Locator) {
   await panel.evaluate(el => Promise.all(el.getAnimations().map(a => a.finished.catch(() => {}))));
   return (await panel.boundingBox())!;
 }
 
-/** Taps a creature into the attack, again if the page was still showing a new turn's banner and held the tap back. */
+/** Taps a creature to declare it as an attacker. It retries if a new turn's banner blocked the tap. */
 async function declareAttacker(card: Locator): Promise<void> {
   await expect(async () => {
-    // A second tap on an attacker would take it out of the attack
+    // A second tap on an attacker would remove it from the attack
     if (!await card.evaluate(el => el.classList.contains('attacking'))) await card.tap({ force: true });
     await expect(card).toHaveClass(/\battacking\b/, { timeout: 2000 });
   }).toPass({ timeout: 20_000 });
@@ -54,19 +54,19 @@ probe('a desktop window does not', async p => {
 
 probe('a tap on a card opens no hover preview', async p => {
   await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Grizzly Bears');
-  // Your own land: a tap on it acts, so nothing but a hover could open a preview
+  // A tap on your own land acts on it, so only a hover could open a preview
   const card = p.page.locator('#me .battlefield .card').first();
   await card.tap();
-  // A phone's browser follows a tap with the mouse events a pointer would have made, which Chromium's emulation leaves out
+  // A phone browser sends mouse events after a tap. Chromium's emulation does not, so the test sends one
   await card.dispatchEvent('mouseenter');
   await p.page.waitForTimeout(600);
-  // The preview takes one of these the first time it draws a card, and keeps it after it closes
+  // The preview gets one of these classes the first time it shows a card, and keeps it after it closes
   await expect(p.page.locator('#zoom')).not.toHaveClass(/image-only|text-card/);
 }, WIDE_TOUCH);
 
 probe('a long-press asks for no ability menu', async p => {
   await board(p, 'humanbattlefield=Forest\naibattlefield=Grizzly Bears');
-  // A right-click asks the host what the card can do; a rested finger must not, on any browser
+  // A right-click asks the host for the card's abilities. A held finger must not do this on any browser
   await p.page.evaluate(() => {
     const seen = window as unknown as { menus: number; asked: number };
     seen.menus = seen.asked = 0;
@@ -74,7 +74,7 @@ probe('a long-press asks for no ability menu', async p => {
     window.forge.actions.selectCard = (key, menu, x, y) => { if (menu) seen.menus++; send(key, menu, x, y); };
     addEventListener('contextmenu', e => { if ((e.target as Element).closest('#opponent .card')) seen.asked++; }, true);
   });
-  // The press must land on the card itself, so the coin toss over the board goes first
+  // The press must hit the card, so wait for the coin toss over the board to close
   await expect(p.page.locator('#coin-toss')).toBeHidden();
   const card = p.page.locator('#opponent .card').first();
   await expect(card).toBeVisible();
@@ -82,7 +82,7 @@ probe('a long-press asks for no ability menu', async p => {
   const at = (await card.boundingBox())!;
   const x = Math.round(at.x + at.width / 2);
   const y = Math.round(at.y + at.height / 2);
-  // The browser's own context menu arrives while the finger still rests, as a real right-click does
+  // A real long-press sends the browser's contextmenu event while the finger is down, like a right-click
   const cdp = await p.page.context().newCDPSession(p.page);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
   await p.page.waitForTimeout(200);
@@ -112,7 +112,7 @@ probe('the prompt is a dock with OK and Cancel in opposite corners', async p => 
   expect(await p.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }, PHONE);
 
-// Different names, so the cards stand apart rather than folding into piles
+// Different names, so the cards are shown one by one and not grouped into piles
 const CROWD = 'humanbattlefield=' + ['Grizzly Bears', 'Runeclaw Bear', 'Hill Giant', 'Gray Ogre', 'Goblin Piker', 'Raging Goblin', 'Craw Wurm', 'Scathe Zombies',
   'Ironroot Treefolk', 'Giant Spider', 'Wall of Wood', 'Elvish Warrior', 'Forest', 'Forest', 'Forest', 'Forest'].join(';')
   + '\naibattlefield=' + ['Hill Giant', 'Gray Ogre', 'Goblin Piker', 'Raging Goblin', 'Craw Wurm', 'Scathe Zombies', 'Giant Spider', 'Wall of Wood', 'Mountain', 'Mountain'].join(';');
@@ -219,7 +219,7 @@ probe('the hand opens as a drawer, a card is played from it, and it closes for t
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
   await expect(p.page.locator('#hand.sheet')).toHaveCount(0);
   await expect(p.page.locator('#opponent .card.selectable')).toBeVisible();
-  // Called off, with the card still in hand, the drawer comes back
+  // Cancel leaves the card in hand, and the drawer opens again
   await p.page.locator('#prompt .cancel').tap();
   await expect(p.page.locator('#hand.sheet')).toBeVisible();
   await p.page.locator('#hand-head .close').tap();
@@ -231,7 +231,7 @@ probe('your bar and your hand do not overlap, and the strip floats no costs over
   const bar = await box(p.page, '#me .player');
   const hand = await box(p.page, '#hand');
   expect(Math.round(bar.y + bar.height)).toBeLessThanOrEqual(Math.round(hand.y) + 1);
-  // The cards print their own costs, so the strip is only as tall as the card tops it shows
+  // The card images show their own costs, so the strip is only as tall as the card tops it shows
   await expect(p.page.locator('#hand .card .cost-badge:visible')).toHaveCount(0);
   expect(hand.height).toBeLessThanOrEqual(52);
   await p.page.locator('#hand').tap();
@@ -245,7 +245,7 @@ probe('a bar keeps its zones as counts, and a tap opens them', async p => {
   await expect(p.page.locator('#me .zone-tile').first()).toBeHidden();
   const pill = p.page.locator('#me .zones-pill');
   await expect(pill.locator('[data-zone="Graveyard"] b')).toHaveText('2');
-  // The counts follow the name along each bar
+  // The counts sit inside each bar, to the right of the portrait
   for (const seat of ['#me', '#opponent']) {
     const counts = await box(p.page, `${seat} .zones-pill`);
     const bar = await box(p.page, `${seat} .player`);
@@ -286,7 +286,7 @@ probe('a spell on the stack shows as a chip under the strip, and its target wear
 
 const FOUR = { players: 4 };
 
-/** Shows an opponent's seat as a player does: the players button, then that opponent's row. */
+/** Shows an opponent's seat as a player does. It taps the players button, then that opponent's row. */
 async function showSeat(page: Page, n: number): Promise<void> {
   await page.locator('#seat-switch').tap();
   await page.locator('#seat-tabs .seat-tab').nth(n).tap();
@@ -306,7 +306,7 @@ probe('three opponents are behind a players button, and a change marks a hidden 
   await expect(tabs.first()).toBeVisible();
   for (const tab of await tabs.all()) expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await tabs.nth(1).tap();
-  // Each seat is looked at once, so what it holds now is what was seen
+  // Show each seat once, so each seat's current cards count as seen
   for (const n of [2, 0]) await showSeat(p.page, n);
   await expect(tabs.nth(0)).toHaveClass(/\bon\b/);
   await setState(p, 'p0battlefield=Forest\np1battlefield=Mountain\np2battlefield=Island;Grizzly Bears\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
@@ -321,7 +321,7 @@ probe('a hidden opponent can be chosen from the dock', async p => {
   await settledBoard(p, 'p0hand=Lightning Bolt\np0battlefield=Mountain\np1battlefield=Mountain\np2battlefield=Island\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
   await castFromHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectablePlayers.length ?? 0) > 0);
-  // Two of the three opponents are out of sight, and each has a button in the dock
+  // Two of the three opponents are hidden, and each of them has a button in the dock
   await expect(p.page.locator('#prompt .choose-players button')).toHaveCount(2);
   await expect(p.page.locator('#seat-tabs .seat-tab.asked')).toHaveCount(2);
   await expect(p.page.locator('#seat-switch')).toHaveClass(/\basked\b/);
@@ -330,7 +330,7 @@ probe('a hidden opponent can be chosen from the dock', async p => {
 probe('a question about a hidden opponent\'s cards marks the players button and leaves the view where it is', async p => {
   await settledBoard(p, 'p0hand=Murder\np0battlefield=Swamp;Swamp;Swamp\np1battlefield=Mountain\np2battlefield=Island;Hill Giant\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
   const tabs = p.page.locator('#seat-tabs .seat-tab');
-  // Looking away from the only player with a creature
+  // Show a seat other than the only player with a creature
   await showSeat(p.page, 0);
   await castFromHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
@@ -350,7 +350,7 @@ probe('the menu sheet holds the log, and conceding asks first', async p => {
   const dock = await box(p.page, '#prompt');
   expect(at.width).toBe(390);
   expect(Math.round(at.y + at.height)).toBeLessThanOrEqual(Math.round(dock.y) + 1);
-  // The sheet is only as tall as what its tab holds
+  // The sheet is only as tall as the content of its tab
   await sheet.locator('.menu-tabs button').nth(1).tap();
   await settled(p.page);
   expect((await box(p.page, '.menu-sheet')).height).toBeLessThan(300);
@@ -415,7 +415,7 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
     const play = await box(p.page, '#play');
     expect(play.y + play.height).toBeLessThanOrEqual(height);
     expect(play.height).toBeGreaterThanOrEqual(44);
-    // Play shares its row with the folded chat bar, which then covers none of the seats
+    // Play is on the same row as the folded chat bar, so the chat bar covers none of the seats
     const chat = await box(p.page, '#dock .dock.folded');
     expect(Math.abs(chat.y - play.y)).toBeLessThan(2);
     expect(play.x + play.width).toBeLessThanOrEqual(chat.x);
@@ -496,7 +496,7 @@ probe('after a reload in a match, Leave still leaves', async p => {
   const depth = await p.page.evaluate(() => history.length);
   await p.page.goBack();
   await expect(p.page.locator('#leave-ask')).toBeVisible();
-  // Asking costs no history: staying and asking again does not pile entries up
+  // The question adds no history entries. Staying and asking again does not add more
   await p.page.locator('#leave-ask .stay').tap();
   await p.page.goBack();
   await expect(p.page.locator('#leave-ask')).toBeVisible();
@@ -511,7 +511,7 @@ probe('a deck is chosen in the finder by taps, with nothing off the screen', asy
   await plate.locator('.sleeve').tap();
   const finder = p.page.locator('.finder');
   await expect(finder).toBeVisible();
-  // It rises into place over a moment
+  // The finder slides up into place, so wait for the animation
   await settled(p.page);
   expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   for (const part of ['.finder', '.finder .results', '.finder .dk-hits', '.finder-foot .use']) {
@@ -530,12 +530,12 @@ probe('a deck is chosen in the finder by taps, with nothing off the screen', asy
 
 probe('a choice of cards from your hand opens the hand by itself', async p => {
   await settledBoard(p, 'humanhand=Faithless Looting;Giant Growth;Shock\nhumanbattlefield=Mountain\naibattlefield=Mountain');
-  // By name: the hand is sorted
+  // Pick by name because the hand is sorted
   await castFromHand(p, 'Faithless');
   await p.until('a card from hand is asked for', () => {
     const prompt = window.forge.model.prompt;
     if (prompt?.paying && prompt.ok?.enabled) window.forge.actions.ok();
-    // Some runs give the priority back with the spell on the stack, and it waits there to be let through
+    // In some runs you get priority again with the spell on the stack. Pass once so it resolves
     const once = window as { passedLooting?: boolean };
     if (prompt?.priority && prompt.ok?.enabled && !document.getElementById('stack')?.hidden && !once.passedLooting) {
       once.passedLooting = true;
@@ -544,7 +544,7 @@ probe('a choice of cards from your hand opens the hand by itself', async p => {
     return !!prompt && !prompt.priority && !prompt.paying && prompt.selectable.length > 0;
   }, undefined, p.page, 30_000);
   await expect(p.page.locator('#hand.sheet')).toBeVisible();
-  // The stack's list would lie over the board the choice is about, so it is folded
+  // The stack's list would cover the board that the choice is about, so it is collapsed
   await expect(p.page.locator('#stack.chip:not(.collapsed) .pile')).toHaveCount(0);
   const pick = p.page.locator('#hand.sheet .card.selectable').first();
   await expect(pick).toBeVisible();
@@ -596,7 +596,7 @@ probe('after viewing the final battlefield, the way back to the result can be ta
     const m = window.forge.model;
     return (m.objects.get(m.root) as { Phase?: string } | undefined)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && !!m.prompt?.ok?.enabled;
   });
-  // A long step name does not cut short whose turn it is
+  // A long step name does not truncate the name of the turn's owner
   expect(await p.page.evaluate(() => { const b = document.querySelector<HTMLElement>('#phase-strip .owner b')!; return b.scrollWidth <= b.clientWidth; })).toBe(true);
   await declareAttacker(p.page.locator('#me .battlefield .card').first());
   await passUntil(p, 'the game ends', () => window.forge.model.gameOver);
@@ -604,7 +604,7 @@ probe('after viewing the final battlefield, the way back to the result can be ta
   await expect(view).toBeVisible();
   await p.page.waitForTimeout(1200);
   await view.tap();
-  // Nothing is left to answer or pass, so the dock and the tools are gone
+  // Nothing is left to answer or pass, so the dock and the tools are hidden
   await expect(p.page.locator('#prompt')).toBeHidden();
   await expect(p.page.locator('#match > .tools')).toBeHidden();
   await p.page.locator('#game-over .to-result').tap({ timeout: 5000 });
@@ -624,7 +624,7 @@ probe('an opponent\'s open zones do not cover their portrait, and their spell\'s
   const list = await box(p.page, '#stack');
   const mine = await box(p.page, '#me .battlefield .group.creatures .card');
   expect(list.y + list.height).toBeLessThanOrEqual(mine.y + 1);
-  // The chip itself stays on the strip, whichever way its list opens
+  // The chip stays on the strip in whichever direction its list opens
   const head = await box(p.page, '#stack .head');
   const strip = await box(p.page, '#phase-strip');
   expect(Math.abs(head.y - strip.y)).toBeLessThan(8);
@@ -642,7 +642,7 @@ probe('a block is declared by taps: the attacker, then your creature', async p =
   await passUntil(p, 'blockers are asked for', () => document.getElementById('match')!.classList.contains('declaring-blocks'), undefined, [], 90_000);
   const attackers = p.page.locator('#opponent .card.attacking');
   await expect(attackers).toHaveCount(2);
-  // The game picks one attacker itself, and a tap on the other moves the pick
+  // The game selects one attacker by default. A tap on the other attacker selects that one instead
   const other = p.page.locator('#opponent .card.attacking:not(.highlighted)');
   await expect(other).toHaveCount(1);
   const key = await other.getAttribute('data-key');
@@ -658,7 +658,7 @@ probe('a block is declared by taps: the attacker, then your creature', async p =
 probe('a zone the game opens for a choice, with a spell on the stack, lies on the dimmed board with cards large enough to tap', async p => {
   await settledBoard(p, 'humanhand=Diabolic Vision\nhumanbattlefield=Island;Swamp\nhumanlibrary=Forest;Mountain;Plains;Island;Swamp;Hill Giant;Grizzly Bears\naibattlefield=Mountain');
   await castFromHand(p);
-  // Paid for, then let resolve: one answer at a time, since a second sent early would land on the choice itself
+  // Pay, then let the spell resolve. Send one answer at a time, because an early second answer would answer the choice
   const shown = () => p.page.evaluate(() => document.querySelectorAll('#zones .card.selectable').length > 0);
   for (let i = 0; i < 20 && !await shown(); i++) {
     if (await p.page.evaluate(() => { const q = window.forge.model.prompt; return !!q && (q.paying || q.priority) && !!q.ok?.enabled; })) await act(p.page, 'ok');
@@ -666,12 +666,12 @@ probe('a zone the game opens for a choice, with a spell on the stack, lies on th
   }
   expect(await shown()).toBe(true);
   await settled(p.page);
-  // The dock's two buttons can do nothing while the choice is open, so they give their room to it
+  // The dock's two buttons do nothing while the choice is open, so they are hidden to give the choice more room
   await expect(p.page.locator('#prompt .ok')).toBeHidden();
   await expect(p.page.locator('#prompt .cancel')).toBeHidden();
   await expect(p.page.locator('#match > .tools .more')).toBeVisible();
   await expect(p.page.locator('#prompt')).toBeHidden();
-  // The dock has given up its row, so the dimmed board runs to the foot of the screen, and the question lies within it
+  // The dock row is hidden, so the dimmed board reaches the bottom of the screen. The question is inside it
   const dock = { y: 664 };
   const back = await box(p.page, '#zones');
   expect(back.width).toBe(390);
@@ -679,11 +679,11 @@ probe('a zone the game opens for a choice, with a spell on the stack, lies on th
   const panel = await box(p.page, '#zones .zone-panel');
   expect(panel.x).toBeGreaterThanOrEqual(0);
   expect(panel.x + panel.width).toBeLessThanOrEqual(390);
-  // Two across at most, larger than the three a sheet held
-  // The library's face-down cards are not drawn, so only the cards it shows are measured
+  // At most two cards per row, so they are larger than the three per row of a sheet
+  // The library's face-down cards are not rendered, so only the visible cards are measured
   const widths = await p.page.locator('#zones .cards .card:visible').evaluateAll(cards => cards.map(c => c.getBoundingClientRect().width));
   expect(Math.min(...widths)).toBeGreaterThan(125);
-  // The stack's chip does not lie over the question
+  // The stack's chip does not cover the question
   expect(await p.page.evaluate(() => { const r = document.querySelector('#zones .zone-panel header')!.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + 20, r.y + 10); return !!hit?.closest('#zones'); })).toBe(true);
   for (const each of await p.page.locator('#zones .card.selectable').all()) await each.tap({ trial: true, timeout: 3000 });
   const card = p.page.locator('#zones .card.selectable').first();
@@ -705,7 +705,7 @@ for (const [name, device] of [['a phone', PHONE], ['a desktop', undefined]] as c
     const items = p.page.locator('#dialog-layer .dialog .ordered-item');
     await expect(items).toHaveCount(4);
     await settled(p.page);
-    // One row, read left to right
+    // One row, in order from left to right
     const boxes = await Promise.all((await items.all()).map(async i => (await i.boundingBox())!));
     for (const b of boxes) expect(Math.abs(b.y - boxes[0].y)).toBeLessThan(2);
     expect(boxes[1].x).toBeGreaterThan(boxes[0].x);
@@ -718,11 +718,11 @@ for (const [name, device] of [['a phone', PHONE], ['a desktop', undefined]] as c
     await items.nth(2).locator('.order-nudge .earlier').click();
     await expect(items.nth(1).locator('.card')).toHaveAttribute('data-key', third!);
     await expect(items.nth(1).locator('.order-number')).toHaveText('2');
-    // A card a tap left hovered still shows its number over it
+    // A card left in hover state by a tap still shows its number on top
     await items.nth(1).locator('.card').hover();
     await settled(p.page);
     const badge = (await items.nth(1).locator('.order-number').boundingBox())!;
-    // The number takes no presses, so it is made to for the moment it is looked for
+    // The number ignores pointer events, so they are turned on briefly for the hit test
     expect(await items.nth(1).locator('.order-number').evaluate((n, [x, y]) => {
       (n as HTMLElement).style.pointerEvents = 'auto';
       const top = document.elementFromPoint(x, y);
@@ -739,7 +739,7 @@ probe('a drawer scrolled to its end leaves the strip showing the tops of the car
   await p.page.locator('#hand').tap();
   await expect(p.page.locator('#hand.sheet')).toBeVisible();
   await settled(p.page);
-  // Every card of a large hand is on show at once or within a scroll
+  // All cards of a large hand are visible at once or by scrolling
   expect((await p.page.locator('#hand.sheet .card').first().boundingBox())!.width).toBeLessThan(95);
   await p.page.evaluate(() => { document.getElementById('hand')!.scrollTop = 9999; });
   await p.page.locator('#hand-head .close').tap();
@@ -757,7 +757,7 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
     for (const bar of ['#opponent .player', '#me .player']) expect((await box(p.page, bar)).height).toBeLessThanOrEqual(48);
     expect((await box(p.page, '#phase-strip .pill')).height).toBeLessThanOrEqual(34);
     expect((await box(p.page, '#prompt')).height).toBeLessThanOrEqual(46);
-    // The tools ride on your own bar, each still a finger wide enough to hit
+    // The tools are on your own bar, and each is still large enough to tap
     const bar = await box(p.page, '#me .player');
     for (const tool of ['.end-turn', '.auto-pass', '.undo', '.more']) {
       const at = await box(p.page, `#match > .tools ${tool}`);
@@ -769,7 +769,7 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
     for (const tool of ['.auto-pass', '.more']) await p.page.locator(`#match > .tools ${tool}`).tap({ trial: true, timeout: 3000 });
     const counts = await box(p.page, '#me .zones-pill');
     expect(counts.x + counts.width).toBeLessThanOrEqual((await box(p.page, '#match > .tools')).x + 1);
-    // What the rows gave up goes to the cards
+    // The height the rows save goes to the cards
     const card = (await p.page.locator('#me .battlefield .card').first().boundingBox())!;
     expect(card.height).toBeGreaterThanOrEqual(78);
     expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(phone.viewport!.width);
@@ -779,7 +779,7 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
 probe('the question of who goes first leaves the dock, which can also answer it, within reach', async p => {
   await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
   await p.page.evaluate(() => {
-    // The game's own saying of who goes first can still be up, and is put away as a question would put it away
+    // The game's own who-goes-first reveal may still be shown. Replace it with the choosing form of the reveal
     document.getElementById('first-reveal')?.remove();
     const ask = Object.assign(document.createElement('div'), { id: 'first-reveal', className: 'choosing' });
     document.getElementById('match')!.append(ask);

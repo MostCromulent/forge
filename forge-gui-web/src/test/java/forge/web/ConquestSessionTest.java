@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
-/** A conquest as a browser drives it, and its battles as netplay plays them. */
+/** Tests a conquest driven from a browser, with its battles played over netplay. */
 public class ConquestSessionTest extends SessionsTest {
     @Override
     WebGuiBase gui() {
@@ -55,7 +55,7 @@ public class ConquestSessionTest extends SessionsTest {
         ConquestFixture.cleanUp();
     }
 
-    /** Starts the battle at a place over the loopback, with no session, and hands the running match to body. */
+    /** Starts the battle at a place over the loopback without a session, then passes the running match to body. */
     private static void battleAt(final ConquestLocation loc, final Consumer<HostedMatch> body) {
         final LocalGame local = new LocalGame();
         try {
@@ -87,7 +87,7 @@ public class ConquestSessionTest extends SessionsTest {
                         p.getName() + " has no commander in the command zone");
             }
             Assert.assertEquals(game.getRules().getGameType(), GameType.PlanarConquest);
-            // Throws when no human player is played from a web seat
+            // Throws if no human player is on a web seat
             WebTestSupport.remoteGui(match);
         });
     }
@@ -100,7 +100,7 @@ public class ConquestSessionTest extends SessionsTest {
         return host;
     }
 
-    /** How much of a balance the bar shows, by its icon. */
+    /** The amount the bar shows for the balance with this icon. */
     private static int balance(final JsonObject bar, final String icon) {
         for (final JsonElement b : bar.getAsJsonArray("balances")) {
             if (icon.equals(b.getAsJsonObject().get("icon").getAsString())) {
@@ -120,14 +120,14 @@ public class ConquestSessionTest extends SessionsTest {
         throw new AssertionError("no such cell");
     }
 
-    // Fails if the map of a new conquest does not have the player at its first place with only that place open
+    // Fails if a new conquest's map does not put the player at the first place with only that place open
     @Test(timeOut = 120_000)
     public void aConquestOpensOnItsMap() throws Exception {
         final ConquestData data = ConquestFixture.create("Zendikar");
         final TestBrowser host = hostInConquest(data);
         final JsonObject state = host.awaitNewest("conquestState");
         Assert.assertEquals(state.get("plane").getAsString(), "Zendikar");
-        // The plane's own data says how many regions and places it has
+        // The expected counts of regions and places come from the plane's own data
         final int events = data.getCurrentPlane().getEventCount();
         Assert.assertEquals(state.getAsJsonArray("regions").size(), data.getCurrentPlane().getRegions().size());
         Assert.assertEquals(state.getAsJsonArray("cells").size(), events);
@@ -139,7 +139,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertTrue(str(bar, "line").endsWith("/ " + events), "the bar does not count the plane's events: " + str(bar, "line"));
     }
 
-    // Fails if selecting a place moves the player, or closes the portal of the place stood on
+    // Fails if selecting a place moves the player, or closes the portal at the player's current place
     @Test(timeOut = 120_000)
     public void selectingDoesNotMove() throws Exception {
         final ConquestData data = ConquestFixture.create("Eldraine");
@@ -159,7 +159,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertFalse(secret.isUnreachable(), "selecting closed the portal");
     }
 
-    // Fails if a move does not save the new place, or sends no path for the marker to walk
+    // Fails if a move does not save the new place, or does not send a path for the marker to follow
     @Test(timeOut = 120_000)
     public void movingSavesThePlaceAndSendsThePath() throws Exception {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -218,7 +218,7 @@ public class ConquestSessionTest extends SessionsTest {
         return host;
     }
 
-    // Fails if a win is not recorded and rewarded once, or a reconnecting browser is not sent the same reward with the save unchanged
+    // Fails if a win is not recorded and rewarded exactly once, or a reconnecting browser does not get the same reward with the save unchanged
     @Test(timeOut = 180_000)
     public void aWinIsRecordedAndRewardedOnce() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -254,7 +254,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(model.getAEtherShards(), shards + wheelShards);
         Assert.assertEquals(model.getPlaneswalkEmblems(), emblems);
 
-        // Until the reward has been shown no other battle starts, since it may end in one that cannot be refused
+        // No other battle starts until the reward is shown, because the reward may lead to a battle that cannot be refused
         sessions.onMessage(again, JsonCodec.message("conquestBattle"));
         onUi(() -> { });
         Assert.assertNull(FModel.getConquest().getActiveBattle(), "a battle started over a reward still to be shown");
@@ -287,7 +287,7 @@ public class ConquestSessionTest extends SessionsTest {
         }
     }
 
-    // Fails if a wheel landing on chaos does not lead to a best-of-three once the reward is acknowledged, or leaving it early is not a loss
+    // Fails if a wheel result of chaos does not start a best-of-three after the reward is claimed, or leaving that match early is not a loss
     @Test(timeOut = 240_000)
     public void aChaosBattleFollowsTheWheelAndLeavingItIsALoss() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -309,13 +309,13 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertNull(FModel.getConquest().getActiveBattle());
     }
 
-    // Fails if a battle that could not start leaves the conquest unable to start another, or records anything
+    // Fails if a battle that could not start blocks the next battle, or records anything
     @Test(timeOut = 180_000)
     public void aBattleThatFailsToStartLeavesTheConquestUsable() throws Exception {
         WebTestSupport.skipUnlessStress();
         final ConquestData data = ConquestFixture.create("Zendikar");
         final TestBrowser host = hostInConquest(data);
-        // A battle already marked active makes the next one refuse to be prepared
+        // While a battle is marked active, the next battle cannot be prepared
         final ConquestLocation loc = FModel.getConquest().getModel().getCurrentLocation();
         FModel.getConquest().prepareBattle(loc.getEvent().createBattle(loc, 0), null);
         send(host, JsonCodec.message("conquestBattle"));
@@ -329,12 +329,12 @@ public class ConquestSessionTest extends SessionsTest {
         awaitPriority(host);
     }
 
-    // Fails if one save that cannot be read keeps every save from being listed
+    // Fails if one unreadable save stops the other saves from being listed
     @Test
     public void anUnreadableSaveDoesNotHideTheOthers() throws Exception {
         final ConquestData data = ConquestFixture.create("Zendikar");
         final String broken = ConquestFixture.broken("<data><planeswalker>nothing a card database knows</planeswalker>");
-        // A card with no name stops the reading there, after the planeswalker and the place and before the planes
+        // A card with no name stops the read after the planeswalker and the place, before the planes
         final String halfRead = ConquestFixture.broken("<data><planeswalker art=\"1\" name=\"A-Ellywick Tumblestrum\" set=\"AFR\"/>"
                 + "<currentLocation col=\"0\" plane=\"Zendikar\" regionIndex=\"0\" row=\"0\"/>"
                 + "<unlockedCards><card art=\"1\" name=\"\" set=\"C16\"/></unlockedCards></data>");
@@ -346,14 +346,14 @@ public class ConquestSessionTest extends SessionsTest {
 
     private TestBrowser editor;
 
-    // The session outlives a test, so an open editor or a conquest the cleanup removes would be shown to the next one's browser
+    // The session lives longer than a test. Without this, the next test's browser would see an open editor or a removed conquest
     @AfterMethod(alwaysRun = true)
     public void leaveTheConquest() throws InterruptedException {
         if (editor != null) {
             sessions.onMessage(editor, JsonCodec.message("editorClose"));
             editor = null;
         }
-        // A test that reconnects has two browsers that held the host's seat, and only the later one is heard
+        // After a reconnect two browsers have held the host's seat. Only the later one's messages are handled
         TestBrowser host = null;
         for (final TestBrowser browser : browsers) {
             if (browser.hello != null && browser.hello.get("host").getAsBoolean()) {
@@ -371,7 +371,7 @@ public class ConquestSessionTest extends SessionsTest {
         }
         if (str(host.hello, "campaignSave") != null) {
             send(host, JsonCodec.message("campaignLeave"));
-            // The shelf reads every save as it opens, and the cleanup must not remove one under that reading
+            // The shelf reads every save when it opens. The cleanup must not remove a save during that read
             if (host.awaitMatching("conquestSaves", saves -> true) == null) {
                 return;
             }
@@ -382,14 +382,14 @@ public class ConquestSessionTest extends SessionsTest {
         }
     }
 
-    /** Opens the selected commander's deck in the editor, and answers what the editor shows. */
+    /** Opens the selected commander's deck in the editor and returns the editor's state. */
     private JsonObject editing(final TestBrowser host) throws InterruptedException {
         editor = host;
         send(host, message("conquestEditDeck", "commander", FModel.getConquest().getModel().getSelectedCommander().getName()));
         return host.awaitMatching("editor", e -> e.has("state"), "the editor did not open").getAsJsonObject("state");
     }
 
-    /** What the editor shows once it has answered the message just sent. */
+    /** Sends the message and returns the editor's state from its reply. */
     private JsonObject edited(final TestBrowser host, final JsonObject message) throws InterruptedException {
         send(host, message);
         return host.awaitMatching("editor", e -> e.has("state"), "the editor did not answer").getAsJsonObject("state");
@@ -402,7 +402,7 @@ public class ConquestSessionTest extends SessionsTest {
         return names;
     }
 
-    /** Owned cards that are in no deck and are neither a commander nor the planeswalker, in name order. */
+    /** Owned cards that are not in a deck, not exiled, not basic lands, and not a commander or the planeswalker, in name order. */
     private static List<PaperCard> spares(final ConquestData data) {
         final List<PaperCard> out = new ArrayList<>();
         for (final PaperCard card : data.getUnlockedCards()) {
@@ -434,7 +434,7 @@ public class ConquestSessionTest extends SessionsTest {
         return FModel.getConquest().getDecks().get(name);
     }
 
-    // Fails if the editor's catalogue lists a card that is not owned or is exiled, or such a card can be added to the deck
+    // Fails if the editor's catalogue lists a card that is exiled or not owned, or such a card can be added to the deck
     @Test(timeOut = 120_000)
     public void theEditorOffersOnlyOwnedCards() throws Exception {
         final TestBrowser host = hostInConquest(ConquestFixture.install());
@@ -463,7 +463,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertFalse(mainNames(again).contains(exiled.getName()), "an exiled card was added");
     }
 
-    // Fails if a card added in the editor is not in the next battle's deck, or the map is not told the deck's new size on close
+    // Fails if a card added in the editor is not in the next battle's deck, or the map does not get the deck's new size on close
     @Test(timeOut = 120_000)
     public void anEditedDeckIsTheDeckFoughtWith() throws Exception {
         final TestBrowser host = hostInConquest(ConquestFixture.install());
@@ -486,7 +486,7 @@ public class ConquestSessionTest extends SessionsTest {
         });
     }
 
-    // Fails if anything the editor can be asked changes the deck's Commander section or its name
+    // Fails if any editor request changes the deck's Commander section or its name
     @Test(timeOut = 120_000)
     public void theCommanderStays() throws Exception {
         final TestBrowser host = hostInConquest(ConquestFixture.install());
@@ -518,7 +518,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertSame(commander.getDeck(), stored, "the commander does not hold the deck that was saved");
     }
 
-    // Fails if an import adds a card that is not owned, leaves out an owned card named in another printing, or refuses the basic lands
+    // Fails if an import adds a card that is not owned, drops an owned card listed under another printing, or refuses the basic lands
     @Test(timeOut = 120_000)
     public void importTakesOnlyOwnedCards() throws Exception {
         final TestBrowser host = hostInConquest(ConquestFixture.install());
@@ -568,7 +568,7 @@ public class ConquestSessionTest extends SessionsTest {
         return m;
     }
 
-    /** How many cards one of the campaign's lists holds. */
+    /** The number of cards in one of the campaign's lists. */
     private static int listed(final JsonObject trading, final String source) {
         for (final JsonElement l : trading.getAsJsonArray("lists")) {
             if (source.equals(l.getAsJsonObject().get("source").getAsString())) {
@@ -583,13 +583,13 @@ public class ConquestSessionTest extends SessionsTest {
                 "sort", "name", "offset", 0, "showAll", true, "source", source));
         final List<String> names = new ArrayList<>();
         final JsonObject page = host.awaitMatching("catalogue", c -> true, "the " + source + " was not listed");
-        // The browser holds one catalogue page for the editor and both lists, and tells them apart by this
+        // The browser uses one catalogue page for the editor and both lists. It uses this field to tell them apart
         Assert.assertEquals(str(page, "source"), source);
         page.getAsJsonArray("rows").forEach(r -> names.add(r.getAsJsonObject().get("name").getAsString()));
         return names;
     }
 
-    // Fails if the thread a session keeps for campaign work outlives the work, so every session that ever used one holds a thread
+    // Fails if a session's campaign thread stays alive after its work. Every session that ever used one would then keep a thread
     @Test(timeOut = 120_000)
     public void campaignWorkLeavesNoThreadBehind() throws Exception {
         onTheShelf();
@@ -600,7 +600,7 @@ public class ConquestSessionTest extends SessionsTest {
         }
     }
 
-    // Fails if a conquest's messages are answered out of the order they were sent, as work on separate threads allows
+    // Fails if a conquest's messages are answered out of order, as can happen when they run on separate threads
     @Test(timeOut = 120_000)
     public void messagesAreAnsweredInTheOrderSent() throws Exception {
         final TestBrowser host = hostInConquest(ConquestFixture.install());
@@ -615,7 +615,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertTrue(types.indexOf("catalogue") < types.indexOf("trading"), "the later message was answered first: " + types);
     }
 
-    // Fails if a card a deck uses can be exiled, or a free card's exile and retrieval do not pay, charge and move it between the lists
+    // Fails if a card in a deck can be exiled, or exiling and retrieving a free card do not pay, charge and move it between the lists
     @Test(timeOut = 120_000)
     public void exileAndRetrieveOverTheWire() throws Exception {
         final TestBrowser host = hostInConquest(ConquestFixture.install());
@@ -639,7 +639,7 @@ public class ConquestSessionTest extends SessionsTest {
         final JsonObject row = host.awaitNewest("catalogue").getAsJsonArray("rows").get(0).getAsJsonObject();
         Assert.assertEquals(row.get("value").getAsInt(), cost);
 
-        // With too few shards the card stays where it is, and mobile's sentence says why
+        // With too few shards the card stays in exile, and the notice uses mobile's message to say why
         data.spendAEtherShards(data.getAEtherShards());
         send(host, exile(spare, true));
         host.awaitMatching("notice", n -> true, "a retrieval that cannot be paid for was not refused");
@@ -652,7 +652,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertTrue(cardsOf(host, "collection").contains(spare.getName()));
     }
 
-    /** The host on the list of saved conquests, wherever the last test left the session. */
+    /** Connects the host and opens the list of saved conquests, whatever state the last test left the session in. */
     private TestBrowser onTheShelf() throws InterruptedException {
         final TestBrowser host = connect("host");
         sessions.onMessage(host, JsonCodec.message("claimHost"));
@@ -678,7 +678,7 @@ public class ConquestSessionTest extends SessionsTest {
         return new File(ForgeConstants.CONQUEST_SAVE_DIR, name.replace(' ', '_'));
     }
 
-    // Fails if the form is not told a plane's commanders or a commander's planeswalkers, or a conquest made from them is not saved and shown
+    // Fails if the form does not get a plane's commanders or a commander's planeswalkers, or a conquest made from them is not saved and shown
     @Test(timeOut = 120_000)
     public void aCreatedConquestOpensOnItsMap() throws Exception {
         final String name = ConquestFixture.expected();
@@ -689,7 +689,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertTrue(planes.get("startShards").getAsInt() > 0);
         send(host, message("conquestOptions", "plane", "Zendikar"));
         final List<String> commanders = names(host.awaitMatching("conquestOptions", o -> o.has("commanders"), "the plane's commanders were not sent"), "commanders");
-        // A rebalanced card has no picture anywhere, so it is offered after every card that has one
+        // A rebalanced card has no picture of its own, so it is listed after every card that has one
         final List<String> pictured = commanders.stream().filter(n -> !n.startsWith("A-")).toList();
         Assert.assertTrue(pictured.size() < commanders.size(), "Zendikar has no rebalanced commander to tell the order by");
         Assert.assertEquals(commanders.subList(0, pictured.size()), pictured, "a rebalanced commander is listed before one with a picture");
@@ -705,7 +705,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(saved.getPlaneswalker().getName(), walker);
     }
 
-    // Fails if renaming the conquest played last leaves the old folder, or the start page's Resume and the shelf's mark still name the old one
+    // Fails if renaming the last played conquest leaves the old folder, or the start page's Resume or the shelf's current mark keeps the old name
     @Test(timeOut = 120_000)
     public void renamingTheCurrentConquestKeepsItCurrent() throws Exception {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -718,12 +718,12 @@ public class ConquestSessionTest extends SessionsTest {
         host.awaitMatching("hello", h -> h.has("campaignResume") && to.equals(str(h.getAsJsonObject("campaignResume"), "conquest")), "the start page was not told the new name");
         Assert.assertFalse(data.getDirectory().exists(), "the old folder is still there");
 
-        // A name another conquest has is refused, and nothing is renamed
+        // A name that another conquest uses is refused, and nothing is renamed
         final ConquestData other = ConquestFixture.create("Zendikar");
         send(host, message("campaignRename", "name", to, "to", other.getName()));
         final JsonObject refused = host.awaitMatching("error", e -> true, "a name in use was not refused");
         Assert.assertTrue(saveDir(to).isDirectory());
-        // The browser forgets an error at every hello, so the refusal is the last thing said
+        // The browser clears an error on every hello, so the refusal must be the last message sent
         awaitTrue(() -> host.got.size() >= 3, "the shelf was not sent again with the refusal");
         Assert.assertSame(host.got.get(host.got.size() - 1), refused, "the refusal was followed by a hello, which wipes it from the page");
     }
@@ -740,7 +740,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertFalse(data.getDirectory().exists());
     }
 
-    // Fails if a plane can be unlocked without the emblems or entered while locked, unlocking does not spend once, or going back costs
+    // Fails if a plane can be unlocked without the emblems or entered while locked, an unlock does not charge exactly once, or going back costs anything
     @Test(timeOut = 120_000)
     public void unlockingSpendsOnce() throws Exception {
         final TestBrowser host = hostInConquest(ConquestFixture.install());
@@ -770,7 +770,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(saved.getPlaneswalkEmblems(), few);
         Assert.assertTrue(saved.isPlaneUnlocked(alara));
 
-        // An unlocked plane is gone back to for nothing, whichever way it is asked for
+        // Going back to an unlocked plane is free, even when the request asks to unlock it
         send(host, message("conquestPlaneswalk", "plane", "Zendikar", "unlock", true));
         host.awaitMatching("conquestState", s -> "Zendikar".equals(s.get("plane").getAsString()), "the player did not go back");
         Assert.assertEquals(data.getPlaneswalkEmblems(), few);
@@ -781,7 +781,7 @@ public class ConquestSessionTest extends SessionsTest {
                 "rarity", shown == null ? "" : shown.get("rarity").getAsString(), "cmc", shown == null ? "" : shown.get("cmc").getAsString(), "pull", pull);
     }
 
-    // Fails if a pull does not cost what the page showed and add the card it names, or a pull with no shards gives a card
+    // Fails if a pull does not cost the price the page showed and add the card it names, or a pull with no shards gives a card
     @Test(timeOut = 120_000)
     public void aPullSpendsAndUnlocks() throws Exception {
         final TestBrowser host = hostInConquest(ConquestFixture.install());
@@ -818,7 +818,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(data.getAEtherShards(), 0);
     }
 
-    // Fails if a preference that breaks a rule, is negative or is not one of the page's is saved, or a good one is not
+    // Fails if a preference is saved that breaks a rule, is negative, is not a whole number or is not on the page, or a valid one is not saved
     @Test(timeOut = 120_000)
     public void aPreferenceIsCheckedBeforeItIsSaved() throws Exception {
         final forge.gamemodes.planarconquest.ConquestPreferences prefs = FModel.getConquestPreferences();
@@ -850,7 +850,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(prefs.getPref(CQPref.CURRENT_CONQUEST), current, "the reset forgot which conquest is current");
     }
 
-    // Fails if a name with a path in it reaches a folder that is not one of the saves, which a delete would remove
+    // Fails if a name containing a path finds a folder outside the saves. A delete would then remove that folder
     @Test
     public void aNameWithAPathInItFindsNothing() {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -861,7 +861,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertNull(ConquestGame.find(folder + "/."));
     }
 
-    // Fails if a rebalanced card is not drawn with the art of the card it rebalances, or a card with its own art is given another's
+    // Fails if a rebalanced card does not use the art of its original card, or a card with its own art gets another card's art
     @Test
     public void aRebalancedCardWearsItsOriginalsArt() {
         final PaperCard rebalanced = FModel.getMagicDb().getCommonCards().getCard("A-Phylath, World Sculptor");

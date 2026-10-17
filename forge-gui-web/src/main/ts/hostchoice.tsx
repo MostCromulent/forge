@@ -1,6 +1,6 @@
-// A question Forge asks the host outside a match, such as a campaign's choice, drawn over whatever page is open
+// A question Forge asks the host outside a match, such as a campaign choice. It is drawn over whatever page is open
 
-// The engine thread waits for the answer to a question the host is asked, so cancelling sends an empty choice instead of nothing
+// The engine thread waits for the host's answer, so cancelling sends an empty choice instead of nothing
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl, hideBroken } from './images';
@@ -8,7 +8,7 @@ import { t } from './text';
 import type { Actions } from './actions';
 import type { HostChoice as Question } from './protocol';
 
-/** A choice of cards or of sets' packs, drawn as pictures: one is marked, and OK takes it, so a stray click takes nothing. */
+/** A choice of cards or set packs, drawn as pictures. A click only marks one and OK confirms it, so a stray click chooses nothing. */
 function Pictured({ question, answer }: { question: Question; answer: (value: number[]) => void }) {
   const [chosen, setChosen] = useState(0);
   const ok = useRef<HTMLButtonElement>(null);
@@ -44,7 +44,7 @@ export function HostChoice({ question, actions }: { question: Question; actions:
   }, []);
   const answer = (value: number[]) => actions.answerHostChoice(question.id, value);
   if (question.images && question.pictured) return <Pictured question={question} answer={answer} />;
-  // Desktop's dialog of a few buttons: its title, its message line by line, and the buttons in a row
+  // Matches desktop's dialog with a few buttons: the title, the message line by line, and the buttons in a row
   if (question.kind === 'confirm') {
     return (
       <div class="host-back">

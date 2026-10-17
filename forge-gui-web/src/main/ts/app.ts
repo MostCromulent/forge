@@ -1,4 +1,4 @@
-// The page's text comes from the server first, so the modules that draw the page are loaded only once it has arrived
+// The page's text is fetched from the server first. The modules that draw the page load only after it arrives
 
 import { loadText } from './text';
 

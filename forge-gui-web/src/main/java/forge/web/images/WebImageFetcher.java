@@ -18,7 +18,7 @@ import java.nio.file.StandardCopyOption;
 
 /**
  * Downloads missing card images into the shared image cache, like the desktop and mobile fetchers. It saves the bytes as they
- * arrive, since the browser decodes the picture itself, so neither desktop's ImageIO re-encoding nor mobile's FileHandle writing fits.
+ * arrive, because the browser decodes the picture itself. So neither desktop's ImageIO re-encoding nor mobile's FileHandle writing fits.
  */
 public final class WebImageFetcher extends ImageFetcher implements IHasForgeLog {
     @Override
@@ -60,7 +60,7 @@ public final class WebImageFetcher extends ImageFetcher implements IHasForgeLog 
                 ScryfallRateLimiter.noteIfRateLimited(code, urlToDownload, c.getHeaderField("Retry-After"));
                 return false;
             }
-            // Written aside first so nothing reads a partial file
+            // Written to a temporary file first, so nothing reads a partial file
             final Path target = Path.of(path);
             final Path tmp = Path.of(path + ".tmp");
             Files.createDirectories(target.getParent());

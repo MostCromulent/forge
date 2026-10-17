@@ -28,7 +28,7 @@ public class ActiveClientTest {
         WebTestSupport.initModel();
     }
 
-    // Basics only: the AI does nothing, and the cards a test needs are placed with a GameState, never drawn
+    // Basic lands only, so the AI does nothing. The cards a test needs are placed with a GameState, never drawn
     private static Deck plains() {
         return TestDecks.of("Plains", "Plains", 40);
     }
@@ -37,7 +37,7 @@ public class ActiveClientTest {
         return TestDecks.of("Forests", "Forest", 40);
     }
 
-    // GameState names the first player "human" and the second "ai", whoever controls them
+    // GameState calls the first player "human" and the second "ai", whoever controls them
     private static void giveWebSeat(final Game game, final String hand, final String battlefield, final String library) throws InterruptedException {
         giveWebSeat(game, hand, battlefield, library, "");
     }
@@ -62,7 +62,7 @@ public class ActiveClientTest {
         apply(state, game);
     }
 
-    /** GameState hands its work to the game thread, so this waits for the cards to be placed. */
+    /** Applies the state on the game thread and waits until the cards are placed. */
     private static void apply(final GameState state, final Game game) throws InterruptedException {
         final CountDownLatch placed = new CountDownLatch(1);
         game.getAction().invoke(() -> {
@@ -78,11 +78,11 @@ public class ActiveClientTest {
         TestMatch.play(plains(), forests(), gui -> TestBrowser.held(gui, 300), (local, gui, browser) -> {
             Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
 
-            // Temple's enter trigger scrys; Evolving Wilds searches the library
+            // The Temple's enter trigger scrys. Evolving Wilds searches the library
             giveWebSeat(local.hostedMatch().getGame(), "Temple of Enlightenment", "Evolving Wilds", "Plains;Plains;Plains;Plains;Plains");
-            // Placing cards fires no game event; the host's own resync sends them while the engine waits on this seat
+            // Placing cards fires no game event. The host's resync sends them while the engine waits for this seat
             WebTestSupport.remoteGui(local.hostedMatch()).updateGameView();
-            // One card at a time, so the Wilds activation cannot interleave with the Temple's trigger
+            // Release one card at a time, so the Wilds activation cannot interleave with the Temple's trigger
             browser.release("Hand:Temple of Enlightenment");
             for (int i = 0; i < 300 && !asked(browser, "manipulate"); i++) {
                 Thread.sleep(100);
@@ -124,11 +124,11 @@ public class ActiveClientTest {
         return browser.last("prompt").getAsJsonObject("ok").get("enabled").getAsBoolean();
     }
 
-    // Answers the pre-game prompts with OK, then waits at the first priority prompt and returns the turn it holds on
+    // Answers the pre-game prompts with OK, then waits at the first priority prompt and returns that turn's number
     private static int keepAndHoldPriority(final WebGuiGame gui, final TestBrowser browser) throws InterruptedException {
         for (int i = 0; i < 600 && !(turn(browser) > 0 && okEnabled(browser) && atPriority(browser)); i++) {
             if (turn(browser) == 0 && okEnabled(browser)) {
-                // A press that lands before the host has registered the input is dropped, so press again if no new prompt follows
+                // A press sent before the host registers the input is dropped, so press again if no new prompt follows
                 final int prompts = browser.all("prompt").size();
                 TestBrowser.command(gui, TestBrowser.action("ok"));
                 for (int j = 0; j < 30 && browser.all("prompt").size() == prompts; j++) {
@@ -198,7 +198,7 @@ public class ActiveClientTest {
         });
     }
 
-    // Jötun Grunt's upkeep asks the web seat to choose a player, and unless the browser is told which it may click the Grunt is sacrificed
+    // Jötun Grunt's upkeep asks the web seat to choose a player. If the browser is not told which players it may click, the Grunt is sacrificed
     @Test(timeOut = 180000)
     public void playerChoicePromptIsAnsweredFromTheWebSeat() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -228,7 +228,7 @@ public class ActiveClientTest {
             final Player seat = game.getPlayers().get(webFirst ? 0 : 1);
             final int turn = game.getPhaseHandler().getTurn();
             browser.release();
-            // On to the web seat's next turn, past the upkeep that asks for the payment
+            // Wait for the web seat's next turn, past the upkeep that asks for the payment
             for (int i = 0; i < 600 && !(game.getPhaseHandler().getTurn() >= turn + 2 && game.getPhaseHandler().getPhase().isAfter(PhaseType.UPKEEP)); i++) {
                 Thread.sleep(100);
             }

@@ -16,11 +16,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-/** The prompt console, changed from the dispatch thread and the host UI thread, so every change is made and sent under one lock. */
+/** The prompt shown to the browser. Both the dispatch thread and the host UI thread change it, so every change is made and sent under one lock. */
 final class PromptState {
     private final Consumer<Prompt> send;
     private String message = "";
-    /** "toss" or "lastGame" while the player is asked who starts, having won the toss or lost the last game. */
+    /** "toss" or "lastGame" while the player is asked who starts. The value says whether the player won the toss or lost the last game. */
     private StarterChoice starterChoice;
     private boolean priority;
     private Ref card;
@@ -38,7 +38,7 @@ final class PromptState {
         this.send = send;
     }
 
-    /** The prompt as it stands, sent to one browser, as a reconnecting one needs. */
+    /** Sends the current prompt to one browser. A reconnecting browser needs this. */
     synchronized void sendTo(final Consumer<Prompt> to) {
         to.accept(current());
     }
@@ -58,12 +58,12 @@ final class PromptState {
         ok = new PromptButton(label1, enable1);
         cancel = new PromptButton(label2, enable2);
         focusOk = focus1;
-        // Only a mana payment offers Auto, and the browser holds the card being paid for while it does
+        // Only a mana payment offers Auto. During a payment the browser keeps the card being paid for in its waiting slot
         paying = Localizer.getInstance().getMessage("lblAuto").equals(label1);
         changed();
     }
 
-    /** What the waiting prompt offers and what has been chosen so far, replacing what the last one marked. */
+    /** Sets what the waiting prompt offers and what has been chosen so far. This replaces the marks of the last prompt. */
     synchronized void selection(final Selection selection) {
         selectable = selection.cards().stream().map(PromptState::cardRef).toList();
         selectableMin = selection.min();
@@ -82,7 +82,7 @@ final class PromptState {
         changed();
     }
 
-    /** The key the browser knows a card, player or stack item by. */
+    /** The key the browser uses for a card, player or stack item. */
     private static int key(final TrackableObject object) {
         final int type = object instanceof CardView ? DeltaPacket.TYPE_CARD_VIEW
                 : object instanceof PlayerView ? DeltaPacket.TYPE_PLAYER_VIEW : DeltaPacket.TYPE_STACK_ITEM_VIEW;
@@ -103,7 +103,7 @@ final class PromptState {
                 selectablePlayers, selectableStack, highlighted, starterChoice);
     }
 
-    /** Whether the message opens with the line the key makes, whatever player's name fills it. */
+    /** Whether the message's first line is the text of the key, with any player's name filled in. */
     private static boolean opensWith(final String message, final String key) {
         final String[] around = Localizer.getInstance().getMessage(key, "\u0000").split("\u0000", -1);
         final String first = message.split("\n", 2)[0];
@@ -114,7 +114,7 @@ final class PromptState {
         return card == null ? null : Ref.card(card.getId());
     }
 
-    // Drops the priority prompt's lines that the phase pill and the stack pile already show
+    // Drops the lines of the priority prompt that the phase pill and the stack pile already show
     private static String withoutTurnState(final String message) {
         final Localizer loc = Localizer.getInstance();
         if (!message.startsWith(loc.getMessage("lblPriority") + ":")) {

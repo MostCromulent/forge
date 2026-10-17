@@ -41,7 +41,7 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
-/** Quest's rules as the shared package states them, with no screen involved. They are tested here because forge-gui's tests have no IGuiBase or FModel set-up to load the cards. */
+/** Tests Quest's rules in the shared package, with no screen. They are tested here because forge-gui's tests have no IGuiBase or FModel setup to load the cards. */
 public class QuestRulesTest {
     @BeforeClass
     public void setUp() {
@@ -62,7 +62,7 @@ public class QuestRulesTest {
         return duel;
     }
 
-    // Fails if a prepared duel does not seat the quest's own deck at the quest's life against the event's deck under the event's name
+    // Fails if a prepared duel does not put the quest's deck at the quest's life against the event's deck, under the event's name
     @Test
     public void aDuelIsPreparedWithTheQuestsDeckAndLife() throws IOException {
         final QuestEventDuel duel = firstDuel();
@@ -97,7 +97,7 @@ public class QuestRulesTest {
         return pool;
     }
 
-    // Fails if the extras of a card are counted against anything but a playset, or a basic land, which a deck may hold any number of, against anything but that setting
+    // Fails if a card's extras are not the copies above a playset, or a basic land's extras are not the copies above the any-number setting
     @Test
     public void extrasAreWhatIsAboveAPlayset() throws IOException {
         FModel.getQuest().load(QuestFixture.install());
@@ -157,7 +157,7 @@ public class QuestRulesTest {
         deck.getMain().forEach(e -> assertTrue(quest.getCards().getCardpool().count(e.getKey()) >= e.getValue(), e.getKey() + " is missing"));
     }
 
-    // Fails if a name another quest has is accepted, or a name with a path in it is not cleaned of it
+    // Fails if another quest's name is accepted, or the path is not removed from a name that contains one
     @Test
     public void aQuestsNameIsCleanAndFree() throws IOException {
         final QuestData data = QuestFixture.install();
@@ -180,7 +180,7 @@ public class QuestRulesTest {
         assertEquals(match.rules().getGameType(), GameType.QuestDraft);
         assertEquals(match.players().size(), 2);
         assertEquals(match.human().getDeck().getName(), "Tournament human");
-        // Seat 3 holds the computer numbered 3, whose name is the third
+        // Seat 3 has computer 3, which has the third name
         final RegisteredPlayer opponent = match.players().get(0) == match.human() ? match.players().get(1) : match.players().get(0);
         assertEquals(opponent.getPlayer().getName(), QuestFixture.AI_NAMES[2]);
         assertEquals(opponent.getDeck().getName(), "AI Deck 2");

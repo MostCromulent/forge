@@ -19,17 +19,17 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-/** What a limited event can be built from, read without prompting, for a frontend that asks for every choice at once. */
+/** What a limited event can be built from. It is read without prompting, for a frontend that asks for every choice at once. */
 final class DraftProducts {
     private DraftProducts() {
     }
 
-    /** A block offered for drafting: it has draft packs, and it is not Conspiracy, whose draft-time prompts only a local GUI can answer. */
+    /** Whether a block is offered for drafting. It must have draft packs and must not be Conspiracy, whose draft-time prompts only a local GUI can answer. */
     static boolean isDraftableBlock(final CardBlock block) {
         return block.getCntBoostersDraft() > 0 && !block.getName().contains("Conspiracy");
     }
 
-    /** Desktop's preset combinations for a block, or an empty list when it asks for one set per pack instead. */
+    /** Desktop's preset set combinations for a block. The list is empty when desktop asks for one set per pack instead. */
     static List<String> draftCombos(final CardBlock block) {
         final List<String> sets = BoosterDraft.blockSets(block);
         return block.getCntBoostersDraft() == 3 && sets.size() > 1 && sets.size() < 4 ? BoosterDraft.getSetCombos(sets) : new ArrayList<>();
@@ -76,7 +76,7 @@ final class DraftProducts {
     public record SealedLists(List<Block> blocks, List<Block> fantasyBlocks, List<Edition> prereleases, List<String> templates) {
     }
 
-    /** A draftable block: its pack count, its sets, and desktop's preset combinations, or none when each pack's set is chosen. */
+    /** A draftable block: its pack count, its sets and desktop's preset combinations. combos is empty when the set of each pack is chosen. */
     public record DraftBlock(String name, int packs, List<String> sets, List<String> combos) {
     }
 

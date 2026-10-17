@@ -18,18 +18,18 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * A campaign mode as a session sees it. One per session and mode, over Forge's one model of that mode.
- * Only the host's session opens a campaign, and it makes every call on its campaign thread ({@code CampaignSession.run}),
- * so nothing here takes a lock. {@link #current} reads only a preference and the saves folder, and may be called from any thread.
+ * A campaign mode as a session sees it. There is one per session and mode, over Forge's single model of that mode.
+ * Only the host's session opens a campaign. It makes every call on its campaign thread ({@code CampaignSession.run}),
+ * so nothing here takes a lock. {@link #current} reads only a preference and the saves folder, so it may be called from any thread.
  */
 public interface Campaign {
-    /** What a mode's own pages need of the session. */
+    /** What a mode's own pages need from the session. */
     interface Host {
         Record error(String text);
 
         DeckSession decks();
 
-        /** The campaign made a save and opened it, so the session's place follows. */
+        /** The campaign made a save and opened it, so the session moves to that save. */
         void opened(String save);
 
         /** Starts a match the campaign built. failed undoes what preparing it did. */
@@ -45,34 +45,34 @@ public interface Campaign {
     /** The save played last, or null. */
     String current();
 
-    /** Makes a save the one Forge has open, and answers its name; null when there is none of that name or it cannot be read. */
+    /** Makes a save the one Forge has open, and returns its name. Returns null when no save has that name or it cannot be read. */
     String open(String save);
 
-    /** Why a save cannot be renamed, or null when it is done. */
+    /** Renames a save. Returns why it cannot be renamed, or null when it is done. */
     String rename(String name, String to);
 
     void delete(String name);
 
-    /** What an open campaign's pages are drawn from, sent whenever they may have changed. */
+    /** The data an open campaign's pages are drawn from. It is sent whenever it may have changed. */
     List<Record> page();
 
-    /** What the last match gave and has yet to be shown, or null. */
+    /** What the last match gave that has not been shown yet, or null. */
     Reward reward();
 
-    /** The reward has been shown, and the campaign goes on to whatever it leads to. */
+    /** Called when the reward has been shown. The campaign then goes on to whatever comes next. */
     void claim(Host host);
 
-    /** A game of the campaign's match ended: recorded and rewarded here. hostGame is the host's own view, which alone knows the match. */
+    /** A game of the campaign's match ended. It is recorded and rewarded here. hostGame is the host's own view, the only view that knows the match. */
     CampaignResult gameOver(GameView hostGame);
 
-    /** The game's result has been sent, so what the mode does next, such as asking about a reward, comes after the result screen. */
+    /** Called when the game's result has been sent. So whatever the mode does next, such as asking about a reward, comes after the result screen. */
     default void resultSent() {
     }
 
     /** The result of the game just ended, while its match is still open, or null. */
     CampaignResult result();
 
-    /** The match is left: its result goes with it. */
+    /** The match was left. Its result is dropped with it. */
     void left();
 
     CataloguePage cards(CatalogueQuery q);
@@ -80,7 +80,7 @@ public interface Campaign {
     /** The lists whose cards are traded, by size. */
     Trading trading();
 
-    /** Trades picks out of the list of that source. Answers why it cannot, or null when it is done. */
+    /** Trades picks out of the list of that source. Returns why it cannot, or null when it is done. */
     String trade(String source, List<TradePick> picks);
 
     CampaignStats stats(String scope);
@@ -88,7 +88,7 @@ public interface Campaign {
     /** The mode's preferences. problem is why the last change was refused, if it was. */
     CampaignPrefs prefs(String problem);
 
-    /** Sets a preference and saves. Answers why it cannot, or null when it is set. */
+    /** Sets a preference and saves. Returns why it cannot, or null when it is set. */
     String setPref(String key, String value);
 
     void resetPrefs();
@@ -96,7 +96,7 @@ public interface Campaign {
     /** A command of the mode's own. save is null on the list of saved games. */
     void handle(BrowserChannel channel, Record command, String save, Host host);
 
-    /** Whether file is the saves folder's own child of exactly that name, however its path was written. Save names come from the browser, so one with a path in it must not reach a file to open, rename or delete outside the saves. */
+    /** Whether file is a direct child of the saves folder with exactly that name, however its path was written. Save names come from the browser. So a name with a path in it must not reach a file outside the saves to open, rename or delete. */
     static boolean isSaveNamed(final String savesDir, final File file, final String child) {
         try {
             final File canonical = file.getCanonicalFile();

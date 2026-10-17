@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { RefObject } from 'preact';
 
-/** A value as it stood once it stopped changing: a long list costs a request per row, so a search waits for a pause in typing. */
+/** The value after it has stopped changing for ms. A long list costs a request per row, so a search waits for a pause in typing. */
 export function useDebounced<T>(value: T, ms = 200): T {
   const [settled, setSettled] = useState(value);
   useEffect(() => {
@@ -13,7 +13,7 @@ export function useDebounced<T>(value: T, ms = 200): T {
   return settled;
 }
 
-/** Closes a popup on Escape, or on a press outside the element it hangs from. */
+/** Closes a popup on Escape, or on a press outside its root element. */
 export function useDismiss(open: boolean, root: RefObject<HTMLElement>, close: () => void): void {
   useEffect(() => {
     if (!open) return;
@@ -28,7 +28,7 @@ export function useDismiss(open: boolean, root: RefObject<HTMLElement>, close: (
   }, [open]);
 }
 
-/** A button that asks twice, for what cannot be undone: the first press arms it, which its label then says, and the second runs act. */
+/** A two-press button for actions that cannot be undone. The first press arms it and changes its label. The second press runs act. */
 export function useTwoPress(): [armed: boolean, press: (act: () => void) => () => void] {
   const [armed, setArmed] = useState(false);
   return [armed, act => () => {

@@ -7,23 +7,23 @@ import type { LogMessage } from '../protocol';
 
 const MAX_ENTRIES = 400;
 
-// The log follows the game unless the player scrolls back through it
+// Whether the log stays scrolled to the newest entry. It is false while the player has scrolled back
 let stick = true;
 
 export function initLog(): void {
   const log = byId('log');
-  // Only the player's own scrolling counts, since a thumbnail loading or entries being trimmed also moves the log
+  // Only the player's own scrolling counts. A thumbnail loading or old entries being removed also scrolls the log
   let handled = 0;
   const byHand = () => { handled = Date.now(); };
   for (const type of ['wheel', 'touchmove', 'pointerdown', 'keydown']) log.addEventListener(type, byHand, { passive: true });
   log.addEventListener('scroll', () => {
     if (Date.now() - handled < 1000) stick = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
   });
-  // The prompt growing under it shrinks the log without an entry arriving, which would leave the newest out of view
+  // When the prompt below grows, the log shrinks without a new entry. Without this the newest entry would go out of view
   new ResizeObserver(() => toBottom(log)).observe(log);
 }
 
-// Told apart by lightness as well as hue, so they hold for red-green colour blindness
+// The tints differ in lightness as well as hue, so they can be told apart with red-green colour blindness
 const PLAYER_TINTS = ['#8fc3ff', '#f0a35e', '#c3a8ff', '#5fd0c0', '#f3a6c8', '#a9b7c9', '#d6c9f0'];
 
 /** Tints each player's name, matching longer names first so "Forge AI 2" is never read as "Forge AI". */
@@ -69,7 +69,7 @@ export function appendLog(msg: LogMessage, tints: readonly { name: string; colou
     stick = true;
   }
   for (const entry of msg.entries) {
-    // The type's class is prefixed, since a bare one (mana, turn) would take the board's rule of the same name
+    // The type's class is prefixed because a bare class (mana, turn) would match the board's CSS rule of the same name
     const el = make('div', `log-entry log-${entry.type.toLowerCase()}`);
     // Entries about a card show it, as the desktop log does
     if (entry.imageKey) {
@@ -79,7 +79,7 @@ export function appendLog(msg: LogMessage, tints: readonly { name: string; colou
       thumb.dataset.key = String(entry.card);
       thumb.dataset.zoom = thumb.src;
       thumb.addEventListener('error', () => thumb.remove());
-      // A thumbnail arriving after the entry makes the log taller, which would leave the newest line off screen
+      // A thumbnail that loads after the entry makes the log taller. Without this the newest line would be off screen
       thumb.addEventListener('load', () => toBottom(root));
       hoverable(thumb);
       el.append(thumb);

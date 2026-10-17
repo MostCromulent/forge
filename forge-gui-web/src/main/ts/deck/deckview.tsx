@@ -1,12 +1,12 @@
-// A deck shown outside the editor, as the deck finder, the importer and the campaigns show one: its curve and its cards by heading
+// Draws a deck outside the editor, for the deck finder, the importer and the campaigns. It shows the mana curve and the cards by heading.
 
 import { imageUrl } from '../images';
 import type { EditorCard } from '../protocol';
 import { t } from '../text';
 import { headingText } from './decklist';
 
-/** A deck's mana curve as bars px tall at most, with the average beside the heading when it is given. */
-// Bar heights are pixels because a percentage would resolve against an auto-sized row and collapse
+/** A deck's mana curve as bars at most px tall. The average is shown beside the heading when it is given. */
+// Bar heights are in pixels because a percentage of an auto-sized row resolves to zero
 export function Curve({ curve, spells, average, px }: { curve: number[]; spells: number[]; average?: number; px: number }) {
   const tallest = Math.max(1, ...curve);
   return (
@@ -33,7 +33,7 @@ export function Curve({ curve, spells, average, px }: { curve: number[]; spells:
   );
 }
 
-/** One heading of a deck list and its cards, as lines or as stacked pictures, marking the Commander game changers. */
+/** One heading of a deck list and its cards, shown as lines or as stacked pictures. Commander game changers are marked. */
 export function CardGroup({ heading, cards, marked, stacked }: {
   heading: string; cards: EditorCard[]; marked?: ReadonlySet<string>; stacked?: boolean;
 }) {

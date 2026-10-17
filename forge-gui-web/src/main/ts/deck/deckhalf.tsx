@@ -1,4 +1,4 @@
-// The editor's right half: the deck as the deck finder shows it, made editable
+// The editor's right half. It shows the deck as the deck finder does, but editable.
 
 import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useState } from 'preact/hooks';
@@ -29,13 +29,13 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
   const hasCommander = state.commanders.length > 0 || state.commanderWanted;
   const half = Math.ceil(state.sideboard.length / 2);
   const groups = regroup(state, by);
-  // A deck that is only the wrong size has no card to point at
+  // A deck that is only the wrong size has no flagged card to show
   const flagged = [...state.main.flatMap(g => g.cards), ...state.sideboard, ...state.commanders].some(card => card.problem);
-  // Two clicks on a card take one copy out. A pool's cards cannot leave it, so there the copy goes to the other section.
+  // A double-click on a card removes one copy. A pool's cards cannot leave the pool, so in limited mode the copy moves to the other section.
   const takeOut = (name: string, zone: 'Main' | 'Sideboard') => (state.limited
     ? actions.edit({ op: 'move', name, from: zone, to: zone === 'Main' ? 'Sideboard' : 'Main', count: 1 })
     : actions.edit({ op: 'remove', name, from: zone, count: 1 }));
-  // A card added from the catalogue flies to its line once the deck shows it there
+  // A card added from the catalogue animates to its line once the deck shows it there
   useLayoutEffect(() => {
     const key = flyingFor();
     if (!key || !state.landed || key.slice(key.indexOf(':') + 1) !== state.landed) return;
@@ -148,7 +148,7 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
   );
 }
 
-/** A section beyond the main deck, planes or schemes say, whose cards the catalogue adds while the section is chosen. */
+/** A section other than the main deck, such as planes or schemes. While the section is chosen, the catalogue adds cards to it. */
 function ExtraZone({ section, cards, adding, landed, addTo, actions }: {
   section: EditorSection; cards: boolean; adding: boolean; landed?: string | null; addTo: (section: DeckSection | null) => void; actions: Actions;
 }) {
@@ -186,7 +186,7 @@ function ExtraZone({ section, cards, adding, landed, addTo, actions }: {
   );
 }
 
-/** The sections a deck does not carry yet; choosing one shows it, empty, and turns the catalogue to its cards. */
+/** The sections the deck does not have yet. Choosing one shows it empty and switches the catalogue to its cards. */
 function AddSection({ sections, addTo }: { sections: EditorSection[]; addTo: (section: DeckSection) => void }) {
   if (!sections.length) return null;
   return (
@@ -208,7 +208,7 @@ function AddSection({ sections, addTo }: { sections: EditorSection[]; addTo: (se
 }
 
 function CommanderZone({ actions, state, handlers }: { actions: Actions; state: EditorState; handlers: CardHandlers }) {
-  // A main-only collection deck keeps the commander it was made for: nothing is dropped here, and nothing is taken away
+  // A main-only collection deck keeps the commander it was made for. No card can be dropped here or removed.
   const kept = state.mainOnly;
   return (
     <div class="zone commander-zone" data-zone={kept ? undefined : 'Commander'}>
@@ -241,7 +241,7 @@ function CommanderZone({ actions, state, handlers }: { actions: Actions; state: 
   );
 }
 
-/** One card in a section drawn as the card, the copies counted on it; cards in a column overlap to show their names. */
+/** One card in a section, drawn as its picture with the copy count on it. Cards in a column overlap so their names stay visible. */
 function Stack({ card, zone, landed, handlers, takeOut }: {
   card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; handlers: CardHandlers; takeOut: () => void;
 }) {
@@ -254,7 +254,7 @@ function Stack({ card, zone, landed, handlers, takeOut }: {
   );
 }
 
-/** One card in a section: its count, name and cost, and while the pointer is on it, one fewer, one more, and a move to the other section. */
+/** One card in a section as a line with its count, name and cost. On hover it shows buttons for one fewer, one more and a move to the other section. */
 function Line({ card, zone, landed, actions, handlers, mainOnly, takeOut }: {
   card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; actions: Actions; handlers: CardHandlers; mainOnly?: boolean; takeOut: () => void;
 }) {
@@ -262,7 +262,7 @@ function Line({ card, zone, landed, actions, handlers, mainOnly, takeOut }: {
   return (
     <div class={`dk-line ed-line${card.problem ? ' bad' : ''}${landed ? ' landed' : ''}`} data-image={card.image} data-card={card.name} data-from={zone}
       {...handlers(card.name, zone, card.image, card.count)}
-      // Two quick presses on the line's own buttons are two presses of that button, and nothing more
+      // A double-click on one of the line's buttons counts only as two presses of that button
       onDblClick={e => { if (!(e.target as Element).closest('button')) takeOut(); }}>
       <span class="n">{card.count}</span>
       <span class="nm">{card.name}</span>
@@ -280,7 +280,7 @@ function Line({ card, zone, landed, actions, handlers, mainOnly, takeOut }: {
 
 const SHARES = ['W', 'U', 'B', 'R', 'G', 'C'];
 
-/** How a count divides among the colours, as one bar and a key of the colours that have any. Each key carries its letter, so no colour is told by hue alone. */
+/** Shows how a count splits among the colours, as one bar and a key of the colours present. Each key entry shows its letter, so no colour depends on hue alone. */
 function Breakdown({ title, counts }: { title: string; counts: number[] }) {
   const total = counts.reduce((a, b) => a + b, 0);
   if (!total) return null;
@@ -317,9 +317,9 @@ function showProblems(): void {
   document.querySelector('.editor-page .ed-line.bad, .editor-page .commander .flag')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
-/** Whether a deck is drawn as cards rather than as a list, and the way to change it; the editor and the deck finder share the choice. */
+/** Whether a deck is drawn as cards or as a list, and a setter for it. The editor and the deck finder share this choice. */
 export function useDeckView(): [boolean, (asCards: boolean) => void] {
-  // Stacked cards are too small to read on a phone, so there the deck opens as a list until the player says otherwise
+  // Stacked cards are too small to read on a phone. In portrait the deck opens as a list until the player changes the view.
   const [cards, setCards] = useState(() => (stored(VIEW_KEY) ?? (isPortrait() ? 'list' : 'cards')) !== 'list');
   return [cards, asCards => {
     setCards(asCards);

@@ -13,18 +13,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntFunction;
 
-/** The draft as the browser sees it, with a step that numbers the pack in hand so a pick names exactly the pack it was made from. */
+/** The draft as the browser sees it. A step number identifies the pack in hand, so each pick names the exact pack it was made from. */
 final class DraftView {
     private int step;
     private volatile DraftState latest;
     private final List<String> log = new ArrayList<>();
 
-    /** Packs go to the next seat (1) in odd rounds and the previous seat (-1) in even ones, as BoosterDraft.passPacks alternates. round counts from 1, and 0 is before the first. */
+    /** Packs go to the next seat (1) in odd rounds and to the previous seat (-1) in even rounds, as in BoosterDraft.passPacks. round counts from 1, and 0 means before the first round. */
     static int passDirection(final int round) {
         return round % 2 == 0 && round > 0 ? -1 : 1;
     }
 
-    /** The seat whose pack passed on, or none when the counts show anything but one pass, so the dial redraws rather than slides. */
+    /** The seat whose pack was passed on. It is empty when the counts show anything other than one pass, so the dial is redrawn instead of animated. */
     static List<Integer> moved(final int[] before, final int[] after, final int pickingSeat, final int direction) {
         if (before == null || after == null || before.length != after.length || pickingSeat < 0 || pickingSeat >= after.length) {
             return List.of();
@@ -51,7 +51,7 @@ final class DraftView {
 
     static DraftCard card(final PaperCard card, final int packNumber, final int pickNumber, final boolean sideboard) {
         final CardRules rules = card.getRules();
-        // A ranked card scores at least 1, where desktop's rounding can show 0
+        // A ranked card scores at least 1. Desktop's rounding can show 0.
         final double score = CardRanker.getRawScore(card);
         return new DraftCard(card.getName(), Foil.key(card), JsonCodec.manaCost(rules.getManaCost()),
                 rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()), rules.getType().toString(),
@@ -59,7 +59,7 @@ final class DraftView {
                 card.getRarity().toString(), score <= 0 ? null : (int) Math.max(1, Math.round(Math.min(99, score))), packNumber, pickNumber, sideboard);
     }
 
-    /** Builds and remembers the next state from its step, which goes up only when newPack says the pack in hand changed. */
+    /** Builds and stores the next state. Its step goes up only when newPack says the pack in hand changed. */
     DraftState state(final boolean newPack, final IntFunction<DraftState> build) {
         if (newPack) {
             step++;
@@ -68,7 +68,7 @@ final class DraftView {
         return latest;
     }
 
-    /** Adds a line to the draft's log, as desktop's draft log words it. */
+    /** Adds a line to the draft's log, worded as in desktop's draft log. */
     void log(final String line) {
         log.add(line);
     }
@@ -77,7 +77,7 @@ final class DraftView {
         return List.copyOf(log);
     }
 
-    /** The state last built, for a browser that arrives again; null before the first pack. */
+    /** The state last built, to send again to a browser that reconnects. Null before the first pack. */
     DraftState latest() {
         return latest;
     }

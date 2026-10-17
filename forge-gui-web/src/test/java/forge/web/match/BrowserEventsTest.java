@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 public class BrowserEventsTest {
-    /** Netplay delivers a cast spell's card as a snapshot with no controller, so the move must name its caster from the tracker. */
+    /** Netplay sends a cast spell's card as a snapshot with no controller, so the move must get its caster from the tracker. */
     @Test
     public void castSnapshotNamesItsCasterFromTheTracker() {
         final Tracker tracker = new Tracker();

@@ -1,10 +1,10 @@
-// The page's popups: the dimmed layer every dialog sits on, the two-button question most of them are, and the panel a button drops
+// The page's popup parts: the dimmed layer under every dialog, the two-button confirm dialog, and a button that opens a panel
 
 import type { ComponentChildren, JSX } from 'preact';
 import { useRef, useState } from 'preact/hooks';
 import { useDismiss } from './hooks';
 
-/** The layer under a dialog, of class layer and cls. A press that starts on the layer dismisses it; one that starts in the dialog does not, though it end outside, as a text selection does. */
+/** The layer under a dialog, of class layer and cls. A press that starts on the layer dismisses the dialog. A press that starts in the dialog does not, even if it ends outside, as a text selection can. */
 export function Backdrop({ layer = 'backdrop', cls, dismiss, children, ...rest }: {
   layer?: string; cls?: string; dismiss?: () => void; children: ComponentChildren;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, 'class' | 'onMouseDown'>) {
@@ -15,7 +15,7 @@ export function Backdrop({ layer = 'backdrop', cls, dismiss, children, ...rest }
   );
 }
 
-/** A question with a way back, which a press outside also takes, and a way on, marked danger when it loses something. */
+/** A question with a back button and a go button. A press outside also goes back. The go button is marked danger when it loses something. */
 export function Confirm({ title, label, text, back, backLabel, go, goLabel, danger, cls }: {
   title: string; label?: string; text: string; back: () => void; backLabel: string; go: () => void; goLabel: string; danger?: boolean; cls?: string;
 }) {
@@ -33,7 +33,7 @@ export function Confirm({ title, label, text, back, backLabel, go, goLabel, dang
   );
 }
 
-/** A button that drops a panel, which Escape or a press outside closes. button draws the button from whether it is open and a way to toggle it; children draw the panel, given a way to close it. block wraps them in a div rather than a span. */
+/** A button that opens a panel. Escape or a press outside closes the panel. button draws the button, given whether the panel is open and a toggle function. children draw the panel, given a close function. block wraps them in a div instead of a span. */
 export function Dropdown({ cls, block, button, children }: {
   cls: string; block?: boolean; button: (open: boolean, toggle: () => void) => ComponentChildren; children: (close: () => void) => ComponentChildren;
 }) {

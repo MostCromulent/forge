@@ -1,4 +1,4 @@
-// The game's open questions, shown oldest first, where answering one closes its dialog without waiting for the server
+// The game's open questions, shown oldest first. Answering one closes its dialog without waiting for the server
 
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { createContext, type ComponentChildren, type RefObject } from 'preact';
@@ -32,7 +32,7 @@ import { trackDrag } from '../press';
 
 type Answer = (value: unknown) => void;
 
-/** Enlarges the cards in a row of a question on the board to fill the space the rest of the question leaves. */
+/** Enlarges the cards in a row of a question on the board to fill the space the rest of the question does not use. */
 function useCardFit(row: RefObject<HTMLElement>, count: number, how: CardFit): void {
   useLayoutEffect(() => {
     const el = row.current;
@@ -48,29 +48,29 @@ function useCardFit(row: RefObject<HTMLElement>, count: number, how: CardFit): v
 
 export function Requests({ model, actions }: { model: Model; actions: Actions }) {
   const req = oldestRequest(model);
-  // Choosing between spells that are on the stack is done on the stack, so no list is drawn for it
+  // The player chooses between spells on the stack by clicking the stack, so no list is drawn for it
   if (!req || stackPick(model) === req) {
     return null;
   }
   if (cardMenu(model) === req) {
     return <CardMenu key={req.id} req={req as ChoicesRequest} answer={value => actions.answer(req.id, value)} />;
   }
-  // Cards shown and nothing asked of them: the zone window, the same as looking through a pile
+  // Cards shown with no question about them use the zone window, as when the player looks through a pile
   if (req.kind === 'reveal' && !req.atX && !req.atY) {
     return <RevealWindow key={req.id} model={model} title={req.message ?? ''} cards={req.options} close={() => actions.answer(req.id, [])}
       aiSkipsOf={req.aiSkipsOf ? model.objects.get(req.aiSkipsOf.ref) as PlayerView | undefined : undefined} />;
   }
-  // Keyed by the question, so nothing picked for one is still picked for the next
+  // Keyed by the question, so picks made for one question are not carried into the next
   return <RequestDialog key={req.id} req={req} model={model} answer={value => actions.answer(req.id, value)} />;
 }
 
-/** A menu at the pointer, which a press or a right-click anywhere else closes having chosen nothing. A phone draws it along the bottom edge (portrait.css). */
+/** A menu at the pointer. A press or a right-click anywhere else closes it with nothing chosen. A phone draws it along the bottom edge (portrait.css). */
 function PointMenu({ x, y, id, cls, label, title, dismiss, children }: {
   x: number; y: number; id?: string; cls: string; label: string; title?: string | null; dismiss: () => void; children: ComponentChildren;
 }) {
   const menu = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState({ x, y });
-  // Opens down and right from the pointer, turning back where that would leave the window
+  // Opens down and right from the pointer, but moves back inside the window if it would go past the edge
   useLayoutEffect(() => {
     const el = menu.current;
     if (!el) return;
@@ -86,7 +86,7 @@ function PointMenu({ x, y, id, cls, label, title, dismiss, children }: {
   );
 }
 
-/** What one right-clicked card can do, as the host lists it. */
+/** The actions the host lists for one right-clicked card. */
 function CardMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
   return (
     <PointMenu x={req.atX ?? 0} y={req.atY ?? 0} cls="card-menu" label={req.message ?? t('lblAbilities')} title={req.message} dismiss={() => answer([])}>
@@ -100,7 +100,7 @@ function CardMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
   );
 }
 
-/** Desktop's stack menu for a right-clicked item, once the host has said what applies to it: auto-yield, always accept or decline an optional trigger, and the yields. */
+/** Desktop's stack menu for a right-clicked item. It opens after the host sends what applies: auto-yield, always accept or decline an optional trigger, and the yields. */
 export function StackMenu({ model, actions }: { model: Model; actions: Actions }) {
   const at = ui.stackMenuAt;
   const answer = model.stackMenu;
@@ -108,7 +108,7 @@ export function StackMenu({ model, actions }: { model: Model; actions: Actions }
   const close = () => changeUi(u => { u.stackMenuAt = null; });
   const items: StackItemView[] = derefAll(model, game(model)?.Stack);
   const source = deref(model, items.find(i => i.$key === at.key)?.SourceCard);
-  // A choice the game remembers carries a tick, shown or not, so every label starts at the same place as a pass's
+  // A remembered choice has a tick slot, filled or empty. A yield has an icon instead, so every label starts at the same place
   const item = (label: string, action: YieldAction, checked?: boolean) => (
     <button type="button" class="card-menu-item" role={checked === undefined ? 'menuitem' : 'menuitemcheckbox'} aria-checked={checked}
       onClick={() => { actions.stackYield(answer.key, action); close(); }}>
@@ -129,23 +129,23 @@ export function StackMenu({ model, actions }: { model: Model; actions: Actions }
   );
 }
 
-/** The questions that lay out cards, which can fold away to show the board. */
+/** The questions that lay out cards. They can be folded to show the board. */
 const FOLDABLE = new Set<Request['kind']>(['choices', 'reveal', 'order', 'manipulate', 'distribute']);
 
-/** The open question's answer as it stands, for the OK key to give; null while it cannot be given yet. */
+/** The open question's current answer, which the OK key sends. give is null while the answer is not complete. */
 let shownAnswer: { id: number; give: (() => void) | null } | null = null;
 
-/** Called as a question is drawn, with how to give the answer shown, or null when it is not ready. */
+/** Called when a question is drawn, with a function that sends the shown answer, or null when it is not ready. */
 function offerAnswer(id: number, give: (() => void) | null): void {
   shownAnswer = { id, give };
 }
 
-/** Gives the answer the open question shows, when it is that question and the answer is ready. */
+/** Sends the answer the open question shows, if id is that question and the answer is ready. */
 export function confirmShown(id: number): void {
   if (shownAnswer?.id === id) shownAnswer.give?.();
 }
 
-/** The way to fold a question laid out on the board, which goes beside its answer rather than in a heading. */
+/** The fold button of a question laid out on the board. It goes beside the answer buttons, not in the heading. */
 const FoldButton = createContext<ComponentChildren>(null);
 
 function RequestDialog({ req, model, answer }: { req: Request; model: Model; answer: Answer }) {
@@ -163,25 +163,25 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
       case 'distribute': return <Distribute req={req} model={model} answer={answer} />;
       case 'sideboard': return <Sideboard req={req} model={model} answer={answer} />;
       default: {
-        // A kind this browser does not know yet still gets an answer, so the game is never left waiting
+        // A kind of question this browser does not know still gets an answer, so the game never waits forever
         const unknown = req as { default?: unknown };
         return <ButtonRow><Button primary onClick={() => answer(unknown.default)}>{t('lblOK')}</Button></ButtonRow>;
       }
     }
   })();
-  // Not every kind of question has a title or a message; the first there is heads the dialog
+  // Not every kind of question has a title or a message. The dialog heading uses the title, or else the message
   const heading = 'title' in req ? req.title : undefined;
   const message = 'message' in req ? req.message : undefined;
-  // A list of what one card can do belongs on that card, the way desktop opens its menu under the cursor
+  // A list of one card's actions opens at that card, as desktop opens its menu under the cursor
   const at = (req.kind === 'choices' || req.kind === 'reveal') && (req.atX || req.atY) ? { x: req.atX ?? 0, y: req.atY ?? 0 } : null;
-  // Folded, the dialog stays drawn but hidden, so what was set in it is still there when it opens again
+  // A folded dialog stays drawn but hidden, so its settings are kept when it opens again
   const folded = ui.requestFolded === req.id;
   const setFolded = (on: boolean) => changeUi(u => { u.requestFolded = on ? req.id : null; });
   useEffect(() => () => {
     if (shownAnswer?.id === req.id) shownAnswer = null;
   }, []);
   const foldable = !at && FOLDABLE.has(req.kind);
-  // A question about cards sits on the dimmed board with no box round it. A phone keeps the way to fold up by the question, and its answer along the foot.
+  // A question about cards is drawn on the dimmed board with no box round it. A phone puts the fold button by the question and the answer along the bottom.
   const onBoard = cardPrompt(req);
   const phone = isPortrait();
   const where = onBoard && whereFrom(model, req);
@@ -210,7 +210,7 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
   </>;
 }
 
-/** A question on the board as one line: the card asking, then what it asks, without the engine's rules text and bookkeeping. */
+/** A question on the board as one line: the card that asks, then the question. The engine's rules text and bookkeeping are left out. */
 function QuestionLine({ model, req, text }: { model: Model; req: Request; text: string }) {
   const asked = splitQuestion(text);
   const from = deref(model, askingCard(model, req)) as CardView | undefined;
@@ -218,7 +218,7 @@ function QuestionLine({ model, req, text }: { model: Model; req: Request; text: 
   return <>{source && <><span class="ask-source">{source}</span><span class="ask-sep" aria-hidden="true">·</span></>}<SymbolText text={asked.ask} /></>;
 }
 
-/** Whose cards a choice is among and how many, when they all lie in one player's zone, which the dim hides on the board. */
+/** The owner, zone and number of the cards in a choice, when they are all in one player's zone. The dim layer hides this on the board. */
 function whereFrom(model: Model, req: Request): string | null {
   if (req.kind !== 'choices') return null;
   const cards = req.options.map(o => (o.card ? model.objects.get(o.card.ref) as CardView | undefined : undefined));
@@ -228,7 +228,7 @@ function whereFrom(model: Model, req: Request): string | null {
   return `${owner?.Name ?? ''} \u00b7 ${zoneTitle(first.Zone)} \u00b7 ${t(cards.length === 1 ? 'lblWebOneCard' : 'lblWebNCards', cards.length)}`;
 }
 
-/** The player's library as a pile in their sleeve, with the ends of the library either side of it. */
+/** The player's library as a pile in their sleeve. The top and bottom ends of the library are drawn on either side of it. */
 function LibraryPile({ model, count }: { model: Model; count: number }) {
   return (
     <div class="lib-pile" style={{ '--sleeve': cssUrl(playerSleeveUrl(me(model))) }} aria-hidden="true">
@@ -239,7 +239,7 @@ function LibraryPile({ model, count }: { model: Model; count: number }) {
   );
 }
 
-/** The key that gives a question's answer, as the player has chosen it. */
+/** The key the player has bound to send a question's answer. */
 function OkKey() {
   return <kbd>{keyName(boundKeys().ok)}</kbd>;
 }
@@ -254,12 +254,12 @@ function ButtonRow({ children }: { children: ComponentChildren }) {
   return <div class="actions">{useContext(FoldButton)}{children}</div>;
 }
 
-// A deck list arrives with its sections marked out as entries of their own, which read as headings, not choices
+// A deck list arrives with each section name as its own entry. These entries are shown as headings, not choices
 const SECTION = /^=+\s*(.*?)\s*=+$/;
 
 /**
- * Cards laid out to be looked at, in a window that folds to a bar so the board under it can be read before answering.
- * With aiSkipsOf it is the warning that a computer will not play some of its deck, worded and drawn as one.
+ * Cards shown to be looked at. The window folds to a bar so the player can read the board before answering.
+ * With aiSkipsOf it is a warning that an AI player will not play some cards in its deck, and it is worded and drawn as a warning.
  */
 function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
   model: Model; title: string; cards: RequestOption[]; close: () => void; aiSkipsOf?: PlayerView;
@@ -285,12 +285,12 @@ function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
     );
   }
   if (aiSkipsOf) {
-    // A heading is worth its line only when the cards come from more than one part of the deck
+    // Section headings are shown only when the cards come from more than one section of the deck
     const headed = cards.filter(isSection).length > 1;
     let dealt = 0;
     return (
       <Backdrop layer="reveal-back" dismiss={close}>
-        {/* Many cards are dealt faster, so the last still lands within half a second of the first */}
+        {/* With many cards each is dealt faster, so the last lands within half a second of the first */}
         <section class="zone-panel reveal-panel ai-skips" role="dialog" aria-label={title} style={`--deal-step: ${Math.min(60, Math.round(500 / Math.max(1, count)))}ms`}>
           <header>
             <span class="warn-mark" aria-hidden="true">!</span>
@@ -342,7 +342,7 @@ function OptionView({ model, opt, picked, onClick }: { model: Model; opt: Option
     return <InlineCard imageKey={opt.imageKey} name={opt.name ?? opt.label} title={opt.label ?? opt.name}
       picked={picked} onClick={onClick} />;
   }
-  // A sticker offered by name shows the piece of its sheet it is
+  // A sticker offered by name shows its own piece of the sticker sheet
   const sticker = cutFor(model, opt.label);
   return (
     <button class={picked ? 'text-option picked' : 'text-option'} onClick={onClick}>
@@ -351,7 +351,7 @@ function OptionView({ model, opt, picked, onClick }: { model: Model; opt: Option
   );
 }
 
-/** A player as the board shows them: their portrait, or their initial without one, with their life and name. */
+/** A player as the board shows them: their portrait, or their initial if there is none, with their life and name. */
 function PlayerOption({ model, player, picked, onClick }: { model: Model; player: PlayerView; picked?: boolean; onClick?: () => void }) {
   const [broken, setBroken] = useState(false);
   const src = playerAvatarUrl(player);
@@ -367,7 +367,7 @@ function PlayerOption({ model, player, picked, onClick }: { model: Model; player
   );
 }
 
-/** A card on the table, drawn by the board's own card code so it looks and updates exactly as it does there. */
+/** A card on the table, drawn by the board's own card code so it looks and updates exactly as it does on the board. */
 function BoardCard({ model, card, title, picked, onClick }: {
   model: Model; card: TrackedObject; title?: string; picked?: boolean; onClick?: () => void;
 }) {
@@ -391,7 +391,7 @@ function BoardCard({ model, card, title, picked, onClick }: {
   return <span class="card-host" ref={host} />;
 }
 
-/** A card that is not on the table: an image and a name, and the frame alone when there is no image. */
+/** A card that is not on the table, drawn as an image and a name. Only the frame is drawn when there is no image. */
 function InlineCard({ imageKey, name, title, picked, onClick }: {
   imageKey?: string; name?: string; title?: string; picked?: boolean; onClick?: () => void;
 }) {
@@ -407,10 +407,10 @@ function InlineCard({ imageKey, name, title, picked, onClick }: {
   );
 }
 
-// Naming a card offers every card face, so long lists get a search box and draw only the first matches
+// Naming a card offers every card face. So long lists get a search box and draw only the first matches
 const SEARCH_FROM = 20;
 const SHOW_AT_MOST = 200;
-// A line of text costs little to draw, so every creature type can be scrolled to without typing
+// A line of text is cheap to draw, so the player can scroll to any creature type without typing
 const WORDS_AT_MOST = 1000;
 
 function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; answer: Answer }) {
@@ -439,22 +439,22 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
   const ready = reveal || (picked.size >= req.min && (req.max < 0 || picked.size <= req.max));
   offerAnswer(req.id, ready ? () => answer(reveal ? [] : [...picked]) : null);
   const colours = !reveal && req.options.every(o => o.symbol);
-  // Choices that are only words read down a list, as a menu does, rather than across the page
+  // Choices that are only words are listed top to bottom, as in a menu, not across the page
   const words = onlyWords(req);
-  // The arrows move between the cards and Enter picks the one reached, leaving the OK key to answer
+  // The arrow keys move between the cards and Enter picks the focused card. The OK key sends the answer
   const onKey = (e: KeyboardEvent) => {
     const cards = [...(e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('.card[tabindex="0"]')];
     const at = cards.indexOf(document.activeElement as HTMLElement);
     if (at < 0) return;
     const by = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : 0;
     if (by) cards[Math.max(0, Math.min(cards.length - 1, at + by))].focus();
-    // A card focused by a click was picked by that click, so Enter after it gives the answer instead
+    // A card focused by a click was already picked by that click, so Enter after it sends the answer instead
     else if (e.key === 'Enter' && cards[at].matches(':focus-visible')) cards[at].click();
     else return;
     e.preventDefault();
     e.stopPropagation();
   };
-  // The bottom edge fades while more cards lie below it, and only then
+  // The bottom edge fades only while there are more cards below it
   const list = useRef<HTMLDivElement>(null);
   const [more, setMore] = useState(false);
   const measure = () => {
@@ -475,7 +475,7 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
       </div>
       <p class="hint">{note}</p>
       <ButtonRow>
-        {/* Picking nothing is an answer the question allows, so it is offered rather than left to an empty Confirm */}
+        {/* The question allows picking nothing, so a button for it is shown instead of relying on an empty Confirm */}
         {!reveal && req.min === 0 && <Button onClick={() => answer([])}>{t('lblWebDialogChooseNone')}</Button>}
         <Button primary disabled={!ready} onClick={() => answer(reveal ? [] : [...picked])}>{reveal ? t('lblOK') : t('lblWebDialogConfirm')} <OkKey /></Button>
       </ButtonRow>
@@ -483,7 +483,7 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
   );
 }
 
-/** A colour to choose, as its mana symbol from the skin with its name under it. */
+/** A colour to choose, shown as its mana symbol from the skin with its name under it. */
 function ColourOption({ symbol, picked, onClick }: { symbol: string; picked: boolean; onClick: () => void }) {
   const name = COLOURS.find(([letter]) => letter === symbol)?.[1];
   return (
@@ -493,12 +493,12 @@ function ColourOption({ symbol, picked, onClick }: { symbol: string; picked: boo
   );
 }
 
-/** Every option is a line of text, with no card, player or mana symbol to draw. */
+/** Whether every option is a line of text, with no card, player or mana symbol to draw. */
 function onlyWords(req: ChoicesRequest): boolean {
   return req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player && !o.symbol);
 }
 
-/** A label with the typed text picked out, unless it draws mana symbols, which a mark would split. */
+/** A label with the typed text highlighted. A label with mana symbols is not highlighted, because the mark would split a symbol. */
 function Marked({ label, typed }: { label: string; typed: string }) {
   const span = label.includes('{') ? null : matchedSpan(label, typed);
   if (!span) return <SymbolText text={label} />;
@@ -506,8 +506,8 @@ function Marked({ label, typed }: { label: string; typed: string }) {
 }
 
 /**
- * Words to choose from, as one searchable list worked from the keyboard: the highlight moves with the arrows,
- * Enter answers, and on a single pick a double-click, or a second tap on a phone, answers too.
+ * Words to choose from, in one searchable list that works from the keyboard. The arrow keys move the highlight and Enter answers.
+ * For a single pick, a double-click or a second tap on a phone also answers.
  */
 function WordChoices({ req, model, answer }: { req: ChoicesRequest; model: Model; answer: Answer }) {
   const single = req.max === 1;
@@ -521,7 +521,7 @@ function WordChoices({ req, model, answer }: { req: ChoicesRequest; model: Model
   const search = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    // On a phone the keyboard would cover the list, so it waits for a tap on the box
+    // On a phone the keyboard would cover the list, so the box is focused only when the player taps it
     if (!isPortrait()) search.current?.focus();
   }, []);
   useEffect(() => {
@@ -544,7 +544,7 @@ function WordChoices({ req, model, answer }: { req: ChoicesRequest; model: Model
   };
   const onKey = (e: KeyboardEvent) => {
     const typing = e.target === search.current;
-    // Cancel and a chip's remove button answer their own keys
+    // Cancel and a chip's remove button handle their own Enter and Space keys
     const other = e.target instanceof HTMLButtonElement && !e.target.classList.contains('word');
     if (other && (e.key === 'Enter' || e.key === ' ')) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -615,10 +615,10 @@ function WordChoices({ req, model, answer }: { req: ChoicesRequest; model: Model
   );
 }
 
-/** The engine ends a triggered ability's text with what set it off, in square brackets. */
+/** The engine ends a triggered ability's text with the cause of the trigger, in square brackets. */
 const SET_OFF_BY = /\s*\[([^\]]*)\]$/;
 
-/** An ability to be put in order: the card it comes from, pictured and named, over its text. */
+/** An ability to be put in order. The picture and name of its source card are shown above its text. */
 function AbilityRow({ model, opt, text, detail, tag, onClick }: {
   model: Model; opt: RequestOption; text: string; detail: string; tag?: string; onClick: () => void;
 }) {
@@ -637,11 +637,11 @@ function AbilityRow({ model, opt, text, detail, tag, onClick }: {
 
 const CHEVRON = { up: 'M6.5 14.5l5.5-5.5 5.5 5.5', down: 'M6.5 9.5l5.5 5.5 5.5-5.5' };
 
-/** How long a card takes to slide to a new place in the order, and to settle when it is put down. */
+/** How long a card takes to slide to a new place in the order, and to settle when it is dropped. */
 const CARRY_MS = 170;
 const CARRY_EASE = 'cubic-bezier(.2,.8,.2,1)';
 
-/** Where an item rests in its row, less any slide it is part way through. */
+/** Where an item rests in its row, minus any slide still in progress. */
 function resting(el: Element): DOMRect {
   const r = el.getBoundingClientRect();
   const [x = 0, y = 0] = getComputedStyle(el).translate.split(' ').map(v => parseFloat(v) || 0);
@@ -649,8 +649,8 @@ function resting(el: Element): DOMRect {
 }
 
 /**
- * Slides the items a change moves from where they stood to their new places: call what it returns just before the
- * change. Items are matched by data-slide, so one drawn again in another row still slides from where it was.
+ * Slides the items that a change moves from their old places to their new ones. Call the returned function just before
+ * the change. Items are matched by data-slide, so an item redrawn in another row still slides from its old place.
  */
 function useSlide(items: () => HTMLElement[], change: unknown): () => void {
   const stood = useRef<Map<string, DOMRect> | null>(null);
@@ -670,22 +670,22 @@ function useSlide(items: () => HTMLElement[], change: unknown): () => void {
 }
 
 interface Carry {
-  /** The row the card is lifted from; the copy is drawn beside it with the row's classes, so the card in it is drawn as the row draws it. */
+  /** The row the card is lifted from. The copy is drawn next to it with the row's classes, so the card looks the same as in the row. */
   row: HTMLElement;
   copyClass: string;
   ghost: { current: HTMLElement | null };
-  /** The places the card can be set down. */
+  /** The places where the card can be dropped. */
   slots: () => Element[];
-  /** Where the card stands now, which it settles into when let go, if not where it was lifted from. */
+  /** The card's current element, which the copy settles onto when released. Without it, the copy settles onto the lifted element. */
   home?: () => Element | null;
-  /** A card leans the way it is moving; a line of words does not, and keeps its width. */
+  /** A card tilts in the direction it moves. A line of words does not tilt, and it keeps its width. */
   words: boolean;
   lifted: () => void;
   over: (slot: number) => void;
   dropped: () => void;
 }
 
-/** Lifts a card onto a copy that follows the pointer, moves it to the place nearest the pointer as it goes, and settles it there when let go. A finger scrolls the dialog, so only a mouse or pen carries. */
+/** Drags a card as a copy that follows the pointer. The card moves to the place nearest the pointer and settles there on release. A finger scrolls the dialog, so only a mouse or pen drags. */
 function carryCard(e: PointerEvent, c: Carry): void {
   if (e.pointerType === 'touch' || e.button !== 0 || c.ghost.current) return;
   const el = e.currentTarget as HTMLElement;
@@ -697,7 +697,7 @@ function carryCard(e: PointerEvent, c: Carry): void {
     from = el.getBoundingClientRect();
     const lifted = make('div', `${c.copyClass} order-ghost`);
     lifted.style.cssText = `left: ${from.left}px; top: ${from.top}px;${c.words ? ` width: ${from.width}px; min-width: 0;` : ''}`;
-    // The row's cards are sized to fit the screen, and the copy's card is the same size
+    // The row's cards are sized to fit the screen, so the copy gets the same size
     const fit = c.row.style.getPropertyValue('--fit');
     if (fit) lifted.style.setProperty('--fit', fit);
     lifted.append(el.cloneNode(true));
@@ -711,7 +711,7 @@ function carryCard(e: PointerEvent, c: Carry): void {
     const dy = m.clientY - start.y;
     const lifted = c.ghost.current;
     if (!lifted || !from) return;
-    // The card leans the way it is moving, and settles upright when it stops
+    // The card tilts in the direction it moves, and turns upright when it stops
     lean += (Math.max(-9, Math.min(9, (m.clientX - last) * 0.9)) - lean) * 0.35;
     last = m.clientX;
     lifted.style.translate = `${dx}px ${dy}px`;
@@ -744,30 +744,30 @@ function carryCard(e: PointerEvent, c: Carry): void {
       { translate: `${to.left - from.left}px ${to.top - from.top}px`, rotate: '0deg', scale: '1' }],
     { duration: CARRY_MS, easing: CARRY_EASE, fill: 'forwards' }).finished.then(done, done);
   };
-  // The click that ends a carry is not a tap on the card, which trackDrag sees to
+  // trackDrag makes sure the click that ends a drag does not count as a tap on the card
   trackDrag(e, 5, { start: lift, move: onMove, end: onUp });
 }
 
 function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer: Answer }) {
   const [chosen, setChosen] = useState<number[]>(() => [...req.selected]);
   const [remember, setRemember] = useState(false);
-  /** The card tapped to be moved, by its place among the options. */
+  /** The card tapped to be moved, by its index in the options. */
   const [held, setHeld] = useState<number | null>(null);
-  /** The card the pointer is carrying, by its place among the options. */
+  /** The card being dragged, by its index in the options. */
   const [carried, setCarried] = useState<number | null>(null);
   const row = useRef<HTMLDivElement>(null);
   const order = useRef(chosen);
   order.current = chosen;
   const ghost = useRef<HTMLElement | null>(null);
-  // Options that are only words, such as abilities, are listed down the dialog; cards keep their row
+  // Options that are only words, such as abilities, are listed down the dialog. Cards stay in a row
   const listed = req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player);
-  // A phone sets these cards four to a row (portrait.css), since one row would leave them too small to read
+  // A phone puts these cards four to a row (portrait.css), because in one row they would be too small to read
   useCardFit(row, listed || isPortrait() ? 0 : chosen.length, { gap: 22, below: 38 });
   const words = req.options.map(o => {
     const found = SET_OFF_BY.exec(o.label ?? '');
     return found ? { text: o.label.slice(0, found.index), detail: found[1] } : { text: o.label ?? '', detail: '' };
   });
-  // What set an ability off is worth its line only where it tells two of them apart
+  // The cause of each trigger is shown only when the causes differ, so it tells the abilities apart
   const tellsApart = new Set(words.map(w => w.detail)).size > 1;
   const items = () => (row.current ? [...row.current.children] as HTMLElement[] : []);
   const slide = useSlide(items, chosen);
@@ -797,7 +797,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const step = (by: number) => {
     if (at >= 0 && at + by >= 0 && at + by < chosen.length) move(at, at + by);
   };
-  // The arrow keys carry the card that is held along the row, or the ability up and down its list
+  // The arrow keys move the held card along the row, or the held ability up and down its list
   const stepRef = useRef(step);
   stepRef.current = step;
   useEffect(() => {
@@ -812,11 +812,11 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   }, []);
   const waiting = req.options.some((_, i) => !chosen.includes(i));
   offerAnswer(req.id, chosen.length >= req.min && chosen.length <= req.max ? () => answer({ indices: chosen, remember }) : null);
-  // A card may leave the row only when the question lets some be left out
+  // A card can be removed from the row only when the question allows some to be left out
   const optional = req.min < req.options.length;
   const rememberBox = req.remember
     && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> {t('lblWebDialogRememberOrder')}</label>;
-  // A library's order is named at both ends; any other order by what goes first
+  // A library order has a label at both ends. Any other order has a label only on the first item
   const library = !listed && (req.top === t('lblClosestToTop') || req.top === t('lblClosestToBottom'));
   const otherEnd = req.top === t('lblClosestToTop') ? t('lblClosestToBottom') : t('lblClosestToTop');
   const railed = !listed && !optional && !!req.top && !library;
@@ -850,13 +850,13 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
                 ? <AbilityRow model={model} opt={req.options[i]} text={words[i].text} detail={tellsApart ? words[i].detail : ''}
                     tag={pos === 0 ? req.top : undefined} onClick={hold} />
                 : <OptionView model={model} opt={req.options[i]} onClick={hold} />}
-              {/* The number is the order they go in, which is the question the dialog is asking */}
+              {/* The number is the card's place in the order, which is what the dialog asks for */}
               <span class="order-number">{pos + 1}</span>
               {!listed && !railed && pos === 0 && req.top && <span class="order-end">{req.top}</span>}
               {library && pos === chosen.length - 1 && pos > 0 && <span class="order-end">{otherEnd}</span>}
-              {/* Under every card, shown for the one that is held, so holding a card moves nothing else in the dialog */}
+              {/* Drawn under every card but shown only for the held card, so holding a card does not move anything else in the dialog */}
               {!listed && <span class="order-nudge">{nudge(-1, pos)}{nudge(1, pos)}</span>}
-              {/* The held ability's arrows take the place of its grip, so they are where the eye already is */}
+              {/* The held ability's arrows replace its grip, so they appear where the player is already looking */}
               {listed && (held === i ? <span class="order-step">{stepButton(-1, pos)}{stepButton(1, pos)}</span> : <span class="order-grip" aria-hidden="true" />)}
             </div>
           );
@@ -879,25 +879,25 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   );
 }
 
-// The host passes the whole library with only the top cards movable, and those placed after the rest go to the bottom
+// The host sends the whole library, but only the top cards can move. Cards placed after the rest go to the bottom
 type Shelf = 'top' | 'bottom';
 
-/** The top of the library and its bottom either side of the pile; the further a card lies from the pile, the nearer it is to that end. */
+/** The top and bottom of the library on either side of the pile. The further a card is from the pile, the nearer it is to that end. */
 function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Model; answer: Answer }) {
   const all = req.options.map((_, i) => i);
   const rest = all.filter(i => !req.movable.includes(i));
   const [piles, setPiles] = useState(() => ({ top: all.filter(i => req.movable.includes(i)), bottom: [] as number[] }));
   const now = useRef(piles);
   now.current = piles;
-  /** The card the pointer is carrying, by its place among the options. */
+  /** The card being dragged, by its index in the options. */
   const [carried, setCarried] = useState<number | null>(null);
   const ghost = useRef<HTMLElement | null>(null);
   const bothEnds = req.toBottom || req.toTop;
   const row = useRef<HTMLDivElement>(null);
-  // Each end's cards, or the empty place where they would go, and the pile between them, in one row. A phone stacks the ends instead (portrait.css).
+  // One row holds each end's cards, or an empty place for an end with none, and the pile between them. A phone stacks the ends instead (portrait.css).
   useCardFit(row, isPortrait() ? 0 : Math.max(piles.top.length, 1) + (bothEnds ? Math.max(piles.bottom.length, 1) : 0) + 1, { gap: 18 });
 
-  // Each end's cards, and the empty place of an end with none, in the order they stand
+  // Each end's cards, and the empty place of an end with none, in page order
   const slots = () => (row.current ? [...row.current.querySelectorAll<HTMLElement>('.lib-card')] : []);
   const slide = useSlide(() => slots().filter(el => el.dataset.slide), piles);
   useEffect(() => () => ghost.current?.remove(), []);
@@ -924,7 +924,7 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
       dropped: () => setCarried(null),
     });
   };
-  // A card sent across lands beside the pile, the middle of its new end
+  // A card sent to the other end goes next to the pile, which is the middle of the library at that end
   const send = (from: Shelf, pos: number) => setPiles(p => {
     const card = p[from][pos];
     const next = { top: [...p.top], bottom: [...p.bottom] };
@@ -936,7 +936,7 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
 
   offerAnswer(req.id, () => answer([...piles.top, ...rest, ...piles.bottom]));
 
-  // The top runs from its end to the pile, and the bottom from the pile to its end, so each end's card is the one furthest out
+  // The top runs from its end to the pile, and the bottom from the pile to its end. So the card at each end is the one furthest out
   const side = (name: Shelf) => (
     <div class={`lib-side ${name}`}>
       <div class="lib-cards">
@@ -995,12 +995,12 @@ function Text({ req, answer }: { req: TextRequest; answer: Answer }) {
 /** How many of the first numbers are offered as buttons. */
 const QUICK_PICKS = 10;
 
-/** A whole number: stepped, picked from the first few, or typed. */
+/** A whole number, set with the step buttons, picked from the first few, or typed. */
 function NumberPick({ req, answer }: { req: NumberRequest; answer: Answer }) {
   const top = req.max ?? 999_999_999;
   const [typed, setTyped] = useState(String(req.min));
   const input = useRef<HTMLInputElement>(null);
-  // A phone would raise its keyboard over the quick picks, which a thumb uses instead
+  // On a phone the keyboard would cover the quick picks, and the player uses those instead
   useEffect(() => {
     if (!isPortrait()) input.current?.select();
   }, []);
@@ -1028,7 +1028,7 @@ function NumberPick({ req, answer }: { req: NumberRequest; answer: Answer }) {
 }
 
 function Distribute({ req, model, answer }: { req: DistributeRequest; model: Model; answer: Answer }) {
-  // It opens on desktop's Auto split, lethal damage to each in turn and the rest onward, for the player to change
+  // It starts with desktop's Auto split, which the player can change. Auto gives lethal damage to each target in turn and the rest to the last
   const [values, setValues] = useState(() => [...req.default]);
   const step = (i: number, delta: number) => setValues(v => {
     if (v[i] + delta < req.perMin) return v;
@@ -1038,14 +1038,14 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
   });
   const left = req.amount - values.reduce((a, b) => a + b, 0);
   offerAnswer(req.id, left === 0 ? () => answer(values) : null);
-  // Players first, opponents before you, then the cards; each keeps its own place in the answer
+  // Opponents are shown first, then you, then the cards. Each target keeps its own index in the answer
   const rank = (i: number) => {
     const ref = req.options[i].player;
     const player = ref ? model.objects.get(ref.ref) as PlayerView | undefined : undefined;
     return !player ? 2 : isLocal(model, player) ? 1 : 0;
   };
   const order = req.options.map((_, i) => i).sort((a, b) => rank(a) - rank(b) || a - b);
-  // What combat damage comes to on each target: whether a blocker's is lethal, and the life a player is left on
+  // The effect of the damage on each target: whether it is lethal to a creature, and the life a player is left with
   const note = (i: number): { text: string; lethal?: boolean } => {
     const ref = req.options[i].player;
     const player = ref ? model.objects.get(ref.ref) as PlayerView | undefined : undefined;
@@ -1056,9 +1056,9 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
     return short <= 0 ? { text: t('lblLethal'), lethal: true } : { text: values[i] ? t('lblWebDialogShortOfLethal', short) : '' };
   };
   const row = useRef<HTMLDivElement>(null);
-  // Under each card: its stepper, and the note on lethal damage where the question has one
+  // Under each card are its step buttons, and the lethal damage note if the question has lethal values
   useCardFit(row, order.length, { gap: 26, below: req.lethal ? 88 : 62, wrap: true });
-  // Side by side, each with its count under it, as the cards stand on the table
+  // The targets are side by side, each with its count under it, as cards are laid out on the table
   return (
     <>
       <div class="dist-row" ref={row}>
@@ -1076,10 +1076,10 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
       </div>
       <ButtonRow>
         <span class={left ? 'dist-left' : 'dist-left done'}>
-          {/* A pip for each point, filled as it is placed, while there are few enough to count at a glance */}
+          {/* One pip per point, filled when the point is assigned. Pips are shown only for small amounts that are easy to count */}
           {req.amount <= 20 && <span class="dist-pips">{Array.from({ length: req.amount }, (_, k) => <i key={k} class={k < req.amount - left ? 'on' : ''} />)}</span>}
           {left ? t('lblWebDialogLeftToAssign', left) : t('lblWebDialogAllAssigned', req.amount)}
-          {/* Beside what it resets, and away from the answer */}
+          {/* Reset is next to the count it resets, and away from the answer buttons */}
           <Button onClick={() => setValues([...req.default])}>{t('lblReset')}</Button>
         </span>
         {req.maySkip && <Button onClick={() => answer(null)}>{t('lblSkip')}</Button>}
@@ -1089,7 +1089,7 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
   );
 }
 
-// Between games: move copies between the main deck and the sideboard. The host re-asks if the deck is illegal
+// Between games the player moves copies between the main deck and the sideboard. The host asks again if the deck is illegal
 function Sideboard({ req, model, answer }: { req: SideboardRequest; model: Model; answer: Answer }) {
   const [inMain, setInMain] = useState(() => [...req.main]);
   const move = (i: number, delta: number) => setInMain(m => m.map((n, k) => (k === i ? n + delta : n)));
@@ -1097,7 +1097,7 @@ function Sideboard({ req, model, answer }: { req: SideboardRequest; model: Model
   const ghost = useRef<HTMLElement | null>(null);
   useEffect(() => () => ghost.current?.remove(), []);
   const lists = () => (columns.current ? [...columns.current.querySelectorAll('.sb-list')] : []);
-  // A copy carried over the other list moves there at once, and back again if carried back, as a click would move it
+  // A copy dragged over the other list moves there at once, as a click would. Dragging it back moves it back
   const carry = (e: PointerEvent, i: number, fromMain: boolean) => {
     if (!columns.current) return;
     let inMainNow = fromMain;

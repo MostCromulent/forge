@@ -1,9 +1,9 @@
-// Sorts the host's one block of rules text into the parts of a printed card, and an unrecognised line stays a line of text
+// Sorts the host's single block of rules text into the parts of a printed card. A line that is not recognised stays a line of text.
 
 import { t } from '../text';
 import type { KeywordText } from '../protocol';
 
-/** A stretch of text, where muted does not apply just now and struck is a word a text-changing effect replaced. */
+/** A run of text. `muted` marks text that does not apply right now. `struck` marks a word that a text-changing effect replaced. */
 interface Run {
   text: string;
   muted: boolean;
@@ -15,21 +15,21 @@ export type Line = Run[];
 export type Block =
   /** Keywords as chips, with the reminder text any of them carries. */
   | { kind: 'keywords'; items: Line[]; reminders: Line[] }
-  /** An activated or loyalty ability: its cost in a column, then what it does. label is an ability word or a name. */
+  /** An activated or loyalty ability, with its cost in a column and then its effect. `label` is an ability word or a name. */
   | { kind: 'ability'; cost: Line; label?: Line; effect: Line; loyalty?: 'plus' | 'minus' | 'zero' }
   /** One of a modal spell's modes. */
   | { kind: 'mode'; text: Line }
-  /** A paragraph; label names the other half of the card it describes, such as its Adventure. */
+  /** A paragraph. `label` names the other half of the card that it describes, such as its Adventure. */
   | { kind: 'text'; text: Line; label?: Line };
 
-/** Something the game has done to the card that fits in a chip: counters, damage, shields. */
+/** A change the game made to the card that fits in a chip, such as counters, damage or shields. */
 interface Chip {
   kind: 'counter' | 'damage' | 'shield' | 'status';
   text: string;
 }
 
 export interface SortedText {
-  /** Token, Emblem and the like: what the card is, when it is not a card. */
+  /** Token, Emblem and similar tags. They say what the object is when it is not a card. */
   tag?: string;
   blocks: Block[];
   chips: Chip[];
@@ -75,7 +75,7 @@ function chipFor(text: string): Chip | null | 'skip' {
   return null;
 }
 
-// The shapes CardDetailUtil gives the other notes on a card, some wrapped in marks desktop colours them by, which are dropped
+// The formats CardDetailUtil uses for the other notes on a card. Some are wrapped in marks that desktop colours them by. The marks are dropped
 const NOTE_PREFIXES = [
   'Text changed:', 'Intensity:', 'Prevent the next ', 'Draft Notes:', 'Sector:', 'Sprocket:', 'Protected by:', 'Imprinting:',
   'Exiled:', 'Exiled until this leaves the battlefield:', 'Haunted by:', 'Haunting ', 'Encoded:', 'Must block ',
@@ -92,10 +92,10 @@ function noteFor(line: Line): Line | null {
   return NOTE_PREFIXES.some(p => text.startsWith(p)) ? line : null;
 }
 
-// A loyalty ability's cost: +1, −2, 0, −X. Forge writes the minus as a true minus sign, but a hyphen is taken too
+// A loyalty ability's cost, such as +1, −2, 0 or −X. Forge writes a true minus sign, but a hyphen is accepted too
 const LOYALTY = /^([+−–-](?:\d+|X)|0): /;
 
-// What a cost without a mana or tap symbol starts with
+// The words that a cost without a mana or tap symbol starts with
 const COST_VERBS = /^(Sacrifice|Discard|Pay|Exile|Remove|Tap|Untap|Return|Put|Reveal|Collect|Forage|Mill)\b/;
 
 /** Where an activated ability's cost ends, or -1 when the line is not one. */
@@ -114,7 +114,7 @@ function keywordsEnd(text: string): number {
   const head = reminder ? text.slice(0, reminder.index) : text;
   if (!head || head.length > 60 || /[.:;—]/.test(head) || !/^[A-Z]/.test(head)) return -1;
   const parts = head.split(/,\s*/);
-  // Names, numbers and costs only: an apostrophe or a bracket means a sentence or a name, such as "Alice's Commander"
+  // Only names, numbers and costs are allowed. An apostrophe or a bracket means a sentence or a name, such as "Alice's Commander"
   return parts.every(p => p.length <= 32 && /^[A-Za-z][A-Za-z0-9 {}/+-]*$/.test(p)) ? head.length : -1;
 }
 
@@ -138,7 +138,7 @@ function reminderOf(line: Line, end: number): Line | null {
   return open < 0 ? null : slice(line, open + 1, text.endsWith(')') ? text.length - 1 : text.length);
 }
 
-/** How a card's rules differ from its printed text, for the preview to say. */
+/** How a card's rules differ from its printed text, for the preview to show. */
 export interface Changes {
   /** Keywords the card has that are not printed on it, in lower case. */
   gained: Set<string>;
@@ -148,12 +148,12 @@ export interface Changes {
   lostText: string[];
 }
 
-// Rules text as compared: no reminder text, no tags, one space between words, no full stop at the end, in lower case
+// Normalises rules text for comparison. It removes reminder text, tags and a final full stop, leaves one space between words and lower-cases it
 const normal = (text: string) => text.replace(/<[^>]*>/g, '').replace(/\((?:[^()]|\([^()]*\))*\)/g, '')
   .replace(/\s+/g, ' ').trim().replace(/\.$/, '').toLowerCase();
 const paragraphs = (text: string) => text.split(/\r?\n/).map(normal).filter(Boolean);
 
-/** Compares printed rules with rules now, applying swaps to the printed text so a rewritten paragraph is not taken for a lost one. */
+/** Compares the printed rules with the current rules. The swaps are applied to the printed text first, so a rewritten paragraph is not counted as lost. */
 export function changesOf(printed: string, now: string, swaps: Readonly<Record<string, string>>,
   keywords: readonly KeywordText[]): Changes {
   let swapped = printed;
@@ -180,7 +180,7 @@ export function changesOf(printed: string, now: string, swaps: Readonly<Record<s
   return changes;
 }
 
-/** The host writes no reminder text for evergreen keywords, so a line of keywords without any takes it from keywords. */
+/** Sorts the rules text. The host writes no reminder text for evergreen keywords, so a keyword line without any takes it from `keywords`. */
 export function sortRulesText(lines: Line[], keywords: readonly KeywordText[] = []): SortedText {
   const sorted: SortedText = { blocks: [], chips: [], notes: [] };
   let first = true;
@@ -234,7 +234,7 @@ export function sortRulesText(lines: Line[], keywords: readonly KeywordText[] = 
       }
       continue;
     }
-    // The spell on the other half of the card, which has a cost to cast rather than to activate
+    // The spell on the other half of the card. Its cost is a casting cost, not an activation cost
     const half = /^(Adventure|Omen|Prepared) — /.exec(text);
     if (half) {
       sorted.blocks.push({ kind: 'text', label: slice(line, 0, half[1].length), text: slice(line, half[0].length) });

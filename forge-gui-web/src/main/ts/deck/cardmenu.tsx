@@ -1,4 +1,4 @@
-// A card's menu in the editor, which holds every route a drag offers, in words, so nothing depends on dragging
+// A card's menu in the editor. It offers every move a drag can make, so no action needs dragging.
 
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { imageUrl } from '../images';
@@ -10,13 +10,13 @@ import { t, type TextKey } from '../text';
 import { addCard, preferPrinting, preferredPrinting } from './preferred';
 import { Backdrop } from '../dialog';
 
-/** The parts of a set the printing picker filters by, as desktop's does: the section's name in the edition file, and its label. */
+/** The art styles the printing picker filters by, as on desktop. Each entry is a section name in the edition file and its label. */
 const ART_STYLES: [string, TextKey][] = [
   ['', 'lblArtStyleAll'], ['cards', 'lblArtStyleStandard'], ['borderless', 'lblArtStyleBorderless'], ['full art', 'lblArtStyleFullArt'],
   ['showcase', 'lblArtStyleShowcase'], ['extended art', 'lblArtStyleExtendedArt'], ['retro frame', 'lblArtStyleRetroFrame'], ['promo', 'lblArtStylePromo'],
 ];
 
-/** How many copies a section holds, as the printing picker says it. */
+/** The printing picker's text for how many copies a section holds. */
 const IN_SECTION: Record<DeckSection, TextKey> = {
   Main: 'lblWebCardMenuInMain', Sideboard: 'lblWebCardMenuInSideboard', Commander: 'lblWebCardMenuInCommander',
   Avatar: 'lblWebCardMenuInAvatar', Planes: 'lblWebCardMenuInPlanes', Schemes: 'lblWebCardMenuInSchemes',
@@ -31,7 +31,7 @@ export interface MenuAt {
   y: number;
 }
 
-/** The card as a section holds it, or undefined when that section has none. */
+/** The named card in a section, or undefined when the section does not hold it. */
 function cardIn(state: EditorState, zone: Zone | DeckSection, name: string): EditorCard | undefined {
   const cards = zone === 'Main' ? state.main.flatMap(g => g.cards) : zone === 'Sideboard' ? state.sideboard
     : zone === 'Commander' ? state.commanders : [];
@@ -53,7 +53,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
   const inDeck = at.from === 'catalogue' ? undefined : cardIn(state, at.from, at.name);
   const zone = at.from === 'catalogue' ? null : at.from;
   const other: DeckSection = zone === 'Main' ? 'Sideboard' : 'Main';
-  // A main-only collection deck is its main deck alone, each card in the printing owned
+  // A main-only collection deck has only a main deck. Each card uses the printing the player owns.
   if (state.mainOnly) {
     return (
       <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
@@ -64,7 +64,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
       </div>
     );
   }
-  // A pool's cards only move between the pool and the deck: there is no sideboard of its own or printing to choose
+  // A pool's cards only move between the pool and the deck. There is no separate sideboard and no printing to choose.
   if (state.limited) {
     return (
       <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
@@ -111,7 +111,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
           {t('lblWebCardMenuMakeCommander')}
         </button>
       )}
-      {/* A card in the deck changes the printing of its copies there; one in the catalogue, the printing this browser prefers for it */}
+      {/* For a card in the deck this changes the printing of its copies. For a catalogue card it sets the printing this browser prefers. */}
       <button role="menuitem" onClick={act(() => printings(zone))}>{t(zone ? 'lblChangePrinting' : 'lblWebCardMenuPreferredPrinting')}</button>
       {zone !== null && inDeck && (
         <button role="menuitem" onClick={act(() => actions.edit({ op: 'foil', name: at.name, from: zone, count: 1 }))}>
@@ -131,7 +131,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
   );
 }
 
-/** Every printing as a picture, filtered by set or style as desktop's dialog is. Steppers move copies between printings so the total never changes, and each step is saved as it is made, so there is no Cancel. */
+/** Shows every printing as a picture, filtered by set or style as in desktop's dialog. Steppers move copies between printings, so the total never changes. Each step is saved at once, so there is no Cancel. */
 export function PrintingPicker({ name, zone, model, state, actions, close }: {
   name: string; zone: DeckSection | null; model: Model; state: EditorState; actions: Actions; close: () => void;
 }) {
@@ -146,7 +146,7 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
     op: 'printings', name, from: zone ?? undefined, count: card?.count ?? 0,
     printings: [...next].filter(([, n]) => n > 0).map(([key, count]) => ({ name: key, count })),
   });
-  // One more of this printing is one fewer of the printing with the most copies, and the other way round
+  // Adding a copy of this printing takes one from the printing with the most copies. Removing one gives it to that printing.
   const shift = (key: string, by: 1 | -1) => {
     const next = new Map(counts);
     const others = list.map(p => p.key).filter(k => k !== key && !list.find(p => p.key === k)?.problem);
@@ -157,7 +157,7 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
     next.set(donor, (next.get(donor) ?? 0) - by);
     send(next);
   };
-  // The printings held when the list arrives come first, as desktop puts the current one first, and stay put while counts change
+  // Held and preferred printings are listed first, as desktop lists the current one first. The order is fixed when the list arrives.
   const ordered = useMemo(() => [...list].sort((x, y) => Number(counts.has(y.key) || y.key === preferred) - Number(counts.has(x.key) || x.key === preferred)), [list]);
   const [query, setQuery] = useState('');
   const [style, setStyle] = useState('');
@@ -183,7 +183,7 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
             return (
               <div key={p.key} class={`print-cell${(zone ? n : p.key === preferred) ? ' cur' : ''}${p.problem ? ' off' : ''}${zone ? '' : ' choose'}`}
                 onClick={zone || p.problem ? undefined : () => preferPrinting(name, p.key)}
-                // Two clicks on a printing make every copy that printing and close, as desktop's dialog does. Two quick presses of a stepper are only that.
+                // A double-click on a printing sets every copy to it and closes, as in desktop's dialog. A double-click on a stepper is ignored here.
                 onDblClick={e => {
                   if (p.problem || (e.target as Element).closest('button')) return;
                   if (zone) send(new Map([[p.key, card?.count ?? 0]]));

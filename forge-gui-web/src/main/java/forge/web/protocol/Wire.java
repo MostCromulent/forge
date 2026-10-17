@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
-/** Turns the message records into JSON and back. A null component is left out of the JSON, and only components marked {@link Nullable} may be null. */
+/** Turns the message records into JSON and back. A null component is left out of the JSON. Only components marked {@link Nullable} may be null. */
 public final class Wire {
     private Wire() {
     }
@@ -35,14 +35,14 @@ public final class Wire {
         String value();
     }
 
-    /** A message from the browser. Empty when the record has a {@code t} component naming several at once. */
+    /** A message from the browser. The value is empty when the record has a {@code t} component that names several commands. */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     @interface Command {
         String value() default "";
     }
 
-    /** A question the game waits on, whose value is empty when a {@code kind} component names several kinds that share one shape. */
+    /** A question the game waits on. The value is empty when a {@code kind} component names several kinds that share one shape. */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     @interface Request {
@@ -69,17 +69,17 @@ public final class Wire {
         String value();
     }
 
-    /** The field's TypeScript type, for a component whose Java type says too little (a raw JSON tree). */
+    /** The field's TypeScript type, for a component whose Java type is not specific enough (a raw JSON tree). */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.RECORD_COMPONENT)
     @interface Ts {
         String value();
     }
 
-    /** The classes whose nested records are the protocol. The campaign modes' are their own, so a build can leave them out. */
+    /** The classes whose nested records make up the protocol. The campaign modes have their own class, so a build can leave them out. */
     private static final List<Class<?>> HOLDERS = List.of(FromBrowser.class, ToBrowser.class, CampaignProtocol.class);
 
-    /** The protocol's records that carry a mark, by name, which is the order the browser's types are written in. */
+    /** The protocol's records that carry a mark, sorted by name. The browser's types are written in this order. */
     @SuppressWarnings("unchecked")
     static List<Class<? extends Record>> marked(final Class<? extends Annotation> mark) {
         return HOLDERS.stream().flatMap(h -> Stream.of(h.getDeclaredClasses())).filter(c -> c.isAnnotationPresent(mark))
@@ -100,7 +100,7 @@ public final class Wire {
         return out;
     }
 
-    /** The JSON for a request's own fields, without the id the waiting queue gives it. */
+    /** The JSON for a request's own fields, without the id that the waiting queue adds. */
     public static JsonObject encodeRequest(final Record request) {
         final JsonObject out = new JsonObject();
         out.addProperty("t", "request");
@@ -165,7 +165,7 @@ public final class Wire {
         throw new IllegalArgumentException("No JSON form for " + value.getClass().getName());
     }
 
-    /** The command records by each name they read, built on first use since FromBrowser's list is made through this class. */
+    /** The command records by each name they handle. Built on first use, because FromBrowser's list is made through this class. */
     private static final class ByName {
         static final Map<String, Class<? extends Record>> COMMANDS = new HashMap<>();
 
@@ -176,7 +176,7 @@ public final class Wire {
         }
     }
 
-    /** A message from the browser as the record its {@code t} names, or null when no record reads that name. */
+    /** Decodes a message from the browser into the record its {@code t} names. Returns null when no record has that name. */
     public static Record decode(final JsonObject message) {
         final JsonElement t = message.get("t");
         final Class<? extends Record> type = t == null || !t.isJsonPrimitive() ? null : ByName.COMMANDS.get(t.getAsString());
@@ -192,7 +192,7 @@ public final class Wire {
         return ((Enum<?>) read(components(command.getClass())[0], command)).name();
     }
 
-    /** Every {@code t} a command record reads: its own, or each constant of its {@code t} component. */
+    /** Every {@code t} a command record handles: its own, or each constant of its {@code t} component. */
     static List<String> commandNames(final Class<?> type) {
         final Command c = type.getAnnotation(Command.class);
         if (c == null) {

@@ -28,14 +28,14 @@ import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import java.util.regex.Pattern;
 
-/** Every card a deck can be built from, built once and shared by every browser. */
+/** Every card that a deck can be built from. The catalogue is built once and shared by every browser. */
 public final class CardCatalog {
     static final int PAGE = 60;
-    /** The order a decklist is written in, which the headings and the type sort follow. */
+    /** The order in which a decklist is written. The headings and the type sort use this order. */
     static final List<String> HEADINGS = List.of("Creatures", "Planeswalkers", "Instants", "Sorceries", "Artifacts",
             "Enchantments", "Battles", "Lands");
 
-    /** filters is search syntax the filter bar's chips add, read apart from the text so a typed name stays ranked. */
+    /** filters is the search syntax that the filter bar's chips add. It is read separately from the text, so a typed name is still ranked. */
     public record Query(String text, String colours, String type, String filters, String sort, int offset, boolean showAll) {
     }
 
@@ -52,14 +52,14 @@ public final class CardCatalog {
         this.rows = rows;
     }
 
-    /** A sealed or draft pool as a catalogue: these cards only, whatever their section. */
+    /** A sealed or draft pool as a catalogue. It holds only these cards, from any section. */
     public static CardCatalog of(final Iterable<PaperCard> cards) {
         final List<Row> rows = new ArrayList<>();
         cards.forEach(card -> rows.add(row(card)));
         return new CardCatalog(rows);
     }
 
-    // The holder idiom builds the catalogue on first use, once, whichever thread asks first
+    // The holder class builds the catalogue once, on first use, on whichever thread asks first
     private static final class Holder {
         static final CardCatalog INSTANCE = build();
     }
@@ -70,7 +70,7 @@ public final class CardCatalog {
 
     private static final Map<DeckSection, CardCatalog> SECTIONS = new ConcurrentHashMap<>();
 
-    /** The cards a section beyond the main deck holds, planes or schemes say, built the first time it is asked for. */
+    /** The cards for a section other than the main deck, such as planes or schemes. Built the first time it is requested. */
     public static CardCatalog of(final DeckSection section) {
         return SECTIONS.computeIfAbsent(section, s -> {
             FModel.getMagicDb().ensureAllCardsLoaded();
@@ -106,12 +106,12 @@ public final class CardCatalog {
     }
 
     private static CardCatalog build() {
-        // Card scripts may load lazily, and every card has to be read to be listed
+        // Card scripts may load lazily, and every card must be read before it can be listed
         FModel.getMagicDb().ensureAllCardsLoaded();
         final List<Row> rows = new ArrayList<>();
         for (final PaperCard card : StaticData.instance().getCommonCards().getUniqueCards()) {
             final CardRules rules = card.getRules();
-            // Planes, schemes, attractions and the like live in sections of their own, never in a main deck
+            // Planes, schemes, attractions and similar cards have their own sections and never go in a main deck
             if (rules.isUnsupported() || rules.isVariant() || rules.isCustom()
                     || DeckSection.matchingSection(card) != DeckSection.Main) {
                 continue;
@@ -127,18 +127,18 @@ public final class CardCatalog {
                 rules.getManaCost().getCMC(), heading(card));
     }
 
-    /** These cards as rows, in the order given, each with what extras adds. */
+    /** These cards as rows, in the given order, each with the data that extras adds. */
     public static List<CatalogueRow> rows(final Iterable<PaperCard> cards, final Function<PaperCard, Extra> extras) {
         final List<CatalogueRow> out = new ArrayList<>();
         cards.forEach(card -> out.add(toBrowser(row(card), null, 0, extras.apply(card))));
         return out;
     }
 
-    /** A card problemOf names a problem for is left out unless the query asks for everything, and commanderOnly and extras may be null. */
+    /** A card that problemOf finds a problem with is left out, unless the query asks for everything. commanderOnly and extras may be null. */
     public CataloguePage query(final int request, final Query q, final Function<PaperCard, String> problemOf,
             final Predicate<PaperCard> commanderOnly, final ToIntFunction<String> inDeck, final Function<PaperCard, Extra> extras) {
         final String typed = q.text() == null ? "" : q.text().trim();
-        // Search syntax such as c:bg or mv<=3 is read by desktop's own parser; plain text is a name, ranked as desktop ranks names
+        // Desktop's own parser reads search syntax such as c:bg or mv<=3. Plain text is a name, ranked the way desktop ranks names.
         final Predicate<PaperCard> syntax = usesSyntax(typed) ? SFilterUtil.buildTextFilter(typed, false, true, false, false, false) : null;
         final String text = syntax == null ? normalize(typed) : "";
         final Predicate<PaperCard> chips = q.filters() == null || q.filters().isBlank() ? null
@@ -163,7 +163,7 @@ public final class CardCatalog {
             matches.sort(order(q.sort()));
             ordered = matches;
         } else {
-            // The same rule as the browser's own search boxes: names starting with the text first, shortest first
+            // The same rule as the browser's own search boxes: names that start with the text come first, shortest first
             startsWith.sort(Comparator.comparingInt(r -> r.card().getName().length()));
             startsWith.addAll(matches);
             ordered = startsWith;
@@ -177,7 +177,7 @@ public final class CardCatalog {
         return new CataloguePage(request, page, ordered.size(), from, ordered.isEmpty() ? hidden : 0, !text.isEmpty(), null);
     }
 
-    /** Whether a query uses Forge's search syntax: a term the advanced parser reads, an or, a bracket, or a term left out with a minus. */
+    /** Whether a query uses Forge's search syntax. That means a term the advanced parser reads, an "or", a bracket, or a term excluded with a minus. */
     static boolean usesSyntax(final String text) {
         for (final String term : text.split("\\s+")) {
             if ((term.startsWith("-") && term.length() > 1) || term.contains("|") || term.contains("(") || term.contains(")")
@@ -264,7 +264,7 @@ public final class CardCatalog {
         return out.isEmpty() ? "C" : out;
     }
 
-    /** Colours as WUBRG letters, and none for colourless. */
+    /** Colours as WUBRG letters, or an empty string for colourless. */
     public static String wubrg(final ColorSet colours) {
         return (colours.hasWhite() ? "W" : "") + (colours.hasBlue() ? "U" : "") + (colours.hasBlack() ? "B" : "")
                 + (colours.hasRed() ? "R" : "") + (colours.hasGreen() ? "G" : "");
@@ -272,12 +272,12 @@ public final class CardCatalog {
 
     private static final Pattern NOT_NAME_CHARACTER = Pattern.compile("[^a-z0-9 ]");
 
-    /** Lower case, accents stripped, and nothing but letters, digits and spaces, as desktop's ListChooser compares names. */
+    /** Lower case, with accents stripped and only letters, digits and spaces kept. Desktop's ListChooser compares names the same way. */
     static String normalize(final String s) {
         return NOT_NAME_CHARACTER.matcher(StringUtils.stripAccents(s.toLowerCase())).replaceAll("");
     }
 
-    // A card with several types goes under the first match in this order, so an artifact land is a land
+    // A card with several types goes under the first match in the order below, so an artifact land is a land
     static String heading(final PaperCard card) {
         final CardType type = card.getRules().getType();
         if (type.isLand()) {

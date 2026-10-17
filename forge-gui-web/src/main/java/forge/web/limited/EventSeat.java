@@ -21,20 +21,20 @@ import forge.web.protocol.ToBrowser.DraftState;
 
 import java.util.function.Supplier;
 
-/** One session's seat in its table's draft or sealed event: the draft it picks in, the pool it is dealt, and its player coming and going. */
+/** One session's seat in its table's draft or sealed event. It tracks the draft it picks in, the pool it is dealt, and its player leaving and returning. */
 public final class EventSeat {
     private final WebSession session;
     private final WebGuiBase ui;
     private final Lobby lobby;
     private final DeckSession decks;
     private final LocalGame local;
-    /** The host's table, wherever this seat sits: every seat's session lives in the host's process, where the draft runs. */
+    /** The host's table, for any seat. Every seat's session runs in the host's process, where the draft runs. */
     private final Supplier<ServerGameLobby> hostTable;
-    /** Tells every seat a pod seat's player went or came back. */
+    /** Tells every seat that a pod seat's player left or came back. */
     private final Runnable seatsChanged;
-    /** This table's draft; a new one comes with each table. */
+    /** This table's draft. Each new table gets a new draft. */
     private volatile OnlineDraft draft;
-    /** Whether the draft host was told this seat's player left, so it is told when the browser is back. */
+    /** Whether the draft host was told that this seat's player left. If so, it is told when the browser comes back. */
     private volatile boolean reportedGone;
     private volatile boolean toldDrafting;
 
@@ -49,11 +49,11 @@ public final class EventSeat {
         this.seatsChanged = seatsChanged;
     }
 
-    /** Makes this table's draft, whose events are handled one at a time on the client's dispatch executor, as the match's are. */
+    /** Creates this table's draft. Its events are handled one at a time on the client's dispatch executor, like the match's events. */
     public void newTable(final WebGuiGame gui) {
         reportedGone = false;
         toldDrafting = false;
-        // An event from an earlier table's draft can still be on its way, and it is not this table's
+        // An event from an earlier table's draft can still arrive. It does not belong to this table, so it is ignored.
         final OnlineDraft[] self = new OnlineDraft[1];
         final OnlineDraft made = new OnlineDraft(gui.dispatchExecutor(), this::eventView, this::podSeat, this::seatHeld,
                 local::sendToHost, state -> {
@@ -80,7 +80,7 @@ public final class EventSeat {
         return d != null && d.drafting();
     }
 
-    /** The browser came back to the table: it is shown the draft again, and a draft host told it had gone is told it is back. */
+    /** The browser came back to the table. It is shown the draft again. A draft host that was told it left is told it is back. */
     public void reconnected(final BrowserChannel channel) {
         if (drafting()) {
             channel.send(draft.latest());
@@ -95,7 +95,7 @@ public final class EventSeat {
         }
     }
 
-    /** A pod seat's player went or came back, so this seat's dial shows it afresh. */
+    /** A pod seat's player left or came back, so this seat's dial is redrawn. */
     public void seatsChanged() {
         final OnlineDraft d = draft;
         if (d != null) {
@@ -103,7 +103,7 @@ public final class EventSeat {
         }
     }
 
-    /** The browser has been gone a while, so a drafting seat's draft host is told its player left, as a closed connection tells desktop's. */
+    /** The browser has been gone for a while. A drafting seat's draft host is told the player left, as desktop's is told when a connection closes. */
     public void goneAWhile() {
         final ServerGameLobby table = hostTable.get();
         final int seat = podSeat();
@@ -115,7 +115,7 @@ public final class EventSeat {
         seatsChanged.run();
     }
 
-    /** The table's event as this seat's lobby last heard it. */
+    /** The table's event, as this seat's lobby last received it. */
     private NetworkEventView eventView() {
         final GameLobby table = local.hostedLobby() != null ? local.hostedLobby() : local.clientLobby();
         return table == null || table.getData() == null ? null : table.getData().getEventView();
@@ -127,14 +127,14 @@ public final class EventSeat {
         return table == null || local.webSeat() < 0 ? -1 : table.findSeatForLobbySlot(local.webSeat());
     }
 
-    /** Whether a pod seat's player has gone. */
+    /** Whether a pod seat's player has left. */
     private boolean seatHeld(final int seat) {
         final ServerGameLobby table = hostTable.get();
         return table != null && table.getDraftHost() != null && table.getDraftHost().isSeatHeld(seat);
     }
 
     private void show(final DraftState state) {
-        // The first pack takes the browser to the draft, which the hello says it is in
+        // The first pack moves the browser to the draft. The hello message tells it that it is in the draft.
         if (!toldDrafting) {
             toldDrafting = true;
             session.tell(session.hello());
@@ -142,9 +142,9 @@ public final class EventSeat {
         session.tell(state);
     }
 
-    /** Opens the event's pool in the limited editor: the host keeps it among the event decks, and a guest's is kept in its browser. */
+    /** Opens the event's pool in the limited editor. The host stores it with the event decks. A guest's pool is stored in its browser. */
     private void poolArrived(final String eventId, final Deck pool) {
-        // A pool dealt as this seat leaves its table belongs to a table that is going, and nothing here shows it
+        // A pool that arrives as this seat leaves its table belongs to a closing table, so it is not shown
         if (!(session.stage() instanceof Setup)) {
             return;
         }
@@ -155,7 +155,7 @@ public final class EventSeat {
             final IStorage<Deck> eventDecks = FModel.getDecks().getNetworkEventDecks();
             final Deck kept;
             synchronized (DeckCatalog.DECKS) {
-                // Two events of one product on one day share a name, and the older pool is not the newer one's to replace
+                // Two events of the same product on the same day get the same name. The newer pool must not replace the older one.
                 String name = pool.getName();
                 for (int n = 2; eventDecks.contains(name); n++) {
                     name = pool.getName() + " (" + n + ")";
@@ -171,7 +171,7 @@ public final class EventSeat {
         } else {
             decks.openEventPool(pool, type, null, "event-" + eventId, b);
         }
-        // An event's deck is new, so it is sleeved afresh rather than every seat wearing the sleeve it sat down in
+        // An event's deck is new, so it gets a new sleeve instead of the sleeve the seat had when it sat down
         lobby.dealSleeve(lobby.mySeat());
         session.tell(session.hello());
     }

@@ -1,4 +1,4 @@
-// The player's hand along the bottom of the board, fanned and sorted as the options say
+// The player's hand along the bottom of the board, fanned out and sorted as the options set
 
 import { commandKind } from './command';
 import { reconcile } from './reconcile';
@@ -15,7 +15,7 @@ import { t } from '../text';
 import { frameColour, manaValue } from './rules';
 
 
-// As Arena sorts by colour: each single colour in WUBRG order, then multicoloured, colourless, and lands last
+// Sorts by colour as Arena does. Each single colour comes in WUBRG order, then multicoloured, colourless, and lands last
 function colourRank(colours: number, type: string): number {
   return /Land/.test(type) ? 7 : 'WUBRGMC'.indexOf(frameColour(colours, type));
 }
@@ -34,7 +34,7 @@ function handOrder(model: Model, cards: CardView[]): CardView[] {
   });
 }
 
-/** Cards playable from outside the hand, which the engine gathers in its Flashback pseudo-zone, each with the zone it is really in. */
+/** Cards playable from outside the hand, mapped to the zone each is really in. The engine collects them in its Flashback pseudo-zone. */
 function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number, ZoneType> {
   const found = new Map<number, ZoneType>();
   for (const card of zone(model, player, 'Flashback')) {
@@ -47,9 +47,9 @@ function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number
 
 /** The prompt open when the drawer was opened, so only a new prompt closes it. */
 const openOver = openedOver();
-/** The card last tapped in the drawer, which is opened again if that card's play is called off. */
+/** The card last tapped in the drawer. The drawer opens again if that card's play is cancelled. */
 let played: number | null = null;
-/** The prompt the drawer opened itself for. */
+/** The prompt for which the drawer opened by itself. */
 let openedFor: object | null = null;
 
 const closeDrawer = () => {
@@ -57,7 +57,7 @@ const closeDrawer = () => {
   changeUi(u => { u.handOpen = false; });
 };
 
-/** On a phone the hand is a strip of card tops, and opens into a drawer to be read and played from. */
+/** On a phone the hand is a strip of card tops. It opens into a drawer where the cards can be read and played. */
 function drawerHead(root: HTMLElement): HTMLElement {
   let head = document.getElementById('hand-head');
   if (!head) {
@@ -82,13 +82,13 @@ function drawerHead(root: HTMLElement): HTMLElement {
   return head;
 }
 
-/** Whether the hand shows as the open drawer this frame, having closed it for a new prompt or opened it again for a play called off. */
+/** Whether the hand shows as the open drawer this frame. It closes the drawer for a new prompt and opens it again for a cancelled play. */
 function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: number): boolean {
   const head = drawerHead(root);
   const portrait = isPortrait();
   const asked = model.prompt;
-  // A prompt answered with cards from the hand, a discard say, needs them at a size that can be told apart and tapped
-  // Before the first turn, the hand just dealt is kept or mulliganed and cards are put back from it, so it is shown while you answer
+  // A prompt answered with cards from the hand, such as a discard, needs them large enough to read and tap
+  // Before the first turn, the player keeps or mulligans the new hand and puts cards back from it. So the hand is shown while they answer
   const dealt = !game(model)?.Turn && held.length > 0 && !!asked && (asked.ok.enabled || asked.cancel.enabled);
   const fromHand = portrait && !!asked && (dealt || (!asked.priority && !asked.paying && asked.selectableMin > 0
     && asked.selectable.some(r => held.some(c => c.$key === r.ref))));
@@ -96,16 +96,16 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
     if (asked !== openedFor) {
       openedFor = asked;
       ui.handOpen = true;
-      // Opened for this prompt, which openOver then counts as the prompt it opened over
+      // The drawer opened for this prompt. openOver is reset so it records this prompt as the one the drawer opened over
       openOver.note(false, null);
       played = null;
     }
   } else if (openedFor) {
-    // Opened for a prompt, the drawer closes when that prompt goes
+    // A drawer opened for a prompt closes when that prompt ends
     openedFor = null;
     ui.handOpen = false;
   } else if (ui.handOpen && (model.requests.size > 0 || (openOver.seen && asked !== openOver.seen && asked && !asked.priority))) {
-    // The tapped card's next prompt is answered on the board, in a menu or in a dialog, so the drawer gets out of the way
+    // The tapped card's next prompt is answered on the board, in a menu or in a dialog. So the drawer closes
     ui.handOpen = false;
   } else if (!ui.handOpen && played !== null && asked?.priority) {
     ui.handOpen = portrait && held.some(c => c.$key === played);
@@ -119,13 +119,13 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
   sheet('hand', open, closeDrawer);
   if (portrait) root.setAttribute('aria-label', t('lblWebPortraitHandTitle', count));
   else root.removeAttribute('aria-label');
-  // The drawer scrolls, and the strip must not keep where it was scrolled to
+  // The drawer scrolls, but the strip must not keep the drawer's scroll position
   if (!open) {
     root.scrollTop = 0;
     return false;
   }
   q(head, 'b').textContent = `${t('lblWebZoneHand')} ${count}`;
-  // What is about to resolve is said here, since the drawer covers the stack
+  // The top of the stack is named here, because the drawer covers the stack
   const top = (derefAll(model, game(model)?.Stack) as StackItemView[])[0];
   const source = top ? deref(model, top.SourceCard) as CardView | undefined : undefined;
   q(head, '.on-stack').textContent = top ? `${source ? stateOf(model, source).Name ?? '' : ''} (${deref(model, top.ActivatingPlayer)?.Name ?? ''})` : '';
@@ -137,22 +137,22 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
   const root = byId('hand');
   const elsewhere = fromElsewhere(model, player);
   const tints = logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) })));
-  // The planar die has a button of its own by the plane, so it is not laid out with the cards
+  // The planar die has its own button next to the plane, so it is not laid out with the cards
   const others = zone(model, player, 'Flashback').filter(c => commandKind(c, stateOf(model, c)) !== 'dice');
-  // The hand's list can lag its cards: one being cast is already on the stack, and hidden, while the list still holds it
+  // The hand's list can be behind its cards. A card being cast is already on the stack and hidden while the list still holds it
   const held = zone(model, player, 'Hand').filter(c => !c.Zone || c.Zone === 'Hand');
   const cards = [...handOrder(model, others), ...handOrder(model, held)];
   reconcile(root, cards, c => c.$key, () => createCard(select), (el, c) => {
     updateCard(el, model, c);
     const source = elsewhere.get(c.$key);
     el.classList.toggle('elsewhere', source !== undefined);
-    // The zone picks the glow's colour in CSS, and names itself in the preview when the card is hovered
+    // CSS picks the glow's colour from the zone. The preview shows the zone's name when the card is hovered
     if (source) {
       el.dataset.from = source;
     } else {
       delete el.dataset.from;
     }
-    // Another player's card you may play says whose it is, so it is not taken for one of your own
+    // Another player's card that you may play shows its owner, so it is not mistaken for one of yours
     const owner = deref(model, c.Owner);
     const foreign = !!owner && !!player && owner.$key !== player.$key;
     el.classList.toggle('foreign', foreign);
@@ -165,7 +165,7 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     return;
   }
   const cardWidth = (root.firstElementChild as HTMLElement | null)?.offsetWidth ?? 0;
-  // The room the hand keeps clear for the prompt beside it is not room for cards
+  // The hand's padding keeps space clear for the prompt beside it, so that space is not used for cards
   const style = getComputedStyle(root);
   const width = root.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
   // Each card covers a fifth of the one before it, and more when the row would overflow
@@ -174,7 +174,7 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
   // At most 3 degrees per card from the middle, 12 at the ends
   const mid = (cards.length - 1) / 2;
   const perCard = mid > 0 ? Math.min(3, 12 / mid) : 0;
-  // Each card drops as far as its tilt would carry it if the whole hand turned about one point below the screen
+  // Each card drops by the amount its tilt would move it if the whole hand rotated around one point below the screen
   const radius = perCard > 0 ? (cardWidth + step) / Math.sin(perCard * Math.PI / 180) : 0;
   [...root.children].forEach((child, i) => {
     const tilt = (i - mid) * perCard;
@@ -184,7 +184,7 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
   });
 }
 
-/** Forgets the last game's drawer: the card last tapped and the prompts it opened for or over. */
+/** Clears the last game's drawer state: the card last tapped and the prompts it opened for or over. */
 export function resetHand(): void {
   played = null;
   openedFor = null;

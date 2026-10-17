@@ -62,7 +62,7 @@ public class SealedProductsTest {
                     offered++;
                 }
             } catch (final RuntimeException e) {
-                // desktop fails on such a block, so the web leaves it out
+                // Desktop fails on such a block, so the web leaves it out
             }
         }
         assertEquals(lists.blocks().size(), offered);

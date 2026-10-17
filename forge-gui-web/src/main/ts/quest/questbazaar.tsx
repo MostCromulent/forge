@@ -1,4 +1,4 @@
-// Quest's Bazaar: the stalls down one side, and the open stall's goods, each bought with one priced button
+// Quest's Bazaar: the stalls down one side, and the open stall's goods. Each item has one button that shows its price and buys it
 
 import { useEffect } from 'preact/hooks';
 import { balance } from '../campaign/campaign';
@@ -10,7 +10,7 @@ import type { QuestItemRow } from '../protocol';
 import { t } from '../text';
 import { CREDITS } from './credits';
 
-/** Levels drawn as squares; an item that goes higher shows its level as words alone. */
+/** The most levels drawn as squares. An item with more levels shows its level in words only. */
 const MOST_SQUARES = 6;
 
 function Item({ item, stall, credits, actions }: { item: QuestItemRow; stall: string; credits: number; actions: Actions }) {

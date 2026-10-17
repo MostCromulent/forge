@@ -1,4 +1,4 @@
-// Quest's Decks page: every deck of the quest as a plate, and beside them the one being looked at with its curve, its list and what can be done with it
+// Quest's Decks page: every deck of the quest as a plate. Beside them, the selected deck shows its curve, its list and its actions
 
 import { useEffect, useState } from 'preact/hooks';
 import { DeckPanel, Plate } from '../campaign/deckplate';
@@ -12,10 +12,10 @@ import { CardGroup, Curve } from '../deck/deckview';
 export function Decks({ page, model, actions }: { page: QuestDecks; model: Model; actions: Actions }) {
   const [chosen, setChosen] = useState<string | null>(null);
   const [naming, setNaming] = useState(false);
-  /** What the panel's foot is doing instead of offering its buttons. */
+  /** What the panel's foot shows instead of its buttons: a rename form or a delete confirm. */
   const [asking, setAsking] = useState<'rename' | 'delete' | null>(null);
   const deck = page.decks.find(d => d.name === chosen) ?? page.decks.find(d => d.current) ?? page.decks[0];
-  // The curve and list are the deck's own details, asked for whenever the deck shown or its size changes
+  // The curve and list come from the server. They are asked for again whenever the shown deck, its size or its sideboard changes
   useEffect(() => {
     if (deck) actions.questDeckView(deck.name);
     setAsking(null);

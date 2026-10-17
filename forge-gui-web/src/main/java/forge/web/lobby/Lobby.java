@@ -46,23 +46,23 @@ import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-/** Match setup read from the engine's lobby: a browser changes its own seat as a client, and the host sets the rest of the table. */
+/** Match setup, read from the engine's lobby. A browser changes its own seat as a client, and the host sets up the rest of the table. */
 public final class Lobby {
     private static final int MOST_TEAMS = 4;
     static final int MAX_SEATS = 8;
     static final int MAX_POD = 8;
     private final DeckCatalog catalog = new DeckCatalog();
-    /** Each seat's planar deck, scheme deck and avatar, for the seats this browser deals for. */
+    /** Each seat's planar deck, scheme deck and avatar, for the seats whose decks this browser sends. */
     private final Map<Integer, Map<DeckSection, Extra>> extras = new ConcurrentHashMap<>();
-    /** The deck each of those seats was last sent, main deck and extras together: the deck of record. */
+    /** The deck last sent for each of those seats, with main deck and extras together. This is the deck that counts. */
     private final Map<Integer, Deck> composed = new ConcurrentHashMap<>();
-    /** The commanders a seat's player chose to lead its deck, by name, until another deck is chosen. */
+    /** The commanders that a seat's player chose to lead its deck, by name. They are kept until another deck is chosen. */
     private final Map<Integer, List<String>> commanderPicks = new ConcurrentHashMap<>();
     private final LocalGame local;
     private final LobbyEvents events;
-    /** Which deck each seat was given, by catalogue key: the lobby slot holds the deck, this holds the choice. */
+    /** Which deck each seat was given, by catalogue key. The lobby slot holds the deck itself, and this map holds the choice. */
     private final Map<Integer, String> deckKeys = new ConcurrentHashMap<>();
-    /** True once the game was opened for others to join, which is when a link is worth showing. */
+    /** True once the game was opened for others to join. Only then is a link worth showing. */
     private volatile boolean shareable;
 
     public Lobby(final LocalGame local, final BooleanSupplier guest, final Map<String, DeckCatalog.OnDevice> device, final WebGuiBase ui) {
@@ -73,18 +73,18 @@ public final class Lobby {
         this.device = device;
     }
 
-    /** Whether this browser is a guest's, whose own decks are the ones its browser keeps. */
+    /** Whether this browser is a guest's. A guest's own decks are the ones its browser stores. */
     private final BooleanSupplier guest;
-    /** Whose UI thread is the only one that changes the table. */
+    /** The UI whose thread is the only one that changes the table. */
     private final WebGuiBase ui;
-    /** A guest's decks, by the id its browser keeps each under. */
+    /** A guest's decks, keyed by the id its browser stores each one under. */
     private final Map<String, DeckCatalog.OnDevice> device;
 
     public void setShareable(final boolean value) {
         shareable = value;
     }
 
-    /** The server's own lobby for the host, whose client copy trails it by an update, and the client copy for a guest. */
+    /** For the host, the server's own lobby, whose client copy is one update behind it. For a guest, the client copy. */
     GameLobby view() {
         final GameLobby hosted = local.hostedLobby();
         return hosted != null ? hosted : local.clientLobby();
@@ -94,13 +94,13 @@ public final class Lobby {
         return local.hostedLobby();
     }
 
-    /** Read from the lobby's variants, because its game type is left out of the serialised data and stays Constructed on a client. */
+    /** Read from the lobby's variants, because the game type is not in the serialised data and stays Constructed on a client. */
     public GameType format() {
         final GameLobby lobby = view();
         if (lobby == null) {
             return browseFormat;
         }
-        // A Limited table plays event decks, which are checked as startGame checks them
+        // A Limited table plays event decks, which are checked the same way startGame checks them
         if (limited(lobby)) {
             return GameType.Draft;
         }
@@ -112,7 +112,7 @@ public final class Lobby {
         return GameType.Constructed;
     }
 
-    /** The format the start page's deck finder lists. Only read while no table is open, so it never touches a seat's deck. */
+    /** The format that the start page's deck finder lists. It is read only while no table is open, so it never affects a seat's deck. */
     private volatile GameType browseFormat = GameType.Constructed;
 
     public void setBrowseFormat(final GameType format) {
@@ -124,7 +124,7 @@ public final class Lobby {
         return local.webSeat();
     }
 
-    /** Counts the tables this browser has sat at, so something begun at one table can tell it is now at another. */
+    /** Counts the tables this browser has sat at, so work started at one table can tell that it is now at another. */
     private volatile int table;
 
     public int table() {
@@ -164,20 +164,20 @@ public final class Lobby {
         return out;
     }
 
-    /** Held while a deck list or the table is built and sent, so two threads cannot both send the same list, or send an older table after a newer one. */
+    /** Held while a deck list or the table is built and sent. Two threads then cannot both send the same list, or send an older table after a newer one. */
     private final Object sentLock = new Object();
     private BrowserChannel decksSentTo;
     private Decks decksSent;
 
-    /** Skips the send when this browser already has this exact list, but always rebuilds it, as building records what the lobby shows. */
+    /** Skips the send when this browser already has this exact list. The list is always rebuilt, because building it records what the lobby shows. */
     public void sendDecks(final BrowserChannel to) {
         settle();
         sendBuilt(to);
     }
 
     /**
-     * As sendDecks, but the list is built and sent through build, where it can wait its turn. What the list settles at the table is
-     * settled now, in order with the browser's other commands, so a Ready pressed after asking is not undone by a list built later.
+     * Like sendDecks, but the list is built and sent through build, where it may wait in a queue. The table changes the list implies
+     * are made now, in order with the browser's other commands. A Ready pressed after the request is then not undone by a later list.
      */
     public void queueDecks(final BrowserChannel to, final Executor build) {
         settle();
@@ -196,7 +196,7 @@ public final class Lobby {
         }
     }
 
-    /** Every deck this format can be played with, rebuilt because the pool differs per format. */
+    /** Every deck this format can be played with. It is rebuilt each time because the pool differs per format. */
     private Decks decks() {
         synchronized (DeckCatalog.DECKS) {
             final GameFormat cardPool = cardPool();
@@ -207,7 +207,7 @@ public final class Lobby {
         }
     }
 
-    /** Brings the table up to the format, card pool and rules a list is about to be built for, which is quick. */
+    /** Updates the table to the format, card pool and rules that a list is about to be built for. This is quick. */
     private void settle() {
         final boolean newPool;
         final boolean newRules;
@@ -215,7 +215,7 @@ public final class Lobby {
             final GameType format = format();
             final GameFormat cardPool = cardPool();
             final String poolName = cardPool == null ? null : cardPool.getName();
-            // A deck key names a deck in one format's lists, so it means nothing in another
+            // A deck key names a deck in one format's lists, so it means nothing in another format
             if (seenFormat != null && format != seenFormat) {
                 deckKeys.clear();
             }
@@ -225,7 +225,7 @@ public final class Lobby {
             seenCardPool = poolName;
             seenRules = rules();
         }
-        // The list is asked for from any thread, but what it settles at the table is changed on the host UI thread alone
+        // Any thread may ask for the list, but the table changes it implies are made only on the host UI thread
         ui.invokeInEdtNow(() -> {
             if (newPool) {
                 dealGeneratorsAgain();
@@ -237,14 +237,14 @@ public final class Lobby {
         });
     }
 
-    /** Runs a change to the table on the host UI thread, and answers what it answers. */
+    /** Runs a change to the table on the host UI thread, and returns the change's result. */
     String onTable(final Supplier<String> change) {
         final String[] answer = new String[1];
         ui.invokeInEdtAndWait(() -> answer[0] = change.get());
         return answer[0];
     }
 
-    /** A lone seat is ready once it has a deck, or at once where the format deals the deck, and with another player seated each presses Ready. */
+    /** A seat alone at the table is ready once it has a deck, or at once if the format deals the deck. With another player seated, each player presses Ready. */
     private void settleReady() {
         final GameLobby lobby = view();
         final int mine = local.webSeat();
@@ -261,7 +261,7 @@ public final class Lobby {
         }
     }
 
-    /** Whether a player at another browser holds a seat at this constructed table. An event has its own Ready. */
+    /** Whether a player at another browser holds a seat at this Constructed table. An event handles Ready in its own way. */
     private boolean withOthers(final GameLobby lobby) {
         if (limited(lobby)) {
             return false;
@@ -275,7 +275,7 @@ public final class Lobby {
         return false;
     }
 
-    /** A slot keeps the generated deck built from the old card pool, so a new pool deals this browser's seats the same generator again. */
+    /** A slot keeps the generated deck that was built from the old card pool. So a new pool deals this browser's seats the same generator again. */
     private void dealGeneratorsAgain() {
         final GameLobby lobby = view();
         if (lobby == null) {
@@ -290,14 +290,14 @@ public final class Lobby {
         }
     }
 
-    /** The event whose decks alone the finder lists, or null for every event's; only a Limited table has one. */
+    /** The event whose decks are the only ones the finder lists, or null for all events' decks. Only a Limited table has one. */
     private String eventFilter() {
         final GameLobby lobby = view();
         final GameLobbyData data = lobby == null ? null : lobby.getData();
         return data != null && data.isLimitedMode() && data.isActiveConformance() ? data.getActiveEventId() : null;
     }
 
-    /** The casual variants on, which seat is the archenemy, and the event filter: what decides the decks a seat may take. */
+    /** The casual variants that are on, which seat is the archenemy, and the event filter. These decide which decks a seat may use. */
     private String rules() {
         final GameLobby lobby = view();
         if (lobby == null) {
@@ -320,7 +320,7 @@ public final class Lobby {
         return out;
     }
 
-    /** Seats whose deck this browser sends: its own, and the computer's when it runs the game. */
+    /** Whether this browser sends the seat's deck. It sends its own, and the computer seats' decks when it runs the game. */
     private boolean dealsFor(final GameLobby lobby, final int index) {
         return index == local.webSeat() || (host() != null && index < lobby.getNumberOfSlots()
                 && lobby.getSlot(index).getType() == LobbySlotType.AI);
@@ -330,7 +330,7 @@ public final class Lobby {
         return lobby.getSlot(index).getType() == LobbySlotType.AI;
     }
 
-    /** The extra sections a seat brings under the variants that are on. */
+    /** The extra sections a seat needs under the variants that are on. */
     private static List<DeckSection> sectionsFor(final GameLobby lobby, final int index) {
         final List<DeckSection> out = new ArrayList<>();
         if (lobby.hasVariant(GameType.Planechase)) {
@@ -350,7 +350,7 @@ public final class Lobby {
         return extras.computeIfAbsent(index, i -> Collections.synchronizedMap(new EnumMap<>(DeckSection.class)));
     }
 
-    /** Sends the deck of every seat this browser deals for. */
+    /** Sends the deck of every seat whose deck this browser sends. */
     private void composeMine() {
         final GameLobby lobby = view();
         for (int i = 0; lobby != null && i < lobby.getNumberOfSlots(); i++) {
@@ -360,7 +360,7 @@ public final class Lobby {
         }
     }
 
-    /** A seat lacking a section its variants call for gets generated planes or schemes, or a random avatar. */
+    /** A seat that lacks a section its variants need gets generated planes or schemes, or a random avatar. */
     private void fillDefaults(final GameLobby lobby, final int index) {
         for (final DeckSection section : sectionsFor(lobby, index)) {
             if (!extrasAt(index).containsKey(section)) {
@@ -406,7 +406,7 @@ public final class Lobby {
         final String avatar = labelOf(index, DeckSection.Avatar);
         if (index == local.webSeat()) {
             local.updateOwnSeat(UpdateLobbyPlayerEvent.deckUpdate(deck));
-            // Alone, a deck readies the seat; with others seated it waits on Ready. Sent only on a change, as the chat hears each
+            // A deck readies a seat that is alone. With others seated, the seat waits for Ready. Sent only on a change, because the chat reports each one.
             final boolean ready = deck != null && !withOthers(lobby);
             if (lobby.getSlot(index).isReady() != ready) {
                 local.updateOwnSeat(UpdateLobbyPlayerEvent.isReadyUpdate(ready));
@@ -424,7 +424,7 @@ public final class Lobby {
     }
 
     private String labelOf(final int index, final DeckSection section) {
-        // Read without creating an entry: this runs while the table is drawn, on whichever thread draws it
+        // Read without creating an entry, because this runs while the table is drawn, on whichever thread draws it
         final Extra extra = extras.getOrDefault(index, Map.of()).get(section);
         return extra == null ? null : extra.label();
     }
@@ -462,7 +462,7 @@ public final class Lobby {
         return null;
     }
 
-    /** A casual variant belongs to the game, so only the host switches one; the engine drops what it excludes. */
+    /** A casual variant belongs to the game, so only the host turns one on or off. The engine removes any variants that it excludes. */
     public void setVariant(final String id, final boolean on) {
         final ServerGameLobby lobby = host();
         if (lobby == null) {
@@ -475,7 +475,7 @@ public final class Lobby {
                 } else {
                     lobby.removeVariant(v);
                 }
-                // The archenemy's role set the teams, so without it every seat goes back to a team of its own
+                // The archenemy's role set the teams. Without it, every seat goes back to a team of its own.
                 if (v == GameType.Archenemy && !on) {
                     for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                         lobby.getSlot(i).setTeam(i);
@@ -487,7 +487,7 @@ public final class Lobby {
         }
     }
 
-    /** Whether seats can be put on teams: not where a draft's pairings or the archenemy's role already decide the sides. */
+    /** Whether seats can be put on teams. They cannot when a draft's pairings or the archenemy's role already decide the sides. */
     private static boolean teamsAllowed(final GameLobby lobby) {
         return !limited(lobby) && !lobby.hasVariant(GameType.Archenemy) && !lobby.hasVariant(GameType.ArchenemyRumble);
     }
@@ -508,7 +508,7 @@ public final class Lobby {
         return shared ? Math.max(2, most + 1) : 0;
     }
 
-    /** The team counts the host may deal the seats into: fewer teams than seats, since as many is a free-for-all. */
+    /** The team counts the host may split the seats into. There are fewer teams than seats, because one team per seat is a free-for-all. */
     private static List<Integer> teamChoices(final GameLobby lobby) {
         final List<Integer> out = new ArrayList<>();
         for (int n = 2; teamsAllowed(lobby) && n < lobby.getNumberOfSlots() && n <= MOST_TEAMS; n++) {
@@ -517,7 +517,7 @@ public final class Lobby {
         return out;
     }
 
-    /** Deals the seats into that many teams in turn, or with 0 puts every seat back on a team of its own. */
+    /** Deals the seats into that many teams in turn. With 0, every seat goes back to a team of its own. */
     public void setTeams(final int count) {
         final ServerGameLobby lobby = host();
         if (lobby == null || (count != 0 && !teamChoices(lobby).contains(count))) {
@@ -529,7 +529,7 @@ public final class Lobby {
         local.pushLobby();
     }
 
-    /** Moves a seat to another of the table's teams: your own seat, or any seat if you run the game. */
+    /** Moves a seat to another of the table's teams. A player may move their own seat, and the host may move any seat. */
     public void setTeam(final int index, final int team) {
         final GameLobby table = view();
         if (table == null || index < 0 || index >= table.getNumberOfSlots() || team < 0 || team >= teams(table)) {
@@ -543,7 +543,7 @@ public final class Lobby {
         }
     }
 
-    /** The team a seat added now joins: the smallest of the table's teams, or in a free-for-all one nobody is on. */
+    /** The team that a newly added seat joins: the smallest team, or in a free-for-all a team that nobody is on. */
     private static int teamForNewSeat(final GameLobby lobby, final int teams) {
         final Map<Integer, Integer> sizes = new HashMap<>();
         for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
@@ -572,7 +572,7 @@ public final class Lobby {
         local.pushLobby();
     }
 
-    /** Downloads a net deck category and adds it to the catalogue. Core asks which one through the browser. */
+    /** Downloads a net deck category and adds it to the catalogue. Core asks the browser which category to load. */
     public void loadNetDecks(final BrowserChannel to) {
         catalog.loadNetDecks(format());
         sendDecks(to);
@@ -607,7 +607,7 @@ public final class Lobby {
             final List<String> illegal = new ArrayList<>();
             final List<String> problems = problems(illegal);
             final GameFormat cardPool = cardPool();
-            // Only the machine running the game can start it; everyone else waits on the host
+            // Only the machine running the game can start it. Everyone else waits for the host.
             return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
                     cardPool == null ? null : cardPool.getName(),
                     LobbyFormats.VARIANTS.stream().map(LobbyFormats::explainedVariant).toList(), variantsOn(lobby),
@@ -622,7 +622,7 @@ public final class Lobby {
     private Seat seat(final GameLobby lobby, final int index) {
         final LobbySlot slot = lobby.getSlot(index);
         final Deck deck = deckAt(index);
-        // Your own seat wherever you are, and the computer's seats if you run the game. Another player's is theirs
+        // A player may edit their own seat, and the host may also edit the computer's seats. Another player's seat belongs to that player.
         final boolean mayEdit = index == local.webSeat() || (local.isHost() && slot.getType() == LobbySlotType.AI);
         return new Seat(slot.getName(), slot.getType(), index == local.webSeat(), mayEdit,
                 slot.isReady(), slot.getAvatarIndex(), slot.getSleeveIndex(), key(index),
@@ -630,7 +630,7 @@ public final class Lobby {
                 deck == null ? 0 : DeckCatalog.played(deck),
                 deck == null ? "" : DeckCatalog.colors(deck),
                 deck == null || format().isAutoGenerated() ? null : DeckCatalog.problemAt(deck, format(), cardPool()),
-                // A deck with a card-art sleeve overrides the numbered one, as it does in every other client
+                // A deck with a card-art sleeve overrides the numbered sleeve, as in every other client
                 deck == null ? "" : deck.getSleeveArtKey(),
                 deck == null ? 0 : deck.getSleeveArtOffset(),
                 lobby.hasVariant(GameType.ArchenemyRumble) ? "archenemy"
@@ -646,17 +646,17 @@ public final class Lobby {
                 slot.getType() == LobbySlotType.AI ? aiProfile(slot) : null);
     }
 
-    /** A computer seat with no playstyle of its own plays the one the settings name, as GameLobby deals it. */
+    /** A computer seat with no playstyle of its own uses the one named in the settings, as GameLobby does. */
     private static String aiProfile(final LobbySlot slot) {
         return StringUtils.isEmpty(slot.getAiProfile()) ? FModel.getPreferences().getPref(FPref.UI_CURRENT_AI_PROFILE) : slot.getAiProfile();
     }
 
-    /** The highest Commander bracket this table plays at, 1 to 4, or 5 for any: the host's own setting, as desktop keeps it. */
+    /** The highest Commander bracket this table plays at, 1 to 4, or 5 for any. It is the host's own setting, stored as on desktop. */
     static int maxBracket() {
         return FModel.getPreferences().getPrefInt(FPref.DECKGEN_MAXIMUM_COMMANDER_BRACKET);
     }
 
-    /** The decks above this table's bracket, which do not stop the match: the host is asked before it starts. */
+    /** The decks above this table's bracket. They do not stop the match, but the host is asked before it starts. */
     private List<String> overBracket(final GameLobby lobby) {
         final List<String> out = new ArrayList<>();
         final int most = maxBracket();
@@ -675,7 +675,7 @@ public final class Lobby {
         return out;
     }
 
-    /** Sets the host's bracket preference, which netplay sends to every client with the lobby, and returns whether it changed. */
+    /** Sets the host's bracket preference, which netplay sends to every client with the lobby. Returns whether it changed. */
     public boolean setMaxBracket(final int bracket) {
         final var prefs = FModel.getPreferences();
         if (host() == null || bracket < 1 || bracket > 5 || prefs.getPrefInt(FPref.DECKGEN_MAXIMUM_COMMANDER_BRACKET) == bracket) {
@@ -687,7 +687,7 @@ public final class Lobby {
         return true;
     }
 
-    /** Another browser's seat is described by the names it published, with a random avatar named "Random" to keep the draw a surprise. */
+    /** Another browser's seat is described by the names it published. A random avatar is labelled "Random", so the drawn avatar stays hidden. */
     private SeatExtra seatExtra(final GameLobby lobby, final int index, final Deck deck, final DeckSection section) {
         final LobbySlot slot = lobby.getSlot(index);
         final String published = switch (section) {
@@ -703,7 +703,7 @@ public final class Lobby {
             final var rules = cards.iterator().next().getKey().getRules();
             detail = Localizer.getInstance().getMessage("lblWebLobbyAvatarMods", signed(rules.getHand()), signed(rules.getLife()));
         }
-        // Before a seat has a deck nothing has been dealt to it, so an empty section is not yet a fault
+        // Before a seat has a deck, nothing has been dealt to it, so an empty section is not yet an error
         final String problem = deck == null ? null : section == DeckSection.Avatar ? (count == 0 ? Localizer.getInstance().getMessage("lblWebLobbyNoAvatar") : null)
                 : ExtraSections.sectionProblem(section, cards);
         return new SeatExtra(label == null ? Localizer.getInstance().getMessage("lblNone") : label, count, detail, problem);
@@ -717,7 +717,7 @@ public final class Lobby {
         return deckKeys.get(index);
     }
 
-    /** A seat this browser chose for is found by its key, while another player's deck arrives with their seat. */
+    /** A deck that this browser chose for a seat is found by its key. Another player's deck arrives with their seat. */
     private Deck deckAt(final int index) {
         final Deck made = composed.get(index);
         if (made != null) {
@@ -732,14 +732,14 @@ public final class Lobby {
     }
 
     /**
-     * What stops the match starting: startGame's own refusals, all at once, then what only the page checks, such as an open seat or a
-     * deck outside the card pool. startGame still runs as the final gate.
+     * What stops the match from starting: all of startGame's own refusals, then the checks only the page makes, such as an open seat or a
+     * deck outside the card pool. startGame still runs as the final check.
      */
     public List<String> problems() {
         return problems(new ArrayList<>());
     }
 
-    /** Adds to illegal the decks that break their format's rules, which do not stop the match: the host is asked whether to play anyway. */
+    /** Adds to illegal the decks that break their format's rules. These do not stop the match, but the host is asked whether to play anyway. */
     private List<String> problems(final List<String> illegal) {
         synchronized (DeckCatalog.DECKS) {
             final GameLobby lobby = view();
@@ -767,7 +767,7 @@ public final class Lobby {
                         illegal.add(deck.getName() + ": " + problem);
                     }
                 }
-                // As startGame: a missing avatar always stops the match, the other sections only with legality on
+                // A missing avatar always stops the match, as in startGame. With legality checks on, a planar or scheme deck fault is listed as illegal.
                 if (lobby.hasVariant(GameType.Vanguard)
                         && (deck == null || deck.get(DeckSection.Avatar) == null || deck.get(DeckSection.Avatar).isEmpty())) {
                     out.add(Localizer.getInstance().getMessage("lblNoSelectedVanguardAvatarForPlayer", String.valueOf(slot.getName())));
@@ -789,7 +789,7 @@ public final class Lobby {
         }
     }
 
-    /** Drops the deck choices, because a new lobby's slots hold none and the two must not disagree. */
+    /** Drops the deck choices, because a new lobby's slots hold no decks and the two must agree. */
     public void forget() {
         table++;
         deckKeys.clear();
@@ -805,13 +805,13 @@ public final class Lobby {
         }
     }
 
-    /** A table as its host set it, kept across a match so the table opened after it is set the same way. */
+    /** A table as its host set it up. It is kept across a match, so the next table opens with the same settings. */
     public record Kept(GameType format, String cardPool, List<String> variants, int teams, List<KeptSeat> seats, Map<Integer, String> deckKeys,
             Map<Integer, Map<DeckSection, Extra>> extras, Map<Integer, List<String>> commanderPicks) { }
 
     private record KeptSeat(LobbySlotType type, String name, int avatar, int sleeve, int team, String aiProfile) { }
 
-    /** The table this browser hosts as it stands, or null when it hosts none. */
+    /** The table this browser hosts, as it is now, or null when it hosts none. */
     public Kept keep() {
         final ServerGameLobby lobby = host();
         if (lobby == null) {
@@ -827,7 +827,7 @@ public final class Lobby {
                 Map.copyOf(deckKeys), Map.copyOf(extras), Map.copyOf(commanderPicks));
     }
 
-    /** Sets a new table as a kept one was. A seat a person held is left open for them to take again, with whatever deck they bring. */
+    /** Sets up a new table the same way as a kept one. A seat that a person held is left open for them to take again, with whatever deck they bring. */
     public void restore(final Kept kept) {
         final ServerGameLobby lobby = host();
         if (lobby == null) {
@@ -837,7 +837,7 @@ public final class Lobby {
         setCardPool(kept.cardPool());
         kept.variants().forEach(v -> setVariant(v, true));
         setPlayerCount(kept.seats().size(), false);
-        // The archenemy's role sets the teams itself
+        // The archenemy's role sets the teams by itself
         final boolean teamed = kept.teams() > 0 && !lobby.hasVariant(GameType.Archenemy);
         if (teamed) {
             setTeams(kept.teams());
@@ -873,11 +873,11 @@ public final class Lobby {
         local.pushLobby();
     }
 
-    /** The format, card pool and rules this browser's deck list was last built for, recorded by {@link #decks()}. */
+    /** The format, card pool and rules this browser's deck list was last built for, recorded by {@link #settle()}. */
     private GameType seenFormat;
     private String seenCardPool;
     private String seenRules;
-    /** Whether another player had a seat when the deck list was last built, so their arrival is seen once. */
+    /** Whether another player had a seat when the deck list was last built, so their arrival is noticed only once. */
     private volatile boolean othersSeated;
 
     /** True when the format, card pool or rules differ from those the last deck list was built for. */
@@ -899,18 +899,18 @@ public final class Lobby {
             if (!wanted.name().equals(id) || wanted == format()) {
                 continue;
             }
-            // Cleared first, so no update ever announces another format still holding a Constructed card pool
+            // Clear it first, so that no update ever announces another format that still has a Constructed card pool
             if (wanted != GameType.Constructed) {
                 lobby.setCardPool(null);
             }
-            // Decks are cleared before the variants change, since that change is announced at once and seats are dealt their new decks
+            // Decks are cleared before the variants change. That change is announced at once, and the seats are then dealt their new decks.
             deckKeys.clear();
             composed.clear();
             commanderPicks.clear();
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 lobby.getSlot(i).setDeck(null);
             }
-            // Constructed is the absence of a format variant rather than one of its own
+            // Constructed means no format variant. It is not a variant of its own.
             for (final GameType other : LobbyFormats.FORMATS) {
                 if (other != GameType.Constructed) {
                     lobby.removeVariant(other);
@@ -924,7 +924,7 @@ public final class Lobby {
         }
     }
 
-    /** The most seats the table takes: a pod's worth at a Limited table, fewer once a configured draft caps its pod. */
+    /** The most seats the table takes: a full pod at a Limited table, or fewer once a configured draft limits its pod size. */
     int maxSeats() {
         final GameLobby lobby = view();
         if (lobby == null) {
@@ -938,12 +938,12 @@ public final class Lobby {
         return data != null && data.isLimitedMode();
     }
 
-    /** Seats stay as they are while their players draft, since each player's seat is where their packs go. */
+    /** Seats stay unchanged while their players draft, because each player's seat is where their packs go. */
     static boolean drafting(final ServerGameLobby lobby) {
         return lobby.getDraftHost() != null && !lobby.getDraftHost().isFinished();
     }
 
-    /** Returns whether the host's match length preference changed, since no lobby update says so. */
+    /** Sets the host's match length preference. Returns whether it changed, because no lobby update reports it. */
     public boolean setMatchLength(final int games) {
         final var prefs = FModel.getPreferences();
         if (host() == null || (games != 1 && games != 3 && games != 5) || prefs.getPrefInt(FPref.UI_MATCHES_PER_GAME) == games) {
@@ -954,7 +954,7 @@ public final class Lobby {
         return true;
     }
 
-    /** New seats are added at the end, open where others can join and the AI's otherwise. Removal takes open seats first, then the AI's, from the end, never a person's. */
+    /** New seats are added at the end, open when others can join and AI otherwise. Removal takes open seats first, then AI seats, from the end, and never a person's seat. */
     public void setPlayerCount(final int count, final boolean open) {
         final ServerGameLobby lobby = host();
         if (lobby == null || drafting(lobby)) {
@@ -990,7 +990,7 @@ public final class Lobby {
     private void addSeat(final boolean open) {
         final ServerGameLobby lobby = host();
         if (lobby != null && !drafting(lobby) && lobby.getNumberOfSlots() < maxSeats()) {
-            // The engine puts a new seat on the team its index names, which another seat may hold by now
+            // The engine puts a new seat on the team with its index number, which another seat may already use
             final int team = teamForNewSeat(lobby, teams(lobby));
             lobby.addSlot();
             lobby.getSlot(lobby.getNumberOfSlots() - 1).setTeam(team);
@@ -1002,7 +1002,7 @@ public final class Lobby {
         }
     }
 
-    /** Leaves a seat for someone to join, rather than filling it with an AI. */
+    /** Leaves a seat open for someone to join, instead of filling it with an AI. */
     public void openSeat(final int index) {
         final ServerGameLobby lobby = host();
         if (lobby != null && !drafting(lobby) && index != local.webSeat() && index < lobby.getNumberOfSlots()) {
@@ -1011,7 +1011,7 @@ public final class Lobby {
             slot.setName(null);
             slot.setIsReady(false);
             slot.setDeck(null);
-            // Whoever sits here brings their own choices, so this browser's for the seat are dropped
+            // Whoever sits here brings their own choices, so this browser's choices for the seat are dropped
             deckKeys.remove(index);
             extras.remove(index);
             composed.remove(index);
@@ -1058,7 +1058,7 @@ public final class Lobby {
         }
     }
 
-    /** Drops a removed seat's entry and moves the seats after it up one, as the lobby's slots move. */
+    /** Drops a removed seat's entry and moves the later seats up by one, as the lobby's slots move. */
     private static <T> void shiftDown(final Map<Integer, T> bySeat, final int removed) {
         final Map<Integer, T> moved = new HashMap<>();
         bySeat.forEach((i, v) -> {
@@ -1070,7 +1070,7 @@ public final class Lobby {
         bySeat.putAll(moved);
     }
 
-    /** The seats at this table that people hold, a browser's or an app's. */
+    /** The seats at this table that people hold from another browser or an app. */
     public List<LobbySlot> remoteSeats() {
         final List<LobbySlot> out = new ArrayList<>();
         final GameLobby lobby = view();
@@ -1085,7 +1085,7 @@ public final class Lobby {
         return out;
     }
 
-    /** The names the computer plays under at this table, which a person may not also take. */
+    /** The names the computer plays under at this table. A person may not use these names. */
     public List<String> computerNames() {
         final List<String> out = new ArrayList<>();
         final GameLobby lobby = view();
@@ -1100,7 +1100,7 @@ public final class Lobby {
         return out;
     }
 
-    /** A blank name gives the computer a new random one, and leaves a person's as it is. */
+    /** A blank name gives a computer seat a new random name, and leaves a person's name unchanged. */
     public void setName(final int index, final String name) {
         if (name == null) {
             return;
@@ -1133,7 +1133,7 @@ public final class Lobby {
         compose(index);
     }
 
-    /** Leads the seat's deck with one of the commanders it offers, for this table only: the saved deck is not changed. */
+    /** Leads the seat's deck with one of the commanders it offers, for this table only. The saved deck is not changed. */
     public void setCommander(final int index, final int option) {
         final GameLobby lobby = view();
         final Deck main = catalog.deck(key(index));
@@ -1165,7 +1165,7 @@ public final class Lobby {
         return cards.stream().map(PaperCard::getName).toList();
     }
 
-    /** The commanders a seat's deck can be led by, offered only when there is a choice and the seat is this browser's to change. */
+    /** The commanders that can lead a seat's deck. They are offered only when there is a choice and this browser may change the seat. */
     private List<CommanderChoice> commanderChoices(final int index, final boolean mayEdit, final Deck deck) {
         final Deck main = catalog.deck(key(index));
         if (!mayEdit || main == null || deck == null || !format().getDeckFormat().hasCommander()) {
@@ -1180,7 +1180,7 @@ public final class Lobby {
                 o.getCommanders().get(0).getImageKey(false), o.getKind().name().toLowerCase(), names(o.getCommanders()).equals(leading))).toList();
     }
 
-    /** Returns whether the seat took the avatar, which it does not when another seat holds it. */
+    /** Returns whether the seat took the avatar. It does not when another seat already holds that avatar. */
     public boolean setAvatar(final int index, final int value) {
         final GameLobby table = view();
         if (value < 0 || value >= SkinSprites.avatarCount() || table == null || avatarsHeld(table, index).contains(value)) {
@@ -1205,7 +1205,7 @@ public final class Lobby {
         return held;
     }
 
-    /** Players are told apart by portrait in a match, so a seat arriving with one an earlier seat holds takes the first free one. */
+    /** Players are told apart by portrait in a match. A seat that arrives with a portrait an earlier seat holds gets the first free one. */
     public static void distinctAvatars(final GameLobby lobby) {
         final Set<Integer> held = avatarsHeld(lobby, -1);
         final Set<Integer> seen = new HashSet<>();
@@ -1235,7 +1235,7 @@ public final class Lobby {
         }
     }
 
-    /** Sets how a computer seat plays, which only the host can. */
+    /** Sets how a computer seat plays. Only the host can do this. */
     public void setAiProfile(final int index, final String profile) {
         final GameLobby lobby = host();
         if (lobby == null || index < 0 || index >= lobby.getNumberOfSlots() || lobby.getSlot(index).getType() != LobbySlotType.AI
@@ -1246,7 +1246,7 @@ public final class Lobby {
         local.pushLobby();
     }
 
-    /** Deals a seat a sleeve at random: one no seat wears yet while there are enough to go round, and never its own. */
+    /** Deals a seat a random sleeve. It picks one that no seat uses yet while there are enough, and never the seat's current sleeve. */
     public void dealSleeve(final int index) {
         final GameLobby lobby = view();
         final int count = SkinSprites.sleeveCount();
@@ -1275,20 +1275,20 @@ public final class Lobby {
         local.updateOwnSeat(UpdateLobbyPlayerEvent.isReadyUpdate(ready));
     }
 
-    /** Writes a card-art sleeve onto the seat's deck, where every client reads it from. */
+    /** Writes a card-art sleeve onto the seat's deck, which every client reads it from. */
     public void setSleeveArt(final int index, final String imageKey, final int offset) {
         final GameLobby lobby = view();
-        // The deck file and the saved sleeves are the host's, and the key goes into that file as written
+        // The deck file and the saved sleeves belong to the host, and the key is written into that file unchanged
         if (lobby == null || guest.getAsBoolean() || !dealsFor(lobby, index) || imageKey == null
                 || (!imageKey.isEmpty() && ImageUtil.getPaperCardFromImageKey(imageKey) == null)) {
             return;
         }
         catalog.saveSleeveArt(key(index), imageKey, offset);
-        // The slot holds a copy of the deck, so the new sleeve reaches it only with the deck sent again
+        // The slot holds a copy of the deck, so the new sleeve reaches the slot only when the deck is sent again
         compose(index);
     }
 
-    /** Saves the avatars and sleeves the seats chose, which the desktop lobby shares. */
+    /** Saves the avatars and sleeves that the seats chose. The desktop lobby uses the same preferences. */
     public void saveLooks() {
         final GameLobby lobby = view();
         // Several browsers share one set of preferences, so only the machine running the game writes them

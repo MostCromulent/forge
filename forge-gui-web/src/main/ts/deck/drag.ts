@@ -1,4 +1,4 @@
-// Dragging a card between the catalogue and the deck, on pointer events so the carried card can say what releasing it will do
+// Drags a card between the catalogue and the deck. It uses pointer events so the dragged chip can show what a drop will do.
 
 import { copyLimit, countsInDeck } from './catalogue';
 import { imageUrl } from '../images';
@@ -11,7 +11,7 @@ export type Zone = 'Main' | 'Sideboard' | 'Commander' | 'catalogue';
 
 export interface Carried {
   name: string;
-  /** Where it was picked up; catalogue for a card not in the deck yet. */
+  /** The zone the drag started from. It is catalogue for a card not in the deck yet. */
   from: Zone;
   count: number;
 }
@@ -19,12 +19,12 @@ export interface Carried {
 export interface Verdict {
   zone: Zone;
   accepts: boolean;
-  /** What release does, as the carried card says it: "add 1 to Sideboard", or why it can't. */
+  /** The text the drag chip shows, such as "add 1 to Sideboard", or the reason the drop is refused. */
   verb: string;
 }
 
 const THRESHOLD_PX = 4;
-// A refusal's words follow this mark, which also tells the zone to show it as refusing
+// A refusal's text starts with this mark. `mark` checks for it to style the zone as refusing.
 const REFUSED = '⊘';
 const ADD: Record<'Main' | 'Sideboard', TextKey> = { Main: 'lblWebEditorDragAddMain', Sideboard: 'lblWebEditorDragAddSideboard' };
 const MOVE: Record<'Main' | 'Sideboard', TextKey> = { Main: 'lblWebEditorDragMoveMain', Sideboard: 'lblWebEditorDragMoveSideboard' };
@@ -33,7 +33,7 @@ const REMOVE: Record<Exclude<Zone, 'catalogue'>, TextKey> = {
 };
 const refused = (key: TextKey, ...args: number[]) => `${REFUSED} ${t(key, ...args)}`;
 
-/** What releasing a carried card over a zone would do. commanderAllowed says whether the card could lead the deck. */
+/** What dropping a dragged card on a zone would do. commanderAllowed says whether the card can be the deck's commander. */
 export function verdictFor(carried: Carried, zone: Zone, state: EditorState, commanderAllowed: boolean): Verdict {
   const n = carried.count;
   if (zone === carried.from) {
@@ -66,7 +66,7 @@ export function verdictFor(carried: Carried, zone: Zone, state: EditorState, com
   return { zone, accepts: true, verb: t(ADD[zone], n) };
 }
 
-/** Watches a press that becomes a drag only after the pointer moves a few pixels, then gives drop the accepting zone's verdict. */
+/** Starts a drag once the pressed pointer moves a few pixels. On release over an accepting zone, it passes that zone's verdict to drop. */
 export function startDrag(e: PointerEvent, carried: Carried, image: string, judge: (zone: Zone) => Verdict,
   drop: (v: Verdict) => void): void {
   if (e.button !== 0 || e.pointerType === 'touch') {
@@ -105,7 +105,7 @@ export function startDrag(e: PointerEvent, carried: Carried, image: string, judg
   trackDrag(e, THRESHOLD_PX, { start, move, end });
 }
 
-/** Pointer handlers for a card that can be dragged, and whose menu opens on right-click or from its preview's More button. */
+/** Pointer handlers for a draggable card. Its menu opens on right-click or from the More button in its preview. */
 export type CardHandlers = (name: string, from: Zone, image: string, count: number) => {
   'data-menu': string;
   onPointerDown: (e: PointerEvent) => void;
@@ -140,7 +140,7 @@ function unmark(zone: HTMLElement): void {
   delete zone.dataset.dropHint;
 }
 
-// A long list is reached while holding a card by resting near its top or bottom edge
+// Scrolls a long list while a card is dragged near its top or bottom edge
 function scrollNearEdge(zone: HTMLElement | null, y: number): void {
   const body = zone?.querySelector<HTMLElement>('.zone-body, .cat-grid, .cat-table');
   if (!body) return;

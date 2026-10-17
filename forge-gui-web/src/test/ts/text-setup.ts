@@ -1,4 +1,4 @@
-// Gives the tests the page's English text, read from Forge's language file as the server would send it
+// Loads the page's English text for the tests. It reads Forge's language file the same way the server sends it
 
 import { setText } from '../../main/ts/text';
 import english from '../../../../forge-gui/res/languages/en-US.properties?raw';
@@ -9,7 +9,7 @@ function properties(source: string): Record<string, string> {
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i].replace(/^\s+/, '');
     if (!line || line.startsWith('#') || line.startsWith('!')) continue;
-    // A line ending in an unescaped backslash carries on on the next
+    // A line that ends in an unescaped backslash continues on the next line
     while (/(^|[^\\])(\\\\)*\\$/.test(line) && i + 1 < lines.length) line = line.slice(0, -1) + lines[++i].replace(/^\s+/, '');
     const at = line.search(/(?<!\\)[=:]/);
     if (at < 0) continue;

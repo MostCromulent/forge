@@ -39,24 +39,24 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
 
-/** The netplay seat one browser plays from, as a client of a server inside this process that opens no socket of its own. */
+/** The netplay seat one browser plays from. It is a client of a server inside this process, and that server opens no socket. */
 public final class LocalGame implements IHasForgeLog {
     private static final long JOIN_TIMEOUT_SECONDS = 15;
-    /** How long a new table waits for the last one's connections to be gone. */
+    /** How long a new table waits for the last table's connections to close. */
     private static final long FREE_SEATS_TIMEOUT_MILLIS = 5_000;
-    /** More seats than any table has, so every connection a table can hold is checked. */
+    /** More seats than any table has, so the check covers every connection a table can hold. */
     private static final int MOST_SEATS = 16;
 
     private final FServerManager server = FServerManager.getInstance();
-    // Set on the UI thread or a joining task, and read from the web server's and the netplay client's threads
+    // Set on the UI thread or a joining task. Read from the web server's threads and the netplay client's threads
     /** The lobby this session owns, or null when another browser is hosting the game. */
     private volatile ServerGameLobby hosted;
-    /** Whether this session started the server. It outlives any one game, so the open lobby cannot say. */
+    /** Whether this session started the server. The server runs longer than any one game, so the open lobby cannot tell. */
     private volatile boolean startedServer;
     private volatile ClientGameLobby joined;
     private volatile FGameClient client;
     private volatile int webSeat = -1;
-    /** Hears the draft and pool events the host sends this seat; set before a table is opened or joined. */
+    /** Receives the draft and pool events the host sends this seat. Set before a table is opened or joined. */
     private volatile IDraftEventHandler draftHandler;
 
     /** One seat of a game set up in a single call. */
@@ -67,7 +67,7 @@ public final class LocalGame implements IHasForgeLog {
         draftHandler = handler;
     }
 
-    /** Sends an event to the host as this seat's client, which is how a draft pick reaches the draft host. */
+    /** Sends an event to the host through this seat's client. A draft pick reaches the draft host this way. */
     public void sendToHost(final NetEvent event) {
         final FGameClient c = client;
         if (c != null) {
@@ -87,24 +87,24 @@ public final class LocalGame implements IHasForgeLog {
         return hosted != null;
     }
 
-    /** The seat the browser sits in, or -1 before it has one. */
+    /** The browser's seat, or -1 before it has one. */
     public int webSeat() {
         return webSeat;
     }
 
-    /** Starts a game this machine owns and takes a seat in it, with an AI in each of the others. */
+    /** Opens a table this machine hosts and takes a seat at it. Every other seat gets an AI. */
     public void openHost(final String playerName, final WebGuiGame gui, final Runnable onUpdate,
             final BiConsumer<String, String> onChat) {
         endMatch();
         awaitOldSeatsFreed();
-        // The server costs nothing to leave running, so it outlives every game it serves
+        // The server costs nothing to leave running, so it stays up between games
         if (!HostingServer.isHosting()) {
             NetworkLogConfig.activateNetworkLogging();
             server.startLoopbackServer();
             startedServer = true;
         }
         openHosted(playerName, gui, onUpdate, onChat);
-        // The browser took the first open seat, so the rest of the table is the host's to fill
+        // The browser took the first open seat. The host fills the other seats
         for (int i = 0; i < hosted.getNumberOfSlots(); i++) {
             if (i != webSeat) {
                 final LobbySlot slot = hosted.getSlot(i);
@@ -113,7 +113,7 @@ public final class LocalGame implements IHasForgeLog {
                 slot.setIsReady(true);
             }
         }
-        // The client took its seat before these were filled, so its copy of the table is a step behind
+        // The client took its seat before these seats were filled, so its copy of the table is out of date
         pushLobby();
     }
 
@@ -121,7 +121,7 @@ public final class LocalGame implements IHasForgeLog {
             final BiConsumer<String, String> onChat) {
         hosted = new ServerGameLobby();
         server.setLobby(hosted);
-        // Slot 0 starts as the host's own local seat; the browser plays through a client, so it is opened up
+        // Slot 0 starts as the host's local seat. The browser plays through a client, so the slot is set to open
         hosted.getSlot(0).setType(LobbySlotType.OPEN);
         hosted.setListener(new IUpdateable() {
             @Override public void update(final boolean fullUpdate) {
@@ -131,11 +131,11 @@ public final class LocalGame implements IHasForgeLog {
             @Override public void update(final int slot, final LobbySlotType type) { }
         });
         server.setLobbyListener(new HostChat(onChat));
-        // The host reads chat through its own listener, so the client one would only repeat it
+        // The host gets chat through its own listener. A client listener would only repeat each message
         connect(playerName, gui, onUpdate, (from, text) -> { }, () -> { });
     }
 
-    /** Waits for the last table's connections to go, since the server frees a late-closing seat in whichever lobby is current by then. */
+    /** Waits for the last table's connections to close. A seat that closes late is freed in whichever lobby is current at that time. */
     private void awaitOldSeatsFreed() {
         if (!HostingServer.isHosting()) {
             return;
@@ -171,7 +171,7 @@ public final class LocalGame implements IHasForgeLog {
         connect(playerName, gui, onUpdate, onChat, onClosed);
     }
 
-    /** Every seat, the host's included, reaches the game as a netplay client. */
+    /** Every seat, including the host's, connects to the game as a netplay client. */
     private void connect(final String playerName, final WebGuiGame gui,
             final Runnable onUpdate, final BiConsumer<String, String> onChat, final Runnable onClosed) {
         joined = new ClientGameLobby();
@@ -196,7 +196,7 @@ public final class LocalGame implements IHasForgeLog {
         }
     }
 
-    /** Sends the table out to every client, because a slot edited straight on the server does not announce itself. */
+    /** Sends the table to every client. A slot edited directly on the server does not send an update by itself. */
     public void pushLobby() {
         if (hosted != null) {
             Lobby.distinctAvatars(hosted);
@@ -204,14 +204,14 @@ public final class LocalGame implements IHasForgeLog {
         }
     }
 
-    /** Changes to the browser's own seat travel as they would from any client. */
+    /** Sends a change to the browser's own seat the same way any client would. */
     public void updateOwnSeat(final UpdateLobbyPlayerEvent event) {
         if (client != null) {
             client.send(event);
         }
     }
 
-    /** Readies the match, which only the host can, and returns what starts it, or null when it will not start. */
+    /** Prepares the match and returns the task that starts it, or null when it cannot start. Only the host can do this. */
     public Runnable prepare() {
         if (hosted == null) {
             throw new IllegalStateException(Localizer.getInstance().getMessage("lblWebLocalGameOnlyHostStarts"));
@@ -219,7 +219,7 @@ public final class LocalGame implements IHasForgeLog {
         return hosted.startGame();
     }
 
-    /** Sets a game up and starts it at once, which is what a test wants. */
+    /** Sets up a game and starts it at once. Tests use this. */
     public void startMatch(final String playerName, final Deck playerDeck, final String aiName, final Deck aiDeck,
             final WebGuiGame gui) {
         openHost(playerName, gui, () -> { }, (from, text) -> { });
@@ -228,7 +228,7 @@ public final class LocalGame implements IHasForgeLog {
                 new Seat(aiName, true, storedIndex(FPref.UI_AVATARS, 1), storedIndex(FPref.UI_SLEEVES, 1), aiDeck)));
     }
 
-    /** A sealed or draft match against computer seats, typed as limitedType, as desktop's offline limited screens start one. */
+    /** Starts a sealed or draft match of type limitedType against AI seats. Desktop's offline limited screens start one the same way. */
     public void startLimitedMatch(final List<Seat> seats, final GameType limitedType, final WebGuiGame gui) {
         final Seat mine = seats.stream().filter(s -> !s.ai()).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("No seat for the browser"));
@@ -236,21 +236,21 @@ public final class LocalGame implements IHasForgeLog {
         openHost(mine.name(), gui, () -> { }, (from, text) -> { });
         hosted.setLimitedMode(true);
         hosted.setLimitedType(limitedType);
-        // Desktop starts a Commander Draft match with the Commander variant, which gives each deck its commander and 40 life
+        // Desktop starts a Commander Draft match with the Commander variant. That gives each deck its commander and 40 life
         if (limitedType == GameType.CommanderDraft) {
             hosted.applyVariant(GameType.Commander);
         }
         seatAndStart(seats);
     }
 
-    /** Opens a table for this browser alone, at seat webSeat, on which a game mode starts a match it built itself. */
+    /** Opens a table with only this browser, at seat webSeat. A game mode then starts a match it built itself on this table. */
     public ServerGameLobby openAlone(final String playerName, final WebGuiGame gui) {
         nameProfile(playerName);
         openHost(playerName, gui, () -> { }, (from, text) -> { });
         return hosted;
     }
 
-    /** Saves the player's name where the profile has none, since HostedMatch would otherwise ask for one on the host's screen. */
+    /** Saves the player's name if the profile has none. Otherwise HostedMatch would ask for a name on the host's screen. */
     private static void nameProfile(final String name) {
         if (StringUtils.isBlank(FModel.getPreferences().getPref(FPref.PLAYER_NAME))) {
             FModel.getPreferences().setPref(FPref.PLAYER_NAME, name);
@@ -293,14 +293,14 @@ public final class LocalGame implements IHasForgeLog {
         throw new IllegalStateException("No seat left for an AI");
     }
 
-    /** The saved avatar or sleeve for a lobby seat, falling back to the seat number as the desktop lobby does. */
+    /** The saved avatar or sleeve for a lobby seat. If none is saved, it is the seat number, as in the desktop lobby. */
     public static int storedIndex(final FPref pref, final int seat) {
         final String[] stored = FModel.getPreferences().getPref(pref).split(",");
         final Integer v = seat < stored.length ? Ints.tryParse(stored[seat].trim()) : null;
         return v == null || v < 0 ? seat : v;
     }
 
-    /** Hands the web seat to an AI so the browser spectates, which only the host can do because the seat belongs to its server. */
+    /** Gives the web seat to an AI so the browser spectates. Only the host can do this, because the seat belongs to its server. */
     public void spectate() {
         if (hosted == null) {
             netLog.warn("Only the host can hand its seat to the AI");
@@ -314,7 +314,7 @@ public final class LocalGame implements IHasForgeLog {
         server.convertToAI(seat);
     }
 
-    /** Hands another seat of the running match to an AI, which only the host can do. Outside a match it does nothing. */
+    /** Gives another seat of the running match to an AI. Only the host can do this. Outside a match it does nothing. */
     public void handToAi(final int seat) {
         if (hosted != null) {
             server.replaceWithAI(seat);
@@ -325,7 +325,7 @@ public final class LocalGame implements IHasForgeLog {
         return hosted == null ? null : hosted.getHostedMatch();
     }
 
-    /** The host's own player in the running game, or null: not the host, no game, or the seat handed to the AI. */
+    /** The host's own player in the running game. Null if this is not the host, no game runs, or the seat was given to the AI. */
     public Player ownPlayer() {
         final HostedMatch match = hostedMatch();
         final RemoteClient seat = hosted == null ? null : server.getClientBySlotIndex(webSeat);
@@ -343,11 +343,11 @@ public final class LocalGame implements IHasForgeLog {
 
     public void endMatch() {
         abandonGame();
-        // A draft still running keeps its timers and would deal packs to whoever sits at the next table
+        // A draft still running keeps its timers. It would deal packs to the players at the next table
         if (hosted != null) {
             hosted.clearCurrentEvent();
         }
-        // An empty lobby takes the late disconnects, which would otherwise hold this table's seats for a reconnect at the next table
+        // Late disconnects go to an empty lobby. Otherwise this table's seats would be held for a reconnect at the next table
         if (hosted != null) {
             server.setLobby(new ServerGameLobby());
         }
@@ -355,7 +355,7 @@ public final class LocalGame implements IHasForgeLog {
             client.close();
             client = null;
         }
-        // Every seat's GUI lives on the one server, so only the host may clear them
+        // The GUIs of all seats are held on the one server, so only the host may clear them
         if (hosted != null) {
             server.clearPlayerGuis();
         }
@@ -364,7 +364,7 @@ public final class LocalGame implements IHasForgeLog {
         webSeat = -1;
     }
 
-    /** Ends a game still being played at a closing table, whose thread would otherwise wait for good on players who have left. */
+    /** Ends a game that is still running at a closing table. Otherwise its thread would wait forever for players who have left. */
     private void abandonGame() {
         final HostedMatch match = hostedMatch();
         final Game game = match == null ? null : match.getGame();
@@ -386,7 +386,7 @@ public final class LocalGame implements IHasForgeLog {
         });
     }
 
-    /** Gives up the seat for good. Only the host stops the server, because only the host started it. */
+    /** Leaves the seat permanently. Only the host stops the server, because only the host started it. */
     public void shutdown() {
         endMatch();
         if (startedServer) {
@@ -412,7 +412,7 @@ public final class LocalGame implements IHasForgeLog {
         @Override public ClientGameLobby getLobby() { return clientLobby; }
     }
 
-    /** The host sees chat through its own listener; a joined client gets it through the client's. */
+    /** The host gets chat through this listener. A joined client gets chat through the client's listener. */
     private record HostChat(BiConsumer<String, String> onChat) implements ILobbyListener {
         @Override public void message(final String source, final String message, final ChatMessage.MessageType type) {
             onChat.accept(source, message);

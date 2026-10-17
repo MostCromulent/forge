@@ -26,7 +26,7 @@ async function playFixture(page: Page): Promise<void> {
   await page.locator('.cq-save', { hasText: 'Fixture conquest' }).getByRole('button', { name: 'Play' }).click();
 }
 
-/** Plays up to the player's first priority: the opening hand is kept, and anything else asked is given its first answer. */
+/** Plays up to the player's first priority. It keeps the opening hand and gives any other question its first answer. */
 async function toPriority(page: Page): Promise<void> {
   await expect(async () => {
     await answerDialogs(page);
@@ -36,7 +36,7 @@ async function toPriority(page: Page): Promise<void> {
   }).toPass({ timeout: 90_000, intervals: [500] });
 }
 
-// Fails if a battle cannot be reached from the map, its reward cannot be gone through, or the win is not shown as conquered
+// Fails if a battle cannot be reached from the map, its reward cannot be claimed to the end, or the win is not shown as conquered
 test('a conquest battle is fought and comes back to the map', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -44,12 +44,12 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await page.click('.chooser [data-kind=conquest]');
   await playFixture(page);
 
-  // The fixture has its first event won, so its two neighbours are open
+  // The fixture's first event is already won, so its two neighbours are open
   await expect(page.locator('.cq-tile.won')).toHaveCount(1);
   await expect(page.locator('.cq-tile.open')).toHaveCount(2);
   await page.locator('.cq-tile.open').first().click();
   await expect(page.locator('.cq-steps')).toHaveText('1 step away');
-  // The marker walks to the place before the battle: part way through its one step it is between the two
+  // The marker moves to the event before the battle starts. Part way through its one step it is between the two tiles
   const centre = async () => { const b = (await page.locator('.cq-you').boundingBox())!; return b.x + b.y; };
   const from = await centre();
   await page.getByRole('button', { name: 'Battle' }).click();
@@ -63,21 +63,21 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await page.evaluate(() => (window as any).forge.actions.devConquestWheel('BOOSTER'));
   await toPriority(page);
   await page.evaluate(() => (window as any).forge.actions.dev('winGame'));
-  // The player in the battle is the player at the seat, so the board knows the win is theirs
+  // The player in the battle is the seat's player, so the board shows the win as theirs
   await expect(page.locator('#game-over .word')).toHaveText('Victory');
   await page.locator('#game-over button', { hasText: 'Great' }).click();
 
-  // The emblem of the first conquest is held back from the bar until the reveal shows it, with the wheel
+  // The bar does not count the first conquest's emblem until the reveal shows it, together with the wheel
   const reveal = page.locator('.cq-reveal');
   await expect(reveal.locator('.cq-wheel-first')).toBeVisible();
-  // Nothing behind the reveal can be reached, so the reward is gone through to its end
+  // Nothing behind the reveal can be used, so the player must go through the whole reward
   const back = page.locator('.cq-purse button', { hasText: 'Back' });
-  // The page's own frame follows the reveal's by one, so this is asked until it holds
+  // The page behind is locked one frame after the reveal opens, so this check is retried
   await expect(async () => {
     await back.focus();
     expect(await back.evaluate(el => el === document.activeElement)).toBe(false);
   }).toPass({ timeout: 2000 });
-  // The balances stay in view over it, and the emblem of the first conquest has reached them
+  // The balances stay visible above the reveal, and they now include the first conquest's emblem
   const emblems = page.locator('.cq-purse .cq-coin').nth(1);
   await expect(emblems.locator('b')).toHaveText('2');
   const layer = (selector: string) => page.locator(selector).evaluate(el => Number(getComputedStyle(el).zIndex));
@@ -86,7 +86,7 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await expect(reveal.locator('.cq-dl.done')).toBeVisible({ timeout: 15_000 });
   await reveal.getByRole('button', { name: 'Great', exact: true }).click();
 
-  // A booster: the pack is opened, every card turns face up, and the reveal ends on the map
+  // The reward is a booster. The pack is opened, every card turns face up, and the reveal closes to the map
   await reveal.locator('.cq-pk').click({ force: true });
   await expect(reveal.getByRole('button', { name: 'Great', exact: true })).toBeVisible({ timeout: 30_000 });
   const cards = await reveal.locator('.cq-rv-card').count();
@@ -99,12 +99,12 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   // A reload shows the same map and does not offer the reward again
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.locator('.cq-tile.won')).toHaveCount(2);
-  // A reward still pending follows the map, so it is given the time to arrive before it is found absent
+  // A pending reward is sent after the map, so wait long enough for it before checking it is absent
   await page.waitForTimeout(1500);
   await expect(page.locator('.cq-reveal')).toHaveCount(0);
 });
 
-// Fails if a commander's deck cannot be edited over the conquest's cards, or a collection card cannot be exiled for its price
+// Fails if a commander's deck cannot be edited with the conquest's cards, or a collection card cannot be exiled for its price
 test('a deck is edited and a card is exiled', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -144,7 +144,7 @@ test('a conquest is started, renamed and deleted', async ({ page }) => {
   await page.locator('.cq-pick-row').first().click();
   await expect(page.locator('.stp.done')).toHaveCount(2);
   await page.locator('.cq-pick-row').first().click();
-  // Start is dim until there is a name, and takes it as typed
+  // Start is disabled until a name is entered, and the conquest gets the name as typed
   await expect(page.locator('.ticket-foot .primary')).toBeDisabled();
   await page.locator('.stp-open input[type=text]').fill('Probe conquest');
   await page.locator('.ticket-foot .primary').click();
@@ -165,7 +165,7 @@ test('a conquest is started, renamed and deleted', async ({ page }) => {
   await expect(card('Fixture conquest')).toHaveCount(1);
 });
 
-// Fails if a card cannot be pulled from the Aether at its price, or the planes, statistics or preferences do not show
+// Fails if a card cannot be pulled from the Aether at its price, or the planes, statistics or preferences are not shown
 test('the Aether, the planes, the statistics and the preferences open', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -182,7 +182,7 @@ test('the Aether, the planes, the statistics and the preferences open', async ({
   await expect(page.locator('.cq-purse')).toContainText((3000 - cost).toLocaleString('en-GB'));
   await expect(page.locator('.cq-ae-recent img')).toHaveCount(1);
 
-  // A price changed in the preferences is the price the page behind them shows when they close
+  // A price changed in the preferences is shown on the page behind them once they close
   await page.getByRole('button', { name: 'Preferences' }).click();
   await page.locator('.cq-pref', { hasText: 'Base Pull Cost' }).locator('input').fill(String(cost + 50));
   await page.locator('.cq-pref', { hasText: 'Base Pull Cost' }).locator('input').blur();
@@ -193,7 +193,7 @@ test('the Aether, the planes, the statistics and the preferences open', async ({
   await expect(page.locator('.cq-plane-card:not(.locked)')).toHaveCount(1);
   await expect(page.locator('.cq-plane-card:not(.locked)')).toContainText('Zendikar');
   await page.locator('.cq-plane-card.locked').first().click();
-  // One emblem does not buy a plane, so the button says what is held against the cost and cannot be pressed
+  // One emblem is not enough for a plane, so the button shows the balance against the cost and is disabled
   await expect(page.locator('.cq-planes .cq-foot button')).toBeDisabled();
 
   await page.locator('.cq-tab', { hasText: 'Statistics' }).click();

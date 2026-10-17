@@ -27,46 +27,46 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-/** Every browser attached to this process, each with a session of its own, so only the web port has to be reachable from outside. */
+/** Every browser attached to this process, each with its own session. Only the web port must be reachable from outside. */
 final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     private final WebGuiBase ui;
     private final long idleMillis;
     private final Runnable onQuit;
-    /** Sessions by the id their browser keeps, so a reload returns to the seat it left rather than taking a new one. */
+    /** Sessions by the id that their browser stores. A reload then returns to the seat it left instead of taking a new one. */
     private final Map<String, WebSession> byId = new ConcurrentHashMap<>();
     private final Map<BrowserChannel, WebSession> byChannel = new ConcurrentHashMap<>();
     private volatile WebSession host;
     private volatile WebServer server;
-    /** An empty server that nobody has reached yet is waiting, not finished, so it does not close itself. */
+    /** A server that nobody has reached yet is waiting, not finished, so it does not close itself. */
     private boolean mayGiveUp;
-    /** Set from the console's checkbox; without a console there is nothing else to show Forge is running. */
+    /** Set from the console's checkbox. Without a console, nothing else shows that Forge is running. */
     private boolean quitWhenEmpty = true;
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(
             new ThreadFactoryBuilder().setNameFormat("WebStartIdle").setDaemon(true).build());
-    /** The most browsers tracked at once, since anyone with an invite link can open one after another. */
+    /** The most browsers tracked at once, because anyone with an invite link can open one browser after another. */
     static final int MOST_SESSIONS = 64;
-    /** How long the host's seat stays reserved for a browser that has gone, so a reload keeps it. */
+    /** How long the host's seat stays reserved for a browser that has left, so a reload keeps the seat. */
     private static final long HOST_GRACE_MILLIS = 20_000;
-    /** How long a drafting seat's browser may be gone before the draft host is told its player left. */
+    /** How long a drafting seat's browser may be gone before the draft host is told the player left. */
     private static final long DRAFT_HOLD_MILLIS = 15_000;
-    /** The app players in the list of who is here as it was last sent, to tell when one has come or gone. */
+    /** The app players in the last list of who is here. It is used to detect when one arrives or leaves. */
     private volatile List<String> appSeatNames = List.of();
-    /** Runs when no browser has been connected for a while, which is the only sign the game is over with. */
+    /** Runs when no browser has been connected for a while. That is the only sign that the players have finished. */
     private ScheduledFuture<?> idle;
 
     WebSessions(final WebGuiBase ui, final long idleMillis, final Runnable onQuit) {
         this.ui = ui;
         this.idleMillis = idleMillis;
         this.onQuit = onQuit;
-        // Also covers a browser that never opens at all
+        // This also covers a browser that never opens
         idle = timer.schedule(onQuit, idleMillis, TimeUnit.MILLISECONDS);
     }
 
-    /** Whether the router has agreed to forward the port, which decides how the internet link is described. */
+    /** Whether the router has agreed to forward the port. This decides how the internet link is described. */
     private volatile boolean portForwarded;
     private volatile String cloudflare;
 
-    /** The address Cloudflare gives for this server while players come in that way, which then stands in for the router's. */
+    /** The address Cloudflare gives this server while players connect that way. It then replaces the router's address. */
     void throughCloudflare(final String address) {
         cloudflare = address;
     }
@@ -75,7 +75,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         portForwarded = value;
     }
 
-    /** The server is built around this endpoint, so it can only be handed over once it exists. */
+    /** The server is built around this endpoint, so it can only be passed in after the server exists. */
     void setServer(final WebServer server) {
         this.server = server;
     }
@@ -97,23 +97,23 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             netLog.info("{} came back after {} s.", session.label(), away);
         }
         session.connected(channel);
-        // Greeted after the session lets go of its own lock, since shutdown takes this lock and then each session's
+        // Greet after the session releases its own lock, because shutdown takes this lock and then each session's lock
         greet(session);
-        // The others were told this browser had gone, if it holds a seat
+        // If this browser holds a seat, the others were told that it had left
         announcePresence();
     }
 
-    /** Stops the process giving up before anyone connects, for when the console shows Forge is running. */
+    /** Stops the process from quitting before anyone connects. Used when the console shows that Forge is running. */
     synchronized void visibleElsewhere() {
         holdOpen();
     }
 
-    /** Whether this session could take the host's seat right now, which is what the browser offers. */
+    /** Whether this session could take the host's seat now. The browser offers the seat when this is true. */
     synchronized boolean hostSeatFree(final WebSession asking) {
         return host == null && asking != null && asking.mayHost();
     }
 
-    /** Takes the host's seat for this session if it is still free, so only one of two claims made at once wins. */
+    /** Takes the host's seat for this session if it is still free. If two claims arrive at once, only one wins. */
     synchronized boolean claimHost(final WebSession session) {
         if (!session.mayHost()) {
             return false;
@@ -129,7 +129,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         return true;
     }
 
-    /** Frees the host's seat once its browser has been gone a while and it holds no game. */
+    /** Frees the host's seat once its browser has been gone for a while, unless the session holds a game. */
     private synchronized void releaseHostIfAbandoned() {
         if (host == null || host.attached() || host.hasGame()) {
             return;
@@ -139,7 +139,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         announceSeat();
     }
 
-    /** The process lives while any browser is attached, so the host closing theirs does not end a guest's game. */
+    /** The process stays alive while any browser is attached, so the host closing their browser does not end a guest's game. */
     private synchronized void holdOpen() {
         mayGiveUp = true;
         if (idle != null) {
@@ -148,7 +148,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         }
     }
 
-    /** Sets whether the process ends once the last browser has gone, which when turned on applies only the next time one leaves. */
+    /** Sets whether the process ends once the last browser has left. Turning it on takes effect the next time a browser leaves. */
     synchronized void quitWhenEmpty(final boolean value) {
         quitWhenEmpty = value;
         if (!value && idle != null) {
@@ -164,7 +164,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         }
     }
 
-    /** The session a browser returns to or a new one, null when full, keyed by link kind so a guest's link never reaches a host session. */
+    /** The session a browser returns to, or a new one, or null when full. The key includes the link kind, so a guest's link never reaches a host session. */
     private synchronized WebSession sessionFor(final BrowserChannel channel, final String clientId, final boolean mayHost) {
         final String id = clientId.isEmpty() ? String.valueOf(System.identityHashCode(channel)) : clientId;
         final String key = (mayHost ? "host:" : "guest:") + id;
@@ -178,7 +178,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
                 return null;
             }
         }
-        // Nobody hosts by arriving. A browser asks for the seat, and the first to ask while it is free gets it
+        // Nobody becomes host by arriving. A browser asks for the seat, and the first to ask while it is free gets it.
         final WebSession session = new WebSession(ui, this, mayHost);
         byId.put(key, session);
         return session;
@@ -194,7 +194,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             timer.schedule(session.eventSeat()::goneAWhile, DRAFT_HOLD_MILLIS, TimeUnit.MILLISECONDS);
         }
         letGo();
-        // A seat held by a browser that never comes back would leave nobody able to set the table
+        // A seat held by a browser that never comes back would leave nobody able to set up the table
         timer.schedule(this::releaseHostIfAbandoned, HOST_GRACE_MILLIS, TimeUnit.MILLISECONDS);
     }
 
@@ -206,7 +206,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         }
     }
 
-    /** The seated guest of this name, which a session that left its seat can still carry. */
+    /** The seated guest with this name. A session whose browser left can still hold the seat. */
     private WebSession seatedGuest(final String name) {
         for (final WebSession session : byId.values()) {
             if (session.seatedAsGuest() && name != null && name.equals(session.playerName())) {
@@ -221,7 +221,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         return table != null && table.getDraftHost() != null && !table.getDraftHost().isFinished();
     }
 
-    /** The host gives a disconnected guest's seat to a browser that is waiting, which takes over the session that holds it. */
+    /** The host gives a disconnected guest's seat to a waiting browser. That browser takes over the session that holds the seat. */
     void giveSeat(final String from, final String to) {
         final WebSession seat;
         final WebSession taker;
@@ -234,7 +234,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             if (seat == null || channel == null || seat.attached()) {
                 return;
             }
-            // The browser that left would otherwise come back to the seat it no longer has
+            // Otherwise the browser that left would come back to a seat it no longer has
             byId.values().remove(seat);
             byId.replaceAll((key, session) -> session == taker ? seat : session);
             byChannel.put(channel, seat);
@@ -250,23 +250,23 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     void dropPlayer(final String name) {
         final WebSession seat = seatedGuest(name);
         final WebSession h = host;
-        // A drafter who has left is the draft host's to deal with, which holds the seat for a return
+        // The draft host handles a drafter who has left. It holds the seat until the player returns.
         if (seat == null || h == null || seat.attached() || drafting()) {
             return;
         }
-        // A match cannot lose a player, so the AI plays on; a table's seat opens when the guest's connection closes
+        // A match cannot lose a player, so the AI keeps playing. A table's seat opens when the guest's connection closes.
         h.handSeatToAi(seat.seatIndex());
         seat.gameGone();
         announcePresence();
     }
 
-    /** Sends the guest in this seat of the host's table back to wait, which opens the seat. False when no guest holds it. */
+    /** Sends the guest in this seat of the host's table back to the waiting screen, which opens the seat. Returns false when no guest holds it. */
     boolean releaseGuestAt(final int index) {
         final ServerGameLobby table = hostLobby();
         if (table == null || drafting() || index < 0 || index >= table.getNumberOfSlots()) {
             return false;
         }
-        // By name, because a client keeps the seat number it sat down at when a seat below it is removed
+        // Find the guest by name, because a client keeps its original seat number when a seat below it is removed
         final WebSession guest = seatedGuest(table.getSlot(index).getName());
         if (guest != null) {
             guest.gameGone();
@@ -280,17 +280,17 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         return h == null ? null : h.local().hostedLobby();
     }
 
-    /** Every browser is sent the table again, after a change no lobby update carries. */
+    /** Sends the table to every browser again, after a change that no lobby update carries. */
     void lobbyChanged() {
         byId.values().forEach(WebSession::lobbyChanged);
     }
 
-    /** Every seat's dial reads again which pod seats are held, after a player went or came back. */
+    /** Makes every seat's dial read again which pod seats are held, after a player left or came back. */
     void seatsChanged() {
         byId.values().forEach(s -> s.eventSeat().seatsChanged());
     }
 
-    /** Drops every seat and stops the server, guests first so none of them outlives the game they were in. */
+    /** Drops every seat and stops the server. Guests go first, so no guest session stays open after its game. */
     synchronized void shutdown() {
         holdOpen();
         timer.shutdownNow();
@@ -312,7 +312,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         return (int) byId.values().stream().filter(WebSession::attached).count();
     }
 
-    /** Whether the host's table is in a match, which takes nobody new. */
+    /** Whether the host's table is in a match. A table in a match takes no new players. */
     boolean hostPlaying() {
         final ServerGameLobby table = hostLobby();
         return table != null && table.isMatchActive();
@@ -336,7 +336,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
                 || appSeats().stream().anyMatch(s -> name.equalsIgnoreCase(s.getName())));
     }
 
-    /** The seats at the host's table held from desktop or mobile Forge, which have no session here. */
+    /** The seats at the host's table held by desktop or mobile Forge players. These have no session here. */
     private List<LobbySlot> appSeats() {
         final WebSession h = host;
         if (h == null) {
@@ -347,32 +347,32 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         return seats;
     }
 
-    /** The host's table changed, which is the only word of a desktop or mobile player arriving or going. */
+    /** The host's table changed. This is the only notice that a desktop or mobile player arrived or left. */
     void seatsMayHaveChanged() {
         if (!appSeats().stream().map(LobbySlot::getName).toList().equals(appSeatNames)) {
             announcePresence();
         }
     }
 
-    /** Enough of the conversation for a browser that arrives late to see what was being said. */
+    /** Enough of the conversation for a browser that arrives late to see what was said. */
     private static final int CHAT_KEPT = 60;
 
     private final Deque<ChatLine> said = new ArrayDeque<>();
 
-    /** Gives a typed line to every browser here, kept by the server so chat outlasts any one table, and to the host's table's netplay chat. */
+    /** Sends a typed line to every browser here and to the host table's netplay chat. The server keeps the lines, so chat lasts longer than any one table. */
     void say(final WebSession from, final String text) {
         final String who = from.playerName();
         if (who == null) {
             return;
         }
         spread(new ChatLine(who, text, false));
-        // Desktop and mobile players at the table read netplay's chat; each browser there drops the line again, having had it here
+        // Desktop and mobile players at the table read netplay's chat. Each browser at the table drops the copy from netplay, because it already got the line here.
         if (HostingServer.isHosting()) {
             FServerManager.getInstance().broadcast(new MessageEvent(who, text));
         }
     }
 
-    /** Gives every browser here a line said in netplay's chat by a desktop or mobile player, who has no session here. */
+    /** Sends every browser here a line from netplay's chat, said by a desktop or mobile player who has no session here. */
     void relay(final String from, final String text) {
         if (byId.values().stream().noneMatch(s -> from.equalsIgnoreCase(s.playerName()))) {
             spread(new ChatLine(from, text, false));
@@ -389,7 +389,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         }
     }
 
-    /** A browser that has just arrived is given who is here and what has been said. */
+    /** Sends a newly arrived browser the list of who is here and the recent chat. */
     private synchronized void greet(final WebSession session) {
         session.tell(presence());
         for (final ChatLine line : said) {
@@ -422,17 +422,17 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         byId.values().forEach(session -> session.tell(now));
     }
 
-    /** Tells every browser without a seat that the host's seat has changed hands, or come free. */
+    /** Tells every browser without a seat that the host's seat has a new holder or is free. */
     private void announceSeat() {
         byId.values().forEach(WebSession::hostSeatChanged);
     }
 
-    /** Tells the guests waiting on a game that there is now one to join. */
+    /** Tells the guests waiting for a game that there is now one to join. */
     void hostGameOpened() {
         forEachGuest(WebSession::joinHostGame);
     }
 
-    /** Tells the guests their game has gone. The server stays up, so nothing else would tell them. */
+    /** Tells the guests that their game has closed. The server stays up, so nothing else would tell them. */
     void hostGameClosed() {
         forEachGuest(WebSession::gameGone);
     }
@@ -465,7 +465,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             list.add(new Address(Localizer.getInstance().getMessage("lblWebSessionsThroughCloudflare"), s.inviteUrlThrough(through)));
             return list;
         }
-        // Last, because without a forwarded port this link reaches the router and stops there
+        // Listed last, because without a forwarded port this link only reaches the router
         final String external = FServerManager.getExternalAddress();
         if (external != null) {
             list.add(new Address(internetCaption(s.port(), portForwarded), s.inviteUrl(external)));

@@ -25,7 +25,7 @@ import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-/** One seat's view of a draft the host's lobby runs, with events handled one at a time so the browser gets whole states in order. */
+/** One seat's view of a draft that the host's lobby runs. Events are handled one at a time, so the browser gets complete states in order. */
 public final class OnlineDraft implements IDraftEventHandler, Draft {
     private final Executor serial;
     private final Supplier<NetworkEventView> event;
@@ -44,12 +44,12 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
     private int clockSeconds;
     private long clockEnd;
     private int[] depths;
-    /** The card this seat sent as its pick, which counts once the draft host says the seat picked. */
+    /** The card this seat sent as its pick. It counts only once the draft host says the seat picked. */
     private PaperCard pending;
     private boolean pendingSideboard;
     private volatile boolean pooled;
 
-    /** lobbySeat finds this seat before its first pack says it, and held says whether a seat's player has gone. */
+    /** lobbySeat finds this seat before the first pack gives its number. held says whether a seat's player has left. */
     public OnlineDraft(final Executor serial, final Supplier<NetworkEventView> event, final IntSupplier lobbySeat, final IntPredicate held,
             final Consumer<NetEvent> send, final Consumer<DraftState> publish, final BiConsumer<String, Deck> onPool) {
         this.serial = serial;
@@ -66,7 +66,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
         return view.latest();
     }
 
-    /** Whether the draft is on screen: a pack has come, and the pool that ends the event has not. */
+    /** Whether the draft is on screen. A pack has arrived, and the pool that ends the event has not. */
     public boolean drafting() {
         return view.latest() != null && !pooled;
     }
@@ -103,7 +103,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
                     view.log(Localizer.getInstance().getMessage("lblWebOnlineDraftYouPicked", pending.getName()));
                     pending = null;
                 }
-                // The pack picked from has gone on; the next arrives as its own event
+                // The pack picked from has been passed on. The next pack arrives as a separate event.
                 pack = List.of();
                 clockEnd = 0;
             } else {
@@ -118,7 +118,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
     @Override
     public void draftAutoPicked(final int seatIndex, final PaperCard card, final int packNum, final int pickInPack) {
         serial.execute(() -> {
-            // The timer took the pick, so a click that raced it is not counted as well
+            // The timer made the pick, so a click that arrived at the same time is not counted too
             pending = null;
             picks.add(DraftView.card(card, packNum, pickInPack));
             view.log(Localizer.getInstance().getMessage("lblWebOnlineDraftOutOfTime", card.getName()));
@@ -146,7 +146,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
         });
     }
 
-    /** The host's pool is sorted by these moves at the end. */
+    /** At the end, the host's pool is sorted by these moves. */
     @Override
     public void move(final int index, final boolean sideboard) {
         serial.execute(() -> {
@@ -158,7 +158,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
         });
     }
 
-    /** The host does not hear where a pick went, so its pool is sorted by the picks this seat remembers, and anything else is sideboard. */
+    /** The host does not learn where each pick went. So the pool is sorted by the picks this seat stored, and every other card goes to the sideboard. */
     private Deck sorted(final Deck pool) {
         final Map<String, Integer> main = new HashMap<>();
         for (final DraftCard pick : picks) {
@@ -185,7 +185,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
         return out;
     }
 
-    /** Sends the state again with each seat's held flag read afresh, after a player went or came back. */
+    /** Sends the state again with each seat's held flag read again, after a player left or came back. */
     public void refresh() {
         serial.execute(() -> {
             if (view.latest() != null && !pooled) {

@@ -1,4 +1,4 @@
-// Starting a conquest: the planes, a plane's commanders and a commander's planeswalkers are asked of the server as each answer is given
+// Starting a conquest. The form requests the planes, then a plane's commanders, then a commander's planeswalkers, as each choice is made
 
 import { useEffect, useState } from 'preact/hooks';
 import { artUrl } from '../sleeves';
@@ -14,17 +14,17 @@ interface NewValue { plane?: string; commander?: string; planeswalker?: string }
 
 export function NewConquest({ model, actions }: { model: Model; actions: Actions }) {
   const [value, setValue] = useState<NewValue>({});
-  // The name is the last thing asked and is typed, not picked: Start takes it as it stands, with no step to close first
+  // The name is the last step and is typed, not picked. Start uses it as typed, with no step to close first
   const [name, setName] = useState('');
-  // Making a conquest builds its first deck; until the map or an error answers, a second click would make another
+  // Creating a conquest builds its first deck. Until the map or an error arrives, a second click would create another
   const [busy, setBusy] = useState(false);
-  // An error from before the form was opened is the shelf's, and is not this form's to show
+  // An error from before the form opened belongs to the saves list, so this form does not show it
   const [sent, setSent] = useState(false);
   useEffect(() => { actions.conquestOptions(value.plane, value.commander); }, [value.plane, value.commander]);
   useEffect(() => setBusy(false), [model.error]);
   const options = model.conquestOptions;
   if (!options) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
-  // A list answers the plane or the commander it was asked for, and an older answer is not shown for a newer choice
+  // Each list belongs to the plane or commander it was requested for. A list for an older choice is not shown for a newer one
   const commanders = options.plane === value.plane ? options.commanders ?? null : null;
   const walkers = options.plane === value.plane && options.commander === value.commander ? options.planeswalkers ?? null : null;
   const ready = !!value.planeswalker && name.trim().length > 0;
@@ -76,7 +76,7 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
   );
 }
 
-/** What the ticket shows of the choices so far: the plane's art, then the commander's card, then both cards. */
+/** The ticket's picture of the choices so far: the plane's art, then the commander's card, then both cards. */
 function Picture({ value, options }: { value: NewValue; options: ConquestOptions }) {
   const commander = options.commanders?.find(c => c.name === value.commander);
   const walker = options.planeswalkers?.find(c => c.name === value.planeswalker);
@@ -92,7 +92,7 @@ function Picture({ value, options }: { value: NewValue; options: ConquestOptions
   return plane ? <div class="cq-ticket-art" style={{ backgroundImage: `url("${artUrl(plane.art)}")` }} /> : null;
 }
 
-/** A chosen card on the ticket. Its name stands in its place until its picture arrives, and when it has none. */
+/** A chosen card on the ticket. Its name is shown in its place until its picture loads, or if it has no picture. */
 function TicketCard({ card }: { card: ConquestCardOption }) {
   return (
     <span class="cq-pic" key={card.name}>
@@ -102,10 +102,10 @@ function TicketCard({ card }: { card: ConquestCardOption }) {
   );
 }
 
-/** One of the choices shown, picked by chance. */
+/** One of the shown choices, picked at random. */
 const anyOf = <T,>(shown: T[]) => shown[Math.floor(Math.random() * shown.length)];
 
-/** The planes as tiles, narrowed by a search; the one pointed at says what it is underneath. */
+/** The planes as tiles, filtered by a search. The description of the plane under the pointer is shown below the tiles. */
 function PlaneTiles({ planes, pick }: { planes: ConquestPlaneOption[]; pick: (plane: string) => void }) {
   const [looking, setLooking] = useState<ConquestPlaneOption | null>(null);
   const [typed, setTyped] = useState('');
@@ -136,7 +136,7 @@ function PlaneTiles({ planes, pick }: { planes: ConquestPlaneOption[]; pick: (pl
   );
 }
 
-/** Commanders or planeswalkers in one column, narrowed by a search; pointing at one shows its card. rows is null until the server has answered. */
+/** Commanders or planeswalkers in one column, filtered by a search. Pointing at one shows its card. rows is null until the server has answered. */
 function CardPick({ rows, pick }: { rows: ConquestCardOption[] | null; pick: (name: string) => void }) {
   const [typed, setTyped] = useState('');
   if (!rows) return <p class="hint">{t('lblWebConquestReading')}</p>;

@@ -19,18 +19,18 @@ import java.util.List;
 
 /** What the lobby tells a browser about each format, casual variant and card pool. None of it depends on the table. */
 public final class LobbyFormats {
-    /** The formats on offer, as desktop orders them. Each but Constructed is a variant; Constructed is the absence of one. */
+    /** The formats on offer, in desktop's order. Every format except Constructed is a variant. Constructed means no variant. */
     static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander,
             GameType.Brawl, GameType.Oathbreaker, GameType.TinyLeaders, GameType.MomirBasic, GameType.MoJhoSto);
 
-    /** The casual variants, which stack on top of any format the engine allows them with. */
+    /** The casual variants. Each one can be added to any format that the engine allows it with. */
     static final List<GameType> VARIANTS = List.of(GameType.Vanguard, GameType.Planechase,
             GameType.Archenemy, GameType.ArchenemyRumble);
 
-    /** The description is the web's own wording, since the engine's older lines still call a commander a "General". */
+    /** The description uses the web's own wording, because the engine's older text still calls a commander a "General". */
     static Format explained(final GameType type) {
         final Localizer text = Localizer.getInstance();
-        // Grouped as Wizards groups formats: Constructed ones, the Commander family, and the rest
+        // Grouped the way Wizards groups formats: Constructed formats, the Commander family, and the rest
         final String group = type == GameType.Constructed ? "Constructed"
                 : type.getDeckFormat().hasCommander() ? "Commander" : "Other";
         return new Format(type.name(), type.toString(), group, text.getMessage("lblWebDesc" + type.name()),
@@ -53,7 +53,7 @@ public final class LobbyFormats {
                 : "lblWebFactDeckAtLeast", main.getMaximum() + commandZone);
     }
 
-    /** Starting life as RegisteredPlayer.forVariants sets it: 20, plus each format's bonus. */
+    /** Starting life, as RegisteredPlayer.forVariants sets it: 20, plus each format's bonus. */
     private static String lifeFact(final GameType type) {
         final Localizer text = Localizer.getInstance();
         return switch (type) {
@@ -65,7 +65,7 @@ public final class LobbyFormats {
         };
     }
 
-    /** A casual variant with what the lobby says about it, in the same shape as a format. */
+    /** A casual variant and what the lobby says about it, in the same shape as a format. */
     static Format explainedVariant(final GameType type) {
         final Localizer text = Localizer.getInstance();
         final List<String> facts = switch (type) {
@@ -78,7 +78,7 @@ public final class LobbyFormats {
                 text.getMessage("lblWebPlay" + type.name()));
     }
 
-    /** The pools on offer, grouped as Forge's format files group them. */
+    /** The pools on offer, grouped the same way as in Forge's format files. */
     public static CardPools cardPools() {
         final var formats = FModel.getFormats();
         final List<CardPoolGroup> out = new ArrayList<>();
@@ -86,7 +86,7 @@ public final class LobbyFormats {
         out.add(new CardPoolGroup("Casual", pools(formats.getCasualList())));
         out.add(new CardPoolGroup("Archived", pools(formats.getArchivedList())));
         out.add(new CardPoolGroup("Block", pools(formats.getBlockList())));
-        // Which formats load depends on the install, so a heading can come up empty
+        // Which formats load depends on the install, so a heading can be empty
         out.removeIf(g -> g.formats().isEmpty());
         return new CardPools(out);
     }
@@ -124,14 +124,14 @@ public final class LobbyFormats {
                 first = e;
             }
         }
-        // A list that starts at Alpha is every set, whatever it leaves out after
+        // A list that starts at Alpha counts as every set, even if it leaves out some later sets
         if (first == null || "LEA".equals(first.getCode())) {
             return Localizer.getInstance().getMessage(f.getRestrictedCards().isEmpty() ? "lblWebLobbyEverySet" : "lblWebLobbyEverySetRestricted");
         }
         return Localizer.getInstance().getMessage("lblWebLobbySetForward", first.getName());
     }
 
-    /** The formats a 60-card Constructed game can take its cards from. A commander format's file is that format's ban list, so it is left out. */
+    /** The formats that a 60-card Constructed game can take its cards from. A commander format's file is only that format's ban list, so it is left out. */
     private static List<String> pools(final Iterable<GameFormat> formats) {
         final List<String> out = new ArrayList<>();
         for (final GameFormat f : formats) {

@@ -64,20 +64,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Quest mode as one session plays it: the saves, the duels and challenges, the decks, the tournaments, travel and the shops. The quest itself is Forge's, one for the whole process, so this holds only what the session knows that the save does not. */
+/** Quest mode as one session plays it: the saves, the duels and challenges, the decks, the tournaments, travel and the shops. The quest itself is Forge's, with one per process. So this class holds only what the session knows that the save does not. */
 public final class QuestGame implements Campaign, IHasForgeLog {
     private static final String[] DIFFICULTIES = {"questDifficultyEasy", "questDifficultyMedium", "questDifficultyHard", "questDifficultyExpert"};
     private List<QuestEventDuel> duels;
-    /** The match being played: its view keeps every game's steps, and the latest game's controller records the match. */
+    /** The match being played. Its view keeps every game's steps. The latest game's controller records the match. */
     private volatile WebQuestView view;
     private volatile QuestWinLoseController controller;
     /** The result of the game just ended, while its match is still open. */
     private volatile CampaignResult result;
-    /** What the last match gave, until the browser says it has shown it. */
+    /** What the last match gave. It is kept until the browser says it has shown it. */
     private volatile Reward reward;
-    /** The computer the player's tournament match is against, while one is played. */
+    /** The AI opponent of the player's tournament match, while one is being played. */
     private volatile String tournamentOpponent;
-    /** Whether that match has been decided, so leaving it is no forfeit. */
+    /** Whether that match has been decided. If so, leaving it is not a forfeit. */
     private volatile boolean tournamentDecided;
 
     static QuestController quest() {
@@ -140,16 +140,16 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         }
         quest().load(data);
         duels = null;
-        // A reward not yet shown is already in its save, and belongs to the quest that was open
+        // A reward not yet shown is already saved, and it belongs to the quest that was open before
         reward = null;
-        // As desktop's quest chooser does, so desktop and mobile open the same quest next
+        // Desktop's quest chooser does this too, so desktop and mobile open the same quest next
         final QuestPreferences prefs = FModel.getQuestPreferences();
         prefs.setPref(QPref.CURRENT_QUEST, file.getName());
         prefs.save();
         return data.getName();
     }
 
-    /** The save file of a name, or null when there is none. */
+    /** The save file with this name, or null when there is none. */
     public static File find(final String name) {
         if (name == null) {
             return null;
@@ -158,7 +158,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return file.isFile() && Campaign.isSaveNamed(ForgeConstants.QUEST_SAVE_DIR, file, name + ".dat") ? file : null;
     }
 
-    /** Renames a save and its backup. The quest Forge has open is read again under its new name, or its next save would bring the old file back. */
+    /** Renames a save and its backup. If Forge has this quest open, it is loaded again under the new name. Otherwise its next save would create the old file again. */
     @Override
     public String rename(final String name, final String to) {
         final File file = find(name);
@@ -181,7 +181,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         if (open) {
             quest().load(data);
         }
-        // Desktop and mobile leave the preference naming a file that is gone
+        // Desktop and mobile leave the preference pointing at the old file name, which no longer exists
         final QuestPreferences prefs = FModel.getQuestPreferences();
         if (file.getName().equals(prefs.getPref(QPref.CURRENT_QUEST))) {
             prefs.setPref(QPref.CURRENT_QUEST, clean + ".dat");
@@ -232,7 +232,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                 sealed, draft, cubes, difficulties);
     }
 
-    /** The form's answers as the shared rules take them; null for a pool or prize type the form does not offer. */
+    /** The form's answers in the form the shared rules take. Null for a pool type the form does not offer. */
     private static NewQuestRules.Choices choices(final QuestCreate c) {
         final StartingPoolType pool = poolType(c.pool());
         if (pool == null || pool == StartingPoolType.CustomFormat) {
@@ -283,7 +283,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return new QuestDecks(rows);
     }
 
-    /** What the deck editor builds a quest deck from: the quest's cards, every printing counted, with a sideboard of its own. */
+    /** What the deck editor builds a quest deck from: the quest's cards, with every printing counted, and a sideboard of its own. */
     private static DeckEditor.Collection collection() {
         return new DeckEditor.Collection(quest().getName(), () -> {
             final CardPool owned = new CardPool();
@@ -292,12 +292,12 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         }, card -> quest().getCards().isNew(card), deck -> quest().getAvailableLandSets(), () -> quest().save(), false);
     }
 
-    /** A Commander quest's decks are checked as Commander decks, every other quest's as Quest's. */
+    /** A Commander quest's decks are checked as Commander decks. Every other quest's decks are checked as Quest decks. */
     private static GameType deckType() {
         return quest().getDeckConstructionRules() == DeckConstructionRules.Commander ? GameType.Commander : GameType.Quest;
     }
 
-    /** Why a quest deck cannot take a name, or null when it can. */
+    /** Why a quest deck cannot use a name, or null when it can. */
     private static String deckNameProblem(final String name) {
         final String problem = DeckStore.nameProblem(name);
         if (problem != null) {
@@ -306,7 +306,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return quest().getMyDecks().contains(name.trim()) ? Localizer.getInstance().getMessage("lblWebEditorNameTaken", name.trim()) : null;
     }
 
-    /** The duels on offer, kept so that an index the browser sends back names the duel it was shown. */
+    /** The duels on offer. They are kept so that an index the browser sends back still names the duel it was shown. */
     private List<QuestEventDuel> duels() {
         if (duels == null) {
             final List<QuestEventDuel> made = quest().getDuelsManager().generateDuels();
@@ -322,7 +322,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         final List<QuestEventDuel> offered = duels();
         for (int i = 0; i < offered.size(); i++) {
             final QuestEventDuel duel = offered.get(i);
-            // The random opponent is a surprise, so nothing of its deck shows
+            // The random opponent is a surprise, so none of its deck is shown
             final boolean random = !duel.showDifficulty();
             rows.add(new QuestDuelRow(i, duel.getTitle(), random ? 0 : duel.getDifficulty().ordinal() + 1, duel.getDescription(),
                     random ? "" : DeckCatalog.colors(duel.getEventDeck()), random ? null : face(duel.getEventDeck()), random));
@@ -332,7 +332,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         final List<QuestPetChoice> pets = new ArrayList<>();
         final List<Integer> lengths = new ArrayList<>();
         String next = null;
-        // Pets, the plant, charms and challenges are Fantasy mode's only, as desktop's Duels screen shows them
+        // Pets, the plant, charms and challenges exist only in Fantasy mode, as on desktop's Duels screen
         if (fantasy) {
             for (int slot = 0; slot < QuestController.MAX_PET_SLOTS; slot++) {
                 final List<String> owned = quest.getPetsStorage().getAvaliablePets(slot, quest.getAssets()).stream().map(QuestPetController::getName).toList();
@@ -354,7 +354,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                 pets, lengths, quest.getMatchLength(), deck == null ? "" : deck.getName(), problem, canUnlock());
     }
 
-    /** Whether Unlock Sets is offered, as desktop shows its button. */
+    /** Whether Unlock Sets is offered, by the same rule desktop uses to show its button. */
     private static boolean canUnlock() {
         return quest().getUnlocksTokens() > 0 && quest().getWorldFormat() == null;
     }
@@ -373,7 +373,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return lengths;
     }
 
-    /** A deck's creature of highest mana value, else its first spell, as the picture of the deck or duel. */
+    /** The picture of a deck or duel: the deck's creature with the highest mana value, or else its first spell. */
     private static String face(final Deck deck) {
         PaperCard best = null;
         PaperCard firstSpell = null;
@@ -412,7 +412,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         reward = null;
     }
 
-    /** Starts the duel at an index of the list the page was sent, as desktop's Start does. */
+    /** Starts the duel at an index in the list sent to the page, as desktop's Start does. */
     private void duel(final int index, final Host host) {
         final List<QuestEventDuel> offered = duels();
         if (index >= 0 && index < offered.size()) {
@@ -420,7 +420,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         }
     }
 
-    /** The challenges on offer, drawn again as desktop's page does each time it is shown, which draws only where there is room. */
+    /** The challenges on offer. Like desktop's page, it draws challenges again each time, but only where there is room. */
     private QuestChallenges challengesPage() {
         final QuestController quest = quest();
         final QuestAchievements record = quest.getAchievements();
@@ -436,7 +436,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                     c.getCardRewardList() == null ? List.of() : c.getCardRewardList().stream().map(InventoryItem::getName).toList(),
                     c.isRepeatable(), c.getHumanExtraCards(), c.getAiExtraCards(), c.getHumanDeck() != null));
         }
-        // Desktop hides the zeppelin and the next-challenge line in Classic mode, though it offers the challenges
+        // Desktop hides the zeppelin and the next-challenge line in Classic mode, but still offers the challenges
         final boolean fantasy = quest.getMode() == QuestMode.Fantasy;
         final int max = Math.max(0, Math.min(5, record.getWin() / quest.getTurnsToUnlockChallenge() - record.getChallengesPlayed()));
         final int wins = QuestUtil.nextChallengeInWins();
@@ -447,7 +447,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                 quest.getAssets().getItemLevel(QuestItemType.ZEPPELIN) == 2);
     }
 
-    /** Leaves a tournament whose draft was not finished: its fee comes back and it is no longer offered, as desktop's leaving the draft does. */
+    /** Leaves a tournament whose draft was not finished, as desktop does. The fee is refunded and the tournament is no longer offered. */
     public void cancelDraft() {
         final QuestEventDraft draft = quest().getAchievements().getCurrentDraft();
         if (draft == null) {
@@ -458,19 +458,19 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         quest().save();
     }
 
-    /** Keeps a tournament's finished draft as Quest keeps it, and answers the storage its deck is built in. */
+    /** Keeps a tournament's finished draft the way Quest does, and returns the storage its deck is built in. */
     public IStorage<DeckGroup> drafted(final DeckGroup group) {
         QuestDraftUtils.completeDraft(group);
         return quest().getDraftDecks();
     }
 
-    /** Decides the computer's matches up to the player's without a game, as mobile does, and starts the player's. Answers why it cannot, or null. */
+    /** Decides the AI matches before the player's without playing them, as mobile does. Then it starts the player's match. Returns why it cannot, or null. */
     private String nextMatch(final Host host) {
         final QuestEventDraft draft = quest().getAchievements().getCurrentDraft();
         if (draft == null || !draft.isStarted() || reward != null) {
             return null;
         }
-        // injectRandomMatchOutcome answers true for ever once the player is out, so the player's matches left end the loop
+        // injectRandomMatchOutcome returns true forever once the player is out. So the loop ends when the player has no matches left
         while (draft.playerHasMatchesLeft() && QuestDraftUtils.injectRandomMatchOutcome(false)) {
         }
         quest().save();
@@ -494,13 +494,13 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return null;
     }
 
-    /** A tournament game, as desktop's QuestDraftWinLose has it: the bracket learns the winner once the match is over, and nothing goes on the quest's record. */
+    /** A tournament game, handled as desktop's QuestDraftWinLose does. The bracket gets the winner once the match is over. Nothing goes on the quest's record. */
     private CampaignResult tournamentGameOver(final GameView hostGame, final String opponent) {
         final boolean over = hostGame.isMatchOver();
         final String winner = hostGame.getWinningPlayerName();
         final boolean won = winner != null && !opponent.equals(winner);
         if (over && winner != null) {
-            // setWinner takes any name not a computer's as the player's, and the player may share a name with a computer
+            // setWinner treats any name that is not an AI's as the player. But the player may have the same name as an AI
             quest().getAchievements().getCurrentDraft().setWinner(won ? QuestEventDraft.HUMAN : opponent);
             quest().save();
             tournamentDecided = true;
@@ -514,7 +514,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return result;
     }
 
-    /** Leaves the tournament entered, as desktop's Leave Tournament or Collect Prizes does: prizes once it has started, the offer to keep the draft, and the pool added to the quest. */
+    /** Leaves the entered tournament, as desktop's Leave Tournament or Collect Prizes does. It gives prizes if the tournament has started, offers to keep the draft, and adds the pool to the quest. */
     private void endTournament() {
         final QuestEventDraft draft = quest().getAchievements().getCurrentDraft();
         if (draft == null) {
@@ -544,7 +544,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
 
     /** Starts a duel or a challenge, as desktop's Start does. */
     private void fight(final QuestEvent duel, final Host host) {
-        // A reward still to be shown belongs to the last match, and the next match's would replace it
+        // A reward still to be shown belongs to the last match. The next match's reward would replace it
         if (reward != null) {
             return;
         }
@@ -552,7 +552,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         if (!QuestUtil.canStartGame()) {
             return;
         }
-        // What desktop's start does in the background before the match
+        // Desktop's start does this in the background before the match
         quest().getDuelsManager().randomizeOpponents();
         quest().setCurrentEvent(duel);
         quest().save();
@@ -569,7 +569,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         });
     }
 
-    /** Quest's own result controller is made for each game, as desktop makes one per game, and the latest one records the match when it is left. */
+    /** Quest's own result controller is created for each game, as on desktop. The latest one records the match when it is left. */
     @Override
     public CampaignResult gameOver(final GameView hostGame) {
         final String opponent = tournamentOpponent;
@@ -595,7 +595,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return result;
     }
 
-    /** The rewards the controller works out may ask the player questions, which belong after the result screen. */
+    /** The controller's reward logic may ask the player questions. Those questions belong after the result screen. */
     @Override
     public void resultSent() {
         final WebQuestView shown = view;
@@ -610,14 +610,14 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return result;
     }
 
-    /** Leaving records the match, as desktop's Quit does, and the match's steps become the reward shown over the Duels page. */
+    /** Leaving records the match, as desktop's Quit does. The match's steps become the reward shown over the Duels page. */
     @Override
     public void left() {
         final String opponent = tournamentOpponent;
         if (opponent != null) {
             tournamentOpponent = null;
             result = null;
-            // A match left before it is decided is forfeit, as desktop's Forfeit Tournament has it
+            // A match left before it is decided is a forfeit, as with desktop's Forfeit Tournament
             if (!tournamentDecided) {
                 quest().getAchievements().getCurrentDraft().setWinner(opponent);
                 QuestDraftUtils.cancelFurtherMatches();
@@ -642,7 +642,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         duels = null;
     }
 
-    /** Cards Forge showed the host, such as a booster just bought: added to what the reveal has yet to show. */
+    /** Cards Forge showed the host, such as a booster just bought. They are added to what the reveal has not shown yet. */
     public void shown(final String title, final List<PaperCard> cards) {
         final List<RewardStep> steps = new ArrayList<>(reward == null ? List.of() : reward.steps());
         steps.add(WebQuestView.cardsStep(title, cards, false));
@@ -664,7 +664,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return QuestShop.trade(source, picks);
     }
 
-    /** The quest's record, purse and collection, its tournament placings, and in Fantasy mode what it owns of the bazaar. */
+    /** The quest's record, credits and collection, its tournament placings, and in Fantasy mode the bazaar items it owns. */
     @Override
     public CampaignStats stats(final String scope) {
         final QuestController quest = quest();
@@ -698,7 +698,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
 
     private static final String[] PLACES = {"lblWebQuestFirstPlace", "lblWebQuestSecondPlace", "lblWebQuestThirdPlace", "lblWebQuestFourthPlace"};
 
-    /** The bazaar's items and pets the quest owns, each with its level of its most; an item missing from every stall has reached its most. */
+    /** The bazaar items and pets the quest owns, each with its level and highest level. An item missing from every stall is at its highest level. */
     private static List<List<String>> owned(final QuestController quest) {
         final QuestAssets assets = quest.getAssets();
         final Map<QuestItemType, Integer> most = new HashMap<>();
@@ -725,11 +725,11 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return rows;
     }
 
-    /** A preference as desktop's page lists it, by its label's and group's keys; column is the difficulty a difficulty's own value is for. */
+    /** A preference as desktop's page lists it, by the keys of its label and group. column is the difficulty that a per-difficulty value belongs to. */
     private record PrefField(QPref pref, String label, String group, String column) {
     }
 
-    /** Desktop's preferences in its order (VSubmenuQuestPrefs), with the difficulty table's values one field each. */
+    /** Desktop's preferences in desktop's order (VSubmenuQuestPrefs). Each value in the difficulty table is its own field. */
     private static final List<PrefField> PREFS = prefFields();
 
     private static List<PrefField> prefFields() {
@@ -793,7 +793,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return new CampaignPrefs(l.getMessage("lblQuestPreferences"), rows, l.getMessage("lblWebQuestPrefsShared"), problem, false);
     }
 
-    /** Checked as desktop checks it: two values are decimals and taken as they are, the rest whole numbers that Quest validates. */
+    /** Checked as desktop checks it. Two values are decimals and are stored as given. The rest are whole numbers that Quest validates. */
     @Override
     public String setPref(final String key, final String text) {
         final QuestPreferences prefs = FModel.getQuestPreferences();
@@ -822,11 +822,11 @@ public final class QuestGame implements Campaign, IHasForgeLog {
     public void resetPrefs() {
     }
 
-    /** A command to this quest, from the save that is open, or from the list of saves while save is null. */
+    /** A command to this quest. save is the open save, or null when the command comes from the list of saves. */
     private record Call(QuestGame game, String save, Host host) {
     }
 
-    /** The shelf's own commands: the form's options, and a new quest from them. */
+    /** Runs a command only on the list of saves. Those commands ask for the form's options and create a new quest. */
     private static <T extends Record> Handler<Call, T> onShelf(final Handler<Call, T> handler) {
         return (c, ch, command) -> {
             if (c.save() == null) {
@@ -843,7 +843,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         };
     }
 
-    /** A tournament step, after which the bar and the tournaments page are sent again. The step answers why it failed, or null. */
+    /** A tournament step. The bar and the tournaments page are sent again after it. The step returns why it failed, or null. */
     private interface Step<T> {
         String run(Call call, T command);
     }
@@ -859,13 +859,13 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         });
     }
 
-    /** A change to the world, which has new opponents, and may change the shop, the bar and every list. */
+    /** A change to the world. It brings new opponents, and may change the shop, the bar and every list. */
     private static <T extends Record> Handler<Call, T> newWorld(final Runnable change) {
         return inSave((c, ch, command) -> {
             change.run();
             c.game().duels = null;
             c.game().page().forEach(ch::send);
-            // An unlocked set's bonus boosters are shown as Forge shows them, which adds them to the reveal
+            // Forge shows an unlocked set's bonus boosters in its usual way, and that adds them to the reveal
             if (c.game().reward != null) {
                 ch.send(c.game().reward);
             }
@@ -893,7 +893,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                     ch.send(c.host().error(problem));
                     return;
                 }
-                // Stored at once, so the deck is on the Decks page whether or not a card is added
+                // Stored at once, so the deck appears on the Decks page even if no card is added
                 final Deck deck = new Deck(name.trim());
                 quest().getMyDecks().add(deck);
                 quest().save();
@@ -969,16 +969,16 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                 ch.send(QuestShop.bazaar(buy.stall()));
             }))
             .on(QuestZeppelin.class, inSave((c, ch, z) -> {
-                // Level 2 is the zeppelin flown since the last match, which the end of a match sets back to 1
+                // Level 2 means the zeppelin was flown since the last match. The end of a match sets it back to 1
                 if (quest().getAssets().hasItem(QuestItemType.ZEPPELIN) && quest().getAssets().getItemLevel(QuestItemType.ZEPPELIN) != 2) {
                     quest().getAchievements().setCurrentChallenges(null);
                     quest().getAssets().setItemLevel(QuestItemType.ZEPPELIN, 2);
                 }
                 ch.send(c.game().challengesPage());
             }))
-            // The Duels page is sent after a refusal too, so the page's control shows the choice that stands
+            // The Duels page is sent after a refusal too, so the page's control shows the current choice
             .on(QuestPet.class, inSave((c, ch, pet) -> {
-                // The plant's slot takes only the plant, as desktop's switch sets it; a pet must be one the quest owns
+                // The plant's slot takes only the plant, as desktop's switch sets it. A pet must be one the quest owns
                 final boolean owned = pet.name() == null || quest().getPetsStorage().getAvaliablePets(pet.slot(), quest().getAssets())
                         .stream().anyMatch(p -> p.getName().equals(pet.name()));
                 if (pet.slot() >= 0 && pet.slot() < QuestController.MAX_PET_SLOTS && owned) {

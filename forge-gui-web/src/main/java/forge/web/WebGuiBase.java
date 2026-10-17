@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-/** What Forge asks of the program it runs in, answered for the web, with one "WebUI" thread in place of Swing's event thread. */
+/** Forge's interface to the program it runs in, implemented for the web. One "WebUI" thread takes the place of Swing's event thread. */
 public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     private volatile Thread uiThread;
     private final ExecutorService ui = Executors.newSingleThreadExecutor(r -> {
@@ -57,7 +57,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     private final String assetsDir = resolveAssetsDir();
     private final ImageFetcher imageFetcher = new WebImageFetcher();
     private volatile Consumer<JsonObject> noticeSink = notice -> { };
-    /** Where cards shown to the host go: the open campaign's reward, which reveals them. */
+    /** Where cards shown to the host are sent. The open campaign's reward screen shows them. */
     private volatile BiConsumer<String, List<PaperCard>> cardsSink = (title, cards) -> { };
     private final HostRequests hostRequests = new HostRequests();
 
@@ -84,7 +84,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         if (fromWorkingDirectory != null) {
             return fromWorkingDirectory;
         }
-        // user.dir may be unrelated to where a packaged JAR is installed, so also look upward from the JAR or classes path
+        // user.dir may not be where a packaged JAR is installed, so also search upward from the JAR or classes path
         try {
             final File codeSource = new File(WebGuiBase.class.getProtectionDomain().getCodeSource()
                     .getLocation().toURI());
@@ -93,12 +93,12 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
                 return fromCodeSource;
             }
         } catch (final Exception ignored) {
-            // An explicit forge.assets.dir remains available for unusual launchers
+            // Unusual launchers can still set forge.assets.dir explicitly
         }
         return "";
     }
 
-    /** Finds either an assets folder itself or the forge-gui module below one of its ancestors. */
+    /** Searches start and its parents for an assets folder, or for a forge-gui module folder that holds one. */
     private static String findAssets(final File start) {
         for (File directory = start; directory != null; directory = directory.getParentFile()) {
             if (new File(directory, "res").isDirectory()) {
@@ -116,7 +116,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         return path.endsWith(File.separator) ? path : path + File.separator;
     }
 
-    /** One thread that runs its jobs in turn and ends when idle, so a session done with it holds none. A job that throws is logged. */
+    /** One thread that runs its jobs in order and ends when idle, so a finished session keeps no thread. A job that throws is logged. */
     public static Executor worker(final String name) {
         final ExecutorService pool = new ThreadPoolExecutor(0, 1, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
             final Thread t = new Thread(r, name);
@@ -217,7 +217,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         for (final T choice : all) {
             options.add(display == null ? String.valueOf(choice) : display.apply(choice));
         }
-        // Sets are drawn as their packs and cards as themselves, as a bonus booster's set or a reward card is chosen
+        // Sets are shown as their packs and cards as themselves. This is how a bonus booster's set or a reward card is chosen.
         final boolean packs = !all.isEmpty() && all.stream().allMatch(CardEdition.class::isInstance);
         final boolean cards = !all.isEmpty() && all.stream().allMatch(PaperCard.class::isInstance);
         final List<String> images = packs ? all.stream().map(e -> boosterImage((CardEdition) e)).toList()
@@ -231,7 +231,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
                 }
             }
         }
-        // Nobody answered, so fall back to what the host would have done on its own
+        // Nobody answered, so use the choice the host would have made on its own
         if (result.isEmpty() && min > 0) {
             netLog.warn("Host choice unanswered, taking the first: {}", message);
             result.add(all.get(0));
@@ -269,16 +269,16 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     }
 
     @Override public HostedMatch hostMatch() { return new HostedMatch(); }
-    /** Unreachable, because every web match is opened by LocalGame over netplay and each seat's WebGuiGame is built by its WebSession. */
+    /** Never called, because LocalGame opens every web match over netplay and each seat's WebSession builds its WebGuiGame. */
     @Override public IGuiGame getNewGuiGame() { throw new UnsupportedOperationException("A web seat's GUI is built by WebSession"); }
     @Override public boolean hasNetGame() { return false; }
 
-    /** The picture of a set's booster, as BoosterPack names its first one. */
+    /** The image key of a set's booster picture, named as BoosterPack names its first one. */
     public static String boosterImage(final CardEdition edition) {
         return ImageKeys.BOOSTER_PREFIX + edition.getCode() + (edition.getCntBoosterPictures() > 1 ? "_1" : "");
     }
 
-    /** A picture the browser draws itself: a skin icon by its FSkinProp, or a file by its path, which only says which picture is meant. */
+    /** A picture that the browser draws itself: a skin icon by its FSkinProp, or a file by its path. It only identifies which picture is meant. */
     public record WebSkinImage(FSkinProp prop, String path) implements ISkinImage {
     }
 
@@ -297,7 +297,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     }
     @Override public void copyToClipboard(final String text) { }
     @Override public void showCardList(final String title, final String message, final List<PaperCard> list) { cardsSink.accept(title, list); }
-    // A box's first pack is shown, and true asks for the rest together, so a box is two steps of a reveal and not thirty-six
+    // The box's first pack is shown, and true asks for the rest together. A box is then two steps of a reveal, not thirty-six.
     @Override public boolean showBoxedProduct(final String title, final String message, final List<PaperCard> list) {
         cardsSink.accept(title, list);
         return true;
@@ -306,7 +306,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     @Override public void showImageDialog(final ISkinImage image, final String message, final String title) { }
     @Override public String showFileDialog(final String title, final String defaultDir) { return null; }
     @Override public File getSaveFile(final File defaultFile) { return null; }
-    // The browser plays the audio, so the formats it understands are the ones this client supports
+    // The browser plays the audio, so this client supports the formats that the browser understands
     @Override public boolean isSupportedAudioFormat(final File file) {
         final String name = file.getName().toLowerCase(Locale.ROOT);
         return name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".ogg") || name.endsWith(".m4a");

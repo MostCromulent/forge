@@ -1,11 +1,11 @@
-// The end of a quest tournament's draft, which takes the place of saving one
+// The end of a quest tournament's draft. It replaces the usual save dialog
 
 import { Backdrop } from '../dialog';
 import { t } from '../text';
 import type { Actions } from '../actions';
 import type { DraftState } from '../protocol';
 
-/** The end of a quest tournament's draft, whose picks are kept under the name Quest gives them and built into its deck next. */
+/** The end of a quest tournament's draft. Quest names the picks itself, and the player builds them into the tournament deck next. */
 export function TournamentDrafted({ state, actions }: { state: DraftState; actions: Actions }) {
   return (
     <Backdrop>

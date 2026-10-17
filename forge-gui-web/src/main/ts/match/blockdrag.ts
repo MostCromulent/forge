@@ -1,4 +1,4 @@
-// A dragged block or attack sends the clicks the engine already takes, each waiting for the one before to show on the board
+// A dragged block or attack sends the same clicks the engine already accepts. Each click waits until the one before it shows on the board.
 
 import { byId, q, make, placeBeside } from '../dom';
 import { game, me, opponents, stateOf, type Model } from '../model';
@@ -10,45 +10,45 @@ import { trackDrag } from '../press';
 
 /** How far the pointer moves before a press on a creature is a drag rather than a click. */
 const DRAG_PX = 8;
-/** How long a click has to show on the board before the drag stops waiting for it. */
+/** How long the drag waits for a click to show on the board before it gives up. */
 const STEP_MS = 2000;
 
 type Point = { x: number; y: number };
 
 let current: Model | null = null;
-/** The drags not yet on the board, one after another, so a quick second drag waits for the first. */
+/** The drags not yet shown on the board, chained in order, so a quick second drag waits for the first. */
 let queued: Promise<void> = Promise.resolve();
 
 const has = (refs: (Ref | null)[] | null | undefined, key: number) => (refs ?? []).some(r => r?.ref === key);
 
-/** The block prompt lists no cards as selectable, so it is known by the step and by whom the attack is aimed at. */
+/** The block prompt marks no cards as selectable. So it is recognised by the step and by who the attack targets. */
 export function declaringBlocks(model: Model): boolean {
   const mine = me(model)?.$key;
   return game(model)?.Phase === 'COMBAT_DECLARE_BLOCKERS' && !!model.prompt
     && (game(model)?.CombatView ?? []).some(b => b.defender?.ref === mine);
 }
 
-/** The opponent the attack prompt is declaring attackers at, which it highlights. */
+/** The opponent the attack prompt is declaring attackers against. The prompt highlights that opponent. */
 function currentDefender(model: Model): PlayerView | undefined {
   const lit = model.prompt?.highlighted ?? [];
   return opponents(model).find(p => lit.includes(p.$key));
 }
 
-/** The attack prompt highlights the player it is declaring at, which the priority prompt later in the same step does not. */
+/** The attack prompt highlights the defending player. The priority prompt later in the same step does not. */
 function declaringAttacks(model: Model): boolean {
   return game(model)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && game(model)?.PlayerTurn?.ref === me(model)?.$key
     && opponents(model).filter(p => !p.HasLost).length > 1 && !!currentDefender(model);
 }
 
 let act: Actions | null = null;
-/** Who you last attacked, by name, since each game of a match has its players anew. */
+/** The name of the player you last attacked. The name is kept because each game of a match creates its players again. */
 let lastDefender: string | null = null;
-/** This attack prompt has been turned to lastDefender already, or was never going to be. */
+/** Whether this attack prompt has already been switched to lastDefender, or never needed to be. */
 let turned = false;
-/** The player this browser asked the prompt to turn to, until it has. */
+/** The player this browser asked the prompt to switch to, until the switch shows. */
 let turning: number | null = null;
 
-/** The engine starts every attack at the first opponent, so once per attack prompt this turns it to whoever you attacked last. */
+/** The engine starts every attack at the first opponent. So once per attack prompt this switches it to the player you attacked last. */
 function followDefender(model: Model): void {
   const at = declaringAttacks(model) ? currentDefender(model) : undefined;
   if (!at) {
@@ -70,7 +70,7 @@ function followDefender(model: Model): void {
   lastDefender = at.Name ?? null;
 }
 
-/** Marks the table while blockers or attackers are being declared, so a touch on your creatures drags rather than scrolls. */
+/** Marks the table while blockers or attackers are being declared, so a touch on your creatures drags instead of scrolling. */
 export function renderBlockDrag(model: Model): void {
   current = model;
   followDefender(model);
@@ -81,7 +81,7 @@ export function renderBlockDrag(model: Model): void {
   if (!blocks && !attacks) setDragArrow(null, null);
 }
 
-/** Runs once every block dragged so far has reached the board, so an OK pressed straight after a drop includes it. */
+/** Runs `then` once every block dragged so far shows on the board. So an OK pressed straight after a drop includes that block. */
 export function afterBlockDrags(then: () => void): void {
   void queued.then(then);
 }
@@ -99,7 +99,7 @@ export function initBlockDrag(actions: Actions): void {
       start: () => { document.body.classList.add('dragging-block'); },
       move: ev => {
         if (!current) return;
-        // Over an attacker, or an opponent to attack, the arrow lands on it; anywhere else it follows the pointer
+        // Over an attacker, or an opponent to attack, the arrow points at it. Anywhere else it follows the pointer
         const over = attack ? defenderAt(current, ev.clientX, ev.clientY)?.face : attackerAt(current, ev.clientX, ev.clientY);
         setDragArrow(el, over ?? { x: ev.clientX, y: ev.clientY }, attack ? 'attack' : 'block');
       },
@@ -117,7 +117,7 @@ export function initBlockDrag(actions: Actions): void {
           const attacker = attackerAt(current, at.x, at.y);
           if (attacker) step = () => block(actions, creature, Number(attacker.dataset.key), at);
         }
-        // A failed block or attack must not stop every later one, or the OK that waits for them
+        // A failed block or attack must not stop the later ones, or the OK that waits for them
         if (step) queued = queued.then(step).catch(e => console.error(e));
       },
     });
@@ -144,10 +144,10 @@ function defenderAt(model: Model, x: number, y: number): { key: number; face: HT
   return null;
 }
 
-/** Attacks the defender with the creature, as the clicks would: the player first, unless the prompt is already at them. */
+/** Attacks the defender with the creature, using the clicks a player would make. It clicks the player first, unless the prompt already targets them. */
 async function declare(actions: Actions, attacker: number, defender: number): Promise<void> {
   const attacking = () => (game(current!)?.CombatView ?? []).some(b => b.defender?.ref === defender && has(b.attackers, attacker));
-  // A click on a creature already attacking the player the prompt is at takes it out of the attack
+  // A click on a creature already attacking the prompt's defender removes it from the attack, so it is not clicked
   if (!current || attacking()) return;
   if (currentDefender(current)?.$key !== defender) {
     actions.selectPlayer(defender);
@@ -182,10 +182,10 @@ function until(test: () => boolean): Promise<boolean> {
   });
 }
 
-/** Makes a drag's block as the block prompt takes one, by clicking the attacker and then the blocker, after first taking a blocker off the attacker it already blocks. */
+/** Makes a drag's block the way the block prompt accepts one, by clicking the attacker and then the blocker. If the blocker already blocks another attacker, that block is removed first. */
 async function block(actions: Actions, blocker: number, attacker: number, at: Point): Promise<void> {
   if (!current || blocking(blocker, attacker)) return;
-  // The block prompt highlights the attacker it is blocking, and one already taken is not clicked again
+  // The block prompt highlights the attacker being blocked. An attacker that is already highlighted is not clicked again
   const named = (key: number) => !!current?.prompt?.highlighted?.includes(key);
   const choose = async (key: number) => {
     if (named(key)) return;
@@ -203,7 +203,7 @@ async function block(actions: Actions, blocker: number, attacker: number, at: Po
   if (!await until(() => blocking(blocker, attacker))) explainRefusal(blocker, attacker, at);
 }
 
-/** A tap that sets your creature to block the attacker the prompt names says why when it is refused, as a drag does. */
+/** When a tap sets your creature to block the prompt's attacker and the block is refused, this shows why, as a drag does. */
 export function watchBlockTap(blocker: number, at: Point): void {
   const model = current;
   if (!model || !declaringBlocks(model) || model.prompt?.priority) return;
@@ -214,13 +214,13 @@ export function watchBlockTap(blocker: number, at: Point): void {
   });
 }
 
-/** Keywords that limit what may block a creature, each with the keywords on a blocker that answer it. An empty list means no keyword does, as colour, type, power or a count decides instead. */
+/** Keywords that limit what can block a creature, each with the blocker keywords that get around it. An empty list means no keyword does, because colour, type, power or a count decides instead. */
 const EVASION: Record<string, readonly string[]> = {
   FEAR: [], FLYING: ['FLYING', 'REACH'], HORSEMANSHIP: ['HORSEMANSHIP'], INTIMIDATE: [], LANDWALK: [], MENACE: [], PROTECTION: [],
   SHADOW: ['SHADOW'], SKULK: [],
 };
 
-/** Gives the reason for a refused block only when one of the attacker's evasion keywords explains it, and no reason otherwise. */
+/** Shows that a block was refused. A reason is given only when one of the attacker's evasion keywords explains the refusal. */
 function explainRefusal(blocker: number, attacker: number, at: Point): void {
   const model = current;
   if (!model) return;
@@ -234,10 +234,10 @@ function explainRefusal(blocker: number, attacker: number, at: Point): void {
   showTip(at, t('lblWebBlockCantBlock', name(blocker), name(attacker)), evasion ? `${evasion.title}: ${evasion.reminder}` : '');
 }
 
-/** How long the reason stays by the pointer, unless the next press takes it away sooner. */
+/** How long the reason stays next to the pointer, unless the next press removes it sooner. */
 const TIP_MS = 3500;
 
-/** A small note where the drag was let go, so the reason is read where the eye already is. */
+/** Shows a small note where the drag was released, so the reason appears where the player is already looking. */
 function showTip(at: Point, title: string, reason: string): void {
   document.querySelector('.block-tip')?.remove();
   const tip = make('div', 'block-tip');

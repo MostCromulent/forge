@@ -1,4 +1,4 @@
-// The cog dialog: settings in tabs down a side rail, with a search box that looks through every tab
+// The options dialog behind the cog button. Settings are grouped in tabs on a side rail, and a search box searches every tab
 
 import type { ComponentChildren } from 'preact';
 import { exportBackup, importBackup } from './backup';
@@ -14,7 +14,7 @@ import { useClosing } from './closing';
 import { Backdrop } from './dialog';
 import { ICONS, Icon } from './icons';
 
-// A setting found only through its section or its hint ranks after label matches, and each section stays together in its usual place
+// Settings matched only by section, hint or dialog contents rank after label matches. Results are then grouped by section in the usual order
 function matching(defs: SettingDef[], typed: string): SettingDef[] {
   const text = normalize(typed);
   if (!text) return defs;
@@ -28,7 +28,7 @@ function matching(defs: SettingDef[], typed: string): SettingDef[] {
   return ranked.map(i => defs[i]).sort((a, b) => (firstOf.get(a.section) ?? 0) - (firstOf.get(b.section) ?? 0));
 }
 
-/** What a button that opens a dialog leads to, so a search for a setting inside the dialog finds the button. */
+/** The settings inside the dialog that a button opens. A search for one of them then finds the button. */
 function inDialog(def: SettingDef): string {
   return def.type === 'dialog' ? SETTINGS.filter(d => d.menu === def.dialog).map(d => `${d.section} ${d.label}`).join(' ') : '';
 }
@@ -43,10 +43,10 @@ const TABS: { name: string; sections: string[]; icon: string }[] = [
   { name: t('lblAdvanced'), sections: [t('lblAdvanced')], icon: ICONS.dev },
 ];
 
-/** The tab last looked at, so the dialog opens where it was left. */
+/** The tab last opened, so the dialog reopens on it. */
 let lastTab = 0;
 
-/** Opens the options at the keyboard shortcuts, for the shortcut that shows them. */
+/** Opens the options on the keyboard shortcuts tab. The key that shows the shortcuts calls this. */
 export function showShortcuts(): void {
   lastTab = TABS.findIndex(tb => tb.name === t('lblKeyboardShortcuts'));
   changeUi(u => { u.optionsOpen = true; });
@@ -62,9 +62,9 @@ export function Options({ close }: { close: () => void }) {
   const searching = !!query.trim();
   const tab = TABS[at];
   const all = [...SETTINGS, ...shortcutSettings()].filter(def => !def.inside && (def.when?.() ?? true) && !(def.hostOnly && isGuest()));
-  // A tab lists its sections in its own order; a search looks through every tab
+  // A tab lists its sections in its own order. A search covers every tab
   const shown = searching ? matching(all, query) : tab.sections.flatMap(section => all.filter(def => def.section === section));
-  // The rail runs down the side, so the next tab's page comes up from below and an earlier one down from above (dialogs.css)
+  // The rail is vertical, so a later tab's page slides up from below and an earlier one slides down from above (dialogs.css)
   const open = (i: number) => easedLocal(() => {
     lastTab = i;
     setAt(i);
@@ -92,12 +92,12 @@ export function Options({ close }: { close: () => void }) {
   );
 }
 
-/** The rows in order under their section headings, with the host's own settings framed together. */
+/** The rows in order under their section headings. Host-only settings are framed together. */
 function blocks(shown: SettingDef[], searching: boolean, tabName: string): ComponentChildren[] {
   const out: ComponentChildren[] = [];
   for (let i = 0; i < shown.length;) {
     const def = shown[i];
-    // A tab's first section goes by the tab's own name, so it has no heading
+    // A tab's first section has the same name as the tab, so it gets no heading outside a search
     const named = def.section !== shown[i - 1]?.section && (searching || def.section !== tabName);
     if (def.hostOnly) {
       let end = i;
@@ -113,19 +113,19 @@ function blocks(shown: SettingDef[], searching: boolean, tabName: string): Compo
   return out;
 }
 
-/** Settings only the host has, which cover everyone at the table, framed so it is plain where they begin and end. */
+/** Settings only the host can change, which apply to everyone at the table. A frame shows where the group begins and ends. */
 function HostGroup({ name, defs }: { name: string | null; defs: SettingDef[] }) {
   return (
     <section class="host-group" aria-label={name ?? t('lblWebOptionsHostOnly')}>
       <h4>{name}<span class="host-only"><Icon d={ICONS.crown} />{t('lblWebOptionsHostOnly')}</span></h4>
-      {/* A lone setting, such as dev mode, says enough with the mark alone */}
+      {/* A group with no heading, such as dev mode, needs only the host-only mark, so the hint is left out */}
       {name && <p class="hint">{t('lblWebOptionsHostOnlyHint')}</p>}
       {defs.map(def => <Row key={def.key} def={def} />)}
     </section>
   );
 }
 
-/** What this browser keeps for its player, saved as a file or put back from one. A file put back loads the page again. */
+/** Saves the data this browser stores for its player to a file, or restores it from one. Restoring a file reloads the page. */
 function BackupRow() {
   const [refused, setRefused] = useState(false);
   const file = useRef<HTMLInputElement>(null);
@@ -148,7 +148,7 @@ function BackupRow() {
   );
 }
 
-/** A section's name; the keys carry the way back to their defaults beside it. */
+/** A section heading. For key bindings it also holds the button that resets the keys to their defaults. */
 export function SectionHeading({ name, keys }: { name: string; keys: boolean }) {
   return (
     <h4>
@@ -160,7 +160,7 @@ export function SectionHeading({ name, keys }: { name: string; keys: boolean }) 
 
 export const CloseIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>;
 
-/** The frame the options dialog and the game menu's dialogs share, where label names the dialog when the title is a phrase. */
+/** The frame shared by the options dialog and the game menu's dialogs. label names the dialog when the title is a phrase. */
 export function OptionsDialog({ title, label, kind, head, rail, footer, close, children }: {
   title: string; label?: string; kind?: string; head?: ComponentChildren; rail?: ComponentChildren; footer?: ComponentChildren; close: () => void;
   children: ComponentChildren;
@@ -181,7 +181,7 @@ export function OptionsDialog({ title, label, kind, head, rail, footer, close, c
   );
 }
 
-/** onChange runs after the setting is changed, for a dialog that must follow it. */
+/** onChange runs after the setting changes, for a dialog that must react to it. */
 export function Row({ def, onChange }: { def: SettingDef; onChange?: () => void }) {
   const [editing, setEditing] = useState(false);
   return (
@@ -218,7 +218,7 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
         </select>
       );
     case 'tiles': {
-      // A choice that cannot be made now shows the one in force in its place
+      // When the saved option is unavailable, the first usable option is shown as selected instead
       const usable = def.options.filter(o => !o.unavailable?.());
       const inForce = usable.some(o => o.value === value) ? value : usable[0]?.value;
       return (
@@ -238,7 +238,7 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
     case 'dialog':
       return <button class="edit" onClick={() => changeUi(u => { u.gameMenu = def.dialog; })}>{t('lblWebOptionsEdit')}</button>;
     case 'css':
-      // Row draws the CSS editor's own button and editor, since the editor is too big for the control column
+      // Row draws the CSS editor's button and the editor itself, because the editor is too big for the control column
       return null;
     case 'key':
       return <KeyControl action={def.action} value={String(value)} />;
@@ -258,7 +258,7 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
 
 const BRIGHTNESS = (SETTINGS.find(def => def.key === 'playmatBrightness') as SettingDef & { type: 'choice' }).options;
 
-/** The playmats as pictures under the chosen brightness, with the brightness beneath them. */
+/** The playmats as pictures drawn at the chosen brightness, with the brightness choice below them. */
 export function PlaymatChoice() {
   const chosen = setting('playmat');
   const brightness = setting('playmatBrightness');
@@ -291,7 +291,7 @@ function seconds(ms: number): string {
   return new Intl.NumberFormat(textLanguage(), { minimumFractionDigits: 1, maximumFractionDigits: 2 }).format(ms / 1000);
 }
 
-// A theme is a plain CSS file: load one, save the current one, or edit it here. Typed CSS lands at once.
+// A theme is a plain CSS file. The player can import one, export the current one, or edit it here. Typed CSS applies at once.
 function CssEditor({ def, value }: { def: SettingDef; value: string }) {
   const file = useRef<HTMLInputElement>(null);
   return (
@@ -315,7 +315,7 @@ function CssEditor({ def, value }: { def: SettingDef; value: string }) {
   );
 }
 
-// Click, then press the new key, with Ctrl or Shift if wanted. Escape leaves the key as it was, and Backspace takes it away, as on desktop.
+// Click, then press the new key, with Ctrl or Shift if wanted. Escape keeps the old key and Backspace removes it, as on desktop.
 function ShortcutControl({ value, change }: { value: string; change: (value: string) => void }) {
   const [listening, setListening] = useState(false);
   return (
@@ -346,7 +346,7 @@ function KeyControl({ action, value }: { action: keyof KeyBindings; value: strin
         e.stopPropagation();
         if (e.key !== 'Escape') setKeys(rebind(boundKeys(), action, e.key));
         setListening(false);
-        // Blurring stops a Space from also clicking the button when it is released, which would listen again
+        // Blurring stops the release of a Space from also clicking the button, which would start listening again
         e.currentTarget.blur();
       }}>
       {listening ? t('lblWebOptionsPressKey') : value ? keyName(value) : t('lblNone')}

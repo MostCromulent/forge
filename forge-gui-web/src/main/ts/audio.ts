@@ -1,14 +1,14 @@
-// Sound effects come from the host as names, and the server serves them and the music from the player's own Forge sound set
+// The host sends sound effects by name. The server serves them and the music from the player's own Forge sound set
 
 import { setting } from './settings';
 import type { Sound } from './protocol';
 
 const clips = new Map<string, HTMLAudioElement>();
 let music: HTMLAudioElement | null = null;
-/** When each sound last started. The host sends a sound for every card of a deal at once, which is heard once. */
+/** When each sound last started. The host sends a sound for every card of a deal at once, and it is played only once. */
 const started = new Map<string, number>();
 const BURST_MS = 100;
-/** Until when the host's copies of a sound are not played, while the page plays it for each card of a deal itself. */
+/** The time until which the host's copies of a sound are skipped, because the page plays it for each card of a deal itself. */
 const echoing = new Map<string, number>();
 
 export function playSound(msg: Sound, echo = false): void {
@@ -20,7 +20,7 @@ export function playSound(msg: Sound, echo = false): void {
     return;
   }
   started.set(msg.name, now);
-  // Named with the host's sound set, so a new set is fetched and not taken from this page or the browser's cache
+  // The URL includes the sound set, so a changed set is fetched again and not served from this page or the browser cache
   const url = `sound?name=${encodeURIComponent(msg.name)}&set=${encodeURIComponent(String(setting('soundSet')))}`;
   let clip = clips.get(url);
   if (!clip) {
@@ -32,14 +32,14 @@ export function playSound(msg: Sound, echo = false): void {
   if (msg.sync && playing) {
     return;
   }
-  // Any other plays again over itself, so a run of them, such as a deal, is heard as a run
+  // Any other effect can overlap itself, so a quick series such as a deal is heard as a series
   const voice = playing ? clip.cloneNode() as HTMLAudioElement : clip;
   voice.volume = volume('soundVolume');
   voice.currentTime = 0;
   voice.play().catch(() => {});
 }
 
-/** Only a sound the host sent a moment ago is echoed, so sounds turned off on the host stay off. */
+/** Repeats a sound only if the host sent it in the last 1.5 seconds, so sounds turned off on the host stay off. */
 export function echoSound(name: string, delays: number[]): void {
   const now = performance.now();
   if (!delays.length || now - (started.get(name) ?? -Infinity) > 1500) {
@@ -77,7 +77,7 @@ export function applyAudioSettings(): void {
     music = track;
     playing = wanted;
     track.addEventListener('ended', nextTrack);
-    // A playlist with no tracks answers 404; it stays silent until the screen asks for another list
+    // A playlist with no tracks returns 404. The music stays silent until the screen asks for another playlist
     track.addEventListener('error', () => { if (music === track) stopMusic(); });
     nextTrack();
   }
@@ -89,7 +89,7 @@ function stopMusic(): void {
   playing = null;
 }
 
-// Each request returns another track from the playlist, so the server's shuffle does the choosing
+// Each request returns another track from the playlist, so the server's shuffle picks the track
 function nextTrack(): void {
   if (!music) {
     return;
@@ -98,7 +98,7 @@ function nextTrack(): void {
   music.volume = volume('musicVolume');
   music.play().catch(e => {
     stopMusic();
-    // A browser plays nothing until the page is first clicked or typed into, so the music waits for that
+    // A browser plays no audio until the page is first clicked or typed into, so the music waits for that
     if (e instanceof DOMException && e.name === 'NotAllowedError' && !awaitingGesture) {
       awaitingGesture = true;
       const retry = () => {

@@ -1,4 +1,4 @@
-// The column beside the board, holding the game log and, in a networked game, the chat dock, each of which collapses to its tab
+// The column beside the board. It holds the game log and, in a networked game, the chat dock. Each panel collapses to its tab.
 
 import { byId, q, relayout } from '../dom';
 import { changeUi, eased, rememberSidePanels, ui, type UiState } from '../ui';
@@ -11,7 +11,7 @@ import { ICONS, iconSvg } from '../icons';
 const PANELS = ['log', 'chat'] as const;
 
 
-/** Daybound and nightbound cards transform without asking, so the whole table changes at night as well as the corner that says which it is. */
+/** Daybound and nightbound cards transform without a prompt. So at night the whole table changes, as well as the corner that shows day or night. */
 export function renderSky(model: Model): void {
   const sky = byId('sky');
   const time = model.controls?.dayTime;
@@ -41,12 +41,12 @@ export function initSide(): void {
   menu.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
   menu.onclick = () => changeUi(u => { u.menuSheet = u.menuSheet ? null : 'log'; });
   byId('match').append(menu);
-  // The dock's height is read by every sheet, some drawn outside the board, and changes with what the prompt says
+  // Every sheet reads the dock's height, and some sheets are drawn outside the board. The height changes with the prompt's text
   let refit = 0;
   new ResizeObserver(() => {
     if (!isPortrait()) return;
     document.documentElement.style.setProperty('--dock-h', `${byId('prompt').offsetHeight}px`);
-    // The board's halves take what the dock leaves, so their cards are fitted again once it has settled
+    // The board's halves use the space the dock leaves. So their cards are fitted again once the dock stops resizing
     clearTimeout(refit);
     refit = window.setTimeout(relayout, 200);
   }).observe(byId('prompt'));
@@ -58,7 +58,7 @@ export function initSide(): void {
   }
 }
 
-/** Opens the log, for the shortcut that shows the console: on a phone in the menu sheet, elsewhere in the side column. */
+/** Opens the log for the shortcut that shows the console. On a phone it opens in the menu sheet, elsewhere in the side column. */
 export function showLog(): void {
   if (isPortrait()) {
     changeUi(u => { u.menuSheet = 'log'; });
@@ -70,7 +70,7 @@ export function showLog(): void {
   }
 }
 
-/** CSS cannot ease a change of grid areas, so the column slides off the right edge as it folds, and back in as it opens (board.css). */
+/** CSS cannot animate a change of grid areas. So the column slides off the right edge as it folds, and back in as it opens (board.css). */
 function folding(change: (state: UiState) => void): void {
   const match = byId('match');
   const wasFolded = match.classList.contains('side-folded');
@@ -80,17 +80,17 @@ function folding(change: (state: UiState) => void): void {
   });
 }
 
-/** On a phone the prompt is the board's own bottom row, so it leaves the column, which is not shown there. */
+/** On a phone the prompt is the board's bottom row. So it is moved out of the column, which is not shown on a phone. */
 function placePrompt(): void {
   const prompt = byId('prompt');
   const home = isPortrait() ? byId('match') : byId('side');
   if (prompt.parentElement !== home) home.append(prompt);
 }
 
-/** Folded, per panel, as last drawn; the board is only told to reflow when that changes. */
+/** Which panels were open when last drawn. The board is told to reflow only when this changes. */
 let drawn = '';
 
-// Chat is there only in a game others can join, and its dock is one of the screens (screens.tsx)
+// Chat exists only in a game others can join. Its dock is one of the screens (screens.tsx)
 export function renderSide(model: Model): void {
   placePrompt();
   const volume = q(byId('side-tools'), '.volume');
@@ -113,6 +113,6 @@ export function renderSide(model: Model): void {
   side.dataset.chat = shown.chat ? 'open' : 'shut';
   for (const panel of PANELS) q(side, `.side-toggle[data-panel="${panel}"]`).setAttribute('aria-expanded', String(shown[panel]));
   byId('match').classList.toggle('side-folded', !shown.log && !shown.chat);
-  // The board changes width; anything placed by measuring it must be placed again
+  // The board changes width. Anything placed by measuring it must be placed again
   relayout();
 }

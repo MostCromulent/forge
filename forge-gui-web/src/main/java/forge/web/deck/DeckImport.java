@@ -31,8 +31,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Reads a deck list for the browser, taking whether each card is allowed from Legality so its marks and the editor's verdict agree.
- * It reads line by line rather than through DeckImportController, because the page marks and fixes each source line and the
+ * Reads a deck list for the browser. It asks Legality whether each card is allowed, so the line marks agree with the editor's verdict.
+ * It reads line by line instead of through DeckImportController. The page marks and fixes each source line, and the
  * recognizer's tokens do not keep their line positions.
  */
 public final class DeckImport {
@@ -43,7 +43,7 @@ public final class DeckImport {
     private DeckImport() {
     }
 
-    /** What reading a list found, and the deck it makes. commanderChosen says the commander was picked because only one card could be it. */
+    /** What reading a list found, and the deck it makes. commanderChosen is set when the commander was picked because only one card could be the commander. */
     public record Read(List<ImportLine> lines, List<ImportProblem> problems, Deck deck, String name, String commanderChosen,
             int notImported) {
     }
@@ -52,14 +52,14 @@ public final class DeckImport {
         return read(text, check, null);
     }
 
-    /** With a collection, a card not owned is a problem, and a collection that fixes all but the main deck takes the main deck alone. */
+    /** With a collection, a card that is not owned is a problem. A collection that keeps every section except the main deck unchanged imports only the main deck. */
     public static Read read(final String text, final Check check, final DeckEditor.Collection collection) {
         final Set<String> owned = new HashSet<>();
         if (collection != null) {
             collection.cards().get().forEach(e -> owned.add(e.getKey().getName()));
         }
         final String[] raw = text.split("\r?\n", -1);
-        // Lines the recognizer misses only because of a set code and collector number are read by name
+        // Lines that the recognizer misses only because of a set code and collector number are read by card name
         final String[] lines = DeckUrlLoader.getRecognizableImportLines(new DeckRecognizer(), String.join("\n", raw));
         final DeckRecognizer recognizer = new DeckRecognizer();
         recognizer.forceImportBannedAndRestrictedCards();
@@ -69,9 +69,9 @@ public final class DeckImport {
         final List<ImportProblem> problems = new ArrayList<>();
         String name = null;
         int notImported = 0;
-        // Reading starts in the main deck, so a legendary card before any heading stays there and the commander is chosen below
+        // Reading starts in the main deck. A legendary card before any heading stays there, and chooseCommander picks the commander later.
         DeckSection section = DeckSection.Main;
-        // A deck file is read as Forge reads its own decks, since the list recognizer does not know its card lines
+        // A deck file is read the way Forge reads its own decks, because the list recognizer does not understand its card lines
         final boolean file = Arrays.stream(raw).anyMatch(l -> l.trim().equalsIgnoreCase("[metadata]"));
         DeckSection fileSection = null;
         boolean fileHead = false;
@@ -99,7 +99,7 @@ public final class DeckImport {
                     kinds[i] = ImportLineKind.ignored;
                     continue;
                 }
-                // A card Forge does not have is read as a stand-in, which no game can play
+                // Forge reads a card it does not have as a placeholder that no game can play
                 if (listed.toFlatList().get(0).getRules().isUnsupported()) {
                     kinds[i] = ImportLineKind.problem;
                     notImported++;
@@ -109,7 +109,7 @@ public final class DeckImport {
                 to = fileSection;
             } else {
                 if (line.startsWith("//")) {
-                    // A comment, unless it is the "// Name:" line some sites put first
+                    // A comment, unless it is the "// Name:" line that some sites put first
                     final String named = DeckRecognizer.deckNameMatch(line);
                     kinds[i] = named.isEmpty() ? ImportLineKind.ignored : ImportLineKind.heading;
                     name = named.isEmpty() ? name : named;
@@ -152,7 +152,7 @@ public final class DeckImport {
                 continue;
             }
             final PaperCard first = listed.toFlatList().get(0);
-            // The listed printing stands for the name: the editor takes the printings owned when the deck is made
+            // The listed printing only identifies the card name. The editor uses the owned printings when the deck is made.
             final boolean taken = collection == null || first.getRules().getType().isBasicLand() || owned.contains(first.getName());
             if (!taken) {
                 kinds[i] = ImportLineKind.problem;
@@ -204,7 +204,7 @@ public final class DeckImport {
         return new ImportResult(request, read.lines(), read.problems(), summary, read.name(), fetched);
     }
 
-    /** A line that names no card: with the closest known name offered, when one is close enough to be the one meant. */
+    /** A line that names no card. The closest known name is offered when it is close enough to be the intended card. */
     private static ImportProblem unknown(final int line, final String text, final boolean unsupported) {
         final String title = Localizer.getInstance().getMessage("lblWebImportLineText", line + 1, text);
         if (unsupported) {
@@ -219,7 +219,7 @@ public final class DeckImport {
         return new ImportProblem(line, title, Localizer.getInstance().getMessage("lblWebImportNotACard"), fixes);
     }
 
-    /** With no Commander section, a lone card that could lead the deck is made its commander and named, and several are offered as a choice. */
+    /** With no Commander section, a single card that could lead the deck becomes its commander, and its name is returned. Several candidates are offered as a choice. */
     private static String chooseCommander(final Deck deck, final Check check, final List<ImportProblem> problems) {
         final DeckFormat df = check.deckFormat();
         final CardPool commanders = deck.get(DeckSection.Commander);

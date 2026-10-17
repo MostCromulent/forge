@@ -16,12 +16,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** The decks beyond the main one that some variants play with, a planar deck, a scheme deck or a Vanguard avatar, as a lobby seat chooses them. */
+/** The extra decks that some variants play with: a planar deck, a scheme deck or a Vanguard avatar. A lobby seat chooses them here. */
 public final class ExtraSections {
     private ExtraSections() {
     }
 
-    /** A seat's choice for one extra section: what it is called, and its cards, or null to follow the main deck's own. */
+    /** A seat's choice for one extra section: its label and its cards. cards is null to use the main deck's own section. */
     public record Extra(String label, CardPool cards) {
     }
 
@@ -31,7 +31,7 @@ public final class ExtraSections {
     private static final String SAVED = "deck:";
     private static final String AVATAR = "avatar:";
 
-    /** What a seat may choose for a planar deck, a scheme deck or an avatar, most common first. */
+    /** The choices a seat has for a planar deck, a scheme deck or an avatar, most common first. */
     public static List<ExtraChoice> extraChoices(final DeckSection section, final boolean forComputer, final Deck main) {
         final List<ExtraChoice> out = new ArrayList<>();
         final CardPool own = main == null ? null : main.get(section);
@@ -57,7 +57,7 @@ public final class ExtraSections {
         return out;
     }
 
-    /** The cards a choice stands for. Generated and random choices are drawn now, so the seat shows what it got. */
+    /** The cards that a choice selects. Generated and random choices are drawn now, so the seat shows what it got. */
     public static Extra resolveExtra(final DeckSection section, final String choice, final boolean forComputer) {
         if (OWN.equals(choice)) {
             return new Extra(Localizer.getInstance().getMessage(section == DeckSection.Avatar ? "lblWebDeckCatalogDeckDefault" : "lblWebDeckCatalogDeckOwn"), null);
@@ -66,7 +66,7 @@ public final class ExtraSections {
             final List<PaperCard> pool = avatars(forComputer);
             PaperCard avatar = null;
             if (RANDOM.equals(choice)) {
-                // A random avatar skips the ones marked unfit for a random pick, as desktop's does
+                // A random avatar skips the cards marked as unfit for random decks, as on desktop
                 final List<PaperCard> fit = pool.stream().filter(c -> !c.getRules().getAiHints().getRemRandomDecks()).toList();
                 avatar = fit.isEmpty() ? null : fit.get(MyRandom.getRandom().nextInt(fit.size()));
             } else if (choice != null && choice.startsWith(AVATAR)) {
@@ -99,7 +99,7 @@ public final class ExtraSections {
                 : DeckgenUtil.generateSchemePool());
     }
 
-    /** What a random avatar is called on its seat, which keeps the draw a surprise. */
+    /** The label that a seat shows for a random avatar. It does not show which avatar was drawn. */
     public static String randomLabel() {
         return Localizer.getInstance().getMessage("lblRandom");
     }
@@ -121,7 +121,7 @@ public final class ExtraSections {
         return out;
     }
 
-    /** Every Vanguard card, or only those the computer can play well for a computer seat. */
+    /** Every Vanguard card. For a computer seat, only the cards that the computer can play well. */
     private static List<PaperCard> avatars(final boolean forComputer) {
         final List<PaperCard> out = new ArrayList<>();
         for (final PaperCard card : FModel.getMagicDb().getVariantCards().getAllCards()) {

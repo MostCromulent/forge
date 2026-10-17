@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-/** Conquests made for a test in the test profile, and removed afterwards. */
+/** Creates conquests in the test profile for a test, and removes them afterwards. */
 final class ConquestFixture {
     private static final List<ConquestData> made = new ArrayList<>();
     private static final List<Path> junk = new ArrayList<>();
@@ -51,7 +51,7 @@ final class ConquestFixture {
         return data;
     }
 
-    /** Copies a saved conquest into the profile under a new name: Zendikar, first event won, 3000 shards, 1 emblem, 42 cards, a 40-card deck. */
+    /** Copies a saved conquest into the profile under a new name. It has Zendikar, the first event won, 3000 shards, 1 emblem, 42 cards and a 40-card deck. */
     static ConquestData install() throws IOException, URISyntaxException {
         if (currentBefore == null) {
             currentBefore = FModel.getConquestPreferences().getPref(CQPref.CURRENT_CONQUEST);
@@ -73,7 +73,7 @@ final class ConquestFixture {
         return data;
     }
 
-    /** A name a test is about to have a conquest made or renamed to, whose folder is removed afterwards. */
+    /** A name that a test will create or rename a conquest to. Its folder is removed afterwards. */
     static String expected() {
         if (currentBefore == null) {
             currentBefore = FModel.getConquestPreferences().getPref(CQPref.CURRENT_CONQUEST);
@@ -83,7 +83,7 @@ final class ConquestFixture {
         return name;
     }
 
-    /** A save folder whose data cannot be read, by the name it would be listed under. */
+    /** Writes a save folder whose data cannot be read, and returns the name it would be listed under. */
     static String broken(final String xml) throws IOException {
         final String name = name();
         final Path dir = Path.of(ForgeConstants.CONQUEST_SAVE_DIR, name.replace(' ', '_'));
@@ -119,7 +119,7 @@ final class ConquestFixture {
             FileUtil.deleteDirectory(dir.toFile());
         }
         junk.clear();
-        // The portal flag is shared by the whole process
+        // The whole process shares the portal flag
         for (final ConquestPlane plane : FModel.getPlanes()) {
             if (List.of("Time_Vault", "Unstable_Realm").contains(plane.getName())) {
                 plane.setTemporarilyReachable(false);

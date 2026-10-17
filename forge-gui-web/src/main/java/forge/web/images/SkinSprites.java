@@ -17,13 +17,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.imageio.ImageIO;
 
-/** Cuts avatars, sleeves, mana symbols and other icons out of the skin's sprite sheets as PNGs for the page. It repeats desktop FSkin's cell scan because this module cannot depend on the desktop one, and follows it exactly, so an index in the shared preferences picks the same picture in both clients. */
+/** Cuts avatars, sleeves, mana symbols and other icons out of the skin's sprite sheets as PNGs for the page. It repeats desktop FSkin's cell scan exactly, because this module cannot depend on the desktop module. So an index in the shared preferences picks the same picture in both clients. */
 public final class SkinSprites implements IHasForgeLog {
     private static List<BufferedImage> avatars;
     private static BufferedImage manaIcons;
     private static BufferedImage abilityIcons;
     private static List<BufferedImage> sleeves;
-    /** The sheets skin icons and the ticket symbol are cut from, by file name. */
+    /** The sheets that skin icons and the ticket symbol are cut from, by file name. */
     private static final Map<String, BufferedImage> iconSheets = new HashMap<>();
     private static final Map<String, byte[]> encoded = new ConcurrentHashMap<>();
 
@@ -52,7 +52,7 @@ public final class SkinSprites implements IHasForgeLog {
 
     /** PNG bytes of one mana or tap symbol, cut from the skin's icon sheet, or null for a symbol it has no image for. */
     public static byte[] manaPng(final String symbol) {
-        // A ticket is on the icon sheet, and desktop draws {TK} with it as it draws mana
+        // A ticket is on the icon sheet. Desktop draws {TK} with it, the same way it draws mana
         if ("TK".equals(symbol)) {
             return encoded.computeIfAbsent("mTK", k -> cell(iconSheet(FSkinProp.IMG_TICKET.getType().getFilename()), FSkinProp.IMG_TICKET, k));
         }
@@ -72,7 +72,7 @@ public final class SkinSprites implements IHasForgeLog {
         return encoded.computeIfAbsent("k" + name, k -> cell(sheetFor(prop), prop, k));
     }
 
-    /** PNG bytes of a skin icon named by its FSkinProp, or null for a name that is none or is not cut from a sheet, such as a colour. */
+    /** PNG bytes of a skin icon named by its FSkinProp. Null for an unknown name, or for one not cut from a sheet, such as a colour. */
     public static byte[] iconPng(final String name) {
         final FSkinProp prop = prop(name);
         if (prop == null || prop.getType().getFilename() == null) {
@@ -81,7 +81,7 @@ public final class SkinSprites implements IHasForgeLog {
         return encoded.computeIfAbsent("c" + name, k -> cell(iconSheet(prop.getType().getFilename()), prop, k));
     }
 
-    /** A face of the coin tossed for a match's first game, which is mobile's art. */
+    /** A face of the coin tossed before a match's first game. The art is mobile's. */
     public static byte[] coinPng(final boolean heads) {
         final String name = heads ? "coin_heads.png" : "coin_tails.png";
         return encoded.computeIfAbsent(name, k -> {
@@ -109,7 +109,7 @@ public final class SkinSprites implements IHasForgeLog {
         return manaIcons;
     }
 
-    /** The ring-bearer's badge is on the mana sheet; every other ability icon is on its own. */
+    /** The ring-bearer's badge is on the mana sheet. Every other ability icon is on the ability sheet. */
     private static synchronized BufferedImage sheetFor(final FSkinProp prop) {
         if (prop == FSkinProp.IMG_ABILITY_RINGBEARER) {
             return manaSheet();
@@ -175,7 +175,7 @@ public final class SkinSprites implements IHasForgeLog {
         return sleeves;
     }
 
-    // A cell whose centre pixel is transparent is empty and takes no index
+    // A cell whose centre pixel is transparent is empty and gets no index
     private static void cut(final File file, final int w, final int h, final boolean skipFirst, final List<BufferedImage> out) {
         final BufferedImage sheet = read(file);
         if (sheet == null) {

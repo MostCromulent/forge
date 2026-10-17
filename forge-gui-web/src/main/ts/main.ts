@@ -1,8 +1,8 @@
-// The controller, which is the only place that talks to the server and draws the model once per frame
+// The controller. It is the only place that talks to the server, and it draws the model once per frame
 
 import { connect } from './net';
 import { createModel, applyState, cardMenu, isLocal, oldestRequest, players, stackPick } from './model';
-// The campaign modes, which a build without them leaves out with this line
+// The campaign modes. A build without them removes this line
 import './campaign/register';
 import { campaigns } from './campaigns';
 import { asked, createActions, type Actions } from './actions';
@@ -40,16 +40,16 @@ import type { Send, ServerMessage } from './protocol';
 const model = createModel();
 const pacer = createPacer(model, apply);
 let scheduled = false;
-// Asked once, so a slow answer is not asked for again on every message that arrives meanwhile
+// Requested once, so a slow answer is not requested again by every message that arrives meanwhile
 let askedAddresses = false;
-// A guest's settings live in its session on the server, so each connection is given back what the browser remembers
+// A guest's settings are kept in its server session, so each connection sends the settings the browser stored
 let restored = false;
-// A guest's decks live in its browser, so each connection tells the server which it holds
+// A guest's decks are stored in its browser, so each connection sends the server the list
 let sentDeviceDecks = false;
-// A sound or a log line is sent ahead of the board it belongs to, and is taken after it, or alone after 300 ms when no board follows (pace.ts)
+// A sound or log line arrives before its board update. It is applied after that board, or alone after 300 ms if no board follows (pace.ts)
 const send = connect(behindItsBoard(msg => pacer.receive(msg), 300), online => {
   byId('banner').hidden = online;
-  // The server replays the conversation for every connection, so the browser starts each one empty
+  // The server replays the chat on every connection, so the browser clears it when the connection drops
   if (!online) {
     restored = false;
     sentDeviceDecks = false;
@@ -57,7 +57,7 @@ const send = connect(behindItsBoard(msg => pacer.receive(msg), 300), online => {
   }
 });
 
-// A script error is otherwise seen only in the player's own browser. A few are enough to tell what broke.
+// Otherwise a script error is only visible in the player's own browser. The first few are enough to tell what broke.
 let reported = 0;
 const report = (text: string): void => {
   if (reported++ < 5) send({ t: 'pageError', text: text.slice(0, 1500) });
@@ -65,7 +65,7 @@ const report = (text: string): void => {
 window.addEventListener('error', e => report(String((e.error as Error | undefined)?.stack ?? e.message)));
 window.addEventListener('unhandledrejection', e => report(String((e.reason as Error | undefined)?.stack ?? e.reason)));
 
-// While messages are held the prompt on screen is an earlier board's, so an answer to it would land on a prompt not yet seen
+// While messages are held, the prompt on screen is from an earlier board. An answer sent now would go to a prompt the player has not seen
 const HELD_INPUT = new Set(['selectCard', 'selectPlayer', 'selectStackItem', 'useMana', 'ok', 'cancel', 'endTurn', 'undo']);
 const sendNow: Send = msg => {
   if (!pacer.holding() || !HELD_INPUT.has(msg.t)) send(msg);
@@ -74,21 +74,21 @@ const sendNow: Send = msg => {
 const wire = createActions(sendNow);
 const actions = {
   ...wire,
-  // Cancel on a pass stops the pass, which the host takes at any time, even while the page catches up
+  // Cancel during a pass stops the pass. The host accepts that at any time, even while the page catches up
   cancel: () => (pacer.holding() && passingFor(model.controls) ? wire.stopYield() : wire.cancel()),
   ok: () => afterBlockDrags(() => wire.ok()),
-  // An answered question leaves the model at once, so its dialog closes without waiting for the server
+  // An answered request is removed from the model at once, so its dialog closes without waiting for the server
   answer: (id, value) => {
     model.requests.delete(id);
     wire.answer(id, value);
     schedule();
   },
-  // An earlier answer is for an earlier menu, so the new one opens only when its own answer is in
+  // A previous answer belongs to a previous menu, so the new menu opens only when its own answer arrives
   askStackMenu: key => {
     model.stackMenu = null;
     wire.askStackMenu(key);
   },
-  // The engine thread waits on the answer, so the question goes as soon as it is answered
+  // The engine thread waits for the answer, so the question is cleared as soon as it is answered
   answerHostChoice: (id, value) => {
     model.hostChoice = null;
     wire.answerHostChoice(id, value);
@@ -116,7 +116,7 @@ Object.assign(window, { forge: { actions, model } });
 
 initUi(schedule, render);
 initForm(() => {
-  // What only one layout draws is put away when the layout changes
+  // Panels that only one layout draws are closed when the layout changes
   ui.menuSheet = null;
   ui.handOpen = false;
   ui.stopsOpen = false;
@@ -138,10 +138,10 @@ initSettings(actions.setSetting, () => {
   schedule();
 });
 
-// Every key the page answers is decided in keys.ts, from what is open
+// keys.ts decides what every key does, based on what is open
 document.addEventListener('keydown', e => {
   const target = e.target instanceof HTMLElement ? e.target : null;
-  // Enter on a question's own button, reached with Tab, presses that button rather than giving the answer
+  // Enter on a dialog button focused with Tab presses that button instead of confirming the answer
   if (e.key === 'Enter' && target instanceof HTMLButtonElement && target.matches(':focus-visible') && target.closest('#dialog-layer')) return;
   const command = keyCommand({
     key: e.key,
@@ -182,7 +182,7 @@ function runKey(command: KeyCommand): void {
     case 'alwaysNo': actions.autoYieldTop(false); break;
     case 'showStack': showStack(); break;
     case 'showLog': showLog(); break;
-    // Desktop shows its dev panel only in dev mode, and the web's dev menu is the host's alone
+    // Desktop shows its dev panel only in dev mode. On the web only the host gets the dev menu
     case 'showDev': if (setting('devMode') && model.host && !model.spectating) changeUi(u => { u.gameMenu = 'dev'; }); break;
     case 'concede': if (!model.spectating) changeUi(u => { u.concedeAsk = true; }); break;
     case 'yieldOptions': changeUi(u => { u.gameMenu = 'stops'; }); break;
@@ -227,7 +227,7 @@ function apply(msg: ServerMessage): void {
       model.host = msg.host;
       setGuest(!model.host);
       setVersion(msg.version);
-      // Before any game opens, so the game is seeded with them rather than corrected afterwards
+      // This runs before any game opens, so the game starts with these settings instead of being corrected later
       if (!model.host && !restored) {
         restored = true;
         restoreGuestSettings();
@@ -240,7 +240,7 @@ function apply(msg: ServerMessage): void {
       model.eventPool = msg.eventPool ?? null;
       model.sealedPools = msg.sealedPools;
       model.draftPools = msg.draftPools;
-      // A gauntlet's result belongs to the game it followed; every new match arrives with a hello
+      // A gauntlet result belongs to the game before it. Every new match starts with a hello, so the result is cleared here
       model.limitedResult = null;
       model.eventKind = msg.eventKind ?? null;
       model.campaign = msg.campaign ?? null;
@@ -252,7 +252,7 @@ function apply(msg: ServerMessage): void {
         model.draft = null;
         ui.draftHidden = false;
       }
-      // A picker belongs to the table it was opened over
+      // A picker belongs to the setup table it was opened over
       if (model.screen !== 'setup') ui.picker = null;
       model.spectating = msg.spectating;
       model.playerName = msg.playerName ?? '';
@@ -260,13 +260,13 @@ function apply(msg: ServerMessage): void {
       if (model.playerName) {
         rememberName(model.playerName);
       } else if (!model.canClaimHost) {
-        // While the host seat is free the prompt is shown instead, since it is where the seat is offered
+        // While the host seat is free, the name prompt is shown instead, because that prompt offers the seat
         offerRememberedName();
       }
       model.looks = { avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
       model.savedSleeveArt = msg.sleeveArt ?? [];
       model.error = null;
-      // A new lobby has an address of its own, and coming back to the same one keeps it
+      // A new lobby has its own address. Returning to the same lobby keeps the address
       if (msg.screen !== 'setup') {
         model.addresses = null;
         askedAddresses = false;
@@ -278,7 +278,7 @@ function apply(msg: ServerMessage): void {
         model.objects.clear();
         model.gameOver = false;
         model.matchScore = [];
-        // Nothing draws the match once it is left, so a card still waiting to be paid for would float over the menu
+        // Nothing draws the match after it is left, so a card still waiting for payment would stay drawn over the menu
         resetTable();
         send({ t: 'decks' });
       }
@@ -288,11 +288,11 @@ function apply(msg: ServerMessage): void {
       }
       break;
     case 'editor':
-      // Back from a pool's deck, the pools are asked for again, since the deck just built changes them
+      // When the editor closes on a pool's deck, the pools are requested again, because the new deck changes them
       if (!msg.state && model.editor && model.screen === 'event') wire.limitedOpen(model.eventKind ?? 'sealed', false);
       model.editor = msg.state ?? null;
       break;
-    // Scrolling asks for the next page of the same query, which is added to what is shown
+    // Scrolling requests the next page of the same query. That page is appended to the rows already shown
     case 'catalogue':
       if (msg.request !== asked.catalogue) return;
       model.catalogue = msg.offset > 0 && model.catalogue ? { ...msg, rows: [...model.catalogue.rows, ...msg.rows] } : msg;
@@ -326,10 +326,10 @@ function apply(msg: ServerMessage): void {
       break;
     case 'lobby': {
       model.lobby = msg.table ?? null;
-      // Renaming your seat renames you, so the next server you reach knows you by it too
+      // Renaming your seat renames you, so the name is stored for the next server you join
       const mine = model.lobby?.seats[model.lobby.mySeat]?.name;
       if (mine) rememberName(mine);
-      // Finding the external address is a web request on the host, so it is asked for once per lobby
+      // The host makes a web request to find its external address, so it is requested once per lobby
       if (!model.lobby?.shareable) {
         askedAddresses = false;
       } else if (!model.addresses && !askedAddresses) {
@@ -340,7 +340,7 @@ function apply(msg: ServerMessage): void {
     }
     case 'addresses': model.addresses = msg.list; break;
     case 'chat': model.chat = [...model.chat, { from: msg.from ?? '', text: msg.text, earlier: msg.earlier }]; break;
-    // The server sends the whole list whenever it changes, so there is nothing to merge
+    // The server sends the whole list on every change, so it replaces the old one
     case 'presence': model.presence = msg.people; break;
     case 'deckDetails': model.deckDetails = msg.deck; break;
     case 'deckMatches': model.deckMatches = { ...model.deckMatches, [msg.kind]: msg }; break;
@@ -348,7 +348,7 @@ function apply(msg: ServerMessage): void {
     case 'printings': model.printings = { name: msg.name, list: msg.printings ?? [] }; break;
     case 'hostChoice': model.hostChoice = msg; break;
     case 'error':
-      // A name remembered from before can belong to someone else here, so the player is asked for another
+      // A stored name can belong to someone else on this server. It is forgotten so the player is asked for another
       if (model.nameSent) {
         model.nameSent = false;
         rememberName(null);
@@ -357,7 +357,7 @@ function apply(msg: ServerMessage): void {
       break;
     case 'state':
       applyState(model, msg);
-      // The next game of a match reuses the card keys of the last one, so nothing keyed on them may survive
+      // The next game of a match reuses the previous game's card keys, so all state keyed on them is cleared
       if (msg.full) {
         model.gameOver = false;
         model.matchScore = [];
@@ -410,7 +410,7 @@ function apply(msg: ServerMessage): void {
   schedule();
 }
 
-// A browser the server does not know yet, after a restart or on a first visit, is known by the name it last used
+// After a server restart or on a first visit, the server does not know this browser. The browser sends the name it last used
 function offerRememberedName(): void {
   const name = rememberedName();
   if (name) {
@@ -419,11 +419,11 @@ function offerRememberedName(): void {
   }
 }
 
-// A file let go over the page would otherwise be opened in its place, ending the session
+// Otherwise a file dropped on the page would open in its place and end the session
 for (const kind of ['dragover', 'drop']) {
   addEventListener(kind, e => { if ((e as DragEvent).dataTransfer?.types.includes('Files')) e.preventDefault(); });
 }
-// The browser gives the wake lock up when the page is hidden, so the next draw asks for it again
+// The browser releases the wake lock when the page is hidden, so the next draw requests it again
 document.addEventListener('visibilitychange', () => {
   forgetWakeLock();
   schedule();
@@ -439,30 +439,30 @@ function schedule(): void {
 let shownUnder = '';
 
 function render(): void {
-  // What happened since the last frame is shown once, by this frame
+  // This frame shows the events since the last frame, each once
   const events = model.events;
   model.events = [];
   const page = screenOf(model);
   const under = pageUnder(model);
-  // The page keeps the scroll it had before the match, which would open a new table halfway down
+  // The page keeps its scroll position from before the match. Without this, a new table would open scrolled halfway down
   if (shownUnder === 'match' && under !== 'match') window.scrollTo(0, 0);
   const enteringMatch = under === 'match' && shownUnder !== 'match';
   shownUnder = under;
   byId('editor').hidden = page !== 'editor';
   for (const id of ['menu', 'lobby', 'limited', 'drafting', 'campaign', 'match']) {
     const el = byId(id);
-    // A phone has no room for a panel, so there the editor takes the screen and the page under it is put away
+    // A phone has no room for a panel. There the editor fills the screen and the page under it is hidden
     el.hidden = id !== (under === 'name' ? 'menu' : under) || (page === 'editor' && isPortrait());
-    // On a desktop the page under the editor is seen and not used
+    // On a desktop the page under the editor stays visible but cannot be used
     el.inert = page === 'editor';
   }
   matchHistory(page === 'match');
   void keepAwake(page === 'match' && !model.gameOver);
   renderScreens(model, actions);
-  // The name page comes before the player's volumes are known
+  // No music on the name page, because the player's volume settings are not known yet
   playMusic(page === 'name' ? null : page !== 'match' ? 'menu' : model.gameOver ? null : 'match');
   if (model.screen !== 'playing') {
-    // Every page's cards share the one preview, so it is drawn with no match on too
+    // Every page's cards use the same preview, so it is drawn when no match is running too
     renderDetail(model);
     return;
   }

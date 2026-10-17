@@ -1,4 +1,4 @@
-// The deck editor: every change is sent to the server, which saves it at once, so there is no Save button
+// The deck editor. Every change is sent to the server, which saves it at once, so there is no Save button.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useDismiss } from '../hooks';
@@ -33,11 +33,11 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   useDismiss(menu !== null, nameMenu, () => setMenu(null));
   const [cardMenu, setCardMenu] = useState<MenuAt | null>(null);
   const [picking, setPicking] = useState<{ name: string; zone: DeckSection | null } | null>(null);
-  /** Which half a phone shows, where there is room for one at a time. */
+  /** The half shown on a phone, which has room for only one at a time. */
   const [half, setHalf] = useState<'find' | 'deck'>('find');
-  /** The section beyond the main deck the catalogue adds to, planes say, or null for the main deck. */
+  /** The non-main section the catalogue adds to, such as planes. Null means the main deck. */
   const [addingTo, setAddingTo] = useState<DeckSection | null>(null);
-  // A list pasted anywhere but a field opens the importer with it, as a file dropped on the page does
+  // A list pasted outside a text field opens the importer with it, as a file dropped on the page does
   useEffect(() => {
     const pasted = (e: ClipboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -52,7 +52,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   if (!state) {
     return null;
   }
-  // Another deck may not carry the section chosen for the last one
+  // The section chosen for the previous deck may not exist in this one
   const adding = addingTo && state.sections.some(s => s.section === addingTo) ? addingTo : null;
   const dropped = (carried: Carried, v: Verdict) => {
     if (v.zone === 'catalogue' && carried.from !== 'catalogue') {
@@ -65,9 +65,9 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
       actions.edit({ op: 'move', name: carried.name, from: carried.from, to: v.zone, count: carried.count });
     }
   };
-  // Alt at the press carries every copy, and the command zone takes any card because the server decides what can lead a deck
+  // Holding Alt at the press drags every copy. The command zone accepts any card because the server decides what can be a commander.
   const handlers: CardHandlers = (name, from, image, count) => ({
-    // A rested finger opens the card's preview, whose More button opens this menu
+    // A long press opens the card's preview. Its More button opens this menu.
     'data-menu': '',
     onPointerDown: e => {
       const carried: Carried = { name, from, count: e.altKey ? Math.max(1, count) : 1 };
@@ -86,16 +86,16 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
       else u.browse = { format: state.format };
     });
   };
-  // A draft or sealed pool, and a deck built from a campaign's cards, are neither made, opened, renamed nor deleted from here
+  // A draft or sealed pool, or a deck built from a campaign's cards, cannot be created, opened, renamed or deleted here
   const ownDeck = !state.limited && !state.collection;
-  /** A row of the deck's menu, which closes the menu unless it opens another. */
+  /** A row of the deck's menu. Choosing it closes the menu unless it opens another menu. */
   const item = (icon: string, label: string, act: () => void, stays = false, cls?: string) => (
     <button role="menuitem" class={cls} onClick={() => {
       if (!stays) setMenu(null);
       act();
     }}><Icon d={icon} /><span>{label}</span></button>
   );
-  // Shown in the head, and on a phone in the deck's own summary, beside the verdict it explains
+  // Shown in the header, and on a phone in the deck summary, next to the verdict it explains
   const check = state.limited
     ? <span class="check-fixed">{state.format === 'CommanderDraft' ? state.check : t('lblWebEditorLimitedFixed')}</span>
     : state.collection ? <span class="check-fixed">{state.check}</span>
@@ -125,7 +125,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
                   {!state.limited && item(ICONS.download, t('lblWebEditorImportList'), () => changeUi(u => { u.importer = { from: 'editor' }; }))}
                   {item(ICONS.upload, t('lblWebEditorCopyAsText'), () => setDialog('text'))}
                   {item(ICONS.upload, t('lblWebEditorDownloadDeckFile'), () => actions.deckOp('file'))}
-                  {/* A deck only being read (a precon, someone else's) has nothing of the player's to delete */}
+                  {/* A deck opened as a copy, such as a precon or someone else's deck, has nothing of the player's to delete */}
                   {ownDeck && !state.copyOf && <hr />}
                   {ownDeck && !state.copyOf && item(ICONS.bin, t('lblWebEditorDeleteThisDeck'), () => setDialog('delete'), false, 'danger')}
                 </div>
@@ -210,7 +210,7 @@ function CheckControl({ model, state, actions }: { model: Model; state: EditorSt
   );
 }
 
-/** "Check legality against" a format, a Constructed card pool or nothing, where value is "format|pool" or "none". */
+/** "Check legality against" a format, a Constructed card pool or nothing. value is "format|pool" or "none". */
 export function CheckSelect({ model, value, change }: {
   model: Model; value: string; change: (format: string, cardPool: string | null, unrestricted: boolean) => void;
 }) {
@@ -236,7 +236,7 @@ export function CheckSelect({ model, value, change }: {
   );
 }
 
-/** The deck as text to copy, or to save as a file, which is a guest's only copy away from this browser. */
+/** The deck as text to copy or save as a file. For a guest, that file is the only copy outside this browser. */
 function TextDialog({ state, close }: { state: EditorState; close: () => void }) {
   const text = deckText(state);
   const area = useRef<HTMLTextAreaElement>(null);

@@ -1,10 +1,10 @@
-// The command zone holds very different kinds of thing, and each kind is drawn in its own place
+// The command zone holds several kinds of card. Each kind is drawn in its own place.
 
 import type { CardStateView, CardView } from '../protocol';
 
 export type CommandKind = 'plane' | 'scheme' | 'avatar' | 'commander' | 'signature' | 'dice' | 'effect';
 
-/** The name Forge gives the card that carries each player's planar die. */
+/** The name of the card Forge uses for each player's planar die. */
 const PLANAR_DICE = 'Planar Dice';
 
 export function commandKind(card: CardView, state: Partial<CardStateView>): CommandKind {
@@ -14,13 +14,13 @@ export function commandKind(card: CardView, state: Partial<CardStateView>): Comm
   if (/\bVanguard\b/.test(type)) return 'avatar';
   if (state.Name === PLANAR_DICE) return 'dice';
   if (card.IsCommander) {
-    // An Oathbreaker's signature spell is a commander too, but one cast only beside its oathbreaker
+    // An Oathbreaker's signature spell is also a commander. It can be cast only while its oathbreaker is on the battlefield
     return /\b(Creature|Planeswalker)\b/.test(type) ? 'commander' : 'signature';
   }
   return 'effect';
 }
 
-/** Hand size then starting life, from a Vanguard card's rules text. The labels are translated, so only the numbers count. */
+/** Reads the hand size and starting life modifiers from a Vanguard card's rules text. The labels are translated, so only the numbers are read. */
 export function avatarModifiers(rulesText: string | undefined): [number, number] | null {
   const numbers = (rulesText ?? '').match(/[+-]\d+/g);
   return numbers && numbers.length >= 2 ? [Number(numbers[0]), Number(numbers[1])] : null;

@@ -1,14 +1,14 @@
-// The bar across the top of every page outside a match, where each page fills the middle and ends with its way out
+// The bar across the top of every page outside a match. Each page fills the middle and puts its exit button at the end
 
 import type { ComponentChildren } from 'preact';
 import { changeUi, ui } from './ui';
 import { t } from './text';
 
-/** Magic's five colours, the one place they are pure decoration: no card art nearby and nothing encoded by hue. */
+/** The Forge wordmark in Magic's five colours. This is the only place the colours are pure decoration, with no card art nearby and no meaning in the hue. */
 export function Wordmark() {
   return (
     <div class="wordmark-block">
-      {/* Five letters for Magic's five colours: each stands on a dash of its own */}
+      {/* Five letters for Magic's five colours. Each letter has its own coloured dash under it */}
       <span class="wordmark" aria-label="Forge">
         {[...'Forge'].map(letter => <i key={letter} aria-hidden="true">{letter}</i>)}
         <span class="beta">{t('lblWebBeta')}</span>
@@ -21,13 +21,13 @@ export function PageHeader({ class: extra, children }: { class?: string; childre
   return <header class={extra ? `page-head ${extra}` : 'page-head'}><Wordmark />{children}</header>;
 }
 
-/** A step of game setup in the trail: a way back to it, or none for the step you are on. */
+/** A step of game setup in the trail. go returns to that step, and is left out for the current step. */
 interface SetupStep {
   label: string;
   go?: () => void;
 }
 
-/** The trail through game setup and the page's question, where each earlier step in the trail goes back to it. */
+/** The trail through game setup, above the page's heading. Each earlier step in the trail is a button that goes back to it. */
 export function SetupHead({ trail, title, aside, sub }: { trail: SetupStep[]; title: string; aside?: ComponentChildren; sub?: ComponentChildren }) {
   return (
     <div class="setup-head">
@@ -39,7 +39,7 @@ export function SetupHead({ trail, title, aside, sub }: { trail: SetupStep[]; ti
           </>
         ))}
       </nav>
-      {/* What the page is about sits by the heading: your deck before a match, or the way back out of a form */}
+      {/* The aside is shown next to the heading. It holds your deck before a match, or the exit button of a form */}
       <div class="setup-title">
         <h2>{title}</h2>
         {aside && <div class="setup-aside">{aside}</div>}
@@ -49,13 +49,13 @@ export function SetupHead({ trail, title, aside, sub }: { trail: SetupStep[]; ti
   );
 }
 
-/** What each way to play is called in the trail. */
+/** The name of each way to play, as shown in the trail. */
 export const WAY_NAMES: Record<'play' | 'friends', string> = {
   get play() { return t('lblWebHeadVersusAi'); },
   get friends() { return t('lblWebHeadWithFriends'); },
 };
 
-/** The volume and options buttons, placed by each page just before its way out. */
+/** The volume and options buttons. Each page places them just before its exit button. */
 export function HeadControls() {
   return (
     <>

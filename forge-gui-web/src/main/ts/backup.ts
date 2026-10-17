@@ -1,10 +1,10 @@
-// What this browser keeps for its player, as one file to carry to another browser or to put back after its storage is cleared
+// Exports what this browser stores for its player as one file. The file can be loaded in another browser, or restored after storage is cleared
 
 import { listDeviceDecks, putDeviceDeck, type DeviceDeck } from './deck/devicedecks';
 import { saveText } from './dom';
 
 const APP = 'forge-web';
-// Which browser this is to the server, and a list half typed into the importer, are not the player's settings
+// The browser's client id and a half-typed importer list are not the player's settings
 const LEFT_OUT = ['forge.clientId', 'forge.importDraft'];
 
 interface Backup {
@@ -16,12 +16,12 @@ interface Backup {
 
 const kept = (key: string): boolean => key.startsWith('forge.') && !LEFT_OUT.includes(key);
 
-/** The file's contents for what a browser holds: every value of Forge's own, and the decks kept in it. */
+/** Builds the file contents from what a browser holds: every Forge value in storage, and the decks stored in it. */
 export function backupOf(storage: Record<string, string>, decks: DeviceDeck[]): Backup {
   return { app: APP, version: 1, storage: Object.fromEntries(Object.entries(storage).filter(([key]) => kept(key))), decks };
 }
 
-/** What a file would put back, or null when it is not one of these files. Anything in it that is not Forge's own is dropped. */
+/** Parses a backup file, or returns null if it is not one. Any entry that is not a Forge value is dropped. */
 export function readBackup(text: string): Backup | null {
   try {
     const file = JSON.parse(text) as Partial<Backup> | null;
@@ -35,7 +35,7 @@ export function readBackup(text: string): Backup | null {
   }
 }
 
-/** Hands the player the file. Storage the browser refuses to read exports as nothing kept. */
+/** Saves the backup file for the player. If the browser blocks storage, the file has no stored values. */
 export async function exportBackup(): Promise<void> {
   const storage: Record<string, string> = {};
   try {
@@ -44,12 +44,12 @@ export async function exportBackup(): Promise<void> {
       if (key !== null) storage[key] = localStorage.getItem(key) ?? '';
     }
   } catch {
-    // Blocked storage holds nothing to export
+    // Blocked storage has nothing to export
   }
   saveText(JSON.stringify(backupOf(storage, await listDeviceDecks()), null, 2), 'forge-web-settings.json', 'application/json');
 }
 
-/** Puts a file's contents back over what the browser holds and loads the page again to use them. False when the file is not one of these. */
+/** Writes a backup file over what the browser holds, then reloads the page to use it. Returns false if the file is not a backup. */
 export async function importBackup(text: string): Promise<boolean> {
   const backup = readBackup(text);
   if (!backup) return false;
