@@ -262,6 +262,7 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 .backdrop.on-board .actions > .primary { order: 2; }
 .backdrop.on-board .card { box-shadow: 0 12px 30px #000d, 0 0 0 1px #000c; }
 .reveal-back.on-board .reveal-panel.bare { background: none; border: 0; box-shadow: none; }
+.reveal-back.on-board .reveal-panel.bare { max-width: 100%; }
 .reveal-back.on-board .reveal-panel.bare .zone-who { font-size: 18px; text-shadow: 0 2px 10px #000; }
 /* The question as one line: the card asking, then what it asks; under it, whose cards they are */
 .ask-source { font-weight: 800; color: var(--accent-2); }
@@ -269,10 +270,12 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 .ask-where { margin: -8px 0 0; color: var(--muted); font-size: 13px; text-shadow: 0 1px 4px #000; }
 /* Picked lifts in a thick ring with a mark, and focused is a dashed outline */
 .pick-mark { display: none; }
-.backdrop.on-board .card.picked { translate: 0 -8px; box-shadow: 0 0 0 4px var(--pick), 0 0 24px color-mix(in srgb, var(--pick) 45%, transparent), 0 12px 30px #000d; }
-.backdrop.on-board .pick-mark { position: absolute; left: -11px; top: -11px; z-index: 7; width: 26px; height: 26px; box-sizing: border-box; display: grid; place-items: center; border-radius: 50%;
+:is(.backdrop.on-board, .zone-panel.asking) .card.picked { translate: 0 -8px; box-shadow: 0 0 0 4px var(--pick), 0 0 24px color-mix(in srgb, var(--pick) 45%, transparent), 0 12px 30px #000d; }
+:is(.backdrop.on-board, .zone-panel.asking) .pick-mark { position: absolute; left: -11px; top: -11px; z-index: 7; width: 26px; height: 26px; box-sizing: border-box; display: grid; place-items: center; border-radius: 50%;
   background: var(--brass); border: 1px solid var(--accent); color: var(--on-brass); font: 900 15px/1 system-ui, sans-serif; box-shadow: 0 2px 6px #0009; pointer-events: none; }
-.backdrop.on-board .pick-mark::after { content: '\2713'; }
+/* A zone's card picked on the board drops the outlines the board gives it, for the ring */
+.zone-panel.asking .card.picked { outline: none; }
+:is(.backdrop.on-board, .zone-panel.asking) .pick-mark::after { content: '\2713'; }
 .backdrop.on-board .card:focus-visible { outline: 2px dashed #ffffffd9; outline-offset: 5px; }
 /* Many cards scroll in place under the question, so the question and the buttons stay put; the foot fades while more lie below */
 .backdrop.on-board .options:not(.ordered) { max-height: calc(100vh - 230px); overflow-y: auto; justify-content: center; gap: 14px; padding: 14px; scrollbar-width: thin; scrollbar-color: #ffffff4d #ffffff0d; }

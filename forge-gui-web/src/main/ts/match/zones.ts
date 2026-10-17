@@ -2,7 +2,8 @@
 // It folds to a bar instead of closing, so the board can be read beside a prompt without losing your place
 
 import { reconcile } from './reconcile';
-import { createCard, updateCard, type CardClick } from './cards';
+import { createCard, markPicked, updateCard, type CardClick } from './cards';
+import { fitCards } from './fit';
 import { stateOf, zone, type Model } from '../model';
 import { byId, q, make, reducedMotion } from '../dom';
 import { setSymbolText } from '../images';
@@ -85,6 +86,24 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
   reconcile(q(root, '.zone-shelf'), [...panels.entries()], ([k]) => k, createPanel,
     (el, [, p]) => updatePanel(el, model, actions, p, select));
   for (const el of box.querySelectorAll<HTMLElement>('.zone-panel:not([data-opened])')) growFromPile(el);
+  fitZones();
+}
+
+let fitting = false;
+
+/** Grows the cards of the zones the game asks about into the room the board leaves them, as a question's cards are. */
+function fitZones(): void {
+  if (!fitting) {
+    fitting = true;
+    window.addEventListener('resize', fitZones);
+  }
+  const root = byId('zones');
+  const asked = [...root.querySelectorAll<HTMLElement>('.zone-panel.asking')];
+  for (const el of asked) {
+    const row = q(el, '.cards');
+    // A long zone keeps its cards at the size a pile opened to look at has, and scrolls
+    fitCards(row, el, root, row.childElementCount, { gap: 14, wrap: true, least: 1.45, share: asked.length });
+  }
 }
 
 /** A window new to the page grows out of the pile it shows; on a phone, or with no pile on the board, it rises in as any dialog does. */
@@ -156,10 +175,18 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   // A search orders the zone by how well each name matches, so the sort waits until it is cleared
   sort.disabled = !!normalize(ui.zoneSearch);
   sort.onchange = () => changeUi(u => { u.zoneSort = sort.value as ZoneSort; });
-  q(el, '.zone-fold').onclick = () => changeUi(u => { u.zonesMinimised = true; });
+  const fold = q(el, '.zone-fold');
+  fold.onclick = () => changeUi(u => { u.zonesMinimised = true; });
   // Done already puts a pile the player opened away
-  q(el, '.zone-fold').hidden = !p.forced;
-  el.classList.toggle('asking', p.forced && !isPortrait());
+  fold.hidden = !p.forced;
+  const asking = p.forced && !isPortrait();
+  el.classList.toggle('asking', asking);
+  // On the board the way to fold waits beside the answer, as a question's does
+  const home = asking ? q(el, 'footer') : q(el, 'header');
+  if (fold.parentElement !== home) {
+    if (asking) home.insertBefore(fold, q(el, '.zone-answer.ok'));
+    else home.append(fold);
+  }
   // The game put this one up and the game takes it down, so it offers no way out of its own
   const done = q<HTMLButtonElement>(el, '.zone-done');
   done.hidden = p.forced;
@@ -179,7 +206,10 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   setSymbolText(q(el, '.zone-ask .ask-text'), asked.ask);
   answer(q(el, '.zone-answer.ok'), prompt?.ok, () => actions.ok());
   q(el, '.zone-answer.ok kbd').textContent = keyName(boundKeys().ok);
-  reconcile(q(el, '.cards'), cards, c => c.$key, () => createCard(select), (c, card) => updateCard(c, model, card));
+  reconcile(q(el, '.cards'), cards, c => c.$key, () => createCard(select), (c, card) => {
+    updateCard(c, model, card);
+    markPicked(c, asking && c.classList.contains('highlighted'));
+  });
 }
 
 function answer(el: HTMLElement, button: PromptButton | undefined, run: () => void): void {

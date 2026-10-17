@@ -57,6 +57,14 @@ export function lastPicture(key: number): { src: string; zoom: string; name: str
 }
 
 /** A new table reuses card keys, so the pictures of the last one mean nothing. */
+/** Marks a card picked in a question with a mark as well as the ring, so being picked is told by shape, not colour alone. */
+export function markPicked(el: HTMLElement, picked: boolean): void {
+  el.classList.toggle('picked', picked);
+  const mark = el.querySelector(':scope > .pick-mark');
+  if (picked && !mark) el.append(make('span', 'pick-mark'));
+  else if (!picked) mark?.remove();
+}
+
 export function forgetPictures(): void {
   pictures.clear();
 }

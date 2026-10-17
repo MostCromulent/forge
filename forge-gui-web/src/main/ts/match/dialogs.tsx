@@ -2,7 +2,7 @@
 
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { createContext, type ComponentChildren, type RefObject } from 'preact';
-import { createCard, updateCard } from './cards';
+import { createCard, markPicked, updateCard } from './cards';
 import { imageUrl, symbolUrl } from '../images';
 import { hoverCard } from '../preview';
 import { matchedSpan, rankByName } from '../search';
@@ -26,45 +26,20 @@ import { t } from '../text';
 import { make, reducedMotion } from '../dom';
 import { isPortrait } from '../form';
 import { cutFor } from './stickers';
+import { fitCards, type CardFit } from './fit';
 import { Backdrop } from '../dialog';
 import { trackDrag } from '../press';
 
 type Answer = (value: unknown) => void;
 
-// Cards on the board grow into the room it leaves them, up to about 200px wide, where their text reads easily
-const MOST_FIT = 2.3;
-
-/**
- * How much to enlarge a question's cards so they fill the room given. Cards are gap pixels apart, and each has below
- * pixels of buttons under it. Wrapping rows are tried when allowed, and the layout with the biggest cards wins.
- */
-function cardScale(count: number, width: number, height: number, card: { w: number; h: number }, gap: number, below: number, wrap: boolean): number {
-  let best = 0;
-  for (let rows = 1; rows <= (wrap ? count : 1); rows++) {
-    const cols = Math.ceil(count / rows);
-    best = Math.max(best, Math.min((width - gap * (cols - 1)) / cols / card.w, (height - gap * (rows - 1) - below * rows) / rows / card.h));
-  }
-  return Math.max(1, Math.min(MOST_FIT, best));
-}
-
 /** Enlarges the cards in a row of a question on the board to fill the space the rest of the question leaves. */
-function useCardFit(row: RefObject<HTMLElement>, count: number, gap: number, below: number, wrap: boolean): void {
+function useCardFit(row: RefObject<HTMLElement>, count: number, how: CardFit): void {
   useLayoutEffect(() => {
     const el = row.current;
-    const back = el?.closest<HTMLElement>('.backdrop.on-board');
-    const dialog = el?.closest<HTMLElement>('.dialog');
-    if (!el || !back || !dialog || !count) return;
-    const fit = () => {
-      const around = getComputedStyle(back);
-      const own = getComputedStyle(el);
-      const card = { w: parseFloat(own.getPropertyValue('--card-w')), h: parseFloat(own.getPropertyValue('--card-h')) };
-      const width = back.clientWidth - parseFloat(around.paddingLeft) - parseFloat(around.paddingRight)
-        - parseFloat(own.paddingLeft) - parseFloat(own.paddingRight) - 16;
-      // The row's padding holds the labels under its cards, and the rest of the question keeps its height
-      const used = dialog.offsetHeight - el.clientHeight + parseFloat(own.paddingTop) + parseFloat(own.paddingBottom);
-      const height = back.clientHeight - parseFloat(around.paddingTop) - parseFloat(around.paddingBottom) - used - 16;
-      el.style.setProperty('--fit', cardScale(count, width, height, card, gap, below, wrap).toFixed(2));
-    };
+    const back = el?.closest<HTMLElement>(':is(.backdrop, .reveal-back).on-board');
+    const box = el?.closest<HTMLElement>('.dialog, .reveal-panel');
+    if (!el || !back || !box || !count) return;
+    const fit = () => fitCards(el, box, back, count, how);
     fit();
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
@@ -293,6 +268,8 @@ function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
   const counted = t(count === 1 ? 'lblWebOneCard' : 'lblWebNCards', count);
   const who = aiSkipsOf?.Name ?? '';
   const title = !aiSkipsOf ? asSent : count === 1 ? t('lblWebRevealAiSkipsOne', who) : t('lblWebRevealAiSkipsN', who, count);
+  const row = useRef<HTMLDivElement>(null);
+  useCardFit(row, folded || aiSkipsOf ? 0 : count, { gap: 14, wrap: true });
   if (folded) {
     return (
       <div class="reveal-back minimised">
@@ -329,12 +306,11 @@ function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: {
       </Backdrop>
     );
   }
-  const few = count === 1 ? 2.6 : count <= 3 ? 2.15 : count <= 5 ? 1.7 : 1.45;
   return (
     <Backdrop layer="reveal-back" cls={isPortrait() ? undefined : 'on-board'} dismiss={close}>
-      <section class="zone-panel reveal-panel bare" role="dialog" aria-label={title} style={`--few: ${few}`}>
+      <section class="zone-panel reveal-panel bare" role="dialog" aria-label={title}>
         <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{counted}</span></header>
-        <div class="cards">{cards.map((o, i) => <OptionView key={i} model={model} opt={o} />)}</div>
+        <div class="cards" ref={row}>{cards.map((o, i) => <OptionView key={i} model={model} opt={o} />)}</div>
         <footer><button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>
           <button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><OkKey /></button></footer>
       </section>
@@ -406,10 +382,7 @@ function BoardCard({ model, card, title, picked, onClick }: {
     c.title = title ?? '';
     c.tabIndex = onClick ? 0 : -1;
     updateCard(c, model, card);
-    c.classList.toggle('picked', !!picked);
-    // A mark as well as the ring, so being picked is told by shape, not colour alone
-    if (picked && !c.querySelector(':scope > .pick-mark')) c.append(make('span', 'pick-mark'));
-    else if (!picked) c.querySelector(':scope > .pick-mark')?.remove();
+    markPicked(c, !!picked);
   });
   return <span class="card-host" ref={host} />;
 }
@@ -485,7 +458,7 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
     if (el) setMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
   };
   useLayoutEffect(measure, [shown.length]);
-  useCardFit(list, words || colours ? 0 : shown.length, 14, 0, true);
+  useCardFit(list, words || colours ? 0 : shown.length, { gap: 14, wrap: true });
   return (
     <>
       {searchable && <input ref={search} class="choice-search" placeholder={t('lblWebDialogSearchOptions', req.options.length)}
@@ -679,7 +652,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const ghost = useRef<HTMLElement | null>(null);
   // Options that are only words, such as abilities, are listed down the dialog; cards keep their row
   const listed = req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player);
-  useCardFit(row, listed ? 0 : chosen.length, 22, 38, false);
+  useCardFit(row, listed ? 0 : chosen.length, { gap: 22, below: 38 });
   const words = req.options.map(o => {
     const found = SET_OFF_BY.exec(o.label ?? '');
     return found ? { text: o.label.slice(0, found.index), detail: found[1] } : { text: o.label ?? '', detail: '' };
@@ -867,7 +840,7 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
   const bothEnds = req.toBottom || req.toTop;
   const row = useRef<HTMLDivElement>(null);
   // Each end's cards, or the empty place where they would go, and the pile between them, in one row
-  useCardFit(row, Math.max(piles.top.length, 1) + (bothEnds ? Math.max(piles.bottom.length, 1) : 0) + 1, 18, 0, false);
+  useCardFit(row, Math.max(piles.top.length, 1) + (bothEnds ? Math.max(piles.bottom.length, 1) : 0) + 1, { gap: 18 });
 
   const place = (shelf: Shelf, at: number) => {
     const card = held.current;
@@ -1011,7 +984,7 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
     return short <= 0 ? { text: t('lblLethal'), lethal: true } : { text: values[i] ? t('lblWebDialogShortOfLethal', short) : '' };
   };
   const row = useRef<HTMLDivElement>(null);
-  useCardFit(row, order.length, 26, 60, true);
+  useCardFit(row, order.length, { gap: 26, below: 60, wrap: true });
   // Side by side, each with its count under it, as the cards stand on the table
   return (
     <>
