@@ -15,6 +15,7 @@ import { rememberName, rememberedAvatar, rememberedName } from './identity';
 import { renderScreens, pageUnder, screenOf } from './screens';
 import { confirmShown } from './match/dialogs';
 import { renderMatch, resetTable } from './match/board';
+import { arriveAtMatch, zoomIntoMatch } from './match/entry';
 import { renderPrompt, flash, pressPromptButton } from './match/prompt';
 import { appendLog, initLog, logTints } from './match/log';
 import { initSide, renderSide, renderSky } from './match/side';
@@ -191,7 +192,7 @@ function runKey(command: KeyCommand): void {
     case 'undo': pressPromptButton('undo'); actions.undo(); break;
     case 'nextFace': nextFace(model); break;
     case 'cardText': changeUi(u => { u.cardText = !u.cardText; }); break;
-    case 'startMatch': actions.startMatch(ui.spectate); break;
+    case 'startMatch': zoomIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate)); break;
     case 'closeCardMenu': {
       const menu = cardMenu(model);
       if (menu) actions.answer(menu.id, []);
@@ -429,6 +430,7 @@ function render(): void {
   const under = pageUnder(model);
   // The page keeps the scroll it had before the match, which would open a new table halfway down
   if (shownUnder === 'match' && under !== 'match') window.scrollTo(0, 0);
+  const enteringMatch = under === 'match' && shownUnder !== 'match';
   shownUnder = under;
   byId('editor').hidden = page !== 'editor';
   for (const id of ['menu', 'lobby', 'limited', 'drafting', 'campaign', 'match']) {
@@ -451,6 +453,7 @@ function render(): void {
   renderSide(model);
   renderSky(model);
   renderMatch(model, actions, events);
+  arriveAtMatch(enteringMatch);
   renderPrompt(model, actions);
   renderDetail(model);
   renderBlockDrag(model);

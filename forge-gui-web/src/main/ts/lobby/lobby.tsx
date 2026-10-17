@@ -21,6 +21,8 @@ import type { Model } from '../model';
 import type { DeckSummary, LobbyTable, Seat, SeatExtra } from '../protocol';
 import { Backdrop, Dropdown } from '../dialog';
 import { ICONS, Icon } from '../icons';
+import { byId } from '../dom';
+import { zoomIntoMatch } from '../match/entry';
 
 export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const picker = ui.picker;
@@ -52,7 +54,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
             : lim?.started ? (lim.kind === 'draft' ? 'lblWebLobbyDraftOn' : 'lblWebLobbyOpeningPacks') : 'lblWebLobbyHostSettingUp')} />
         {/* A new kind of event is set up afresh, so the key makes its dialog open again */}
         {lim
-          ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => actions.startMatch(ui.spectate)} />
+          ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => zoomIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate))} />
           : <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview} />}
         <div class="seats" id="seats">
           {/* Keyed by who sits there too, so a seat added or newly taken comes in afresh (lobby.css) */}
@@ -67,7 +69,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           )}
         </div>
         {/* An event's Play is on its rail, which also says what the match waits on; only a warning about illegal decks is left */}
-        {lim ? lim.activeEventId && <IllegalDecks lobby={lobby} /> : <Verdict lobby={lobby} start={() => actions.startMatch(ui.spectate)} />}
+        {lim ? lim.activeEventId && <IllegalDecks lobby={lobby} /> : <Verdict lobby={lobby} start={() => zoomIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate))} />}
       </div>
       {seat && picker?.kind === 'deck' && <DeckFinder model={model} actions={actions} seat={{ index: picker.seat, seat }} close={close} />}
       {seat && picker && (picker.kind === 'planes' || picker.kind === 'schemes' || picker.kind === 'vanguard') && (

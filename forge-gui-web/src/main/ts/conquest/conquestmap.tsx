@@ -12,7 +12,8 @@ import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
 import type { ConquestCell, ConquestPlace, ConquestState } from '../protocol';
 import { t, type TextKey } from '../text';
-import { reducedMotion } from '../dom';
+import { byId, reducedMotion } from '../dom';
+import { zoomIntoMatch } from '../match/entry';
 
 /** How long the marker takes over one step, as mobile's token does. */
 const STEP_MS = 500;
@@ -24,6 +25,8 @@ const same = (a: ConquestPlace, b: ConquestPlace): boolean => a.region === b.reg
 const VARIANT_NAMES: Record<string, TextKey> = { Commander: 'lblCommander', Vanguard: 'lblVanguard', Planeswalker: 'lblPlaneswalker', Planechase: 'lblPlanechase' };
 const VARIANT_DESC: Record<string, TextKey> = { Commander: 'lblCommanderDesc', Vanguard: 'lblVanguardDesc', Planeswalker: 'lblPlaneswalkerDesc', Planechase: 'lblPlanechaseDesc' };
 const variantName = (v: string): string => (VARIANT_NAMES[v] ? t(VARIANT_NAMES[v]) : v);
+
+const fight = (actions: Actions) => zoomIntoMatch(byId('campaign'), () => actions.conquestBattle());
 
 export function ConquestMap({ actions, state }: { actions: Actions; state: ConquestState }) {
   const cells = new Map(state.cells.map(c => [key(c), c]));
@@ -42,7 +45,7 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
       setWalk(null);
       if (battleWanted.current) {
         battleWanted.current = false;
-        actions.conquestBattle();
+        fight(actions);
       }
     };
     if (reducedMotion()) {
@@ -106,7 +109,7 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
       battleWanted.current = true;
       actions.conquestMove();
     } else {
-      actions.conquestBattle();
+      fight(actions);
     }
   };
 
