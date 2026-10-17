@@ -601,21 +601,27 @@ public abstract class GameLobby implements IHasGameType {
 
         //if above checks succeed, return runnable that can be used to finish starting game
         return () -> {
-            hostedMatch = GuiBase.getInterface().hostMatch();
-            hostedMatch.setOnMatchOver(this::onMatchOver);
-            hostedMatch.startMatch(baseGameType, variantTypes, players, guis);
-
-            for (final Player p : hostedMatch.getGame().getPlayers()) {
-                final LobbySlot slot = playerToSlot.get(p.getRegisteredPlayer());
-                if (p.getController() instanceof IGameController controller) {
-                    gameControllers.put(slot, controller);
-                }
-            }
-
-            hostedMatch.gameControllers = gameControllers;
-
-            onGameStarted();
+            final HostedMatch match = GuiBase.getInterface().hostMatch();
+            match.startMatch(baseGameType, variantTypes, players, guis);
+            adopt(match, playerToSlot);
         };
+    }
+
+    /** Makes a started match this lobby's, so the server finds each seat's controller and the running match through the lobby. */
+    public void adopt(final HostedMatch match, final Map<RegisteredPlayer, LobbySlot> seats) {
+        hostedMatch = match;
+        hostedMatch.setOnMatchOver(this::onMatchOver);
+
+        for (final Player p : hostedMatch.getGame().getPlayers()) {
+            final LobbySlot slot = seats.get(p.getRegisteredPlayer());
+            if (slot != null && p.getController() instanceof IGameController controller) {
+                gameControllers.put(slot, controller);
+            }
+        }
+
+        hostedMatch.gameControllers = gameControllers;
+
+        onGameStarted();
     }
 
     /**
@@ -624,22 +630,9 @@ public abstract class GameLobby implements IHasGameType {
      */
     public void startPrepared(final PreparedMatch match, final int humanSeat) {
         final RegisteredPlayer human = match.human();
-        final Map<RegisteredPlayer, IGuiGame> guis = Maps.newHashMap();
-        guis.put(human, getGui(humanSeat));
-
-        hostedMatch = GuiBase.getInterface().hostMatch();
-        hostedMatch.setOnMatchOver(this::onMatchOver);
-        hostedMatch.startMatch(match.rules(), match.variants(), match.players(), guis, null);
-
-        for (final Player p : hostedMatch.getGame().getPlayers()) {
-            if (p.getRegisteredPlayer() == human && p.getController() instanceof IGameController controller) {
-                gameControllers.put(getSlot(humanSeat), controller);
-            }
-        }
-
-        hostedMatch.gameControllers = gameControllers;
-
-        onGameStarted();
+        final HostedMatch started = GuiBase.getInterface().hostMatch();
+        started.startMatch(match.rules(), match.variants(), match.players(), Map.of(human, getGui(humanSeat)), null);
+        adopt(started, Map.of(human, getSlot(humanSeat)));
     }
 
     protected void onMatchOver() {

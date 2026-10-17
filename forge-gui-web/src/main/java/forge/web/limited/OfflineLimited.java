@@ -1,15 +1,20 @@
 package forge.web.limited;
 
+import forge.LobbyPlayer;
 import forge.deck.Deck;
 import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.game.GameView;
+import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.GauntletMini;
 import forge.gamemodes.match.HostedMatch;
+import forge.gamemodes.net.server.FServerManager;
+import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.player.GamePlayerUtil;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.util.storage.IStorage;
@@ -32,6 +37,7 @@ import forge.web.protocol.ToBrowser.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
@@ -49,6 +55,9 @@ public final class OfflineLimited implements IHasForgeLog {
     /** Whether this session is playing a limited gauntlet, and the result of its last game. */
     private volatile boolean gauntletRunning;
     public volatile LimitedResult lastResult;
+    /** The pool the gauntlet returns to, and the game type its rounds are played as, while one is running. */
+    private volatile Event gauntletBack;
+    private volatile GameType gauntletType;
     /** The draft against the computer, while one is being played. */
     private volatile OfflineDraft draft;
     /** What the draft is played for when the Limited pages did not start it, or null. */
@@ -74,7 +83,7 @@ public final class OfflineLimited implements IHasForgeLog {
                 final LimitedResult result = l.lastResult;
                 if (l.gauntletRunning && result != null && result.nextRound()) {
                     l.lastResult = null;
-                    FModel.getGauntletMini().nextRound();
+                    l.playRound(() -> FModel.getGauntletMini().nextRound());
                 }
             }))
             .on(Plain.gauntletRestart, (l, ch, c) -> l.ui.invokeInEdtLater(() -> {
@@ -337,17 +346,11 @@ public final class OfflineLimited implements IHasForgeLog {
                     gauntlet.resetGauntletDraft();
                 }
                 gauntletRunning = true;
+                gauntletBack = back;
+                gauntletType = limitedType;
                 lastResult = null;
-                gauntlet.setRoundStarter((type, variants, players, me) -> playLimited(back, type, List.of(mySeat(players.get(0).getDeck()),
-                        opponentSeat(gauntlet.getCurrentRound(), 1, players.get(1).getDeck()))));
-                try {
-                    gauntlet.launch(ai.size(), human, limitedType);
-                } catch (final RuntimeException ex) {
-                    netLog.error(ex, "Could not start the gauntlet");
-                    channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionGauntletFailed", String.valueOf(ex.getMessage()))));
-                }
                 // If the first round did not start, the pool stays on screen and there is no gauntlet to continue
-                if (!(session.stage() instanceof Playing)) {
+                if (!playRound(() -> gauntlet.launch(ai.size(), human, limitedType))) {
                     stopGauntlet();
                 }
             }
@@ -389,7 +392,7 @@ public final class OfflineLimited implements IHasForgeLog {
                 LocalGame.storedIndex(FPref.UI_SLEEVES, seat), deck);
     }
 
-    /** Starts a pool's match, from the Limited pages or from the match before it in a gauntlet. Null when it could not start. */
+    /** Starts a pool's match from the Limited pages. Null when it could not start. */
     private HostedMatch playLimited(final Event back, final GameType type, final List<LocalGame.Seat> seats) {
         final Stage from = session.stage();
         final Playing playing = new Playing(new WebGuiGame(session.settings), false, false, back);
@@ -398,9 +401,6 @@ public final class OfflineLimited implements IHasForgeLog {
             return null;
         }
         session.attach(playing.gui());
-        if (gauntletRunning) {
-            playing.gui().onGameOver(() -> recordGauntletGame(playing));
-        }
         try {
             local.startLimitedMatch(seats, type, playing.gui());
             return local.hostedMatch();
@@ -410,6 +410,54 @@ public final class OfflineLimited implements IHasForgeLog {
             session.move(playing, back);
             session.tell(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
             return null;
+        }
+    }
+
+    /**
+     * Opens a table where the browser sits alone, then runs start, which has core's gauntlet start a round there. The round
+     * uses the names, avatars and sleeves of the Limited pages' other matches. False when the round did not start.
+     */
+    private boolean playRound(final Runnable start) {
+        final Event back = gauntletBack;
+        final Stage from = session.stage();
+        final Playing playing = new Playing(new WebGuiGame(session.settings), false, false, back);
+        if (back == null || !session.move(from, playing)) {
+            playing.gui().close();
+            return false;
+        }
+        session.attach(playing.gui());
+        playing.gui().onGameOver(() -> recordGauntletGame(playing));
+        try {
+            final ServerGameLobby table = local.openAlone(session.playerName(), playing.gui());
+            table.setLimitedType(gauntletType);
+            final int seat = local.webSeat();
+            ui.playSolo(new WebGuiBase.SoloTable(() -> FServerManager.getInstance().getGui(seat), (match, rules, players, human, begin) -> {
+                dressRound(players, human);
+                begin.run();
+                table.adopt(match, Map.of(human, table.getSlot(seat)));
+            }));
+            start.run();
+            return true;
+        } catch (final RuntimeException ex) {
+            netLog.error(ex, "Could not start the gauntlet round");
+            local.endMatch();
+            session.move(playing, back);
+            session.tell(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionGauntletFailed", String.valueOf(ex.getMessage()))));
+            return false;
+        } finally {
+            ui.playSolo(null);
+        }
+    }
+
+    /** Names the gauntlet's players as the Limited pages name a match's seats. The result is read by the player's name. */
+    private void dressRound(final List<RegisteredPlayer> players, final RegisteredPlayer me) {
+        for (final RegisteredPlayer player : players) {
+            final LocalGame.Seat seat = player == me ? mySeat(player.getDeck())
+                    : opponentSeat(FModel.getGauntletMini().getCurrentRound(), 1, player.getDeck());
+            final LobbyPlayer dressed = player == me ? GamePlayerUtil.getGuiPlayer(seat.name(), seat.avatar(), seat.sleeve(), false)
+                    : GamePlayerUtil.createAiPlayer(seat.name(), seat.avatar(), seat.sleeve());
+            dressed.setSleeveArtKey(player.getDeck().getSleeveArtKey());
+            player.setPlayer(dressed);
         }
     }
 
@@ -440,7 +488,7 @@ public final class OfflineLimited implements IHasForgeLog {
         }
         gauntletRunning = false;
         lastResult = null;
+        gauntletBack = null;
         FModel.getGauntletMini().resetCurrentRound();
-        FModel.getGauntletMini().setRoundStarter(null);
     }
 }
