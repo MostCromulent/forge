@@ -1,7 +1,6 @@
 package forge.gamemodes.net;
 
 import forge.LobbyPlayer;
-import forge.game.GameState;
 import forge.deck.CardPool;
 import forge.game.GameEntityView;
 import forge.game.event.GameEvent;
@@ -14,9 +13,9 @@ import forge.game.player.IHasIcon;
 import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbilityView;
 import forge.gamemodes.match.DrawOfferMessage;
+import forge.gamemodes.match.Selection;
 import forge.gamemodes.match.YieldUpdate;
 import forge.gamemodes.net.server.DeltaSyncManager;
-import forge.trackable.TrackableObject;
 import forge.util.IHasForgeLog;
 import forge.gui.control.GameEventForwarder;
 import forge.gui.interfaces.IGuiGame;
@@ -109,6 +108,8 @@ public class ProtocolGuiGame extends NetworkGuiGame implements IHasForgeLog {
         initialSyncSent = false;
         fallbackLogged = false;
         syncManager.reset();
+        // the client has none of the marks sent before
+        super.setSelection(Selection.NONE);
     }
 
     public void setForwarder(GameEventForwarder forwarder) {
@@ -194,6 +195,7 @@ public class ProtocolGuiGame extends NetworkGuiGame implements IHasForgeLog {
         updateGameView(true);
     }
     private void updateGameView(boolean flush) {
+        if (paused) { return; }
         GameView gameView = getGameView();
         if (gameView == null) {
             return;
@@ -372,11 +374,6 @@ public class ProtocolGuiGame extends NetworkGuiGame implements IHasForgeLog {
     }
 
     @Override
-    public GameState getGamestate() {
-        return null;
-    }
-
-    @Override
     public SpellAbilityView getAbilityToPlay(final CardView hostCard, final List<SpellAbilityView> abilities, final ITriggerEvent triggerEvent) {
         return syncAndSendAndWait(ProtocolMethod.getAbilityToPlay, hostCard, abilities, null/*triggerEvent*/); //someplatform don't have mousetriggerevent class or it will not allow them to click/tap
     }
@@ -454,9 +451,14 @@ public class ProtocolGuiGame extends NetworkGuiGame implements IHasForgeLog {
         return syncAndSendAndWait(ProtocolMethod.manipulateCardList, title, cards, manipulable, toTop, toBottom, toAnywhere);
     }
 
-    public void setHighlighted(final Iterable<? extends TrackableObject> objects, final boolean value) {
-        super.setHighlighted(objects, value);
-        syncAndSend(ProtocolMethod.setHighlighted, objects, value);
+    @Override
+    public void setSelection(final Selection selection) {
+        // every prompt sends its selection when shown and when it stops, and most have none
+        if (selection.equals(getSelection())) {
+            return;
+        }
+        super.setSelection(selection);
+        syncAndSend(ProtocolMethod.setSelection, selection);
     }
 
     @Override
@@ -465,23 +467,8 @@ public class ProtocolGuiGame extends NetworkGuiGame implements IHasForgeLog {
     }
 
     @Override
-    public void setSelectables(final Iterable<CardView> cards, final int min, final int max) {
-        syncAndSend(ProtocolMethod.setSelectables, cards, min, max);
-    }
-
-    @Override
     public boolean canPickStackTargets() {
         return true;
-    }
-
-    @Override
-    public void setSelectableTargets(final Iterable<? extends TrackableObject> targets) {
-        syncAndSend(ProtocolMethod.setSelectableTargets, targets);
-    }
-
-    @Override
-    public void clearSelectables() {
-        syncAndSend(ProtocolMethod.clearSelectables);
     }
 
     @Override

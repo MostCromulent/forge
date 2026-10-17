@@ -13,7 +13,6 @@ import forge.deck.CardPool;
 import forge.game.DrawOffer;
 import forge.game.GameEntityView;
 import forge.game.GameLog;
-import forge.game.GameState;
 import forge.game.GameView;
 import forge.game.card.CardFaceView;
 import forge.game.card.CardView;
@@ -29,6 +28,7 @@ import forge.game.spellability.StackItemView;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.match.DrawOfferMessage;
 import forge.gamemodes.match.NextGameDecision;
+import forge.gamemodes.match.Selection;
 import forge.gamemodes.match.YieldController;
 import forge.gamemodes.match.YieldMarker;
 import forge.gamemodes.match.YieldUpdate;
@@ -42,7 +42,6 @@ import forge.localinstance.skin.FSkinProp;
 import forge.player.AutoYieldStore.TriggerDecision;
 import forge.player.PlayerZoneUpdate;
 import forge.trackable.TrackableCollection;
-import forge.trackable.TrackableObject;
 import forge.trackable.TrackableProperty;
 import forge.trackable.TrackableTypes;
 import forge.trackable.TrackableTypes.TrackableType;
@@ -538,20 +537,22 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     @Override
-    public void setSelectables(final Iterable<CardView> cards, final int min, final int max) {
-        super.setSelectables(cards, min, max);
-        final List<Ref> refs = new ArrayList<>();
-        for (final CardView c : cards) {
-            refs.add(cardRef(c));
-        }
-        // A choice among cards opens the zones holding them, as desktop does; a maximum of 0 only highlights.
-        // Opened before the prompt changes, because a prompt sends the zones the last choice closed, and this one may reopen them
-        if (max > 0) {
+    public void setSelection(final Selection selection) {
+        final Selection before = getSelection();
+        super.setSelection(selection);
+        // A choice among cards opens the zones holding them, as desktop does. A maximum of 0 only highlights.
+        // A pick in the same choice keeps its cards, so its zones are left as they are.
+        // Zones change before the prompt does, because the prompt sends the zones the last choice closed and this one may reopen them.
+        if (!selection.cards().equals(before.cards()) || selection.max() != before.max()) {
             synchronized (zonesLock) {
-                selectionZonesShown.addAll(showZones(getZonesHolding(cards)));
+                hideZones(selectionZonesShown);
+                selectionZonesShown.clear();
+                if (selection.max() > 0) {
+                    selectionZonesShown.addAll(showZones(getZonesHolding(selection.cards())));
+                }
             }
         }
-        prompt.selectable(refs, min);
+        prompt.selection(selection);
     }
 
     // Cards the engine says you can act on now, and, at strength two, the ones the Auto button would tap
@@ -580,31 +581,6 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     @Override
-    public void setSelectableTargets(final Iterable<? extends TrackableObject> targets) {
-        super.setSelectableTargets(targets);
-        final List<Ref> players = new ArrayList<>();
-        final List<Integer> stackItems = new ArrayList<>();
-        for (final TrackableObject target : targets) {
-            if (target instanceof PlayerView p) {
-                players.add(Ref.player(p.getId()));
-            } else if (target instanceof StackItemView item) {
-                stackItems.add(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, item.getId()));
-            }
-        }
-        prompt.selectableTargets(players, stackItems);
-    }
-
-    @Override
-    public void clearSelectables() {
-        super.clearSelectables();
-        prompt.clearSelectables();
-        synchronized (zonesLock) {
-            hideZones(selectionZonesShown);
-            selectionZonesShown.clear();
-        }
-    }
-
-    @Override
     public void showRevealedCards(final Iterable<CardView> cards) {
         // The host sends these only for a hand reveal, so another zone the cards came from stays closed
         final List<PlayerZoneUpdate> hands = new ArrayList<>();
@@ -624,12 +600,6 @@ public class WebGuiGame extends NetworkGuiGame {
             hideZones(revealZonesShown);
             revealZonesShown.clear();
         }
-    }
-
-    @Override
-    public void setHighlighted(final Iterable<? extends TrackableObject> objects, final boolean b) {
-        super.setHighlighted(objects, b);
-        prompt.highlight(objects, b);
     }
 
     @Override
@@ -713,7 +683,6 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override public void alertUser() { }
     @Override public void setPanelSelection(final CardView hostCard) { }
     @Override public void setPlayerAvatar(final LobbyPlayer player, final IHasIcon ihi) { }
-    @Override public GameState getGamestate() { return null; }
 
     // Parking releases the mirror lock so browser actions and replies can proceed while the player decides
     private JsonElement ask(final Record request, final Predicate<JsonElement> valid) {

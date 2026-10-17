@@ -369,7 +369,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         TrackableType<?> type = prop.getType();
 
         // Object references → Integer ID
-        if (type == TrackableTypes.CardViewType || type == TrackableTypes.PlayerViewType)
+        if (type == TrackableTypes.CardViewType || type == TrackableTypes.PlayerViewType || type == TrackableTypes.StackItemViewType)
             return ((TrackableObject) value).getId();
 
         // Polymorphic reference → int[]{typeMarker, id}
@@ -379,7 +379,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         }
 
         // Collections of objects → List<Integer> of IDs
-        if (type == TrackableTypes.CardViewCollectionType || type == TrackableTypes.PlayerViewCollectionType) {
+        if (type == TrackableTypes.CardViewCollectionType || type == TrackableTypes.PlayerViewCollectionType || type == TrackableTypes.StackItemViewListType) {
             TrackableCollection<?> coll = (TrackableCollection<?>) value;
             List<Integer> ids = new ArrayList<>(coll.size());
             for (TrackableObject obj : coll) ids.add(obj == null ? -1 : obj.getId());
@@ -394,17 +394,6 @@ public class DeltaSyncManager implements IHasForgeLog {
 
         if (type == TrackableTypes.CombatViewType) {
             return combatViewToCombatData((CombatView) value);
-        }
-
-        if (type == TrackableTypes.StackItemViewType) {
-            return ((TrackableObject) value).getId();
-        }
-
-        if (type == TrackableTypes.StackItemViewListType) {
-            TrackableCollection<?> coll = (TrackableCollection<?>) value;
-            List<Integer> ids = new ArrayList<>(coll.size());
-            for (TrackableObject obj : coll) ids.add(obj == null ? -1 : obj.getId());
-            return ids;
         }
 
         return value;

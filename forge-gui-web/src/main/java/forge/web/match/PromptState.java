@@ -2,6 +2,8 @@ package forge.web.match;
 
 import forge.game.card.CardView;
 import forge.game.player.PlayerView;
+import forge.game.spellability.StackItemView;
+import forge.gamemodes.match.Selection;
 import forge.gamemodes.net.DeltaPacket;
 import forge.trackable.TrackableObject;
 import forge.util.Localizer;
@@ -10,9 +12,8 @@ import forge.web.protocol.ToBrowser.PromptButton;
 import forge.web.protocol.ToBrowser.Ref;
 import forge.web.protocol.ToBrowser.StarterChoice;
 
-import java.util.LinkedHashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
 
 /** The prompt console, changed from the dispatch thread and the host UI thread, so every change is made and sent under one lock. */
@@ -31,7 +32,7 @@ final class PromptState {
     private int selectableMin;
     private List<Ref> selectablePlayers = List.of();
     private List<Integer> selectableStack = List.of();
-    private final Set<Integer> highlighted = new LinkedHashSet<>();
+    private List<Integer> highlighted = List.of();
 
     PromptState(final Consumer<Prompt> send) {
         this.send = send;
@@ -62,38 +63,30 @@ final class PromptState {
         changed();
     }
 
-    synchronized void selectable(final List<Ref> cards, final int min) {
-        selectable = cards;
-        selectableMin = min;
-        changed();
-    }
-
-    synchronized void selectableTargets(final List<Ref> players, final List<Integer> stackItems) {
-        selectablePlayers = players;
-        selectableStack = stackItems;
-        changed();
-    }
-
-    synchronized void clearSelectables() {
-        selectable = List.of();
-        selectablePlayers = List.of();
-        selectableStack = List.of();
-        selectableMin = 0;
-        changed();
-    }
-
-    synchronized void highlight(final Iterable<? extends TrackableObject> objects, final boolean on) {
-        for (final TrackableObject e : objects) {
-            final int type = e instanceof CardView ? DeltaPacket.TYPE_CARD_VIEW
-                    : e instanceof PlayerView ? DeltaPacket.TYPE_PLAYER_VIEW : DeltaPacket.TYPE_STACK_ITEM_VIEW;
-            final int key = DeltaPacket.makeDeltaKey(type, e.getId());
-            if (on) {
-                highlighted.add(key);
-            } else {
-                highlighted.remove(key);
+    /** What the waiting prompt offers and what has been chosen so far, replacing what the last one marked. */
+    synchronized void selection(final Selection selection) {
+        selectable = selection.cards().stream().map(PromptState::cardRef).toList();
+        selectableMin = selection.min();
+        final List<Ref> players = new ArrayList<>();
+        final List<Integer> stack = new ArrayList<>();
+        for (final TrackableObject target : selection.targets()) {
+            if (target instanceof PlayerView p) {
+                players.add(Ref.player(p.getId()));
+            } else if (target instanceof StackItemView item) {
+                stack.add(key(item));
             }
         }
+        selectablePlayers = players;
+        selectableStack = stack;
+        highlighted = selection.chosen().stream().map(PromptState::key).distinct().toList();
         changed();
+    }
+
+    /** The key the browser knows a card, player or stack item by. */
+    private static int key(final TrackableObject object) {
+        final int type = object instanceof CardView ? DeltaPacket.TYPE_CARD_VIEW
+                : object instanceof PlayerView ? DeltaPacket.TYPE_PLAYER_VIEW : DeltaPacket.TYPE_STACK_ITEM_VIEW;
+        return DeltaPacket.makeDeltaKey(type, object.getId());
     }
 
     synchronized void card(final CardView about) {
@@ -107,7 +100,7 @@ final class PromptState {
 
     private Prompt current() {
         return new Prompt(message, priority, card, ok, cancel, focusOk, paying, selectable, selectableMin,
-                selectablePlayers, selectableStack, List.copyOf(highlighted), starterChoice);
+                selectablePlayers, selectableStack, highlighted, starterChoice);
     }
 
     /** Whether the message opens with the line the key makes, whatever player's name fills it. */
