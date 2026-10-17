@@ -32,7 +32,7 @@
 .cq-main { flex: 1; min-height: 0; display: grid; view-transition-name: page; }
 .cq-main > * { animation: box-in .18s ease-out; }
 html[data-motion="reduced"] .cq-main > * { animation: none; }
-/* A tab's page plays its rise at once rather than not at all: turned off, it would play when the slide ends and the mark comes off */
+/* Zero duration rather than none: with none, the rise plays when data-way is removed at the end of the slide */
 html[data-way] .cq-main > * { animation-duration: 0s; }
 
 .cq-kicker { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }

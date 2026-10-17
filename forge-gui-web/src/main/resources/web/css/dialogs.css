@@ -156,7 +156,7 @@ html:not([data-form="portrait"]) .dialog .dist-row .po-avatar { width: 78px; hei
 .dialog :is(.ordered-item, .lib-card).carried > :not(.order-number, .order-end) { visibility: hidden; }
 .dialog .order-ghost { position: fixed; z-index: 90; display: block; margin: 0; padding: 0; pointer-events: none; scale: 1.07; }
 .dialog .order-ghost.sb-list { overflow: visible; }
-/* Pressing to carry would otherwise start selecting the dialog's text */
+/* Stops a drag from selecting text */
 .dialog :is(.ordered-item, .lib-card, .sb-row) { user-select: none; -webkit-user-select: none; }
 .dialog .order-ghost :is(.ordered-item, .lib-card, .sb-row) { cursor: grabbing; box-shadow: 0 20px 34px #000b, 0 4px 10px #0008; }
 .dialog .order-ghost :is(.order-number, .order-end, .order-nudge) { display: none; }

@@ -83,11 +83,11 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 #match.tabbed #seat-tabs:not([hidden]) { grid-area: tabs; display: flex; align-items: flex-end; min-width: 0; margin-bottom: -8px; }
 #seat-tabs::after { content: ''; flex: 1; align-self: flex-end; border-bottom: 1px solid var(--edge); }
 #match.tabbed #opponent.many { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); }
-/* The open tab and its seat share one faint fill, so they read as one panel */
+/* The open tab and its seat share a faint fill, so they read as one panel */
 #opponent.tabbed > .seat:not(.compact) { position: relative; padding: 8px 10px; border: 1px solid var(--edge); border-top: 0; border-radius: 0 0 10px 10px;
   background: color-mix(in srgb, var(--open-tint, var(--line)) 7%, transparent); }
 #opponent.tabbed > .seat:not(.compact) .player { position: absolute; left: 12px; top: 14px; z-index: 6; }
-/* On the open player's turn the whole outline, tab and strip included, lights gold as a compact seat's frame does. The glow stays under the seat, clear of the tabs. */
+/* Gold outline on the open player's turn, like a compact seat. The glow sits below the seat so it misses the tabs. */
 #match.tabbed:has(#opponent > .seat.turn:not(.compact, [hidden])) { --edge: color-mix(in srgb, var(--accent-2) 70%, transparent); }
 #opponent.tabbed > .seat.turn:not(.compact) { box-shadow: 0 12px 22px -14px color-mix(in srgb, var(--accent-2) 30%, transparent), inset 0 -18px 30px -26px color-mix(in srgb, var(--accent-2) 40%, transparent); }
 .seat-tab { position: relative; flex: 0 1 auto; min-width: 118px; max-width: 190px; display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; column-gap: 9px; align-items: center; padding: 8px 14px 9px 10px;
@@ -871,7 +871,7 @@ html[data-motion="reduced"] #game-over .win-rays { animation: none; opacity: .55
 html[data-motion="reduced"] #game-over .win-mote { display: none; }
 html[data-motion="reduced"] #match.ending > :not(#game-over) { transition: none; }
 html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
-/* A card's corners round as a printed card's do, so a large one's square scan corners stay hidden */
+/* Corners scale with the card, so a large card's square scan corners don't show */
 .card { --radius: max(6px, calc(var(--card-w) * var(--fit, 1) * .05)); width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .3s ease, opacity .3s ease; flex: none; }
 /* A tapped card's shadow turns with it, so its offset turns the other way to keep falling downwards, and glow states carry it by --lift */
 /* A tight dark edge where the card meets the table, and a softer fall around it, so cards stand off a busy playmat */
@@ -924,7 +924,7 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 /* A card held in exile is dimmed rather than brightened, so its frame stays as dark as its holder's */
 .card.ghost { box-shadow: 0 0 0 1px var(--zone-exile), var(--lift, 0 0 #0000); }
 .card.ghost > img { opacity: .55; filter: grayscale(.6); }
-/* The text face under the image would show through it */
+/* The fallback text face would show through the dimmed image */
 .card.ghost:not(.noimg) .frame { visibility: hidden; }
 .card .pt { display: none; position: absolute; right: 4px; bottom: 4px; background: #000c; border-radius: 4px; padding: 0 4px; font-size: 12px; font-weight: 700; }
 .card .pt.on { display: block; }
