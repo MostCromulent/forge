@@ -551,6 +551,7 @@ public class WebGuiGame extends NetworkGuiGame {
                 selectionZonesShown.addAll(showZones(getZonesHolding(cards)));
             }
         }
+        prompt.selectable(refs, min);
     }
 
     // Cards the engine says you can act on now, and, at strength two, the ones the Auto button would tap
@@ -564,7 +565,6 @@ public class WebGuiGame extends NetworkGuiGame {
             if (getWeakSelectableStrength(c) >= 2) {
                 autoTap.add(cardRef(c));
             }
-        prompt.selectable(refs, min);
         }
         sendPlayable(playable, autoTap);
     }
@@ -717,6 +717,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     // Parking releases the mirror lock so browser actions and replies can proceed while the player decides
     private JsonElement ask(final Record request, final Predicate<JsonElement> valid) {
+        flushZones();
         final int holds = mirrorLock.getHoldCount();
         for (int i = 0; i < holds; i++) {
             mirrorLock.unlock();
@@ -730,7 +731,6 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-        flushZones();
     private boolean isInMirror(final CardView card) {
         final GameView gv = getGameView();
         return gv != null && gv.getTracker() != null && gv.getTracker().getObj(TrackableTypes.CardViewType, card.getId()) == card;
