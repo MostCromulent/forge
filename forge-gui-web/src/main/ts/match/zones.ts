@@ -7,7 +7,7 @@ import { fitCards } from './fit';
 import { stateOf, zone, type Model } from '../model';
 import { byId, q, make, reducedMotion } from '../dom';
 import { setSymbolText } from '../images';
-import { splitQuestion } from './asking';
+import { sourceName, splitQuestion } from './asking';
 import { changeUi, ui, type ZoneSort } from '../ui';
 import { normalize, rankByName } from '../search';
 import { isPortrait } from '../form';
@@ -202,8 +202,9 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   q(el, '.zone-hint').textContent = question;
   // On the board the question is one line: the source card, then the question, as in a dialog
   const asked = splitQuestion(question);
-  q(el, '.zone-ask .ask-source').textContent = asked.source;
-  q(el, '.zone-ask .ask-sep').hidden = !asked.source;
+  const source = sourceName(model, asked, prompt?.card);
+  q(el, '.zone-ask .ask-source').textContent = source;
+  q(el, '.zone-ask .ask-sep').hidden = !source;
   setSymbolText(q(el, '.zone-ask .ask-text'), asked.ask);
   answer(q(el, '.zone-answer.ok'), prompt?.ok, () => actions.ok());
   q(el, '.zone-answer.ok kbd').textContent = keyName(boundKeys().ok);

@@ -13,7 +13,7 @@ import { keyName } from '../keys';
 import { boundKeys } from '../settings';
 import { cssUrl, playerAvatarUrl, playerSleeveUrl } from '../looks';
 import { askingCard, cardMenu, cardPrompt, deref, derefAll, game, isLocal, me, oldestRequest, stackPick, stateOf, type Model } from '../model';
-import { splitQuestion } from './asking';
+import { sourceName, splitQuestion } from './asking';
 import { zoneTitle } from './zones';
 import { changeUi, ui } from '../ui';
 import { MenuIcon } from './gamemenu';
@@ -213,8 +213,7 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
 /** A question on the board as one line: the card that asks, then the question. The engine's rules text and bookkeeping are left out. */
 function QuestionLine({ model, req, text }: { model: Model; req: Request; text: string }) {
   const asked = splitQuestion(text);
-  const from = deref(model, askingCard(model, req)) as CardView | undefined;
-  const source = asked.source || (from ? stateOf(model, from).Name ?? '' : '');
+  const source = sourceName(model, asked, askingCard(model, req));
   return <>{source && <><span class="ask-source">{source}</span><span class="ask-sep" aria-hidden="true">·</span></>}<SymbolText text={asked.ask} /></>;
 }
 

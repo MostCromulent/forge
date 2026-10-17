@@ -1,15 +1,19 @@
 // Shortens a question to one line. The engine's prompt text also holds the source card's rules text, its id and the engine's own notes.
 
-/** A question's text, split into the source card (when the text names one) and what it asks. */
+import { deref, stateOf, type Model } from '../model';
+import type { CardView, Ref } from '../protocol';
+
+/** A question's text, split into the source card (when the text names one) and what it asks. sourceId is the source card's id. */
 export interface Asked {
   source: string;
+  sourceId?: number;
   ask: string;
 }
 
 // "Gravedigger (121) - When Gravedigger enters, ...": the source card, its id, and its rules text
-const SOURCE = /^(.+?) \(\d+\) - (.*)$/;
+const SOURCE = /^(.+?) \((\d+)\) - (.*)$/;
 // A later step of the same effect names only the source and its id, without the rules text
-const BARE_SOURCE = /^(.+?) \(\d+\)$/;
+const BARE_SOURCE = /^(.+?) \((\d+)\)$/;
 // The engine adds its own notes in square brackets, such as the trigger an ability belongs to
 const BRACKETED = /\s*\[[^\]]*\]/g;
 const CARD_ID = / \(\d+\)/g;
@@ -24,8 +28,14 @@ export function splitQuestion(text: string): Asked {
   // Some prompts break the line after the source's id, before the dash and its rules text
   if (kept.length > 1 && kept[1].startsWith('- ')) kept.splice(0, 2, `${kept[0]} ${kept[1]}`);
   const named = SOURCE.exec(kept[0]) ?? (kept.length > 1 ? BARE_SOURCE.exec(kept[0]) : null);
-  const source = named ? named[1] : '';
   // When the text names a source, only what it asks is kept. The stack and the prompt already show the source and its rules text
-  const ask = !named ? kept.join(' ') : kept.length > 1 ? kept[kept.length - 1] : named[2];
-  return { source, ask: ask.replace(BRACKETED, '').replace(CARD_ID, '').trim() };
+  const ask = (!named ? kept.join(' ') : kept.length > 1 ? kept[kept.length - 1] : named[3]).replace(BRACKETED, '').replace(CARD_ID, '').trim();
+  return named ? { source: named[1], sourceId: Number(named[2]), ask } : { source: '', ask };
+}
+
+/** The name of the card a question comes from: the card the text gives the id of, else the card the request names, else the name in the text. */
+export function sourceName(model: Model, asked: Asked, card: Ref | null | undefined): string {
+  // A card's key is its id
+  const from = (asked.sourceId === undefined ? undefined : model.objects.get(asked.sourceId)) ?? deref(model, card);
+  return from ? stateOf(model, from as CardView).Name ?? asked.source : asked.source;
 }

@@ -15,7 +15,7 @@ import { boundKeys, shortcutKeys } from '../settings';
 import { isPortrait } from '../form';
 import { notePick } from './overlay';
 import { declaringBlocks } from './blockdrag';
-import { splitQuestion } from './asking';
+import { sourceName, splitQuestion } from './asking';
 import type { CardView, PlayerView, PromptButton, Ref } from '../protocol';
 import { t } from '../text';
 import { ICONS, iconSvg } from '../icons';
@@ -203,9 +203,8 @@ function drawPrompt(model: Model, actions: Actions): void {
   if (req && onBoard) {
     const folded = ui.requestFolded === req.id;
     const ref = askingCard(model, req);
-    const card = deref(model, ref) as CardView | undefined;
     const asked = splitQuestion(('title' in req ? req.title : 'message' in req ? req.message : '') ?? '');
-    const source = asked.source || (card ? stateOf(model, card).Name ?? '' : '');
+    const source = sourceName(model, asked, ref);
     q(root, '.step').textContent = folded ? t('lblWebPromptQuestionWaits') : source ? t('lblWebPromptResolving') : stepName(game(model)?.Phase);
     // With no source to name, the prompt shows the question itself
     setSymbolText(q(root, '.message'), source || asked.ask);
