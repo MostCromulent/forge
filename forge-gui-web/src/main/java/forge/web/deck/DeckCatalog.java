@@ -69,7 +69,7 @@ public final class DeckCatalog {
     private static final Map<String, String> COLOUR_LETTERS = Map.of(
             "White", "W", "Blue", "U", "Black", "B", "Red", "R", "Green", "G");
     /** The finder lists a deck's cards without problem marks. The verdict line states the problems. */
-    public static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), Map.of(), List.of());
+    public static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), Map.of(), Set.of(), List.of());
 
     private final Map<String, Entry> byKey = new ConcurrentHashMap<>();
 

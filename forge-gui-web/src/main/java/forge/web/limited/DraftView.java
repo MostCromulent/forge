@@ -7,6 +7,8 @@ import forge.web.deck.CardCatalog;
 import forge.web.images.Foil;
 import forge.web.protocol.JsonCodec;
 import forge.web.protocol.ToBrowser.DraftCard;
+import forge.web.protocol.ToBrowser.DraftLogKind;
+import forge.web.protocol.ToBrowser.DraftLogLine;
 import forge.web.protocol.ToBrowser.DraftState;
 
 import java.util.ArrayList;
@@ -17,7 +19,7 @@ import java.util.function.IntFunction;
 final class DraftView {
     private int step;
     private volatile DraftState latest;
-    private final List<String> log = new ArrayList<>();
+    private final List<DraftLogLine> log = new ArrayList<>();
 
     /** Packs go to the next seat (1) in odd rounds and to the previous seat (-1) in even rounds, as in BoosterDraft.passPacks. round counts from 1, and 0 means before the first round. */
     static int passDirection(final int round) {
@@ -69,11 +71,11 @@ final class DraftView {
     }
 
     /** Adds a line to the draft's log, worded as in desktop's draft log. */
-    void log(final String line) {
-        log.add(line);
+    void log(final DraftLogKind kind, final String line) {
+        log.add(new DraftLogLine(kind, line));
     }
 
-    List<String> lines() {
+    List<DraftLogLine> lines() {
         return List.copyOf(log);
     }
 

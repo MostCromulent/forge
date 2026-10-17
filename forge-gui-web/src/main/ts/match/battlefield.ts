@@ -28,7 +28,7 @@ function groupOf(model: Model, slot: Slot): Group {
   const type = stateOf(model, slot.top).Type ?? '';
   // A land that is also a creature can attack and block, so it goes with the creatures
   if (/Creature/.test(type)) return 'creatures';
-  if (/Land/.test(type)) return 'lands';
+  if (/\bLand\b/.test(type)) return 'lands';
   if (/Planeswalker|Battle/.test(type)) return 'far';
   return 'support';
 }
@@ -356,7 +356,7 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
     c.classList.toggle('sickness', card.Zone !== 'Exile' && isSick(model, card));
     // A land among the creatures gets a tag that explains why, because its art still looks like a land
     const type = stateOf(model, card).Type ?? '';
-    q(c, '.kind-tag').textContent = /Land/.test(type) && /Creature/.test(type) ? t('lblWebBoardLandCreature') : '';
+    q(c, '.kind-tag').textContent = /\bLand\b/.test(type) && /Creature/.test(type) ? t('lblWebBoardLandCreature') : '';
   });
   [...el.children].forEach((c, i) => (c as HTMLElement).style.setProperty('--under', String(i)));
   el.style.setProperty('--behind', String(behind(slot)));

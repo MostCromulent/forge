@@ -8,14 +8,13 @@ export type CommandKind = 'plane' | 'scheme' | 'avatar' | 'commander' | 'signatu
 const PLANAR_DICE = 'Planar Dice';
 
 export function commandKind(card: CardView, state: Partial<CardStateView>): CommandKind {
-  const type = state.Type ?? '';
-  if (/\b(Plane|Phenomenon)\b/.test(type)) return 'plane';
-  if (/\bScheme\b/.test(type)) return 'scheme';
-  if (/\bVanguard\b/.test(type)) return 'avatar';
+  if (card.GamePieceType === 'PLANAR') return 'plane';
+  if (card.GamePieceType === 'SCHEME') return 'scheme';
+  if (card.GamePieceType === 'AVATAR') return 'avatar';
   if (state.Name === PLANAR_DICE) return 'dice';
   if (card.IsCommander) {
     // An Oathbreaker's signature spell is also a commander. It can be cast only while its oathbreaker is on the battlefield
-    return /\b(Creature|Planeswalker)\b/.test(type) ? 'commander' : 'signature';
+    return /\b(Creature|Planeswalker)\b/.test(state.Type ?? '') ? 'commander' : 'signature';
   }
   return 'effect';
 }

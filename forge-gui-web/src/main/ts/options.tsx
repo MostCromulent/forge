@@ -33,14 +33,14 @@ function inDialog(def: SettingDef): string {
   return def.type === 'dialog' ? SETTINGS.filter(d => d.menu === def.dialog).map(d => `${d.section} ${d.label}`).join(' ') : '';
 }
 
-const TABS: { name: string; sections: string[]; icon: string }[] = [
-  { name: t('lblDisplay'), sections: [t('lblDisplay'), t('lblCards'), t('lblWebOptionsSectionSound')], icon: ICONS.monitor },
+const TABS: { id: string; name: string; sections: string[]; icon: string }[] = [
+  { id: 'display', name: t('lblDisplay'), sections: [t('lblDisplay'), t('lblCards'), t('lblWebOptionsSectionSound')], icon: ICONS.monitor },
   {
-    name: t('GamePlay'), sections: [t('GamePlay'), t('lblAutoYieldsAndTriggers'), t('lblWebOptionsSectionTable')],
+    id: 'gameplay', name: t('GamePlay'), sections: [t('GamePlay'), t('lblAutoYieldsAndTriggers'), t('lblWebOptionsSectionTable')],
     icon: ICONS.gamepad,
   },
-  { name: t('lblKeyboardShortcuts'), sections: [t('lblKeyboardShortcuts')], icon: ICONS.keyboard },
-  { name: t('lblAdvanced'), sections: [t('lblAdvanced')], icon: ICONS.dev },
+  { id: 'shortcuts', name: t('lblKeyboardShortcuts'), sections: [t('lblKeyboardShortcuts')], icon: ICONS.keyboard },
+  { id: 'advanced', name: t('lblAdvanced'), sections: [t('lblAdvanced')], icon: ICONS.dev },
 ];
 
 /** The tab last opened, so the dialog reopens on it. */
@@ -48,7 +48,7 @@ let lastTab = 0;
 
 /** Opens the options on the keyboard shortcuts tab. The key that shows the shortcuts calls this. */
 export function showShortcuts(): void {
-  lastTab = TABS.findIndex(tb => tb.name === t('lblKeyboardShortcuts'));
+  lastTab = TABS.findIndex(tb => tb.id === 'shortcuts');
   changeUi(u => { u.optionsOpen = true; });
 }
 
@@ -76,7 +76,7 @@ export function Options({ close }: { close: () => void }) {
         value={query} onInput={e => setQuery(e.currentTarget.value)} />}
       rail={<>
         {TABS.map((tb, i) => (
-          <button key={tb.name} role="tab" aria-selected={!searching && i === at} onClick={() => open(i)}>
+          <button key={tb.id} role="tab" aria-selected={!searching && i === at} onClick={() => open(i)}>
             <Icon d={tb.icon} />{tb.name}
             {!searching && i === at && <span class="rail-mark" />}
           </button>
@@ -85,7 +85,7 @@ export function Options({ close }: { close: () => void }) {
       </>}
       footer={!searching && shown[0]?.type === 'key'
         ? <button class="section-action" onClick={resetKeys}>{t('lblWebOptionsResetKeys')}</button> : null}>
-      {!searching && tab.name === t('lblAdvanced') && <BackupRow />}
+      {!searching && tab.id === 'advanced' && <BackupRow />}
       {blocks(shown, searching, tab.name)}
       {!shown.length && <p class="hint">{t('lblWebOptionsNoMatch')}</p>}
     </OptionsDialog>

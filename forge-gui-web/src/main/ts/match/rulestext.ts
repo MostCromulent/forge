@@ -81,14 +81,18 @@ const NOTE_PREFIXES = [
   'Exiled:', 'Exiled until this leaves the battlefield:', 'Haunted by:', 'Haunting ', 'Encoded:', 'Must block ',
   'Current Card Colors:', 'Current Storm Count:', 'Owner:',
 ];
-const NOTE_ASIDES = /^\((chosen|noted type|named card|stored dice|in room|class level|ring level|selected)/i;
+const NOTE_ASIDES = /^\((chosen|noted type|named card|stored dice|in room|class level|ring level)/i;
+// These two notes start with a translated label
+const TRANSLATED_ASIDES = ['lblSelected', 'lblChosenColors'] as const;
+// The labels of the card's other half. The host writes each one translated, then " — "
+const HALVES = ['lblAdventure', 'lblOmen', 'lblVengeance', 'lblPrepared'] as const;
 const MARKED = /^([=*+^])(.*)\1$/;
 
 function noteFor(line: Line): Line | null {
   const text = plain(line);
   const marked = MARKED.exec(text);
   if (marked && /^(Attached|Enchanting|Controlling|Cloned via)\b/.test(marked[2])) return slice(line, 1, text.length - 1);
-  if (NOTE_ASIDES.test(text)) return slice(line, 1, text.endsWith(')') ? text.length - 1 : text.length);
+  if (NOTE_ASIDES.test(text) || TRANSLATED_ASIDES.some(k => text.startsWith(`(${t(k)}`))) return slice(line, 1, text.endsWith(')') ? text.length - 1 : text.length);
   return NOTE_PREFIXES.some(p => text.startsWith(p)) ? line : null;
 }
 
@@ -235,9 +239,9 @@ export function sortRulesText(lines: Line[], keywords: readonly KeywordText[] = 
       continue;
     }
     // The spell on the other half of the card. Its cost is a casting cost, not an activation cost
-    const half = /^(Adventure|Omen|Prepared) — /.exec(text);
-    if (half) {
-      sorted.blocks.push({ kind: 'text', label: slice(line, 0, half[1].length), text: slice(line, half[0].length) });
+    const half = HALVES.map(k => t(k)).find(label => text.startsWith(`${label} — `));
+    if (half !== undefined) {
+      sorted.blocks.push({ kind: 'text', label: slice(line, 0, half.length), text: slice(line, half.length + 3) });
       continue;
     }
     const cost = costEnd(text);

@@ -663,8 +663,8 @@ const STAR_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="curre
 const HOURGLASS_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3 1h10v2l-3.6 5L13 13v2H3v-2l3.6-5L3 3zm2 2l3 4 3-4z"/></svg>';
 
 /** The label on a command zone effect's plaque. An emblem or a lasting designation is named, and anything else is an effect. */
-function effectKind(state: Partial<CardStateView>): { label: string; lasting: boolean } {
-  if (/\bEmblem\b/.test(state.Type ?? '')) return { label: t('lblEmblem'), lasting: true };
+function effectKind(card: CardView, state: Partial<CardStateView>): { label: string; lasting: boolean } {
+  if (card.IsEmblem) return { label: t('lblEmblem'), lasting: true };
   // The designation's name is the card name the server sends
   const named = /^The (Monarch|Initiative|Ring)$/.exec(state.Name ?? '');
   return named ? { label: named[1], lasting: true } : { label: t('lblEffect'), lasting: false };
@@ -756,7 +756,7 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
       }
       const words = (state.Name ?? '').replace(/^(The|Emblem) /, '').split(/[\s-]+/).filter(w => /^\w/.test(w));
       q(el, '.initials').textContent = words.map(w => w[0]).join('').slice(0, 2).toUpperCase();
-      const kind = effectKind(state);
+      const kind = effectKind(card, state);
       q(el, '.band i').innerHTML = kind.lasting ? STAR_ICON : HOURGLASS_ICON;
       q(el, '.band b').textContent = kind.label;
       // An effect that tracks a number, such as a player's speed, shows it as the overlay text desktop draws on the card

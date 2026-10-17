@@ -15,7 +15,7 @@ export function frameColour(colours: number, type: string): string {
   const one = COLOUR_BITS.filter(([bit]) => colours & bit);
   if (one.length > 1) return 'M';
   if (one.length === 1) return one[0][1];
-  return /Land/.test(type) ? 'L' : 'C';
+  return /\bLand\b/.test(type) ? 'L' : 'C';
 }
 
 /** The mana value of a mana cost. {2}{W} counts as three, {W/U} as one, {2/W} as two and X as zero. */

@@ -661,7 +661,13 @@ public final class ToBrowser {
     @Message("draft")
     public record DraftState(int step, String product, int pack, int packs, int pick, int packSize, int direction, List<DraftSeat> seats,
             List<DraftCard> cards, List<DraftCard> picks, List<Integer> moved, int clockSeconds, int clockLeftMillis,
-            List<String> log, boolean done) {
+            List<DraftLogLine> log, boolean done) {
+    }
+
+    /** A line of the draft log: the start of a pack, the player's own pick, or another seat's pick. */
+    public enum DraftLogKind { pack, own, seat }
+
+    public record DraftLogLine(DraftLogKind kind, String text) {
     }
 
     /** A seat in pass order, where seat 0 is the player: how many packs it holds, and whether its player has left. */

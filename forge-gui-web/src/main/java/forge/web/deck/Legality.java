@@ -27,8 +27,8 @@ final class Legality {
     private Legality() {
     }
 
-    /** The deck's own problems and each card's problem by name. kinds holds each card's problem in short form, for a verdict that names several. */
-    record Result(Map<String, String> flags, Map<String, String> kinds, List<String> deckItems) {
+    /** The deck's own problems and each card's problem by name. kinds holds each card's problem in short form, for a verdict that names several. overLimit names the cards with too many copies. */
+    record Result(Map<String, String> flags, Map<String, String> kinds, Set<String> overLimit, List<String> deckItems) {
         int problemCount() {
             return deckItems.size() + flags.size();
         }
@@ -43,7 +43,7 @@ final class Legality {
                     return StringUtils.capitalize(deckItems.get(0)) + ".";
                 }
                 final Map.Entry<String, String> only = flags.entrySet().iterator().next();
-                return describe(only.getKey(), only.getValue(), kinds.get(only.getKey())) + ".";
+                return describe(only.getKey(), only.getValue(), overLimit.contains(only.getKey())) + ".";
             }
             final List<String> parts = new ArrayList<>(deckItems.subList(0, Math.min(2, deckItems.size())));
             final Map<String, Integer> counted = new LinkedHashMap<>();
@@ -73,24 +73,43 @@ final class Legality {
         for (final Map.Entry<PaperCard, Integer> e : all) {
             byName.putIfAbsent(e.getKey().getName(), e.getKey());
         }
-        final Function<PaperCard, String> problems = cardProblems(check, commanders);
+        final Function<PaperCard, Problem> problems = problemsOf(check, commanders);
         final Map<String, String> flags = new LinkedHashMap<>();
         final Map<String, String> kinds = new LinkedHashMap<>();
+        final Set<String> overLimit = new HashSet<>();
         for (final Map.Entry<String, PaperCard> e : byName.entrySet()) {
             // Count as the engine does. A card with its own copy limit is counted in the main deck only.
             final int count = DeckFormat.canHaveSpecificNumberInDeck(e.getValue()) != null ? deck.getMain().countByName(e.getKey())
                     : all.countByName(e.getKey());
-            final String[] problem = problemInDeck(e.getValue(), count, check, problems);
+            final Problem problem = problemInDeck(e.getValue(), count, check, problems);
             if (problem != null) {
-                flags.put(e.getKey(), problem[0]);
-                kinds.put(e.getKey(), problem[1]);
+                flags.put(e.getKey(), problem.text());
+                kinds.put(e.getKey(), problem.kind());
+                if (problem.copies()) {
+                    overLimit.add(e.getKey());
+                }
             }
         }
-        return new Result(flags, kinds, check.unrestricted() ? List.of() : deckItems(deck, df, commanders, flags.isEmpty()));
+        return new Result(flags, kinds, overLimit, check.unrestricted() ? List.of() : deckItems(deck, df, commanders, flags.isEmpty()));
+    }
+
+    /** A card's problem, its short form for a verdict that names several, and whether it is about the number of copies. */
+    private record Problem(String text, String kind, boolean copies) {
+        Problem(final String text) {
+            this(text, text, false);
+        }
     }
 
     /** Why a card cannot go in this deck, or null. The reason is a ban, the format, the card pool or the commander's colours. Counts are not checked. */
     static Function<PaperCard, String> cardProblems(final Check check, final List<PaperCard> commanders) {
+        final Function<PaperCard, Problem> problems = problemsOf(check, commanders);
+        return card -> {
+            final Problem problem = problems.apply(card);
+            return problem == null ? null : problem.text();
+        };
+    }
+
+    private static Function<PaperCard, Problem> problemsOf(final Check check, final List<PaperCard> commanders) {
         if (check.unrestricted()) {
             return card -> null;
         }
@@ -101,8 +120,10 @@ final class Legality {
         final String letters = identityLetters(commanders);
         final String outside = letters.isEmpty() ? Localizer.getInstance().getMessage("lblWebLegalityOutsideColourless")
                 : Localizer.getInstance().getMessage("lblWebLegalityOutside", String.join(" ", letters.split("")));
-        final String bannedHere = bannedIn(check);
-        final String notLegalHere = Localizer.getInstance().getMessage("lblWebLegalityNotLegalIn", formatName(check));
+        // The short form of a ban leaves out the format. A card outside the identity or the format keeps the full text.
+        final Problem bannedHere = new Problem(Localizer.getInstance().getMessage("lblWebLegalityBannedIn", formatName(check)),
+                Localizer.getInstance().getMessage("lblWebLegalityBanned"), false);
+        final Problem notLegalHere = new Problem(Localizer.getInstance().getMessage("lblWebLegalityNotLegalIn", formatName(check)));
         return card -> {
             if (banned.contains(card.getName())) {
                 return bannedHere;
@@ -111,7 +132,7 @@ final class Legality {
                 return notLegalHere;
             }
             if (!commanders.contains(card) && !inIdentity.test(card)) {
-                return outside;
+                return new Problem(outside);
             }
             return null;
         };
@@ -138,27 +159,22 @@ final class Legality {
         return deck.getCommanders();
     }
 
-    /** A card's problem in this deck and its short form for a verdict that names several, or null when it has none. */
-    private static String[] problemInDeck(final PaperCard card, final int count, final Check check,
-            final Function<PaperCard, String> problems) {
+    /** A card's problem in this deck, or null when it has none. */
+    private static Problem problemInDeck(final PaperCard card, final int count, final Check check,
+            final Function<PaperCard, Problem> problems) {
         final int most = check.deckFormat().getMaxCardCopies(card);
         if (count > most) {
-            return new String[] {Localizer.getInstance().getMessage("lblWebNOfM", count, most), Localizer.getInstance().getMessage("lblWebLegalityOverCopyLimit")};
+            return new Problem(Localizer.getInstance().getMessage("lblWebNOfM", count, most), Localizer.getInstance().getMessage("lblWebLegalityOverCopyLimit"), true);
         }
-        final String problem = problems.apply(card);
+        final Problem problem = problems.apply(card);
         if (problem != null) {
-            // The short form of a ban leaves out the format. A card outside the identity or the format keeps the full text.
-            return new String[] {problem, problem.equals(bannedIn(check)) ? Localizer.getInstance().getMessage("lblWebLegalityBanned") : problem};
+            return problem;
         }
         final GameFormat pool = check.pool();
         if (pool != null && count > 1 && pool.getRestrictedCards().contains(card.getName())) {
-            return new String[] {Localizer.getInstance().getMessage("lblWebLegalityAllowsOne", pool.getName()), Localizer.getInstance().getMessage("lblWebLegalityRestricted")};
+            return new Problem(Localizer.getInstance().getMessage("lblWebLegalityAllowsOne", pool.getName()), Localizer.getInstance().getMessage("lblWebLegalityRestricted"), false);
         }
         return null;
-    }
-
-    private static String bannedIn(final Check check) {
-        return Localizer.getInstance().getMessage("lblWebLegalityBannedIn", formatName(check));
     }
 
     /** Problems with the deck as a whole. Each one is worked out here, because the engine reports only the first. */
@@ -210,8 +226,8 @@ final class Legality {
     }
 
     /** One card's problem as the verdict states it: a number of copies, or what is wrong with the card. */
-    private static String describe(final String name, final String flag, final String kind) {
-        return Localizer.getInstance().getMessage("lblWebLegalityOverCopyLimit").equals(kind) ? Localizer.getInstance().getMessage("lblWebLegalityCardCopies", name, flag)
+    private static String describe(final String name, final String flag, final boolean copies) {
+        return copies ? Localizer.getInstance().getMessage("lblWebLegalityCardCopies", name, flag)
                 : Localizer.getInstance().getMessage("lblWebLegalityCardIs", name, flag);
     }
 

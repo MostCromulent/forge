@@ -16,7 +16,7 @@ import { t, tNodes, shortDay, type TextKey } from '../text';
 import type { ComponentChildren } from 'preact';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { DraftCard, DraftSeat, DraftState } from '../protocol';
+import type { DraftCard, DraftLogLine, DraftSeat, DraftState } from '../protocol';
 import { make, reducedMotion } from '../dom';
 import { isPortrait } from '../form';
 import { Backdrop, Confirm, Dropdown } from '../dialog';
@@ -438,16 +438,16 @@ function PickSection({ title, held, by, cards, onDrop, move }: {
 }
 
 /** Other seats' picks make up most of the log, so they are shown only on request. The newest line comes first. */
-function DraftLog({ lines }: { lines: string[] }) {
+function DraftLog({ lines }: { lines: DraftLogLine[] }) {
   const [everyone, setEveryone] = useState(false);
-  const shown = lines.filter(l => everyone || !/ picked · \d+ waiting$/.test(l)).reverse();
+  const shown = lines.filter(l => everyone || l.kind !== 'seat').reverse();
   return (
     <aside class="draft-log" aria-label={t('lblWebDraftLog')}>
       <header>
         <b>{t('lblWebDraftLog')}</b>
         <label><input type="checkbox" checked={everyone} onChange={e => setEveryone(e.currentTarget.checked)} /> {t('lblWebDraftEverySeatsPicks')}</label>
       </header>
-      {shown.map((line, i) => <p key={shown.length - i} class={line.startsWith('Pack ') ? 'head' : ''}>{line}</p>)}
+      {shown.map((line, i) => <p key={shown.length - i} class={line.kind === 'pack' ? 'head' : ''}>{line.text}</p>)}
     </aside>
   );
 }

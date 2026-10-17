@@ -17,7 +17,7 @@ import { frameColour, manaValue } from './rules';
 
 // Sorts by colour as Arena does. Each single colour comes in WUBRG order, then multicoloured, colourless, and lands last
 function colourRank(colours: number, type: string): number {
-  return /Land/.test(type) ? 7 : 'WUBRGMC'.indexOf(frameColour(colours, type));
+  return /\bLand\b/.test(type) ? 7 : 'WUBRGMC'.indexOf(frameColour(colours, type));
 }
 
 function handOrder(model: Model, cards: CardView[]): CardView[] {

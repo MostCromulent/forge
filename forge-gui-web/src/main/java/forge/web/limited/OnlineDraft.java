@@ -10,6 +10,7 @@ import forge.gui.interfaces.IDraftEventHandler;
 import forge.item.PaperCard;
 import forge.util.Localizer;
 import forge.web.protocol.ToBrowser.DraftCard;
+import forge.web.protocol.ToBrowser.DraftLogKind;
 import forge.web.protocol.ToBrowser.DraftSeat;
 import forge.web.protocol.ToBrowser.DraftState;
 
@@ -77,7 +78,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
         serial.execute(() -> {
             mySeat = seatIndex;
             if (packNum != packNumber) {
-                view.log(Localizer.getInstance().getMessage("lblDraftLogPackHeader", packNum,
+                view.log(DraftLogKind.pack, Localizer.getInstance().getMessage("lblDraftLogPackHeader", packNum,
                         Localizer.getInstance().getMessage(packNum % 2 == 1 ? "lblDraftLogPassingRight" : "lblDraftLogPassingLeft")));
             }
             pack = List.copyOf(cards);
@@ -100,14 +101,14 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
             if (mine) {
                 if (pending != null) {
                     picks.add(DraftView.card(pending, packNumber, pickNumber + 1, pendingSideboard));
-                    view.log(Localizer.getInstance().getMessage("lblWebOnlineDraftYouPicked", pending.getName()));
+                    view.log(DraftLogKind.own, Localizer.getInstance().getMessage("lblWebOnlineDraftYouPicked", pending.getName()));
                     pending = null;
                 }
                 // The pack picked from has been passed on. The next pack arrives as a separate event.
                 pack = List.of();
                 clockEnd = 0;
             } else {
-                view.log(Localizer.getInstance().getMessage("lblWebOnlineDraftSeatPicked", nameOf(seatIndex), depthOf(seatIndex)));
+                view.log(DraftLogKind.seat, Localizer.getInstance().getMessage("lblWebOnlineDraftSeatPicked", nameOf(seatIndex), depthOf(seatIndex)));
             }
             if (view.latest() != null) {
                 send(mine, moved);
@@ -121,7 +122,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
             // The timer made the pick, so a click that arrived at the same time is not counted too
             pending = null;
             picks.add(DraftView.card(card, packNum, pickInPack));
-            view.log(Localizer.getInstance().getMessage("lblWebOnlineDraftOutOfTime", card.getName()));
+            view.log(DraftLogKind.own, Localizer.getInstance().getMessage("lblWebOnlineDraftOutOfTime", card.getName()));
         });
     }
 

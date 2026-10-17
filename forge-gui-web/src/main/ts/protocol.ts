@@ -14,7 +14,7 @@ export type CardView = View<'CurrentState' | 'Owner' | 'Controller' | 'Tapped' |
   | 'PhasedOut' | 'Detained' | 'Token' | 'Cloned' | 'Damage' | 'IsRingBearer' | 'Counters' | 'EntityAttachedTo' | 'Zone'
   | 'ShieldCount' | 'MustBlockCards' | 'BlockAdditional' | 'BlockAny'
   | 'ClassLevel' | 'CurrentRoom' | 'RingLevel' | 'Sprocket' | 'AttractionLights' | 'Intensity' | 'PlayerMayLook'
-  | 'IsCommander' | 'UntilLeavesBattlefield' | 'PreparedSpell' | 'PairedWith' | 'Facedown' | 'FacedownImageKey' | 'OverlayText' | 'ChangedTypes' | 'ChangedColorWords' | 'PaperFoil' | 'Stickers'>;
+  | 'IsCommander' | 'UntilLeavesBattlefield' | 'PreparedSpell' | 'PairedWith' | 'Facedown' | 'FacedownImageKey' | 'OverlayText' | 'ChangedTypes' | 'ChangedColorWords' | 'PaperFoil' | 'Stickers' | 'IsEmblem' | 'GamePieceType'>;
 
 export type CardStateView = View<'Name' | 'ImageKey' | 'Type' | 'ManaCost' | 'OriginalManaCost' | 'Power' | 'Toughness' | 'BasePower' | 'BaseToughness' | 'Loyalty'
   | 'Defense' | 'Keywords' | 'Colors' | 'RulesText' | 'OracleText' | 'AbilityText' | 'FoilIndex'>;

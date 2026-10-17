@@ -68,7 +68,7 @@ const escape = (s: string) => s.replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`)
 /** The markup for a layer of stickers over a card's image. Names go along the name line, art on the art, abilities across the text box and power/toughness in the corner. */
 function stickersHtml(model: Model, card: CardView | undefined): string {
   // A sheet marks the place of each sticker that has been used, as a real peeled sheet does
-  if (card?.Stickers?.startsWith('Stickers on this sheet')) {
+  if (card?.GamePieceType === 'STICKER_SHEET' && card.Stickers) {
     return sheetLines(card.Stickers).map((line, slot) => {
       if (!line.used || !CUTS[slot]) return '';
       const [x, y, w, h] = CUTS[slot];

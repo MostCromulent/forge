@@ -19,12 +19,14 @@ export interface Carried {
 export interface Verdict {
   zone: Zone;
   accepts: boolean;
+  /** The drop breaks a rule of the deck, as opposed to dropping where the card already is. */
+  refused?: boolean;
   /** The text the drag chip shows, such as "add 1 to Sideboard", or the reason the drop is refused. */
   verb: string;
 }
 
 const THRESHOLD_PX = 4;
-// A refusal's text starts with this mark. `mark` checks for it to style the zone as refusing.
+// A refusal's text starts with this mark
 const REFUSED = '⊘';
 const ADD: Record<'Main' | 'Sideboard', TextKey> = { Main: 'lblWebEditorDragAddMain', Sideboard: 'lblWebEditorDragAddSideboard' };
 const MOVE: Record<'Main' | 'Sideboard', TextKey> = { Main: 'lblWebEditorDragMoveMain', Sideboard: 'lblWebEditorDragMoveSideboard' };
@@ -44,10 +46,10 @@ export function verdictFor(carried: Carried, zone: Zone, state: EditorState, com
   }
   if (zone === 'Commander') {
     if (!state.commanderZone) {
-      return { zone, accepts: false, verb: refused('lblWebEditorDragOnlyCommanderFormats') };
+      return { zone, accepts: false, refused: true, verb: refused('lblWebEditorDragOnlyCommanderFormats') };
     }
     if (!commanderAllowed) {
-      return { zone, accepts: false, verb: refused('lblWebEditorDragNotLegalCommander') };
+      return { zone, accepts: false, refused: true, verb: refused('lblWebEditorDragNotLegalCommander') };
     }
     return { zone, accepts: true, verb: state.commanders.length ? t('lblWebEditorDragReplaceCommander') : t('lblWebEditorDragMakeCommander') };
   }
@@ -56,12 +58,12 @@ export function verdictFor(carried: Carried, zone: Zone, state: EditorState, com
   }
   if (state.limited) {
     const left = state.sideboard.find(c => c.name === carried.name)?.count ?? 0;
-    return n > left ? { zone, accepts: false, verb: refused('lblWebEditorDragNoneLeft') } : { zone, accepts: true, verb: t(ADD[zone], n) };
+    return n > left ? { zone, accepts: false, refused: true, verb: refused('lblWebEditorDragNoneLeft') } : { zone, accepts: true, verb: t(ADD[zone], n) };
   }
   const have = countsInDeck(state).get(carried.name) ?? 0;
   const limit = copyLimit(state, carried.name);
   if (have + n > limit) {
-    return { zone, accepts: false, verb: limit === 1 ? refused('lblWebEditorDragSingleton') : refused('lblWebEditorDragAtLimit', have, limit) };
+    return { zone, accepts: false, refused: true, verb: limit === 1 ? refused('lblWebEditorDragSingleton') : refused('lblWebEditorDragAtLimit', have, limit) };
   }
   return { zone, accepts: true, verb: t(ADD[zone], n) };
 }
@@ -130,7 +132,7 @@ function makeChip(carried: Carried, image: string): HTMLElement {
 function mark(zone: HTMLElement, v: Verdict, under: boolean): void {
   zone.classList.toggle('drop-eligible', v.accepts && !under);
   zone.classList.toggle('drop-over', v.accepts && under);
-  zone.classList.toggle('drop-refuse', !v.accepts && v.verb.startsWith(REFUSED));
+  zone.classList.toggle('drop-refuse', !!v.refused);
   zone.classList.toggle('drop-remove', v.accepts && v.zone === 'catalogue');
   zone.dataset.dropHint = v.accepts ? (under ? v.verb : t('lblWebEditorDragWouldAccept')) : v.verb;
 }
