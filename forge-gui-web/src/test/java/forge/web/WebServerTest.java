@@ -142,6 +142,22 @@ public class WebServerTest {
         Assert.assertEquals(get("/skinicon?k=nonsense&token=secret", null).statusCode(), 404);
     }
 
+    // Fails if the page's text is sent again when the browser holds it, if text is sent uncompressed, or if a picture is compressed a second time
+    @Test
+    public void textIsCompressedAndRevalidatedAndPicturesAreSentAsTheyAre() throws Exception {
+        final HttpResponse<byte[]> text = http.send(HttpRequest.newBuilder(URI.create(origin() + "/text?token=secret"))
+                .header("Accept-Encoding", "gzip").build(), HttpResponse.BodyHandlers.ofByteArray());
+        Assert.assertEquals(text.headers().firstValue("content-encoding").orElse(""), "gzip");
+        final String etag = text.headers().firstValue("etag").orElseThrow();
+        final HttpResponse<byte[]> held = http.send(HttpRequest.newBuilder(URI.create(origin() + "/text?token=secret"))
+                .header("If-None-Match", etag).build(), HttpResponse.BodyHandlers.ofByteArray());
+        Assert.assertEquals(held.statusCode(), 304);
+        final HttpResponse<byte[]> icon = http.send(HttpRequest.newBuilder(URI.create(origin() + "/skinicon?k=IMG_AETHER_SHARD&token=secret"))
+                .header("Accept-Encoding", "gzip").build(), HttpResponse.BodyHandlers.ofByteArray());
+        Assert.assertEquals(icon.statusCode(), 200);
+        Assert.assertTrue(icon.headers().firstValue("content-encoding").isEmpty());
+    }
+
     private WebSocket openSocket(final String origin, final List<String> texts) throws Exception {
         return openSocket(origin, "secret", texts);
     }

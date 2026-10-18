@@ -43,9 +43,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpUtil;
@@ -635,11 +637,24 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             ctx.pipeline().addLast(
                     // State and deck lists are JSON that repeats its field names, so compression matters to a guest over the internet
                     new WebSocketServerCompressionHandler(),
+                    new TextCompressor(),
                     new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
                             .websocketPath("/ws").checkStartsWith(true).maxFramePayloadLength(1 << 22)
                             .allowExtensions(true).build()),
                     new StaticFiles(),
                     new BrowserSocket(endpoint));
+        }
+    }
+
+    /**
+     * Compresses the page's text for a guest over the internet. Pictures and sound are compressed already, so they are sent as they are.
+     * Netty's socket handshake removes this from the pipeline, so it never sees socket frames.
+     */
+    private static final class TextCompressor extends HttpContentCompressor {
+        @Override
+        protected Result beginEncode(final HttpResponse response, final String acceptEncoding) throws Exception {
+            final String type = response.headers().get(HttpHeaderNames.CONTENT_TYPE, "");
+            return type.startsWith("text/") || type.contains("json") || type.startsWith("image/svg") ? super.beginEncode(response, acceptEncoding) : null;
         }
     }
 
@@ -716,7 +731,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 return;
             }
             if ("/text".equals(path)) {
-                respond(ctx, HttpResponseStatus.OK, PageText.json(), "application/json; charset=utf-8");
+                respondUnlessUnchanged(ctx, PageText.json(), "application/json; charset=utf-8", null, "no-cache", ifNoneMatch);
                 return;
             }
             final String resource = "/".equals(path) ? "index.html" : path.substring(1);

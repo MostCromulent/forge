@@ -165,9 +165,18 @@ function draw(): void {
   painter.gl.drawArrays(painter.gl.TRIANGLE_STRIP, 0, 4);
 }
 
-/** Draws the image at src on the preview's canvas, over the image, when it is a foil and the browser has WebGL. Otherwise the canvas is hidden and the server's image shows. */
-export function showFoil(canvas: HTMLCanvasElement, src: string): void {
-  if (src === showing) return;
+/**
+ * Draws the image at src on the preview's canvas, over the image, when it is a foil and the browser has WebGL. Otherwise the canvas is hidden and the server's image shows.
+ * Returns the address the preview's image should load. While the canvas draws the foil, that is the image without it, so the server does not paint a foil no one sees.
+ */
+export function showFoil(canvas: HTMLCanvasElement, src: string): string {
+  if (src !== showing) paintFoil(canvas, src);
+  return seed && painter ? unfoiled(src) : src;
+}
+
+const unfoiled = (src: string): string => imageUrl(keyOf(src).replace(FOIL_NAME, '$1'));
+
+function paintFoil(canvas: HTMLCanvasElement, src: string): void {
   showing = src;
   canvas.hidden = true;
   seed = foilSeed(src);
@@ -188,7 +197,7 @@ export function showFoil(canvas: HTMLCanvasElement, src: string): void {
     canvas.hidden = false;
     draw();
   };
-  picture.src = imageUrl(keyOf(src).replace(FOIL_NAME, '$1'));
+  picture.src = unfoiled(src);
 }
 
 /** Moves the streaks to match the pointer's place on the hovered card. x and y each run from -0.5 to 0.5 across the card. */

@@ -1,7 +1,7 @@
 // The editor's left half. Cards the deck can't use are hidden until a filter shows them.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { imageUrl, hideBroken } from '../images';
+import { imageUrl, hideBroken, smallImage } from '../images';
 import { lift, liftFromLine } from '../flight';
 import { ColourToggles, SymbolText, toggled } from '../symbols';
 import { useDebounced } from '../hooks';
@@ -336,7 +336,7 @@ function liftCard(name: string, to: string): void {
   const at = document.querySelector<HTMLElement>(`[data-from="catalogue"][data-card="${CSS.escape(name)}"]`);
   const img = at?.querySelector<HTMLImageElement>('img:not(.sym)');
   if (img) lift(img, `${to}:${name}`);
-  else if (at?.dataset.image) liftFromLine(imageUrl(at.dataset.image), at.getBoundingClientRect(), `${to}:${name}`);
+  else if (at?.dataset.image) liftFromLine(smallImage(imageUrl(at.dataset.image)), at.getBoundingClientRect(), `${to}:${name}`);
 }
 
 function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly, add, remove, makeCommander, handlers }: {
@@ -351,7 +351,7 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
       <button class="tile" data-image={row.image} data-act={commanderWanted ? t('lblWebCardMenuMakeCommander') : t('lblAdd')}
         {...handlers(row.name, 'catalogue', row.image, 1)} onClick={() => (commanderWanted ? makeCommander(row.name) : add(row.name))}>
         <span class="tile-name">{row.name}</span>
-        <img loading="lazy" alt="" draggable={false} src={imageUrl(row.image)} onError={hideBroken} />
+        <img loading="lazy" alt="" draggable={false} src={smallImage(imageUrl(row.image))} onError={hideBroken} />
         {count > 0 && <span class="badge">{count}</span>}
         {row.isNew && <span class="new-card">{t('lblNew')}</span>}
       </button>

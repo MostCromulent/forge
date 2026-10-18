@@ -366,8 +366,12 @@ function drawDetail(model: Model): void {
   zoom.classList.toggle('image-only', !text);
   zoom.classList.toggle('text-card', text);
   img.hidden = text;
-  if (!text) setImage(img, src);
-  showFoil(q<HTMLCanvasElement>(zoom, 'canvas'), text ? '' : src);
+  // A foil's image can be loaded without its foil, so a failed load is recorded against the card's own address
+  const picture = showFoil(q<HTMLCanvasElement>(zoom, 'canvas'), text ? '' : src);
+  if (!text) {
+    img.dataset.card = src;
+    setImage(img, picture);
+  }
   q(zoom, '.detail').hidden = !face;
   if (!d || !face) drawStickers(q(zoom, '.stickers'), model, undefined);
   setSource(q(zoom, '.from'), hover.from);
@@ -554,7 +558,7 @@ function ensureZoom(zoom: HTMLElement): void {
   zoom.innerHTML = '<span class="shot"><img alt=""><span class="stickers" aria-hidden="true"></span><canvas class="foil" hidden></canvas><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cid"></span><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
   const img = q<HTMLImageElement>(zoom, 'img');
   img.addEventListener('error', () => {
-    brokenSrc = img.getAttribute('src') ?? '';
+    brokenSrc = img.dataset.card ?? '';
     redrawUi();
   });
   // Remove the class after the animation. Otherwise the preview would flip again the next time it is shown

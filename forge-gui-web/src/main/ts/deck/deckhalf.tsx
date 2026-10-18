@@ -5,7 +5,7 @@ import { useLayoutEffect, useState } from 'preact/hooks';
 import { isPortrait } from '../form';
 import { flyingFor, land } from '../flight';
 import { drawHand, headingText, regroup, type GroupBy } from './decklist';
-import { imageUrl } from '../images';
+import { imageUrl, smallImage } from '../images';
 import { Curve } from './deckview';
 import { Pip, Pips, SymbolText } from '../symbols';
 import type { Actions } from '../actions';
@@ -167,7 +167,7 @@ function ExtraZone({ section, cards, adding, landed, addTo, actions }: {
           ? <div class="group">{section.cards.map(c => (
               <div key={c.name} class={landed === c.name ? 'deck-stack landed' : 'deck-stack'} data-image={c.image} data-card={c.name} data-from={from}
                 onDblClick={() => remove(c.name)}>
-                <img alt={c.name} src={imageUrl(c.image)} draggable={false} />
+                <img alt={c.name} src={smallImage(imageUrl(c.image))} draggable={false} />
                 {c.count > 1 && <span class="deck-count">×{c.count}</span>}
               </div>
             ))}</div>
@@ -226,7 +226,7 @@ function CommanderZone({ actions, state, handlers }: { actions: Actions; state: 
         : state.commanders.map(c => (
           <div key={c.name} class="commander" data-image={c.image} data-card={c.name} data-from="Commander"
             {...(kept ? {} : handlers(c.name, 'Commander', c.image, 1))}>
-            <img alt="" src={imageUrl(c.image)} />
+            <img alt="" src={smallImage(imageUrl(c.image))} />
             <div>
               <div class="cname">{c.name} <span class="cost"><SymbolText text={c.cost} /></span></div>
               {c.problem && <div class="flag">! {c.problem}</div>}
@@ -248,7 +248,7 @@ function Stack({ card, zone, landed, handlers, takeOut }: {
   return (
     <div class={`deck-stack${card.problem ? ' bad' : ''}${landed ? ' landed' : ''}`} data-image={card.image} data-card={card.name} data-from={zone}
       title={card.problem} {...handlers(card.name, zone, card.image, card.count)} onDblClick={takeOut}>
-      <img alt={card.name} src={imageUrl(card.image)} draggable={false} />
+      <img alt={card.name} src={smallImage(imageUrl(card.image))} draggable={false} />
       {card.count > 1 && <span class="deck-count">×{card.count}</span>}
     </div>
   );
