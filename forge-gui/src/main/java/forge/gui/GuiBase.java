@@ -47,7 +47,7 @@ public class GuiBase {
         Runtime runtime = Runtime.getRuntime();
         StringBuilder sb = new StringBuilder();
         sb.append("##########################################");
-        sb.append("\nAPP: Forge v.").append(getInterface().getCurrentVersion());
+        sb.append("\nAPP: ").append(getInterface().getAppName()).append(" v.").append(getInterface().getCurrentVersion());
         if (hwInfo != null) {
             sb.append("\nDEV: ").append(hwInfo.device().getName());
             sb.append(hwInfo.getChipset()

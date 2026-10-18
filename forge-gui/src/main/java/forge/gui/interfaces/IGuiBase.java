@@ -24,6 +24,8 @@ public interface IGuiBase {
     boolean isRunningOnDesktop();
     boolean isLibgdxPort();
     String getCurrentVersion();
+    /** Names the program in the log header. */
+    default String getAppName() { return "Forge"; }
 
     void invokeInEdtNow(Runnable runnable);
     void invokeInEdtLater(Runnable runnable);

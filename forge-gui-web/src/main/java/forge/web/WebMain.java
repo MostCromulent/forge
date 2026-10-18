@@ -1,5 +1,6 @@
 package forge.web;
 
+import forge.error.ExceptionHandler;
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
@@ -32,6 +33,8 @@ public final class WebMain implements IHasForgeLog {
     public static void main(final String[] args) throws Exception {
         final WebGuiBase ui = new WebGuiBase();
         GuiBase.setInterface(ui);
+        ExceptionHandler.registerErrorHandling();
+        GuiBase.logHWInfo();
         final CountDownLatch quit = new CountDownLatch(1);
         // The console uses the player's language. The language is known before FModel loads the rest.
         Localizer.getInstance().initialize(FModel.getPreferences().getPref(FPref.UI_LANGUAGE), ForgeConstants.LANG_DIR);
