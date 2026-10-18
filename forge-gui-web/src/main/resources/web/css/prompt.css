@@ -89,15 +89,10 @@ html:not([data-form="portrait"]) #prompt.strike .cancel::before {
 #options .split { display: grid; grid-template-columns: 168px minmax(0, 1fr); min-height: 0; }
 #options .rail { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; background: var(--bg); border-right: 1px solid var(--line); }
 #options .rail button { display: flex; align-items: center; gap: 9px; padding: 8px 10px; background: none; border: 1px solid transparent; border-radius: 8px; color: var(--muted); font-size: 13px; text-align: left; }
-/* The links to Forge's project and players are at the bottom of the list. They are less prominent than the tabs. */
-#options .rail .forge-links { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line); }
-#options .rail .forge-links svg:not(.leaves) { fill: currentColor; stroke: none; }
 #options .rail button:hover { color: var(--text); background: var(--surface); }
 #options .rail button[aria-selected="true"] { color: var(--text); background: var(--surface-2); border-color: var(--line-bright); }
-/* The host tab has the gold of the host-only frames, and a gap sets it apart from the player's own tabs */
-#options .rail button.host { margin-bottom: 8px; color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 45%, var(--line)); background: color-mix(in srgb, var(--accent-2) 4%, transparent); }
-#options .rail button.host:hover { background: color-mix(in srgb, var(--accent-2) 10%, transparent); }
-#options .rail button.host[aria-selected="true"] { color: var(--accent-2); border-color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 12%, var(--surface-2)); }
+/* The host tab's name is in the gold of the host-only marks, and a gap sets it apart from the player's own tabs */
+#options .rail button.host, #options .rail button.host:hover, #options .rail button.host[aria-selected="true"] { margin-bottom: 8px; color: var(--accent-2); }
 /* The open tab's gold edge is a separate element, so a tab change animates it to the new tab. The page slides too (dialogs.css). */
 #options .rail button { position: relative; }
 #options .rail-mark { position: absolute; left: -1px; top: 6px; bottom: 6px; width: 3px; border-radius: 2px; background: var(--accent-2); view-transition-name: rail-mark; }
@@ -146,7 +141,7 @@ html:not([data-form="portrait"]) #prompt.strike .cancel::before {
 #options .tiles small { color: var(--muted); font-size: 11.5px; line-height: 1.3; }
 #options .tiles :is(.theirs, .tab) { fill: var(--surface-3); stroke: var(--line-bright); }
 #options .tiles .tab.on { fill: #8fc3ff; stroke: none; }
-#options .tiles .yours { fill: color-mix(in srgb, var(--accent-2) 22%, var(--table, #1a202c)); stroke: var(--accent-2); }
+#options .tiles .yours { fill: color-mix(in srgb, var(--text) 22%, var(--surface-3)); stroke: var(--muted); }
 #options .hint { color: var(--muted); font-size: 11.5px; line-height: 1.4; margin-top: 1px; }
 /* An on/off setting is a switch, gold when on. A choice is a menu. */
 #options .switch { justify-self: end; position: relative; width: 38px; height: 22px; padding: 0; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface-2); }
@@ -188,6 +183,13 @@ input.level:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 
   #options .rail { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
 }
 #options footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); }
+/* The links to Forge's project and players are small, so they do not compete with the settings */
+#options footer .forge-links { grid-auto-flow: column; gap: 2px; margin-left: -8px; }
+#options footer .forge-links a { gap: 6px; padding: 4px 8px; font-size: 12px; }
+#options footer .forge-links svg { width: 14px; height: 14px; fill: currentColor; stroke: none; }
+#options footer .forge-links .leaves { display: none; }
+/* Gold marks a choice. The search box has focus whenever the dialog opens, so its focus is shown in grey */
+#options .search:focus { outline: none; border-color: var(--line-bright); }
 /* The volume control is a small panel over its button. It changes the sound level without opening the options. */
 #volume .volume-panel { position: fixed; display: grid; gap: 8px; padding: 10px 12px; min-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 34px #000a; }
 #volume .volume-row { display: grid; grid-template-columns: 48px 1fr 34px; align-items: center; gap: 8px; font-size: 12.5px; }

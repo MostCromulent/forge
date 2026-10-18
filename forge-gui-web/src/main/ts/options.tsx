@@ -77,7 +77,6 @@ export function Options({ close }: { close: () => void }) {
     setAt(i);
     setQuery('');
   }, (): Record<string, string> => (i === at ? {} : { rail: i > at ? 'on' : 'back' }));
-  const resettable = !searching && shown[0]?.type === 'key';
   const version = buildVersion();
   return (
     <OptionsDialog title={t('lblWebHeadOptions')} kind="tabbed" close={close}
@@ -90,12 +89,11 @@ export function Options({ close }: { close: () => void }) {
             {!searching && i === at && <span class="rail-mark" />}
           </button>
         ))}
-        <ForgeLinks />
       </>}
-      footer={resettable || version ? <>
-        {resettable && <button class="section-action" onClick={resetKeys}>{t('lblWebOptionsResetKeys')}</button>}
+      footer={<>
+        <ForgeLinks />
         {version && <span class="version">v{version}</span>}
-      </> : null}>
+      </>}>
       {!searching && tab.id === 'advanced' && <BackupRow />}
       {blocks(shown, searching, tab.name)}
       {!shown.length && <p class="hint">{t('lblWebOptionsNoMatch')}</p>}
@@ -109,8 +107,8 @@ function blocks(shown: SettingDef[], searching: boolean, tabName: string): Compo
   let explained = false;
   for (let i = 0; i < shown.length;) {
     const def = shown[i];
-    // A tab's first section has the same name as the tab, so it gets no heading outside a search
-    const named = def.section !== shown[i - 1]?.section && (searching || def.section !== tabName);
+    // A tab's first section has the same name as the tab, so it gets no heading outside a search. The shortcuts keep theirs for its reset button
+    const named = def.section !== shown[i - 1]?.section && (searching || def.section !== tabName || def.type === 'key');
     if (def.hostOnly) {
       let end = i;
       while (end < shown.length && shown[end].hostOnly && shown[end].section === def.section) end++;
@@ -118,7 +116,7 @@ function blocks(shown: SettingDef[], searching: boolean, tabName: string): Compo
       explained ||= named;
       i = end;
     } else {
-      if (named) out.push(<SectionHeading key={`section ${def.section}`} name={def.section} keys={searching && def.type === 'key'} />);
+      if (named) out.push(<SectionHeading key={`section ${def.section}`} name={def.section} keys={def.type === 'key'} />);
       out.push(<Row key={def.key} def={def} />);
       i++;
     }
