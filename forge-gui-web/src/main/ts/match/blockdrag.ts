@@ -4,7 +4,7 @@ import { byId, q, make, placeBeside } from '../dom';
 import { game, me, opponents, stateOf, type Model } from '../model';
 import { setDragArrow } from './overlay';
 import type { Actions } from '../actions';
-import type { CardView, KeywordText, PlayerView, Ref } from '../protocol';
+import type { CardView, PlayerView, Ref } from '../protocol';
 import { t } from '../text';
 import { trackDrag } from '../press';
 
@@ -214,35 +214,25 @@ export function watchBlockTap(blocker: number, at: Point): void {
   });
 }
 
-/** Keywords that limit what can block a creature, each with the blocker keywords that get around it. An empty list means no keyword does, because colour, type, power or a count decides instead. */
-const EVASION: Record<string, readonly string[]> = {
-  FEAR: [], FLYING: ['FLYING', 'REACH'], HORSEMANSHIP: ['HORSEMANSHIP'], INTIMIDATE: [], LANDWALK: [], MENACE: [], PROTECTION: [],
-  SHADOW: ['SHADOW'], SKULK: [],
-};
-
-/** Shows that a block was refused. A reason is given only when one of the attacker's evasion keywords explains the refusal. */
+/** Shows that a block was refused. The host gives no reason, so none is shown. */
 function explainRefusal(blocker: number, attacker: number, at: Point): void {
   const model = current;
   if (!model) return;
-  const card = (key: number) => model.objects.get(key) as CardView | undefined;
-  const state = (key: number) => { const c = card(key); return c ? stateOf(model, c) : undefined; };
-  const name = (key: number) => state(key)?.Name ?? t('lblWebBlockThatCreature');
-  const keywords = (key: number): KeywordText[] => state(key)?.Keywords ?? [];
-  const answers = new Set(keywords(blocker).map(k => k.keyword));
-  const evasion = keywords(attacker).find(k => k.keyword !== undefined && k.keyword in EVASION
-    && !EVASION[k.keyword].some(a => answers.has(a)));
-  showTip(at, t('lblWebBlockCantBlock', name(blocker), name(attacker)), evasion ? `${evasion.title}: ${evasion.reminder}` : '');
+  const name = (key: number) => {
+    const card = model.objects.get(key) as CardView | undefined;
+    return (card && stateOf(model, card).Name) ?? t('lblWebBlockThatCreature');
+  };
+  showTip(at, t('lblWebBlockCantBlock', name(blocker), name(attacker)));
 }
 
-/** How long the reason stays next to the pointer, unless the next press removes it sooner. */
+/** How long the note stays next to the pointer, unless the next press removes it sooner. */
 const TIP_MS = 3500;
 
-/** Shows a small note where the drag was released, so the reason appears where the player is already looking. */
-function showTip(at: Point, title: string, reason: string): void {
+/** Shows a small note where the drag was released, so it appears where the player is already looking. */
+function showTip(at: Point, title: string): void {
   document.querySelector('.block-tip')?.remove();
   const tip = make('div', 'block-tip');
   tip.append(Object.assign(document.createElement('b'), { textContent: title }));
-  if (reason) tip.append(Object.assign(document.createElement('span'), { textContent: reason }));
   document.body.append(tip);
   placeBeside(tip, at.x, at.y, 14);
   const gone = () => {
