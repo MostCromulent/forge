@@ -10,15 +10,15 @@ const LOCAL_KEY = 'forge.settings';
 const GUEST_KEY = 'forge.guestSettings';
 
 
-/** The playmats a player can show under the board. The first is the bare table, with no picture. */
+/** The playmats a player can show under the board. The last is the bare table, with no picture. */
 export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb: string | null }[] = [
-  { id: 'table', name: 'lblNone', image: null, thumb: null },
-  { id: 'mistbound', name: 'lblWebPlaymatMistbound', image: '/playmats/mistbound-ruins.jpg', thumb: '/playmats/mistbound-ruins-thumb.jpg' },
   { id: 'nebula', name: 'lblWebPlaymatNebula', image: '/playmats/stormy-nebula.jpg', thumb: '/playmats/stormy-nebula-thumb.jpg' },
+  { id: 'emerald', name: 'lblWebPlaymatEmerald', image: '/playmats/emerald-mistscape.jpg', thumb: '/playmats/emerald-mistscape-thumb.jpg' },
+  { id: 'mistbound', name: 'lblWebPlaymatMistbound', image: '/playmats/mistbound-ruins.jpg', thumb: '/playmats/mistbound-ruins-thumb.jpg' },
   { id: 'bayou', name: 'lblWebPlaymatBayou', image: '/playmats/twilight-bayou.jpg', thumb: '/playmats/twilight-bayou-thumb.jpg' },
   { id: 'steppe', name: 'lblWebPlaymatSteppe', image: '/playmats/dawn-steppe.jpg', thumb: '/playmats/dawn-steppe-thumb.jpg' },
   { id: 'molten', name: 'lblWebPlaymatMolten', image: '/playmats/molten-forge.jpg', thumb: '/playmats/molten-forge-thumb.jpg' },
-  { id: 'emerald', name: 'lblWebPlaymatEmerald', image: '/playmats/emerald-mistscape.jpg', thumb: '/playmats/emerald-mistscape-thumb.jpg' },
+  { id: 'table', name: 'lblNone', image: null, thumb: null },
 ];
 type SettingValue = string | number | boolean;
 
