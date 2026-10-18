@@ -94,6 +94,10 @@ html:not([data-form="portrait"]) #prompt.strike .cancel::before {
 #options .rail .forge-links svg:not(.leaves) { fill: currentColor; stroke: none; }
 #options .rail button:hover { color: var(--text); background: var(--surface); }
 #options .rail button[aria-selected="true"] { color: var(--text); background: var(--surface-2); border-color: var(--line-bright); }
+/* The host tab has the gold of the host-only frames, and a gap sets it apart from the player's own tabs */
+#options .rail button.host { margin-bottom: 8px; color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 45%, var(--line)); background: color-mix(in srgb, var(--accent-2) 4%, transparent); }
+#options .rail button.host:hover { background: color-mix(in srgb, var(--accent-2) 10%, transparent); }
+#options .rail button.host[aria-selected="true"] { color: var(--accent-2); border-color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 12%, var(--surface-2)); }
 /* The open tab's gold edge is a separate element, so a tab change animates it to the new tab. The page slides too (dialogs.css). */
 #options .rail button { position: relative; }
 #options .rail-mark { position: absolute; left: -1px; top: 6px; bottom: 6px; width: 3px; border-radius: 2px; background: var(--accent-2); view-transition-name: rail-mark; }

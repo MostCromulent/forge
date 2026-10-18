@@ -33,40 +33,47 @@ function inDialog(def: SettingDef): string {
   return def.type === 'dialog' ? SETTINGS.filter(d => d.menu === def.dialog).map(d => `${d.section} ${d.label}`).join(' ') : '';
 }
 
+/** The host tab holds every host-only setting. The other tabs list the rest of their sections. */
 const TABS: { id: string; name: string; sections: string[]; icon: string }[] = [
+  {
+    id: 'host', name: t('lblWebOptionsTabHost'), sections: [t('lblWebOptionsSectionTable'), t('lblWebOptionsSectionSound'), t('lblAdvanced')],
+    icon: ICONS.crown,
+  },
   { id: 'display', name: t('lblDisplay'), sections: [t('lblDisplay'), t('lblCards'), t('lblWebOptionsSectionSound')], icon: ICONS.monitor },
   {
-    id: 'gameplay', name: t('GamePlay'), sections: [t('GamePlay'), t('lblAutoYieldsAndTriggers'), t('lblWebOptionsSectionTable')],
+    id: 'gameplay', name: t('GamePlay'), sections: [t('GamePlay'), t('lblAutoYieldsAndTriggers')],
     icon: ICONS.gamepad,
   },
   { id: 'shortcuts', name: t('lblKeyboardShortcuts'), sections: [t('lblKeyboardShortcuts')], icon: ICONS.keyboard },
   { id: 'advanced', name: t('lblAdvanced'), sections: [t('lblAdvanced')], icon: ICONS.dev },
 ];
 
-/** The tab last opened, so the dialog reopens on it. */
-let lastTab = 0;
+/** The tab last opened, so the dialog reopens on it. It is kept by id, because a guest has no host tab. */
+let lastTab = 'display';
 
 /** Opens the options on the keyboard shortcuts tab. The key that shows the shortcuts calls this. */
 export function showShortcuts(): void {
-  lastTab = TABS.findIndex(tb => tb.id === 'shortcuts');
+  lastTab = 'shortcuts';
   changeUi(u => { u.optionsOpen = true; });
 }
 
 export function Options({ close }: { close: () => void }) {
   const [query, setQuery] = useState('');
-  const [at, setAt] = useState(lastTab);
+  const tabs = TABS.filter(tb => tb.id !== 'host' || !isGuest());
+  const [at, setAt] = useState(Math.max(0, tabs.findIndex(tb => tb.id === lastTab)));
   const search = useRef<HTMLInputElement>(null);
   useEffect(() => {
     search.current?.focus();
   }, []);
   const searching = !!query.trim();
-  const tab = TABS[at];
+  const tab = tabs[at];
   const all = [...SETTINGS, ...shortcutSettings()].filter(def => !def.inside && (def.when?.() ?? true) && !(def.hostOnly && isGuest()));
   // A tab lists its sections in its own order. A search covers every tab
-  const shown = searching ? matching(all, query) : tab.sections.flatMap(section => all.filter(def => def.section === section));
+  const shown = searching ? matching(all, query)
+    : tab.sections.flatMap(section => all.filter(def => def.section === section && !!def.hostOnly === (tab.id === 'host')));
   // The rail is vertical, so a later tab's page slides up from below and an earlier one slides down from above (dialogs.css)
   const open = (i: number) => easedLocal(() => {
-    lastTab = i;
+    lastTab = tabs[i].id;
     setAt(i);
     setQuery('');
   }, (): Record<string, string> => (i === at ? {} : { rail: i > at ? 'on' : 'back' }));
@@ -77,8 +84,8 @@ export function Options({ close }: { close: () => void }) {
       head={<input ref={search} class="search" type="search" placeholder={t('lblWebOptionsSearch')} aria-label={t('lblWebOptionsSearch')}
         value={query} onInput={e => setQuery(e.currentTarget.value)} />}
       rail={<>
-        {TABS.map((tb, i) => (
-          <button key={tb.id} role="tab" aria-selected={!searching && i === at} onClick={() => open(i)}>
+        {tabs.map((tb, i) => (
+          <button key={tb.id} class={tb.id === 'host' ? 'host' : undefined} role="tab" aria-selected={!searching && i === at} onClick={() => open(i)}>
             <Icon d={tb.icon} />{tb.name}
             {!searching && i === at && <span class="rail-mark" />}
           </button>
@@ -96,9 +103,10 @@ export function Options({ close }: { close: () => void }) {
   );
 }
 
-/** The rows in order under their section headings. Host-only settings are framed together. */
+/** The rows in order under their section headings. Host-only settings are framed together, and only the first frame explains them. */
 function blocks(shown: SettingDef[], searching: boolean, tabName: string): ComponentChildren[] {
   const out: ComponentChildren[] = [];
+  let explained = false;
   for (let i = 0; i < shown.length;) {
     const def = shown[i];
     // A tab's first section has the same name as the tab, so it gets no heading outside a search
@@ -106,7 +114,8 @@ function blocks(shown: SettingDef[], searching: boolean, tabName: string): Compo
     if (def.hostOnly) {
       let end = i;
       while (end < shown.length && shown[end].hostOnly && shown[end].section === def.section) end++;
-      out.push(<HostGroup key={`host ${def.key}`} name={named ? def.section : null} defs={shown.slice(i, end)} />);
+      out.push(<HostGroup key={`host ${def.key}`} name={named ? def.section : null} explain={named && !explained} defs={shown.slice(i, end)} />);
+      explained ||= named;
       i = end;
     } else {
       if (named) out.push(<SectionHeading key={`section ${def.section}`} name={def.section} keys={searching && def.type === 'key'} />);
@@ -118,12 +127,12 @@ function blocks(shown: SettingDef[], searching: boolean, tabName: string): Compo
 }
 
 /** Settings only the host can change, which apply to everyone at the table. A frame shows where the group begins and ends. */
-function HostGroup({ name, defs }: { name: string | null; defs: SettingDef[] }) {
+function HostGroup({ name, explain, defs }: { name: string | null; explain: boolean; defs: SettingDef[] }) {
   return (
     <section class="host-group" aria-label={name ?? t('lblWebOptionsHostOnly')}>
       <h4>{name}<span class="host-only"><Icon d={ICONS.crown} />{t('lblWebOptionsHostOnly')}</span></h4>
-      {/* A group with no heading, such as dev mode, needs only the host-only mark, so the hint is left out */}
-      {name && <p class="hint">{t('lblWebOptionsHostOnlyHint')}</p>}
+      {/* A group with no heading needs only the host-only mark, so the hint is left out */}
+      {explain && <p class="hint">{t('lblWebOptionsHostOnlyHint')}</p>}
       {defs.map(def => <Row key={def.key} def={def} />)}
     </section>
   );
