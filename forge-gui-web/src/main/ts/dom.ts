@@ -58,7 +58,7 @@ export function relayout(): void {
   for (const place of relayouts) place();
 }
 
-export function saveText(text: string, fileName: string, type: string): void {
+export function saveText(text: string | Blob, fileName: string, type: string): void {
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([text], { type }));
   link.download = fileName;

@@ -95,6 +95,7 @@ export function Options({ close }: { close: () => void }) {
         {version && <span class="version">v{version}</span>}
       </>}>
       {!searching && tab.id === 'advanced' && <BackupRow />}
+      {!searching && tab.id === 'advanced' && !isGuest() && <LogsRow />}
       {blocks(shown, searching, tab.name)}
       {!shown.length && <p class="hint">{t('lblWebOptionsNoMatch')}</p>}
     </OptionsDialog>
@@ -155,6 +156,38 @@ function BackupRow() {
           if (chosen) void chosen.text().then(importBackup).then(done => setRefused(!done));
         }} />
       </div>
+    </div>
+  );
+}
+
+/** Downloads the host machine's logs as one zip, as desktop and mobile export them. */
+function LogsRow() {
+  const [problem, setProblem] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const download = async () => {
+    setBusy(true);
+    try {
+      const reply = await fetch('/logs');
+      if (!reply.ok) {
+        setProblem(t(reply.status === 404 ? 'lblNoLogFilesFound' : 'lblWebOptionsLogsFailed'));
+        return;
+      }
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
+      saveText(await reply.blob(), `forge-logs-${stamp}.zip`, 'application/zip');
+      setProblem(null);
+    } catch {
+      setProblem(t('lblWebOptionsLogsFailed'));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div class="setting">
+      <div>
+        <div>{t('lblExportLogs')}<span class="host-only"><Icon d={ICONS.crown} />{t('lblWebOptionsHostOnly')}</span></div>
+        <div class="hint">{problem ?? t('lblWebOptionsLogsHint')}</div>
+      </div>
+      <button class="edit" disabled={busy} onClick={() => void download()}>{t('lblWebOptionsExport')}</button>
     </div>
   );
 }
