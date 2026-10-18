@@ -3,41 +3,39 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { OptionsDialog } from '../options';
 import type { Actions } from '../actions';
-import type { Model } from '../model';
 import type { DevAction } from '../protocol';
 import { t, type TextKey } from '../text';
+import { players, zone, type Model } from '../model';
+import { isPortrait } from '../form';
+import { ICONS } from '../icons';
+import { MenuIcon } from './gamemenu';
 
-// Each group is sorted alphabetically when drawn, so the order of entries within a group here does not matter
-const GROUPS: [TextKey, [DevAction, TextKey][]][] = [
-  ['lblCards', [
-    ['addCardToHand', 'lblWebDevAddCardToHand'], ['addCardToBattlefield', 'lblWebDevAddCardToBattlefield'],
-    ['addTokenToBattlefield', 'lblWebDevAddToken'], ['addCardToLibrary', 'lblWebDevAddCardToLibrary'],
-    ['addCardToGraveyard', 'lblWebDevAddCardToGraveyard'], ['addCardToExile', 'lblWebDevAddCardToExile'],
-    ['repeatLastAddition', 'lblWebDevRepeatLastAddition'], ['castASpell', 'lblWebDevCastSpell'],
-    ['tutorForCard', 'lblWebDevTutor'],
-  ]],
-  ['lblRemove', [
-    ['exileCardsFromHand', 'lblWebDevExileFromHand'], ['exileCardsFromBattlefield', 'lblWebDevExileFromBattlefield'],
-    ['removeCardsFromGame', 'lblWebDevRemoveFromGame'],
-  ]],
-  ['lblPermanents', [
-    ['addCountersToPermanent', 'lblWebDevAddCounters'], ['removeCountersFromPermanent', 'lblWebDevRemoveCounters'],
-    ['tapPermanents', 'lblTapPermanent'], ['untapPermanents', 'lblUntapPermanent'],
-  ]],
-  ['lblGame', [
-    ['generateMana', 'lblWebDevAddMana'], ['setPlayerLife', 'lblWebDevSetLife'],
-    ['winGame', 'lblWebDevWinGame'], ['dumpGameState', 'lblWebDevDumpState'],
-  ]],
-  ['lblPlanechase', [['riggedPlanarRoll', 'lblWebDevRiggedPlanarRoll'], ['planeswalkTo', 'lblWebDevPlaneswalkTo']]],
-];
+type Entry = [DevAction, TextKey];
 
-/** The cheats, shown in place of the game menu's own items. */
+/** The cheats that come in families. Each family is one row of the menu with its cheats in a submenu. */
+const FAMILIES: Record<string, { name: TextKey; items: (Entry | 'sep')[] }> = {
+  place: { name: 'lblWebDevPlaceCard', items: [['addCardToHand', 'lblWebZoneHand'], ['addCardToBattlefield', 'lblWebZoneBattlefield'], ['addCardToLibrary', 'lblLibrary'],
+    ['addCardToGraveyard', 'lblGraveyard'], ['addCardToExile', 'lblExile'], 'sep', ['addTokenToBattlefield', 'lblWebDevAddToken']] },
+  exile: { name: 'lblWebDevExileCards', items: [['exileCardsFromHand', 'lblWebDevExileFromHand'], ['exileCardsFromBattlefield', 'lblWebDevExileFromBattlefield'], 'sep',
+    ['removeCardsFromGame', 'lblWebDevRemoveFromGame']] },
+  counters: { name: 'lblWebDevCounters', items: [['addCountersToPermanent', 'lblWebDevAddCounters'], ['removeCountersFromPermanent', 'lblWebDevRemoveCounters']] },
+  tap: { name: 'lblWebDevTapUntap', items: [['tapPermanents', 'lblTapPermanent'], ['untapPermanents', 'lblUntapPermanent']] },
+  planechase: { name: 'lblPlanechase', items: [['riggedPlanarRoll', 'lblWebDevRiggedPlanarRoll'], ['planeswalkTo', 'lblWebDevPlaneswalkTo']] },
+};
+const FAMILY_ICONS: Record<string, string> = { place: ICONS.plus, exile: ICONS.bin, counters: ICONS.yields, tap: ICONS.next, state: ICONS.folder, planechase: ICONS.dev };
+
+/**
+ * The cheats, shown in place of the game menu's own items. A family of cheats opens a submenu beside the menu on a desktop,
+ * on hover, a click or the right arrow. On a phone it opens as a page of its own with a row back.
+ */
 export function DevItems({ model, actions, back, close, setUp }: {
   model: Model; actions: Actions; back: () => void; close: () => void; setUp: () => void;
 }) {
   useEffect(() => {
     actions.dev('state');
   }, []);
+  const [open, setOpen] = useState<{ family: string; top: number } | null>(null);
+  const phone = isPortrait();
   const run = (action: DevAction) => {
     actions.dev(action);
     close();
@@ -47,24 +45,65 @@ export function DevItems({ model, actions, back, close, setUp }: {
       {on ? '✓ ' : ''}{label}
     </button>
   );
+  const item = (action: DevAction, key: TextKey, icon?: string) => (
+    <button key={action} type="button" role="menuitem" class="card-menu-item" onClick={() => run(action)}>{icon && <MenuIcon d={icon} />}{t(key)}</button>
+  );
+  // A Planechase game is one where a player has a planar deck
+  const planechase = players(model).some(p => zone(model, p, 'PlanarDeck').length > 0);
+  const families = ['place', 'exile', 'counters', 'tap', 'state', ...(planechase ? ['planechase'] : [])];
+  const familyName = (family: string): string => t(family === 'state' ? 'lblWebDevGameState' : FAMILIES[family].name);
+  const subItems = (family: string) => (family === 'state'
+    ? <>
+        <button type="button" role="menuitem" class="card-menu-item" onClick={setUp}>{t('lblWebDevSetUpState')}</button>
+        {item('dumpGameState', 'lblWebDevDumpState')}
+      </>
+    : FAMILIES[family].items.map((e, i) => (e === 'sep' ? <div key={i} class="card-menu-sep" role="separator" /> : item(e[0], e[1]))));
+  const show = (family: string, row: HTMLElement) => setOpen({ family, top: row.offsetTop });
+  const familyRow = (family: string) => (
+    <button key={family} type="button" role="menuitem" aria-haspopup="menu" aria-expanded={open?.family === family}
+      class={open?.family === family ? 'card-menu-item on' : 'card-menu-item'}
+      onMouseEnter={phone ? undefined : e => show(family, e.currentTarget)}
+      onClick={e => show(family, e.currentTarget)}
+      onKeyDown={e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); show(family, e.currentTarget); } }}>
+      <MenuIcon d={FAMILY_ICONS[family]} />{familyName(family)}<MenuIcon d={ICONS.next} end />
+    </button>
+  );
+  // On a phone an open family replaces the menu, with its name as the way back
+  if (phone && open) {
+    return (
+      <>
+        <button type="button" role="menuitem" class="card-menu-item dev-back" onClick={() => setOpen(null)}>‹ {familyName(open.family)}</button>
+        {subItems(open.family)}
+      </>
+    );
+  }
+  const plain = (action: DevAction, key: TextKey, icon: string) => (
+    <button key={action} type="button" role="menuitem" class="card-menu-item" onMouseEnter={() => setOpen(null)} onClick={() => run(action)}><MenuIcon d={icon} />{t(key)}</button>
+  );
   return (
     <>
-      <button type="button" role="menuitem" class="card-menu-item dev-back" onClick={back}>‹ {t('lblDevMode')}</button>
-      <div class="dev-top">
-        {toggle('unlimitedLands', t('lblWebDevUnlimitedLands'), model.devState?.unlimitedLands)}
-        {toggle('viewAll', t('lblWebDevViewAll'), model.devState?.viewAll)}
-        <button type="button" role="menuitem" class="card-menu-item" onClick={setUp}>{t('lblWebDevSetUpState')}</button>
-      </div>
-      <div class="dev-groups">
-        {GROUPS.map(([heading, items]) => (
-          <div key={heading} class="dev-group" role="group" aria-label={t(heading)}>
-            <h5>{t(heading)}</h5>
-            {items.map(([action, key]): [DevAction, string] => [action, t(key)]).sort((x, y) => x[1].localeCompare(y[1])).map(([action, label]) => (
-              <button key={action} type="button" role="menuitem" class="card-menu-item" onClick={() => run(action)}>{label}</button>
-            ))}
-          </div>
-        ))}
-      </div>
+      <button type="button" role="menuitem" class="card-menu-item dev-back" onMouseEnter={() => setOpen(null)} onClick={back}>‹ {t('lblDevMode')}</button>
+      <div class="card-menu-sep" role="separator" />
+      {toggle('unlimitedLands', t('lblWebDevUnlimitedLands'), model.devState?.unlimitedLands)}
+      {toggle('viewAll', t('lblWebDevViewAll'), model.devState?.viewAll)}
+      <div class="card-menu-sep" role="separator" />
+      {familyRow('place')}
+      {plain('repeatLastAddition', 'lblWebDevRepeatLastAddition', ICONS.undo)}
+      {plain('castASpell', 'lblWebDevCastSpell', ICONS.autoPass)}
+      {plain('tutorForCard', 'lblWebDevTutor', ICONS.eye)}
+      {families.filter(f => f !== 'place' && f !== 'state' && f !== 'planechase').map(familyRow)}
+      <div class="card-menu-sep" role="separator" />
+      {plain('generateMana', 'lblWebDevAddMana', ICONS.plus)}
+      {plain('setPlayerLife', 'lblWebDevSetLife', ICONS.user)}
+      {plain('winGame', 'lblWebDevWinGame', ICONS.crown)}
+      {familyRow('state')}
+      {planechase && familyRow('planechase')}
+      {open && !phone && (
+        <div class="card-menu dev-sub" role="menu" aria-label={familyName(open.family)} style={{ top: `${open.top - 6}px` }}
+          onKeyDown={e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setOpen(null); } }}>
+          {subItems(open.family)}
+        </div>
+      )}
     </>
   );
 }

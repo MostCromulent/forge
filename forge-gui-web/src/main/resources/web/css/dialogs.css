@@ -343,11 +343,11 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 .game-menu { min-width: 240px; }
 /* Dev mode's many cheats flow in newspaper columns, which balance their heights. The menu scrolls if they still do not fit. */
 .game-menu { max-height: calc(100vh - 140px); overflow-y: auto; }
-.game-menu.dev { width: min(720px, calc(100vw - 16px)); max-width: none; }
-.dev-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px 10px; }
-.dev-groups { columns: 3 200px; column-gap: 10px; }
-.dev-group { display: grid; gap: 1px; break-inside: avoid; }
-.dev-group h5 { margin: 8px 10px 3px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+/* The dev menu is one column. A family of cheats opens its submenu to the left, beside the row that opened it, because the menu sits at the right edge */
+.game-menu.dev { width: 270px; }
+/* The submenu is drawn outside the menu, so on a desktop the dev menu does not scroll and clip it. It is short enough to fit */
+html:not([data-form="portrait"]) .game-menu.dev { overflow: visible; }
+.game-menu .dev-sub { position: absolute; right: calc(100% + 6px); bottom: auto; width: 220px; min-width: 0; animation: menu-in .12s cubic-bezier(.2,.7,.3,1); transform-origin: 100% 0; }
 #options textarea.dev-state { width: 100%; box-sizing: border-box; font: 12px/1.4 ui-monospace, monospace; resize: vertical; }
 
 /* The playmat picker, shown next to the game menu */
