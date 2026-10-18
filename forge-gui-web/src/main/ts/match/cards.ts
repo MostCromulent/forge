@@ -38,7 +38,7 @@ export function createCard(onClick: CardClick): HTMLDivElement {
 
 // Every card checks these lists on every render. Each message replaces a whole list, so a Set is cached per list object.
 const refSets = new WeakMap<readonly (Ref | number)[], Set<number>>();
-const has = (refs: readonly (Ref | number)[] | null | undefined, key: number): boolean => {
+export const has = (refs: readonly (Ref | number)[] | null | undefined, key: number): boolean => {
   if (!refs) return false;
   let keys = refSets.get(refs);
   if (!keys) {

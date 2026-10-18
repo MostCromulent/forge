@@ -29,6 +29,8 @@ export interface UiState {
   /** Filters the open zone to cards whose name contains this text, in lower case. */
   zoneSearch: string;
   zoneSort: ZoneSort;
+  /** Of several zones the game shows for one question, the one whose cards are drawn, as `${playerKey}/${zone}`. Null draws the first with a card to choose. */
+  zoneChoice: string | null;
   stackCollapsed: boolean;
   /** The stack item under the pointer. Arrows are drawn to its targets. */
   hoveredStackItem: number | null;
@@ -88,6 +90,7 @@ export const ui: UiState = {
   requestFolded: null,
   zoneSearch: '',
   zoneSort: 'order',
+  zoneChoice: null,
   stackCollapsed: false,
   hoveredStackItem: null,
   stackMenuAt: null,
@@ -195,6 +198,7 @@ export function resetMatchUi(): void {
   ui.requestFolded = null;
   ui.zoneSearch = '';
   ui.zoneSort = 'order';
+  ui.zoneChoice = null;
   ui.hoveredStackItem = null;
   ui.stackMenuAt = null;
   ui.stopsOpen = false;

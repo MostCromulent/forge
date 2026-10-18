@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import { board, passUntil, probe, type Probe } from './probe';
+import { act, board, passUntil, probe, type Probe } from './probe';
 
 // A question about cards is shown on the dimmed board. The log, the stack and the prompt stay readable
 
@@ -65,4 +65,24 @@ probe('with the side column folded, the prompt still stays on top of a card ques
   await expect(question).toBeVisible();
   // The column slides out as it folds, so poll until it has gone
   await expect.poll(() => onTop(p.page, '#prompt')).toBe(true);
+});
+
+// Fails if several graveyards shown for one target are drawn at once instead of one at a time behind a chip per player, or a chip does not switch the graveyard
+probe('a target in any graveyard shows one graveyard at a time, chosen by a chip per player', async p => {
+  const yards = [0, 1, 2, 3].map(i => `p${i}graveyard=${i === 3 ? 'Shock' : 'Hill Giant;Grizzly Bears;Shock'}`).join('\n');
+  await board(p, `p0hand=Reanimate\np0battlefield=Swamp\n${yards}`, { players: 4 });
+  const key = await p.page.evaluate(() => Number([...document.querySelectorAll<HTMLElement>('#hand .card')].find(c => c.textContent?.includes('Reanimate'))?.dataset.key));
+  await act(p.page, 'selectCard', key, false, 0, 0);
+  // The game leaves out the graveyard with no creature in it
+  const chips = p.page.locator('#zones .zone-chip');
+  await expect(chips).toHaveCount(3, { timeout: 20_000 });
+  await expect(p.page.locator('#zones .zone-panel.asking')).toHaveCount(1);
+  await expect(chips.first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(chips.first().locator('i')).toHaveText('2');
+  const second = (await chips.nth(1).locator('b').textContent())!;
+  await chips.nth(1).click();
+  await expect(chips.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await expect(p.page.locator('#zones .zone-who')).toHaveText(`${second} · Graveyard`);
+  await p.page.locator('#zones .card.selectable').first().click({ force: true });
+  await expect(chips).toHaveCount(0, { timeout: 20_000 });
 });

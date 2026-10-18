@@ -462,6 +462,11 @@ html[data-form="portrait"] :is(.backdrop.on-board .options:not(.ordered), .revea
   display: flex; flex-wrap: wrap; justify-content: center; align-content: start; gap: 12px; padding: 10px 0 14px; }
 html[data-form="portrait"] .backdrop.on-board .dist-row { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
 html[data-form="portrait"] #zones.asking .zone-count { display: none; }
+/* The zone chips are avatars with a badge in a row that scrolls sideways, because the line under them names the player shown. The names stay for screen readers. */
+html[data-form="portrait"] .zone-chips { justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 4px 2px; }
+html[data-form="portrait"] .zone-chip { flex: none; padding: 3px; }
+html[data-form="portrait"] .zone-chip :is(b, em) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+html[data-form="portrait"] .zone-chip i { position: absolute; top: -4px; right: -4px; min-width: 0; padding: 0 4px; font-size: 10px; }
 /* A short zone (fewer than nine cards) does not need the search or the sort */
 html[data-form="portrait"] #zones.asking .zone-panel:not(:has(.cards > :nth-child(9 of :not(.back:not(.selectable))))) :is(.zone-find:placeholder-shown, .zone-sort) { display: none; }
 /* In a long zone, the search gets its own line under the name of the zone's owner */

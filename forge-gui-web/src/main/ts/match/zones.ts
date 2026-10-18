@@ -2,11 +2,12 @@
 // It folds to a bar instead of closing. So the player can look at the board during a prompt and come back to the same place.
 
 import { reconcile } from './reconcile';
-import { createCard, markPicked, updateCard, type CardClick } from './cards';
+import { createCard, has, markPicked, updateCard, type CardClick } from './cards';
 import { fitCards } from './fit';
-import { stateOf, zone, type Model } from '../model';
+import { isLocal, stateOf, zone, type Model } from '../model';
 import { byId, q, make, reducedMotion } from '../dom';
-import { setSymbolText } from '../images';
+import { setImage, setSymbolText } from '../images';
+import { playerAvatarUrl } from '../looks';
 import { sourceName, splitQuestion } from './asking';
 import { changeUi, ui, type ZoneSort } from '../ui';
 import { normalize, rankByName } from '../search';
@@ -15,7 +16,7 @@ import { sheet } from '../sheet';
 import type { Actions } from '../actions';
 import { keyName } from '../keys';
 import { boundKeys } from '../settings';
-import type { CardView, PromptButton, ZoneType } from '../protocol';
+import type { CardView, PlayerView, PromptButton, ZoneType } from '../protocol';
 import { t, type TextKey } from '../text';
 import { manaValue } from './rules';
 
@@ -55,6 +56,10 @@ export function togglePile(playerKey: number, zoneName: ZoneType): void {
 export function renderZones(model: Model, actions: Actions, select: CardClick): void {
   const panels = new Map<string, Panel>();
   for (const z of model.zones) panels.set(`${z.player.ref}/${z.zone}`, { player: z.player.ref, zone: z.zone, forced: true });
+  // Several zones the game shows for one question, such as every graveyard for a target, are chips. Only the chosen zone's cards are drawn
+  const chips = model.zones.length > 1 ? [...panels.keys()] : [];
+  if (!chips.length) ui.zoneChoice = null;
+  const chosen = chips.length ? chosenZone(model, chips) : null;
   for (const k of ui.openZones) {
     if (panels.has(k)) continue;
     const [player, zoneName] = k.split('/');
@@ -83,8 +88,9 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
   // Add the shelf again only when it is missing. Removing an open dialog from the page resets its scroll and loses the search box's focus.
   const box = shelf(root);
   if (root.firstElementChild !== box || root.childElementCount !== 1) root.replaceChildren(box);
-  reconcile(q(root, '.zone-shelf'), [...panels.entries()], ([k]) => k, createPanel,
-    (el, [, p]) => updatePanel(el, model, actions, p, select));
+  const drawn = [...panels.entries()].filter(([k, p]) => !p.forced || !chosen || k === chosen);
+  reconcile(q(root, '.zone-shelf'), drawn, ([k]) => k, createPanel,
+    (el, [, p]) => updatePanel(el, model, actions, p, select, chips, chosen));
   for (const el of box.querySelectorAll<HTMLElement>('.zone-panel:not([data-opened])')) growFromPile(el);
   fitZones();
 }
@@ -142,7 +148,7 @@ function shelf(root: HTMLElement): HTMLElement {
 
 function createPanel(): HTMLElement {
   const el = make('section', 'zone-panel');
-  el.innerHTML = '<p class="zone-ask"><span class="ask-source"></span><span class="ask-sep" aria-hidden="true">·</span><span class="ask-text"></span></p><header><b class="zone-who"></b><span class="zone-count"></span><span class="zone-gap"></span>'
+  el.innerHTML = '<p class="zone-ask"><span class="ask-source"></span><span class="ask-sep" aria-hidden="true">·</span><span class="ask-text"></span></p><div class="zone-chips" role="group"></div><header><b class="zone-who"></b><span class="zone-count"></span><span class="zone-gap"></span>'
     + '<input class="zone-find" type="search">'
     + '<label class="zone-sort"><select></select></label>'
     + '<button class="zone-fold"></button></header>'
@@ -160,10 +166,14 @@ function createPanel(): HTMLElement {
   return el;
 }
 
-function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, select: CardClick): void {
+/** chips are the keys of the zones shown together for one question, and chosen is the one drawn. Both are empty for a single zone. */
+function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, select: CardClick, chips: string[], chosen: string | null): void {
   const player = model.objects.get(p.player);
   const cards = shown(model, zone(model, player, p.zone));
-  q(el, '.zone-who').textContent = `${player?.Name ?? ''} \u00b7 ${zoneTitle(p.zone)}`;
+  const among = p.forced && chips.length > 1;
+  renderChips(q(el, '.zone-chips'), model, among ? chips : [], chosen);
+  // Among several zones the chip already shows the avatar, so the line names the player in words
+  q(el, '.zone-who').textContent = `${among && player && isLocal(model, player) ? t('lblWebLobbyKindYou') : player?.Name ?? ''} \u00b7 ${zoneTitle(p.zone)}`;
   q(el, '.zone-count').textContent = t(cards.length === 1 ? 'lblWebOneCard' : 'lblWebNCards', cards.length);
   const find = q<HTMLInputElement>(el, '.zone-find');
   if (find.value !== ui.zoneSearch) {
@@ -212,6 +222,60 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
     updateCard(c, model, card);
     markPicked(c, asking && c.classList.contains('highlighted'));
   });
+}
+
+/** The chosen zone, or else the first zone with a card that can be chosen. */
+function chosenZone(model: Model, keys: string[]): string {
+  if (ui.zoneChoice && keys.includes(ui.zoneChoice)) return ui.zoneChoice;
+  return keys.find(k => chipCounts(model, k).can > 0) ?? keys[0];
+}
+
+/** A zone's player, and how many of its cards can be chosen and are chosen. */
+function chipCounts(model: Model, key: string): { player: PlayerView | undefined; zoneName: ZoneType; can: number; got: number } {
+  const [ref, zoneName] = key.split('/') as [string, ZoneType];
+  const player = model.objects.get(Number(ref));
+  const cards = zone(model, player, zoneName);
+  return { player, zoneName, can: cards.filter(c => has(model.prompt?.selectable, c.$key)).length,
+    got: cards.filter(c => has(model.prompt?.highlighted, c.$key)).length };
+}
+
+/** One chip per zone: the player's avatar and name, and a count of the cards that can be chosen there. Once some are chosen, it counts those in a light badge. */
+function renderChips(box: HTMLElement, model: Model, keys: string[], chosen: string | null): void {
+  box.hidden = !keys.length;
+  // Zones of more than one kind, such as a graveyard and an exile, name the zone on each chip
+  const kinds = new Set(keys.map(k => k.split('/')[1])).size;
+  reconcile(box, keys, k => k, () => {
+    const chip = make('button', 'zone-chip');
+    chip.innerHTML = '<img alt="" draggable="false"><b></b><em></em><i></i>';
+    return chip;
+  }, (chip, k) => {
+    const { player, zoneName, can, got } = chipCounts(model, k);
+    const name = kinds > 1 ? `${player?.Name ?? ''} · ${zoneTitle(zoneName)}` : player?.Name ?? '';
+    if (player) setImage(q<HTMLImageElement>(chip, 'img'), playerAvatarUrl(player));
+    q(chip, 'b').textContent = name;
+    const you = q(chip, 'em');
+    you.textContent = t('lblWebLobbyKindYou');
+    you.hidden = !player || !isLocal(model, player);
+    const badge = q(chip, 'i');
+    badge.textContent = String(got || can);
+    badge.hidden = !got && !can;
+    badge.classList.toggle('got', got > 0);
+    // A player with nothing to choose keeps a chip, faded, so the chips stay in seat order
+    chip.classList.toggle('none', !can && !got);
+    chip.setAttribute('aria-pressed', String(k === chosen));
+    chip.onclick = () => changeUi(u => { u.zoneChoice = k; });
+  });
+  // The arrow keys move between the chips, as between tabs
+  box.onkeydown = e => {
+    const by = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+    const all = [...box.children] as HTMLElement[];
+    const at = all.indexOf(document.activeElement as HTMLElement);
+    if (!by || at < 0) return;
+    e.preventDefault();
+    const next = all[(at + by + all.length) % all.length];
+    next.focus();
+    next.click();
+  };
 }
 
 function answer(el: HTMLElement, button: PromptButton | undefined, run: () => void): void {

@@ -630,6 +630,20 @@ html:not([data-form="portrait"]) #zones.asking:not(.minimised) { padding-block: 
 .zone-panel.asking .cards .card { box-shadow: 0 12px 30px #000d, 0 0 0 1px #000c; }
 /* In a library the game asks about, only the cards it shows are drawn. The rest are face down and cannot be picked. */
 .zone-panel.asking .cards > .card.back:not(.selectable) { display: none; }
+/* Zones the game shows together, such as every graveyard for one target, are chips above the chosen zone's cards (zones.ts renderChips) */
+.zone-chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; padding: 8px 18px 2px; }
+.zone-chips[hidden] { display: none; }
+.zone-chip { position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px 3px 3px; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface-2); color: var(--text); font-size: 13px; }
+.zone-chip img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.zone-chip b { font-weight: 600; }
+.zone-chip em { padding: 1px 5px; border-radius: 999px; background: var(--text); color: var(--bg); font-size: 9.5px; font-style: normal; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.zone-chip i { min-width: 18px; padding: 1px 5px; border-radius: 999px; background: var(--surface-3); font-size: 11px; font-style: normal; font-weight: 800; text-align: center; }
+.zone-chip[aria-pressed="true"] { border-color: var(--accent-2); background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface-2); }
+.zone-chip[aria-pressed="true"] i { background: var(--accent-2); color: var(--on-brass); }
+/* Once cards are chosen the badge counts those, light rather than gold */
+.zone-chip i.got, .zone-chip[aria-pressed="true"] i.got { background: var(--text); color: var(--bg); }
+/* A player with nothing to choose keeps a faded chip, so the chips stay in seat order */
+.zone-chip.none { opacity: .4; }
 /* When folded, the bar is shown where the stack is, near the board's top right, not under the hand */
 #zones.minimised, .reveal-back.minimised { background: none; place-items: start end; padding: 56px calc(var(--side-gap, 270px) + 8px) 0 0; pointer-events: none; }
 #zones.minimised > *, .reveal-back.minimised > * { pointer-events: auto; }
