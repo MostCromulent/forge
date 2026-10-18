@@ -1,8 +1,12 @@
 // The bar across the top of every page outside a match. Each page fills the middle and puts its exit button at the end
 
 import type { ComponentChildren } from 'preact';
-import { changeUi, ui } from './ui';
+import { useEffect } from 'preact/hooks';
+import { changeUi, redrawUi, ui } from './ui';
 import { t } from './text';
+import { isPortrait } from './form';
+import { Dropdown } from './dialog';
+import { ICONS, Icon } from './icons';
 
 /** The Forge wordmark in Magic's five colours. This is the only place the colours are pure decoration, with no card art nearby and no meaning in the hue. */
 export function Wordmark() {
@@ -17,18 +21,66 @@ export function Wordmark() {
   );
 }
 
-export function PageHeader({ class: extra, children }: { class?: string; children?: ComponentChildren }) {
+/** brand pages show the phone header on a phone, with the wordmark as its title and action as its one action. Other pages keep this header on a phone. */
+export function PageHeader({ class: extra, brand, action, children }: { class?: string; brand?: boolean; action?: ComponentChildren; children?: ComponentChildren }) {
+  if (brand && isPortrait()) return <PhoneHead title={<Wordmark />} action={action} />;
   return <header class={extra ? `page-head ${extra}` : 'page-head'}><Wordmark />{children}</header>;
 }
 
+/**
+ * The header of a page on a phone: back to the previous step, the title and its line, one action of the page's own, the chat and a menu.
+ * tabs, when given, are a second row. more adds the page's own rows to the menu.
+ */
+export function PhoneHead({ back, title, line, action, more, tabs, inert }: {
+  back?: SetupStep; title: ComponentChildren; line?: ComponentChildren; action?: ComponentChildren;
+  more?: (close: () => void) => ComponentChildren; tabs?: ComponentChildren; inert?: boolean;
+}) {
+  // The dock draws its folded bar into the chat slot (dock.tsx), so it must draw again once the slot exists
+  useEffect(redrawUi, []);
+  return (
+    <header class="ph" inert={inert}>
+      <div class="ph-row">
+        {back && <button class="ph-icon ph-back" title={back.label} aria-label={back.label} onClick={back.go}><Icon d={ICONS.back} /></button>}
+        <div class="ph-title">
+          {typeof title === 'string' ? <h2>{title}</h2> : title}
+          {line && <span class="ph-line">{line}</span>}
+        </div>
+        {action}
+        <span class="ph-chat" />
+        <Dropdown cls="ph-more" button={(open, toggle) => (
+          <button class="ph-icon" title={t('lblWebHeadMore')} aria-label={t('lblWebHeadMore')} aria-expanded={open} onClick={toggle}><Icon d={ICONS.ellipsis} /></button>
+        )}>
+          {close => (
+            <div class="ph-menu" role="menu">
+              <button role="menuitem" onClick={() => { close(); changeUi(u => { u.volumeOpen = true; }); }}><Icon d={ICONS.volume} />{t('lblWebHeadVolume')}</button>
+              {more?.(close)}
+              <button role="menuitem" onClick={() => { close(); changeUi(u => { u.optionsOpen = true; }); }}><Icon d={ICONS.cog} />{t('lblWebHeadOptions')}</button>
+            </div>
+          )}
+        </Dropdown>
+      </div>
+      {tabs}
+    </header>
+  );
+}
+
+/** The step a phone header's back button returns to: the last earlier step of the trail, if any. */
+export const backStep = (trail: SetupStep[]): SetupStep | undefined => trail.findLast(step => step.go);
+
 /** A step of game setup in the trail. go returns to that step, and is left out for the current step. */
-interface SetupStep {
+export interface SetupStep {
   label: string;
   go?: () => void;
 }
 
-/** The trail through game setup, above the page's heading. Each earlier step in the trail is a button that goes back to it. */
+/**
+ * The trail through game setup, above the page's heading. Each earlier step in the trail is a button that goes back to it.
+ * On a phone a trail with an earlier step is drawn by the page's PhoneHead instead, so only the aside and the line under the heading are left here.
+ */
 export function SetupHead({ trail, title, aside, sub }: { trail: SetupStep[]; title: string; aside?: ComponentChildren; sub?: ComponentChildren }) {
+  if (isPortrait() && backStep(trail)) {
+    return aside || sub ? <div class="setup-head">{aside && <div class="setup-aside">{aside}</div>}{sub && <p class="setup-sub">{sub}</p>}</div> : null;
+  }
   return (
     <div class="setup-head">
       <nav class="crumb" aria-label={t('lblGameSetup')}>

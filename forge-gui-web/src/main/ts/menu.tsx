@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { LookPicker } from './lookpicker';
 import { changeUi, eased, ui } from './ui';
 import { avatarUrl } from './looks';
-import { HeadControls, PageHeader, SetupHead, WAY_NAMES, Wordmark } from './header';
+import { HeadControls, PageHeader, PhoneHead, SetupHead, WAY_NAMES, Wordmark } from './header';
+import { isPortrait } from './form';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import { t } from './text';
@@ -36,11 +37,15 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   const decks = model.decks?.length ?? 0;
   return (
     <div class="menu-shell">
-      <PageHeader>
-        <div class="head-right">
-          <HeadControls />
-        </div>
-      </PageHeader>
+      {choosing && isPortrait()
+        ? <PhoneHead back={{ label: t('lblStart'), go: () => setChoosing(null) }} title={t('lblWebMenuWhatMode')} />
+        : (
+          <PageHeader brand>
+            <div class="head-right">
+              <HeadControls />
+            </div>
+          </PageHeader>
+        )}
       <div class="menu-page">
         <ForgeLinks foot />
         {choosing && <Chooser who={choosing} model={model} actions={actions} back={() => setChoosing(null)} />}

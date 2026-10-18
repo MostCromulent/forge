@@ -415,11 +415,10 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
     const play = await box(p.page, '#play');
     expect(play.y + play.height).toBeLessThanOrEqual(height);
     expect(play.height).toBeGreaterThanOrEqual(44);
-    // Play is on the same row as the folded chat bar, so the chat bar covers none of the seats
-    const chat = await box(p.page, '#dock .dock.folded');
-    expect(Math.abs(chat.y - play.y)).toBeLessThan(2);
-    expect(play.x + play.width).toBeLessThanOrEqual(chat.x);
-    expect(chat.x + chat.width - play.x).toBeGreaterThan(width * 0.85);
+    // The folded chat is a chip in the header row, so it covers none of the seats and Play spans the screen
+    const chat = await box(p.page, '.ph-chat .dock.folded');
+    expect(chat.y + chat.height).toBeLessThanOrEqual(52);
+    expect(play.width).toBeGreaterThan(width * 0.85);
     for (const plate of await p.page.locator('#seats .plate').all()) expect((await plate.boundingBox())!.width).toBeGreaterThan(width * 0.85);
     for (const b of await p.page.locator('.match-bar button:visible').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(40);
   }, phone);

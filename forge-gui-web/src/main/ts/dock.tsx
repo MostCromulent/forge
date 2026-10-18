@@ -1,6 +1,7 @@
 // The list of people on this server and their chat. It is a panel at the bottom edge before a match and a widget under the log during one
 
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { createPortal } from 'preact/compat';
 import { avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
 import { rememberAvatar } from './identity';
@@ -10,6 +11,7 @@ import type { Actions } from './actions';
 import type { Person } from './protocol';
 import { t, type TextKey } from './text';
 import { Dropdown } from './dialog';
+import { isPortrait } from './form';
 
 /** The roster text for what each person is doing. */
 const DOING: Record<string, TextKey> = {
@@ -73,7 +75,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   const tints = chatTints(model);
   if (!inMatch && !open) {
     const unread = unreadSince(model.chat, lastSeen.current, model.playerName);
-    return (
+    const bar = (
       <button class={unread || arrived.length ? 'dock folded unread' : 'dock folded'} onClick={() => setOpen(true)}>
         <span class="faces" aria-hidden="true">
           {people.slice(0, 3).map(p => <img key={p.name} alt="" src={avatarUrl(p.avatar)} />)}
@@ -84,6 +86,9 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
         {arrivedBadge}
       </button>
     );
+    // A phone header has a slot for the folded dock (header.tsx). The pages are drawn before the dock, so the slot is in place
+    const slot = isPortrait() ? document.querySelector('main:not([hidden]) .ph-chat') : null;
+    return slot ? createPortal(bar, slot) : bar;
   }
   // Before a match, pressing your own avatar in the roster opens this picker. During a match the seat's avatar is fixed
   const picker = picking && (

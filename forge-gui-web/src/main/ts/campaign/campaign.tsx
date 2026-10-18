@@ -2,14 +2,16 @@
 // a currency balance, the statistics, the preferences and the reward reveal.
 
 import type { ComponentChildren } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl, skinIconUrl } from '../images';
 import { artUrl } from '../sleeves';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { CampaignBar as Bar, PrefRow } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
-import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from '../header';
+import { backStep, HeadControls, PageHeader, PhoneHead, SetupHead, WAY_NAMES } from '../header';
+import { isPortrait } from '../form';
+import { ICONS, Icon } from '../icons';
 import { changeUi, eased, type UiState } from '../ui';
 import { Reveal, type Owed } from './reward';
 import { Backdrop } from '../dialog';
@@ -22,26 +24,46 @@ export function Purse({ icon, n, label }: { icon: string; n: number; label: stri
 /** The amount of a currency the bar reports for the player, looked up by the currency's icon. */
 export const balance = (bar: Bar | null, icon: string): number => bar?.balances.find(b => b.icon === icon)?.amount ?? 0;
 
-/** The bar shared by every page of a campaign. It shows the save's name and line, the mode's tabs, the balances and the back button. */
+/**
+ * The bar shared by every page of a campaign. It shows the save's name and line, the mode's tabs, the balances and the back button.
+ * extra is a dev tool: a control beside the balances, or on a phone a row of the header's menu.
+ */
 export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, extra, prefs, leave, under }: {
   bar: Bar; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void;
   /** The amounts a reward reveal has not shown yet, by balance icon. The server's balances already include them, so the bar subtracts them. */
   held: Record<string, number>;
   extra?: ComponentChildren; prefs?: () => void; leave: () => void; under: boolean;
 }) {
+  const strip = useRef<HTMLElement>(null);
+  // A tab opened from a page, such as Change on the map, may be scrolled out of a narrow strip
+  useEffect(() => { strip.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [tab]);
+  const nav = (
+    <nav class="cq-tabs" ref={strip}>
+      {tabs.map(([id, name]) => (
+        <button key={id} class="cq-tab" aria-current={id === tab ? 'page' : undefined} onClick={() => setTab(id)}>
+          {t(name)}{id === tab && <span class="cq-tab-line" />}
+        </button>
+      ))}
+    </nav>
+  );
+  const balances = bar.balances.map(b => <Purse key={b.icon} icon={b.icon} n={b.amount - (held[b.icon] ?? 0)} label={b.label} />);
+  if (isPortrait()) {
+    return (
+      <PhoneHead back={{ label: t('lblBack'), go: leave }} title={bar.name} inert={under} tabs={nav}
+        line={<><span class="cq-purse">{balances}</span><span>{bar.line}</span></>}
+        more={close => <>
+          {prefs && <button role="menuitem" onClick={() => { close(); prefs(); }}><Icon d={ICONS.sliders} />{t('Preferences')}</button>}
+          {extra}
+        </>} />
+    );
+  }
   return (
     <div class="cq-bar" inert={under}>
       <div class="cq-id"><b>{bar.name}</b><span>{bar.line}</span></div>
-      <nav class="cq-tabs">
-        {tabs.map(([id, name]) => (
-          <button key={id} class="cq-tab" aria-current={id === tab ? 'page' : undefined} onClick={() => setTab(id)}>
-            {t(name)}{id === tab && <span class="cq-tab-line" />}
-          </button>
-        ))}
-      </nav>
+      {nav}
       <div class="cq-purse">
         {extra}
-        {bar.balances.map(b => <Purse key={b.icon} icon={b.icon} n={b.amount - (held[b.icon] ?? 0)} label={b.label} />)}
+        {balances}
         {prefs && <button onClick={prefs}>{t('Preferences')}</button>}
         <HeadControls />
         <button onClick={leave}>{t('lblBack')}</button>
@@ -50,16 +72,20 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
   );
 }
 
-/** The panel beside a page's list. It shows the chosen item's title, picture and text, and the player's own items in the foot. A pressed picture is shown large. */
-export function SidePanel({ kicker, where, title, art, label, zoom, setZoom, children, foot }: {
+/**
+ * The panel beside a page's list. It shows the chosen item's title, picture and text, and the player's own items in the foot. A pressed picture is shown large.
+ * fold makes the title a button that opens and closes the rest of the panel, for a panel drawn as a small card over the page.
+ */
+export function SidePanel({ kicker, where, title, art, label, zoom, setZoom, children, foot, fold }: {
   kicker: string; where?: ComponentChildren; title?: string; art?: string | null; label?: string;
   zoom: string | null; setZoom: (image: string | null) => void; children: ComponentChildren; foot: ComponentChildren;
+  fold?: { open: boolean; toggle: () => void };
 }) {
   return (
-    <aside class="cq-side">
+    <aside class={fold?.open ? 'cq-side open' : 'cq-side'}>
       <div class="cq-panel">
         <div class="cq-where"><span class="cq-kicker">{kicker}</span>{where}</div>
-        <h3>{title}</h3>
+        {fold ? <h3><button class="cq-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3> : <h3>{title}</h3>}
         <button class="cq-art" disabled={!art} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }}
           onClick={() => setZoom(art ?? null)}>
           <b>{label}</b>
@@ -222,8 +248,8 @@ export function CampaignShell({ model, actions, icons, shelf, open }: {
   useEffect(() => { if (inside) setCreating(false); }, [inside]);
   return (
     <div key={inside ? 'open' : 'shelf'} class={inside ? 'cq-shell' : 'limited-page'}>
-      {/* An open save has its back button on its bar */}
-      {!inside && (
+      {/* An open save has its back button on its bar. On a phone the shelf's trail draws the header */}
+      {!inside && !isPortrait() && (
         <PageHeader class="limited-head">
           <div class="head-right">
             <HeadControls />
@@ -247,8 +273,10 @@ export function CampaignShelf({ model, actions, creating, setCreating, words, fo
     creating ? { label: words.mode, go: () => setCreating(false) } : { label: words.mode },
     ...(creating ? [{ label: words.new }] : []),
   ];
+  const title = creating ? words.new : words.yours;
   return <>
-    <SetupHead trail={trail} title={creating ? words.new : words.yours} />
+    {isPortrait() && <PhoneHead back={backStep(trail)} title={title} />}
+    <SetupHead trail={trail} title={title} />
     {model.error && !creating && <p class="limited-error">{model.error}</p>}
     {creating ? form : saves ?? <p class="muted pools-wait">{words.reading}</p>}
   </>;

@@ -3,6 +3,8 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { HeadControls, PageHeader } from '../header';
+import { isPortrait } from '../form';
+import { ICONS, Icon } from '../icons';
 import { t, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -10,12 +12,13 @@ import { Dropdown } from '../dialog';
 import type { Address, Format, LobbyTable } from '../protocol';
 
 /** A field's popup. Its button opens it. Escape or a press anywhere outside it closes it. */
-function Popup({ label, disabled, children, wide, onOpen }: {
-  label: ComponentChildren; disabled?: boolean; children: (close: () => void) => ComponentChildren; wide?: boolean; onOpen?: () => void;
+/** name is the button's accessible name, for a label with no words. */
+function Popup({ label, name, disabled, children, wide, onOpen }: {
+  label: ComponentChildren; name?: string; disabled?: boolean; children: (close: () => void) => ComponentChildren; wide?: boolean; onOpen?: () => void;
 }) {
   return (
     <Dropdown cls="popup-anchor" button={(open, toggle) => (
-      <button class="field-value menu-button" aria-expanded={open} disabled={disabled} onClick={() => {
+      <button class="field-value menu-button" title={name} aria-label={name} aria-expanded={open} disabled={disabled} onClick={() => {
         if (!open) onOpen?.();
         toggle();
       }}>{label}</button>
@@ -297,21 +300,28 @@ export function MatchBar({ model, lobby, actions, preview }: {
   );
 }
 
+/** The button that shows the addresses others join the table at. On a phone it is an icon in the header. */
+export function Invite({ model }: { model: Model }) {
+  const phone = isPortrait();
+  return (
+    <Popup label={phone ? <Icon d={ICONS.link} /> : t('lblWebMatchBarInvite')} name={phone ? t('lblWebMatchBarInvite') : undefined}>
+      {() => (
+        <div class="invite">
+          <b>{t('lblWebMatchBarOthersJoinAt')}</b>
+          <Addresses list={model.addresses ?? []} />
+        </div>
+      )}
+    </Popup>
+  );
+}
+
 /** How others join, the sound and the options. The dock shows who is here. */
 export function TableHeader({ model, lobby }: { model: Model; lobby: LobbyTable }) {
+  const invite = lobby.shareable ? <Invite model={model} /> : undefined;
   return (
-    <PageHeader>
+    <PageHeader brand action={invite}>
       <div class="head-right">
-        {lobby.shareable && (
-          <Popup label={t('lblWebMatchBarInvite')}>
-            {() => (
-              <div class="invite">
-                <b>{t('lblWebMatchBarOthersJoinAt')}</b>
-                <Addresses list={model.addresses ?? []} />
-              </div>
-            )}
-          </Popup>
-        )}
+        {invite}
         {/* The way out is the trail above the table (lobby.tsx), which also shows where it leads */}
         <HeadControls />
       </div>

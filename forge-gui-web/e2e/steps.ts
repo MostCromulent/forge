@@ -25,7 +25,8 @@ export async function chooseDeck(page: Page, plate: Locator): Promise<void> {
 
 /** Reads the guest address from the header's Invite menu and points it at this machine. */
 export async function inviteLink(page: Page, serverUrl: string): Promise<string> {
-  await page.locator('.page-head .menu-button', { hasText: 'Invite' }).click();
+  // On a phone the button is an icon in the phone header, named by its label
+  await page.locator(':is(.page-head, .ph)').getByRole('button', { name: 'Invite' }).click();
   await expect(page.locator('.share-url').first()).toBeVisible();
   const shared = await page.locator('.share-url').first().textContent();
   await page.keyboard.press('Escape');

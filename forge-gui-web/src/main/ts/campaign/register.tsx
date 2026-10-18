@@ -58,6 +58,8 @@ declare module '../ui' {
     /** The page of the open quest that is shown. */
     questTab: QuestTab;
     conquestOpened: Record<string, boolean>;
+    /** Dev mode: where the next Chaos Wheel stops. It is kept here because on a phone it is chosen in the header's menu, which closes after each choice. */
+    conquestWheel: string;
   }
 }
 
@@ -163,7 +165,7 @@ const STORED = new Set(['conquestSaves', 'questSaves', 'questDuels', 'questDecks
 const CONQUEST_ICON = <><circle cx="24" cy="24" r="11" /><ellipse cx="24" cy="24" rx="20" ry="6.5" transform="rotate(-18 24 24)" /></>;
 const QUEST_ICON = <><path d="M13 42V7" /><path d="M13 9h22l-6 7 6 7H13" /></>;
 
-Object.assign(ui, { conquestTab: 'map', questTab: 'duels', conquestOpened: {} });
+Object.assign(ui, { conquestTab: 'map', questTab: 'duels', conquestOpened: {}, conquestWheel: '' });
 
 registerCampaigns({
   fields: () => ({ conquestSaves: null, questOptions: null, campaignResult: null, conquestOptions: null, campaignPrefs: null, ...NO_CAMPAIGN, ...NO_CONQUEST, ...NO_QUEST }),

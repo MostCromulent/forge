@@ -4,7 +4,8 @@ import { useEffect, useState } from 'preact/hooks';
 import { Shelf } from '../shelf';
 import { StepForm } from '../stepform';
 import { draftCombo, draftSteps, draftTicket, sealedAction, sealedSteps, sealedTicket, type DraftValue, type SealedValue } from './setup';
-import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from '../header';
+import { backStep, HeadControls, PageHeader, PhoneHead, SetupHead, WAY_NAMES } from '../header';
+import { isPortrait } from '../form';
 import { COLOUR_NAMES, Pips } from '../symbols';
 import { changeUi } from '../ui';
 import type { Actions } from '../actions';
@@ -29,22 +30,30 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
     { label: kind, go: toEvents },
     ...(pool ? [{ label: pool.name }] : creating ? [{ label: t('lblWebEventNewEvent') }] : []),
   ];
+  const title = pool ? pool.name
+    : creating ? (draft ? t('lblWebLimitedNewBoosterDraft') : t('lblWebEventNewSealedEvent'))
+    : draft ? t('lblWebLimitedYourDrafts') : t('lblWebLimitedYourSealedEvents');
+  const phone = isPortrait();
   return (
     <div class="limited-page">
-      <PageHeader class="limited-head">
-        <div class="head-right">
-          <HeadControls />
-          <button onClick={() => (pool ? actions.poolClose() : actions.limitedLeave())}>{t('lblBack')}</button>
-        </div>
-      </PageHeader>
+      {/* On a phone the trail's last earlier step is the back button, so the page's own Back and the form's way back are left out */}
+      {phone
+        ? <PhoneHead back={backStep(trail)} title={title} />
+        : (
+          <PageHeader class="limited-head">
+            <div class="head-right">
+              <HeadControls />
+              <button onClick={() => (pool ? actions.poolClose() : actions.limitedLeave())}>{t('lblBack')}</button>
+            </div>
+          </PageHeader>
+        )}
       {pool
-        ? <SetupHead trail={trail} title={pool.name} aside={<YourDeck pool={pool} actions={actions} />}
+        ? <SetupHead trail={trail} title={title} aside={<YourDeck pool={pool} actions={actions} />}
             sub={draft ? t('lblWebLimitedDraftSub', pool.opponents.length) : t('lblWebLimitedSealedSub', pool.opponents.length)} />
         : creating
-          ? <SetupHead trail={trail} title={draft ? t('lblWebLimitedNewBoosterDraft') : t('lblWebEventNewSealedEvent')}
-              aside={<button class="ghost" onClick={() => setCreating(false)}>{t('lblWebLimitedBackToEvents')}</button>} />
-          : <SetupHead trail={trail} title={draft ? t('lblWebLimitedYourDrafts') : t('lblWebLimitedYourSealedEvents')}
-              sub={draft ? t('lblWebLimitedDraftsIntro') : t('lblWebLimitedSealedIntro')} />}
+          ? <SetupHead trail={trail} title={title}
+              aside={!phone && <button class="ghost" onClick={() => setCreating(false)}>{t('lblWebLimitedBackToEvents')}</button>} />
+          : <SetupHead trail={trail} title={title} sub={draft ? t('lblWebLimitedDraftsIntro') : t('lblWebLimitedSealedIntro')} />}
       {model.error && <p class="limited-error">{model.error}</p>}
       {pool
         ? <Opponents pool={pool} draft={draft} actions={actions} />

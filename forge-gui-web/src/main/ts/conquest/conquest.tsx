@@ -1,8 +1,9 @@
 // Planar Conquest. It shows the saved conquests, and inside an open one, the bar shared by every page above the page itself
 
-import { useState } from 'preact/hooks';
 import { Shelf as Cards } from '../shelf';
-import { ui } from '../ui';
+import { changeUi, ui } from '../ui';
+import { isPortrait } from '../form';
+import { ICONS, Icon } from '../icons';
 import type { ConquestTab } from '../campaign/register';
 import { CampaignPages, CampaignShelf, CampaignShell, Purse, Stats, slideTab } from '../campaign/campaign';
 import { ConquestMap } from './conquestmap';
@@ -68,22 +69,33 @@ const DEV_WHEEL = ['BOOSTER', 'DOUBLE_BOOSTER', 'SHARDS', 'DOUBLE_SHARDS', 'PLAN
 const TABS: [ConquestTab, TextKey][] = [['map', 'lblTheMultiverse'], ['aether', 'lblTheAether'], ['party', 'lblCommanders'],
   ['collection', 'lblCollection'], ['planes', 'lblPlaneswalk'], ['stats', 'lblStatistics']];
 
-/** Dev mode: sets where the next Chaos Wheel stops, so each reward can be tested. The menu is drawn like the deck editor's. */
+/** Dev mode: sets where the next Chaos Wheel stops, so each reward can be tested. The menu is drawn like the deck editor's. On a phone it is a row of the header's menu. */
 function DevWheel({ actions }: { actions: Actions }) {
-  const [chosen, setChosen] = useState('');
   const labels: Record<string, string> = wheelLabels();
   const name = (o: string) => (o ? labels[o] : t('lblWebConquestDevWheel'));
+  const choose = (o: string) => {
+    changeUi(u => { u.conquestWheel = o; });
+    actions.devConquestWheel(o);
+  };
+  if (isPortrait()) {
+    return (
+      <label class="ph-menu-row"><Icon d={ICONS.dev} />{t('lblWebConquestDevWheel')}
+        <select value={ui.conquestWheel} onChange={e => choose(e.currentTarget.value)}>
+          {['', ...DEV_WHEEL].map(o => <option key={o} value={o}>{o ? labels[o] : t('lblRandom')}</option>)}
+        </select>
+      </label>
+    );
+  }
   return (
     <Dropdown cls="menu-anchor" block button={(open, toggle) => (
-      <button class="cq-dev" aria-expanded={open} title={t('lblWebConquestDevWheel')} onClick={toggle}>{name(chosen)} &#8964;</button>
+      <button class="cq-dev" aria-expanded={open} title={t('lblWebConquestDevWheel')} onClick={toggle}>{name(ui.conquestWheel)} &#8964;</button>
     )}>
       {close => (
         <div class="deck-menu" role="menu">
           {['', ...DEV_WHEEL].map(o => (
-            <button key={o} role="menuitemradio" aria-checked={o === chosen} onClick={() => {
-              setChosen(o);
+            <button key={o} role="menuitemradio" aria-checked={o === ui.conquestWheel} onClick={() => {
               close();
-              actions.devConquestWheel(o);
+              choose(o);
             }}>{name(o)}</button>
           ))}
         </div>

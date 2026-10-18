@@ -205,3 +205,32 @@ test('the Aether, the planes, the statistics and the preferences open', async ({
   await page.locator('.cq-prefs').getByRole('button', { name: 'OK' }).click();
   await expect(page.locator('.cq-prefs')).toHaveCount(0);
 });
+
+// Fails if the phone header loses the balances, the chat or the menu's Options, the map's event card does not open from its title, or Back does not leave the save
+test('an open conquest on a phone has one header and a folding event card', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 664 });
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await page.click('[data-mode=play]');
+  await page.click('.chooser [data-kind=conquest]');
+  await playFixture(page);
+
+  const head = page.locator('.ph');
+  await expect(head).toHaveCount(1);
+  await expect(head.locator('.ph-line .cq-coin')).toHaveCount(2);
+  await expect(head.locator('.ph-chat .dock.folded')).toBeVisible();
+  await head.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: 'Options' }).click();
+  await expect(page.locator('.options-dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.options-dialog')).toHaveCount(0);
+
+  await page.locator('.cq-tile.open').first().click();
+  const art = page.locator('.cq-side .cq-art');
+  await expect(art).toBeHidden();
+  await page.locator('.cq-fold').click();
+  await expect(art).toBeVisible();
+
+  await head.getByRole('button', { name: 'Back' }).click();
+  await expect(page.locator('.cq-save', { hasText: 'Fixture conquest' })).toBeVisible();
+});

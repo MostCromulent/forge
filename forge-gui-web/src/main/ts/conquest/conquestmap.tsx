@@ -14,6 +14,7 @@ import type { ConquestCell, ConquestPlace, ConquestState } from '../protocol';
 import { t, type TextKey } from '../text';
 import { byId, reducedMotion } from '../dom';
 import { zoomIntoMatch } from '../match/entry';
+import { isPortrait } from '../form';
 
 /** The time the marker takes for one step, the same as mobile's token. */
 const STEP_MS = 500;
@@ -255,11 +256,14 @@ function HoverCard({ cell, at, width }: { cell: ConquestCell; at: { x: number; y
 
 function EventPanel({ state, cell, busy, battle }: { state: ConquestState; cell: ConquestCell; busy: boolean; battle: () => void }) {
   const [zoom, setZoom] = useState<string | null>(null);
+  // On a phone the panel is a small card over the map, and the title opens the rest of it
+  const [open, setOpen] = useState(false);
   const region = state.regions[cell.region];
   const lead = state.commander;
   return (
     <SidePanel kicker={`${state.plane} - ${region.name}`} where={<span class="pips"><Pips colors={region.colors} /></span>}
       title={cell.name} art={cell.avatar} label={cell.opponent} zoom={zoom} setZoom={setZoom}
+      fold={isPortrait() ? { open, toggle: () => setOpen(!open) } : undefined}
       foot={<>
         <DeckRow image={lead.image} name={lead.name} line={t('lblWebConquestDeckCards', lead.deckSize)} problem={!!lead.problem}
           zoom={setZoom} change={() => changeUi(u => { u.conquestTab = 'party'; })} />

@@ -609,3 +609,295 @@ html[data-form="portrait"] #drafting .draft-group-by { flex-wrap: wrap; padding:
 .picks-toggle { flex: 1; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--text); font-size: 15px; font-weight: 700; text-align: left; }
 .picks-toggle .caret { margin-left: auto; color: var(--muted); font-size: 13px; }
 .picks-scrim { position: fixed; inset: 0; z-index: 34; background: var(--scrim-deep); }
+
+/* The phone header (PhoneHead in header.tsx): back, the title and its line, the page's own action, the chat and a menu, with a campaign's tabs as a second row */
+html[data-form="portrait"] .ph { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
+html[data-form="portrait"] .ph-row { display: flex; align-items: center; gap: 6px; min-height: 52px; padding: 0 6px 0 4px; }
+html[data-form="portrait"] .ph-icon { flex: none; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--muted); }
+html[data-form="portrait"] .ph-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+html[data-form="portrait"] .ph-icon:is(:active, [aria-expanded="true"]) { background: var(--surface-2); color: var(--text); }
+html[data-form="portrait"] .ph-back { color: var(--text); }
+html[data-form="portrait"] .ph-back svg { width: 22px; height: 22px; stroke-width: 2.4; }
+html[data-form="portrait"] .ph-title { flex: 1; min-width: 0; display: grid; gap: 1px; padding-left: 4px; }
+html[data-form="portrait"] .ph-title h2 { margin: 0; font-size: 15px; line-height: 1.2; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+html[data-form="portrait"] .ph-title .wordmark-block { justify-items: start; padding-left: 6px; }
+html[data-form="portrait"] .ph-title .wordmark { font-size: 22px; }
+html[data-form="portrait"] .ph-title .wordmark .beta { position: static; margin-left: .28em; }
+/* A campaign's balances lead the title's second line, so the save's name has the first line to itself */
+html[data-form="portrait"] .ph-line { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 11.5px; color: var(--muted); }
+html[data-form="portrait"] .ph-line > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-form="portrait"] .ph-line .cq-purse { flex: none; display: inline-flex; gap: 9px; margin: 0; padding: 0; }
+html[data-form="portrait"] .ph-line .cq-coin { gap: 3px; padding: 0; border: 0; background: none; }
+html[data-form="portrait"] .ph-line .cq-coin img { width: 13px; height: 13px; }
+html[data-form="portrait"] .ph-line .cq-coin b { font-size: 12.5px; color: var(--text); }
+html[data-form="portrait"] .ph .popup-anchor > .menu-button { width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border: 0; background: none; color: var(--muted); }
+html[data-form="portrait"] .ph .popup-anchor > .menu-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* The invite popup spans the screen under the header, so its addresses are not cut off at the left */
+html[data-form="portrait"] .ph .popup:has(.invite) { position: fixed; top: 54px; left: 8px; right: 8px; }
+html[data-form="portrait"] .ph .invite { width: auto; }
+/* The folded chat is drawn into the header's slot by the dock (dock.tsx). It is a chip of faces, and a new message or arrival is a gold dot on it */
+html[data-form="portrait"] .ph-chat:empty { display: none; }
+html[data-form="portrait"] .ph-chat .dock.folded { position: relative; height: 34px; padding: 0 4px; gap: 0; border: 1px solid var(--line-bright); border-radius: 999px; box-shadow: none; overflow: visible; }
+html[data-form="portrait"] .ph-chat .faces img { width: 24px; height: 24px; }
+html[data-form="portrait"] .ph-chat .dock-count { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The badge keeps its words for screen readers. Only a dot is drawn. */
+html[data-form="portrait"] .ph-chat .dock-new { position: absolute; top: -2px; right: -2px; width: 11px; height: 11px; padding: 0; box-sizing: border-box; overflow: hidden; color: transparent; text-shadow: none; text-indent: 20px; border-radius: 50%; box-shadow: 0 0 0 2px var(--bg); }
+html[data-form="portrait"] .ph-more { position: relative; flex: none; }
+html[data-form="portrait"] .ph-menu { position: absolute; top: calc(100% + 4px); right: 0; z-index: 40; width: 240px; padding: 6px; display: grid; gap: 2px; background: var(--surface-3); border: 1px solid var(--line-bright); border-radius: 12px; box-shadow: 0 18px 40px #000d;
+  animation: menu-in .14s cubic-bezier(.2,.7,.3,1); transform-origin: 100% 0; }
+html[data-form="portrait"] :is(.ph-menu > button, .ph-menu-row) { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 8px; background: none; color: var(--text); font-size: 14px; text-align: left; white-space: nowrap; }
+html[data-form="portrait"] .ph-menu > button:active { background: var(--surface-2); }
+html[data-form="portrait"] :is(.ph-menu > button, .ph-menu-row) svg { flex: none; width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+html[data-form="portrait"] .ph-menu-row select { margin-left: auto; min-width: 0; max-width: 110px; height: 34px; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }
+/* A campaign's tabs are a strip that scrolls by itself, and fades at whichever end has more tabs past it */
+html[data-form="portrait"] .ph .cq-tabs { overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; padding: 0 6px;
+  --fade-l: 0px; --fade-r: 28px; -webkit-mask: linear-gradient(90deg, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent); mask: linear-gradient(90deg, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent);
+  animation: cq-tabs-fade linear both; animation-timeline: scroll(self inline); }
+@property --fade-l { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --fade-r { syntax: '<length>'; inherits: false; initial-value: 28px; }
+@keyframes cq-tabs-fade { 0% { --fade-l: 0px; --fade-r: 28px; } 8%, 92% { --fade-l: 28px; --fade-r: 28px; } 100% { --fade-l: 28px; --fade-r: 0px; } }
+html[data-form="portrait"] .ph .cq-tab { flex: none; min-height: 40px; padding: 0 12px; font-size: 13px; white-space: nowrap; scroll-snap-align: start; }
+html[data-form="portrait"] .ph .cq-tab:last-child { margin-right: 28px; }
+/* Under a phone header the setup pages start near the top */
+html[data-form="portrait"] .limited-page > .setup-head { margin-top: 12px; }
+html[data-form="portrait"] .menu-shell:has(> .ph) .menu-page { align-content: start; padding-top: 12px; }
+html[data-form="portrait"] #lobby:has(> .ph) .lobby-main { padding-top: 12px; }
+/* The Decks tile's card fan is smaller, so its words keep their room */
+html[data-form="portrait"] .modes .mode.plaque.wide { height: auto; min-height: 112px; padding-left: 78px; }
+html[data-form="portrait"] .modes .mode.plaque.wide .mode-text { flex: 1; min-width: 0; }
+html[data-form="portrait"] .modes .mode.plaque.wide .plaque-fan { flex: none; padding: 0 4px 0 10px; }
+html[data-form="portrait"] .modes .mode.plaque.wide .plaque-fan i { width: 30px; height: 42px; margin-left: -16px; }
+html[data-form="portrait"] .modes .mode.plaque.wide .plaque-fan i:first-child { margin-left: 0; }
+
+/* Planar Conquest and Quest */
+html[data-form="portrait"] .cq-shell { height: 100dvh; }
+/* A page holds its own scroll, so the bar stays at the top */
+html[data-form="portrait"] .cq-main { grid-template-rows: minmax(0, 1fr); }
+/* A page with a list and a panel shows the list. The panel under it keeps the chosen item's name, a strip of its picture, two lines of its text and its actions. */
+html[data-form="portrait"] :is(.cq-party, .cq-planes) { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+html[data-form="portrait"] .cq-side { border-left: 0; border-top: 1px solid var(--line); max-height: 46dvh; }
+html[data-form="portrait"] .cq-panel { padding: 10px 16px 4px; gap: 6px; }
+html[data-form="portrait"] .cq-panel h3 { font-size: 16px; }
+html[data-form="portrait"] .cq-side .cq-art { height: 44px; background-position: center 30%; padding-bottom: 6px; }
+html[data-form="portrait"] .cq-side .cq-art b { font-size: 12.5px; }
+html[data-form="portrait"] .cq-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12px; }
+html[data-form="portrait"] :is(.cq-panel .cq-chips, .cq-reward-line) { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+  -webkit-mask: linear-gradient(90deg, #000 calc(100% - 24px), transparent); mask: linear-gradient(90deg, #000 calc(100% - 24px), transparent); }
+html[data-form="portrait"] .cq-foot { padding: 8px 16px 10px; gap: 8px; }
+html[data-form="portrait"] .cq-big { padding: 9px 14px; font-size: 15px; min-height: 42px; }
+html[data-form="portrait"] .cq-face2 { width: 36px; height: 36px; }
+html[data-form="portrait"] .cq-mine > button:last-child { min-height: 34px; }
+
+/* The map takes the room the panel leaves. The bar already names the plane and the count. */
+html[data-form="portrait"] .cq-map-head { display: none; }
+html[data-form="portrait"] .cq-trail { padding: 6px 12px; }
+/* A tap leaves :hover on the tile, and the panel already shows what the hover card would */
+html[data-form="portrait"] .cq-hov { display: none; }
+/* The map fills the page. The chosen event is a card floating over the map's foot. A tap on its name opens the picture, the text and the deck (SidePanel's fold). */
+html[data-form="portrait"] .cq-map:has(> .cq-stage) { position: relative; grid-template-rows: minmax(0, 1fr); }
+html[data-form="portrait"] .cq-map:has(> .cq-stage) .cq-trail { padding-bottom: 210px; }
+html[data-form="portrait"] .cq-map > .cq-stage + .cq-side { position: absolute; left: 8px; right: 8px; bottom: 10px; z-index: 9; max-height: calc(100% - 70px); border: 1px solid var(--line-bright); border-radius: 14px; overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 90%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 14px 34px #000c; }
+html[data-form="portrait"] .cq-stage + .cq-side .cq-panel { padding: 10px 14px 0; gap: 4px; }
+html[data-form="portrait"] .cq-stage + .cq-side .cq-where { gap: 6px; }
+html[data-form="portrait"] .cq-fold { width: 100%; display: flex; align-items: center; gap: 8px; padding: 2px 0; border: 0; background: none; color: inherit; font: inherit; font-size: 15.5px; text-align: left; }
+html[data-form="portrait"] .cq-fold::after { content: ''; margin-left: auto; flex: none; width: 8px; height: 8px; border: solid var(--muted); border-width: 2px 2px 0 0; transform: translateY(2px) rotate(-45deg); transition: transform .15s; }
+html[data-form="portrait"] .cq-fold[aria-expanded="true"]::after { transform: translateY(-2px) rotate(135deg); }
+html[data-form="portrait"] .cq-stage + .cq-side :is(.cq-art, .cq-desc, .cq-chips, .cq-mine .t) { display: none; }
+html[data-form="portrait"] .cq-stage + .cq-side.open :is(.cq-art, .cq-chips) { display: flex; }
+html[data-form="portrait"] .cq-stage + .cq-side.open .cq-desc { display: -webkit-box; -webkit-line-clamp: 5; }
+html[data-form="portrait"] .cq-stage + .cq-side.open .cq-art { height: 64px; order: -1; margin: -10px -14px 4px; border-radius: 0; }
+html[data-form="portrait"] .cq-stage + .cq-side.open .cq-mine .t { display: grid; }
+/* Reward and distance share a line */
+html[data-form="portrait"] .cq-stage + .cq-side .cq-panel { grid-template-columns: minmax(0, 1fr) auto; }
+html[data-form="portrait"] .cq-stage + .cq-side .cq-panel > * { grid-column: 1 / -1; }
+html[data-form="portrait"] .cq-stage + .cq-side .cq-reward-line { grid-column: 1; }
+html[data-form="portrait"] .cq-stage + .cq-side .cq-steps { grid-column: 2; align-self: center; font-size: 12px; color: var(--muted); white-space: nowrap; }
+/* The foot is one row: the deck's picture, Change, and Battle */
+html[data-form="portrait"] .cq-stage + .cq-side .cq-foot { grid-template-columns: auto minmax(0, 1fr); align-items: center; border-top: 0; background: none; padding: 8px 12px 12px; }
+html[data-form="portrait"] .cq-stage + .cq-side.open .cq-foot { grid-template-columns: minmax(0, 1fr); }
+
+/* Commanders, planeswalkers and quest decks are rows. The selected one's name, chips and actions are under the list, without its card picture. */
+html[data-form="portrait"] .cq-party-list, html[data-form="portrait"] .cq-planes-list { padding: 12px 12px 16px; gap: 14px; }
+html[data-form="portrait"] .cq-party-list .find { width: 100%; }
+html[data-form="portrait"] .cq-cmd-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+html[data-form="portrait"] .cq-cmd { grid-template-columns: 64px minmax(0, 1fr); }
+html[data-form="portrait"] .cq-cmd .a { min-height: 64px; }
+html[data-form="portrait"] .cq-cmd .t { padding: 8px 10px; }
+html[data-form="portrait"] .cq-cmd .tag { top: 8px; bottom: auto; }
+html[data-form="portrait"] .qu-new { min-height: 52px; grid-auto-flow: column; justify-content: start; padding: 0 14px; }
+html[data-form="portrait"] .qu-new .plus { width: 28px; height: 28px; font-size: 17px; }
+html[data-form="portrait"] .cq-cmd-detail { padding: 10px 16px 4px; gap: 8px; min-height: 0; }
+html[data-form="portrait"] .cq-cmd-detail :is(img.cq-card, .curve) { display: none; }
+html[data-form="portrait"] .cq-cmd-detail h3 { font-size: 16px; }
+html[data-form="portrait"] .cq-two button { min-height: 40px; }
+
+/* Planes are two to a row. The chosen plane's picture is a short strip over its text and foot. */
+html[data-form="portrait"] .cq-planes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+html[data-form="portrait"] .cq-plane-card .a { height: 64px; }
+html[data-form="portrait"] .cq-plane-card .t { padding: 7px 9px 9px; gap: 3px; }
+html[data-form="portrait"] .cq-plane-card .t b { font-size: 13.5px; }
+html[data-form="portrait"] .cq-plane-art { height: 64px; padding: 0 16px 8px; }
+html[data-form="portrait"] .cq-plane-art h3 { font-size: 20px; }
+html[data-form="portrait"] .cq-planes .cq-panel { padding-top: 6px; }
+
+/* The Aether fits one screen. The orb, the pool's counts and the pull are a short block at the top. Each filter is one labelled row under it, except rarity, whose long odds take two columns. */
+html[data-form="portrait"] .cq-aether { display: flex; flex-direction: column; overflow-y: auto; }
+html[data-form="portrait"] .cq-ae-stage { order: -1; flex: none; overflow: visible; display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 6px 12px; padding: 12px 16px; }
+html[data-form="portrait"] .cq-ae-core { display: contents; }
+html[data-form="portrait"] .cq-ae-orb { grid-column: 1; grid-row: 1 / span 2; width: 76px; height: 76px; }
+html[data-form="portrait"] .cq-ae-core .cq-chips { grid-column: 2; grid-row: 1; gap: 4px; align-self: end; }
+html[data-form="portrait"] .cq-ae-core .cq-chip { font-size: 11px; padding: 1px 7px; }
+html[data-form="portrait"] .cq-ae-count { grid-column: 2; grid-row: 2; align-self: start; font-size: 12px; }
+html[data-form="portrait"] .cq-ae-pull { grid-column: 1 / -1; grid-row: 3; justify-content: center; padding: 10px 16px; font-size: 15px; }
+html[data-form="portrait"] .cq-ae-stage > .cq-warn { grid-column: 1 / -1; margin: 0; text-align: center; }
+html[data-form="portrait"] .cq-ae-recent { grid-column: 1 / -1; position: static; flex-wrap: wrap; gap: 6px; }
+html[data-form="portrait"] .cq-ae-recent:empty { display: none; }
+html[data-form="portrait"] .cq-ae-recent img { width: 36px; }
+/* A pulled card shows beside its name, with the next pull under both */
+html[data-form="portrait"] .cq-ae-stage:has(.cq-ae-card) { grid-template-columns: minmax(0, 1fr); }
+html[data-form="portrait"] .cq-ae-stage:has(.cq-ae-card) .cq-ae-count { grid-column: 1 / -1; grid-row: auto; justify-self: end; }
+html[data-form="portrait"] .cq-ae-card { grid-column: 1 / -1; grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto auto; justify-items: start; align-items: center; gap: 8px 14px; }
+html[data-form="portrait"] .cq-ae-face { grid-row: 1 / span 2; }
+html[data-form="portrait"] .cq-ae-face img { width: 96px; border-radius: 6px; }
+html[data-form="portrait"] .cq-ae-card .what { grid-column: 2; grid-row: 1; align-self: end; font-size: 15px; flex-wrap: wrap; }
+html[data-form="portrait"] .cq-ae-card .cq-ae-pull { grid-column: 1 / -1; grid-row: 3; width: 100%; }
+html[data-form="portrait"] .cq-ae-filters { overflow: visible; border-right: 0; border-top: 1px solid var(--line); padding: 10px 16px 64px; gap: 10px; }
+html[data-form="portrait"] .cq-ae-filters > div { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 4px 8px; }
+html[data-form="portrait"] .cq-ae-filters h4 { margin: 0; font-size: 10px; }
+html[data-form="portrait"] .cq-ae-filters h4 > span { display: none; }
+html[data-form="portrait"] .cq-ae-filters .colours { justify-self: start; gap: 2px; padding: 2px; }
+html[data-form="portrait"] .cq-ae-filters .colour { width: 34px; height: 34px; }
+html[data-form="portrait"] .cq-ae-filters .cq-opts { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; }
+html[data-form="portrait"] .cq-ae-filters .cq-opts.two { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+html[data-form="portrait"] .cq-opt { min-height: 36px; padding: 6px 8px; font-size: 12px; line-height: 1.25; justify-content: center; text-align: center; }
+html[data-form="portrait"] .cq-opt b { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
+/* Rarity's odds are long, so its label goes above and its tiles are two to a row with the price under the odds */
+html[data-form="portrait"] .cq-ae-filters > div:has(.cq-opt .r) { grid-template-columns: minmax(0, 1fr); }
+html[data-form="portrait"] .cq-ae-filters > div:has(.cq-opt .r) .cq-opts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html[data-form="portrait"] .cq-opt:has(.r) { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 3px; text-align: left; font-size: 11.5px; }
+
+/* The collection, the exile and the Spell Shop. The list switch and the search stay on one row. The colours, type, plane, note and the shop's packs fold away as the cards scroll, and come back at the top. */
+html[data-form="portrait"] .cq-coll { timeline-scope: --cq-cards; }
+html[data-form="portrait"] .cq-coll-grid { scroll-timeline: --cq-cards block; }
+html[data-form="portrait"] .cq-coll-bar { display: grid; grid-template-columns: auto minmax(96px, 1fr); gap: 0 6px; padding: 8px 12px; }
+html[data-form="portrait"] .cq-coll-bar .seg { display: flex; justify-self: stretch; }
+html[data-form="portrait"] .cq-coll-bar .seg button { flex: 1; min-height: 36px; padding: 0 10px; font-size: 12.5px; white-space: nowrap; }
+html[data-form="portrait"] .cq-coll-bar .find { width: auto; min-width: 0; height: 36px; }
+html[data-form="portrait"] .cq-coll-bar .colours { order: 1; gap: 1px; padding: 2px; justify-self: start; }
+html[data-form="portrait"] .cq-coll-bar .colour { width: 34px; height: 34px; }
+html[data-form="portrait"] .cq-coll-bar select { order: 2; height: 36px; min-width: 0; }
+html[data-form="portrait"] .cq-coll-bar select ~ select { order: 3; grid-column: 1; justify-self: stretch; }
+html[data-form="portrait"] .cq-coll-note { order: 4; grid-column: 1 / -1; margin: 0; font-size: 11.5px; line-height: 1.35; }
+html[data-form="portrait"] .cq-coll-bar > :is(.colours, select, .cq-coll-note) { margin-top: 6px; }
+html[data-form="portrait"] :is(.cq-coll-bar > :is(.colours, select, .cq-coll-note), .cq-coll > .qu-products) { overflow: hidden; animation: cq-fold linear both; animation-timeline: --cq-cards; animation-range: 0 140px; }
+@keyframes cq-fold { from { max-height: 180px; } 45% { opacity: 0; } to { max-height: 0; margin-top: 0; padding-block: 0; border-width: 0; opacity: 0; } }
+html[data-form="portrait"] .cq-coll-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; padding: 10px 12px 120px; }
+html[data-form="portrait"] .cq-cc .val { font-size: 11px; }
+html[data-form="portrait"] .cq-cc .inuse { bottom: 24px; left: 4px; right: 4px; font-size: 10px; padding: 2px 4px; }
+/* The bar for the picked cards runs along the bottom */
+html[data-form="portrait"] .cq-sel-bar { left: 10px; right: 10px; bottom: 6px; transform: none; justify-content: space-between; gap: 8px; padding: 6px 6px 6px 12px; font-size: 13px; }
+html[data-form="portrait"] .cq-sel-bar button { min-height: 38px; min-width: 0; flex-wrap: wrap; justify-content: center; }
+/* The Spell Shop's packs are short tiles with the picture beside the words */
+html[data-form="portrait"] .qu-products { gap: 8px; padding: 8px 12px; }
+html[data-form="portrait"] .qu-products-head { display: none; }
+html[data-form="portrait"] .qu-product { width: 176px; padding: 6px; gap: 2px; grid-template-columns: 40px minmax(0, 1fr); justify-items: start; align-content: center; column-gap: 8px; text-align: left; font-size: 11.5px; }
+html[data-form="portrait"] .qu-product-pic { grid-row: 1 / span 3; width: 40px; height: 56px; }
+html[data-form="portrait"] .qu-product > b { font-size: 12px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* The reward reveal. The wheel fits the screen's width, and a pack's cards are four to a row. */
+html[data-form="portrait"] .cq-wheel-host { --d: min(440px, 56vh, 100vw - 72px); padding: 24px 0 18px; }
+html[data-form="portrait"] .cq-rv-grid { gap: 10px 8px; }
+html[data-form="portrait"] .cq-rv-slot { flex-basis: calc((100% - 3 * 8px) / 4); }
+
+/* Statistics */
+html[data-form="portrait"] .cq-stats { padding: 14px 12px 70px; gap: 10px; }
+html[data-form="portrait"] .cq-stats-head h2 { font-size: 18px; }
+html[data-form="portrait"] .cq-figures { gap: 8px; }
+html[data-form="portrait"] .cq-figure { padding: 10px 12px; gap: 2px; }
+html[data-form="portrait"] .cq-figure p b { font-size: 22px; }
+html[data-form="portrait"] .cq-tables { grid-template-columns: minmax(0, 1fr); }
+html[data-form="portrait"] .cq-tables :is(th, td) { padding: 7px 8px; }
+
+/* The preferences are one column on a sheet that fills the screen */
+html[data-form="portrait"] .backdrop:has(> .cq-prefs) { padding: 0; }
+html[data-form="portrait"] .dialog.cq-prefs { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; border: 0; display: flex; flex-direction: column; }
+html[data-form="portrait"] .cq-prefs header, html[data-form="portrait"] .cq-prefs footer { padding: 10px 16px; }
+html[data-form="portrait"] .cq-prefs-body { columns: 1; padding: 12px 16px; flex: 1; overflow-y: auto; }
+html[data-form="portrait"] .cq-pref input, html[data-form="portrait"] .cq-pref-table input { width: 76px; height: 36px; }
+html[data-form="portrait"] .cq-prefs-body section.wide { overflow-x: auto; }
+
+/* Quest. The tab already names the list, so its heading and prompt give way. Travel sits at the end of the status line. */
+html[data-form="portrait"] .qu-list { position: relative; padding: 12px 12px 16px; gap: 10px; grid-auto-rows: max-content; }
+html[data-form="portrait"] .qu-list-head { display: contents; }
+html[data-form="portrait"] .qu-list-head > :not(button) { display: none; }
+html[data-form="portrait"] .qu-list-head button { position: absolute; top: 10px; right: 12px; min-height: 32px; }
+html[data-form="portrait"] .qu-status { min-height: 32px; padding-right: 84px; }
+html[data-form="portrait"] .qu-tourneys .qu-status { padding-right: 140px; }
+/* Duels are a list of rows: a picture, the name, the colours and the difficulty. The chosen row also shows its deck's theme, so the panel's own copy of it goes. */
+html[data-form="portrait"] .qu-events:has(.qu-ev) { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+html[data-form="portrait"] .qu-ev { grid-template-columns: 64px minmax(0, 1fr); grid-template-rows: none; min-height: 64px; }
+html[data-form="portrait"] .qu-ev .a { min-height: 100%; }
+html[data-form="portrait"] .qu-ev .a::after { background: linear-gradient(90deg, transparent 55%, var(--surface) 100%); }
+html[data-form="portrait"] .qu-ev .a.unknown b { font-size: 30px; }
+html[data-form="portrait"] .qu-ev .t { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: none; align-content: center; gap: 4px 8px; padding: 8px 12px; }
+html[data-form="portrait"] .qu-ev .t > b { grid-column: 1; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-form="portrait"] .qu-ev .t .f { grid-column: 2; grid-row: 1; padding: 0; border: 0; }
+html[data-form="portrait"] .qu-ev .t .l { grid-column: 1 / -1; }
+html[data-form="portrait"] .qu-ev .t p { display: none; grid-column: 1 / -1; }
+html[data-form="portrait"] .qu-ev[aria-pressed="true"] .t p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 12px; }
+html[data-form="portrait"] .cq-map:has(> .qu-list) > .cq-side:not(:has(.qu-facts)) .cq-panel { display: none; }
+/* The foot puts the deck and the plant first, then any match length and deck warning across the width, then the pet and the start button. Each control names itself, so the row labels are not shown. */
+html[data-form="portrait"] .cq-foot:has(.qu-row) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; row-gap: 0; }
+html[data-form="portrait"] .cq-foot:has(.qu-row) > * { margin-top: 8px; }
+html[data-form="portrait"] .cq-foot:has(.qu-row) > .cq-mine { grid-column: 1; grid-row: 1; margin-top: 0; }
+html[data-form="portrait"] .cq-foot:has(.qu-row) > .qu-row:has(input[type="checkbox"]) { grid-column: 2; grid-row: 1; justify-self: end; margin-top: 0; }
+html[data-form="portrait"] .cq-foot:has(.qu-row) > .qu-row:has(.seg) { grid-column: 1 / -1; grid-row: 2; }
+html[data-form="portrait"] .cq-foot:has(.qu-row) > .cq-warn { grid-column: 1 / -1; grid-row: 3; }
+html[data-form="portrait"] .cq-foot:has(.qu-row) > .qu-row:has(select) { grid-column: 1; grid-row: 4; }
+html[data-form="portrait"] .cq-foot:has(.qu-row) > button:last-child { grid-column: 2; grid-row: 4; }
+html[data-form="portrait"] .cq-foot:has(.qu-row):not(:has(> .qu-row select)) > button:last-child { grid-column: 1 / -1; }
+/* A challenge's panel already shows its text */
+html[data-form="portrait"] .cq-map:has(.qu-facts) .qu-ev .t p { display: none; }
+html[data-form="portrait"] .qu-row > span:first-child { display: none; }
+html[data-form="portrait"] .qu-row select { max-width: none; width: 100%; height: 42px; }
+
+/* Tournaments */
+html[data-form="portrait"] .qu-tourney-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+html[data-form="portrait"] .qu-tourney { grid-template-rows: 72px auto auto; }
+html[data-form="portrait"] .qu-tourney-packs img { height: 64px; }
+html[data-form="portrait"] .qu-tourney-t { padding: 10px 14px; }
+html[data-form="portrait"] .qu-tourney-foot { padding: 8px 14px 10px; }
+
+/* The bazaar's stalls are a strip across the top. The open stall's items are under it, one to a row. */
+html[data-form="portrait"] .qu-bazaar { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+html[data-form="portrait"] .qu-stalls { display: flex; overflow-x: auto; scrollbar-width: none; gap: 6px; padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--line); }
+html[data-form="portrait"] .qu-stalls > .cq-kicker { display: none; }
+html[data-form="portrait"] .qu-stall { flex: none; gap: 8px; padding: 6px 12px 6px 6px; }
+html[data-form="portrait"] .qu-stall img { width: 30px; height: 30px; }
+html[data-form="portrait"] .qu-stall span .muted { display: none; }
+html[data-form="portrait"] .qu-stall-page { padding: 12px 12px 70px; gap: 12px; }
+html[data-form="portrait"] .qu-stall-head { gap: 12px; }
+html[data-form="portrait"] .qu-stall-head img { width: 48px; height: 48px; }
+html[data-form="portrait"] .qu-stall-head h2 { font-size: 19px; }
+html[data-form="portrait"] .qu-items { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+html[data-form="portrait"] .qu-item { grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 12px; }
+html[data-form="portrait"] .qu-item-pic img { max-width: 64px; }
+
+/* The shelves. The new-save tile is a short row, so the saves start near the top. */
+html[data-form="portrait"] #campaign .event-shelf { gap: 10px; }
+html[data-form="portrait"] #campaign .ev.new { grid-template-rows: none; grid-auto-flow: column; justify-content: start; align-items: center; gap: 12px; min-height: 0; padding: 12px 16px; text-align: left; }
+html[data-form="portrait"] #campaign .ev.new > :not(:first-child, :nth-child(2)) { display: none; }
+/* The new-conquest rows give the name the room the empty right column took */
+html[data-form="portrait"] .cq-pick-row { grid-template-columns: 40px minmax(0, 1fr) auto; }
+
+/* An upright tablet has room for more than one column */
+@media (min-width: 600px) {
+  html[data-form="portrait"] .cq-cmd-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  html[data-form="portrait"] .cq-planes-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  html[data-form="portrait"] .qu-events { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  html[data-form="portrait"] .cq-coll-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  html[data-form="portrait"] .qu-items { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  html[data-form="portrait"] .dialog.cq-prefs { width: min(92vw, 640px); height: auto; max-height: calc(100dvh - 32px); border-radius: 12px; border: 1px solid var(--line); }
+  html[data-form="portrait"] .backdrop:has(> .cq-prefs) { padding: 16px; }
+}

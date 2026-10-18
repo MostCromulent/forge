@@ -13,8 +13,9 @@ import { ExtraPicker } from './extrapicker';
 import { CENTRE, SleevePicker, artUrl, objectPosition } from '../sleeves';
 import { AI_ICON, Pips } from '../symbols';
 import { EventHead } from './event';
-import { MatchBar, TableHeader, seatsLeaving } from './matchbar';
-import { SetupHead, WAY_NAMES } from '../header';
+import { Invite, MatchBar, TableHeader, seatsLeaving } from './matchbar';
+import { backStep, PhoneHead, SetupHead, WAY_NAMES } from '../header';
+import { isPortrait } from '../form';
 import { t, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -45,13 +46,17 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
     actions.leaveLobby();
   } : undefined;
   const kind = t(lim ? (lim.kind === 'draft' ? 'lblDraft' : 'lblSealed') : 'lblConstructed');
+  const trail = [{ label: t('lblStart'), go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }];
+  const title = t(lobby.host ? 'lblWebLobbySetUpGame' : lim?.activeEventId ? 'lblWebLobbyBuildThenPlay'
+    : lim?.started ? (lim.kind === 'draft' ? 'lblWebLobbyDraftOn' : 'lblWebLobbyOpeningPacks') : 'lblWebLobbyHostSettingUp');
+  const phoneBack = isPortrait() ? backStep(trail) : undefined;
   return (
     <>
-      <TableHeader model={model} lobby={lobby} />
+      {phoneBack
+        ? <PhoneHead back={phoneBack} title={title} action={lobby.shareable ? <Invite model={model} /> : undefined} />
+        : <TableHeader model={model} lobby={lobby} />}
       <div class="lobby-main">
-        <SetupHead trail={[{ label: t('lblStart'), go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }]}
-          title={t(lobby.host ? 'lblWebLobbySetUpGame' : lim?.activeEventId ? 'lblWebLobbyBuildThenPlay'
-            : lim?.started ? (lim.kind === 'draft' ? 'lblWebLobbyDraftOn' : 'lblWebLobbyOpeningPacks') : 'lblWebLobbyHostSettingUp')} />
+        <SetupHead trail={trail} title={title} />
         {/* A new kind of event needs a fresh setup. The key remounts the event head so its dialog opens again */}
         {lim
           ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => zoomIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate))} />
