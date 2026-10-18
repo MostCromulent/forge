@@ -74,6 +74,7 @@ public enum ProtocolMethod implements IHasForgeLog {
     applyDelta          (Mode.SERVER, Void.TYPE, DeltaPacket.class),
     /** Server→client push of authoritative yield-state changes. */
     applyYieldUpdate    (Mode.SERVER, Void.TYPE, YieldUpdate.class),
+    applyMacroState     (Mode.SERVER, Void.TYPE, IMacroSystem.State.class),
 
     // Client -> Server
     // Note: these should all return void, to avoid awkward situations in
@@ -81,9 +82,6 @@ public enum ProtocolMethod implements IHasForgeLog {
     // the threads that're supposed to give that response
     useMana                   (Mode.CLIENT, Void.TYPE, Byte.TYPE),
     undoLastAction            (Mode.CLIENT, Void.TYPE),
-    setRememberedActions      (Mode.MACRO, Void.TYPE),
-    nextRememberedAction      (Mode.MACRO, Void.TYPE),
-    repeatRememberedActions   (Mode.MACRO, Void.TYPE),
     selectPlayer              (Mode.CLIENT, Void.TYPE, PlayerView.class, ITriggerEvent.class),
     selectCard                (Mode.CLIENT, Void.TYPE, CardView.class, List.class, ITriggerEvent.class),
     selectButtonOk            (Mode.CLIENT, Void.TYPE),
@@ -97,7 +95,10 @@ public enum ProtocolMethod implements IHasForgeLog {
     alphaStrike               (Mode.CLIENT, Void.TYPE),
     reorderHand               (Mode.CLIENT, Void.TYPE, CardView.class, Integer.TYPE),
     requestResync             (Mode.CLIENT, Void.TYPE),
-    sendYieldUpdate           (Mode.CLIENT, Void.TYPE, YieldUpdate.class);
+    sendYieldUpdate           (Mode.CLIENT, Void.TYPE, YieldUpdate.class),
+    setRememberedActions      (Mode.MACRO, Void.TYPE),
+    nextRememberedAction      (Mode.MACRO, Void.TYPE),
+    repeatRememberedActions   (Mode.MACRO, Void.TYPE);
 
     private enum Mode {
         SERVER(IGuiGame.class),
@@ -152,7 +153,6 @@ public enum ProtocolMethod implements IHasForgeLog {
             return null;
         }
     }
-
     /** What a call received from a client is made on: the controller, or for a macro its macro system. */
     public Object receiver(final Object toInvoke) {
         return mode == Mode.MACRO ? ((IGameController) toInvoke).macros() : toInvoke;
