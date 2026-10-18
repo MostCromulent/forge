@@ -19,6 +19,7 @@ import { sourceName, splitQuestion } from './asking';
 import type { CardView, PlayerView, PromptButton, Ref } from '../protocol';
 import { t } from '../text';
 import { ICONS, iconSvg } from '../icons';
+import { isSilent } from '../volume';
 
 let built = false;
 /** The row of tools. On a phone it is moved out of the prompt and onto the player's bar. */
@@ -96,6 +97,7 @@ function drawPrompt(model: Model, actions: Actions): void {
         <button class="undo">${iconSvg(ICONS.undo)}</button>
         <button class="macro" hidden></button>
         <span class="tools-gap" aria-hidden="true"></span>
+        <button class="volume"></button>
         <button class="more">${iconSvg(ICONS.ellipsis)}</button>
       </div>
       <p class="step"></p>
@@ -111,6 +113,8 @@ function drawPrompt(model: Model, actions: Actions): void {
     tools = q(root, '.tools');
     q(tools, '.auto-pass').title = t('lblWebPromptAutoPassTip');
     q(tools, '.more').title = t('lblWebPromptGameMenuTip');
+    q(tools, '.volume').title = t('lblWebHeadVolume');
+    q(tools, '.volume').onclick = () => changeUi(u => { u.volumeOpen = !u.volumeOpen; });
     q(tools, '.auto-pass').onclick = () => actions.toggleAutoPass();
     q(tools, '.undo').onclick = () => actions.undo();
     q(tools, '.more').onclick = () => changeUi(u => { u.gameMenu = u.gameMenu ? null : 'menu'; });
@@ -148,7 +152,15 @@ function drawPrompt(model: Model, actions: Actions): void {
     if (isPortrait()) replay(root, 'pulse');
   }
   root.classList.toggle('spectating', !!model.spectating);
-  tools.hidden = !!model.spectating;
+  // A spectator keeps the volume and the game menu, but has no turn to pass or undo
+  tools.classList.toggle('watching', !!model.spectating);
+  const volume = q(tools, '.volume');
+  const silent = String(isSilent());
+  if (volume.dataset.silent !== silent) {
+    volume.dataset.silent = silent;
+    volume.innerHTML = iconSvg(silent === 'true' ? ICONS.muted : ICONS.volume);
+  }
+  volume.classList.toggle('open', ui.volumeOpen);
   if (model.spectating) {
     renderPlayerChoices(root, model, [], actions);
     q(root, '.step').textContent = stepName(game(model)?.Phase);

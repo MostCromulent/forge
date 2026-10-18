@@ -9,7 +9,7 @@ const VOLUMES = SETTINGS.filter(def => def.volume);
 /** Whether every volume is off. The speaker button is then drawn crossed out. */
 export const isSilent = (): boolean => VOLUMES.every(def => Number(setting(def.key)) <= 0);
 
-export function Volume({ close, anchor = '#side-tools .volume' }: { close: () => void; anchor?: string }) {
+export function Volume({ close, anchor }: { close: () => void; anchor: string }) {
   const button = document.querySelector(anchor)?.getBoundingClientRect();
   // The panel's right edge lines up with the button's. It opens below a button in the top half of the screen and above one in the bottom half
   const below = !!button && button.top < window.innerHeight / 2;

@@ -60,7 +60,8 @@ export function renderScreens(model: Model, actions: Actions): void {
   render(<>
     {page === 'match' && <Requests model={model} actions={actions} />}
     {page === 'match' && <StackMenu model={model} actions={actions} />}
-    {page === 'match' && ui.volumeOpen && <Volume close={() => changeUi(u => { u.volumeOpen = false; })} />}
+    {/* A phone has no speaker among the tools. Its volume is opened from the game menu, so it opens by that menu's button */}
+    {page === 'match' && ui.volumeOpen && <Volume anchor={isPortrait() ? '#match .tools .more' : '#match .tools .volume'} close={() => changeUi(u => { u.volumeOpen = false; })} />}
     {page !== 'match' && ui.volumeOpen && <Volume anchor=":is(.page-head, .cq-purse) .volume, .ph-more" close={() => changeUi(u => { u.volumeOpen = false; })} />}
     {page !== 'name' && ui.optionsOpen && <Options close={() => changeUi(u => { u.optionsOpen = false; })} />}
     {page === 'match' && (ui.gameMenu === 'menu' || ui.gameMenu === 'dev') && (

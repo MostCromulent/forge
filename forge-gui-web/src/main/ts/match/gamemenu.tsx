@@ -13,6 +13,7 @@ import { changeUi, ui } from '../ui';
 import { Backdrop, Confirm } from '../dialog';
 import { ICONS, Icon } from '../icons';
 import { useTwoPress } from '../hooks';
+import { isPortrait } from '../form';
 
 /** A menu item's icon. It goes at the start of the item, or at the end when `end` is set. */
 export const MenuIcon = ({ d, end, cls }: { d: string; end?: boolean; cls?: string }) => <Icon d={d} cls={['menu-icon', end ? 'end' : '', cls ?? ''].filter(Boolean).join(' ')} />;
@@ -62,6 +63,14 @@ export function GameMenu({ model, actions, close, open, dev: atDev }: {
           recordMacro(actions);
           close();
         }}><MenuIcon d={ICONS.macro} />{t(ui.macro === 'recording' ? 'lblWebGameMenuMacroStop' : 'lblWebGameMenuMacroRecord')}</button>
+        <div class="card-menu-sep" role="separator" />
+        {/* A desktop has the speaker beside this menu's button. A phone's tools have no room for it */}
+        {isPortrait() && <button type="button" role="menuitem" class="card-menu-item" onClick={() => { close(); changeUi(u => { u.volumeOpen = true; }); }}>
+          <MenuIcon d={ICONS.volume} />{t('lblWebHeadVolume')}
+        </button>}
+        <button type="button" role="menuitem" class="card-menu-item" onClick={() => { close(); changeUi(u => { u.optionsOpen = true; }); }}>
+          <MenuIcon d={ICONS.cog} />{t('lblWebHeadOptions')}
+        </button>
         <div class="card-menu-sep" role="separator" />
         <button type="button" role="menuitem" class="card-menu-item" disabled={!!offer || model.spectating}
           onClick={() => { actions.drawOffer('OFFER'); close(); }}>
