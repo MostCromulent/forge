@@ -76,6 +76,7 @@ public final class WebSettings implements IHasForgeLog {
                 MulliganDefs.GetRuleByName(player.get(FPref.MULLIGAN_RULE)).name(),
                 player.get(FPref.UI_CURRENT_AI_PROFILE),
                 player.getBoolean(FPref.UI_ANTE),
+                player.get(FPref.UI_UNDO_MODE),
                 SHORTCUTS.stream().map(p -> new ShortcutPref(p.name(), Localizer.getInstance().getMessage("lbl" + p.name()), player.get(p), p.getDefault())).toList());
     }
 
@@ -142,7 +143,9 @@ public final class WebSettings implements IHasForgeLog {
     /** The sound sets in Forge's sound folder. They are read only once, because every settings update sends them. */
     private static final Supplier<List<String>> SOUND_SETS = Suppliers.memoize(() -> List.of(SoundSystem.instance.getAvailableSoundSets()));
 
-    private static final List<String> TABLE_SETTINGS = List.of("filteredHands", "mulliganRule", "aiProfile", "ante");
+    private static final List<String> TABLE_SETTINGS = List.of("filteredHands", "mulliganRule", "aiProfile", "ante", "undoMode");
+
+    private static final List<String> UNDO_MODES = List.of(ForgeConstants.UNDO_MODE_OFF, ForgeConstants.UNDO_MODE_SINGLE, ForgeConstants.UNDO_MODE_FREE);
 
     /** Sets one of the host's table rules. Returns false for a value Forge does not know. */
     private static boolean setTableRule(final PlayerSettings player, final String key, final String value) {
@@ -169,6 +172,14 @@ public final class WebSettings implements IHasForgeLog {
                     return false;
                 }
                 player.set(FPref.UI_CURRENT_AI_PROFILE, value);
+            }
+            case "undoMode" -> {
+                if (!UNDO_MODES.contains(value)) {
+                    netLog.warn("Web client: bad undo mode {}", value);
+                    return false;
+                }
+                // The engine reads the host's preference at each priority prompt, so a change applies in a running game
+                player.set(FPref.UI_UNDO_MODE, value);
             }
             default -> player.set(FPref.UI_ANTE, Boolean.parseBoolean(value));
         }

@@ -170,6 +170,10 @@ export const SETTINGS: SettingDef[] = [
   {
     section: t('lblWebOptionsSectionTable'), key: 'ante', label: t('cbAnte'), type: 'toggle', server: true, hostOnly: true, def: false,
   },
+  {
+    section: t('lblWebOptionsSectionTable'), key: 'undoMode', label: t('cbUndoMode'), hint: t('lblWebOptionsUndoModeHint'), type: 'choice', server: true, hostOnly: true,
+    options: ['Off', 'Single step', 'Free'].map(m => [m, m]), def: 'Free',
+  },
   { section: t('lblKeyboardShortcuts'), key: 'keyOk', label: t('lblOK'), action: 'ok', type: 'key', def: ' ' },
   { section: t('lblKeyboardShortcuts'), key: 'keyNextFace', label: t('lblWebOptionsKeyNextFace'), hint: t('lblWebOptionsUnderPointer'), action: 'nextFace', type: 'key', def: 'f' },
   { section: t('lblKeyboardShortcuts'), key: 'keyCardText', label: t('lblWebOptionsKeyCardText'), hint: t('lblWebOptionsUnderPointer'), action: 'cardText', type: 'key', def: 't' },
