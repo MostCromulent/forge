@@ -1046,8 +1046,18 @@ body.dragging-block #zoom { display: none; }
 .card.sickness .sick { display: block; }
 /* A permanent you cannot use yet loses its colour. So it is clear at a glance, not only from a 10px label. */
 .card.sickness > img, .card.sickness .frame { filter: grayscale(1) brightness(.78); }
-.card.phased { opacity: .35; outline: 2px dotted var(--muted); }
-.card.phased > img, .card.phased .frame { filter: grayscale(1); }
+/* A phased-out card keeps its place as a tinted ghost in a dashed outline, and a tag names the state. The art stays opaque because the text frame is drawn beneath it. */
+.card.phased > img { filter: grayscale(1) contrast(.72) brightness(1.04); }
+.card.phased::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 3;
+  border: 1.5px dashed #d3e0ffa6; box-shadow: 0 0 14px #a9c6ff33, inset 0 0 18px #b8d2ff26;
+  background: linear-gradient(112deg, #0000 34%, #e6eeff2e 47%, #0000 60%) 0 0 / 260% 100% no-repeat, #16202ec4;
+  animation: phase-sheen 4s ease-in-out infinite; }
+@keyframes phase-sheen { from { background-position: 160% 0; } to { background-position: -110% 0; } }
+html[data-motion="reduced"] .card.phased::after { animation: none; }
+.card .phase-tag { display: none; }
+.battlefield .card.phased .phase-tag { display: block; position: absolute; left: 50%; top: 44%; z-index: 4; transform: translateX(-50%);
+  padding: 1px 7px; border-radius: 999px; background: #0e1116e6; border: 1px solid #c9d8ff; color: #dfe8ff;
+  font-size: calc(8.5px * var(--fit, 1)); font-weight: 700; white-space: nowrap; pointer-events: none; }
 /* A detained card shows chains held by a lock seal. No other state uses this shape, because the board's white rings already mean selectable and attacking. */
 .card .chains, .card .seal { display: none; position: absolute; inset: 0; z-index: 1; border-radius: var(--radius); pointer-events: none;
   background: center / 100% 100% no-repeat; }
