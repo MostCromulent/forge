@@ -158,13 +158,17 @@ public class WebServerTest {
         Assert.assertTrue(icon.headers().firstValue("content-encoding").isEmpty());
     }
 
-    // Fails if the page names a stylesheet without the version that lets the browser keep it, or a versioned file is not kept
+    // Fails if the page links more than one stylesheet, the joined one has no version or is not kept, or it leaves out the first or last stylesheet
     @Test
-    public void thePageVersionsItsStylesheetsAndTheyAreKept() throws Exception {
-        final java.util.regex.Matcher versioned = java.util.regex.Pattern.compile("href=\"(css/theme\\.css\\?v=[0-9a-f]+)\"")
-                .matcher(get("/?token=secret", null).body());
+    public void thePageLinksOneVersionedStylesheetThatIsKept() throws Exception {
+        final String page = get("/?token=secret", null).body();
+        Assert.assertEquals(page.split("rel=\"stylesheet\"", -1).length - 1, 1, "the page links more than one stylesheet");
+        final java.util.regex.Matcher versioned = java.util.regex.Pattern.compile("href=\"(css/page\\.css\\?v=[0-9a-f]+)\"").matcher(page);
         Assert.assertTrue(versioned.find(), "the stylesheet has no version");
-        Assert.assertTrue(get("/" + versioned.group(1) + "&token=secret", null).headers().firstValue("cache-control").orElse("").contains("immutable"));
+        final HttpResponse<String> styles = get("/" + versioned.group(1) + "&token=secret", null);
+        Assert.assertTrue(styles.headers().firstValue("cache-control").orElse("").contains("immutable"));
+        Assert.assertTrue(styles.body().contains(get("/css/theme.css?token=secret", null).body()));
+        Assert.assertTrue(styles.body().contains(get("/css/portrait.css?token=secret", null).body()));
     }
 
     private WebSocket openSocket(final String origin, final List<String> texts) throws Exception {

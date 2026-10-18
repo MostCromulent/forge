@@ -67,6 +67,7 @@ import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketSe
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -108,6 +109,9 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private static final String KEEP_A_DAY = "max-age=86400";
     /** A stylesheet or script the page names. The page adds a hash of its contents to the address. */
     private static final Pattern PAGE_FILE = Pattern.compile("(href|src)=\"((?:css|js)/[^\"?]+)\"");
+    /** A stylesheet link in the page. The page's stylesheets are served joined into one file, STYLES. */
+    private static final Pattern STYLESHEET = Pattern.compile("<link rel=\"stylesheet\" href=\"(css/[^\"?]+)\">\\R?");
+    private static final String STYLES = "css/page.css";
     /** A chunk the page's script imports. */
     private static final Pattern CHUNK = Pattern.compile("\\./(chunks/[^\"']+\\.js)");
     private static final Pattern BYTE_RANGE = Pattern.compile("bytes=(\\d*)-(\\d*)");
@@ -591,10 +595,11 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
 
     /** The page as served. It is built once, unless the page is read from a folder that may change. */
     private volatile byte[] page;
+    private volatile byte[] styles;
 
     /**
      * The page, with a hash of each stylesheet's and script's contents in its address, so the browser keeps them until they change.
-     * The script's chunks are asked for at once, not one after another as each import is reached.
+     * Its stylesheets become one file, so a first visit asks for one, and the script's chunks are asked for at once, not one after another.
      */
     private byte[] page() throws IOException {
         final byte[] built = page;
@@ -605,10 +610,26 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         if (html == null) {
             return null;
         }
+        // Joined in the page's order, so the cascade is the same as with separate files. Every stylesheet is in the same folder, so its relative addresses still work
+        final ByteArrayOutputStream joined = new ByteArrayOutputStream();
+        final StringBuilder linked = new StringBuilder();
+        final Matcher sheet = STYLESHEET.matcher(new String(html, StandardCharsets.UTF_8));
+        boolean first = true;
+        while (sheet.find()) {
+            final byte[] css = readResource(sheet.group(1));
+            if (css != null) {
+                joined.write(css);
+                joined.write('\n');
+            }
+            sheet.appendReplacement(linked, first ? Matcher.quoteReplacement("<link rel=\"stylesheet\" href=\"" + STYLES + "\">\n") : "");
+            first = false;
+        }
+        sheet.appendTail(linked);
+        styles = joined.toByteArray();
         final StringBuilder out = new StringBuilder();
-        final Matcher file = PAGE_FILE.matcher(new String(html, StandardCharsets.UTF_8));
+        final Matcher file = PAGE_FILE.matcher(linked);
         while (file.find()) {
-            final byte[] named = readResource(file.group(2));
+            final byte[] named = STYLES.equals(file.group(2)) ? styles : readResource(file.group(2));
             final CRC32 crc = new CRC32();
             if (named != null) {
                 crc.update(named);
@@ -628,6 +649,11 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             out.insert(head, preloads);
         }
         return page = out.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    /** The page's stylesheets joined into one file. */
+    private byte[] styles() throws IOException {
+        return page() == null ? null : styles;
     }
 
     private static byte[] readResource(final String resource) throws IOException {
@@ -781,7 +807,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 return;
             }
             final String resource = "/".equals(path) ? "index.html" : path.substring(1);
-            final byte[] body = resource.contains("..") ? null : "index.html".equals(resource) ? page() : readResource(resource);
+            final byte[] body = resource.contains("..") ? null : "index.html".equals(resource) ? page()
+                    : STYLES.equals(resource) ? styles() : readResource(resource);
             final String type = contentType(resource);
             if (body == null) {
                 notFound(ctx);
