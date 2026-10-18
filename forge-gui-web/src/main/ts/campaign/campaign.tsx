@@ -51,10 +51,8 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
     return (
       <PhoneHead back={{ label: t('lblBack'), go: leave }} title={bar.name} inert={under} tabs={nav}
         line={<><span class="cq-purse">{balances}</span><span>{bar.line}</span></>}
-        more={close => <>
-          {prefs && <button role="menuitem" onClick={() => { close(); prefs(); }}><Icon d={ICONS.sliders} />{t('Preferences')}</button>}
-          {extra}
-        </>} />
+        more={close => prefs && <button role="menuitem" onClick={() => { close(); prefs(); }}><Icon d={ICONS.sliders} />{t('Preferences')}</button>}
+        dev={extra} />
     );
   }
   return (
@@ -62,9 +60,9 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
       <div class="cq-id"><b>{bar.name}</b><span>{bar.line}</span></div>
       {nav}
       <div class="cq-purse">
-        {extra}
         {balances}
         {prefs && <button onClick={prefs}>{t('Preferences')}</button>}
+        {extra}
         <HeadControls />
         <button onClick={leave}>{t('lblBack')}</button>
       </div>

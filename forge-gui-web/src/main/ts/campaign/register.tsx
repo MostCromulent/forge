@@ -177,6 +177,7 @@ registerCampaigns({
     if (msg.campaign !== 'conquest') {
       Object.assign(model, NO_CONQUEST);
       ui.conquestTab = 'map';
+      ui.conquestWheel = '';
     }
     if (msg.campaign !== 'quest') {
       Object.assign(model, NO_QUEST);
@@ -193,7 +194,11 @@ registerCampaigns({
 
   actions: (send, model, schedule) => ({
     campaignOpen: (mode, resume) => send({ t: 'campaignOpen', mode, resume }),
-    campaignLoad: name => send({ t: 'campaignLoad', name }),
+    // The server forgets a queued Chaos Wheel result when a save opens, and once a won battle has used it
+    campaignLoad: name => {
+      ui.conquestWheel = '';
+      send({ t: 'campaignLoad', name });
+    },
     campaignLeave: () => send({ t: 'campaignLeave' }),
     // The error from the last refused request no longer applies, so it is cleared
     campaignRename: (name, to) => {
@@ -210,6 +215,7 @@ registerCampaigns({
     // A shown reward is removed from the model at once, so its dialog closes without waiting for the server
     rewardClaim: () => {
       model.reward = null;
+      ui.conquestWheel = '';
       send({ t: 'rewardClaim' });
       schedule();
     },

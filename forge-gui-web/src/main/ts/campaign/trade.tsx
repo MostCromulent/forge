@@ -139,7 +139,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
         {rows.map(row => {
           const pick = picked.get(keyOf(row));
           const card = (
-              <button key={keyOf(row)} class={`cq-cc${pick ? ' sel' : ''}${row.problem ? ' used' : ''}`} title={row.problem ?? row.name}
+              <button key={keyOf(row)} class={`cq-cc${pick ? ' sel' : ''}${row.problem ? ' used' : ''}`} title={row.problem} data-image={row.image} data-act={t('lblChoose')}
                 aria-pressed={!!pick} aria-disabled={!!row.problem}
                 onClick={() => (row.problem ? showNotice({ t: 'notice', title: row.problem, error: false }) : toggle(pickOf(row)))}>
                 <span class="cq-pic"><span class="nm">{row.name}</span><img loading="lazy" alt="" src={imageUrl(row.image)} onError={hideBroken} /></span>

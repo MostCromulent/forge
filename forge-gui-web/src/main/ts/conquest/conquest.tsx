@@ -69,29 +69,39 @@ const DEV_WHEEL = ['BOOSTER', 'DOUBLE_BOOSTER', 'SHARDS', 'DOUBLE_SHARDS', 'PLAN
 const TABS: [ConquestTab, TextKey][] = [['map', 'lblTheMultiverse'], ['aether', 'lblTheAether'], ['party', 'lblCommanders'],
   ['collection', 'lblCollection'], ['planes', 'lblPlaneswalk'], ['stats', 'lblStatistics']];
 
-/** Dev mode: sets where the next Chaos Wheel stops, so each reward can be tested. The menu is drawn like the deck editor's. On a phone it is a row of the header's menu. */
+/**
+ * Dev mode: sets where the next Chaos Wheel stops, so each reward can be tested. It is marked as a dev tool, like the match's dev menu, so it is not taken for a reward.
+ * On the desktop it is an icon that names the queued result. On a phone it is a row of the header's menu, under a Dev Mode heading.
+ */
 function DevWheel({ actions }: { actions: Actions }) {
   const labels: Record<string, string> = wheelLabels();
-  const name = (o: string) => (o ? labels[o] : t('lblWebConquestDevWheel'));
+  const name = (o: string) => (o ? labels[o] : t('lblRandom'));
   const choose = (o: string) => {
     changeUi(u => { u.conquestWheel = o; });
     actions.devConquestWheel(o);
   };
+  const tool = `${t('lblDevMode')} · ${t('lblWebConquestDevWheel')}`;
   if (isPortrait()) {
-    return (
+    return <>
+      <hr class="ph-menu-sep" />
+      <small class="ph-menu-head">{t('lblDevMode')}</small>
       <label class="ph-menu-row"><Icon d={ICONS.dev} />{t('lblWebConquestDevWheel')}
         <select value={ui.conquestWheel} onChange={e => choose(e.currentTarget.value)}>
-          {['', ...DEV_WHEEL].map(o => <option key={o} value={o}>{o ? labels[o] : t('lblRandom')}</option>)}
+          {['', ...DEV_WHEEL].map(o => <option key={o} value={o}>{name(o)}</option>)}
         </select>
       </label>
-    );
+    </>;
   }
+  const queued = ui.conquestWheel ? labels[ui.conquestWheel] : '';
   return (
     <Dropdown cls="menu-anchor" block button={(open, toggle) => (
-      <button class="cq-dev" aria-expanded={open} title={t('lblWebConquestDevWheel')} onClick={toggle}>{name(ui.conquestWheel)} &#8964;</button>
+      <button class={queued ? 'cq-dev set' : 'cq-dev'} aria-expanded={open} title={tool} aria-label={queued ? `${tool}: ${queued}` : tool} onClick={toggle}>
+        <Icon d={ICONS.dev} />{queued && <span>{queued}</span>}
+      </button>
     )}>
       {close => (
-        <div class="deck-menu" role="menu">
+        <div class="deck-menu" role="menu" aria-label={tool}>
+          <small class="cq-dev-head">{tool}</small>
           {['', ...DEV_WHEEL].map(o => (
             <button key={o} role="menuitemradio" aria-checked={o === ui.conquestWheel} onClick={() => {
               close();

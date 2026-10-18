@@ -28,8 +28,12 @@ html:not([data-form="portrait"]) .cq-shell { width: min(1500px, 94vw); height: m
 /* The balances are drawn above the reward reveal, because the reveal counts up into them */
 .cq-shell:has(.cq-reveal) .cq-purse { position: relative; z-index: 55; }
 .cq-shell:has(.cq-reveal) .cq-purse > :not(.cq-coin) { visibility: hidden; }
-.cq-dev { font-size: 12px; padding: 3px 8px; white-space: nowrap; }
-.cq-purse .deck-menu { width: 170px; }
+/* The Next wheel is a dev tool, so it is drawn like one: a muted code icon in a dashed outline, never gold, so it is not taken for a reward. A queued result is named beside the icon */
+.cq-dev { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 7px; border: 1px dashed var(--line-bright); background: none; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.cq-dev svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.cq-dev.set { padding-right: 10px; color: var(--text); }
+.cq-dev-head { display: block; padding: 4px 10px 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.cq-purse .deck-menu { width: 190px; }
 .cq-purse .deck-menu [aria-checked="true"] { color: var(--accent-2); }
 /* A tab change slides the page (dialogs.css). A page that arrives any other way, such as on a new plane, rises in. */
 /* The page is one column no wider than the window. So a strip that scrolls by itself, such as the Spell Shop's packs, does not widen the page. */
@@ -108,6 +112,19 @@ button.cq-banner:not(:disabled):hover { filter: brightness(1.15); }
 @keyframes cq-you-pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(1.9); opacity: 0; } }
 .cq-you b { margin-top: -9px; font: 800 9.5px/1 system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #fff; color: #0b0e14; box-shadow: 0 2px 6px #000a; }
 html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
+/* A region the player opens or folds moves as an accordion (conquestmap.tsx). Everything after it slides along the road while it grows from its spine or shrinks back to one.
+   An opened region's places then fade in step by step along the road. */
+.cq-trail-in.moving :is(.cq-banner, .cq-spine, .cq-you) { transition: left .38s cubic-bezier(.3,.7,.3,1); }
+.cq-trail-in.moving .cq-tie { transition: left .38s cubic-bezier(.3,.7,.3,1), width .38s cubic-bezier(.3,.7,.3,1); }
+.cq-trail-in.moving .cq-tile { transition: left .38s cubic-bezier(.3,.7,.3,1), transform .12s, box-shadow .12s, filter .12s; }
+:is(.cq-banner.grow, .cq-spine.shrink) { animation: cq-grow .38s cubic-bezier(.3,.7,.3,1); }
+@keyframes cq-grow { from { width: var(--from); } }
+.cq-banner.grow > * { animation: cq-arrive .25s .2s ease-out both; }
+.cq-tile.arrive { animation: cq-arrive .3s calc(.18s + var(--step) * .07s) ease-out both; }
+.cq-tie.arrive { animation: cq-arrive .3s .3s ease-out both; }
+@keyframes cq-arrive { from { opacity: 0; } }
+html[data-motion="reduced"] :is(.cq-banner.grow, .cq-banner.grow > *, .cq-spine.shrink, .cq-tile.arrive, .cq-tie.arrive) { animation: none; }
+html[data-motion="reduced"] .cq-trail-in.moving * { transition: none; }
 /* Win animation, played after the reward reveal closes (conquestmap.tsx). The won tile is stamped and new ties grow from it. Then the unlocked tiles fade in one by one, and the counts go up. */
 .cq-map.won .cq-tile.sealed { animation: cq-sealed .65s .3s ease-out; }
 @keyframes cq-sealed { 35% { transform: scale(1.08); filter: brightness(1.6); } }

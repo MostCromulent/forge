@@ -119,6 +119,15 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
 
   const [hover, setHover] = useState<string | null>(null);
   const hovered = hover ? cells.get(hover) : undefined;
+
+  // A region the player opens or folds animates as an accordion: the regions after it slide along the road while it grows or shrinks
+  const [moved, setMoved] = useState<{ region: number; open: boolean } | null>(null);
+  useEffect(() => {
+    if (!moved) return;
+    const timer = window.setTimeout(() => setMoved(null), 900);
+    return () => clearTimeout(timer);
+  }, [moved]);
+  const fullWidth = state.rows * TW + (state.rows - 1) * G;
   const selected = cells.get(key(state.selected));
 
   // A line joins two adjacent places when at least one is conquered. Lines run along the road, into the next region and down to the next lane
@@ -149,25 +158,30 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
         <div class="cq-map-head"><h2>{state.plane}</h2>
           <span class="muted cq-count">{state.cells.filter(c => c.state === 'won').length - (wonHere ? 1 : 0)} / {state.cells.length}</span></div>
         <div class="cq-trail" ref={trail}>
-          <div class={walk?.moving ? 'cq-trail-in walking' : 'cq-trail-in'} style={{ width: `${l.width}px`, height: `${l.height}px` }}>
+          <div class={['cq-trail-in', walk?.moving && 'walking', moved && 'moving'].filter(Boolean).join(' ')} style={{ width: `${l.width}px`, height: `${l.height}px` }}>
             {state.regions.map((region, r) => {
               const at = l.regions[r];
               const conquered = region.conquered - (wonHere?.region === r ? 1 : 0);
               const done = conquered === region.total;
               const count = `${conquered} / ${region.total}`;
-              const toggle = r === state.at.region ? undefined : () => { const open = folded(r); changeUi(u => { u.conquestOpened[`${state.plane}:${r}`] = open; }); };
+              const toggle = r === state.at.region ? undefined : () => {
+                const open = folded(r);
+                setMoved({ region: r, open });
+                changeUi(u => { u.conquestOpened[`${state.plane}:${r}`] = open; });
+              };
+              const motion = moved?.region === r ? (moved.open ? ' grow' : ' shrink') : '';
               if (at.folded) {
                 return (
-                  <button key={`s${r}`} class={done ? 'cq-spine done' : 'cq-spine'} title={region.name} onClick={toggle}
-                    style={{ left: `${at.x}px`, top: `${Y0}px`, width: `${SPINE}px`, height: `${l.height - Y0 - 20}px` }}>
+                  <button key={`s${r}`} class={(done ? 'cq-spine done' : 'cq-spine') + motion} title={region.name} onClick={toggle}
+                    style={{ left: `${at.x}px`, top: `${Y0}px`, width: `${SPINE}px`, height: `${l.height - Y0 - 20}px`, '--from': `${fullWidth}px` }}>
                     <i style={{ backgroundImage: `url("${artUrl(region.art)}")` }} />
                     <b>{region.name}</b><span>{count}</span>
                   </button>
                 );
               }
               return (
-                <button key={`b${r}`} class={done ? 'cq-banner done' : 'cq-banner'} disabled={!toggle} onClick={toggle}
-                  style={{ left: `${at.x}px`, top: `${Y0}px`, width: `${at.w}px`, height: `${BH}px`, backgroundImage: `url("${artUrl(region.art)}")` }}>
+                <button key={`b${r}`} class={(done ? 'cq-banner done' : 'cq-banner') + motion} disabled={!toggle} onClick={toggle}
+                  style={{ left: `${at.x}px`, top: `${Y0}px`, width: `${at.w}px`, height: `${BH}px`, backgroundImage: `url("${artUrl(region.art)}")`, '--from': `${SPINE}px` }}>
                   <b>{region.name}</b><span class={showing && won!.tile.region === r ? 'cq-count' : undefined}>{done && <img alt={t('lblWebConquestConquered')} src={skinIconUrl('IMG_PW_BADGE_COMMON')} />}{count}</span>
                 </button>
               );
@@ -178,11 +192,11 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
               const sel = same(c, state.selected) && !same(c, state.at);
               const opened = won ? won.opened.indexOf(key(c)) : -1;
               const cls = ['cq-tile', c.state, here && 'here', sel && 'sel', hover === key(c) && 'hover', won && same(c, won.tile) && 'sealed',
-                opened >= 0 && 'unveiled'].filter(Boolean).join(' ');
+                opened >= 0 && 'unveiled', moved?.open && moved.region === c.region && 'arrive'].filter(Boolean).join(' ');
               return (
                 <button key={key(c)} class={cls} disabled={c.state === 'fog'} aria-label={c.name ?? undefined}
                   style={{ left: `${p.x}px`, top: `${p.y}px`, width: `${TW}px`, height: `${TH}px`, backgroundImage: c.avatar ? `url("${artUrl(c.avatar)}")` : undefined,
-                    '--i': opened }}
+                    '--i': opened, '--step': c.row }}
                   onPointerEnter={() => setHover(key(c))} onPointerLeave={() => setHover(null)}
                   onClick={() => { if (!walk) actions.conquestSelect(c.region, c.row, c.col); }}>
                   {(c.state === 'open' || here) && <span>{c.name}</span>}
@@ -195,7 +209,8 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
               // A new line is animated outward from the tile just won
               const far = won && (same(a, won.tile) ? b : same(b, won.tile) ? a : null);
               const drawn = !!far && far.state !== 'won';
-              const cls = ['cq-tie', p.y !== q.y && 'down', kind, drawn && 'drawn', drawn && far === a && 'back'].filter(Boolean).join(' ');
+              const cls = ['cq-tie', p.y !== q.y && 'down', kind, drawn && 'drawn', drawn && far === a && 'back',
+                moved?.open && (moved.region === a.region || moved.region === b.region) && 'arrive'].filter(Boolean).join(' ');
               return p.y === q.y
                 ? <i key={`${key(a)}-${key(b)}`} class={cls} style={{ left: `${p.x + TW}px`, top: `${p.y + TH / 2}px`, width: `${q.x - p.x - TW}px` }} />
                 : <i key={`${key(a)}-${key(b)}`} class={cls} style={{ left: `${p.x + TW / 2}px`, top: `${p.y + TH}px`, height: `${G}px` }} />;

@@ -29,11 +29,11 @@ export function PageHeader({ class: extra, brand, action, children }: { class?: 
 
 /**
  * The header of a page on a phone: back to the previous step, the title and its line, one action of the page's own, the chat and a menu.
- * tabs, when given, are a second row. more adds the page's own rows to the menu.
+ * tabs, when given, are a second row. more adds the page's own rows to the menu, and dev adds dev mode tools at its end.
  */
-export function PhoneHead({ back, title, line, action, more, tabs, inert }: {
+export function PhoneHead({ back, title, line, action, more, dev, tabs, inert }: {
   back?: SetupStep; title: ComponentChildren; line?: ComponentChildren; action?: ComponentChildren;
-  more?: (close: () => void) => ComponentChildren; tabs?: ComponentChildren; inert?: boolean;
+  more?: (close: () => void) => ComponentChildren; dev?: ComponentChildren; tabs?: ComponentChildren; inert?: boolean;
 }) {
   // The dock draws its folded bar into the chat slot (dock.tsx), so it must draw again once the slot exists
   useEffect(redrawUi, []);
@@ -55,6 +55,7 @@ export function PhoneHead({ back, title, line, action, more, tabs, inert }: {
               <button role="menuitem" onClick={() => { close(); changeUi(u => { u.volumeOpen = true; }); }}><Icon d={ICONS.volume} />{t('lblWebHeadVolume')}</button>
               {more?.(close)}
               <button role="menuitem" onClick={() => { close(); changeUi(u => { u.optionsOpen = true; }); }}><Icon d={ICONS.cog} />{t('lblWebHeadOptions')}</button>
+              {dev}
             </div>
           )}
         </Dropdown>
