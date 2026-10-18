@@ -158,6 +158,15 @@ public class WebServerTest {
         Assert.assertTrue(icon.headers().firstValue("content-encoding").isEmpty());
     }
 
+    // Fails if the page names a stylesheet without the version that lets the browser keep it, or a versioned file is not kept
+    @Test
+    public void thePageVersionsItsStylesheetsAndTheyAreKept() throws Exception {
+        final java.util.regex.Matcher versioned = java.util.regex.Pattern.compile("href=\"(css/theme\\.css\\?v=[0-9a-f]+)\"")
+                .matcher(get("/?token=secret", null).body());
+        Assert.assertTrue(versioned.find(), "the stylesheet has no version");
+        Assert.assertTrue(get("/" + versioned.group(1) + "&token=secret", null).headers().firstValue("cache-control").orElse("").contains("immutable"));
+    }
+
     private WebSocket openSocket(final String origin, final List<String> texts) throws Exception {
         return openSocket(origin, "secret", texts);
     }

@@ -104,6 +104,12 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private static final AttributeKey<Boolean> KEEP_ALIVE = AttributeKey.valueOf("forge.keepAlive");
     /** For content that never changes at its address, such as a card picture of one printing or a hashed script chunk. The browser keeps it permanently. */
     private static final String KEEP_FOREVER = "public, max-age=31536000, immutable";
+    /** For skin pictures and sound effects. They change only when the skin or sound set is changed and the server restarted, so a day's wait is fair. */
+    private static final String KEEP_A_DAY = "max-age=86400";
+    /** A stylesheet or script the page names. The page adds a hash of its contents to the address. */
+    private static final Pattern PAGE_FILE = Pattern.compile("(href|src)=\"((?:css|js)/[^\"?]+)\"");
+    /** A chunk the page's script imports. */
+    private static final Pattern CHUNK = Pattern.compile("\\./(chunks/[^\"']+\\.js)");
     private static final Pattern BYTE_RANGE = Pattern.compile("bytes=(\\d*)-(\\d*)");
     /** The most bytes that one reply to an audio range request carries: about a minute of music at 128 kbps. */
     private static final int AUDIO_SLICE = 1 << 20;
@@ -395,12 +401,12 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain");
     }
 
-    /** Sends a picture drawn from the skin, or a not-found reply. The browser asks again each time, because another skin changes the picture at the same address. */
+    /** Sends a picture drawn from the skin, or a not-found reply. */
     private void respondOrNotFound(final ChannelHandlerContext ctx, final byte[] body, final String type, final String ifNoneMatch) {
         if (body == null) {
             notFound(ctx);
         } else {
-            respondUnlessUnchanged(ctx, body, type, null, "no-cache", ifNoneMatch);
+            respondUnlessUnchanged(ctx, body, type, null, KEEP_A_DAY, ifNoneMatch);
         }
     }
 
@@ -490,8 +496,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name, final String track,
             final String range, final String ifNoneMatch) throws IOException {
         if (sound) {
-            // A file in the sound set can be replaced, so the browser asks each time whether it changed
-            respondAudio(ctx, isFileName(name) ? SoundSystem.instance.getSoundResource(name) : null, range, "no-cache", ifNoneMatch);
+            respondAudio(ctx, isFileName(name) ? SoundSystem.instance.getSoundResource(name) : null, range, KEEP_A_DAY, ifNoneMatch);
             return;
         }
         final boolean menu = "menu".equals(name);
@@ -582,6 +587,47 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         final CRC32 crc = new CRC32();
         crc.update(body);
         return "\"" + Long.toHexString(crc.getValue()) + "-" + Integer.toHexString(body.length) + "\"";
+    }
+
+    /** The page as served. It is built once, unless the page is read from a folder that may change. */
+    private volatile byte[] page;
+
+    /**
+     * The page, with a hash of each stylesheet's and script's contents in its address, so the browser keeps them until they change.
+     * The script's chunks are asked for at once, not one after another as each import is reached.
+     */
+    private byte[] page() throws IOException {
+        final byte[] built = page;
+        if (built != null && PAGE_DIR == null) {
+            return built;
+        }
+        final byte[] html = readResource("index.html");
+        if (html == null) {
+            return null;
+        }
+        final StringBuilder out = new StringBuilder();
+        final Matcher file = PAGE_FILE.matcher(new String(html, StandardCharsets.UTF_8));
+        while (file.find()) {
+            final byte[] named = readResource(file.group(2));
+            final CRC32 crc = new CRC32();
+            if (named != null) {
+                crc.update(named);
+            }
+            file.appendReplacement(out, Matcher.quoteReplacement(named == null ? file.group()
+                    : file.group(1) + "=\"" + file.group(2) + "?v=" + Long.toHexString(crc.getValue()) + "\""));
+        }
+        file.appendTail(out);
+        final byte[] script = readResource("js/app.js");
+        final StringBuilder preloads = new StringBuilder();
+        final Matcher chunk = CHUNK.matcher(script == null ? "" : new String(script, StandardCharsets.UTF_8));
+        while (chunk.find()) {
+            preloads.append("<link rel=\"modulepreload\" href=\"js/").append(chunk.group(1)).append("\">\n");
+        }
+        final int head = out.indexOf("</head>");
+        if (head >= 0) {
+            out.insert(head, preloads);
+        }
+        return page = out.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     private static byte[] readResource(final String resource) throws IOException {
@@ -735,7 +781,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 return;
             }
             final String resource = "/".equals(path) ? "index.html" : path.substring(1);
-            final byte[] body = resource.contains("..") ? null : readResource(resource);
+            final byte[] body = resource.contains("..") ? null : "index.html".equals(resource) ? page() : readResource(resource);
             final String type = contentType(resource);
             if (body == null) {
                 notFound(ctx);
@@ -743,10 +789,10 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             }
             // The page stores the link's token as a cookie, so its later requests come in on the same link
             final String token = param(q, "token");
-            // Other page files keep their names between builds, so the browser asks whether the file changed.
-            // A chunk's name contains a hash of its contents. A changed chunk is a new file, so an old chunk never goes stale.
-            respondUnlessUnchanged(ctx, body, type, accessOf(token) == Access.NONE ? null : token,
-                    resource.startsWith("js/chunks/") ? KEEP_FOREVER : "no-cache", ifNoneMatch);
+            // A chunk's name, and the version the page adds to its other files, are hashes of the file. A changed file is a new address,
+            // so an old one never goes stale. The page itself and files asked for without a version are checked each time.
+            final boolean hashed = resource.startsWith("js/chunks/") || q.parameters().containsKey("v");
+            respondUnlessUnchanged(ctx, body, type, accessOf(token) == Access.NONE ? null : token, hashed ? KEEP_FOREVER : "no-cache", ifNoneMatch);
         }
     }
 
