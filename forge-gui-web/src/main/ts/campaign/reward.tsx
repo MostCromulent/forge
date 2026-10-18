@@ -134,6 +134,8 @@ function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; n
     <div class="cq-wheel-stop">
       {emblem > 0 && <p class="cq-wheel-first"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestFirstConquest')}</p>}
       <div class="cq-wheel-host" ref={host} />
+      {/* The name fades in under the dial once it stops (conquest.css) */}
+      <p class="cq-wheel-name">{phase === 'stopped' ? wheelLabels()[step.outcome as WheelOutcome] : ''}</p>
       <div class="cq-reveal-foot">
         {phase === 'stopped'
           ? <button class="primary cq-big" onClick={next}>{t('lblGreat')}</button>

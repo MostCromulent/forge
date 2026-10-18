@@ -28,6 +28,7 @@ final class PromptState {
     private PromptButton cancel = new PromptButton("", false);
     private boolean focusOk;
     private boolean paying;
+    private boolean endsTurn;
     private List<Ref> selectable = List.of();
     private int selectableMin;
     private List<Ref> selectablePlayers = List.of();
@@ -60,6 +61,8 @@ final class PromptState {
         focusOk = focus1;
         // Only a mana payment offers Auto. During a payment the browser keeps the card being paid for in its waiting slot
         paying = Localizer.getInstance().getMessage("lblAuto").equals(label1);
+        // At priority the engine labels the cancel button End Turn only when it ends the turn, and Undo when it undoes
+        endsTurn = Localizer.getInstance().getMessage("lblEndTurn").equals(label2);
         changed();
     }
 
@@ -99,7 +102,7 @@ final class PromptState {
     }
 
     private Prompt current() {
-        return new Prompt(message, priority, card, ok, cancel, focusOk, paying, selectable, selectableMin,
+        return new Prompt(message, priority, card, ok, cancel, focusOk, paying, endsTurn, selectable, selectableMin,
                 selectablePlayers, selectableStack, highlighted, starterChoice);
     }
 

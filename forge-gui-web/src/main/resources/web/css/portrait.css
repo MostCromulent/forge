@@ -459,7 +459,7 @@ html[data-form="portrait"] .reveal-back.on-board header { display: flex; align-i
 html[data-form="portrait"] .reveal-back.on-board header .zone-who { flex: 1; width: auto; min-width: 0; }
 /* The cards start under the question, and scroll in place when there are many */
 html[data-form="portrait"] :is(.backdrop.on-board .options:not(.ordered), .reveal-back.on-board .cards, #zones.asking .cards) { flex: 0 1 auto; min-height: 0; max-height: none; max-width: none; min-width: 0; overflow-y: auto;
-  display: flex; flex-wrap: wrap; justify-content: center; align-content: start; gap: 12px; padding: 10px 0 14px; }
+  display: flex; flex-wrap: wrap; justify-content: center; align-content: start; gap: 12px; padding: 22px 12px 14px; }
 html[data-form="portrait"] .backdrop.on-board .dist-row { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
 html[data-form="portrait"] #zones.asking .zone-count { display: none; }
 /* The zone chips are avatars with a badge in a row that scrolls sideways, because the line under them names the player shown. The names stay for screen readers. */
@@ -490,8 +490,11 @@ html[data-form="portrait"] .lib-side { justify-items: start; }
 html[data-form="portrait"] .lib-row .lib-pile { display: none; }
 /* A touch screen has no drag, so the line about dragging is hidden */
 html[data-form="portrait"] .manipulate .hint { display: none; }
-/* The count next to the pips says the same thing in less space */
-html[data-form="portrait"] .dialog .dist-pips { display: none; }
+/* The attacker and its pile are a row of their own, and the arrow is left out, so the targets keep their size */
+html[data-form="portrait"] .dialog .dist-arrow { display: none; }
+html[data-form="portrait"] .dialog .dist-source { flex-basis: 100%; width: auto; grid-template-columns: auto auto; justify-content: center; align-items: center; gap: 14px; }
+html[data-form="portrait"] .dialog .dist-source > :first-child { width: calc(var(--card-w) * var(--fit, 1) * .7); }
+html[data-form="portrait"] .dialog .dist-pile { min-width: 110px; }
 html[data-form="portrait"] .reveal-panel .cards .section:first-child:not(:has(~ .section)) { display: none; }
 /* When the player is asked who goes first, the dock can also answer, so the question stops above the dock */
 html[data-form="portrait"] #first-reveal.choosing { inset: 0 0 var(--dock-h, 45px) 0; }

@@ -105,9 +105,17 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 /* The cards are large enough to read, because the split depends on what each card is */
 html:not([data-form="portrait"]) .dialog .dist-row { --fit: 1.5; }
 .dialog .dist-left { display: flex; align-items: center; gap: 12px; margin-right: auto; color: var(--accent-2); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.dialog .dist-pips { display: flex; flex-wrap: wrap; gap: 4px; max-width: 124px; }
-.dialog .dist-pips i { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--line-bright); }
-.dialog .dist-pips i.on { background: var(--accent-2); border-color: var(--accent-2); }
+/* The card dealing the damage leads the row, and an arrow points from it to the targets. Under it is the amount still to assign, which each + takes from */
+.dialog .dist-source { pointer-events: none; }
+.dialog .dist-source > :first-child { pointer-events: auto; }
+.dialog .dist-arrow { align-self: center; flex: none; width: 56px; height: 24px; margin: 0 -8px; fill: none; stroke: var(--damage); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.dialog .dist-pile { margin: 0; min-width: 100%; box-sizing: border-box; display: grid; justify-items: center; gap: 2px; padding: 6px 10px 8px; border-radius: 12px; background: #0b0e14b3; border: 1px solid var(--line-bright); color: var(--muted); font-size: 12px; text-align: center; }
+.dialog .dist-pile b { font-size: 26px; line-height: 1; color: var(--damage); font-variant-numeric: tabular-nums; }
+.dialog .dist-pile.done { color: var(--accent-2); font-weight: 650; }
+.dialog .dist-pile.done::before { content: '✓'; font-size: 22px; line-height: 1; }
+/* Reset and Skip are quiet, so the answer stands out */
+.dialog:has(.dist-row) .actions button:not(.primary) { border-color: transparent; background: none; color: var(--muted); }
+.dialog:has(.dist-row) .actions button:not(.primary):hover { color: var(--text); }
 .dialog .dist-left.done { color: var(--muted); font-weight: 400; }
 /* Space under each card for a tab on its bottom edge, such as Blocking, above its steppers */
 .dialog .dist-target { width: calc(var(--card-w) * var(--fit, 1)); display: grid; justify-items: center; gap: 22px; }
@@ -284,6 +292,7 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 /* A picked card moves up and gets a thick ring and a mark. A focused card gets a dashed outline. */
 .pick-mark { display: none; }
 :is(.backdrop.on-board, .zone-panel.asking) .card.picked { translate: 0 -8px; box-shadow: 0 0 0 4px var(--pick), 0 0 24px color-mix(in srgb, var(--pick) 45%, transparent), 0 12px 30px #000d; }
+/* The mark reaches 19px above a picked card, which is lifted 8px. A row that scrolls clips what is outside it, so each such row keeps at least that much padding (board.css, portrait.css) */
 :is(.backdrop.on-board, .zone-panel.asking) .pick-mark { position: absolute; left: -11px; top: -11px; z-index: 7; width: 26px; height: 26px; box-sizing: border-box; display: grid; place-items: center; border-radius: 50%;
   background: var(--brass); border: 1px solid var(--accent); color: var(--on-brass); font: 900 15px/1 system-ui, sans-serif; box-shadow: 0 2px 6px #0009; pointer-events: none; }
 /* A zone card picked on the board loses the board's outlines, so the ring shows instead */
@@ -291,7 +300,7 @@ html:has(:is(.backdrop.on-board, .reveal-back.on-board):not([hidden])) :is(.back
 :is(.backdrop.on-board, .zone-panel.asking) .pick-mark::after { content: '\2713'; }
 .backdrop.on-board .card:focus-visible { outline: 2px dashed #ffffffd9; outline-offset: 5px; }
 /* Many cards scroll in place under the question, so the question and the buttons stay fixed. The bottom edge fades while more cards are below. */
-.backdrop.on-board .options:not(.ordered) { max-height: calc(100vh - 230px); overflow-y: auto; justify-content: center; gap: 14px; padding: 14px; scrollbar-width: thin; scrollbar-color: #ffffff4d #ffffff0d; }
+.backdrop.on-board .options:not(.ordered) { max-height: calc(100vh - 230px); overflow-y: auto; justify-content: center; gap: 14px; padding: 22px 14px 14px; scrollbar-width: thin; scrollbar-color: #ffffff4d #ffffff0d; }
 .backdrop.on-board .options.more { -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 60px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 60px), transparent); }
 /* On the board, a row of abilities shows each card large enough to recognise */
 .backdrop.on-board .listed .card { width: 54px; height: 76px; }

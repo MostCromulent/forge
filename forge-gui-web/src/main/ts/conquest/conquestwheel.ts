@@ -22,7 +22,17 @@ const ICONS: Record<WheelOutcome, string> = {
 /** The chaos symbol, shown on the dial's hub and on the chaos pack. */
 export const CHAOS_MARK = LINES.chaos;
 
-const SPIN_MS = 5600;
+const SPIN_MS = 4200;
+
+/** The dial's angle at x, from 0 to 1 through the spin. It pulls back a little, runs and slows, carries a few degrees past the spot and settles back, so it feels heavy. */
+function turned(x: number, to: number): number {
+  const WIND = .07, PULL = 7, PAST = 4, SETTLE = .1;
+  if (x < WIND) return PULL * Math.sin(x / WIND * Math.PI / 2);
+  const k = (x - WIND) / (1 - WIND);
+  if (k < 1 - SETTLE) return PULL + (to - PAST - PULL) * (1 - Math.pow(1 - k / (1 - SETTLE), 2.5));
+  const back = (k - (1 - SETTLE)) / SETTLE;
+  return to - PAST + PAST * (1 - Math.pow(1 - back, 2));
+}
 
 /** A spot that holds the outcome. Three spots hold a booster, so one of them is picked at random. */
 export function spotFor(outcome: string): number {
@@ -42,16 +52,26 @@ export function mountWheel(host: HTMLElement, labels: Record<WheelOutcome, strin
   const stops = WHEEL_SPOTS.map((o, i) => `${TONES[o]} ${i * 45}deg ${(i + 1) * 45}deg`).join(', ');
   host.innerHTML = `<div class="cq-dl">
     <div class="cq-dl-glow"></div><div class="cq-dl-rim"></div>
+    <div class="cq-dl-pegs">${WHEEL_SPOTS.map((_, i) => `<i style="rotate: ${45 * i + 22.5}deg"></i>`).join('')}</div>
     <div class="cq-dl-spin"><div class="cq-dl-disc" style="background: conic-gradient(from -22.5deg, ${stops})"></div>${
-      WHEEL_SPOTS.map((o, i) => `<div class="cq-dl-wedge${i > 2 && i < 6 ? ' low' : ''}" style="transform: rotate(${45 * i}deg)"><div class="cq-dl-ic">${ICONS[o]}</div><span></span></div>`).join('')
+      WHEEL_SPOTS.map((o, i) => `<div class="cq-dl-wedge" style="transform: rotate(${45 * i}deg)"><div class="cq-dl-face"><div class="cq-dl-ic">${ICONS[o]}</div><span></span></div></div>`).join('')
     }</div>
-    <div class="cq-dl-flare"></div><div class="cq-dl-hub">${LINES.chaos}</div><div class="cq-dl-needle"></div>
+    <div class="cq-dl-flare"></div><div class="cq-dl-hub">${LINES.chaos}</div><div class="cq-dl-wave"></div><div class="cq-dl-needle"></div>
   </div>`;
   const root = host.firstElementChild as HTMLElement;
   const spin = root.querySelector<HTMLElement>('.cq-dl-spin')!;
+  const needle = root.querySelector<HTMLElement>('.cq-dl-needle')!;
   root.querySelectorAll<HTMLElement>('.cq-dl-wedge span').forEach((span, i) => { span.textContent = labels[WHEEL_SPOTS[i]]; });
+  // A wedge on the lower half of the dial turns its icon and label over, so they read the right way up. Which half a wedge is on depends on the spot the dial stopped at
+  const upright = (spot: number) => root.querySelectorAll<HTMLElement>('.cq-dl-wedge').forEach((wedge, i) => {
+    const at = (i - spot + WHEEL_SPOTS.length) % WHEEL_SPOTS.length;
+    wedge.classList.toggle('low', at > 2 && at < 6);
+  });
+  upright(0);
   const show = (spot: number) => {
     spin.style.transform = `rotate(${-45 * spot}deg)`;
+    upright(spot);
+    root.querySelectorAll('.cq-dl-wedge').forEach((wedge, i) => wedge.classList.toggle('hit', i === spot));
     root.classList.add('done');
   };
   return {
@@ -62,9 +82,30 @@ export function mountWheel(host: HTMLElement, labels: Record<WheelOutcome, strin
         return;
       }
       root.classList.remove('done');
-      await spin.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${-45 * spot - 360 * 5}deg)` }],
-        { duration: SPIN_MS, easing: 'cubic-bezier(.16,.6,.1,1)', fill: 'forwards' }).finished;
-      root.classList.add('done');
+      root.classList.add('spinning');
+      const to = -45 * spot - 360 * 4;
+      const start = performance.now();
+      let peg = 0;
+      await new Promise<void>(stopped => {
+        const frame = (now: number) => {
+          const x = Math.min(1, (now - start) / SPIN_MS);
+          const angle = x < 1 ? turned(x, to) : to;
+          spin.style.transform = `rotate(${angle}deg)`;
+          // The needle drags on each peg that passes under it
+          const at = Math.floor((angle + 22.5) / 45);
+          if (at !== peg) {
+            peg = at;
+            needle.classList.remove('drag');
+            void needle.offsetWidth;
+            needle.classList.add('drag');
+          }
+          if (x < 1) requestAnimationFrame(frame);
+          else stopped();
+        };
+        requestAnimationFrame(frame);
+      });
+      root.classList.remove('spinning');
+      show(spot);
     },
   };
 }

@@ -243,7 +243,9 @@ function drawPrompt(model: Model, actions: Actions): void {
   if (strike) setButton(ok, { label: t('lblWebPromptNoAttack'), enabled: true });
   const cancelKey = q(root, '.buttons .cancel kbd');
   const strikeKey = shortcutName(shortcuts.SHORTCUT_ALPHASTRIKE ?? '');
-  cancelKey.textContent = strike ? strikeKey : 'Esc';
+  // When the button ends the turn it shows the end turn shortcut, which does the same. Escape still presses it
+  const endKey = p.endsTurn ? shortcutName(shortcuts.SHORTCUT_ENDTURN ?? '') : '';
+  cancelKey.textContent = strike ? strikeKey : endKey || 'Esc';
   cancelKey.hidden = strike && !strikeKey;
   if (attackers) {
     setButton(ok, { label: t('lblWebPromptAttackWith', attackers), enabled: true });

@@ -619,7 +619,7 @@ html:not([data-form="portrait"]) #zones.asking:not(.minimised) { padding-block: 
 .zone-ask { display: none; }
 .zone-panel.asking { width: auto; background: none; border-color: transparent; box-shadow: none; }
 /* The cards grow into the space the board leaves them (zones.ts fitZones), so the window is as wide as its rows */
-.zone-panel.asking .cards { display: flex; flex-wrap: wrap; justify-content: center; }
+.zone-panel.asking .cards { display: flex; flex-wrap: wrap; justify-content: center; padding-top: 22px; }
 #zones.asking .zone-shelf { max-height: calc(100vh - 72px); }
 .zone-panel.asking .zone-ask { display: block; margin: 0; padding: 0 18px 2px; font-size: 18px; font-weight: 700; text-align: center; text-wrap: balance; text-shadow: 0 2px 10px #000; }
 .zone-panel.asking header { justify-content: center; padding-top: 4px; border: 0; }

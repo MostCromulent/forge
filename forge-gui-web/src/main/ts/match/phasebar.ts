@@ -335,7 +335,8 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
   const left = opponents(model).filter(p => !p.HasLost);
   const other = players(model).find(p => p.HasPriority && !isLocal(model, p))
     ?? (turn ? (isLocal(model, turn) ? undefined : turn) : left.length === 1 ? left[0] : undefined);
-  const holder = onMe ? (people.length ? mine : undefined) : other;
+  // A finished game waits on nobody, though its board stays open to look at
+  const holder = model.gameOver ? undefined : onMe ? (people.length ? mine : undefined) : other;
   const chip = q(pill, '.waiting');
   chip.hidden = !holder;
   if (!holder) {

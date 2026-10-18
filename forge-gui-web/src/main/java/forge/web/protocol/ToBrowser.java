@@ -454,8 +454,9 @@ public final class ToBrowser {
     public enum StarterChoice { toss, lastGame }
 
     @Message("prompt")
+    /** endsTurn is true when the cancel button ends the turn, as the end turn shortcut does, and not when it undoes or declines. */
     public record Prompt(String message, boolean priority, @Nullable Ref card, PromptButton ok, PromptButton cancel,
-            boolean focusOk, boolean paying, List<Ref> selectable, int selectableMin, List<Ref> selectablePlayers,
+            boolean focusOk, boolean paying, boolean endsTurn, List<Ref> selectable, int selectableMin, List<Ref> selectablePlayers,
             List<Integer> selectableStack, List<Integer> highlighted, @Nullable StarterChoice starterChoice) {
     }
 

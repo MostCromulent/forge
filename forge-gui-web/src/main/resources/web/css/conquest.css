@@ -224,19 +224,42 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
 .cq-dl-disc::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(from -22.7deg, #c9a544aa 0 .4deg, transparent .4deg 45deg); }
 .cq-dl-disc::after { content: ''; position: absolute; inset: 0; border-radius: 50%;
   background: radial-gradient(circle at 32% 22%, #ffffff14 0, transparent 40%), radial-gradient(circle, transparent 0 27%, #c9a54433 27.4% 27.8%, transparent 28.2% 62%, #00000066 100%); }
-.cq-dl-wedge { position: absolute; left: 50%; top: 0; width: 34%; margin-left: -17%; height: 50%; transform-origin: 50% 100%; display: grid; justify-items: center; align-content: start; gap: 7px; padding-top: 8%;
-  font: 600 11px/1.1 Georgia, "Times New Roman", serif; letter-spacing: .14em; text-transform: uppercase; color: #dfe5ee; text-align: center; }
-.cq-dl-ic { height: 34px; display: flex; align-items: center; gap: 4px; color: #e6cf8e; }
-.cq-dl-ic svg { height: 30px; width: auto; }
-.cq-dl-ic img { height: 30px; width: 30px; }
-.cq-dl-hub { position: absolute; inset: 41%; border-radius: 50%; display: grid; place-items: center; color: #e6cf8e;
+/* Each wedge's icon and label scale with the dial and sit in from its edge, where the wedge is wide enough to hold them. A long label wraps */
+.cq-dl-wedge { position: absolute; left: 50%; top: 0; width: 34%; margin-left: -17%; height: 50%; transform-origin: 50% 100%; display: grid; justify-items: center; align-content: start; padding-top: calc(var(--d) * .075);
+  font: 600 calc(var(--d) * .025)/1.15 Georgia, "Times New Roman", serif; letter-spacing: .14em; text-transform: uppercase; color: #dfe5ee; text-align: center; transition: opacity .8s .15s; }
+.cq-dl-face { display: grid; justify-items: center; gap: calc(var(--d) * .014); }
+.cq-dl-face span { max-width: calc(var(--d) * .22); text-wrap: balance; }
+.cq-dl-ic { height: calc(var(--d) * .072); display: flex; align-items: center; gap: 3px; color: #e6cf8e; }
+.cq-dl-ic svg { height: calc(var(--d) * .062); width: auto; }
+.cq-dl-ic img { height: calc(var(--d) * .062); width: calc(var(--d) * .062); }
+.cq-dl-hub { position: absolute; inset: 41%; z-index: 2; border-radius: 50%; display: grid; place-items: center; color: #e6cf8e; transition: color 1s;
   background: radial-gradient(circle at 35% 28%, #2a3142, #0b0e14 70%); box-shadow: 0 0 0 1.5px #c9a544, 0 0 0 5px #0b0e14, 0 0 0 6px #6f5416, 0 8px 18px #000c; }
 .cq-dl-hub svg { width: 52%; height: 52%; stroke-width: 3; }
-.cq-dl-needle { position: absolute; left: 50%; top: -30px; width: 16px; height: 46px; margin-left: -8px; z-index: 4; clip-path: polygon(50% 100%, 0 18%, 50% 0, 100% 18%);
+/* Brass pegs on the rim at each wedge edge. The needle drags on each one as it passes, and the shadow deepens while the dial turns */
+.cq-dl-pegs { position: absolute; inset: -10px; border-radius: 50%; z-index: 3; pointer-events: none; }
+.cq-dl-pegs i { position: absolute; left: 50%; top: 0; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; transform-origin: 3.5px calc(var(--d) / 2 + 10px);
+  background: radial-gradient(circle at 35% 30%, var(--gold-hi), #8a6a1e); box-shadow: 0 1px 2px #000; }
+.cq-dl.spinning .cq-dl-rim { box-shadow: 0 0 0 1px #000, 0 34px 80px #000f; }
+.cq-dl-needle { position: absolute; left: 50%; top: -30px; width: 16px; height: 46px; margin-left: -8px; z-index: 4; transform-origin: 50% 8px; clip-path: polygon(50% 100%, 0 18%, 50% 0, 100% 18%);
   background: linear-gradient(90deg, #7a5a16, #fbe9bd 48%, #c9a544 60%, #5a4412); filter: drop-shadow(0 3px 4px #000c); }
-.cq-dl-flare { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .5s ease;
-  background: conic-gradient(from -22.5deg, #f0c05a3d 0 45deg, transparent 0); }
-.cq-dl.done .cq-dl-flare { opacity: 1; animation: cq-breathe 2.6s ease-in-out infinite; }
+.cq-dl-needle.drag { animation: cq-drag .22s cubic-bezier(.3,.6,.4,1); }
+@keyframes cq-drag { 35% { transform: rotate(-9deg); } }
+/* When the dial stops, a faint shimmer of aether rolls out from the hub to the rim. Then a violet light fills the wedge under the needle and stays, the hub's mark turns violet, and the other wedges fade */
+.cq-dl-wave { position: absolute; inset: -14%; z-index: 3; border-radius: 50%; pointer-events: none; opacity: 0; scale: .12; mix-blend-mode: screen;
+  background: radial-gradient(circle, transparent 60%, #9a85ff00 63%, #b8a8ff59 66%, #9a85ff00 69%, transparent 72%); filter: blur(1px); }
+.cq-dl.done .cq-dl-wave { animation: cq-wave 1.6s cubic-bezier(.25,.6,.3,1) forwards; }
+@keyframes cq-wave { 0% { opacity: 0; scale: .12; } 20% { opacity: .9; } 100% { opacity: 0; scale: 1.02; } }
+.cq-dl-flare { position: absolute; left: 50%; top: 0; width: 34%; margin-left: -17%; height: 50%; z-index: 1; pointer-events: none; opacity: 0; clip-path: polygon(50% 100%, 0 0, 100% 0);
+  background: radial-gradient(70% 95% at 50% 100%, #7a5cff70, #7a5cff1a 60%, transparent 85%); }
+.cq-dl.done .cq-dl-flare { animation: cq-vein 1.2s .25s ease-out forwards; }
+@keyframes cq-vein { 0% { opacity: 0; clip-path: polygon(50% 100%, 46% 80%, 54% 80%); } 50% { opacity: 1; } 100% { opacity: .9; clip-path: polygon(50% 100%, 0 0, 100% 0); } }
+.cq-dl.done .cq-dl-hub { color: #b8a8ff; }
+.cq-dl.done .cq-dl-wedge:not(.hit) { opacity: .5; }
+.cq-wheel-name { margin: -6px 0 0; min-height: 1.2em; font: 400 26px/1.2 Georgia, "Times New Roman", serif; letter-spacing: .22em; text-transform: uppercase; color: #e9e2ff; text-shadow: 0 0 22px #7a5cff77; }
+.cq-wheel-name:not(:empty) { animation: cq-name-in .9s .3s ease-out both; }
+@keyframes cq-name-in { from { opacity: 0; letter-spacing: .45em; } }
+html[data-motion="reduced"] :is(.cq-dl-needle.drag, .cq-dl.done .cq-dl-wave, .cq-wheel-name) { animation: none; }
+html[data-motion="reduced"] .cq-dl.done .cq-dl-flare { animation: none; opacity: .9; }
 
 /* A booster pack, shown over the slots its cards will fill */
 .cq-pack-stop { width: min(1080px, 100%); display: grid; justify-items: center; gap: 14px; }
@@ -509,6 +532,6 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-pref-table input { width: 72px; padding: 5px 8px; text-align: right; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
 .cq-pref-table td.bad input { border-color: var(--select); }
 
-/* A wedge on the lower half of the dial would show its icon and label upside down. So they are rotated to be the right way up. */
-.cq-dl-wedge.low > * { transform: rotate(180deg); }
+/* A wedge on the lower half of the dial would show its icon and label upside down. So its face is turned over as a whole, with the icon kept nearest the rim */
+.cq-dl-wedge.low .cq-dl-face { rotate: 180deg; }
 .cq-dl-wedge.low .cq-dl-ic { order: 2; }

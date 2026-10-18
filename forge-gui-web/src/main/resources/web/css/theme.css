@@ -46,6 +46,8 @@
   /* The colour for removing something permanently. It is a separate red because the amber above looks like the gold of a choice. */
   --remove: #e5383b;
   --error: #ef4a3c;
+  /* Damage still to deal, such as an attacker's damage to assign. A warm orange that is darker than the gold of a choice */
+  --damage: #ff7a59;
   /* The zone that a playable card is in. The colours come from the desktop zone banners. None of them is close to the castable cyan or the prompt's lime. */
   --zone-graveyard: #a98fe0;
   --zone-exile: #cfd6ea;

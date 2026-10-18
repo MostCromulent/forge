@@ -76,7 +76,7 @@ describe('behindItsBoard', () => {
 
 describe('asksPlayer', () => {
   const prompt = (over: Partial<Prompt>): Prompt => ({ t: 'prompt', message: '', priority: false, ok: { label: 'OK', enabled: false }, cancel: { label: 'Cancel', enabled: false },
-    focusOk: false, paying: false, selectable: [], selectablePlayers: [], selectableStack: [], selectableMin: 0, highlighted: [], ...over });
+    focusOk: false, paying: false, endsTurn: false, selectable: [], selectablePlayers: [], selectableStack: [], selectableMin: 0, highlighted: [], ...over });
   const stopPassing = prompt({ cancel: { label: 'Cancel', enabled: true } });
   it('takes Cancel as a question, except while the game passes for the player', () => {
     expect(asksPlayer(stopPassing)).toBe(true);

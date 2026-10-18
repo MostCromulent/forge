@@ -22,7 +22,7 @@ import type {
   ChoicesRequest, DistributeRequest, ManipulateRequest, NumberRequest, OptionRequest, OrderRequest, Request, RequestOption,
   CardView, PlayerView, SideboardRequest, StackItemView, TextRequest, TrackedObject, YieldAction,
 } from '../protocol';
-import { t } from '../text';
+import { t, tNodes } from '../text';
 import { make, reducedMotion } from '../dom';
 import { isPortrait } from '../form';
 import { cutFor } from './stickers';
@@ -1055,12 +1055,22 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
     return short <= 0 ? { text: t('lblLethal'), lethal: true } : { text: values[i] ? t('lblWebDialogShortOfLethal', short) : '' };
   };
   const row = useRef<HTMLDivElement>(null);
+  // The card dealing the damage, such as the attacker, leads the row with the amount still to assign under it
+  const source = req.card ? model.objects.get(req.card.ref) : undefined;
   // Under each card are its step buttons, and the lethal damage note if the question has lethal values
-  useCardFit(row, order.length, { gap: 26, below: req.lethal ? 88 : 62, wrap: true });
+  useCardFit(row, order.length + (source ? 1 : 0), { gap: 26, below: req.lethal ? 88 : 62, wrap: true });
+  const count = left ? tNodes('lblWebDialogLeftToAssign', <b>{left}</b>) : tNodes('lblWebDialogAllAssigned', req.amount);
   // The targets are side by side, each with its count under it, as cards are laid out on the table
   return (
     <>
       <div class="dist-row" ref={row}>
+        {source && <>
+          <div class="dist-target dist-source">
+            <BoardCard model={model} card={source} />
+            <p class={left ? 'dist-pile' : 'dist-pile done'}>{count}</p>
+          </div>
+          <svg class="dist-arrow" viewBox="0 0 70 24" aria-hidden="true"><path d="M2 12h60M52 4l10 8-10 8" /></svg>
+        </>}
         {order.map(i => (
           <div key={i} class="dist-target">
             <OptionView model={model} opt={req.options[i]} />
@@ -1074,11 +1084,9 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
         ))}
       </div>
       <ButtonRow>
+        {/* Reset is next to the count it resets, and away from the answer buttons. With a source card the count is under the card instead */}
         <span class={left ? 'dist-left' : 'dist-left done'}>
-          {/* One pip per point, filled when the point is assigned. Pips are shown only for small amounts that are easy to count */}
-          {req.amount <= 20 && <span class="dist-pips">{Array.from({ length: req.amount }, (_, k) => <i key={k} class={k < req.amount - left ? 'on' : ''} />)}</span>}
-          {left ? t('lblWebDialogLeftToAssign', left) : t('lblWebDialogAllAssigned', req.amount)}
-          {/* Reset is next to the count it resets, and away from the answer buttons */}
+          {!source && count}
           <Button onClick={() => setValues([...req.default])}>{t('lblReset')}</Button>
         </span>
         {req.maySkip && <Button onClick={() => answer(null)}>{t('lblSkip')}</Button>}
