@@ -41,8 +41,9 @@ public class GameEventForwarder implements Observer {
         this.gui = gui;
     }
 
+    // A host that ends a game from another thread fires the game's last events there, beside the game thread
     @Subscribe
-    public void receiveGameEvent(GameEvent ev) {
+    public synchronized void receiveGameEvent(GameEvent ev) {
         if (ev instanceof GameEventTurnEnded && somethingHappened) {
             flush();
         }
@@ -54,7 +55,7 @@ public class GameEventForwarder implements Observer {
         }
     }
 
-    public void flush() {
+    public synchronized void flush() {
         if (pendingEvents.isEmpty()) {
             return;
         }
@@ -64,10 +65,10 @@ public class GameEventForwarder implements Observer {
         gui.handleGameEvents(batch);
     }
 
-    public boolean hasPendingEvents() {
+    public synchronized boolean hasPendingEvents() {
         return !pendingEvents.isEmpty();
     }
-    public boolean hasPendingZoneChange(Object... args) {
+    public synchronized boolean hasPendingZoneChange(Object... args) {
         List<Integer> zoneChangers = pendingEvents.stream().filter(GameEventCardChangeZone.class::isInstance).map(ev -> ((GameEventCardChangeZone) ev).card().getId()).collect(Collectors.toList());
         if (zoneChangers.isEmpty()) {
             return false;

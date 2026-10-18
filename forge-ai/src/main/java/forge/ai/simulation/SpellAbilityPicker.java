@@ -345,27 +345,29 @@ public class SpellAbilityPicker {
         // Use a deterministic random seed when evaluating different choices of a spell ability.
         // This is needed as otherwise random effects may result in a different number of choices
         // each iteration, which will break the logic in SpellAbilityChoicesIterator.
-        Random origRandom = MyRandom.getRandom();
-        long randomSeedToUse = origRandom.nextLong();
+        long randomSeedToUse = MyRandom.getRandom().nextLong();
+        final Random outerRandom = MyRandom.setThreadRandom(new Random(randomSeedToUse));
 
         Score bestScore = new Score(Integer.MIN_VALUE);
         final SpellAbilityChoicesIterator choicesIterator = new SpellAbilityChoicesIterator(controller);
         Score lastScore;
-        do {
-            // TODO: MyRandom should be an instance on the game object, so that we could do
-            // simulations in parallel without messing up global state.
-            MyRandom.setRandom(new Random(randomSeedToUse));
-            GameSimulator simulator = new GameSimulator(controller, game, player, phase);
-            simulator.setInterceptor(choicesIterator);
-            // I feel like something here is making a wrong assumption about what the target is
-            lastScore = simulator.simulateSpellAbility(sa);
-            numSimulations++;
-            if (lastScore.value > bestScore.value) {
-                bestScore = lastScore;
-            }
-        } while (choicesIterator.advance(lastScore));
+        try {
+            do {
+                MyRandom.getRandom().setSeed(randomSeedToUse);
+                GameSimulator simulator = new GameSimulator(controller, game, player, phase);
+                simulator.setInterceptor(choicesIterator);
+                // I feel like something here is making a wrong assumption about what the target is
+                lastScore = simulator.simulateSpellAbility(sa);
+                numSimulations++;
+                if (lastScore.value > bestScore.value) {
+                    bestScore = lastScore;
+                }
+            } while (choicesIterator.advance(lastScore));
+        } finally {
+            // A timed-out simulation throws, and its seeded provider must not outlive it on this game's thread
+            MyRandom.setThreadRandom(outerRandom);
+        }
         controller.doneEvaluating(bestScore);
-        MyRandom.setRandom(origRandom);
         return bestScore;
     }
 

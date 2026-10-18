@@ -11,10 +11,11 @@ import io.netty.channel.ChannelHandlerContext;
 
 final class GameServerHandler extends GameProtocolHandler<IGameController> implements IHasForgeLog {
 
-    private final FServerManager server = FServerManager.getInstance();
+    private final FServerManager server;
 
-    GameServerHandler() {
+    GameServerHandler(final FServerManager server) {
         super(false);
+        this.server = server;
     }
 
     private RemoteClient getClient(final ChannelHandlerContext ctx) {

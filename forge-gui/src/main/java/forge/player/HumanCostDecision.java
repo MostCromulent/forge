@@ -19,7 +19,6 @@ import forge.game.zone.ZoneType;
 import forge.gamemodes.match.input.InputConfirm;
 import forge.gamemodes.match.input.InputSelectCardsFromList;
 import forge.gamemodes.match.input.InputSelectManyBase;
-import forge.gui.util.SGuiChoose;
 import forge.util.*;
 import forge.util.collect.FCollectionView;
 
@@ -841,7 +840,7 @@ public class HumanCostDecision extends CostDecisionMakerBase {
         }
 
         GameEntityViewMap<Player, PlayerView> gameCachePlayer = GameEntityView.getMap(payableZone);
-        PlayerView pv = SGuiChoose.oneOrNone(TextUtil.concatNoSpace(Localizer.getInstance().getMessage("lblPutCardsFromWhoseZone"), fromZone.getTranslatedName()), gameCachePlayer.getTrackableKeys());
+        PlayerView pv = controller.getGui().oneOrNone(TextUtil.concatNoSpace(Localizer.getInstance().getMessage("lblPutCardsFromWhoseZone"), fromZone.getTranslatedName()), gameCachePlayer.getTrackableKeys());
         if (pv == null || !gameCachePlayer.containsKey(pv)) {
             return null;
         }

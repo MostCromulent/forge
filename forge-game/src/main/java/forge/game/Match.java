@@ -78,6 +78,7 @@ public class Match {
     }
 
     public void startGame(final Game game, Runnable startGameHook) {
+        game.getUndoManager().countDrawsOnThisThread();
         prepareAllZones(game);
         if (rules.useAnte()) {  // Deciding which cards go to ante
             Multimap<Player, Card> list = game.chooseCardsForAnte(rules.getMatchAnteRarity(), rules.getAnteIncludeBasicLands());

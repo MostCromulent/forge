@@ -10,7 +10,6 @@ import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.GauntletMini;
 import forge.gamemodes.match.HostedMatch;
-import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
@@ -431,7 +430,7 @@ public final class OfflineLimited implements IHasForgeLog {
             final ServerGameLobby table = local.openAlone(session.playerName(), playing.gui());
             table.setLimitedType(gauntletType);
             final int seat = local.webSeat();
-            ui.playSolo(new WebGuiBase.SoloTable(() -> FServerManager.getInstance().getGui(seat), (match, rules, players, human, begin) -> {
+            ui.playSolo(new WebGuiBase.SoloTable(() -> local.server().getGui(seat), (match, rules, players, human, begin) -> {
                 dressRound(players, human);
                 begin.run();
                 table.adopt(match, Map.of(human, table.getSlot(seat)));

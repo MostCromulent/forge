@@ -56,7 +56,7 @@ public class NetConnectUtil {
     public static ChatMessage host(final IOnlineLobby onlineLobby, final IOnlineChatInterface chatInterface) {
         final int port = FModel.getNetPreferences().getPrefInt(ForgeNetPreferences.FNetPref.NET_PORT);
         final FServerManager server = FServerManager.getInstance();
-        final ServerGameLobby lobby = new ServerGameLobby();
+        final ServerGameLobby lobby = new ServerGameLobby(server);
         final ILobbyView view = onlineLobby.setLobby(lobby);
 
         NetworkLogConfig.activateNetworkLogging();

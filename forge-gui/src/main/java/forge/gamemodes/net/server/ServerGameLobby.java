@@ -31,6 +31,7 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
     /** Returned by {@link #startDraftEvent} with the info the UI needs for overlay/log setup. */
     public record DraftStartResult(String[] names, boolean[] aiFlags, int hostSeatIndex, int totalPacks) {}
 
+    private final FServerManager server;
     private BoosterDraftHost draftHost;
     private NetworkEvent currentEvent;
 
@@ -67,7 +68,9 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         updateView(true);
     }
 
-    public ServerGameLobby() {
+    /** The lobby of the given server. Several servers can run in one process, and each lobby talks to its own. */
+    public ServerGameLobby(final FServerManager server) {
+        this.server = server;
         final int[] avatarIndices = localAvatarIndices();
         final int[] sleeveIndices = localSleeveIndices();
 
@@ -120,7 +123,7 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
     public void removeSlot(final int index) {
         if (getSlot(index) != null) {
             // Before the lobby is sent out again, which tells each client the slot it holds
-            FServerManager.getInstance().slotRemoved(index);
+            server.slotRemoved(index);
         }
         super.removeSlot(index);
     }
@@ -148,7 +151,7 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
 
     @Override
     protected IGuiGame getGui(final int index) {
-        return FServerManager.getInstance().getGui(index);
+        return server.getGui(index);
     }
 
     @Override
@@ -164,8 +167,8 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
             }
         }
         super.onMatchOver();
-        FServerManager.getInstance().clearPlayerGuis();
-        FServerManager.getInstance().updateLobbyState();
+        server.clearPlayerGuis();
+        server.updateLobbyState();
     }
 
     /**
@@ -356,7 +359,7 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
                 podSize, humanSeats.size(), totalPacks,
                 event.getProductDescription(), event.getPickTimerSeconds());
 
-        draftHost = new BoosterDraftHost(draft, event);
+        draftHost = new BoosterDraftHost(draft, event, server);
         // Broadcast the fully-populated event (with participants and numRounds) so
         // clients can initialize their overlay with pod names before the first pack.
         event.setPhase(EventPhase.DRAFTING);
@@ -402,7 +405,6 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         }
 
         String eventId = event.getEventId();
-        FServerManager server = FServerManager.getInstance();
 
         for (EventParticipant participant : event.getParticipants()) {
             if (participant.isAI()) {

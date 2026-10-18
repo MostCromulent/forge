@@ -180,7 +180,7 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             logServerInstanceBanner("LocalAI", playerCount, port);
 
             // 2. Create lobby
-            lobby = new ServerGameLobby();
+            lobby = new ServerGameLobby(server);
             server.setLobby(lobby);
 
             // Add slots for multiplayer
@@ -272,7 +272,7 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             logServerInstanceBanner("RemoteNetwork", playerCount, port);
 
             // 2. Create lobby
-            lobby = new ServerGameLobby();
+            lobby = new ServerGameLobby(server);
             server.setLobby(lobby);
             setupLobbyListener();
 

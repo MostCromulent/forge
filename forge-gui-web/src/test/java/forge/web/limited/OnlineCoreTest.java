@@ -7,6 +7,7 @@ import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.EventFormat;
+import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.web.WebTestSupport;
 import org.testng.annotations.BeforeClass;
@@ -26,7 +27,7 @@ public class OnlineCoreTest {
     // Fails if configuring a sealed event from a built pool runs the prompting constructor. That constructor hangs until the time limit
     @Test(timeOut = 30_000)
     public void configureWithABuiltGenerator() {
-        final ServerGameLobby lobby = new ServerGameLobby();
+        final ServerGameLobby lobby = new ServerGameLobby(FServerManager.getInstance());
         lobby.createEvent(EventFormat.SEALED);
         final SealedCardPoolGenerator gen = SealedCardPoolGenerator.createFull(6);
         assertTrue(lobby.configureEvent(LimitedPoolType.Full, gen, 0, 0));
@@ -36,7 +37,7 @@ public class OnlineCoreTest {
     // Fails if startGame seats a slot that sits out. Two ready seats with one sitting out are too few to play
     @Test
     public void aSeatSittingOutIsNotSeated() {
-        final ServerGameLobby lobby = new ServerGameLobby();
+        final ServerGameLobby lobby = new ServerGameLobby(FServerManager.getInstance());
         final Deck deck = new Deck("Forests");
         deck.getMain().add(StaticData.instance().getCommonCards().getCard("Forest"), 40);
         for (int i = 0; i < 2; i++) {

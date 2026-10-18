@@ -9,7 +9,6 @@ import forge.StaticData;
 import forge.gamemodes.net.WebSocketBytes;
 import forge.gamemodes.net.WebSocketTunnel;
 import forge.gamemodes.net.server.FServerManager;
-import forge.gamemodes.net.server.HostingServer;
 import forge.gui.GuiBase;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
@@ -605,7 +604,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 // A netplay client is not a page and sends no origin to check. So a cookie must not let it in, and only its link's token does.
                 final Access access = netplay ? accessOf(param(q, "token")) : access(req, q);
                 // The token keeps other pages out. The origin check stops them from opening a socket with a stolen cookie.
-                if (access == Access.NONE || (socket && !sameOrigin(req)) || (netplay && !HostingServer.isHosting())) {
+                if (access == Access.NONE || (socket && !sameOrigin(req)) || (netplay && !FServerManager.getInstance().isRunning())) {
                     req.release();
                     respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain");
                     return;

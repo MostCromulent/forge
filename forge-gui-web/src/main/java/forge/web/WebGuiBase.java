@@ -23,6 +23,7 @@ import forge.util.ImageFetcher;
 import forge.web.images.Foil;
 import forge.web.images.WebDownloads;
 import forge.web.images.WebImageFetcher;
+import forge.web.match.TableWatchdog;
 import forge.web.protocol.ToBrowser.HostChoiceKind;
 import forge.web.protocol.ToBrowser.Notice;
 import forge.web.protocol.Wire;
@@ -89,11 +90,14 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     /** The host browser's table, where a match that a core game mode starts is played. seatGui is the server's GUI for the browser's seat. */
     public record SoloTable(Supplier<IGuiGame> seatGui, SoloStart start) { }
 
-    /** Set while a core game mode, such as the limited gauntlet, starts a match for the host's browser. */
-    private volatile SoloTable soloTable;
+    /**
+     * Set while a core game mode, such as the limited gauntlet, starts a match for a browser. It is kept per thread: another
+     * table can start its own match at the same time, and must not be handed this browser's table.
+     */
+    private final ThreadLocal<SoloTable> soloTable = new ThreadLocal<>();
 
     public void playSolo(final SoloTable table) {
-        soloTable = table;
+        soloTable.set(table);
     }
 
     /** A core game mode's match, moved to the browser's table so the browser plays it over its loopback connection. */
@@ -312,12 +316,21 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     }
 
     @Override public HostedMatch hostMatch() {
-        final SoloTable table = soloTable;
-        return table == null ? new HostedMatch() : new SoloMatch(table);
+        final SoloTable table = soloTable.get();
+        if (table != null) {
+            return new SoloMatch(table);
+        }
+        return new HostedMatch() {
+            @Override
+            public void startGame() {
+                super.startGame();
+                TableWatchdog.started(getGame());
+            }
+        };
     }
     /** The server's GUI for the browser's seat at the solo table. Outside a core game mode's match, each seat's WebSession builds its GUI. */
     @Override public IGuiGame getNewGuiGame() {
-        final SoloTable table = soloTable;
+        final SoloTable table = soloTable.get();
         if (table == null) {
             throw new UnsupportedOperationException("A web seat's GUI is built by WebSession");
         }

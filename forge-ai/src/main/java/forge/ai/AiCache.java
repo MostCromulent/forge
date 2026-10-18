@@ -24,7 +24,12 @@ public class AiCache {
     // for that you can pass Functions that compare the args
     public static <T> T getCached(String key, Supplier<T> func, List<BiFunction<Object, Object, Boolean>> argsCheck, Object... args) {
         // TODO would like a good strategy to derive default key, but there's no clean way to obtain the method name
-        for (List<Object> cached : Lists.newArrayList(dataMap.get(key))) {
+        final List<List<Object>> entries;
+        // A synchronized multimap's views are not, so the copy holds its lock
+        synchronized (dataMap) {
+            entries = Lists.newArrayList(dataMap.get(key));
+        }
+        for (List<Object> cached : entries) {
             boolean hit = true;
             for (int i = 0; i < args.length; i++) {
                 BiFunction<Object, Object, Boolean> checker = argsCheck == null ? Object::equals : argsCheck.get(i);

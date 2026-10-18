@@ -42,6 +42,7 @@ import forge.util.TextUtil;
 import org.apache.commons.lang3.Strings;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * <p>
@@ -52,16 +53,12 @@ import java.util.*;
  * @version $Id$
  */
 public abstract class Trigger extends TriggerReplacementBase {
-    private static int maxId = 0;
-    private static int nextId() { return ++maxId; }
+    private static final AtomicInteger maxId = new AtomicInteger();
+    private static int nextId() { return maxId.incrementAndGet(); }
 
-    /**
-     * <p>
-     * resetIDs.
-     * </p>
-     */
+    /** Raises the id counter to at least 50000. It never lowers it, because another game in this process may still hold the lower ids. */
     public static void resetIDs() {
-        Trigger.maxId = 50000;
+        maxId.accumulateAndGet(50000, Math::max);
     }
 
     /** The ID. */

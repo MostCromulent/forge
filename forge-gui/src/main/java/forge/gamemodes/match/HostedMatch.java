@@ -38,23 +38,28 @@ import forge.haptic.HapticEngine;
 import forge.sound.MusicPlaylist;
 import forge.sound.SoundSystem;
 import forge.trackable.TrackableCollection;
+import forge.util.IHasForgeLog;
 import forge.util.TextUtil;
 import forge.util.collect.FCollectionView;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-public class HostedMatch {
+public class HostedMatch implements IHasForgeLog {
     private Match match;
-    private Game game;
+    private volatile Game game;
+    /** Set when a host ended the running game from outside. Only then is an exception on the game's way out expected. */
+    private volatile boolean abandoned;
     private String title;
     private MusicPlaylist matchPlaylist = null;
     public HashMap<LobbySlot, IGameController> gameControllers = null;
     private Runnable startGameHook = null;
     private Runnable endGameHook = null;
     private Runnable onMatchOver = null;
-    private final List<PlayerControllerHuman> humanControllers = Lists.newArrayList();
+    // A host can end the game from another thread, which reads this list
+    private final List<PlayerControllerHuman> humanControllers = new CopyOnWriteArrayList<>();
     private Map<RegisteredPlayer, IGuiGame> guis;
     private int humanCount;
     private FControlGamePlayback playbackControl = null;
@@ -294,10 +299,14 @@ public class HostedMatch {
             try {
                 match.startGame(currentGame, startGameHook);
             } catch (final RuntimeException | Error ex) {
-                if (replay != null) {
-                    replay.abort();
+                // A game ended from outside releases its prompts with no answer, which can fail the game thread on its way out
+                if (!abandoned || !currentGame.isGameOver()) {
+                    if (replay != null) {
+                        replay.abort();
+                    }
+                    throw ex;
                 }
-                throw ex;
+                guiLog.warn(ex, "Game {} failed after it was ended", currentGame.getId());
             }
             // this function waits?
             if (endGameHook != null){
@@ -306,14 +315,7 @@ public class HostedMatch {
 
             // Flush any buffered game events to remote clients so they receive
             // GameEventGameOutcome and GameEventGameFinished before we proceed.
-            for (PlayerControllerHuman hc : humanControllers) {
-                if (hc.getGui() instanceof forge.gamemodes.net.ProtocolGuiGame ngg) {
-                    GameEventForwarder fwd = ngg.getForwarder();
-                    if (fwd != null) {
-                        fwd.flush();
-                    }
-                }
-            }
+            flushRemoteEvents();
 
             if (replay != null) {
                 replay.finish();
@@ -367,6 +369,41 @@ public class HostedMatch {
     public Game getGame() {
         return game;
     }
+
+    private void flushRemoteEvents() {
+        for (PlayerControllerHuman hc : humanControllers) {
+            if (hc.getGui() instanceof forge.gamemodes.net.ProtocolGuiGame ngg) {
+                GameEventForwarder fwd = ngg.getForwarder();
+                if (fwd != null) {
+                    fwd.flush();
+                }
+            }
+        }
+    }
+
+    /**
+     * Ends the game as a draw from any thread, if it is still this match's running game, and releases every human's prompt.
+     * Set threadStopped when the game's thread has died or is deadlocked: it never sends the game's last events, so they are
+     * sent from here. A running thread sends them itself, and sending them beside it would walk the views it is changing.
+     */
+    public boolean abandonGame(final Game expected, final boolean threadStopped) {
+        if (expected == null || game != expected || expected.isGameOver()) {
+            return false;
+        }
+        abandoned = true;
+        for (final Player p : expected.getPlayers()) {
+            p.intentionalDraw();
+        }
+        expected.setGameOver(GameEndReason.Draw);
+        if (threadStopped) {
+            flushRemoteEvents();
+        }
+        for (final PlayerControllerHuman human : humanControllers) {
+            human.getInputQueue().onGameOver(true);
+        }
+        return true;
+    }
+
     public Match getMatch() {
         return match;
     }
@@ -379,6 +416,7 @@ public class HostedMatch {
         boolean isMatchOver = game.getView().isMatchOver();
 
         game = null;
+        abandoned = false;
 
         for (final PlayerControllerHuman humanController : humanControllers) {
             if (humanController.getGui() instanceof forge.gamemodes.net.ProtocolGuiGame ngg) {

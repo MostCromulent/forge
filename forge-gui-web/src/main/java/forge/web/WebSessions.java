@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.net.event.MessageEvent;
 import forge.gamemodes.net.server.FServerManager;
-import forge.gamemodes.net.server.HostingServer;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
@@ -367,7 +366,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         }
         spread(new ChatLine(who, text, false));
         // Desktop and mobile players at the table read netplay's chat. Each browser at the table drops the copy from netplay, because it already got the line here.
-        if (HostingServer.isHosting()) {
+        if (FServerManager.getInstance().isRunning()) {
             FServerManager.getInstance().broadcast(new MessageEvent(who, text));
         }
     }

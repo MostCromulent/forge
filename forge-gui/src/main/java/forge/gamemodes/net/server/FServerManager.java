@@ -60,9 +60,8 @@ import java.io.InputStreamReader;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
@@ -137,7 +136,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
      */
     private void scheduleLoginDeadline(final ChannelHandlerContext ctx) {
         final int deadline = loginDeadlineSeconds();
-        afkExecutor.schedule(() -> {
+        final ScheduledFuture<?> check = afkExecutor.schedule(() -> {
             final RemoteClient client = clients.get(ctx.channel());
             if (client != null && !client.hasValidSlot()) {
                 netLog.warn("Closing {}: no login within {}s",
@@ -145,10 +144,16 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
                 ctx.close();
             }
         }, deadline, TimeUnit.SECONDS);
+        // The check holds the channel's pipeline, and with it everything the channel decoded, until it runs
+        ctx.channel().closeFuture().addListener(f -> check.cancel(false));
     }
 
-    /** The address of a server started by {@link #startLoopbackServer()}. Only a client in this process can connect to it. */
+    /** The address of the default server started by {@link #startLoopbackServer()}. Only a client in this process can connect to it. */
     public static final LocalAddress LOOPBACK = new LocalAddress("forge");
+
+    /** Where {@link #startLoopbackServer()} binds this server. Each server in the process has its own. */
+    private final LocalAddress loopbackAddress;
+    private volatile boolean running;
 
     private volatile boolean loopbackOnly;
     private final ChannelGroup adopted = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
@@ -162,7 +167,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
     private int port;
     private static final Localizer localizer = Localizer.getInstance();
     private final Thread shutdownHook = new Thread(() -> {
-        if (HostingServer.isHosting()) {
+        if (running) {
             stopServer(false);
         }
     });
@@ -171,7 +176,18 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
     private final forge.gamemodes.net.NetworkByteTracker byteTracker =
             FModel.getNetPreferences().getPrefBoolean(forge.localinstance.properties.ForgeNetPreferences.FNetPref.NET_BANDWIDTH_LOGGING) ? new forge.gamemodes.net.NetworkByteTracker() : null;
 
-    private FServerManager() {
+    /** A server beside the default one from {@link #getInstance()}, for clients in this process at the given address. */
+    public FServerManager(final LocalAddress loopbackAddress) {
+        this.loopbackAddress = loopbackAddress;
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    /** The address a client in this process connects to after {@link #startLoopbackServer()}. */
+    public LocalAddress loopbackAddress() {
+        return loopbackAddress;
     }
 
 
@@ -214,7 +230,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
      */
     public static FServerManager getInstance() {
         if (instance == null) {
-            instance = new FServerManager();
+            instance = new FServerManager(LOOPBACK);
         }
         return instance;
     }
@@ -240,9 +256,9 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         bind(new InetSocketAddress(port), startUPnP);
     }
 
-    /** Starts a server at {@link #LOOPBACK} with no socket, no UPnP and no AFK timeout. Its clients are in this process or come through {@link #adopt}. */
+    /** Starts a server at its loopback address with no socket, no UPnP and no AFK timeout. Its clients are in this process or come through {@link #adopt}. */
     public void startLoopbackServer() {
-        bind(LOOPBACK, false);
+        bind(loopbackAddress, false);
     }
 
     /**
@@ -266,7 +282,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
                 new SaturationLoggingHandler(),
                 new RegisterClientHandler(),
                 new DeregisterClientHandler(),
-                new GameServerHandler());
+                new GameServerHandler(this));
     }
 
     private void bind(final SocketAddress address, final boolean startUPnP) {
@@ -305,7 +321,8 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
                 mapNatPort();
             }
             Runtime.getRuntime().addShutdownHook(shutdownHook);
-            HostingServer.set(this);
+            running = true;
+            HostingServer.add(this);
         } catch (final InterruptedException e) {
             netLog.error(e, "Server start interrupted");
         }
@@ -339,9 +356,10 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
     }
     private synchronized void stopServer(final boolean removeShutdownHook) {
         // The shutdown hook and the channel-close thread both stop the server; only the first does the work
-        if (!HostingServer.isHosting()) {
+        if (!running) {
             return;
         }
+        running = false;
         forgetDisconnectedClients();
         clients.clear();
         afkSlots.clear();
@@ -369,8 +387,11 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         if (removeShutdownHook) {
             Runtime.getRuntime().removeShutdownHook(shutdownHook);
         }
-        HostingServer.set(null);
-        NetworkLogConfig.deactivateNetworkLogging();
+        HostingServer.remove(this);
+        // Another server in this process may still write to the network log
+        if (!HostingServer.isHosting()) {
+            NetworkLogConfig.deactivateNetworkLogging();
+        }
     }
 
     public int getTotalSendErrors() {
@@ -412,12 +433,15 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
     }
 
     // Warnings must be one-shot — never use scheduleAtFixedRate here
-    private static final ScheduledExecutorService afkExecutor =
-            Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "AFK-Timeout");
-                t.setDaemon(true);
-                return t;
-            });
+    private static final ScheduledThreadPoolExecutor afkExecutor = new ScheduledThreadPoolExecutor(1, r -> {
+        Thread t = new Thread(r, "AFK-Timeout");
+        t.setDaemon(true);
+        return t;
+    });
+    static {
+        // A cancelled timeout would otherwise stay queued, holding its game, until its delay ran out
+        afkExecutor.setRemoveOnCancelPolicy(true);
+    }
 
     private static final long AFK_REPEAT_TIMEOUT_MS = 10_000L;
     private static final long AFK_WARNING_LEAD_MS = 30_000L;
@@ -434,7 +458,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
      */
     @Override
     public AfkTimeout armAfkTimeout(final PlayerControllerHuman controller, final InputSynchronized input) {
-        if (!HostingServer.isHosting() || localLobby == null || loopbackOnly) {
+        if (!running || localLobby == null || loopbackOnly) {
             return AfkTimeout.NOOP;
         }
         final HostedMatch hostedMatch = localLobby.getHostedMatch();
@@ -952,6 +976,19 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         localLobby.disconnectPlayer(client.getIndex());
 
         broadcast(MessageEvent.warning(String.format("%s did not reconnect in time. AI has taken over.", username)));
+    }
+
+    /**
+     * Ends the game as a draw if it is still the running game of this server's match, and releases every seat that waits on
+     * its client's reply. See {@link HostedMatch#abandonGame}.
+     */
+    public void abandonGame(final HostedMatch hostedMatch, final Game game, final boolean threadStopped) {
+        // The game is over before any reply is cancelled, so a released seat finds it over instead of playing on
+        if (hostedMatch.abandonGame(game, threadStopped)) {
+            for (final RemoteClient client : clients.values()) {
+                client.getReplyPool().cancelAll();
+            }
+        }
     }
 
     /**

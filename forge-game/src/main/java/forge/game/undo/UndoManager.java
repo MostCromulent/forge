@@ -9,6 +9,7 @@ import forge.util.MyRandom;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.concurrent.atomic.AtomicLong;
 
 public final class UndoManager {
     private final GameMemento.Recorder recorder = new GameMemento.Recorder();
@@ -23,7 +24,9 @@ public final class UndoManager {
     private record Entry(GameMemento memento, int logSize) {}
 
     private final Deque<Entry> stack = new ArrayDeque<>();   // newest first
-    private long randomMark = MyRandom.callCount();
+    /** This game's random draws. Games on other threads draw too, so a process-wide count would bar undo in every game. */
+    private final AtomicLong draws = new AtomicLong();
+    private long randomMark;
     private boolean justRestored;
     private volatile boolean requested;
     private String barrierReason;
@@ -33,6 +36,9 @@ public final class UndoManager {
     private int undosLeft = UNDOS_PER_PHASE;
     private long budgetPhase = -1;
     public synchronized Mode mode() { return mode; }
+
+    /** Counts the calling thread's random draws, and its helper threads', as this game's. The game's own thread calls it as the game starts. */
+    public void countDrawsOnThisThread() { MyRandom.countDrawsIn(draws); }
 
     /** Game thread; safe to call every prompt. Turning undo off drops the history. */
     public synchronized void setMode(Mode m) {
@@ -59,7 +65,7 @@ public final class UndoManager {
             }
             owner = who;
             if (justRestored) { justRestored = false; return; }
-            long r = MyRandom.callCount();
+            long r = draws.get();
             if (r != randomMark) { barrier("randomness used"); randomMark = r; }
             var ph = game.getPhaseHandler();
             long phaseKey = ph.getTurn() * 100L + (ph.getPhase() == null ? 0 : ph.getPhase().ordinal());
@@ -110,7 +116,7 @@ public final class UndoManager {
         if (!target.memento().problems.isEmpty()) System.err.println("Undo problems: " + target.memento().problems);
         refreshViews(game);
         game.fireEvent(new GameEventSnapshotRestored(false));
-        randomMark = MyRandom.callCount();
+        randomMark = draws.get();
         justRestored = true;
         return true;
     }

@@ -3,7 +3,6 @@ package forge.web.match;
 import com.google.common.primitives.Ints;
 import forge.deck.Deck;
 import forge.game.Game;
-import forge.game.GameEndReason;
 import forge.game.GameType;
 import forge.game.player.Player;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
@@ -17,7 +16,6 @@ import forge.gamemodes.net.client.FGameClient;
 import forge.gamemodes.net.event.NetEvent;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.FServerManager;
-import forge.gamemodes.net.server.HostingServer;
 import forge.gamemodes.net.server.RemoteClient;
 import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gamemodes.net.server.ServerGameLobby;
@@ -28,14 +26,16 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.player.PlayerControllerHuman;
 import forge.util.IHasForgeLog;
+import forge.util.ThreadUtil;
 import forge.util.Localizer;
 import forge.web.lobby.Lobby;
+import io.netty.channel.local.LocalAddress;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
 
@@ -47,7 +47,8 @@ public final class LocalGame implements IHasForgeLog {
     /** More seats than any table has, so the check covers every connection a table can hold. */
     private static final int MOST_SEATS = 16;
 
-    private final FServerManager server = FServerManager.getInstance();
+    private static final AtomicInteger NEXT_TABLE = new AtomicInteger();
+    private final FServerManager server;
     // Set on the UI thread or a joining task. Read from the web server's threads and the netplay client's threads
     /** The lobby this session owns, or null when another browser is hosting the game. */
     private volatile ServerGameLobby hosted;
@@ -56,6 +57,26 @@ public final class LocalGame implements IHasForgeLog {
     private volatile ClientGameLobby joined;
     private volatile FGameClient client;
     private volatile int webSeat = -1;
+
+    public LocalGame() {
+        this(FServerManager.getInstance());
+    }
+
+    /** A seat on the given server. */
+    public LocalGame(final FServerManager server) {
+        this.server = server;
+    }
+
+    /** A seat at a table of its own, beside the default one. */
+    public static LocalGame atNewTable() {
+        return new LocalGame(new FServerManager(new LocalAddress("forge-table-" + NEXT_TABLE.incrementAndGet())));
+    }
+
+    /** The server this seat's table plays on. */
+    public FServerManager server() {
+        return server;
+    }
+
     /** Receives the draft and pool events the host sends this seat. Set before a table is opened or joined. */
     private volatile IDraftEventHandler draftHandler;
 
@@ -98,10 +119,11 @@ public final class LocalGame implements IHasForgeLog {
         endMatch();
         awaitOldSeatsFreed();
         // The server costs nothing to leave running, so it stays up between games
-        if (!HostingServer.isHosting()) {
+        if (!server.isRunning()) {
             NetworkLogConfig.activateNetworkLogging();
             server.startLoopbackServer();
             startedServer = true;
+            TableWatchdog.watch(this);
         }
         openHosted(playerName, gui, onUpdate, onChat);
         // The browser took the first open seat. The host fills the other seats
@@ -119,7 +141,7 @@ public final class LocalGame implements IHasForgeLog {
 
     private void openHosted(final String playerName, final WebGuiGame gui, final Runnable onUpdate,
             final BiConsumer<String, String> onChat) {
-        hosted = new ServerGameLobby();
+        hosted = new ServerGameLobby(server);
         server.setLobby(hosted);
         // Slot 0 starts as the host's local seat. The browser plays through a client, so the slot is set to open
         hosted.getSlot(0).setType(LobbySlotType.OPEN);
@@ -137,7 +159,7 @@ public final class LocalGame implements IHasForgeLog {
 
     /** Waits for the last table's connections to close. A seat that closes late is freed in whichever lobby is current at that time. */
     private void awaitOldSeatsFreed() {
-        if (!HostingServer.isHosting()) {
+        if (!server.isRunning()) {
             return;
         }
         final long giveUp = System.currentTimeMillis() + FREE_SEATS_TIMEOUT_MILLIS;
@@ -178,7 +200,7 @@ public final class LocalGame implements IHasForgeLog {
         // AbstractGuiGame.getDeckForPlayer reads the client lobby
         gui.setClientLobby(joined);
         final CountDownLatch ready = new CountDownLatch(1);
-        client = new FGameClient(playerName, gui, FServerManager.LOOPBACK);
+        client = new FGameClient(playerName, gui, server.loopbackAddress());
         client.setDispatchExecutor(gui.dispatchExecutor());
         client.setDraftHandler(draftHandler);
         client.addLobbyListener(new ClientListener(joined, ready, onChat, onClosed, seat -> {
@@ -348,7 +370,7 @@ public final class LocalGame implements IHasForgeLog {
         }
         // Late disconnects go to an empty lobby. Otherwise this table's seats would be held for a reconnect at the next table
         if (hosted != null) {
-            server.setLobby(new ServerGameLobby());
+            server.setLobby(new ServerGameLobby(server));
         }
         if (client != null) {
             client.close();
@@ -366,27 +388,29 @@ public final class LocalGame implements IHasForgeLog {
     /** Ends a game that is still running at a closing table. Otherwise its thread would wait forever for players who have left. */
     private void abandonGame() {
         final HostedMatch match = hostedMatch();
-        final Game game = match == null ? null : match.getGame();
-        if (game == null || game.isGameOver()) {
-            return;
+        if (match != null) {
+            abandonGame(match, match.getGame(), false);
         }
-        // Ending the game clears the players' controllers, so the humans are found first
-        final List<PlayerControllerHuman> humans = new ArrayList<>();
-        for (final Player p : game.getRegisteredPlayers()) {
-            if (p.getController() instanceof PlayerControllerHuman human) {
-                humans.add(human);
-            }
+    }
+
+    /** Ends the game if it is still this table's running game. The watchdog calls it. */
+    void abandonGame(final Game game, final boolean threadStopped) {
+        final HostedMatch match = hostedMatch();
+        if (match != null) {
+            abandonGame(match, game, threadStopped);
         }
-        game.getAction().invoke(() -> {
-            game.setGameOver(GameEndReason.Draw);
-            for (final PlayerControllerHuman human : humans) {
-                human.getInputQueue().onGameOver(true);
-            }
-        });
+    }
+
+    // Ending a game waits for its lock, so it runs off the caller's thread, which is often the WebUI thread every table shares
+    private void abandonGame(final HostedMatch match, final Game game, final boolean threadStopped) {
+        if (game != null && !game.isGameOver()) {
+            ThreadUtil.invokeInGameThread(() -> server.abandonGame(match, game, threadStopped));
+        }
     }
 
     /** Leaves the seat permanently. Only the host stops the server, because only the host started it. */
     public void shutdown() {
+        TableWatchdog.forget(this);
         endMatch();
         if (startedServer) {
             server.stopServer();

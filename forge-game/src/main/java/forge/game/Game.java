@@ -57,6 +57,7 @@ import org.tinylog.TaggedLogger;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Represents the state of a <i>single game</i>, a new instance is created for each game.
@@ -65,8 +66,8 @@ public class Game {
 
     private static final TaggedLogger netLog = Logger.tag("NETWORK");
 
-    private static int maxId = 0;
-    private static int nextId() { return ++maxId; }
+    private static final AtomicInteger maxId = new AtomicInteger();
+    private static int nextId() { return maxId.incrementAndGet(); }
 
     private boolean noGUIUser;
 
@@ -137,7 +138,8 @@ public class Game {
     private long timestamp = 0;
     public final GameAction action;
     private final Match match;
-    private GameStage age = GameStage.BeforeMulligan;
+    // Read without the game's lock, which a thread ending the game holds while it fires the game's last events
+    private volatile GameStage age = GameStage.BeforeMulligan;
     private GameOutcome outcome;
     private DrawOffer drawOffer;
 
@@ -575,7 +577,7 @@ public class Game {
         return maingame;
     }
 
-    public synchronized boolean isGameOver() {
+    public boolean isGameOver() {
         return age == GameStage.GameOver;
     }
 

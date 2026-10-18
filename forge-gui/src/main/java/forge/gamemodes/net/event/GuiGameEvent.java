@@ -2,9 +2,11 @@ package forge.gamemodes.net.event;
 
 import forge.gamemodes.net.ProtocolMethod;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public final class GuiGameEvent implements IdentifiableNetEvent {
     private static final long serialVersionUID = 6223690008522514574L;
-    private static int staticId = 0;
+    private static final AtomicInteger staticId = new AtomicInteger();
 
     private final int id;
     private final ProtocolMethod method;
@@ -12,7 +14,7 @@ public final class GuiGameEvent implements IdentifiableNetEvent {
     private boolean replaceTrackables = true;
 
     public GuiGameEvent(final ProtocolMethod method, final Object ... objects) {
-        this.id = staticId++;
+        this.id = staticId.getAndIncrement();
         this.method = method;
         this.objects = objects == null ? new Object[0] : objects;
     }

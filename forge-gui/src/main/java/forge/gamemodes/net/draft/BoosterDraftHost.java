@@ -52,6 +52,7 @@ public final class BoosterDraftHost implements IHasForgeLog {
     private enum SeatConnectionState { LIVE, IN_GRACE, POST_GRACE_AUTO }
 
     private final BoosterDraft draft;
+    private final FServerManager server;
     private final NetworkEvent event;
     private final List<EventParticipant> participants;
     private int currentPackNumber;  // 1-based round number — used to decide pass direction
@@ -79,8 +80,9 @@ public final class BoosterDraftHost implements IHasForgeLog {
         return t;
     });
 
-    public BoosterDraftHost(BoosterDraft draft, NetworkEvent event) {
+    public BoosterDraftHost(BoosterDraft draft, NetworkEvent event, FServerManager server) {
         this.draft = draft;
+        this.server = server;
         this.event = event;
         // Snapshot participants so a lobby-side repopulate after draft start
         // can't corrupt the host's running pod.
@@ -311,13 +313,13 @@ public final class BoosterDraftHost implements IHasForgeLog {
         int timerSecs = event.getPickTimerSeconds();
         int slot = participant.getLobbySlotIndex();
 
-        dispatches.add(() -> FServerManager.getInstance().sendToSlot(slot,
+        dispatches.add(() -> server.sendToSlot(slot,
                 new DraftPackArrivedEvent(seatIndex, packCards, packNum, pickNum, timerSecs)));
     }
 
     private void addBroadcastSeatPicked(List<Runnable> dispatches, int seatIndex) {
         int[] queueDepths = computeQueueDepths();
-        dispatches.add(() -> FServerManager.getInstance().broadcast(
+        dispatches.add(() -> server.broadcast(
                 new DraftSeatPickedEvent(seatIndex, queueDepths)));
     }
 
@@ -357,7 +359,7 @@ public final class BoosterDraftHost implements IHasForgeLog {
             Deck pool = new Deck(player.getDeck(), NetworkEvent.poolNameFor(event));
             NetworkEvent.setEventTags(pool, event);
             int slot = participant.getLobbySlotIndex();
-            dispatches.add(() -> FServerManager.getInstance().sendToSlot(slot,
+            dispatches.add(() -> server.sendToSlot(slot,
                     new ReceiveEventPoolEvent(eventId, pool)));
         }
     }
@@ -482,14 +484,14 @@ public final class BoosterDraftHost implements IHasForgeLog {
                 ? String.format("%s disconnected from draft — %ds to reconnect before auto-picking starts.",
                         name, graceSeconds)
                 : String.format("%s disconnected from draft — auto-picking remaining packs.", name);
-        dispatches.add(() -> FServerManager.getInstance().broadcast(new MessageEvent(msg)));
+        dispatches.add(() -> server.broadcast(new MessageEvent(msg)));
     }
 
     private void addBroadcastReconnect(List<Runnable> dispatches, int seatIndex) {
         EventParticipant participant = EventParticipant.findBySeat(participants, seatIndex);
         if (participant == null) return;
         String name = participant.getName();
-        dispatches.add(() -> FServerManager.getInstance().broadcast(new MessageEvent(
+        dispatches.add(() -> server.broadcast(new MessageEvent(
                 String.format("%s reconnected — picking live again.", name))));
     }
 
@@ -497,7 +499,7 @@ public final class BoosterDraftHost implements IHasForgeLog {
         EventParticipant participant = EventParticipant.findBySeat(participants, seatIndex);
         if (participant == null) return;
         String name = participant.getName();
-        dispatches.add(() -> FServerManager.getInstance().broadcast(new MessageEvent(
+        dispatches.add(() -> server.broadcast(new MessageEvent(
                 String.format("%s grace period expired — auto-picking remaining packs.", name))));
     }
 
@@ -536,7 +538,7 @@ public final class BoosterDraftHost implements IHasForgeLog {
         int slot = participant.getLobbySlotIndex();
         int packNumber = currentPackNumber;
         int pickInPack = computePickInPack(picksMadePerSeat[seatIndex]);
-        dispatches.add(() -> FServerManager.getInstance().sendToSlot(slot,
+        dispatches.add(() -> server.sendToSlot(slot,
                 new DraftAutoPickedEvent(seatIndex, card, packNumber, pickInPack)));
     }
 
