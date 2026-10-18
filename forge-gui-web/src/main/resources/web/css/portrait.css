@@ -11,7 +11,7 @@ html[data-form="portrait"], html[data-form="portrait"] body { overscroll-behavio
   #hand .card:hover::after { content: none; }
   #hand .card:is(:has(~ .card:hover), :hover ~ .card, :has(+ .card:hover), :hover + .card) { --shift: 0px; }
   #hand .card:hover :is(.cost-badge, .seen) { transform: none; }
-  #prompt kbd { display: none; }
+  :is(#prompt, .first-answers) kbd { display: none; }
 }
 
 /* One column: the opponent, the phase strip, you, your hand, and the prompt as a dock along the bottom edge */
@@ -496,8 +496,20 @@ html[data-form="portrait"] .dialog .dist-source { flex-basis: 100%; width: auto;
 html[data-form="portrait"] .dialog .dist-source > :first-child { width: calc(var(--card-w) * var(--fit, 1) * .7); }
 html[data-form="portrait"] .dialog .dist-pile { min-width: 110px; }
 html[data-form="portrait"] .reveal-panel .cards .section:first-child:not(:has(~ .section)) { display: none; }
-/* When the player is asked who goes first, the dock can also answer, so the question stops above the dock */
-html[data-form="portrait"] #first-reveal.choosing { inset: 0 0 var(--dock-h, 45px) 0; }
+/* The toss and the question of who goes first stop above the dock, which keeps the prompt's message */
+html[data-form="portrait"] #coin-toss { inset: 0 0 var(--dock-h, 45px) 0; }
+html[data-form="portrait"] #coin-toss .coin-scene { width: 150px; height: 150px; }
+html[data-form="portrait"] #coin-toss.asking .coin-scene { scale: .4; margin: -45px 0; }
+html[data-form="portrait"] #coin-toss h3 { font-size: 22px; }
+html[data-form="portrait"] #coin-toss .first-answers button { width: 132px; min-height: 46px; }
+html[data-form="portrait"] #coin-toss .first-seats { gap: 12px; }
+html[data-form="portrait"] #coin-toss .first-seat .reveal-avatar { width: 52px; height: 52px; }
+html[data-form="portrait"] #coin-toss .reveal-name { font-size: 12px; }
+html[data-form="portrait"] #coin-toss p { font-size: 17px; }
+html[data-form="portrait"] #first-reveal .reveal-faces { gap: 12px; }
+html[data-form="portrait"] #first-reveal .reveal-avatar { width: 52px; height: 52px; font-size: 22px; }
+html[data-form="portrait"] #first-reveal .reveal-name { font-size: 12px; }
+html[data-form="portrait"] #first-reveal p { font-size: 22px; }
 
 /* The deck editor's head is one line: the deck's name, its save state, Undo, the menu and Done */
 html[data-form="portrait"] #editor .editor-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 6px; padding: 6px 10px; }

@@ -13,6 +13,7 @@ import { byId, q } from '../dom';
 import type { CardView, PlayerView, StackItemView, ZoneType } from '../protocol';
 import { t } from '../text';
 import { frameColour, manaValue } from './rules';
+import { starterShowing } from './starter';
 
 
 // Sorts by colour as Arena does. Each single colour comes in WUBRG order, then multicoloured, colourless, and lands last
@@ -88,8 +89,9 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
   const portrait = isPortrait();
   const asked = model.prompt;
   // A prompt answered with cards from the hand, such as a discard, needs them large enough to read and tap
-  // Before the first turn, the player keeps or mulligans the new hand and puts cards back from it. So the hand is shown while they answer
-  const dealt = !game(model)?.Turn && held.length > 0 && !!asked && (asked.ok.enabled || asked.cancel.enabled);
+  // Before the first turn, the player keeps or mulligans the new hand and puts cards back from it. So the hand is shown while they answer,
+  // once who goes first has been shown
+  const dealt = !game(model)?.Turn && held.length > 0 && !!asked && (asked.ok.enabled || asked.cancel.enabled) && !starterShowing();
   const fromHand = portrait && !!asked && (dealt || (!asked.priority && !asked.paying && asked.selectableMin > 0
     && asked.selectable.some(r => held.some(c => c.$key === r.ref))));
   if (fromHand) {

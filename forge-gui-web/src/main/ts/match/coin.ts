@@ -19,7 +19,8 @@ export function readyCoin(): void {
   for (const side of ['heads', 'tails']) new Image().src = `coin?side=${side}`;
 }
 
-/** Tosses the coin and calls `then` when it is removed. The coin lands heads if the player won the toss. A click removes it early. */
+/** Tosses the coin and calls `then` when it has rested. The coin lands heads if the player won the toss. A click ends the toss early.
+ *  The loser's coin is then removed. The winner's coin stays where it rests, because the question of who goes first opens under it (starter.ts). */
 export function tossCoin(heads: boolean, caption: string, then: () => void): void {
   if (reducedMotion()) return;
   inAir = true;
@@ -36,13 +37,24 @@ export function tossCoin(heads: boolean, caption: string, then: () => void): voi
   const end = () => {
     if (!inAir) return;
     inAir = false;
-    leave(root);
+    if (heads) {
+      // A coin clicked down early is put where it would have rested
+      pose(FLIGHT_S + REST_S);
+      root.classList.add('rested');
+    } else {
+      leave(root);
+    }
     then();
   };
   root.onclick = end;
   const frame = (now: number) => {
     if (!inAir) return;
     const s = (now - start) / 1000;
+    pose(s);
+    if (s - FLIGHT_S >= REST_S) end();
+    else requestAnimationFrame(frame);
+  };
+  const pose = (s: number) => {
     const t = Math.min(1, s / FLIGHT_S);
     const rested = Math.max(0, s - FLIGHT_S);
     const spun = 1 - (1 - t) ** 3;
@@ -60,8 +72,11 @@ export function tossCoin(heads: boolean, caption: string, then: () => void): voi
     shadow.style.scale = String(1 - lift / 520);
     shadow.style.opacity = String(.5 - lift / 700);
     root.classList.toggle('landed', t === 1);
-    if (rested >= REST_S) end();
-    else requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
+}
+
+/** Removes a winner's coin that no question of who goes first opened under. */
+export function dropCoin(): void {
+  leave(document.querySelector('#coin-toss.rested:not(.asking)'));
 }

@@ -775,17 +775,16 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
   }, phone);
 }
 
-probe('the question of who goes first leaves the dock, which can also answer it, within reach', async p => {
+probe('the question of who goes first stops above the dock, which keeps the prompt\'s message', async p => {
   await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
   await p.page.evaluate(() => {
-    // The game's own who-goes-first reveal may still be shown. Replace it with the choosing form of the reveal
-    document.getElementById('first-reveal')?.remove();
-    const ask = Object.assign(document.createElement('div'), { id: 'first-reveal', className: 'choosing' });
+    // The game's own toss may still be shown. Replace it with the asking form of the toss
+    document.getElementById('coin-toss')?.remove();
+    const ask = Object.assign(document.createElement('div'), { id: 'coin-toss', className: 'rested landed asking' });
     document.getElementById('match')!.append(ask);
   });
-  const ask = await box(p.page, '#first-reveal');
+  const ask = await box(p.page, '#coin-toss');
   expect(ask.y + ask.height).toBeLessThanOrEqual((await box(p.page, '#prompt')).y + 1);
-  await p.page.locator('#prompt .ok').tap({ trial: true, timeout: 3000 });
 }, PHONE);
 
 probe('a start tile\'s icon stands clear of its name', async p => {

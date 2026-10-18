@@ -1146,44 +1146,62 @@ body.dragging-block #zoom { display: none; }
 
 /* The coin toss for a match's first game uses mobile's coin, shown alone over the board. It comes before who goes first is asked or shown (coin.ts). */
 #coin-toss { position: fixed; inset: 0 calc(var(--side-w) + 16px) 0 0; z-index: 70; display: grid; place-content: center; justify-items: center; gap: 36px;
-  background: radial-gradient(closest-side, #070910d9, #07091000); animation: backdrop-in .25s ease-out; cursor: pointer; }
+  background: radial-gradient(closest-side, #070910d9, #07091000); animation: backdrop-in .25s ease-out; cursor: pointer; --opening: .6s cubic-bezier(.3,.7,.3,1); transition: gap var(--opening); }
 #coin-toss.closing { animation: backdrop-out .2s ease-in forwards; }
-#coin-toss .coin-scene { position: relative; width: 200px; height: 200px; perspective: 900px; }
+#coin-toss .coin-scene { position: relative; width: 200px; height: 200px; perspective: 900px; transition: scale var(--opening), margin var(--opening); }
 #coin-toss .coin { position: absolute; inset: 0; transform-style: preserve-3d; }
 #coin-toss .coin i { position: absolute; inset: 0; border-radius: 50%; }
 #coin-toss .coin-side { background: url("../coin?side=heads") center / 102%; backface-visibility: hidden; transform: translateZ(7px); }
 #coin-toss .coin-side.tails { background-image: url("../coin?side=tails"); transform: rotateX(180deg) translateZ(7px); }
 #coin-toss .coin .coin-edge { inset: 1px; background: repeating-conic-gradient(#b8912e 0 1.5deg, #8d6b1c 1.5deg 3deg); }
 #coin-toss .coin-shadow { position: absolute; left: 10%; right: 10%; bottom: -30px; height: 24px; border-radius: 50%; background: #000; filter: blur(11px); opacity: .5; }
-#coin-toss p { margin: 0; font-size: 17px; font-weight: 600; text-align: center; opacity: 0; transition: opacity .3s; }
+#coin-toss p { margin: 0; font-size: 20px; font-weight: 600; text-align: center; opacity: 0; transition: opacity .3s; }
 #coin-toss.landed p { opacity: 1; }
+/* The question of who goes first opens under the coin that decided it. The coin shrinks in place, and the question and its answers fade in below (starter.ts). */
+#coin-toss.asking { cursor: auto; gap: 14px; }
+#coin-toss.asking .coin-scene { scale: .38; margin: -62px 0; }
+#coin-toss .first-ask { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--opening); }
+#coin-toss.asking .first-ask { grid-template-rows: 1fr; }
+/* The padding leaves room for a face's ring while the question is still opening and clipped */
+#coin-toss .first-ask > div { min-height: 0; overflow: hidden; display: grid; justify-items: center; gap: 18px; padding: 4px 16px 14px; }
+#coin-toss h3 { margin: 0; font-size: 26px; font-weight: 700; text-shadow: 0 1px 8px #000; opacity: 0; translate: 0 6px; transition: opacity .4s .2s, translate .4s .2s ease-out; }
+#coin-toss :is(.first-answers, .first-seats) { display: flex; opacity: 0; translate: 0 8px; transition: opacity .4s .32s, translate .4s .32s ease-out; }
+#coin-toss.asking :is(h3, .first-answers, .first-seats) { opacity: 1; translate: 0 0; }
+/* Play and Draw look like the prompt's buttons they replace: one bar of two equal halves */
+#coin-toss .first-answers { gap: 2px; }
+#coin-toss .first-answers button { display: flex; align-items: center; justify-content: center; gap: 7px; width: 150px; min-height: 44px; padding: 0 12px; border-radius: 8px 4px 4px 8px;
+  font-size: 14px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+#coin-toss .first-answers button:not(.primary) { background: var(--surface-2); border-color: var(--line); color: var(--muted); border-radius: 4px 8px 8px 4px; }
+#coin-toss .first-answers button:not(.primary):hover { color: var(--text); }
+/* Each face can be picked, so it has the same ring as a pickable portrait on the table. The face under the pointer gets the pick ring, and every face shows the turn it would then play. */
+#coin-toss .first-seats { gap: 22px; }
+#coin-toss .first-seat { position: relative; display: grid; justify-items: center; gap: 8px; padding: 0; background: none; border: 0; color: var(--text); font: inherit; cursor: pointer; }
+#coin-toss .first-seat:focus-visible { outline: none; }
+#coin-toss .first-seat .reveal-avatar { width: 64px; height: 64px; font-size: 24px; border-color: transparent; box-shadow: 0 0 0 3px var(--selectable); transition: transform .15s ease, box-shadow .15s ease; }
+#coin-toss .first-seat.lit .reveal-avatar { transform: scale(1.08); box-shadow: 0 0 0 3px var(--pick), 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent); }
+#coin-toss .first-seats.pointing .first-seat:not(.lit) { opacity: .7; }
+#coin-toss .first-seat .turn { position: absolute; top: -4px; right: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; font-style: normal;
+  background: var(--surface-2); color: var(--muted); box-shadow: 0 0 0 1px var(--line-bright); opacity: 0; transition: opacity .15s; }
+#coin-toss .first-seats.pointing .turn { opacity: 1; }
+#coin-toss .first-seat.lit .turn { background: var(--brass); color: var(--on-brass); box-shadow: none; }
 /* The who-goes-first message needs no click, so the mulligan prompt under it can be answered at once */
 #first-reveal { position: fixed; inset: 0 calc(var(--side-w) + 16px) 0 0; z-index: 70; pointer-events: none; display: grid; place-content: center; justify-items: center; gap: 22px;
   background: radial-gradient(closest-side, #070910d9, #07091000); animation: first-reveal 2.2s ease forwards; }
 #first-reveal .reveal-faces { display: flex; gap: 36px; }
 #first-reveal .reveal-face { display: grid; justify-items: center; gap: 8px; }
-#first-reveal .reveal-face > :first-child { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; box-sizing: border-box; border: 2px solid var(--line-bright);
+:is(#first-reveal, #coin-toss) .reveal-avatar { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; box-sizing: border-box; border: 2px solid var(--line-bright);
   background: var(--surface-2); display: grid; place-items: center; font-size: 32px; font-weight: 700; }
-#first-reveal .reveal-name { font-size: 13px; font-weight: 600; }
-#first-reveal .reveal-face.first > :first-child { animation: first-lit .45s cubic-bezier(.2,.8,.3,1.2) .45s forwards; }
+:is(#first-reveal, #coin-toss) .reveal-name { font-size: 13px; font-weight: 600; }
+#first-reveal .reveal-face.first .reveal-avatar { animation: first-lit .45s cubic-bezier(.2,.8,.3,1.2) .45s forwards; }
 #first-reveal .reveal-face:not(.first) { animation: first-dim .45s ease .45s forwards; }
-#first-reveal p { margin: 0; padding: 9px 30px; border-radius: 999px; background: var(--brass); color: var(--on-brass); font-size: 15px; font-weight: 800;
-  letter-spacing: .16em; text-transform: uppercase; box-shadow: 0 10px 24px #000a; opacity: 0; animation: first-say .4s cubic-bezier(.2,.8,.3,1) .55s forwards; }
+#first-reveal p { margin: 0; font-size: 26px; font-weight: 700; text-shadow: 0 1px 8px #000; opacity: 0; animation: first-say .4s cubic-bezier(.2,.8,.3,1) .55s forwards; }
 @keyframes first-reveal { from { opacity: 0; } 8% { opacity: 1; } 86% { opacity: 1; } to { opacity: 0; } }
 @keyframes first-lit { to { transform: scale(1.14); border-color: var(--accent-2); box-shadow: 0 0 0 3px #0e1116, 0 0 24px var(--accent-glow); } }
 @keyframes first-dim { to { opacity: .4; transform: scale(.9); } }
 @keyframes first-say { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
-/* Choosing who starts: the faces are the choice, so the overlay stays until one is clicked. No face is dimmed yet. */
-#first-reveal.choosing { pointer-events: auto; animation: first-reveal-in .3s ease forwards; }
-@keyframes first-reveal-in { from { opacity: 0; } }
-#first-reveal.choosing .reveal-face { animation: none; padding: 0; background: none; border: 0; color: var(--text); font: inherit; cursor: pointer; }
-/* Each face can be picked, so it has the same ring as a pickable portrait on the table. The face under the pointer gets the pick ring. */
-#first-reveal.choosing .reveal-face > :first-child { border-color: transparent; box-shadow: 0 0 0 3px var(--selectable); transition: transform .15s ease, box-shadow .15s ease; }
-#first-reveal.choosing .reveal-face:is(:hover, :focus-visible) > :first-child { transform: scale(1.08); box-shadow: 0 0 0 3px var(--pick), 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent); }
-#first-reveal.choosing .reveal-face:focus-visible { outline: none; }
-#first-reveal.choosing p { animation-delay: .1s; }
 /* The message is still shown, only without the motion */
-html[data-motion="reduced"] #first-reveal .reveal-face > :first-child, html[data-motion="reduced"] #first-reveal .reveal-face, html[data-motion="reduced"] #first-reveal p { animation-duration: 1ms; animation-delay: 0s; }
+html[data-motion="reduced"] #first-reveal .reveal-avatar, html[data-motion="reduced"] #first-reveal .reveal-face, html[data-motion="reduced"] #first-reveal p { animation-duration: 1ms; animation-delay: 0s; }
+html[data-motion="reduced"] #coin-toss, html[data-motion="reduced"] #coin-toss * { transition-duration: 1ms; transition-delay: 0s; }
 /* The starting player keeps a mark on their portrait until their first turn ends */
 .avatar.first::after { content: attr(data-first-label); position: absolute; right: -10px; top: -6px; padding: 2px 6px; border-radius: 9px; background: var(--brass); color: var(--on-brass);
   font-size: 10px; font-weight: 800; letter-spacing: .04em; border: 1px solid color-mix(in srgb, var(--accent-2) 52%, #fff); box-shadow: 0 1px 3px #000a; }

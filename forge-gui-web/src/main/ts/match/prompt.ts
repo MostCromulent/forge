@@ -231,9 +231,11 @@ function drawPrompt(model: Model, actions: Actions): void {
   const body = (heading ? lines.slice(1) : lines).map(line => line.trim()).filter(line => line).join('\n');
   setSymbolText(q(root, '.message'), body || (p.priority && p.ok.enabled ? priorityLine(model, p.ok.label) : ''));
   renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, p.card);
-  renderPlayerChoices(root, model, p.selectablePlayers ?? [], actions);
-  setButton(q<HTMLButtonElement>(root, '.ok'), p.ok);
-  setButton(q<HTMLButtonElement>(root, '.cancel'), p.cancel);
+  // Who goes first is answered on the board, under the coin (starter.ts). The prompt keeps only its message
+  const elsewhere = !!p.starterChoice;
+  renderPlayerChoices(root, model, elsewhere ? [] : p.selectablePlayers ?? [], actions);
+  setButton(q<HTMLButtonElement>(root, '.ok'), elsewhere ? undefined : p.ok);
+  setButton(q<HTMLButtonElement>(root, '.cancel'), elsewhere ? undefined : p.cancel);
   // When declaring attackers, each button says what it will do. The host's OK label is the same whether nothing attacks or everything does.
   const strike = p.ok.enabled && p.cancel.label === t('lblAlphaStrike');
   const attackers = p.ok.enabled && p.cancel.label === t('lblCallBack')
