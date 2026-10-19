@@ -212,8 +212,20 @@ export function initSettings(save: (key: string, value: string) => void, schedul
 export function setting(key: string): SettingValue {
   const def = byKey.get(key);
   if (!def) throw new Error(`No setting ${key}`);
-  const value = def.server ? (server as Record<string, SettingValue | undefined>)[key] : local[key];
+  const value = def.server ? (server as Record<string, SettingValue | undefined>)[key] : stored(def, local[key]);
   return value === undefined ? def.def : value;
+}
+
+/** The browser may hold a value from an older version or an imported backup, such as a playmat that was removed. Such a value is ignored. */
+export function stored(def: SettingDef, value: SettingValue | undefined): SettingValue | undefined {
+  switch (def.type) {
+    case 'toggle': return typeof value === 'boolean' ? value : undefined;
+    case 'choice': return def.options.some(([id]) => id === value) ? value : undefined;
+    case 'tiles': return def.options.some(o => o.value === value) ? value : undefined;
+    case 'playmat': return PLAYMATS.some(m => m.id === value) ? value : undefined;
+    case 'slider': return typeof value === 'number' && Number.isFinite(value) ? Math.min(def.max, Math.max(def.min, value)) : undefined;
+    default: return typeof value === 'string' ? value : undefined;
+  }
 }
 
 // The server sends its preference values with the rest of the turn controls
