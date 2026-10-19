@@ -417,7 +417,7 @@ const YOUR_ZONE: Record<string, TextKey> = {
 };
 const THEIR_ZONE: Record<string, TextKey> = {
   Graveyard: 'lblWebDetailTheirGraveyard',
-  Exile: 'lblWebDetailExile',
+  Exile: 'lblWebDetailTheirExile',
   Library: 'lblWebDetailTheirLibrary',
   Hand: 'lblWebDetailTheirHand',
 };

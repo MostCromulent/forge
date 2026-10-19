@@ -9,9 +9,10 @@ import { openedOver, sheet, swipeDown } from '../sheet';
 import { changeUi, ui } from '../ui';
 import { logTints } from './log';
 import { setting } from '../settings';
-import { byId, q } from '../dom';
+import { byId, make, q } from '../dom';
 import type { CardView, PlayerView, StackItemView, ZoneType } from '../protocol';
-import { t } from '../text';
+import { t, type TextKey } from '../text';
+import { zoneTitle } from './zones';
 import { frameColour, manaValue } from './rules';
 import { starterShowing } from './starter';
 
@@ -45,6 +46,31 @@ function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number
   }
   return found;
 }
+
+/** Library and hand cards in the Flashback pseudo-zone that a playable list has held. */
+let shownOnceListed = new Set<number>();
+
+// The pseudo-zone also holds library and hand cards that are only revealed, and the views do not say which may be played.
+// So those wait for the playable list. Cards from the other zones are there because they can be played
+function inHand(model: Model, flashback: CardView[]): CardView[] {
+  const playable = new Set((model.playable?.cards ?? []).map(r => r.ref));
+  const listed = new Set<number>();
+  // A new game reuses card keys
+  if (!model.playable) shownOnceListed.clear();
+  for (const c of flashback) {
+    if ((c.Zone === 'Library' || c.Zone === 'Hand') && (playable.has(c.$key) || shownOnceListed.has(c.$key))) {
+      listed.add(c.$key);
+    }
+  }
+  shownOnceListed = listed;
+  return flashback.filter(c => (c.Zone !== 'Library' && c.Zone !== 'Hand') || listed.has(c.$key));
+}
+
+const THEIR_ZONE: Partial<Record<ZoneType, TextKey>> = {
+  Graveyard: 'lblWebHandTheirGraveyard',
+  Library: 'lblWebHandTheirLibrary',
+  Hand: 'lblWebHandTheirHand',
+};
 
 /** The prompt open when the drawer was opened, so only a new prompt closes it. */
 const openOver = openedOver();
@@ -140,7 +166,7 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
   const elsewhere = fromElsewhere(model, player);
   const tints = logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) })));
   // The planar die has its own button next to the plane, so it is not laid out with the cards
-  const others = zone(model, player, 'Flashback').filter(c => commandKind(c, stateOf(model, c)) !== 'dice');
+  const others = inHand(model, zone(model, player, 'Flashback').filter(c => commandKind(c, stateOf(model, c)) !== 'dice'));
   // The hand's list can be behind its cards. A card being cast is already on the stack and hidden while the list still holds it
   const held = zone(model, player, 'Hand').filter(c => !c.Zone || c.Zone === 'Hand');
   const cards = [...handOrder(model, others), ...handOrder(model, held)];
@@ -158,7 +184,14 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     const owner = deref(model, c.Owner);
     const foreign = !!owner && !!player && owner.$key !== player.$key;
     el.classList.toggle('foreign', foreign);
-    q(el, '.owned-by').textContent = foreign ? t('lblWebHandOwnedBy', owner?.Name ?? '') : '';
+    const band = q(el, '.owned-by');
+    band.replaceChildren();
+    if (foreign) {
+      const from = source ? THEIR_ZONE[source] : undefined;
+      const label = make('small', '');
+      label.textContent = from ? t(from) : source ? zoneTitle(source) : '';
+      band.append(label, owner?.Name ?? '');
+    }
     if (foreign) el.style.setProperty('--owner-tint', tints.find(t => t.name === owner?.Name)?.colour ?? 'var(--muted)');
     // A card another player may look at has been revealed to them
     el.classList.toggle('revealed', (c.PlayerMayLook ?? []).some(r => !!r && !model.localPlayers.includes(r.ref)));

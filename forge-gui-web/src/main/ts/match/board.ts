@@ -542,14 +542,15 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, se
       }
       const cards = zone(model, player, zoneName);
       // New cards go to the end of the graveyard and exile lists, so the last card is on top
-      const top = zoneName === 'Graveyard' || zoneName === 'Exile' ? cards[cards.length - 1] : undefined;
+      // A library's top card is first. It shows in place of the sleeve while this player may see it
+      const top = zoneName === 'Graveyard' || zoneName === 'Exile' ? cards[cards.length - 1] : zoneName === 'Library' ? cards[0] : undefined;
       const src = cardImageSrc(model, top);
       const img = q<HTMLImageElement>(el, 'img');
       setImage(img, src);
       img.hidden = !src;
       img.dataset.key = String(top?.$key ?? '');
       img.dataset.zoom = src;
-      el.classList.toggle('back', zoneName === 'Library' && cards.length > 0);
+      el.classList.toggle('back', zoneName === 'Library' && cards.length > 0 && !src);
       el.classList.toggle('empty', cards.length === 0);
       // A card still animating to this zone is not counted until it arrives
       el.dataset.count = String(cards.length);

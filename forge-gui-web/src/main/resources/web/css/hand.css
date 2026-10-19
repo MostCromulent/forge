@@ -38,10 +38,11 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 #hand .card .seen svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 #hand .card.revealed .seen { display: block; }
 #hand .card:hover .seen { transform: scale(.67); }
-/* A card owned by another player that you may play shows the owner's name across it, in their colour */
-#hand .card.foreign .owned-by { display: block; position: absolute; left: 6%; right: 6%; top: 13%; z-index: 3; padding: 1px 4px; border-radius: 4px;
-  background: color-mix(in srgb, var(--owner-tint) 85%, #000); color: #0b0e14; font-size: calc(var(--hand-w) * 0.1); font-weight: 800; text-align: center;
+/* A card owned by another player that you may play has a band across it with the zone and the owner's name, in their colour */
+#hand .card.foreign .owned-by { display: block; position: absolute; left: 0; right: 0; top: 14%; z-index: 3; padding: calc(var(--hand-w) * 0.025) 4px;
+  background: var(--owner-tint); color: #0b0e14; font-size: calc(var(--hand-w) * 0.09); font-weight: 800; text-align: center;
   line-height: 1.15; overflow-wrap: anywhere; box-shadow: 0 1px 4px #000a; }
+#hand .card.foreign .owned-by small { display: block; font-size: .78em; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; opacity: .8; }
 #hand .card { flex: none; transform: translateX(var(--shift, 0px)) translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg)); transform-origin: 50% 100%; transition: transform .2s cubic-bezier(.2, .8, .2, 1), filter .3s ease; }
 /* The cards on each side of a hovered card move away from it. The two cards next to it move furthest. */
 #hand .card:has(~ .card:hover) { --shift: calc(var(--hand-w) * -.12); }
@@ -54,7 +55,8 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 
 /* A card playable from outside the hand gets a ring, not a fill. A fill would tint a face-down card or a card without art. */
 .card .haze, .card .halo, .card .rim { display: none; }
-#hand .card.elsewhere .rim, #hand .card.elsewhere .halo {
+/* Light marks what can be played now. A card that cannot keeps only the thin rim, which tells its zone */
+#hand .card.elsewhere .rim, #hand .card.elsewhere:is(.playable, .auto-tap) .halo {
   display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter;
 }
 /* The rim is thinner than the castable outline. It shows where the card is, not that the card can be cast. */
@@ -72,7 +74,7 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 #hand .card.elsewhere:hover .rim { opacity: 1; }
 #hand .card.elsewhere:hover .halo { border-color: color-mix(in srgb, var(--zone-glow) 62%, transparent); }
 html[data-motion="reduced"] #hand .card.elsewhere .halo { filter: blur(6px); }
-#hand .card.elsewhere:hover .haze { display: block; position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: var(--radius); pointer-events: none; }
+#hand .card.elsewhere:is(.playable, .auto-tap):hover .haze { display: block; position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: var(--radius); pointer-events: none; }
 #hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after {
   content: ''; position: absolute; bottom: 26%; width: 4px; height: 4px; border-radius: 50%;
   background: var(--zone-glow); box-shadow: 0 0 7px 1px var(--zone-glow); opacity: 0;
