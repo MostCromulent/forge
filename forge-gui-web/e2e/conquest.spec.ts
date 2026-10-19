@@ -86,12 +86,17 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await expect(reveal.locator('.cq-dl.done')).toBeVisible({ timeout: 15_000 });
   await reveal.getByRole('button', { name: 'Great', exact: true }).click();
 
-  // The reward is a booster. The pack is opened, every card turns face up, and the reveal closes to the map
+  // The reward is a booster. The pack is opened and skipped, every card turns face up, and the reveal closes to the map
   await reveal.locator('.cq-pk').click({ force: true });
+  await reveal.getByRole('button', { name: 'Skip' }).click();
   await expect(reveal.getByRole('button', { name: 'Great', exact: true })).toBeVisible({ timeout: 30_000 });
   const cards = await reveal.locator('.cq-rv-card').count();
   expect(cards).toBeGreaterThan(0);
   await expect(reveal.locator('.cq-rv-card.up')).toHaveCount(cards);
+  // Fails if a card skipped into place keeps its finished flight, which blocks the hover preview
+  await expect(page.locator('#zoom')).toBeHidden();
+  await reveal.locator('.cq-rv-card.up').first().hover();
+  await expect(page.locator('#zoom')).toBeVisible();
   await reveal.getByRole('button', { name: 'Great', exact: true }).click();
   await expect(reveal).toHaveCount(0);
   await expect(page.locator('.cq-tile.won')).toHaveCount(2);

@@ -186,9 +186,10 @@ export function mountPack(host: HTMLElement, spec: PackSpec, hooks: PackHooks): 
       const dx = px - (r.left + r.width / 2), mouthDy = box.top + box.height * SEAL / 100 - (r.top + r.height / 2);
       const start = 700 + i * 78, lean = (i - mid) * 3.2;
       slot.classList.add('shown');
+      // The flight ends where the card rests, so it does not fill forwards. A card with an animation left on it gets no hover preview
       card.animate([{ transform: `translateX(${dx}px) rotate(0deg) scale(.6)`, opacity: 0 }, { transform: `translateX(${dx}px) rotate(0deg) scale(.6)`, opacity: 1, offset: .06, easing: 'cubic-bezier(.3,.6,.5,1)' },
         { transform: `translateX(${dx * .86}px) rotate(${lean}deg) scale(.72)`, opacity: 1, offset: .34, easing: 'cubic-bezier(.45,0,.3,1)' }, { transform: 'translateX(0px) rotate(0deg) scale(1)', opacity: 1 }],
-        { duration: FLIGHT, delay: start, fill: 'both' });
+        { duration: FLIGHT, delay: start, fill: 'backwards' });
       y.animate([{ transform: `translateY(${mouthDy + 96}px)`, easing: 'cubic-bezier(.3,.7,.4,1)' }, { transform: `translateY(${mouthDy - 118}px)`, offset: .34, easing: 'cubic-bezier(.45,0,.3,1)' }, { transform: 'translateY(0px)' }],
         { duration: FLIGHT, delay: start, fill: 'both' });
       // A card flips as it lands, but no sooner after the previous card than its rarity's delay allows
