@@ -37,6 +37,7 @@ public final class NetworkEvent {
     private final LocalDateTime createdAt;
     private int pickTimerSeconds;
     private int disconnectGraceSeconds;
+    private boolean allowDraftRankings = true;
     private String productDescription;
     private LimitedPoolType poolType;
     private int numRounds = 3;
@@ -64,6 +65,8 @@ public final class NetworkEvent {
     public void setPickTimerSeconds(int seconds) { this.pickTimerSeconds = seconds; }
     public int getDisconnectGraceSeconds() { return disconnectGraceSeconds; }
     public void setDisconnectGraceSeconds(int seconds) { this.disconnectGraceSeconds = seconds; }
+    public boolean getAllowDraftRankings() { return allowDraftRankings; }
+    public void setAllowDraftRankings(boolean allow) { this.allowDraftRankings = allow; }
     public String getProductDescription() { return productDescription; }
     public void setProductDescription(String desc) { this.productDescription = desc; }
     public LimitedPoolType getPoolType() { return poolType; }
@@ -120,7 +123,7 @@ public final class NetworkEvent {
         return new NetworkEventView(eventId, format, phase,
                 participants, pickTimerSeconds, productDescription, numRounds,
                 draft == null ? 0 : draft.getPodSize(),
-                draft == null ? null : resolvedDoublePick());
+                draft == null ? null : resolvedDoublePick(), allowDraftRankings);
     }
 
     /** The draft's pick rule resolved against its pod size; NEVER when there is no draft. */

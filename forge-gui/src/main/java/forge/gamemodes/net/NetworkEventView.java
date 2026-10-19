@@ -22,11 +22,12 @@ public final class NetworkEventView implements Serializable {
     private final int numRounds;
     private final int podSize;
     private final DraftOptions.DoublePick doublePick;
+    private final boolean allowDraftRankings;
 
     public NetworkEventView(String eventId, EventFormat format, EventPhase phase,
                             List<EventParticipant> participants, int pickTimerSeconds,
                             String productDescription, int numRounds,
-                            int podSize, DraftOptions.DoublePick doublePick) {
+                            int podSize, DraftOptions.DoublePick doublePick, boolean allowDraftRankings) {
         this.eventId = eventId;
         this.format = format;
         this.phase = phase;
@@ -36,6 +37,7 @@ public final class NetworkEventView implements Serializable {
         this.numRounds = numRounds;
         this.podSize = podSize;
         this.doublePick = doublePick;
+        this.allowDraftRankings = allowDraftRankings;
     }
 
     public String getEventId() { return eventId; }
@@ -47,4 +49,5 @@ public final class NetworkEventView implements Serializable {
     public int getNumRounds() { return numRounds; }
     public int getPodSize() { return podSize; }
     public DraftOptions.DoublePick getDoublePick() { return doublePick; }
+    public boolean getAllowDraftRankings() { return allowDraftRankings; }
 }

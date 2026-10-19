@@ -9,7 +9,11 @@ import forge.gui.framework.DragCell;
 import forge.gui.framework.FScreen;
 import forge.item.PaperCard;
 import forge.itemmanager.CardManager;
+import forge.itemmanager.ColumnDef;
+import forge.itemmanager.ItemColumn;
+import forge.itemmanager.ItemColumnConfig;
 import forge.itemmanager.ItemManagerConfig;
+import forge.itemmanager.views.ItemTableColumn;
 import forge.model.FModel;
 import forge.screens.deckeditor.CDeckEditorUI;
 import forge.screens.deckeditor.views.VAllDecks;
@@ -29,6 +33,7 @@ import forge.util.Localizer;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
 
@@ -70,18 +75,19 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
      *                    mid-draft exit prompt — lets the lobby drop its
      *                    reference and dismiss the overlay
      * @param cDetailPicture0 the shared detail picture controller
+     * @param allowRankings whether the host lets players see draft rankings
      */
     public CEditorNetworkDraft(int seatIndex,
             Consumer<DraftPickEvent> pickSender, Runnable onLeave,
-            CDetailPicture cDetailPicture0) {
+            CDetailPicture cDetailPicture0, boolean allowRankings) {
         super(FScreen.DRAFTING_PROCESS, cDetailPicture0, GameType.Draft);
 
         this.seatIndex = seatIndex;
         this.pickSender = pickSender;
         this.onLeave = onLeave;
 
-        final CardManager catalogManager = new CardManager(cDetailPicture0, false, false, true);
-        final CardManager deckManager = new CardManager(cDetailPicture0, false, false, true);
+        final CardManager catalogManager = new CardManager(cDetailPicture0, false, false, allowRankings);
+        final CardManager deckManager = new CardManager(cDetailPicture0, false, false, allowRankings);
 
         // Hide filters so more of the pack is visible
         catalogManager.setHideViewOptions(1, true);
@@ -95,9 +101,17 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
         this.setDeckManager(deckManager);
 
         // Seed state here so auto-picks arriving before update() runs don't NPE on a null pool
-        catalogManager.setup(ItemManagerConfig.DRAFT_PACK);
-        deckManager.setup(ItemManagerConfig.DRAFT_POOL);
+        catalogManager.setup(ItemManagerConfig.DRAFT_PACK, allowRankings ? null : blankRanking(ItemManagerConfig.DRAFT_PACK));
+        deckManager.setup(ItemManagerConfig.DRAFT_POOL, allowRankings ? null : blankRanking(ItemManagerConfig.DRAFT_POOL));
         deckManager.setPool(Collections.<PaperCard>emptyList());
+    }
+
+    /** A hidden Ranking column with no values, so turning it back on in the view options shows nothing. */
+    private static Map<ColumnDef, ItemTableColumn> blankRanking(ItemManagerConfig config) {
+        ItemColumnConfig ranking = new ItemColumnConfig(ColumnDef.RANKING);
+        ranking.setIndex(config.getCols().get(ColumnDef.RANKING).getIndex());
+        ranking.setVisible(false);
+        return Map.of(ColumnDef.RANKING, new ItemTableColumn(new ItemColumn(ranking, e -> 0, e -> "")));
     }
 
     /**

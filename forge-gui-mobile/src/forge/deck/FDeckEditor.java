@@ -75,6 +75,7 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
         public boolean isLimited() { return false; } //TODO: Figure out if I can derive this from gameType; Has different meaning for Quest...
         public boolean usePlayerInventory() { return false; }
         public boolean isDraft() { return false; } //Draft and quest draft
+        public boolean allowsDraftRankings() { return true; }
         public boolean hasInfiniteCardPool() { return !isLimited() && !usePlayerInventory(); }
         public boolean hasCommander() {
             DeckFormat deckFormat = getDeckFormat();
@@ -1351,6 +1352,9 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
         }
 
         protected boolean showDraftRanking() {
+            if (parentScreen != null && !parentScreen.editorConfig.allowsDraftRankings()) {
+                return false;
+            }
             return ItemManagerConfig.DRAFT_CONSPIRACY == config
                     || ItemManagerConfig.DRAFT_PACK == config || ItemManagerConfig.DRAFT_POOL == config
                     || ItemManagerConfig.DRAFT_DECKS == config || (parentScreen != null && parentScreen.isDraftEditor());

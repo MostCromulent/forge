@@ -63,8 +63,8 @@ public final class NetworkDraftingProcessScreen extends FDeckEditor {
     private int[] lastQueueDepths;
 
     public NetworkDraftingProcessScreen(int seatIndex, List<EventParticipant> participants,
-            Consumer<DraftPickEvent> pickSender, Runnable onLeave) {
-        super(new NetworkDraftEditorConfig(), new PicksDeckController(new Deck()));
+            Consumer<DraftPickEvent> pickSender, Runnable onLeave, boolean allowRankings) {
+        super(new NetworkDraftEditorConfig(allowRankings), new PicksDeckController(new Deck()));
 
         this.seatIndex  = seatIndex;
         this.participants = participants;
@@ -428,6 +428,15 @@ public final class NetworkDraftingProcessScreen extends FDeckEditor {
     }
 
     private static final class NetworkDraftEditorConfig extends DeckEditorConfig {
+        private final boolean allowRankings;
+
+        NetworkDraftEditorConfig(boolean allowRankings) {
+            this.allowRankings = allowRankings;
+        }
+
+        @Override
+        public boolean allowsDraftRankings() { return allowRankings; }
+
         @Override
         public GameType getGameType() {
             return GameType.Draft;

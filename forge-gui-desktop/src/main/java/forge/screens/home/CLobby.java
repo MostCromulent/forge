@@ -44,6 +44,7 @@ import forge.screens.deckeditor.controllers.CEditorNetworkDraft;
 import forge.screens.deckeditor.controllers.NetworkDraftLog;
 import forge.screens.deckeditor.views.VEditorLog;
 import forge.screens.home.online.VSubmenuOnlineLobby;
+import forge.toolbox.FCheckBox;
 import forge.toolbox.FComboBox;
 import forge.toolbox.FLabel;
 import forge.toolbox.FList;
@@ -366,6 +367,7 @@ public class CLobby implements IDraftEventHandler {
             FLabel pickLbl = new FLabel.Builder().fontSize(12).text(localizer.getMessage("lblNetworkPickTimerPrompt")).build();
             FLabel graceLbl1 = new FLabel.Builder().fontSize(12).text(localizer.getMessage("lblNetworkGraceTimerPromptLine1")).build();
             FLabel graceLbl2 = new FLabel.Builder().fontSize(12).text(localizer.getMessage("lblNetworkGraceTimerPromptLine2")).build();
+            FCheckBox allowRankingsBox = new FCheckBox(localizer.getMessage("lblNetworkAllowDraftRankings"), event.getAllowDraftRankings());
 
             // A set's pick rule can depend on pod size, so both the marker and the selection follow it.
             Runnable refreshPicks = () -> {
@@ -398,6 +400,7 @@ public class CLobby implements IDraftEventHandler {
             panel.add(graceLbl1, "gaptop 10");
             panel.add(graceLbl2);
             panel.add(graceField, "w 80!");
+            panel.add(allowRankingsBox, "gaptop 10");
 
             int result = FOptionPane.showOptionDialog(
                     null,
@@ -411,6 +414,7 @@ public class CLobby implements IDraftEventHandler {
 
             podDraft.setPodSize(podSizes.get(podCombo.getSelectedIndex()));
             podDraft.setDoublePick(pickRules.get(picksCombo.getSelectedIndex()));
+            event.setAllowDraftRankings(allowRankingsBox.isSelected());
             try {
                 int parsed = Integer.parseInt(pickField.getText().trim());
                 if (parsed >= 0) timerSeconds = parsed;
@@ -536,7 +540,8 @@ public class CLobby implements IDraftEventHandler {
 
         networkDraftEditor = new CEditorNetworkDraft(
                 mySeatIndex, pickSender, this::cancelActiveDraft,
-                CDeckEditorUI.SINGLETON_INSTANCE.getCDetailPicture());
+                CDeckEditorUI.SINGLETON_INSTANCE.getCDetailPicture(),
+                lastEventView == null || lastEventView.getAllowDraftRankings());
         VEditorLog.SINGLETON_INSTANCE.resetNewDraft();
 
         Singletons.getControl().setCurrentScreen(FScreen.DRAFTING_PROCESS);

@@ -311,6 +311,9 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby, IDra
                                 + Forge.getLocalizer().getMessage("lblNetworkGraceTimerPromptLine2"),
                         timersTitle, null, String.valueOf(graceSeconds), null, true);
                 if (graceStr == null) return;
+                event.setAllowDraftRankings(SOptionPane.showConfirmDialog(
+                        Forge.getLocalizer().getMessage("lblNetworkAllowDraftRankingsPrompt"),
+                        timersTitle, event.getAllowDraftRankings()));
                 finishConfigureEvent(sgl, poolType, draft,
                         parseSecondsOrDefault(pickStr, timerSeconds),
                         parseSecondsOrDefault(graceStr, graceSeconds));
@@ -457,13 +460,17 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby, IDra
                 List<EventParticipant> participants = currentEvent != null
                         ? currentEvent.getParticipants()
                         : (lastEventView != null ? lastEventView.getParticipants() : List.of());
+                boolean allowRankings = currentEvent != null
+                        ? currentEvent.getAllowDraftRankings()
+                        : lastEventView == null || lastEventView.getAllowDraftRankings();
                 activeDraftScreen = new NetworkDraftingProcessScreen(
                         seatIndex, participants,
                         finalPickSender,
                         () -> {
                             activeDraftScreen = null;
                             closeConn("");
-                        });
+                        },
+                        allowRankings);
                 Forge.openScreen(activeDraftScreen);
             }
             activeDraftScreen.onPackArrived(pack, packNumber, pickNumber, timerDurationSeconds);
