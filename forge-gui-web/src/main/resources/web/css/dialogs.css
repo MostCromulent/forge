@@ -357,7 +357,8 @@ html:not([data-form="portrait"]) .game-menu.dev { overflow: visible; }
 /* Each mat's picture gets the same dark layer the board would give it, so the brightness setting shows on the pictures too (board.css) */
 .playmat-choice { display: grid; gap: 12px; }
 .playmat-choice .mats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(120px, 28%), 1fr)); gap: 10px; }
-.playmat-choice .mat { min-width: 0; display: grid; gap: 6px; padding: 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2);
+/* Rows keep their own height. A picture stretched by a wrapped label in the same row would widen past its tile. */
+.playmat-choice .mat { min-width: 0; display: grid; align-content: start; gap: 6px; padding: 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2);
   color: var(--text); font-size: 12.5px; text-align: left; }
 .playmat-choice .mat:hover { border-color: var(--line-bright); }
 .playmat-choice .mat .pic { display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 6px; filter: saturate(var(--mat-saturate, 1));
