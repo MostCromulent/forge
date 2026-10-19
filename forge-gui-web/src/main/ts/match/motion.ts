@@ -7,7 +7,7 @@ import { cssUrl, playerSleeveUrl } from '../looks';
 import { echoSound } from '../audio';
 import { TAPPED_SCALE, unmake } from './leaving';
 import type { Model } from '../model';
-import { make } from '../dom';
+import { make, reducedMotion } from '../dom';
 import { cardImageSrc } from '../images';
 import { lastPicture } from './cards';
 
@@ -276,9 +276,8 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   });
   holdCounts(landings);
   fizzled.clear();
-  for (const e of events) {
-    if (e.kind === 'shuffled') riffle(e.player.ref);
-  }
+  // A library shuffled twice in one update riffles once
+  for (const player of new Set(events.flatMap(e => e.kind === 'shuffled' ? [e.player.ref] : []))) riffle(player);
   // A cancelled cast that flew back from beside the stack has travelled, so it does not also fly out of its zone's tile
   const travelled = new Set([...trips.keys(), ...settleWaiting(!!model.prompt?.paying)]);
   arriveElsewhere(travelled);
@@ -629,12 +628,39 @@ function standIn(model: Model, key: string): HTMLElement {
   return el;
 }
 
-/** Shakes a library's tile from side to side when the library is shuffled. */
+const RIFFLE_MS = 580;
+
+/**
+ * Riffles a library's tile when the library is shuffled, as a deck is shuffled on a table. Two halves turn on their top inner
+ * corners into a V, the cards drop back one at a time from alternate sides, and the halves are pushed square.
+ * The tile clips its contents, so copies of its sleeve move above the board.
+ */
 function riffle(player: number): void {
-  document.querySelector(`.seat[data-player="${player}"] .zone-tile[data-zone="Library"]`)?.animate([
-    { translate: '0 0', rotate: '0deg' }, { translate: '-4px 0', rotate: '-3deg', offset: 0.2 }, { translate: '4px 0', rotate: '3deg', offset: 0.45 },
-    { translate: '-3px 0', rotate: '-2deg', offset: 0.7 }, { translate: '0 0', rotate: '0deg' },
-  ], { duration: 380, easing: 'ease-in-out' });
+  const tile = document.querySelector<HTMLElement>(`.seat[data-player="${player}"] .zone-tile[data-zone="Library"]`);
+  const rect = tile?.getBoundingClientRect();
+  if (!tile || !rect?.width || reducedMotion()) return;
+  const sleeve = getComputedStyle(tile).getPropertyValue('--sleeve');
+  const cards = 12, open = 150, firstDrop = 190, step = 24, settle = 80;
+  const at = (ms: number) => ms / RIFFLE_MS;
+  for (let i = 0; i < cards; i++) {
+    const side = i % 2 ? 1 : -1;
+    const copy = make('div', 'zone-tile back');
+    copy.style.cssText = `position: fixed; left: ${rect.left}px; top: ${rect.top}px; width: ${rect.width}px; height: ${rect.height}px;`
+      + `z-index: 40; pointer-events: none; box-shadow: 0 1px 2px #0009; transform-origin: ${side < 0 ? '100%' : '0%'} 0%;`;
+    copy.style.setProperty('--sleeve', sleeve);
+    document.body.append(copy);
+    const held = { translate: `${side * 0.34 * rect.width}px ${2 - Math.floor(i / 2) * 0.6}px`, rotate: `${side * 14}deg` };
+    const flat = { translate: '0 0', rotate: '0deg' };
+    const drop = firstDrop + i * step;
+    copy.animate([
+      { ...flat, easing: EASE },
+      { ...held, offset: at(open) },
+      { ...held, offset: at(drop), easing: 'cubic-bezier(.55,0,.75,.35)' },
+      { ...flat, offset: at(drop + settle) },
+      flat,
+    ], { duration: RIFFLE_MS }).finished.then(() => copy.remove(), () => copy.remove());
+  }
+  tile.animate([{ scale: '1' }, { scale: '1', offset: 0.82 }, { scale: '0.97 1', offset: 0.9 }, { scale: '1' }], { duration: RIFFLE_MS });
 }
 
 // A face-down top card is not drawn on its tile, and its hidden picture has zero size
