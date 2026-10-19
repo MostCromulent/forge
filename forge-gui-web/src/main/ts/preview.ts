@@ -374,8 +374,9 @@ function drawDetail(model: Model): void {
   }
   q(zoom, '.detail').hidden = !face;
   if (!d || !face) drawStickers(q(zoom, '.stickers'), model, undefined);
-  setSource(q(zoom, '.from'), hover.from);
-  setSource(q(zoom, '.from-tab'), hover.from);
+  const source = sourceText(model, hover);
+  setSource(q(zoom, '.from'), hover.from, source);
+  setSource(q(zoom, '.from-tab'), hover.from, source);
   q(zoom, '.hint').textContent = '';
   if (!face) return;
   q(zoom, '.name').textContent = face.name ?? '';
@@ -407,18 +408,36 @@ function drawDetail(model: Model): void {
 }
 
 // Each zone has its own text because they do not all take a possessive. It is "your graveyard" but not "your exile"
-const PLAYABLE_FROM: Record<string, TextKey> = {
-  Graveyard: 'lblWebDetailPlayableFromGraveyard',
-  Exile: 'lblWebDetailPlayableFromExile',
-  Command: 'lblWebDetailPlayableFromCommand',
-  Library: 'lblWebDetailPlayableFromLibrary',
-  Sideboard: 'lblWebDetailPlayableFromSideboard',
+const YOUR_ZONE: Record<string, TextKey> = {
+  Graveyard: 'lblWebDetailYourGraveyard',
+  Exile: 'lblWebDetailExile',
+  Command: 'lblWebDetailYourCommand',
+  Library: 'lblWebDetailYourLibrary',
+  Sideboard: 'lblWebDetailYourSideboard',
+};
+const THEIR_ZONE: Record<string, TextKey> = {
+  Graveyard: 'lblWebDetailTheirGraveyard',
+  Exile: 'lblWebDetailExile',
+  Library: 'lblWebDetailTheirLibrary',
+  Hand: 'lblWebDetailTheirHand',
 };
 
+/** Names the zone a hand card is really in, and whose it is. The engine also lists cards that are only revealed, so "Playable" needs the card in the playable list. */
+function sourceText(model: Model, hover: { card: number | null; from?: string }): string {
+  const zone = hover.from;
+  if (!zone) return '';
+  const card = hover.card !== null ? model.objects.get(hover.card) as CardView | undefined : undefined;
+  const owner = card ? deref(model, card.Owner) : undefined;
+  const theirs = !!owner && !model.localPlayers.includes(owner.$key);
+  const known = (theirs ? THEIR_ZONE : YOUR_ZONE)[zone];
+  const where = known ? t(known, owner?.Name ?? '') : zone.toLowerCase();
+  const playable = hover.card !== null && (model.playable?.cards ?? []).some(r => r.ref === hover.card);
+  return t(playable ? 'lblWebDetailPlayableFrom' : 'lblWebDetailIn', where);
+}
+
 /** Shows that a hand card is really in another zone. The glow around the card uses that zone's colour too. */
-function setSource(el: HTMLElement, zone: string | undefined): void {
-  const known = zone ? PLAYABLE_FROM[zone] : undefined;
-  el.textContent = known ? t(known) : zone ? t('lblWebDetailPlayableFrom', zone.toLowerCase()) : '';
+function setSource(el: HTMLElement, zone: string | undefined, text = ''): void {
+  el.textContent = text;
   if (zone) {
     el.dataset.from = zone;
   } else {

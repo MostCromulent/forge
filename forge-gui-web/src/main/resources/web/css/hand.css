@@ -41,7 +41,7 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 /* A card owned by another player that you may play shows the owner's name across it, in their colour */
 #hand .card.foreign .owned-by { display: block; position: absolute; left: 6%; right: 6%; top: 13%; z-index: 3; padding: 1px 4px; border-radius: 4px;
   background: color-mix(in srgb, var(--owner-tint) 85%, #000); color: #0b0e14; font-size: calc(var(--hand-w) * 0.1); font-weight: 800; text-align: center;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 1px 4px #000a; }
+  line-height: 1.15; overflow-wrap: anywhere; box-shadow: 0 1px 4px #000a; }
 #hand .card { flex: none; transform: translateX(var(--shift, 0px)) translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg)); transform-origin: 50% 100%; transition: transform .2s cubic-bezier(.2, .8, .2, 1), filter .3s ease; }
 /* The cards on each side of a hovered card move away from it. The two cards next to it move furthest. */
 #hand .card:has(~ .card:hover) { --shift: calc(var(--hand-w) * -.12); }
