@@ -11,7 +11,7 @@ import { logTints } from './log';
 import { setting } from '../settings';
 import { byId, make, q } from '../dom';
 import type { CardView, PlayerView, StackItemView, ZoneType } from '../protocol';
-import { t, type TextKey } from '../text';
+import { t } from '../text';
 import { zoneTitle } from './zones';
 import { frameColour, manaValue } from './rules';
 import { starterShowing } from './starter';
@@ -65,12 +65,6 @@ function inHand(model: Model, flashback: CardView[]): CardView[] {
   shownOnceListed = listed;
   return flashback.filter(c => (c.Zone !== 'Library' && c.Zone !== 'Hand') || listed.has(c.$key));
 }
-
-const THEIR_ZONE: Partial<Record<ZoneType, TextKey>> = {
-  Graveyard: 'lblWebHandTheirGraveyard',
-  Library: 'lblWebHandTheirLibrary',
-  Hand: 'lblWebHandTheirHand',
-};
 
 /** The prompt open when the drawer was opened, so only a new prompt closes it. */
 const openOver = openedOver();
@@ -187,9 +181,8 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     const band = q(el, '.owned-by');
     band.replaceChildren();
     if (foreign) {
-      const from = source ? THEIR_ZONE[source] : undefined;
       const label = make('small', '');
-      label.textContent = from ? t(from) : source ? zoneTitle(source) : '';
+      label.textContent = source ? zoneTitle(source) : '';
       band.append(label, owner?.Name ?? '');
     }
     if (foreign) el.style.setProperty('--owner-tint', tints.find(t => t.name === owner?.Name)?.colour ?? 'var(--muted)');
