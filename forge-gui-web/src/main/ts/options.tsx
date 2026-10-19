@@ -1,7 +1,7 @@
 // The options dialog behind the cog button. Settings are grouped in tabs on a side rail, and a search box searches every tab
 
 import type { ComponentChildren } from 'preact';
-import { exportBackup, importBackup } from './backup';
+import { exportBackup, importBackup, type ImportResult } from './backup';
 import { buildVersion, ForgeLinks } from './links';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { saveText } from './dom';
@@ -139,13 +139,13 @@ function HostGroup({ name, explain, defs }: { name: string | null; explain: bool
 
 /** Saves the data this browser stores for its player to a file, or restores it from one. Restoring a file reloads the page. */
 function BackupRow() {
-  const [refused, setRefused] = useState(false);
+  const [problem, setProblem] = useState<ImportResult | null>(null);
   const file = useRef<HTMLInputElement>(null);
   return (
     <div class="setting">
       <div>
         <div>{t('lblBackupRestore')}</div>
-        <div class="hint">{t(refused ? 'lblWebOptionsImportRefused' : 'lblWebOptionsBackupHint')}</div>
+        <div class="hint">{t(problem === 'notBackup' ? 'lblWebOptionsImportRefused' : problem === 'notSaved' ? 'lblWebOptionsImportNotSaved' : 'lblWebOptionsBackupHint')}</div>
       </div>
       <div class="backup">
         <button class="edit" onClick={() => void exportBackup()}>{t('lblWebOptionsExport')}</button>
@@ -153,7 +153,7 @@ function BackupRow() {
         <input ref={file} type="file" accept=".json,application/json" hidden onChange={e => {
           const chosen = e.currentTarget.files?.[0];
           e.currentTarget.value = '';
-          if (chosen) void chosen.text().then(importBackup).then(done => setRefused(!done));
+          if (chosen) void chosen.text().then(importBackup, (): ImportResult => 'notBackup').then(result => setProblem(result === 'done' ? null : result));
         }} />
       </div>
     </div>

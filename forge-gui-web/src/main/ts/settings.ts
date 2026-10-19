@@ -205,7 +205,9 @@ export function isGuest(): boolean {
 export function initSettings(save: (key: string, value: string) => void, schedule: () => void): void {
   saveOnServer = save;
   redraw = schedule;
-  local = storedJson(LOCAL_KEY, {});
+  // A hand-edited backup can hold any JSON here. Anything but an object could not take new values
+  const saved = storedJson<unknown>(LOCAL_KEY, {});
+  local = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved as Record<string, SettingValue> : {};
   apply();
 }
 

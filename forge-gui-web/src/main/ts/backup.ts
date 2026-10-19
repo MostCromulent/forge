@@ -49,16 +49,21 @@ export async function exportBackup(): Promise<void> {
   saveText(JSON.stringify(backupOf(storage, await listDeviceDecks()), null, 2), 'forge-web-settings.json', 'application/json');
 }
 
-/** Writes a backup file over what the browser holds, then reloads the page to use it. Returns false if the file is not a backup. */
-export async function importBackup(text: string): Promise<boolean> {
+/** What an import did: restored the file, refused a file that is not a backup, or could not save all of it. */
+export type ImportResult = 'done' | 'notBackup' | 'notSaved';
+
+/** Writes a backup file over what the browser holds, then reloads the page to use it. A browser that could not save all of it is not reloaded, so the player sees why. */
+export async function importBackup(text: string): Promise<ImportResult> {
   const backup = readBackup(text);
-  if (!backup) return false;
+  if (!backup) return 'notBackup';
   try {
     for (const [key, value] of Object.entries(backup.storage)) localStorage.setItem(key, value);
   } catch {
-    return false;
+    return 'notSaved';
   }
-  for (const deck of backup.decks) await putDeviceDeck(deck);
+  let saved = true;
+  for (const deck of backup.decks) saved = await putDeviceDeck(deck) && saved;
+  if (!saved) return 'notSaved';
   location.reload();
-  return true;
+  return 'done';
 }

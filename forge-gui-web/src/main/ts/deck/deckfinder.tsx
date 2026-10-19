@@ -124,7 +124,10 @@ export function DeckFinder({ model, actions, seat, close }: {
   model: Model; actions: Actions; seat?: { index: number; seat: Seat }; close: () => void;
 }) {
   // A guest's stars are stored in the guest's browser. The host's stars are stored with Forge's decks.
-  const [guestStars, setGuestStars] = useState<string[]>(() => storedJson(GUEST_STARS, []));
+  const [guestStars, setGuestStars] = useState<string[]>(() => {
+    const stars = storedJson<unknown>(GUEST_STARS, []);
+    return Array.isArray(stars) ? stars : [];
+  });
   const decks = model.host ? model.decks ?? [] : (model.decks ?? []).map(d => ({ ...d, favourite: guestStars.includes(d.key) || undefined }));
   const star = (key: string, on: boolean) => {
     if (model.host) {

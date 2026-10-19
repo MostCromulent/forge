@@ -648,7 +648,13 @@ public final class DeckSession implements IHasForgeLog {
         }
         for (final DeviceDeckText d : decks) {
             try {
-                device.put(d.id(), new OnDevice(parse(d.text()), gameType(d.format())));
+                // Text with no deck sections, as a hand-edited backup can hold, parses to no deck
+                final Deck deck = parse(d.text());
+                if (deck == null) {
+                    netLog.warn("A deck kept in a guest's browser is not a deck: {}", d.id());
+                    continue;
+                }
+                device.put(d.id(), new OnDevice(deck, gameType(d.format())));
             } catch (final RuntimeException e) {
                 netLog.warn(e, "A deck kept in a guest's browser could not be read");
             }

@@ -19,13 +19,15 @@ function open(): Promise<IDBDatabase> {
 }
 
 // Storage can be missing or blocked, for example in a private window. The decks are then not saved and the fallback is returned.
+// The result waits for the transaction to complete. A write is not stored until then, and a page reload would abort it
 async function run<T>(mode: IDBTransactionMode, act: (store: IDBObjectStore) => IDBRequest, fallback: T): Promise<T> {
   try {
     const db = await open();
     return await new Promise<T>((resolve, reject) => {
-      const request = act(db.transaction(STORE, mode).objectStore(STORE));
-      request.onsuccess = () => resolve(request.result as T);
-      request.onerror = () => reject(request.error);
+      const transaction = db.transaction(STORE, mode);
+      const request = act(transaction.objectStore(STORE));
+      transaction.oncomplete = () => resolve(request.result as T);
+      transaction.onabort = transaction.onerror = () => reject(transaction.error ?? request.error);
     });
   } catch {
     return fallback;
@@ -36,8 +38,9 @@ export function listDeviceDecks(): Promise<DeviceDeck[]> {
   return run<DeviceDeck[]>('readonly', store => store.getAll(), []);
 }
 
-export async function putDeviceDeck(deck: DeviceDeck): Promise<void> {
-  await run('readwrite', store => store.put(deck), undefined);
+/** Stores a deck. Returns false if the browser could not store it. */
+export async function putDeviceDeck(deck: DeviceDeck): Promise<boolean> {
+  return await run<IDBValidKey | null>('readwrite', store => store.put(deck), null) !== null;
 }
 
 export async function deleteDeviceDeck(id: string): Promise<void> {
