@@ -320,7 +320,8 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
 
 // Cards with the same signature pile together. So it includes everything a player can see or act on. A property never set gives the same value as one reset to its default.
 export function signature(model: Model, card: CardView, marks: Set<number>[]): string | null {
-  if (!model.visible.has(card.$key)) return null;
+  // Face-down cards look the same but can be different cards, so each one keeps its own slot
+  if (!model.visible.has(card.$key) || card.Facedown) return null;
   const s = stateOf(model, card);
   // A land played this turn is the same as the lands played before it, so it goes in their pile
   return [s.Name, s.Power ?? null, s.Toughness ?? null, s.Loyalty && s.Loyalty !== '0' ? s.Loyalty : null, !!card.Tapped,
