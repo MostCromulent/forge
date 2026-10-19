@@ -3,6 +3,7 @@
 - [Requirements](#requirements)
 - [Quick Start](#quick-start)
 - [Disconnect/Reconnect Support](#disconnectreconnect-support)
+- [Host Commands](#host-commands)
 - [AFK Timer](#afk-timer)
 - [Network Configuration](#network-configuration)
   - [Local Network Setup](#local-network-setup)
@@ -83,15 +84,19 @@ This means disconnects are typically detected within about 45 seconds, even when
 - On successful reconnect, the full game state is re-sent to the player and the game resumes normally.
 
 ## If the Player doesn't Reconnect
-When the 5-minute timeout expires, the disconnected player is **replaced by an AI** and the game continues.
+When the 5-minute timeout expires, the disconnected player is **replaced by an AI** and the game continues. The host can end or extend the wait with `/skipreconnect` and `/skiptimeout` (see [Host Commands](#host-commands)).
 
-## Host Commands
-The host can type these commands in the lobby chat during the reconnection window. These commands are **host-only** — clients cannot use them.
+# Host Commands
+The host can type these commands in chat. They are **host-only**: clients cannot use them.
 
 | Command | Effect |
 |---|---|
 | `/skipreconnect [player]` | Immediately replace the disconnected player with AI (skip the countdown). Player name can be omitted if only one player is disconnected. |
 | `/skiptimeout [player]` | Cancel the countdown timer and wait **indefinitely** for the player to reconnect. |
+| `/kick <player>` | Remove the player. During a match they lose the current game and every later game in the match. With no name, lists the players. |
+| `/allow <player>` | Let a kicked player join again. With no name, lists the kicked players. |
+
+A kicked player cannot join again under the same name until the host uses `/allow` or stops the server. When a kicked player tries to join, the host sees a chat message naming them. A player kicked during a draft has their remaining picks made automatically.
 
 # AFK Timer
 The host can configure an **Away-From-Keyboard (AFK) timer** so that one idle player cannot stall the whole game. 

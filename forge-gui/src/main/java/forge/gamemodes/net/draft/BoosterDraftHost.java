@@ -444,6 +444,24 @@ public final class BoosterDraftHost implements IHasForgeLog {
         run(dispatches);
     }
 
+    /** Switches a seat whose player will not return to auto-picking at once, with no grace window and no disconnect messages. */
+    public void dropSeat(int seatIndex) {
+        List<Runnable> dispatches;
+        synchronized (this) {
+            if (finished || seatIndex < 0 || seatIndex >= seatState.length || isAiSeat(seatIndex)) return;
+            if (seatState[seatIndex] == SeatConnectionState.POST_GRACE_AUTO) return;
+            cancelSeatTimer(seatIndex);
+            cancelGraceTimer(seatIndex);
+            // As on a disconnect, so advanceDraft auto-picks the pack the seat was holding
+            inFlight[seatIndex] = false;
+            seatState[seatIndex] = SeatConnectionState.POST_GRACE_AUTO;
+            netLog.info("Seat {} dropped — auto-picking", seatIndex);
+            dispatches = new ArrayList<>();
+            advanceDraft(dispatches);
+        }
+        run(dispatches);
+    }
+
     /** Grace timer callback — transition to POST_GRACE_AUTO and drain held/queued packs. */
     private void onGraceExpired(int seatIndex) {
         List<Runnable> dispatches;

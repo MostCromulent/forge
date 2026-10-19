@@ -66,6 +66,7 @@ public class FGameClient implements IToServer, IHasForgeLog {
     private volatile Channel channel;
 
     private ReconnectState reconnectState = ReconnectState.CONNECTED;
+    private volatile SeatLostEvent.Reason seatLostReason;
     private boolean shuttingDown = false;
     private final Object reconnectLock = new Object();
     private final ScheduledExecutorService reconnectScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -271,6 +272,16 @@ public class FGameClient implements IToServer, IHasForgeLog {
         }
     }
 
+    /** Whether the server refused this client because the host kicked the player. */
+    public boolean wasKicked() {
+        return seatLostReason == SeatLostEvent.Reason.KICKED;
+    }
+
+    /** Whether a match is on screen. Before the first game the lobby, not the match screen, tells the player about a lost seat. */
+    private boolean inMatch() {
+        return clientGui != null && clientGui.getGameView() != null;
+    }
+
     public ReconnectState getReconnectState() {
         synchronized (reconnectLock) {
             return reconnectState;
@@ -393,13 +404,17 @@ public class FGameClient implements IToServer, IHasForgeLog {
         notifyReconnectState(ReconnectState.CONNECTED, 0, 0);
     }
 
-    void onSeatLost() {
+    /** The server will not seat this client: the match moved on while it reconnected, or the host kicked this player. */
+    void onSeatLost(final SeatLostEvent.Reason reason) {
         synchronized (reconnectLock) {
-            if (shuttingDown || reconnectState != ReconnectState.RECONNECTING) return;
+            if (shuttingDown || (reconnectState != ReconnectState.RECONNECTING && reconnectState != ReconnectState.CONNECTED)) return;
             reconnectState = ReconnectState.SEAT_LOST;
+            seatLostReason = reason;
         }
         cancelResumeWatch();
-        notifyReconnectState(ReconnectState.SEAT_LOST, -1, 0);
+        if (inMatch()) {
+            notifyReconnectState(ReconnectState.SEAT_LOST, -1, 0);
+        }
     }
 
     /**
@@ -471,9 +486,9 @@ public class FGameClient implements IToServer, IHasForgeLog {
     private class LobbyUpdateHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
-            if (msg instanceof SeatLostEvent) {
+            if (msg instanceof SeatLostEvent event) {
                 if (isActiveChannel(ctx.channel())) {
-                    onSeatLost();
+                    onSeatLost(event.getReason());
                 }
                 return;
             }
@@ -514,7 +529,9 @@ public class FGameClient implements IToServer, IHasForgeLog {
                 onDisconnected();
                 final boolean notifyListeners;
                 synchronized (reconnectLock) {
-                    notifyListeners = !shuttingDown && reconnectState != ReconnectState.RECONNECTING;
+                    // The match screen's own dialog handles a lost seat
+                    notifyListeners = !shuttingDown && reconnectState != ReconnectState.RECONNECTING
+                            && !(reconnectState == ReconnectState.SEAT_LOST && inMatch());
                 }
                 if (notifyListeners) {
                     for (final ILobbyListener listener : lobbyListeners) {

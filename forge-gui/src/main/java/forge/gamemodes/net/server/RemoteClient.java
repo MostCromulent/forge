@@ -9,6 +9,7 @@ import forge.gamemodes.net.event.NetEvent;
 import forge.util.IHasForgeLog;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -65,6 +66,20 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
     public SocketAddress getRemoteAddress() {
         final Channel ch = channel;
         return ch == null ? null : ch.remoteAddress();
+    }
+
+    /** Sends the event and closes the connection once it is written. A plain close would drop a write still queued. */
+    public void sendAndClose(final NetEvent event) {
+        final Channel ch = channel;
+        if (ch == null) {
+            return;
+        }
+        final ByteBuf encoded = encodeOnCallingThread(event);
+        if (encoded == null) {
+            ch.close();
+        } else {
+            ch.writeAndFlush(encoded).addListener(ChannelFutureListener.CLOSE);
+        }
     }
 
     /** Encodes synchronously on the caller's thread. Returns null on failure (logged). */

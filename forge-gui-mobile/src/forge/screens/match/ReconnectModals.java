@@ -81,8 +81,8 @@ public final class ReconnectModals {
     public static void showSeatLost(final FGameClient client, final Runnable onReturnToMain) {
         final Localizer loc = Localizer.getInstance();
         FOptionPane.showMessageDialog(
-                loc.getMessage("lblReconnectSeatLostMessage"),
-                loc.getMessage("lblReconnectSeatLostTitle"),
+                loc.getMessage(client.wasKicked() ? "lblNetKickedMessage" : "lblReconnectSeatLostMessage"),
+                loc.getMessage(client.wasKicked() ? "lblNetKickedTitle" : "lblReconnectSeatLostTitle"),
                 FOptionPane.WARNING_ICON,
                 result -> {
                     client.beginShutdown();

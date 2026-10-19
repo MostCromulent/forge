@@ -70,6 +70,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 public final class FServerManager implements IHasForgeLog, HostingServer.Server {
 
@@ -83,6 +84,8 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
     private final Map<Channel, RemoteClient> clients = new ConcurrentHashMap<>();
     private final Map<String, RemoteClient> disconnectedClients = new ConcurrentHashMap<>();
     private final Map<String, Timer> reconnectTimers = new ConcurrentHashMap<>();
+    /** Names the host kicked. They cannot join again until the host allows them or the server stops. */
+    private final Set<String> kickedPlayers = ConcurrentHashMap.newKeySet();
 
     // Abuse limits. Read per call rather than into constants so a test can vary
     // them: Integer.getInteger in a static initialiser fixes the value at
@@ -321,6 +324,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         }
         reconnectTimers.clear();
         disconnectedClients.clear();
+        kickedPlayers.clear();
         clients.clear();
         afkSlots.clear();
 
@@ -855,8 +859,105 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
             return handleSkipReconnectCommand(trimmed);
         } else if (lower.equals("/skiptimeout") || lower.startsWith("/skiptimeout ")) {
             return handleSkipTimeoutCommand(trimmed);
+        } else if (lower.equals("/kick") || lower.startsWith("/kick ")) {
+            return handleKickCommand(trimmed.substring("/kick".length()).trim());
+        } else if (lower.equals("/allow") || lower.startsWith("/allow ")) {
+            return handleAllowCommand(trimmed.substring("/allow".length()).trim());
         }
         return false;
+    }
+
+    private boolean handleKickCommand(final String name) {
+        // Slot 0 is the host's own seat. A player waiting to reconnect still holds theirs
+        final List<RemoteClient> players = Stream.concat(clients.values().stream(), disconnectedClients.values().stream())
+                .filter(c -> c.getIndex() > 0).toList();
+        if (name.isEmpty()) {
+            tellHost(players.isEmpty() ? localizer.getMessage("lblNetKickNoPlayers")
+                    : localizer.getMessage("lblNetKickPlayers", String.join(", ", players.stream().map(RemoteClient::getUsername).toList())));
+            return true;
+        }
+        final RemoteClient client = players.stream().filter(c -> name.equals(c.getUsername())).findFirst().orElse(null);
+        if (client == null) {
+            tellHost(localizer.getMessage("lblNetKickNoPlayer", name));
+        } else {
+            kick(client);
+        }
+        return true;
+    }
+
+    /** Removes a player and refuses them until the host allows them back. */
+    private void kick(final RemoteClient client) {
+        final String name = client.getUsername();
+        netLog.info("Host kicked {}", name);
+        kickedPlayers.add(name);
+        final Timer timer = reconnectTimers.remove(name);
+        if (timer != null) {
+            timer.cancel();
+        }
+        removeFromTable(client, true);
+        client.sendAndClose(new SeatLostEvent(SeatLostEvent.Reason.KICKED));
+        broadcast(new MessageEvent(localizer.getMessage("lblNetKickRemoved", name)));
+    }
+
+    private boolean handleAllowCommand(final String name) {
+        if (name.isEmpty()) {
+            tellHost(kickedPlayers.isEmpty() ? localizer.getMessage("lblNetAllowNone")
+                    : localizer.getMessage("lblNetAllowList", String.join(", ", kickedPlayers)));
+        } else if (kickedPlayers.remove(name)) {
+            tellHost(localizer.getMessage("lblNetAllowDone", name));
+        } else {
+            tellHost(localizer.getMessage("lblNetAllowNoPlayer", name));
+        }
+        return true;
+    }
+
+    /**
+     * Takes a player off the table for good. In the lobby their seat is freed, and in a draft their seat picks automatically.
+     * In a match, a player who concedes loses the current game and every later one. Otherwise the AI plays their seat from here.
+     * The caller closes any connection.
+     */
+    private void removeFromTable(final RemoteClient client, final boolean concede) {
+        // Deregistered first, so the close is not taken for a drop
+        clients.values().remove(client);
+        disconnectedClients.values().remove(client);
+        client.getReplyPool().cancelAll();
+        final int index = client.getIndex();
+        if (isMatchActive()) {
+            pauseRemoteClientGuiGame(client);
+            final PlayerControllerHuman pch = findRemoteController(index);
+            final Player player = pch == null ? null : pch.getPlayer();
+            if (concede && player != null) {
+                // Outcome only: the game thread removes them at its next state check
+                if (!player.getGame().isGameOver()) {
+                    player.concede();
+                }
+                localLobby.getHostedMatch().withdraw(player.getRegisteredPlayer());
+            }
+            // An AI controller answers for the seat; a conceded player's only until the game removes them
+            convertToAI(client);
+            localLobby.disconnectPlayer(index);
+        } else if (isDraftInProgress()) {
+            final int seat = localLobby.findSeatForLobbySlot(index);
+            final BoosterDraftHost host = localLobby.getDraftHost();
+            if (seat >= 0 && host != null) {
+                host.dropSeat(seat);
+            }
+        } else {
+            localLobby.disconnectPlayer(index);
+            broadcast(new LogoutEvent(client.getUsername()));
+        }
+    }
+
+    private boolean isDraftInProgress() {
+        return localLobby != null && localLobby.getCurrentEvent() != null
+                && localLobby.getCurrentEvent().getPhase() == EventPhase.DRAFTING;
+    }
+
+    /** A chat line only the host sees. */
+    private void tellHost(final String text) {
+        if (lobbyListener != null) {
+            lobbyListener.message(null, text, ChatMessage.MessageType.SYSTEM);
+        }
     }
 
     private boolean handleSkipReconnectCommand(final String command) {
@@ -866,10 +967,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         final RemoteClient client = disconnectedClients.remove(target);
         final Timer timer = reconnectTimers.remove(target);
         if (timer != null) { timer.cancel(); }
-        if (isMatchActive()) {
-            convertToAI(client);
-        }
-        localLobby.disconnectPlayer(client.getIndex());
+        removeFromTable(client, false);
         broadcast(new MessageEvent(String.format("Host forced AI takeover for %s.", target)));
         return true;
     }
@@ -976,18 +1074,11 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         final RemoteClient client = disconnectedClients.remove(username);
         if (client == null) { return; }
 
-        // If match already ended, just clean up
+        removeFromTable(client, false);
         if (!isMatchActive()) {
-            localLobby.disconnectPlayer(client.getIndex());
             return;
         }
-
-        netLog.info("[Reconnect] Timeout for {}. Converting to AI.", username);
-        convertToAI(client);
-
-        // Reset lobby slot
-        localLobby.disconnectPlayer(client.getIndex());
-
+        netLog.info("[Reconnect] Timeout for {}. Converted to AI.", username);
         broadcast(MessageEvent.warning(String.format("%s did not reconnect in time. AI has taken over.", username)));
     }
 
@@ -1098,9 +1189,14 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
                 final String username = LogSafe.forDisplay(event.getUsername(), maxNameLength());
                 client.setUsername(username);
 
+                final boolean kicked = kickedPlayers.contains(username);
                 // Check if this is a reconnecting player
-                final RemoteClient disconnected = disconnectedClients.remove(username);
-                if (disconnected != null) {
+                final RemoteClient disconnected = kicked ? null : disconnectedClients.remove(username);
+                if (kicked) {
+                    netLog.info("Refused {}: kicked", username);
+                    tellHost(localizer.getMessage("lblNetKickRefused", username));
+                    client.sendAndClose(new SeatLostEvent(SeatLostEvent.Reason.KICKED));
+                } else if (disconnected != null) {
                     // Cancel timeout timer
                     final Timer timer = reconnectTimers.remove(username);
                     if (timer != null) {
@@ -1122,10 +1218,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
                     // Draft-side resync: re-send the current pack and clear grace state.
                     // The draft host broadcasts its own reconnect message, so suppress
                     // the generic one below to avoid double-firing.
-                    final boolean draftInProgress = localLobby != null
-                            && localLobby.getCurrentEvent() != null
-                            && localLobby.getCurrentEvent().getPhase() == EventPhase.DRAFTING;
-                    if (draftInProgress) {
+                    if (isDraftInProgress()) {
                         final int seat = localLobby.findSeatForLobbySlot(disconnected.getIndex());
                         final BoosterDraftHost host = localLobby.getDraftHost();
                         if (seat >= 0 && host != null) {
@@ -1141,10 +1234,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
                     // Tell them explicitly so the client surfaces the seat-lost modal instead
                     // of inferring it from a lobby update.
                     netLog.info("[Reconnect] LoginEvent for {} during active match - seat unavailable", username);
-                    if (client != null) {
-                        broadcastTo(new SeatLostEvent(), client);
-                    }
-                    ctx.close();
+                    client.sendAndClose(new SeatLostEvent(SeatLostEvent.Reason.MATCH_GONE));
                 } else {
                     // Normal login flow
                     final int index = localLobby.connectPlayer(username, event.getAvatarIndex(), event.getSleeveIndex());
@@ -1253,9 +1343,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
 
             netLog.info("[Disconnect] Client disconnected: index={}, username={}", playerIndex, username);
 
-            final boolean draftInProgress = localLobby != null
-                    && localLobby.getCurrentEvent() != null
-                    && localLobby.getCurrentEvent().getPhase() == EventPhase.DRAFTING;
+            final boolean draftInProgress = isDraftInProgress();
 
             if (isMatchActive() && client.hasValidSlot()) {
                 // Match is active — pause, store for reconnect, run 5-minute reclaim timer.

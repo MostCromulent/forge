@@ -44,6 +44,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class HostedMatch {
     private Match match;
@@ -54,6 +55,8 @@ public class HostedMatch {
     private Runnable startGameHook = null;
     private Runnable endGameHook = null;
     private Runnable onMatchOver = null;
+    /** Players who left the match for good. They concede every game that starts after they left. */
+    private final Set<RegisteredPlayer> withdrawn = ConcurrentHashMap.newKeySet();
     private final List<PlayerControllerHuman> humanControllers = Lists.newArrayList();
     private Map<RegisteredPlayer, IGuiGame> guis;
     private int humanCount;
@@ -70,6 +73,10 @@ public class HostedMatch {
     }
     public void setEndGameHook(Runnable hook) { endGameHook = hook; }
     public void setOnMatchOver(Runnable callback) { onMatchOver = callback; }
+
+    public void withdraw(final RegisteredPlayer player) {
+        withdrawn.add(player);
+    }
 
     private static GameRules getDefaultRules(final GameType gameType) {
         final GameRules gameRules = new GameRules(gameType);
@@ -290,6 +297,12 @@ public class HostedMatch {
                 playbackControl = new FControlGamePlayback(humanControllers.get(0));
                 playbackControl.setGame(currentGame);
                 currentGame.subscribeToEvents(playbackControl);
+            }
+            // Players who left the match concede before it starts, and the first state check removes them
+            for (final Player p : currentGame.getPlayers()) {
+                if (withdrawn.contains(p.getRegisteredPlayer())) {
+                    p.concede();
+                }
             }
             // Actually start the game!
             try {

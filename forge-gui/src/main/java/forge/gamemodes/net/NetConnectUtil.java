@@ -201,7 +201,8 @@ public class NetConnectUtil {
             }
             @Override
             public void close() {
-                onlineLobby.closeConn(Localizer.getInstance().getMessage("lblYourConnectionToHostWasInterrupted", url));
+                onlineLobby.closeConn(client.wasKicked() ? Localizer.getInstance().getMessage("lblNetKickedMessage")
+                        : Localizer.getInstance().getMessage("lblYourConnectionToHostWasInterrupted", url));
             }
             @Override
             public ClientGameLobby getLobby() {
