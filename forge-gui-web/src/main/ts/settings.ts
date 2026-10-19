@@ -14,7 +14,6 @@ const GUEST_KEY = 'forge.guestSettings';
 export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb: string | null }[] = [
   { id: 'nebula', name: 'lblWebPlaymatNebula', image: '/playmats/stormy-nebula.jpg', thumb: '/playmats/stormy-nebula-thumb.jpg' },
   { id: 'emerald', name: 'lblWebPlaymatEmerald', image: '/playmats/emerald-mistscape.jpg', thumb: '/playmats/emerald-mistscape-thumb.jpg' },
-  { id: 'volcanic', name: 'lblWebPlaymatVolcanic', image: '/playmats/volcanic-stonescape.jpg', thumb: '/playmats/volcanic-stonescape-thumb.jpg' },
   { id: 'bayou', name: 'lblWebPlaymatBayou', image: '/playmats/twilight-bayou.jpg', thumb: '/playmats/twilight-bayou-thumb.jpg' },
   { id: 'steppe', name: 'lblWebPlaymatSteppe', image: '/playmats/dawn-steppe.jpg', thumb: '/playmats/dawn-steppe-thumb.jpg' },
   { id: 'molten', name: 'lblWebPlaymatMolten', image: '/playmats/molten-forge.jpg', thumb: '/playmats/molten-forge-thumb.jpg' },
