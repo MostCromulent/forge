@@ -1245,7 +1245,7 @@ public class ImageView<T extends InventoryItem> extends ItemView<T> {
                 //draw draft ranking
                 if (showRanking && FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_OVERLAY_DRAFT_RANKING)) {
                     double score = CardRanker.getRawScore((PaperCard) item);
-                    int draftRank = score <= 0 ? 0 : score > 99 ? 99 : (int) Math.round(CardRanker.getRawScore((PaperCard) item));
+                    int draftRank = score <= 0 ? 0 : score > 99 ? 99 : (int) Math.round(score);
                     String value = String.valueOf(draftRank);
                     g.setColor(Color.white);
                     Shape clip = g.getClip();

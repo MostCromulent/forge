@@ -1165,7 +1165,7 @@ public class ImageView<T extends InventoryItem> extends ItemView<T> {
                 showRanking = itemManager.getShowRanking() && FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_OVERLAY_DRAFT_RANKING);
                 if (showRanking) {
                     double score = CardRanker.getRawScore(pc);
-                    draftRank = score <= 0 ? 0 : score > 99 ? 99 : (int) Math.round(CardRanker.getRawScore((PaperCard) item));
+                    draftRank = score <= 0 ? 0 : score > 99 ? 99 : (int) Math.round(score);
                     if (draftRank >= 90) {
                         draftRankImage = FSkinImage.DRAFTRANK_S;
                     } else if (draftRank >= 80) {
