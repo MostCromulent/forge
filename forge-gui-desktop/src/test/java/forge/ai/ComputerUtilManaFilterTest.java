@@ -61,4 +61,47 @@ public class ComputerUtilManaFilterTest extends AITest {
         AssertJUnit.assertTrue(payForReal(firstWing, ai));
         AssertJUnit.assertTrue(expanse.isTapped());
     }
+
+    @Test
+    public void hybridFilterLandTurnsOneColorIntoTwoOfAnother() {
+        Game game = initAndCreateGame();
+        Player ai = game.getPlayers().get(1);
+
+        addCard("Plains", ai);
+        Card gate = addCard("Mystic Gate", ai); // {W/U}, {T}: Add {W}{W}, {W}{U}, or {U}{U}
+        Card counterspell = addCardToZone("Counterspell", ai, ZoneType.Hand); // {U}{U}
+
+        AssertJUnit.assertTrue(payForReal(counterspell, ai));
+        AssertJUnit.assertTrue(gate.isTapped());
+    }
+
+    @Test
+    public void hybridFilterLandCannotPayForItself() {
+        Game game = initAndCreateGame();
+        Player ai = game.getPlayers().get(1);
+
+        addCard("Mystic Gate", ai);
+        Card counterspell = addCardToZone("Counterspell", ai, ZoneType.Hand);
+
+        SpellAbility sa = counterspell.getFirstSpellAbility();
+        sa.setActivatingPlayer(ai);
+        AssertJUnit.assertFalse(ComputerUtilMana.canPayManaCost(sa, ai, 0, false));
+    }
+
+    @Test
+    public void planningAgreesWithPaymentWhenOneFilterWouldPayForAnother() {
+        Game game = initAndCreateGame();
+        Player ai = game.getPlayers().get(1);
+
+        addCard("Plains", ai);
+        addCards("Azorius Signet", 2, ai);
+        Card abuelo = addCardToZone("Abuelo, Ancestral Echo", ai, ZoneType.Hand); // {1}{W}{U}
+
+        SpellAbility sa = abuelo.getFirstSpellAbility();
+        sa.setActivatingPlayer(ai);
+        boolean planned = ComputerUtilMana.canPayManaCost(sa, ai, 0, false);
+        ManaCostBeingPaid cost = new ManaCostBeingPaid(sa.getPayCosts().getTotalMana());
+        boolean paid = ComputerUtilMana.payManaCost(cost, sa, ai, false) && cost.isPaid();
+        AssertJUnit.assertEquals(paid, planned);
+    }
 }
