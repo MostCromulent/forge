@@ -520,6 +520,10 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby, IDra
 
     @Override
     public void closeConn(String msg) {
+        closeConn(msg, false);
+    }
+
+    private void closeConn(String msg, boolean offerGuide) {
         if (getfGameClient() != null) {
             getfGameClient().setDraftHandler(null);
         }
@@ -544,8 +548,14 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby, IDra
         });
         if (msg.length() > 0) {
             FThreads.invokeInBackgroundThread(() -> {
-                final boolean callBackAlwaysTrue = SOptionPane.showOptionDialog(msg, Forge.getLocalizer().getMessage("lblError"), FSkinProp.ICO_WARNING, List.of(Forge.getLocalizer().getMessage("lblOK")), 1) == 0;
-                if (callBackAlwaysTrue) { //to activate online menu popup when player press play online
+                final List<String> options = offerGuide
+                        ? List.of(Forge.getLocalizer().getMessage("lblOK"), Forge.getLocalizer().getMessage("lblNetworkPlayGuide"))
+                        : List.of(Forge.getLocalizer().getMessage("lblOK"));
+                final int choice = SOptionPane.showOptionDialog(msg, Forge.getLocalizer().getMessage("lblError"), FSkinProp.ICO_WARNING, options, 0);
+                if (choice == 1) {
+                    Gdx.net.openURI(ForgeConstants.NETWORK_PLAY_MESSAGES_URL);
+                }
+                if (choice >= 0) { //to activate online menu popup when player press play online
                     if (FServerManager.getInstance() != null)
                         FServerManager.getInstance().stopServer();
                     if (getfGameClient() != null)
@@ -858,7 +868,7 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby, IDra
                         return;
                     } else if (message != null && message.startsWith(ForgeConstants.CONN_ERROR_PREFIX)) {
                         String errorDetail = message.substring(ForgeConstants.CONN_ERROR_PREFIX.length());
-                        closeConn(errorDetail);
+                        closeConn(errorDetail, true);
                         return;
                     } else if (ForgeConstants.INVALID_HOST_COMMAND.equals(message)) {
                         closeConn(Forge.getLocalizer().getMessage("lblDetectedInvalidHostAddress", url));

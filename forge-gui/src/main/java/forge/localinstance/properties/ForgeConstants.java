@@ -33,6 +33,7 @@ public final class ForgeConstants {
     public static final String GITHUB_COMMITS_ATOM              = GITHUB_FORGE_URL + "commits/master.atom";
     public static final String GITHUB_SNAPSHOT_URL              = GITHUB_FORGE_URL + "releases/download/daily-snapshots/";
     public static final String NETWORK_PLAY_WIKI_URL            = GITHUB_FORGE_URL + "wiki/network-play";
+    public static final String NETWORK_PLAY_MESSAGES_URL        = NETWORK_PLAY_WIKI_URL + "#connection-messages";
     public static final String RELEASE_URL                      = "https://releases.cardforge.org/";
     public static final String PATH_SEPARATOR                   = File.separator;
     public static final String ASSETS_DIR                       = GuiBase.getInterface().getAssetsDir();

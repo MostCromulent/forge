@@ -18,6 +18,7 @@ import forge.gamemodes.net.server.HostingServer.AfkTimeout;
 import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.CompatibleObjectDecoder;
 import forge.gamemodes.net.CompatibleObjectEncoder;
+import forge.gamemodes.net.ConnectionDiagnosis;
 import forge.gamemodes.net.EventPhase;
 import forge.gamemodes.net.NetworkLogConfig;
 import forge.gamemodes.net.draft.BoosterDraftHost;
@@ -36,6 +37,7 @@ import forge.util.BuildInfo;
 import forge.util.IterableUtil;
 import forge.util.LogSafe;
 import forge.util.Localizer;
+import forge.util.ThreadUtil;
 import forge.localinstance.properties.ForgeNetPreferences;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -52,9 +54,13 @@ import io.netty.handler.timeout.IdleStateHandler;
 
 import org.jupnp.UpnpService;
 import org.jupnp.UpnpServiceImpl;
+import org.jupnp.model.action.ActionInvocation;
+import org.jupnp.model.message.UpnpResponse;
 import org.jupnp.model.meta.Device;
+import org.jupnp.model.meta.Service;
 import org.jupnp.registry.Registry;
 import org.jupnp.support.igd.PortMappingListener;
+import org.jupnp.support.igd.callback.GetExternalIP;
 import org.jupnp.support.model.PortMapping;
 import org.jupnp.util.SpecificationViolationReporter;
 
@@ -63,6 +69,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -690,7 +697,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         if (lower.startsWith("zt") || lowerDisplay.contains("zerotier")) {
             return "ZeroTier";
         }
-        if (isTailscaleAddress(ip)) {
+        if (ConnectionDiagnosis.isSharedAddressSpace(ip)) {
             return "Tailscale";
         }
         if (lower.startsWith("wg")) {
@@ -726,24 +733,14 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         return displayName;
     }
 
-    private static boolean isTailscaleAddress(final String ip) {
-        try {
-            final String[] parts = ip.split("\\.");
-            if (parts.length == 4) {
-                final int first = Integer.parseInt(parts[0]);
-                final int second = Integer.parseInt(parts[1]);
-                return first == 100 && second >= 64 && second <= 127;
-            }
-        } catch (final NumberFormatException ignored) { }
-        return false;
-    }
-
     public static String getExternalAddress() {
         BufferedReader in = null;
         try {
-            URL whatismyip = new URL("https://checkip.amazonaws.com");
+            final URLConnection whatismyip = new URL("https://checkip.amazonaws.com").openConnection();
+            whatismyip.setConnectTimeout(5000);
+            whatismyip.setReadTimeout(5000);
             in = new BufferedReader(new InputStreamReader(
-                    whatismyip.openStream()));
+                    whatismyip.getInputStream()));
             return in.readLine();
         } catch (IOException e) {
             netLog.error(e, "Failed to get external address");
@@ -784,11 +781,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
             new Timer("upnp-timeout", true).schedule(new TimerTask() {
                 @Override
                 public void run() {
-                    if (!listener.isCompleted()) {
-                        listener.setCompleted();
-                        netLog.warn("UPnP: no gateway confirmed a mapping for port {} within 5 seconds", port);
-                        onUPnPResult(false);
-                    }
+                    listener.reportTimeout();
                 }
             }, 5000);
         } catch (LinkageError | Exception e) {
@@ -802,13 +795,10 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         }
     }
 
-    private void onUPnPResult(boolean success) {
-        String msg = success
-            ? localizer.getMessage("lblUPnPSuccess", String.valueOf(port))
-            : localizer.getMessage("lblUPnPFailed", String.valueOf(port));
-        if (lobbyListener != null) {
-            broadcast(success ? new MessageEvent(msg) : MessageEvent.warning(msg));
-        }
+    // The diagnosis is about the host's own router, so it goes to the host's lobby only
+    private void onUPnPResult(final ConnectionDiagnosis.UPnPResult result, final String routerAddress) {
+        final String publicAddress = result == ConnectionDiagnosis.UPnPResult.FORWARDED ? getExternalAddress() : null;
+        dispatchToLocalListener(ConnectionDiagnosis.hostMessage(result, port, routerAddress, publicAddress));
     }
 
     /**
@@ -817,7 +807,8 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
      * so by the time super.deviceAdded() returns, the result is known.
      */
     private class ForgePortMappingListener extends PortMappingListener {
-        private volatile boolean completed = false;
+        // Null until the first result. A router that confirms after the timeout replaces the timeout's result
+        private ConnectionDiagnosis.UPnPResult reported;
 
         ForgePortMappingListener(PortMapping portMapping) {
             super(portMapping);
@@ -826,23 +817,56 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         @Override
         public synchronized void deviceAdded(Registry registry, Device device) {
             super.deviceAdded(registry, device);
-            if (!completed && !activePortMappings.isEmpty()) {
-                completed = true;
-                onUPnPResult(true);
+            if (activePortMappings.isEmpty() || (reported != null && reported != ConnectionDiagnosis.UPnPResult.NO_ANSWER)) {
+                return;
             }
+            reported = ConnectionDiagnosis.UPnPResult.FORWARDED;
+            final Service<?, ?> service = activePortMappings.keySet().iterator().next();
+            // Asking the router and checkip can each take seconds, and jupnp holds its registry lock here
+            ThreadUtil.getServicePool().execute(() -> onUPnPResult(ConnectionDiagnosis.UPnPResult.FORWARDED, getRouterAddress(service)));
         }
 
         @Override
-        protected void handleFailureMessage(String message) {
+        protected synchronized void handleFailureMessage(String message) {
             super.handleFailureMessage(message);
-            if (!completed) {
-                completed = true;
-                onUPnPResult(false);
+            if (reported == null) {
+                reported = ConnectionDiagnosis.UPnPResult.REFUSED;
+                onUPnPResult(ConnectionDiagnosis.UPnPResult.REFUSED, null);
             }
         }
 
-        boolean isCompleted() { return completed; }
-        void setCompleted() { completed = true; }
+        synchronized void reportTimeout() {
+            if (reported == null) {
+                reported = ConnectionDiagnosis.UPnPResult.NO_ANSWER;
+                netLog.warn("UPnP: no gateway confirmed a mapping for port {} within 5 seconds", port);
+                onUPnPResult(ConnectionDiagnosis.UPnPResult.NO_ANSWER, null);
+            }
+        }
+
+        /** The router's internet address, or null if it does not report one within 5 seconds. */
+        private String getRouterAddress(final Service<?, ?> service) {
+            if (service.getAction("GetExternalIPAddress") == null) {
+                return null;
+            }
+            final CompletableFuture<String> address = new CompletableFuture<>();
+            upnpService.getControlPoint().execute(new GetExternalIP(service) {
+                @Override
+                protected void success(final String externalIPAddress) {
+                    address.complete(externalIPAddress);
+                }
+
+                @Override
+                public void failure(final ActionInvocation invocation, final UpnpResponse operation, final String defaultMsg) {
+                    netLog.warn("UPnP: router did not report its internet address: {}", defaultMsg);
+                    address.complete(null);
+                }
+            });
+            try {
+                return address.get(5, TimeUnit.SECONDS);
+            } catch (final Exception e) {
+                return null;
+            }
+        }
     }
 
     // --- Reconnection helper methods ---

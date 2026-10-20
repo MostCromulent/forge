@@ -55,6 +55,8 @@ public class FGameClient implements IToServer, IHasForgeLog {
     static final int READER_IDLE_SECONDS = 45;
     private static final int[] BACKOFF_SECONDS = {1, 5, 15, 45, 60};
     private static final int RESUME_WATCH_SECONDS = 5;
+    // Shorter than the Windows connect timeout of about 21 s, so every platform reports a timeout as ConnectTimeoutException
+    private static final int CONNECT_TIMEOUT_SECONDS = 15;
     private final IGuiGame clientGui;
     private final String hostname;
     private final Integer port;
@@ -101,6 +103,7 @@ public class FGameClient implements IToServer, IHasForgeLog {
             final Bootstrap b = new Bootstrap()
              .group(group)
              .channel(NioSocketChannel.class)
+             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, CONNECT_TIMEOUT_SECONDS * 1000)
              .handler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(final SocketChannel ch) throws Exception {

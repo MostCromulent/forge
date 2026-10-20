@@ -8,6 +8,7 @@
   - [Local Network Setup](#local-network-setup)
   - [Remote Network Setup](#remote-network-setup)
   - [VPN / Software-Defined Networks](#vpn--software-defined-networks)
+  - [Connection Messages](#connection-messages)
 - [Known Limitations](#known-limitations)
 - [Network Logs](#network-logs)
 ---
@@ -196,15 +197,9 @@ Forge has built-in **UPnP** support that can automatically configure your router
 | **Not Now** | Skip UPnP this time. You will be prompted again next time. |
 | **Never** | Never attempt UPnP. Saved as a preference. You will need to configure port forwarding manually. |
 
-**If UPnP succeeds**, Forge will display a confirmation in the lobby chat:
-> UPnP: Port 36743 forwarded successfully. Remote players should be able to connect using your external IP.
+After the attempt, Forge posts a message in the lobby chat. It says whether the port was forwarded and whether players on the internet can reach you. See [Connection Messages](#connection-messages) for what each message means.
 
-No manual router configuration is needed — skip to [Validate External Access](#2-validate-external-access) below.
-
-**If UPnP fails**, Forge will display a notification in the lobby chat after a few seconds:
-> UPnP: Automatic port forwarding failed for port 36743. You may need to set up manual port forwarding for remote play.
-
-You will need to configure port forwarding manually using the steps below. Common reasons for failure: UPnP is disabled on the router, the router doesn't support UPnP, or a firewall is blocking UPnP discovery.
+If the port was forwarded, skip to [Validate External Access](#2-validate-external-access) below. Otherwise, set up port forwarding manually using the steps below.
 
 ### 1. Manual Port Forwarding on the Router
 
@@ -263,6 +258,33 @@ For self-hosted options (e.g. OpenVPN on your own server or router), you will ne
 
 ### Security Note
 Any player on a shared private network can see other devices on that network. Only share access with people you trust, and disconnect when you're not playing.
+
+## Connection Messages
+
+### When Hosting
+
+When UPnP is on, Forge posts one of these messages in the lobby chat after it asks your router to forward the port. Only you see them.
+
+| Message | What it means | What to do |
+|---|---|---|
+| Port 36743 is forwarded. Players on the internet should be able to join at 203.0.113.45:36743. | Your router forwarded the port, and its internet address matches the one the internet sees. | Share the address shown. If players still cannot join, check the [host firewall](#1-configure-the-host-firewall) and [validate external access](#2-validate-external-access). |
+| Your router forwarded port 36743, but your internet provider uses carrier-grade NAT (CGNAT). | Your provider shares one internet address among many customers. Incoming connections stop at the provider, so forwarding on your router does not help. | Ask your provider for a public IP address, ask another player to host, or use a [VPN or SDN](#vpn--software-defined-networks). |
+| Your router forwarded port 36743, but its own internet address is private. | Your router is connected to another router, often a modem from your provider, or to a shared building network. Incoming connections stop at that device. | Forward port 36743 on the other device to your router, or set that device to bridge mode. If you do not control it, use a [VPN or SDN](#vpn--software-defined-networks). |
+| Your router and the internet report different addresses for you. | Something between your router and the internet changes your address. Common causes are a VPN, a router with more than one internet connection, or provider-level NAT. | Try to join from outside your network. If it fails, turn off any VPN, or use a [VPN or SDN](#vpn--software-defined-networks) designed for play. |
+| No router accepted the UPnP request within 5 seconds. | No router answered, or it answered too slowly. UPnP may be turned off in the router's settings. | Turn on UPnP in your router's settings, or [forward the port manually](#1-manual-port-forwarding-on-the-router). If the router answers later, Forge posts a second message. |
+| Your router did not accept the request to forward port 36743. | The router answered but did not add the forwarding rule. Another device may already use the port, or the router may only allow some devices to use UPnP. | [Forward the port manually](#1-manual-port-forwarding-on-the-router), or choose another **Server Port** under **Server Preferences**. |
+| Forge could not find your internet address. | Forge could not reach checkip.amazonaws.com, which tells it your internet address. | Check that you are online. Players on your network can still join. |
+
+### When Joining
+
+When a join fails, Forge explains the cause in the error dialog. Click **Network Play User Guide** to open this section.
+
+| Message | What it means | What to do |
+|---|---|---|
+| The host did not answer. | Nothing replied at that address. This usually means the port is not forwarded, or a firewall is dropping the connection. The host may also be offline. | Ask the host to check their [port forwarding](#remote-network-setup) and [firewall](#1-configure-the-host-firewall). |
+| The connection was refused. | Something at that address rejected the connection. Forge may not be hosting, the port may be wrong, or the host's router may reject connections it has no forwarding rule for. | Check that the host has started hosting and that the port number is correct. |
+| 192.168.1.50 is a private address. | The address belongs to a home or office network. It works only for players on the same network as the host. | Ask the host for their external address. |
+| 100.72.4.9 is a private address used by Tailscale and by carrier-grade NAT. | Addresses in this range work only between devices on the same private network. | If the host uses Tailscale, join their Tailscale network. Otherwise ask the host for their external address. |
 
 ---
 

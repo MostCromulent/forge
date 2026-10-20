@@ -235,7 +235,7 @@ public class NetConnectUtil {
         Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
         String causeName = cause.getClass().getSimpleName();
 
-        sb.append(localizer.getMessage("lblConnectionFailedTo", hostname, port));
+        sb.append(localizer.getMessage("lblConnectionFailedTo", hostname, String.valueOf(port)));
         sb.append("\n\n");
 
         // Provide specific messages for common error types
@@ -257,6 +257,10 @@ public class NetConnectUtil {
             }
         }
 
+        final String addressNote = ConnectionDiagnosis.joinMessage(hostname);
+        if (addressNote != null) {
+            sb.append("\n\n").append(addressNote);
+        }
         return sb.toString();
     }
 }

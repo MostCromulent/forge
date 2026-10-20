@@ -174,7 +174,11 @@ public enum CSubmenuOnlineLobby implements ICDoc, IMenuProvider {
         } else if (message != null && message.startsWith(ForgeConstants.CONN_ERROR_PREFIX)) {
             // Show detailed connection error
             String errorDetail = message.substring(ForgeConstants.CONN_ERROR_PREFIX.length());
-            FOptionPane.showErrorDialog(errorDetail, Localizer.getInstance().getMessage("lblConnectionError"));
+            final Localizer localizer = Localizer.getInstance();
+            if (FOptionPane.showOptionDialog(errorDetail, localizer.getMessage("lblConnectionError"), FOptionPane.ERROR_ICON,
+                    List.of(localizer.getMessage("lblOK"), localizer.getMessage("lblNetworkPlayGuide"))) == 1) {
+                MenuUtil.openUrlInBrowser(ForgeConstants.NETWORK_PLAY_MESSAGES_URL);
+            }
             SOverlayUtils.hideOverlay();
         } else if (Objects.equals(message, ForgeConstants.INVALID_HOST_COMMAND)) {
             FOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblDetectedInvalidHostAddress", url));
