@@ -99,6 +99,11 @@ public final class WebSession implements IHasForgeLog {
     private volatile String name;
     /** The avatar chosen next to the name, held here before any seat exists. Null until it chooses one. */
     private volatile Integer avatar;
+    /** A guest's last chosen sleeve, from its browser. Null until it chooses one, and the seat then keeps the sleeve it was given. */
+    private volatile Integer sleeve;
+    /** Tells sessions apart. A browser that is moved to another session, such as a seat handed over, sees the number change. */
+    private final int serial = SERIALS.incrementAndGet();
+    private static final AtomicInteger SERIALS = new AtomicInteger();
     private final OfflineLimited limited;
     /** This seat's part in the table's draft or sealed event. */
     private final EventSeat eventSeat;
@@ -345,7 +350,7 @@ public final class WebSession implements IHasForgeLog {
     public static final Commands<WebSession> COMMANDS = new Commands<WebSession>()
             .on(Plain.decks, (s, ch, c) -> s.lobby.queueDecks(ch, s.decks::inTurn))
             .on(PageError.class, (s, ch, e) -> netLog.warn("Page error for {}: {}", s.label(), LogSafe.forLog(e.text(), 1500)))
-            .on(SetName.class, (s, ch, n) -> s.rename(ch, n.name(), n.avatar()))
+            .on(SetName.class, (s, ch, n) -> s.rename(ch, n.name(), n.avatar(), n.sleeve()))
             // A join that found no seat leaves the browser on the waiting page, which offers to try again
             .on(Plain.join, (s, ch, c) -> s.joinHostGame())
             .on(Plain.claimHost, (s, ch, c) -> s.claimHost(ch))
@@ -767,7 +772,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** Takes the name this browser asked for, unless the name has a problem. A guest waiting for a name then takes its seat. */
-    private void rename(final BrowserChannel channel, final String wanted, final Integer face) {
+    private void rename(final BrowserChannel channel, final String wanted, final Integer face, final Integer back) {
         final String problem = nameProblem(wanted);
         if (problem != null) {
             channel.send(error(problem));
@@ -778,18 +783,29 @@ public final class WebSession implements IHasForgeLog {
         if (face != null) {
             avatar = face;
         }
+        if (back != null) {
+            sleeve = back;
+        }
         ui.invokeInEdtLater(this::applyChosenAvatar);
         channel.send(hello());
         sessions.announcePresence();
         joinHostGame();
     }
 
-    /** Puts the avatar chosen on the start page on this session's seat, once it has a seat. */
+    /** Puts the avatar chosen on the start page on this session's seat, once it has a seat. A guest's remembered sleeve goes on it too. */
     private void applyChosenAvatar() {
         final Integer face = avatar;
+        final Integer back = sleeve;
         final int seat = local.webSeat();
-        if (face != null && seat >= 0 && stage instanceof Setup) {
+        if (seat < 0 || !(stage instanceof Setup)) {
+            return;
+        }
+        if (face != null) {
             lobby.setAvatar(seat, face);
+        }
+        // A guest's seat starts with the host's sleeve, because the netplay login reads the host's preferences
+        if (back != null && !isHost) {
+            lobby.setSleeve(seat, back);
         }
     }
 
@@ -832,6 +848,9 @@ public final class WebSession implements IHasForgeLog {
         }
         if (seat.sleeve() != null) {
             lobby.setSleeve(seat.index(), seat.sleeve());
+            if (seat.index() == local.webSeat()) {
+                sleeve = seat.sleeve();
+            }
         }
         if (seat.commander() != null) {
             lobby.setCommander(seat.index(), seat.commander());
@@ -862,7 +881,7 @@ public final class WebSession implements IHasForgeLog {
                 // The jar's manifest holds the version, so a server run from classes has none
                 WebSession.class.getPackage().getImplementationVersion(),
                 // The menu's volume slider and music need the settings before any match sends them with its controls
-                WebSettings.values(settings));
+                WebSettings.values(settings), serial);
     }
 
     private static Screen screen(final Stage stage) {

@@ -239,9 +239,19 @@ export function onServerSettings(values: ServerSettings | undefined): void {
 /** Sends the server the settings this guest's browser stored. It runs before any game opens, so the game starts with them. */
 export function restoreGuestSettings(): void {
   for (const [key, value] of Object.entries(guestSettings())) {
-    if (byKey.get(key)?.server || key.startsWith('SHORTCUT_')) {
+    if (byKey.get(key)?.server || key.startsWith('SHORTCUT_') || key === AUTO_PASS) {
       saveOnServer(key, String(value));
     }
+  }
+}
+
+// The match's auto-pass button sets this server setting. It has no row in the options, so its value comes with the match's controls
+const AUTO_PASS = 'autoPassNoActions';
+
+/** Keeps a guest's auto-pass choice in its browser, as set() keeps its other server settings. */
+export function rememberGuestAutoPass(on: boolean): void {
+  if (guest && guestSettings()[AUTO_PASS] !== on) {
+    storeJson(GUEST_KEY, { ...guestSettings(), [AUTO_PASS]: on });
   }
 }
 

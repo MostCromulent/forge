@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { sleeveUrl } from './looks';
+import { rememberSleeve } from './identity';
 import { imageUrl } from './images';
 import { t } from './text';
 import type { Actions } from './actions';
@@ -60,6 +61,7 @@ export function SleevePicker({ model, actions, index, seat, close }: {
                   // Clear the deck's card art so it no longer overrides the numbered sleeve, then set this sleeve
                   actions.setSleeveArt(index, '', CENTRE);
                   actions.setSeat(index, { sleeve: i });
+                  if (seat.mine) rememberSleeve(i);
                   close();
                 }}><img alt="" src={sleeveUrl(i)} /></button>
               ))}

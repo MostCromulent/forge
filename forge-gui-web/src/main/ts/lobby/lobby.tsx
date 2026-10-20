@@ -6,7 +6,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from '../ui';
 import { sleeveUrl, avatarUrl } from '../looks';
 import { LookPicker } from '../lookpicker';
-import { rememberAvatar } from '../identity';
+import { rememberAvatar, rememberSleeve } from '../identity';
 import { BracketMark, DeckFinder } from '../deck/deckfinder';
 import { imageUrl, smallImage } from '../images';
 import { ExtraPicker } from './extrapicker';
@@ -230,7 +230,9 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
   // Right-click picks another sleeve at random, never the current one. A numbered sleeve replaces any card art
   const randomSleeve = () => {
     actions.setSleeveArt(index, '', CENTRE);
-    actions.setSeat(index, { sleeve: another(seat.sleeveArt ? -1 : seat.sleeve, sleeveCount) });
+    const sleeve = another(seat.sleeveArt ? -1 : seat.sleeve, sleeveCount);
+    if (seat.mine) rememberSleeve(sleeve);
+    actions.setSeat(index, { sleeve });
   };
   // No two seats share a portrait, so the pick is from the portraits no seat uses
   const randomAvatar = () => {

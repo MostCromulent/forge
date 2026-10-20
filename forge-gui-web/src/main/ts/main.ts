@@ -11,7 +11,7 @@ import { initForm, isPortrait } from './form';
 import { initPress } from './press';
 import { initSheets, matchHistory } from './sheet';
 import { keyCommand, type KeyCommand } from './keys';
-import { rememberName, rememberedAvatar, rememberedName } from './identity';
+import { rememberName, rememberedAvatar, rememberedName, rememberedSleeve } from './identity';
 import { renderScreens, pageUnder, screenOf } from './screens';
 import { confirmShown } from './match/dialogs';
 import { renderMatch, resetTable } from './match/board';
@@ -25,7 +25,7 @@ import { recordMacro } from './match/gamemenu';
 import { showShortcuts } from './options';
 import { initOverlay, drawOverlay } from './match/overlay';
 import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './match/blockdrag';
-import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest, setting, shortcutKeys } from './settings';
+import { boundKeys, initSettings, onServerSettings, rememberGuestAutoPass, restoreGuestSettings, setGuest, setting, shortcutKeys } from './settings';
 import { behindItsBoard, passingFor } from './match/pace';
 import { createPacer } from './match/pacer';
 import { setVersion } from './links';
@@ -42,8 +42,9 @@ const pacer = createPacer(model, apply);
 let scheduled = false;
 // Requested once, so a slow answer is not requested again by every message that arrives meanwhile
 let askedAddresses = false;
-// A guest's settings are kept in its server session, so each connection sends the settings the browser stored
-let restored = false;
+// A guest's settings are kept in its server session, so the browser sends the settings it stored to each session it is given.
+// A seat handed over moves the browser to another session on the same connection
+let restoredFor: number | null = null;
 // A guest's decks are stored in its browser, so each connection sends the server the list
 let sentDeviceDecks = false;
 // A sound or log line arrives before its board update. It is applied after that board, or alone after 300 ms if no board follows (pace.ts)
@@ -51,7 +52,7 @@ const send = connect(behindItsBoard(msg => pacer.receive(msg), 300), online => {
   byId('banner').hidden = online;
   // The server replays the chat on every connection, so the browser clears it when the connection drops
   if (!online) {
-    restored = false;
+    restoredFor = null;
     sentDeviceDecks = false;
     model.chat = [];
   }
@@ -228,8 +229,8 @@ function apply(msg: ServerMessage): void {
       setGuest(!model.host);
       setVersion(msg.version);
       // This runs before any game opens, so the game starts with these settings instead of being corrected later
-      if (!model.host && !restored) {
-        restored = true;
+      if (!model.host && restoredFor !== msg.session) {
+        restoredFor = msg.session;
         restoreGuestSettings();
         restoreStops(actions.setStops);
       }
@@ -392,7 +393,10 @@ function apply(msg: ServerMessage): void {
       model.controls = msg;
       onServerSettings(msg.settings);
       applyAudioSettings();
-      if (!model.host) rememberStops(msg);
+      if (!model.host) {
+        rememberStops(msg);
+        rememberGuestAutoPass(msg.autoPass);
+      }
       break;
     case 'log':
       appendLog(msg, logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) }))));
@@ -415,7 +419,7 @@ function offerRememberedName(): void {
   const name = rememberedName();
   if (name) {
     model.nameSent = true;
-    send({ t: 'setName', name, avatar: rememberedAvatar() });
+    send({ t: 'setName', name, avatar: rememberedAvatar(), sleeve: rememberedSleeve() });
   }
 }
 

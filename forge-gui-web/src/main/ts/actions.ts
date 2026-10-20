@@ -54,7 +54,7 @@ export interface PageActions {
   setSetting(key: string, value: string): void;
 
   /** Sets the name and avatar this browser plays under. The server refuses a name another player already has. */
-  setName(name: string, avatar: number): void;
+  setName(name: string, avatar: number, sleeve: number | undefined): void;
   /** Opens a table against the computer, or a table others can join by link. */
   openLobby(invite: boolean): void;
   claimHost(): void;
@@ -199,7 +199,7 @@ export function createActions(send: Send): PageActions {
     giveSeat: (from, to) => send({ t: 'giveSeat', from, to }),
     dropPlayer: name => send({ t: 'dropPlayer', name }),
     setSetting: (key, value) => send({ t: 'setSetting', key, value }),
-    setName: (name, avatar) => send({ t: 'setName', name, avatar }),
+    setName: (name, avatar, sleeve) => send({ t: 'setName', name, avatar, sleeve }),
     openLobby: invite => send({ t: invite ? 'invite' : 'lobby' }),
     claimHost: () => send({ t: 'claimHost' }),
     join: () => send({ t: 'join' }),

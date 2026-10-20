@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
 import { avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
-import { rememberAvatar } from './identity';
+import { rememberAvatar, rememberedSleeve } from './identity';
 import { logTints } from './match/log';
 import { players, type ChatEntry, type Model } from './model';
 import type { Actions } from './actions';
@@ -97,7 +97,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
         setPicking(false);
         if (chosen !== null) {
           rememberAvatar(chosen);
-          actions.setName(model.playerName, chosen);
+          actions.setName(model.playerName, chosen, rememberedSleeve());
         }
       }} />
   );

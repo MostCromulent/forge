@@ -11,7 +11,7 @@ import { isPortrait } from './form';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import { t } from './text';
-import { rememberAvatar, rememberedAvatar } from './identity';
+import { rememberAvatar, rememberedAvatar, rememberedSleeve } from './identity';
 import { CampaignMenu } from './campaigns';
 
 /** Matches the server's limit (WebSession.MAX_NAME_LENGTH), so the field stops before the server would refuse the name. */
@@ -192,7 +192,7 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
         if (offerHost && takeHost) {
           actions.claimHost();
         }
-        actions.setName(name, avatar);
+        actions.setName(name, avatar, rememberedSleeve());
       }}>
         <div class="start-field">
           <label for="player-name">{t('lblWebMenuCallYou')}</label>

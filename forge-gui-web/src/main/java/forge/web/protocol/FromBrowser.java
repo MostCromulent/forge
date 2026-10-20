@@ -32,9 +32,9 @@ public final class FromBrowser {
     public record Invite(@Nullable EventKind limited) {
     }
 
-    /** The name and avatar this browser plays under. Both are chosen before anything else. */
+    /** The name and avatar this browser plays under. Both are chosen before anything else. A guest's browser also sends the sleeve it last chose. */
     @Command("setName")
-    public record SetName(String name, @Nullable Integer avatar) {
+    public record SetName(String name, @Nullable Integer avatar, @Nullable Integer sleeve) {
     }
 
     @Command("chat")

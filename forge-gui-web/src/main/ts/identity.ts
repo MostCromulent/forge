@@ -1,9 +1,10 @@
-// The name and avatar this browser last played under, kept between visits
+// The name, avatar and sleeve this browser last played under, kept between visits
 
 import { store, stored } from './storage';
 
 const NAME_KEY = 'forge.playerName';
 const AVATAR_KEY = 'forge.avatar';
+const SLEEVE_KEY = 'forge.sleeve';
 
 /** The name this browser last played under. It is sent to a server that does not know this browser yet. */
 export function rememberedName(): string | null {
@@ -22,4 +23,15 @@ export function rememberedAvatar(): number {
 
 export function rememberAvatar(index: number): void {
   store(AVATAR_KEY, String(index));
+}
+
+/** The sleeve this browser last chose for its own seat, if it chose one. A guest's seat gets it back at each table. */
+export function rememberedSleeve(): number | undefined {
+  const saved = stored(SLEEVE_KEY);
+  const index = Number(saved);
+  return saved !== null && Number.isInteger(index) && index >= 0 ? index : undefined;
+}
+
+export function rememberSleeve(index: number): void {
+  store(SLEEVE_KEY, String(index));
 }
