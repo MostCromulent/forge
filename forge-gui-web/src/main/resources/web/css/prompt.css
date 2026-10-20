@@ -5,6 +5,19 @@
 #prompt.waiting { border-color: var(--accent-2); }
 /* While a question is answered on the board, the prompt only says what is resolving. Its border stays plain so it does not ask for a press. */
 #prompt.answering { border-color: var(--line-bright); }
+/* A rail down the left edge says whose move it is. It is brass while the game waits on you, also for a question on the board, and grey while another player acts.
+   The brass is a layer over the grey, because a gradient cannot fade. The phone's dock has no rail. */
+html:not([data-form="portrait"]) #prompt { padding-left: 18px; }
+html:not([data-form="portrait"]) #prompt::before, html:not([data-form="portrait"]) #prompt::after { content: ""; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 7px; border-radius: 12px 0 0 12px; pointer-events: none; }
+html:not([data-form="portrait"]) #prompt::before { background: var(--line-bright); }
+html:not([data-form="portrait"]) #prompt::after { background: var(--brass); opacity: 0; }
+html:not([data-form="portrait"]) #prompt:is(.waiting, .answering)::after { opacity: 1; }
+html:not([data-form="portrait"]) #prompt:not(.waiting, .answering) :is(.step, .message) { color: var(--muted); }
+/* When the game turns to you, the prompt fades to its own colours. It switches back to grey at once */
+html:not([data-form="portrait"]) #prompt:is(.waiting, .answering) { transition: border-color .7s ease-out; }
+html:not([data-form="portrait"]) #prompt:is(.waiting, .answering)::after { transition: opacity .7s ease-out; }
+html:not([data-form="portrait"]) #prompt:is(.waiting, .answering) :is(.step, .message) { transition: color .7s ease-out; }
+html[data-motion="reduced"] #prompt, html[data-motion="reduced"] #prompt::after, html[data-motion="reduced"] #prompt :is(.step, .message) { transition: none !important; }
 /* Two glints run around the gold border while you hold priority. Each glint is three dashes centred on one point and blurred. */
 #prompt .glints { position: absolute; left: -1px; top: -1px; overflow: visible; pointer-events: none; filter: blur(.6px); opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility 0s linear .45s; }
 #prompt.priority .glints { opacity: 1; visibility: visible; transition: opacity .45s ease; }

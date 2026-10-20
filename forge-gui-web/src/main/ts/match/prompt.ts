@@ -1,4 +1,4 @@
-// The prompt shows the game's question and its buttons. It is at the bottom of the side column, or in the dock on a phone. Its border glows while the game waits on you.
+// The prompt shows the game's question and its buttons. It is at the bottom of the side column, or in the dock on a phone. Its border glows while the game waits on you, and its rail says whose move it is.
 
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from '../images';
 import { askingCard, cardPrompt, deref, game, me, oldestRequest, stackPick, stackTopSource, stateOf, type Model } from '../model';
