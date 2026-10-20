@@ -104,4 +104,28 @@ public class ComputerUtilManaFilterTest extends AITest {
         boolean paid = ComputerUtilMana.payManaCost(cost, sa, ai, false) && cost.isPaid();
         AssertJUnit.assertEquals(paid, planned);
     }
+
+    @Test
+    public void manaLeftOverFromPayingForASignetPaysTheSpell() {
+        Game game = initAndCreateGame();
+        Player ai = game.getPlayers().get(1);
+
+        addCard("Sol Ring", ai);
+        addCard("Azorius Signet", ai);
+        Card abuelo = addCardToZone("Abuelo, Ancestral Echo", ai, ZoneType.Hand); // {1}{W}{U}
+
+        AssertJUnit.assertTrue("one {C} pays for the Signet, the other for {1}", payForReal(abuelo, ai));
+    }
+
+    @Test
+    public void manaASignetMakesBeyondTheSpellPaysForTheNextSignet() {
+        Game game = initAndCreateGame();
+        Player ai = game.getPlayers().get(1);
+
+        addCard("Plains", ai);
+        addCards("Golgari Signet", 2, ai);
+        Card tusker = addCardToZone("Kalonian Tusker", ai, ZoneType.Hand); // {G}{G}
+
+        AssertJUnit.assertTrue("the first Signet's {B} pays for the second", payForReal(tusker, ai));
+    }
 }
