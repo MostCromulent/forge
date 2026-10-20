@@ -171,6 +171,10 @@ input.level:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 
 #options .setting .key-bind, #options .setting .edit { justify-self: end; height: 30px; padding: 0 14px; background: linear-gradient(180deg, var(--surface-3), var(--surface-2)); border: 1px solid var(--line-bright); border-radius: 6px; color: var(--text); font-size: 12px; box-shadow: 0 1px 2px #0009, inset 0 1px 0 #ffffff12; }
 #options .setting .key-bind:hover, #options .setting .edit:hover { border-color: var(--accent-2); }
 #options .backup { display: flex; gap: 8px; justify-self: end; }
+/* Browser storage is kept per web address, so the Advanced tab opens with that warning above the backup */
+#options .storage-note { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--line-bright); border-left: 3px solid var(--accent-2); border-radius: 8px; background: var(--accent-soft); }
+#options .storage-note b { font-size: 13px; }
+#options .storage-note p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 #options .key-bind { min-width: 56px; border-bottom-width: 3px; font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
 #options .key-bind.listening { background: var(--brass); border-color: var(--accent-2); color: var(--on-brass); }
 #options .css-editor { grid-column: 1 / -1; display: grid; gap: 6px; }

@@ -94,6 +94,9 @@ export function Options({ close }: { close: () => void }) {
         <ForgeLinks />
         {version && <span class="version">v{version}</span>}
       </>}>
+      {!searching && tab.id === 'advanced' && (
+        <div class="storage-note" role="note"><b>{t('lblWebOptionsStorageTitle')}</b><p>{t('lblWebOptionsStorageNote')}</p></div>
+      )}
       {!searching && tab.id === 'advanced' && <BackupRow />}
       {!searching && tab.id === 'advanced' && !isGuest() && <LogsRow />}
       {blocks(shown, searching, tab.name)}
