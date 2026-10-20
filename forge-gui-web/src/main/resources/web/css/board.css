@@ -798,6 +798,9 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 
 /* A card image's corner radius is about 4.5% of its width. So the rounding scales with the preview and hides the white corners behind it. */
 #zoom img { width: var(--zoom-w); aspect-ratio: 63 / 88; border-radius: 4.5% / 3.2%; box-shadow: 0 10px 40px #000a; }
+/* A creature in hand whose power or toughness is not its printed value shows the current value on a plate over the printed box (preview.ts) */
+#zoom .shot > .now-pt { position: absolute; left: 77.4%; top: 89.2%; width: 16.2%; height: 4.8%; z-index: 2; display: grid; place-items: center; box-sizing: border-box;
+  background: #0d1118; border: 1.5px solid var(--accent-2); border-radius: 6px; box-shadow: 0 2px 8px #000a; color: var(--accent-2); font-size: calc(var(--zoom-w) * .052); font-weight: 800; line-height: 1; }
 #zoom canvas.foil { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 4.5% / 3.2%; }
 #zoom .detail { width: 260px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 10px 40px #000a; font-size: 13px; }
 #zoom .detail header { display: flex; justify-content: space-between; gap: 8px; }

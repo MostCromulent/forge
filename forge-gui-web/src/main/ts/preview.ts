@@ -373,6 +373,8 @@ function drawDetail(model: Model): void {
     setImage(img, picture);
   }
   q(zoom, '.detail').hidden = !face;
+  const nowPt = q(zoom, '.now-pt');
+  nowPt.hidden = true;
   if (!d || !face) drawStickers(q(zoom, '.stickers'), model, undefined);
   const source = sourceText(model, hover);
   setSource(q(zoom, '.from'), hover.from, source);
@@ -393,6 +395,12 @@ function drawDetail(model: Model): void {
   const card = face === d?.faces[0] && hover.card !== null ? model.objects.get(hover.card) as CardView | undefined : undefined;
   drawStickers(q(zoom, '.stickers'), model, text ? undefined : card);
   const state = card ? stateOf(model, card) : undefined;
+  // The picture shows the printed power and toughness, such as ★/1+★. A missing value arrives for a ★ and for a 0, so both count as 0
+  if (!text && card?.Zone === 'Hand' && state && /Creature/.test(face.type ?? '')
+      && ((state.Power ?? 0) !== (state.BasePower ?? 0) || (state.Toughness ?? 0) !== (state.BaseToughness ?? 0))) {
+    nowPt.textContent = `${state.Power ?? 0}/${state.Toughness ?? 0}`;
+    nowPt.hidden = false;
+  }
   // A token or a face-down card has no printed text to compare its changes against
   const changes = card && state && !card.Token && !card.Facedown
     ? changesOf(state.OracleText ?? '', state.AbilityText ?? '', { ...card.ChangedTypes, ...card.ChangedColorWords }, state.Keywords ?? [])
@@ -574,7 +582,7 @@ function drawPt(el: HTMLElement, model: Model, key: number | null, face: CardFac
 
 function ensureZoom(zoom: HTMLElement): void {
   if (zoom.firstChild) return;
-  zoom.innerHTML = '<span class="shot"><img alt=""><span class="stickers" aria-hidden="true"></span><canvas class="foil" hidden></canvas><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cid"></span><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
+  zoom.innerHTML = '<span class="shot"><img alt=""><span class="stickers" aria-hidden="true"></span><span class="now-pt" hidden></span><canvas class="foil" hidden></canvas><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cid"></span><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
   const img = q<HTMLImageElement>(zoom, 'img');
   img.addEventListener('error', () => {
     brokenSrc = img.dataset.card ?? '';
