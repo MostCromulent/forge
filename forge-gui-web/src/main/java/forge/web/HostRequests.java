@@ -30,6 +30,15 @@ final class HostRequests implements IHasForgeLog {
     private final Map<Integer, HostChoice> pending = new ConcurrentHashMap<>();
     private final AtomicInteger nextId = new AtomicInteger();
     private volatile Consumer<JsonObject> toBrowser = message -> { };
+    private final long timeoutMillis;
+
+    HostRequests() {
+        this(TimeUnit.MINUTES.toMillis(ANSWER_TIMEOUT_MINUTES));
+    }
+
+    HostRequests(final long timeoutMillis) {
+        this.timeoutMillis = timeoutMillis;
+    }
 
     void setSink(final Consumer<JsonObject> sink) {
         toBrowser = sink;
@@ -52,7 +61,7 @@ final class HostRequests implements IHasForgeLog {
         pending.put(id, request);
         toBrowser.accept(Wire.encode(request));
         try {
-            return answer.get(ANSWER_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+            return answer.get(timeoutMillis, TimeUnit.MILLISECONDS);
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             return null;

@@ -2,10 +2,12 @@ package forge.web;
 
 import com.google.gson.JsonObject;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.ImageUtil;
+import forge.web.images.CardThumbnails;
 import forge.web.images.Foil;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.JsonCodec;
@@ -14,6 +16,10 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -131,6 +137,28 @@ public class WebServerTest {
             prefs.setPref(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER, online);
         }
         Assert.assertEquals(get("/..%2Fpom.xml?token=secret", null).statusCode(), 404);
+    }
+
+    // Fails if the board's size is not shrunk to the thumbnail width, the full size is shrunk, or a browser can ask for a size of its choosing
+    @Test
+    public void aCardImageIsShrunkOnlyToTheBoardsSize() throws Exception {
+        final File file = new File(ForgeConstants.CACHE_TOKEN_PICS_DIR, "web_test_thumbnail.jpg");
+        file.getParentFile().mkdirs();
+        ImageIO.write(new BufferedImage(600, 840, BufferedImage.TYPE_INT_RGB), "jpg", file);
+        try {
+            Assert.assertEquals(imageWidth("&w=" + CardThumbnails.WIDTH), CardThumbnails.WIDTH);
+            Assert.assertEquals(imageWidth(""), 600);
+            Assert.assertEquals(imageWidth("&w=10"), 600);
+        } finally {
+            file.delete();
+        }
+    }
+
+    private int imageWidth(final String size) throws Exception {
+        final HttpResponse<byte[]> r = http.send(HttpRequest.newBuilder(URI.create(origin() + "/img?key=t:web_test_thumbnail" + size + "&token=secret")).build(),
+                HttpResponse.BodyHandlers.ofByteArray());
+        Assert.assertEquals(r.statusCode(), 200);
+        return ImageIO.read(new ByteArrayInputStream(r.body())).getWidth();
     }
 
     // Fails if the skin icon route cannot cut icons from their sheets, or serves a name that is not an icon, such as a colour
