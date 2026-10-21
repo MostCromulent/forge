@@ -1,10 +1,8 @@
 // Breaks a player's portrait apart when they lose. At the end of the game it moves to the middle of the board, shakes,
-// cracks and bursts. For a player who loses mid-game it bursts at once on their seat. The pieces are lit 3D slabs drawn
-// with WebGL. three.js is loaded the first time a portrait breaks, not with the page.
+// cracks and bursts. For a player who loses mid-game it bursts at once on their seat. The pieces are lit slabs drawn on a
+// 2D canvas: each piece's 3D rotation and perspective are applied by hand, so no 3D library or WebGL is needed.
 
 import { make, reducedMotion } from '../dom';
-
-type Three = typeof import('three');
 
 interface ShatterOptions {
   /** The bounds of the seat avatar the portrait starts from. */
@@ -29,19 +27,11 @@ const GRAVITY = 1500;
 // Playback speed of the final burst. Slowing the clock does not change the path of any piece.
 const BURST_PACE = 0.75;
 
-let three: Promise<{ THREE: Three; Room: typeof import('three/examples/jsm/environments/RoomEnvironment.js').RoomEnvironment }> | null = null;
-
-function loadThree() {
-  three ??= Promise.all([import('three'), import('three/examples/jsm/environments/RoomEnvironment.js')])
-    .then(([THREE, room]) => ({ THREE, Room: room.RoomEnvironment }));
-  return three;
-}
-
 /** Whether this browser can show the effect. If not, the seat just empties and the title shows at once. */
 export function canShatter(): boolean {
   if (reducedMotion()) return false;
   try {
-    return !!document.createElement('canvas').getContext('webgl2');
+    return !!document.createElement('canvas').getContext('2d');
   } catch {
     return false;
   }
@@ -60,6 +50,8 @@ function mulberry(seed: number) {
 }
 
 type Point = [number, number];
+type Vec = [number, number, number];
+type Matrix = [number, number, number, number, number, number, number, number, number];
 
 /** Voronoi cells inside a disc of radius r. The seeds are densest around the impact point. */
 function fracture(rng: () => number, r: number, impact: Point): Point[][] {
@@ -107,7 +99,7 @@ function fracture(rng: () => number, r: number, impact: Point): Point[][] {
   return cells;
 }
 
-/** Draws the portrait in a steel frame with a brass inner rim. It is drawn once and used as the texture of every piece. */
+/** Draws the portrait in a steel frame with a brass inner rim. It is drawn once, and every piece shows its part of it. */
 function medalCanvas(img: HTMLImageElement): HTMLCanvasElement {
   const S = 1024, r = S / 2, c = document.createElement('canvas');
   c.width = c.height = S;
@@ -144,9 +136,29 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Breaks one portrait. Resolves when the effect ends. Rejects before anything shows if WebGL or the portrait image is not available. */
+const norm = (v: Vec): Vec => {
+  const l = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0] / l, v[1] / l, v[2] / l];
+};
+const dot = (a: Vec, b: Vec) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+
+/** Rotation for Euler angles applied X, then Y, then Z. */
+function rotation([a, b, c]: Vec): Matrix {
+  const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), cc = Math.cos(c), sc = Math.sin(c);
+  return [cb * cc, -cb * sc, sb, ca * sc + sa * sb * cc, ca * cc - sa * sb * sc, -sa * cb, sa * sc - ca * sb * cc, sa * cc + ca * sb * sc, ca * cb];
+}
+const apply = (m: Matrix, v: Vec): Vec => [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]];
+
+interface Piece {
+  local: Point[]; cx: number; cy: number; dir: Point; reach: number; hair: number; jit: number; sep: number; zj: number; rj: number;
+  pos: Vec; rot: Vec; vel: Vec; spin: Vec; delay: number; crack: number; shown: boolean; live: boolean; gone: boolean;
+}
+
+interface Debris { tri: Point[]; pos: Vec; rot: Vec; vel: Vec; spin: Vec; shown: boolean }
+
+/** Breaks one portrait. Resolves when the effect ends. Rejects before anything shows if the portrait image does not load. */
 export async function shatter(o: ShatterOptions): Promise<void> {
-  const [{ THREE, Room }, img] = await Promise.all([loadThree(), loadImage(o.image)]);
+  const img = await loadImage(o.image);
   const T = o.final ? FINAL : SEAT;
   const W = window.innerWidth, H = window.innerHeight;
   const seatR = o.from.width / 2;
@@ -163,92 +175,59 @@ export async function shatter(o: ShatterOptions): Promise<void> {
     return el;
   };
   const gBloom = glow('bloom'), gRing = glow('ring'), gCore = glow('core'), gStreak = glow('streak');
-  // This throws when the browser has no WebGL, before anything is added to the page
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d')!;
   document.body.append(layer);
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-  renderer.setSize(W, H);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
-  const scene = new THREE.Scene();
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  const env = pmrem.fromScene(new Room(), 0.04).texture;
-  scene.environment = env;
-  scene.environmentIntensity = 0.5;
-  const camera = new THREE.PerspectiveCamera(30, W / H, 20, 8000);
-  const dist = (H / 2) / Math.tan(THREE.MathUtils.degToRad(15));
-  camera.position.set(0, 0, dist);
-  const key = new THREE.DirectionalLight(0xfff0dc, 1.7);
-  key.position.set(-600, 800, 1000);
-  const fill = new THREE.DirectionalLight(0x9db6ff, 0.55);
-  fill.position.set(700, -300, 500);
-  const flare = new THREE.PointLight(0xe4ecff, 0, 1600 * k, 1.3);
-  scene.add(key, fill, flare, new THREE.AmbientLight(0xffffff, 0.12));
 
-  const world = (x: number, y: number) => new THREE.Vector3(x - W / 2, H / 2 - y, 0);
-  const tex = new THREE.CanvasTexture(medalCanvas(img));
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  tex.repeat.set(1 / (2 * R), 1 / (2 * R));
-  tex.offset.set(0.5, 0.5);
-  const faceMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0.06 });
-  const edgeMat = new THREE.MeshStandardMaterial({ color: 0x3b424d, roughness: 0.3, metalness: 0.75 });
-  const debrisMat = new THREE.MeshStandardMaterial({ color: 0xaeb8c5, roughness: 0.25, metalness: 0.6 });
+  const medal = medalCanvas(img);
+  const focal = (H / 2) / Math.tan(15 * Math.PI / 180);
+  // Lit from the upper left and in front, as the key light that the pieces were tuned under
+  const light = norm([-0.42, -0.6, 0.68]);
+  const half = norm([light[0], light[1], light[2] + 1]);
   const depth = 12 * k;
-  // The bevel has no inset, so neighbouring pieces show no seam until they move apart
-  const extrude = { depth, bevelEnabled: true, bevelThickness: 1.4 * k, bevelSize: 1.1 * k, bevelOffset: 0, bevelSegments: 1, curveSegments: 1 };
-
   const rng = mulberry((Math.random() * 1e9) | 0);
-  const medal = new THREE.Group();
-  const disc = new THREE.Shape();
-  disc.absarc(0, 0, R, 0, Math.PI * 2, false);
-  const whole = new THREE.Mesh(new THREE.ExtrudeGeometry(disc, { ...extrude, curveSegments: 64 }), [faceMat, edgeMat]);
-  // The whole disc is placed just behind the pieces, so it shows wherever a piece is not visible yet
-  whole.geometry.translate(0, 0, -depth / 2 - 0.4);
-  medal.add(whole);
-  const impact: Point = [(-14 + rng() * 10) * k, (12 + rng() * 10) * k];
-  const pieces = fracture(rng, R, impact).map(poly => {
+  // Screen coordinates point down, so the impact sits above the centre
+  const impact: Point = [(-14 + rng() * 10) * k, -(12 + rng() * 10) * k];
+  const pieces: Piece[] = fracture(rng, R, impact).map(poly => {
     const cx = poly.reduce((s, p) => s + p[0], 0) / poly.length;
     const cy = poly.reduce((s, p) => s + p[1], 0) / poly.length;
-    const geo = new THREE.ExtrudeGeometry(new THREE.Shape(poly.map(p => new THREE.Vector2(p[0], p[1]))), extrude);
-    geo.translate(-cx, -cy, -depth / 2);
-    const mesh = new THREE.Mesh(geo, [faceMat, edgeMat]);
-    mesh.position.set(cx, cy, 0);
-    mesh.visible = false;
-    medal.add(mesh);
     const dx = cx - impact[0], dy = cy - impact[1];
     const d = Math.hypot(dx, dy) || 1;
     const near = Math.max(0, 1 - d / (R * 1.1));
-    const dir = new THREE.Vector3(dx / d, dy / d, 0);
+    const dir: Point = [dx / d, dy / d];
     // Pieces fly faster at the end of the game than for a seat breaking mid-game
     const spd = (390 + near * 620 + rng() * 280) * (o.final ? 1.9 : 0.55);
     const vz = (near > 0.5 || rng() > 0.8 ? 490 + rng() * 780 : rng() * 380 - 150) * (o.final ? 1.6 : 0.5);
+    const spinAxis = norm([rng() - 0.5, rng() - 0.5, (rng() - 0.5) * 0.6]);
+    const spinRate = 2.1 + near * 6.6 + rng() * 2.9;
     return {
-      mesh, base: new THREE.Vector3(cx, cy, 0), dir,
+      local: poly.map(p => [p[0] - cx, p[1] - cy] as Point), cx, cy, dir,
       reach: d / R, hair: (0.5 + rng()) * k, jit: rng(), sep: (1.2 + rng() * 2.4) * k, zj: (rng() - 0.5) * 5 * k, rj: (rng() - 0.5) * 0.02,
-      vel: new THREE.Vector3(dir.x * spd, dir.y * spd * 0.8 + 160 * (o.final ? 1 : 0.6), vz),
-      spin: new THREE.Vector3(rng() - 0.5, rng() - 0.5, (rng() - 0.5) * 0.6).normalize().multiplyScalar(2.1 + near * 6.6 + rng() * 2.9),
-      delay: (d / R) * 0.05, live: false,
+      pos: [cx, cy, 0], rot: [0, 0, 0], vel: [dir[0] * spd, dir[1] * spd * 0.8 - 160 * (o.final ? 1 : 0.6), vz],
+      spin: [spinAxis[0] * spinRate, spinAxis[1] * spinRate, spinAxis[2] * spinRate],
+      delay: (d / R) * 0.05, crack: 0, shown: false, live: false, gone: false,
     };
   });
-  const debris = Array.from({ length: o.final ? 100 : 24 }, () => {
+  const debris: Debris[] = Array.from({ length: o.final ? 100 : 24 }, () => {
     const s = (2.5 + rng() * 6) * Math.max(0.5, k);
-    const tri = new THREE.Shape([new THREE.Vector2(0, s), new THREE.Vector2(s * 0.9, -s * 0.5), new THREE.Vector2(-s * 0.7, -s * 0.6)]);
-    const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: 1.5, bevelEnabled: false }), debrisMat);
-    mesh.visible = false;
-    scene.add(mesh);
     const a = rng() * Math.PI * 2, spd = (460 + rng() * 980) * (o.final ? 1.9 : 0.5);
-    return { mesh, vel: new THREE.Vector3(Math.cos(a) * spd, Math.sin(a) * spd * 0.8 + 140, rng() * 900 - 200), spin: new THREE.Vector3(rng() * 20, rng() * 20, rng() * 20) };
+    return {
+      tri: [[0, -s], [s * 0.9, s * 0.5], [-s * 0.7, s * 0.6]], pos: [0, 0, 0], rot: [rng() * 6, rng() * 6, rng() * 6],
+      vel: [Math.cos(a) * spd, Math.sin(a) * spd * 0.8 - 140, rng() * 900 - 200], spin: [rng() * 20, rng() * 20, rng() * 20], shown: false,
+    };
   });
-  scene.add(medal);
 
-  const from = world(o.from.left + seatR, o.from.top + seatR);
-  const to = o.final ? world(o.centre.x, o.centre.y) : from.clone();
+  const from: Point = [o.from.left + seatR, o.from.top + seatR];
+  const to: Point = o.final ? [o.centre.x, o.centre.y] : [from[0], from[1]];
   const startScale = seatR / R;
   const lift = o.final ? 70 : 0;
-  medal.position.copy(from);
-  medal.scale.setScalar(startScale);
+  const pose = { x: from[0], y: from[1], z: 0, scale: startScale, rx: 0, ry: 0, rz: 0, whole: true };
+  let flare = 0;
+  let shake: Point = [0, 0];
 
   const place = (el: HTMLElement, x: number, y: number, sx: number, sy: number, opacity: number) => {
     el.style.transform = 'translate(' + (x - el.offsetWidth / 2) + 'px,' + (y - el.offsetHeight / 2) + 'px) scale(' + sx + ',' + sy + ')';
@@ -274,7 +253,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       const dt = real * scale;
       t += dt;
       step(before, dt);
-      renderer.render(scene, camera);
+      render();
       if (!titled && t >= T.title) {
         titled = true;
         o.onTitle?.();
@@ -287,24 +266,27 @@ export async function shatter(o: ShatterOptions): Promise<void> {
     };
     requestAnimationFrame(frame);
   });
+  layer.remove();
 
   function step(before: number, dt: number) {
     if (t < T.brk) {
       const m = ease(t / T.fly);
-      medal.position.lerpVectors(from, to, m);
-      medal.position.z = lift * m + (t > T.fly ? lift * 0.4 * ease((t - T.fly) / (T.brk - T.fly)) : 0);
-      medal.scale.setScalar(startScale + (1 - startScale) * m);
-      medal.rotation.x = o.final ? -0.35 * (1 - m) : 0;
-      medal.rotation.y = o.final ? 0.28 * (1 - m) : 0;
+      pose.x = from[0] + (to[0] - from[0]) * m;
+      pose.y = from[1] + (to[1] - from[1]) * m;
+      pose.z = lift * m + (t > T.fly ? lift * 0.4 * ease((t - T.fly) / (T.brk - T.fly)) : 0);
+      pose.scale = startScale + (1 - startScale) * m;
+      pose.rx = o.final ? 0.35 * (1 - m) : 0;
+      pose.ry = o.final ? 0.28 * (1 - m) : 0;
+      pose.rz = 0;
       if (t > T.fly) {
         // The shake grows stronger and faster as the break nears, and the portrait grows slightly
         const p = (t - T.fly) / (T.brk - T.fly);
         const amp = (0.6 + 8.5 * p * p) * k;
         const f = 20 + 16 * p;
-        medal.position.x += amp * (Math.sin(t * f) * 0.65 + Math.sin(t * f * 1.73 + 1.1) * 0.35);
-        medal.position.y += amp * (Math.sin(t * f * 1.21 + 0.7) * 0.65 + Math.sin(t * f * 1.93 + 2.3) * 0.35);
-        medal.rotation.z = 0.035 * p * p * Math.sin(t * f * 0.9 + 0.4);
-        medal.scale.multiplyScalar(1 + 0.025 * p * p);
+        pose.x += amp * (Math.sin(t * f) * 0.65 + Math.sin(t * f * 1.73 + 1.1) * 0.35);
+        pose.y += amp * (Math.sin(t * f * 1.21 + 0.7) * 0.65 + Math.sin(t * f * 1.93 + 2.3) * 0.35);
+        pose.rz = 0.035 * p * p * Math.sin(t * f * 0.9 + 0.4);
+        pose.scale *= 1 + 0.025 * p * p;
       }
     }
     if (t >= T.crack && t < T.brk) {
@@ -312,57 +294,59 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       const c = Math.pow((t - T.crack) / (T.brk - T.crack), 1.6);
       for (const q of pieces) {
         const p = ease((c * 1.2 - q.reach * 0.95 - q.jit * 0.12) / 0.14);
-        q.mesh.visible = p > 0.01;
-        q.mesh.position.copy(q.base).addScaledVector(q.dir, q.hair * p);
-        q.mesh.rotation.set(q.rj * 0.3 * p, -q.rj * 0.3 * p, q.rj * 0.6 * p);
+        q.shown = p > 0.01;
+        q.crack = p;
+        q.pos = [q.cx + q.dir[0] * q.hair * p, q.cy + q.dir[1] * q.hair * p, 0];
+        q.rot = [q.rj * 0.3 * p, -q.rj * 0.3 * p, q.rj * 0.6 * p];
       }
     }
     if (reaches(before, T.brk)) {
-      whole.visible = false;
-      for (const q of pieces) q.mesh.visible = true;
-      medal.position.set(to.x, to.y, lift * 1.4);
-      medal.rotation.set(0, 0, 0);
-      flare.position.set(to.x + impact[0], to.y + impact[1], 140 * k);
+      pose.whole = false;
+      pose.x = to[0];
+      pose.y = to[1];
+      pose.z = lift * 1.4;
+      pose.scale = 1;
+      pose.rx = pose.ry = pose.rz = 0;
     }
     if (t >= T.brk && t < T.burst) {
       const p = ease((t - T.brk) / 0.07);
       for (const q of pieces) {
-        q.mesh.position.copy(q.base).addScaledVector(q.dir, q.hair + q.sep * p);
-        q.mesh.position.z = q.zj * p;
-        q.mesh.rotation.set(q.rj * (0.3 + 0.7 * p), -q.rj * (0.3 + 0.7 * p), q.rj * (0.6 + 1.4 * p));
+        q.pos = [q.cx + q.dir[0] * (q.hair + q.sep * p), q.cy + q.dir[1] * (q.hair + q.sep * p), q.zj * p];
+        q.rot = [q.rj * (0.3 + 0.7 * p), -q.rj * (0.3 + 0.7 * p), q.rj * (0.6 + 1.4 * p)];
       }
-      flare.intensity = t - T.brk < 0.07 ? 6 : 0;
+      flare = t - T.brk < 0.07 ? 0.25 : 0;
     }
     if (before < T.burst && t >= T.burst) {
       for (const d of debris) {
-        d.mesh.visible = true;
-        d.mesh.position.set(to.x + impact[0] + (rng() - 0.5) * 30 * k, to.y + impact[1] + (rng() - 0.5) * 30 * k, 110 * k);
+        d.shown = true;
+        d.pos = [impact[0] + (rng() - 0.5) * 30 * k, impact[1] + (rng() - 0.5) * 30 * k, 110 * k];
       }
     }
     if (t >= T.burst) {
       const s = t - T.burst;
-      flare.intensity = (o.final ? 180 : 120) * Math.exp(-s * 9);
+      flare = (o.final ? 1 : 0.7) * Math.exp(-s * 9);
       for (const q of pieces) {
         if (!q.live && s >= q.delay) q.live = true;
-        if (!q.live || !q.mesh.visible) continue;
-        q.vel.y -= GRAVITY * dt;
-        q.vel.multiplyScalar(1 - 0.15 * dt);
-        q.mesh.position.addScaledVector(q.vel, dt);
-        q.mesh.rotation.x += q.spin.x * dt;
-        q.mesh.rotation.y += q.spin.y * dt;
-        q.mesh.rotation.z += q.spin.z * dt;
-        if (q.mesh.position.y + to.y < -H) q.mesh.visible = false;
+        if (!q.live || q.gone) continue;
+        q.vel[1] += GRAVITY * dt;
+        for (let i = 0; i < 3; i++) {
+          q.vel[i] *= 1 - 0.15 * dt;
+          q.pos[i] += q.vel[i] * dt;
+          q.rot[i] += q.spin[i] * dt;
+        }
+        if (q.pos[1] + to[1] > H * 2) q.gone = true;
       }
       for (const d of debris) {
-        if (!d.mesh.visible) continue;
-        d.vel.y -= GRAVITY * dt;
-        d.mesh.position.addScaledVector(d.vel, dt);
-        d.mesh.rotation.x += d.spin.x * dt;
-        d.mesh.rotation.y += d.spin.y * dt;
-        if (d.mesh.position.y < -H) d.mesh.visible = false;
+        if (!d.shown) continue;
+        d.vel[1] += GRAVITY * dt;
+        for (let i = 0; i < 3; i++) {
+          d.pos[i] += d.vel[i] * dt;
+          d.rot[i] += d.spin[i] * dt;
+        }
+        if (d.pos[1] + to[1] > H * 2) d.shown = false;
       }
       // The glow elements of the burst. Their CSS adds their light to what is behind them instead of covering it.
-      const x = to.x + impact[0] + W / 2, y = H / 2 - (to.y + impact[1]);
+      const x = to[0] + impact[0], y = to[1] + impact[1];
       const rise = Math.min(1, s / 0.025);
       const core = (0.25 + 1.15 * ease(s / 0.3)) * k;
       place(gCore, x, y, core, core, rise * Math.exp(-Math.max(0, s - 0.025) * 10));
@@ -373,20 +357,146 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       place(gRing, x, y, ring, ring, rise * 0.7 * Math.pow(1 - ringK, 2.2));
       place(gStreak, x, y, (0.3 + 0.8 * ease(s / 0.3)) * k, 1, rise * 0.4 * Math.exp(-s * 10));
     }
-    // The camera shakes by moving sideways and up and down, never by rotating
+    // The view shakes by moving sideways and up and down, never by rotating
     let amp = 0;
     if (t >= T.brk && t < T.burst) amp = 3 * k * Math.exp(-(t - T.brk) * 16);
     if (t >= T.burst) amp = (o.final ? 20 : 4) * Math.exp(-(t - T.burst) * 6.5);
-    camera.position.set((rng() - 0.5) * amp, (rng() - 0.5) * amp, dist);
+    shake = [(rng() - 0.5) * amp, (rng() - 0.5) * amp];
   }
 
-  scene.traverse(obj => {
-    if (obj instanceof THREE.Mesh) obj.geometry.dispose();
-  });
-  [faceMat, edgeMat, debrisMat].forEach(m => m.dispose());
-  tex.dispose();
-  env.dispose();
-  pmrem.dispose();
-  renderer.dispose();
-  layer.remove();
+  /** A point in the portrait's frame on screen, and the perspective scale there. */
+  function project(x: number, y: number, z: number): Vec {
+    const wx = pose.x + x * pose.scale, wy = pose.y + y * pose.scale, wz = pose.z + z;
+    const s = focal / (focal - wz);
+    return [W / 2 + (wx - W / 2) * s + shake[0], H / 2 + (wy - H / 2) * s + shake[1], s * pose.scale];
+  }
+
+  function shade(path: () => void, n: Vec) {
+    const lambert = Math.max(0, dot(n, light));
+    const spec = Math.pow(Math.max(0, dot(n, half)), 36);
+    ctx.fillStyle = `rgba(0,0,0,${(0.62 * (1 - (0.35 + 0.65 * lambert))).toFixed(3)})`;
+    path();
+    ctx.fill();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = `rgba(255,246,232,${(spec * 0.55 + flare * 0.5).toFixed(3)})`;
+    path();
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    return spec;
+  }
+
+  function outline(pts: Point[]) {
+    return () => {
+      ctx.beginPath();
+      pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+      ctx.closePath();
+    };
+  }
+
+  function drawWhole() {
+    const [x, y, s] = project(0, 0, 0);
+    const sx = Math.cos(pose.ry), sy = Math.cos(pose.rx);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(pose.rz);
+    // The rim's thickness shows as a darker disc behind the face while the portrait is tilted
+    ctx.fillStyle = '#2a3038';
+    ctx.beginPath();
+    ctx.ellipse(-Math.sin(pose.ry) * depth * s, Math.sin(pose.rx) * depth * s, R * s * sx, R * s * sy, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.scale(sx, sy);
+    ctx.drawImage(medal, -R * s, -R * s, 2 * R * s, 2 * R * s);
+    ctx.restore();
+  }
+
+  function drawCracks(q: Piece) {
+    const [cx, cy, s] = project(q.pos[0], q.pos[1], 0);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(s, s);
+    outline(q.local)();
+    ctx.lineWidth = 1.1 / s;
+    ctx.strokeStyle = `rgba(6,8,12,${(0.75 * q.crack).toFixed(3)})`;
+    ctx.stroke();
+    ctx.translate(-0.6 / s, -0.6 / s);
+    ctx.lineWidth = 0.6 / s;
+    ctx.strokeStyle = `rgba(235,240,250,${(0.28 * q.crack).toFixed(3)})`;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // A piece is a slab: the face it shows, the side walls that face the viewer, and its back when it has flipped over.
+  // One perspective scale, taken at its centre, is close enough for pieces this small.
+  function drawPiece(q: Piece) {
+    const m = rotation(q.rot);
+    const n = apply(m, [0, 0, 1]);
+    const [cx, cy, s] = project(q.pos[0], q.pos[1], q.pos[2]);
+    const at = (x: number, y: number, z: number): Point => {
+      const v = apply(m, [x, y, z]);
+      return [cx + v[0] * s, cy + v[1] * s];
+    };
+    const front = q.local.map(p => at(p[0], p[1], depth / 2));
+    const back = q.local.map(p => at(p[0], p[1], -depth / 2));
+    for (let i = 0; i < q.local.length; i++) {
+      const a = q.local[i], b = q.local[(i + 1) % q.local.length];
+      let wallNormal = norm(apply(m, [b[1] - a[1], -(b[0] - a[0]), 0]));
+      // The edge's normal is turned to point away from the piece's centre
+      if ((a[0] + b[0]) * (b[1] - a[1]) - (a[1] + b[1]) * (b[0] - a[0]) < 0) wallNormal = [-wallNormal[0], -wallNormal[1], -wallNormal[2]];
+      if (wallNormal[2] <= 0.02) continue;
+      const wall = outline([front[i], front[(i + 1) % front.length], back[(i + 1) % back.length], back[i]]);
+      ctx.fillStyle = '#4a525e';
+      wall();
+      ctx.fill();
+      shade(wall, wallNormal);
+    }
+    if (n[2] >= 0) {
+      const [ox, oy] = at(0, 0, depth / 2);
+      ctx.save();
+      ctx.transform(m[0] * s, m[3] * s, m[1] * s, m[4] * s, ox, oy);
+      outline(q.local)();
+      ctx.clip();
+      ctx.drawImage(medal, -q.cx - R, -q.cy - R, 2 * R, 2 * R);
+      ctx.restore();
+      const face = outline(front);
+      const spec = shade(face, n);
+      // A bevelled edge catches a thin line of light
+      ctx.strokeStyle = `rgba(230,236,245,${(0.18 + 0.25 * spec).toFixed(3)})`;
+      ctx.lineWidth = 0.8;
+      face();
+      ctx.stroke();
+    } else {
+      const backFace = outline(back);
+      ctx.fillStyle = '#3b424d';
+      backFace();
+      ctx.fill();
+      shade(backFace, [-n[0], -n[1], -n[2]]);
+    }
+  }
+
+  function drawDebris(d: Debris) {
+    const m = rotation(d.rot);
+    const n = apply(m, [0, 0, 1]);
+    const [cx, cy, s] = project(d.pos[0], d.pos[1], d.pos[2]);
+    const p = d.tri.map(v => {
+      const w = apply(m, [v[0], v[1], 0]);
+      return [cx + w[0] * s, cy + w[1] * s] as Point;
+    });
+    const facing: Vec = n[2] < 0 ? [-n[0], -n[1], -n[2]] : n;
+    const g = Math.round(80 + 110 * Math.max(0, dot(facing, light)) + 60 * Math.pow(Math.max(0, dot(facing, half)), 36));
+    ctx.fillStyle = `rgb(${g},${g + 6},${g + 14})`;
+    outline(p)();
+    ctx.fill();
+  }
+
+  function render() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (pose.whole) {
+      drawWhole();
+      for (const q of pieces) if (q.shown) drawCracks(q);
+    } else {
+      for (const q of pieces.filter(q => !q.gone).sort((a, b) => a.pos[2] - b.pos[2])) drawPiece(q);
+    }
+    for (const d of debris) if (d.shown) drawDebris(d);
+  }
 }

@@ -73,7 +73,7 @@ function breakPortraits(model: Model, losers: PlayerView[], actions: Actions): v
       match.style.setProperty('--end-x', centre.x + 'px');
       match.style.setProperty('--end-y', centre.y + 'px');
       match.classList.add('ending');
-      // Without WebGL nothing has shown yet, so the result is not held back
+      // If the portrait does not load, nothing has shown yet, so the result is not held back
       run.catch(release);
       window.setTimeout(release, TITLE_LIMIT_MS);
     } else {
