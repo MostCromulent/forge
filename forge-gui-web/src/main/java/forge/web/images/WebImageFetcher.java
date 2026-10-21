@@ -2,7 +2,6 @@ package forge.web.images;
 
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgeConstants;
-import forge.util.BuildInfo;
 import forge.util.IHasForgeLog;
 import forge.util.ImageFetcher;
 import forge.util.ScryfallRateLimiter;
@@ -52,7 +51,7 @@ public final class WebImageFetcher extends ImageFetcher implements IHasForgeLog 
         final HttpURLConnection c = (HttpURLConnection) new URL(urlToDownload).openConnection();
         try {
             c.setRequestProperty("Accept", "*/*");
-            c.setRequestProperty("User-Agent", BuildInfo.getUserAgent());
+            c.setRequestProperty("User-Agent", GuiBase.getInterface().getUserAgent());
             c.setConnectTimeout(10000);
             c.setReadTimeout(30000);
             final int code = c.getResponseCode();

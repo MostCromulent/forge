@@ -26,6 +26,7 @@ public interface IGuiBase {
     String getCurrentVersion();
     /** Names the program in the log header. */
     default String getAppName() { return "Forge"; }
+    String getUserAgent();
 
     void invokeInEdtNow(Runnable runnable);
     void invokeInEdtLater(Runnable runnable);

@@ -77,6 +77,11 @@ public class GuiMobile implements IGuiBase {
     }
 
     @Override
+    public String getUserAgent() {
+        return "Forge/" + getCurrentVersion() + " (gui-mobile)";
+    }
+
+    @Override
     public String getAssetsDir() {
         return assetsDir;
     }
