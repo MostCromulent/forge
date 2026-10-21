@@ -110,7 +110,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   el.dataset.zoom = src;
   if (small) pictures.set(card.$key, { src: small, zoom: src, name: state.Name ?? '' });
   // A battlefield card that changes face (a transform, a morph turned face up) animates to the new face
-  const face = card.Facedown ? 'down' : state.ImageKey ?? '';
+  const face = card.Facedown ? 'down' : visible ? state.ImageKey ?? '' : '';
   if (el.dataset.face !== undefined && el.dataset.face !== face && el.closest('.battlefield') && !reducedMotion()) {
     q(el, 'img').animate([{ scale: '0 1' }, { scale: '1 1' }], { duration: 220, easing: 'cubic-bezier(.2,.7,.3,1)' });
   }
