@@ -10,11 +10,6 @@ import org.testng.annotations.Test;
 
 /** Tests draft and sealed events at a web table. The host sets them up and starts them with guests seated, as desktop's lobby does. */
 public class OnlineEventTest extends SessionsTest {
-    @Override
-    boolean slow() {
-        return true;
-    }
-
     /** Seats the host at a new table, invited or not, with the Limited switch set to kind. */
     private TestBrowser hostAt(final String open, final String kind) throws InterruptedException {
         final TestBrowser host = hostAt(open);
@@ -107,7 +102,6 @@ public class OnlineEventTest extends SessionsTest {
     // Fails if no pack reaches a seat, one pick counts twice, a pick from a pack already passed on counts, or the other seat never sees the pick
     @Test(timeOut = 300_000)
     public void aGuestPicksOnlyItsOwnPacks() throws Exception {
-        WebTestSupport.skipUnlessStress();
         final TestBrowser[] both = startedEvent("draft", eventSetup(LimitedPoolType.Full.name(), 2));
         final TestBrowser host = both[0];
         final TestBrowser guest = both[1];
@@ -118,7 +112,9 @@ public class OnlineEventTest extends SessionsTest {
         sessions.onMessage(guest, draftPick(step - 1, 0));
         sessions.onMessage(guest, draftPick(step, 0));
         guest.awaitMatching("draft", d -> picks(d) == 1, "the guest's pick never counted");
-        Thread.sleep(1_000);
+        // The guest's next pack comes from the host, so it arrives after anything the guest's own pick could still send
+        sessions.onMessage(host, draftPick(hostFirst.get("step").getAsInt(), 0));
+        guest.awaitMatching("draft", d -> d.get("step").getAsInt() > step && d.getAsJsonArray("cards").size() > 0, "the guest never got the host's pack");
         Assert.assertTrue(guest.got.stream().filter(m -> "draft".equals(m.get("t").getAsString())).allMatch(d -> picks(d) <= 1),
                 "one pick counted twice");
         final String before = hostFirst.getAsJsonArray("seats").toString();
@@ -129,7 +125,6 @@ public class OnlineEventTest extends SessionsTest {
     // Fails if a guest that reloads mid-draft is not put back in the draft with its pack
     @Test(timeOut = 300_000)
     public void aReloadReturnsToTheOnlineDraft() throws Exception {
-        WebTestSupport.skipUnlessStress();
         final TestBrowser[] both = startedEvent("draft", eventSetup(LimitedPoolType.Full.name(), 2));
         final TestBrowser guest = both[1];
         final JsonObject shown = guest.awaitMatching("draft", d -> d.getAsJsonArray("cards").size() > 0, "the guest was never shown a pack");

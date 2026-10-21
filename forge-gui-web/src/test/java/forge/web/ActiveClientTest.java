@@ -74,8 +74,7 @@ public class ActiveClientTest {
 
     @Test(timeOut = 180000)
     public void actingSeatReachesScryAndLibrarySearch() throws Exception {
-        WebTestSupport.skipUnlessStress();
-        TestMatch.play(plains(), forests(), gui -> TestBrowser.held(gui, 300), (local, gui, browser) -> {
+        TestMatch.play(plains(), forests(), gui -> TestBrowser.held(gui, 50), (local, gui, browser) -> {
             Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
 
             // The Temple's enter trigger scrys. Evolving Wilds searches the library
@@ -84,16 +83,10 @@ public class ActiveClientTest {
             WebTestSupport.remoteGui(local.hostedMatch()).updateGameView();
             // Release one card at a time, so the Wilds activation cannot interleave with the Temple's trigger
             browser.release("Hand:Temple of Enlightenment");
-            for (int i = 0; i < 300 && !asked(browser, "manipulate"); i++) {
-                Thread.sleep(100);
-            }
-            Assert.assertTrue(asked(browser, "manipulate"), "no scry reached the browser");
+            SessionsTest.awaitTrue(() -> asked(browser, "manipulate"), "no scry reached the browser");
 
             browser.release("Battlefield:Evolving Wilds");
-            for (int i = 0; i < 300 && !shown(browser, "Library"); i++) {
-                Thread.sleep(100);
-            }
-            Assert.assertTrue(shown(browser, "Library"), "no library search reached the browser");
+            SessionsTest.awaitTrue(() -> shown(browser, "Library"), "no library search reached the browser");
             Assert.assertTrue(browser.reloaded, "no reload happened mid-request");
             Assert.assertEquals(MatchProbe.skippedProperties(gui), 0);
             TestBrowser.command(gui, TestBrowser.action("concede"));
@@ -126,16 +119,16 @@ public class ActiveClientTest {
 
     // Answers the pre-game prompts with OK, then waits at the first priority prompt and returns that turn's number
     private static int keepAndHoldPriority(final WebGuiGame gui, final TestBrowser browser) throws InterruptedException {
-        for (int i = 0; i < 600 && !(turn(browser) > 0 && okEnabled(browser) && atPriority(browser)); i++) {
+        for (int i = 0; i < 6000 && !(turn(browser) > 0 && okEnabled(browser) && atPriority(browser)); i++) {
             if (turn(browser) == 0 && okEnabled(browser)) {
                 // A press sent before the host registers the input is dropped, so press again if no new prompt follows
                 final int prompts = browser.all("prompt").size();
                 TestBrowser.command(gui, TestBrowser.action("ok"));
-                for (int j = 0; j < 30 && browser.all("prompt").size() == prompts; j++) {
-                    Thread.sleep(100);
+                for (int j = 0; j < 300 && browser.all("prompt").size() == prompts; j++) {
+                    Thread.sleep(10);
                 }
             } else {
-                Thread.sleep(100);
+                Thread.sleep(10);
             }
         }
         final int held = turn(browser);
@@ -161,20 +154,19 @@ public class ActiveClientTest {
         final JsonObject request = TestBrowser.action("detail");
         request.addProperty("key", key);
         TestBrowser.command(gui, request);
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 500; i++) {
             for (final JsonObject m : browser.all("detail")) {
                 if (m.get("key").getAsInt() == key) {
                     return m.getAsJsonArray("faces");
                 }
             }
-            Thread.sleep(50);
+            Thread.sleep(10);
         }
         throw new AssertionError("no detail for card " + key);
     }
 
     @Test(timeOut = 180000)
     public void cardDetailShowsOtherFacesOnlyToThoseWhoMaySeeThem() throws Exception {
-        WebTestSupport.skipUnlessStress();
         TestMatch.play(plains(), forests(), gui -> new TestBrowser(gui, false), (local, gui, browser) -> {
             keepAndHoldPriority(gui, browser);
             final Game game = local.hostedMatch().getGame();
@@ -184,8 +176,8 @@ public class ActiveClientTest {
             final int split = cardKey(game, ZoneType.Hand, true, "Fire // Ice", false);
             final int ownFaceDown = cardKey(game, ZoneType.Battlefield, true, "Grizzly Bears", true);
             final int theirFaceDown = cardKey(game, ZoneType.Battlefield, false, "Grizzly Bears", true);
-            for (int i = 0; i < 100 && !MatchProbe.objects(browser.model).keySet().containsAll(List.of(delver, split, ownFaceDown, theirFaceDown)); i++) {
-                Thread.sleep(100);
+            for (int i = 0; i < 1000 && !MatchProbe.objects(browser.model).keySet().containsAll(List.of(delver, split, ownFaceDown, theirFaceDown)); i++) {
+                Thread.sleep(10);
             }
 
             Assert.assertEquals(faces(gui, browser, delver).size(), 2, "a double-faced card shows both faces");
@@ -201,7 +193,6 @@ public class ActiveClientTest {
     // Jötun Grunt's upkeep asks the web seat to choose a player. If the browser is not told which players it may click, the Grunt is sacrificed
     @Test(timeOut = 180000)
     public void playerChoicePromptIsAnsweredFromTheWebSeat() throws Exception {
-        WebTestSupport.skipUnlessStress();
         // Passes priority, takes the first option of optional choices and presses OK to pay costs
         TestMatch.play(plains(), forests(), gui -> TestBrowser.held(gui, 50), (local, gui, browser) -> {
             Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
@@ -210,9 +201,10 @@ public class ActiveClientTest {
             final String web = webFirst ? "human" : "ai";
             final String ai = webFirst ? "ai" : "human";
             final GameState state = new GameState();
+            // The computer's turn is ending, so the web seat's upkeep comes next
             state.parse(List.of(
-                    "activeplayer=" + web,
-                    "activephase=MAIN1",
+                    "activeplayer=" + ai,
+                    "activephase=END_OF_TURN",
                     web + "life=20",
                     ai + "life=20",
                     web + "battlefield=J\u00f6tun Grunt",
@@ -229,8 +221,8 @@ public class ActiveClientTest {
             final int turn = game.getPhaseHandler().getTurn();
             browser.release();
             // Wait for the web seat's next turn, past the upkeep that asks for the payment
-            for (int i = 0; i < 600 && !(game.getPhaseHandler().getTurn() >= turn + 2 && game.getPhaseHandler().getPhase().isAfter(PhaseType.UPKEEP)); i++) {
-                Thread.sleep(100);
+            for (int i = 0; i < 6000 && !(game.getPhaseHandler().getTurn() > turn && game.getPhaseHandler().getPhase().isAfter(PhaseType.UPKEEP)); i++) {
+                Thread.sleep(10);
             }
             Assert.assertEquals(game.getPhaseHandler().getPlayerTurn(), seat, "the web seat's next turn never came: turn "
                     + game.getPhaseHandler().getTurn() + " in " + game.getPhaseHandler().getPhase());

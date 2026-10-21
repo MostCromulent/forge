@@ -48,21 +48,20 @@ public class BatchBoundaryTest {
 
     @Test(timeOut = 360000)
     public void aMessageHoldsWholeActionsAndNoMoreThanOne() throws Exception {
-        WebTestSupport.skipUnlessStress();
         final Deck red = TestDecks.of("Red", "Mountain", 22, "Shock", 10, "Goblin Piker", 14, "Raging Goblin", 14);
         TestMatch.play(red, red, gui -> new TestBrowser(gui, true), (local, gui, browser) -> {
-            for (int i = 0; i < 300; i++) {
+            for (int i = 0; i < 3000; i++) {
                 final HostedMatch match = local.hostedMatch();
                 if (match != null && match.getGame() != null && browser.all("state").size() > 1) {
                     break;
                 }
-                Thread.sleep(100);
+                Thread.sleep(10);
             }
             // The computer takes the web seat, so both sides cast spells and nobody is asked anything
             local.spectate();
             // Ten turns of this deck cover every case below many times, and a whole game takes much longer
-            for (int i = 0; i < 3000 && browser.gameOver.getCount() > 0 && turn(browser) < 10; i++) {
-                Thread.sleep(100);
+            for (int i = 0; i < 30000 && browser.gameOver.getCount() > 0 && turn(browser) < 10; i++) {
+                Thread.sleep(10);
             }
 
             final BrowserModel replay = new BrowserModel();

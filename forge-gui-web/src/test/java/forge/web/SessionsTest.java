@@ -30,16 +30,8 @@ abstract class SessionsTest {
 
     @BeforeClass
     public void startSessions() {
-        if (slow()) {
-            WebTestSupport.skipUnlessStress();
-        }
         WebTestSupport.initModel();
         sessions = new WebSessions(gui(), 120_000, () -> { });
-    }
-
-    /** Whether the class plays whole sessions over netplay. These are slow, so they run only when asked for. */
-    boolean slow() {
-        return false;
     }
 
     /** The GUI the sessions run on. It is their own, unless a test needs core's questions sent to the browser. */

@@ -79,7 +79,6 @@ public class OfflineSealedTest extends SessionsTest {
     // Fails if a free-for-all from a draft pool seats no more than three opponents
     @Test(timeOut = 120_000)
     public void aDraftFreeForAllSeatsEveryOpponent() throws Exception {
-        WebTestSupport.skipUnlessStress();
         final String name = "Draft test " + UUID.randomUUID().toString().substring(0, 8);
         final DeckGroup group = new DeckGroup(name);
         group.setHumanDeck(TestDecks.of(name, "Forest", 40));

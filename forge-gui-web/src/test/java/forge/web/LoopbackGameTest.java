@@ -31,12 +31,12 @@ public class LoopbackGameTest {
     }
 
     private static void awaitGameStarted(final LocalGame local, final TestBrowser browser) throws InterruptedException {
-        for (int i = 0; i < 300; i++) {
+        for (int i = 0; i < 3000; i++) {
             final HostedMatch match = local.hostedMatch();
             if (match != null && match.getGame() != null && browser.all("state").size() > 1) {
                 return;
             }
-            Thread.sleep(100);
+            Thread.sleep(10);
         }
         Assert.fail("game did not start");
     }
@@ -58,9 +58,9 @@ public class LoopbackGameTest {
 
     @Test(timeOut = 360000)
     public void passiveGameCompletesAndIncrementalMatchesFull() throws Exception {
-        WebTestSupport.skipUnlessStress();
         final Deck bears = TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 20);
-        final Deck islands = TestDecks.of("Islands", "Island", 40);
+        // The web seat loses by drawing from an empty library a few turns in
+        final Deck islands = TestDecks.of("Islands", "Island", 8);
         TestMatch.play(islands, bears, gui -> new TestBrowser(gui, true), (local, gui, browser) -> {
             awaitGameStarted(local, browser);
 
