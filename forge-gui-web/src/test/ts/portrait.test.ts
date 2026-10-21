@@ -48,13 +48,9 @@ describe('tagsFor', () => {
 });
 
 describe('fieldChanged', () => {
-  it('is true when a permanent arrived', () => {
+  it('is true when a permanent arrived or left, and false when the same permanents are there in another order', () => {
     expect(fieldChanged(new Set([1, 2]), [1, 2, 3])).toBe(true);
-  });
-  it('is true when a permanent left', () => {
     expect(fieldChanged(new Set([1, 2, 3]), [1, 2])).toBe(true);
-  });
-  it('is false when the same permanents are there', () => {
     expect(fieldChanged(new Set([1, 2, 3]), [3, 1, 2])).toBe(false);
   });
   it('is false for a seat never looked at', () => {
@@ -64,14 +60,12 @@ describe('fieldChanged', () => {
 
 describe('seatToOpen', () => {
   const base = { open: 11, seats: [11, 12, 13], active: 12, turn: 4, chosenTurn: 0 };
-  it('follows the turn to an opponent', () => {
+  it('follows the turn to an opponent, also on the turn after the player chose', () => {
     expect(seatToOpen(base)).toBe(12);
+    expect(seatToOpen({ ...base, chosenTurn: 3 })).toBe(12);
   });
   it('stays where the player chose during this turn', () => {
     expect(seatToOpen({ ...base, chosenTurn: 4 })).toBe(11);
-  });
-  it('follows the next turn after the player chose', () => {
-    expect(seatToOpen({ ...base, chosenTurn: 3 })).toBe(12);
   });
   it('stays where the player chose through their own turn', () => {
     expect(seatToOpen({ ...base, chosenTurn: 3, active: 1 })).toBe(11);
