@@ -141,7 +141,6 @@ public final class CampaignProtocol {
     public record QuestBuy(String stall, String item) {
     }
 
-    /** Fights a challenge, by its id. */
     @Command("questChallenge")
     public record QuestChallenge(String id) {
     }
@@ -218,7 +217,6 @@ public final class CampaignProtocol {
     public record Figure(String label, int amount, @Nullable Integer of) {
     }
 
-    /** A table of the statistics, as text. */
     public record StatTable(List<String> headers, List<List<String>> rows) {
     }
 

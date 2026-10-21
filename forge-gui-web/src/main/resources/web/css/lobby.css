@@ -53,8 +53,6 @@
 .start-buttons { display: flex; gap: 8px; }
 .start-buttons button { flex: 1; padding: 11px; font-size: 15px; }
 
-/* Waiting for a seat */
-
 /* The card keeps one size in every state, so the page does not jump when a join succeeds or fails */
 .wait-card {
   display: flex; flex-direction: column; gap: 15px; width: min(100%, 380px); min-height: 212px; padding: 22px;
@@ -132,7 +130,6 @@ button.ghost:hover { color: var(--text); background: var(--surface-2); }
 .modes .mode.plaque[data-mode="editor"] { --ground: radial-gradient(70% 140% at 88% 50%, #4a3a1e 0%, transparent 65%),
   repeating-linear-gradient(45deg, #ffffff06 0 1px, transparent 1px 12px), repeating-linear-gradient(-45deg, #ffffff06 0 1px, transparent 1px 12px),
   linear-gradient(160deg, #241d12, #110e09); }
-/* A large, faint copy of the plaque's icon is drawn in the top corner as a watermark */
 .modes .mode.plaque .plaque-mark { position: absolute; z-index: -1; right: -14px; top: -18px; width: 170px; height: 170px; opacity: .1; pointer-events: none;
   transition: transform .4s ease, opacity .3s ease; }
 .modes .mode.plaque .plaque-mark svg { width: 100%; height: 100%; fill: none; stroke: #fff; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
@@ -151,7 +148,6 @@ button.ghost:hover { color: var(--text); background: var(--surface-2); }
 .modes .mode.plaque:hover:not(:disabled) { box-shadow: 0 0 0 1px var(--accent-2), 0 0 0 2px #0008, 0 0 14px color-mix(in srgb, var(--accent-2) 14%, transparent), 0 18px 40px #000b; transform: translateY(-2px); }
 .modes .mode.plaque:hover:not(:disabled)::before { transform: scale(1.08); filter: saturate(1); }
 .modes .mode.plaque:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
-/* The wide plaque is laid out in a row. It shows the medallion, then the text, then a fan of cards. */
 .modes .mode.plaque.wide { height: 112px; flex-direction: row; align-items: center; padding-left: 90px; }
 .modes .mode.plaque.wide .mode-art { top: 50%; transform: translateY(-50%); }
 .plaque-fan { margin-left: auto; display: flex; padding-right: 8px; }
@@ -204,12 +200,10 @@ html[data-way] .modes .mode.plaque, html[data-motion="reduced"] .modes .mode.pla
 .page-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
 .head-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
 
-/* Role tags in Archenemy. The archenemy gets a brass tag and each hero gets a plain one. */
 .role { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; }
 .role.archenemy { background: var(--brass); color: var(--on-brass); }
 .role.hero { border: 1px solid var(--line-bright); color: var(--muted); }
 .make-archenemy { font-size: 11.5px; padding: 2px 8px; background: none; color: var(--muted); }
-/* A seat's planar deck, scheme deck or avatar. Each is one plain row that opens its picker. */
 .seat-extra { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font-size: 13px; }
 .seat-extra .extra-kind { width: 62px; flex: none; color: var(--faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; }
 .seat-extra .extra-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -233,13 +227,11 @@ html[data-way] .modes .mode.plaque, html[data-motion="reduced"] .modes .mode.pla
   border-radius: 12px;
 }
 
-/* A new seat animates in when it is added. When a guest takes a seat, the seat glows gold once. */
 .plate { animation: box-in .2s ease-out; }
 .plate.guest { animation: box-in .2s ease-out, seat-taken .9s ease-in-out .2s; }
 @keyframes seat-taken { 50% { box-shadow: 0 0 0 2px var(--accent-2), 0 0 18px color-mix(in srgb, var(--accent-2) 35%, transparent); } }
 html[data-motion="reduced"] .plate { animation: none; }
 
-/* The player's own seat gets an accent background gradient as well as an accent border */
 .plate.mine { border-color: var(--accent-2); background: linear-gradient(100deg, var(--accent-soft) 0%, var(--surface) 46%); }
 .plate-body { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-width: 0; flex: 1; }
 
@@ -328,7 +320,6 @@ button.team-tab { color: var(--text); }
 button.team-tab:hover, button.team-tab[aria-expanded="true"] { border-color: var(--accent-2); color: var(--accent-2); }
 .team-tab .chevron { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: .7; }
 .team-tab-slot .popup { left: 0; top: calc(100% + 6px); width: max-content; min-width: 0; }
-/* A short list of choices in a popup. The current choice is highlighted. */
 .menu-list { width: max-content; display: flex; flex-direction: column; gap: 1px; }
 .popup.menu-list, .popup:has(> .menu-list) { padding: 5px; width: max-content; min-width: 0; }
 .menu-list button { padding: 7px 26px 7px 10px; border: 0; border-radius: 6px; background: none; text-align: left; font-size: 13px; font-weight: 400; }
@@ -366,8 +357,6 @@ button.team-tab:hover, button.team-tab[aria-expanded="true"] { border-color: var
 .not-yet.warn b { color: var(--accent-2); }
 .not-yet .hint { margin: 8px 0 0; font-size: 12.5px; color: var(--faint); }
 
-/* The deck finder */
-
 .finder-back, .sleeves-back { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: 60; }
 .finder, .sleeves { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; width: min(1500px, 94vw); height: min(880px, 92vh); display: grid; grid-template-rows: auto 1fr auto; }
 .finder-head, .sleeves-head, .imp-head { display: flex; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line); }
@@ -375,7 +364,6 @@ button.team-tab:hover, button.team-tab[aria-expanded="true"] { border-color: var
 .finder-head .dk-close, .sleeves-head .dk-close, .imp-head .dk-close { margin-left: auto; }
 .finder-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); }
 
-/* The finder body has three columns. The filters are on the left, the deck list is in the middle, and the right panel shows the whole decklist. */
 .finder-body { display: grid; grid-template-columns: 230px 560px minmax(0, 1fr); min-height: 0; }
 .rail { display: flex; flex-direction: column; gap: 18px; padding: 16px 12px; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 80%, var(--bg)); overflow-y: auto; scrollbar-width: thin; min-height: 0; }
 .rail section { display: flex; flex-direction: column; gap: 2px; }
@@ -384,7 +372,6 @@ button.team-tab:hover, button.team-tab[aria-expanded="true"] { border-color: var
 .rail .source:hover { background: var(--surface-2); }
 .rail .source[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-2); box-shadow: inset 2px 0 0 var(--accent-2); }
 .rail .dk-count { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-/* The net deck categories are indented under the source that opened them */
 .net-cats { display: flex; flex-direction: column; gap: 2px; margin-left: 12px; padding-left: 6px; border-left: 2px solid var(--line); }
 .net-cats .source { height: 28px; font-size: 13px; }
 .rail .get-net { align-self: flex-start; margin: 4px 10px 0; padding: 0; border: 0; background: none; color: var(--accent-2); font-size: 12.5px; font-weight: 600; }
@@ -493,8 +480,6 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .group h4 { display: flex; justify-content: space-between; margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
 .none { color: var(--muted); padding: 18px; }
 
-/* The sleeve picker */
-
 .sleeves { width: min(1100px, 92vw); grid-template-rows: auto 1fr; }
 .sleeves-body { overflow: auto; padding: 16px 18px; display: grid; gap: 20px; align-content: start; }
 .sleeves-body h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
@@ -538,8 +523,6 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
   .art-picker { grid-template-columns: 200px 1fr; }
   .preview { grid-column: 1 / -1; }
 }
-
-/* The finder's filters, statistics and card peek */
 
 .count-row { display: flex; gap: 10px; align-items: center; }
 .count-row .shown { flex: 1; }
@@ -613,8 +596,6 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .host-option { text-align: left; }
 .host-choice footer { display: flex; justify-content: flex-end; }
 
-/* Multiplayer */
-
 .menu-note { color: var(--muted); min-height: 1.2em; max-width: 520px; text-align: center; }
 /* A failure note is marked by bold text and a side bar, not by colour alone */
 .menu-note.bad { color: var(--text); font-weight: 600; border-left: 3px solid var(--danger); padding-left: 8px; text-align: left; }
@@ -642,8 +623,6 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .share-url { grid-column: 1 / -1; font-family: ui-monospace, monospace; font-size: 11px; overflow-wrap: anywhere; }
 .share-copy { color: var(--accent-2); font-size: 12px; }
 
-/* The chat dock. It shows who is here and what they are saying. */
-
 /* Outside a match, the dock is fixed to the bottom edge. So it looks attached to the edge, not floating over the page. */
 #dock .dock { position: fixed; right: 24px; bottom: 0; z-index: 30; width: 318px; }
 .dock {
@@ -652,7 +631,6 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 }
 .dock.folded { display: flex; align-items: center; gap: 10px; padding: 9px 14px 11px 9px; cursor: pointer; }
 .dock.open { display: flex; flex-direction: column; max-height: min(60vh, 420px); }
-/* Opening slides the panel up from the folded bar's position. Closing slides it back down. */
 .dock.open:not(.in-match) { animation: dock-rise .24s cubic-bezier(.2,.8,.3,1); }
 .dock.open.closing { animation: dock-sink .18s ease-in forwards; }
 @keyframes dock-rise { from { transform: translateY(calc(100% - 44px)); } }
@@ -742,7 +720,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .avatar-choice .avatar-name { font-size: 11.5px; text-align: center; }
 .avatar-choice .mods { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-/* The finder's controls for making a new deck, and for importing a file dragged over it */
 .finder-head .head-tools { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 .finder-head .legality { margin-left: 16px; }
 .finder-foot .delete-deck { margin-right: auto; color: var(--danger); }
@@ -751,7 +728,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .finder-foot .delete-line b { color: var(--text); }
 .finder-foot .danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
 .finder-foot .linked-line { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; }
-/* The dialog that "+ New deck" opens. It shows a field for a deck site's link first, then the other ways to make a deck. */
 .dialog.new-deck { width: min(92vw, 440px); gap: 16px; }
 .new-deck section { display: grid; gap: 8px; }
 .new-deck h4 { margin: 0; font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--accent-2); }
@@ -767,7 +743,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 /* A Limited table. It has the switch above, the event next to the seats, and seats that can be marked ready before any deck exists. */
 .event-setup { position: relative; width: min(760px, 100%); padding: 0; }
 .event-setup .dk-close { position: absolute; right: 12px; top: 12px; z-index: 1; }
-/* The setup dialog's first question, and the list of earlier events it can open */
 .setup-choice, .event-setup .past-events { display: grid; gap: 12px; padding: 22px 24px 24px; }
 .setup-choice h3, .past-events h3 { margin: 0; font-size: 18px; }
 .event-setup .setup-back { justify-self: start; font-size: 13px; }
@@ -795,7 +770,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .plate.sitting-out { opacity: .6; }
 .event-setup .wiz { border: none; background: transparent; }
 
-/* The page header. It holds the wordmark and the buttons to invite, set the sound and options, and leave. The match settings are in the bar below it. */
 .page-head .wordmark-block { justify-items: start; }
 .page-head .wordmark .beta { position: static; margin-left: .28em; }
 .icon-button { width: 32px; height: 30px; padding: 0; display: grid; place-items: center; }
@@ -803,7 +777,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .icon-button[aria-expanded="true"] { background: var(--surface-2); }
 .invite { display: grid; gap: 8px; width: min(460px, calc(100vw - 32px)); }
 
-/* The match bar is one strip of labelled fields above the seats */
 .match-bar { margin-bottom: 14px; width: min(100%, 960px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
 .match-bar .fields { display: flex; flex-wrap: wrap; }
 /* The event header of a Draft or Sealed table. It replaces the match bar at the top of the table. */
@@ -834,7 +807,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .event-head.slim .eh-title .event-product { font-size: 18px; }
 .eh-facts { font-size: 12.5px; color: var(--muted); }
 .eh-rail { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center; padding: 14px 22px 16px; border-top: 1px solid var(--line); }
-/* A progress track with four stops. The line is brass up to the event's current stop. */
 .eh-track { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; padding: 0; list-style: none; }
 .eh-track::before, .eh-track::after { content: ''; position: absolute; left: 12.5%; top: 10px; height: 3px; border-radius: 2px; }
 .eh-track::before { right: 12.5%; background: var(--line); }
@@ -871,7 +843,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .plate.leaving { opacity: .38; border-style: dashed; }
 .seat-note { margin: 0; font-size: 12.5px; color: var(--muted); }
 
-/* A field's popup, shown below the field */
 .popup-anchor { position: relative; }
 .popup.wide { width: min(560px, calc(100vw - 32px)); }
 .popup { position: absolute; z-index: 30; top: calc(100% + 10px); left: -14px; padding: 12px; background: var(--surface); border: 1px solid var(--line-bright);
@@ -917,7 +888,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .pool-more { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; font-size: 12.5px; color: var(--muted); }
 .pool-more label { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
-/* A host question with pictures. Cards are shown as card images, and packs have their set's name below them. The selected one has an outline and a tick. */
 .host-choice.pictured { width: min(900px, 94vw); }
 .host-pictures { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; max-height: 62vh; overflow: auto; padding: 4px; }
 .host-picture { position: relative; display: grid; justify-items: center; gap: 6px; padding: 8px; border-radius: 10px; background: var(--surface-2); font-size: 12.5px; font-weight: 600; }

@@ -236,12 +236,10 @@ public final class WebSession implements IHasForgeLog {
         return local.webSeat();
     }
 
-    /** The host hands another seat of its running match to the AI. */
     void handSeatToAi(final int seat) {
         local.handToAi(seat);
     }
 
-    /** Whether this session holds the host's seat. */
     public boolean hosting() {
         return isHost;
     }
@@ -264,7 +262,6 @@ public final class WebSession implements IHasForgeLog {
         return now instanceof Opening ? Doing.joining : Doing.waiting;
     }
 
-    /** Sends one message to this session's browser, if it has one. */
     public void tell(final Record message) {
         final BrowserChannel b = browser;
         if (b != null) {
@@ -1050,7 +1047,6 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    /** The parts of this session that the campaign modes can use. */
     private final class CampaignHost implements Campaigns.Host {
         @Override
         public boolean hosting() {

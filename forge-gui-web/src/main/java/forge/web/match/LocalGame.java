@@ -59,7 +59,6 @@ public final class LocalGame implements IHasForgeLog {
     /** Receives the draft and pool events the host sends this seat. Set before a table is opened or joined. */
     private volatile IDraftEventHandler draftHandler;
 
-    /** One seat of a game set up in a single call. */
     public record Seat(String name, boolean ai, int avatar, int sleeve, Deck deck) {
     }
 

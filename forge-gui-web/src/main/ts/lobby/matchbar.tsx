@@ -11,7 +11,6 @@ import type { Model } from '../model';
 import { Dropdown } from '../dialog';
 import type { Address, Format, LobbyTable } from '../protocol';
 
-/** A field's popup. Its button opens it. Escape or a press anywhere outside it closes it. */
 /** name is the button's accessible name, for a label with no words. */
 function Popup({ label, name, disabled, children, wide, onOpen }: {
   label: ComponentChildren; name?: string; disabled?: boolean; children: (close: () => void) => ComponentChildren; wide?: boolean; onOpen?: () => void;
@@ -51,7 +50,6 @@ function deckMark(format: Format): string {
   return size ? t('lblWebNCards', size) : t('lblNoDeck');
 }
 
-/** An icon for each family of games: a deck for Constructed, a crown for the commander games, a die for the Momir games and a pack for Limited. */
 const GROUP_ICONS: Record<string, ComponentChildren> = {
   Constructed: <svg viewBox="0 0 16 16"><rect x="3" y="2" width="9" height="12" rx="1.5" /><path d="M5 4.5v10.5h8V5" opacity=".6" /></svg>,
   Commander: <svg viewBox="0 0 16 16"><path d="M2 12 L3 5 L6 8 L8 3 L10 8 L13 5 L14 12 Z" /></svg>,
@@ -171,7 +169,6 @@ export function seatsLeaving(lobby: LobbyTable, count: number): Set<number> {
   return out;
 }
 
-/** The fewest seats a table can have: two, or the number of seated people if that is more. */
 function fewestSeats(lobby: LobbyTable): number {
   return Math.max(2, lobby.seats.filter(s => s.mine || s.type === 'LOCAL' || s.type === 'REMOTE').length);
 }

@@ -1,5 +1,3 @@
-// The campaign modes' model fields, actions and tabs, and the hooks the shared pages call (campaigns.tsx)
-
 import { registerCampaigns } from '../campaigns';
 import { Kind } from '../menu';
 import { ui } from '../ui';
@@ -55,7 +53,6 @@ declare module '../ui' {
   interface UiState {
     /** The page of the open conquest that is shown. It is kept while the deck editor replaces the page for a while. */
     conquestTab: ConquestTab;
-    /** The page of the open quest that is shown. */
     questTab: QuestTab;
     conquestOpened: Record<string, boolean>;
     /** Dev mode: where the next Chaos Wheel stops. It is kept here because on a phone it is chosen in the header's menu, which closes after each choice. */

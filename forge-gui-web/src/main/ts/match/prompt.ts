@@ -279,7 +279,6 @@ function drawPrompt(model: Model, actions: Actions): void {
   root.classList.toggle('priority', waiting && !!p.priority);
 }
 
-/** Counts the cards that are attacking. */
 function countAttacking(model: Model): number {
   let n = 0;
   for (const o of model.objects.values()) {

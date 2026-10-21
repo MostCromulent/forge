@@ -4,7 +4,6 @@ import { symbolParts, symbolUrl } from './images';
 import { t, type TextKey } from './text';
 import { ICONS, Icon } from './icons';
 
-/** The icon for a computer player. */
 export const AI_ICON = <Icon d={ICONS.bot} />;
 
 /** Text with symbols such as {2}{B} and {T} drawn from the skin's icon sheet, as setSymbolText does on the board. */

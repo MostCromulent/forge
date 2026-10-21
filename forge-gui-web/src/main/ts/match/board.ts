@@ -469,7 +469,6 @@ function cardTypes(typeLines: readonly string[]): string[] {
   return CORE_TYPES.filter(t => found.has(t));
 }
 
-/** A graveyard tile's tooltip. It gives the number of cards and the number of card types among them. */
 function graveyardTitle(count: number, types: string[]): string {
   const cards = t(count === 1 ? 'lblWebOneCard' : 'lblWebNCards', count);
   if (!types.length) return t('lblWebBoardGraveyardTitle', cards);

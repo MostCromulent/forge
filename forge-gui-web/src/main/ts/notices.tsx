@@ -11,7 +11,6 @@ const NOTICE_MS = 6000;
 /** The length of a notice's exit animation (theme.css). */
 const NOTICE_OUT_MS = 180;
 
-/** Sets the model that holds the notices and the function that redraws the page. */
 export function initNotices(into: Model, schedule: () => void): void {
   model = into;
   redraw = schedule;

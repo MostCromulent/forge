@@ -142,7 +142,6 @@ function unmark(zone: HTMLElement): void {
   delete zone.dataset.dropHint;
 }
 
-// Scrolls a long list while a card is dragged near its top or bottom edge
 function scrollNearEdge(zone: HTMLElement | null, y: number): void {
   const body = zone?.querySelector<HTMLElement>('.zone-body, .cat-grid, .cat-table');
   if (!body) return;

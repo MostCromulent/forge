@@ -1,5 +1,3 @@
-// A quest's Spell Shop. The trade page shows the cards for sale and the player's own cards, in Quest's words. The packs and decks for sale go above the cards
-
 import { TYPES } from '../deck/catalogue';
 import { TradePage, pickOf, type Pick, type TradeWords } from '../campaign/trade';
 import { imageUrl, hideBroken } from '../images';

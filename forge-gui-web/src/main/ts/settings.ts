@@ -188,7 +188,6 @@ export const SETTINGS: SettingDef[] = [
 const byKey = new Map(SETTINGS.map(s => [s.key, s]));
 let local: Record<string, SettingValue> = {};
 let server: Partial<ServerSettings> = {};
-/** Saves a setting the server keeps. */
 let saveOnServer: (key: string, value: string) => void = () => {};
 let redraw: () => void = () => {};
 /** The host's server settings are Forge preferences, which persist after the server stops. A guest's do not. */
@@ -294,7 +293,6 @@ export function shortcutSettings(): SettingDef[] {
     .map(s => ({ section: t('lblKeyboardShortcuts'), key: s.pref, label: s.label, type: 'shortcut', server: true, def: s.defaultKeys }));
 }
 
-/** Each shortcut preference's keys. */
 export function shortcutKeys(): Record<string, string> {
   return Object.fromEntries((server.shortcuts ?? []).map(s => [s.pref, s.keys]));
 }

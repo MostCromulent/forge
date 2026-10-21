@@ -7,9 +7,7 @@ public interface DraftOwner {
     /** The single name that the drafted decks are saved under. */
     String deckName();
 
-    /** The drafted decks were saved under deckName. */
     void saved(DeckGroup decks);
 
-    /** The draft was left without being saved. */
     void discarded();
 }

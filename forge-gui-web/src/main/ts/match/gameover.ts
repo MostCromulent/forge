@@ -105,7 +105,6 @@ function drawTally(root: HTMLElement, everyone: PlayerView[], wins: (p: PlayerVi
   }
 }
 
-/** How many motes of light rise past a winner's portrait. */
 const WIN_MOTES = 16;
 
 /** Shows the result once the losing portrait has broken. It is drawn once per ending, so its fade-in plays only once. */

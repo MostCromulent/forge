@@ -8,7 +8,6 @@ export interface CardFit {
   gap: number;
   /** The height in pixels of the buttons under each card. */
   below?: number;
-  /** Whether the cards may wrap onto more rows. */
   wrap?: boolean;
   /** The smallest scale, below which the cards scroll instead. */
   least?: number;

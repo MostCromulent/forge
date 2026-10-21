@@ -23,7 +23,6 @@ final class LogCapture {
     /** The colour of the last error or warning written. The stack trace under it is drawn in the same colour. */
     private SimpleAttributeSet carried = PLAIN;
 
-    /** onError is run for each error written to the pane. */
     LogCapture(final JTextPane text, final Runnable onError) {
         this.text = text;
         this.onError = onError;

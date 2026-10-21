@@ -423,7 +423,6 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         }
     }
 
-    /** Sends a picture drawn from the skin, or a not-found reply. */
     private void respondOrNotFound(final ChannelHandlerContext ctx, final byte[] body, final String type, final String ifNoneMatch) {
         if (body == null) {
             notFound(ctx);
@@ -470,7 +469,6 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         send(ctx, resp, keepAlive);
     }
 
-    /** Redirects the browser to another address. The redirect is never cached. */
     private void redirect(final ChannelHandlerContext ctx, final String location) {
         final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
         final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FOUND);
@@ -669,7 +667,6 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return page = out.toString().getBytes(StandardCharsets.UTF_8);
     }
 
-    /** The page's stylesheets joined into one file. */
     private byte[] styles() throws IOException {
         return page() == null ? null : styles;
     }

@@ -68,7 +68,6 @@ final class CardImageDownloads {
     /** The number of the latest count for the current choice. A newer count replaces an older one that is still running. */
     private int countRun;
 
-    /** A choice of cards to save images for. */
     private record Choice(String name, Predicate<PaperCard> cards) {
         @Override
         public String toString() {

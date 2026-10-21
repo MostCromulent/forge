@@ -35,7 +35,6 @@ export const pickOf = (row: CatalogueRow, count = 1): Pick => ({ key: keyOf(row)
 /** The key for a row in a trade. It is the server's key when the image key is not enough, as for a foil. Otherwise it is the image key. */
 const keyOf = (row: CatalogueRow): string => row.key ?? row.image;
 
-/** A button that spends a balance. It shows its label, the currency's icon and the cost, and is disabled while the balance is too low. */
 export function PricedButton({ label, icon, iconLabel, size, cost, have, disabled, cls, onClick }: {
   label: string; icon: string; iconLabel: string; size: number; cost: number; have: number; disabled?: boolean; cls?: string; onClick: () => void;
 }) {
@@ -46,7 +45,6 @@ export function PricedButton({ label, icon, iconLabel, size, cost, have, disable
   );
 }
 
-/** Owned copies shown as four squares, one filled for each copy held, with the number beside them. */
 function Owned({ n }: { n: number }) {
   return (
     <span class="cq-owned" title={t('lblWebTradeOwned', n)}>

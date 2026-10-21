@@ -1,4 +1,3 @@
-/* The match screen: the table, the seats, the stack, the prompt and the end of a game */
 /* The table is lighter than the other pages' background, so a card's black border stays visible against it */
 #match { --table: #1a202c; --table-deep: #0f131b; }
 #match::after {
@@ -48,7 +47,6 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 @keyframes side-on { from { transform: translateX(calc(100% + 16px)); } }
 @keyframes side-fade-in { from { opacity: 0; } }
 @keyframes side-fade-out { to { opacity: 0; } }
-/* The log takes the space the chat does not use. When a panel is closed, only its tab shows. */
 .side-panel { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
 #log-panel { flex: 1; }
 #chat-panel { flex: 0 1 40%; }
@@ -64,7 +62,6 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 /* The chat is drawn into its own container. Its log and input are the rows of the panel. */
 #match-chat { display: flex; flex: 1; min-height: 0; }
 #hand { grid-area: hand; }
-/* Two or three opponents share the top half in columns, in seating order */
 #opponent.many { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; min-height: 0; }
 /* The tabbed layout shows one opponent at a time. The other opponents are tabs along the top edge of the seat. Only the open tab has a full outline. */
 #seat-tabs, #seat-switch { display: none; }
@@ -147,7 +144,6 @@ html[data-motion="reduced"] #opponent.tabbed > .seat > * { animation: none; }
 .seat.compact .zone-tile .zone-name { font-size: 9px; letter-spacing: 0; }
 .seat.compact .zone-tile .zone-count { font-size: 11px; min-width: 18px; }
 .seat.compact .battlefield { max-height: none; }
-/* A player out of the game keeps their seat. The seat is greyed and a skull is drawn over the portrait. */
 #out-banner .skull svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .seat.out .name { color: var(--muted); }
 .seat.out .battlefield, .seat.out .zone-tiles, .seat.out .hand-fan, .seat.out .emblems { filter: grayscale(1) brightness(.55); opacity: .6; pointer-events: none; }
@@ -247,7 +243,6 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .seat.compact .hand-fan .hand-count { font-size: 12px; }
 /* In a full seat the portrait is on its own row, on the side the player faces. It is above the tiles for you and below them for an opponent. */
 .seat:not(.compact) .player { flex-direction: column; align-items: flex-start; gap: 10px; }
-/* The name and hand are next to the portrait, centred on it */
 .seat:not(.compact) .player-id { grid-template-columns: auto auto; grid-template-rows: 1fr auto auto 1fr; column-gap: 12px; row-gap: 0; align-items: center; justify-items: start; }
 .seat:not(.compact) .player-id .avatar { grid-row: 1 / 5; }
 .seat:not(.compact) .player-id .name { grid-row: 2; font-weight: 700; font-size: 15px; max-width: 230px; }
@@ -278,7 +273,6 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 /* At 15 or more, the arc and the chip turn bright. The warning uses brightness and glow, not only hue. */
 .avatar .cmdr-arc.near circle { stroke: #fff4ee; opacity: 1; filter: drop-shadow(0 0 2px #ff3b2a) drop-shadow(0 0 6px #ff2a14aa); }
 .avatar .cmdr-chip.near { border-color: #ff5a3c; color: #fff; box-shadow: 0 0 7px #ff3b2a99; }
-/* The commander damage section in a portrait's hover preview */
 #zoom .cmdr-taken { display: grid; gap: 6px; padding: 6px 0 8px; border-bottom: 1px solid var(--line); }
 #zoom .cmdr-taken h6 { margin: 0; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 #zoom .cmdr-row { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
@@ -294,7 +288,6 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .ai-badge svg { width: 100%; height: 100%; fill: var(--text); }
 .ai-badge svg .eye { fill: var(--bg); }
 .avatar.active { border-color: var(--accent-2); }
-/* A player out of the game keeps the portrait, greyed and dimmed, with a skull over it */
 .avatar.lost { border-color: #2a3240; }
 .avatar.lost .portrait { filter: grayscale(1) brightness(.45); animation: lost-return .9s ease 1.8s both; }
 /* The portrait shatters first. Its grey copy fades back in only after the pieces are gone. */
@@ -532,7 +525,6 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 #phase-strip .stops th .name { display: block; margin-top: 4px; color: var(--muted); font-size: 10.5px; line-height: 1.25; }
 #phase-strip .stops th.now .name { color: var(--col); font-weight: 650; }
 #phase-strip .stops td.who { text-align: left; padding: 0 10px 0 8px; white-space: nowrap; }
-/* Each phase has a bracket over its steps, and a gap separates one phase from the next */
 #phase-strip .stops th.group { height: auto; padding: 0 3px 5px; color: var(--muted); font-size: 10px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
 #phase-strip .stops th.group span { display: block; white-space: nowrap; padding-bottom: 3px; border-bottom: 1px solid var(--line-bright); }
 #phase-strip .stops td.gap { width: 12px; }
@@ -553,7 +545,6 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 #phase-strip .stops .square.current { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 #phase-strip .stops .cell:hover .square { outline: 2px solid var(--text); outline-offset: 2px; }
 #phase-strip .stops .skip { color: var(--select); display: flex; }
-/* The stack floats over the right edge of the board. When it is collapsed, only its header shows. */
 /* A raised panel lighter than the table, with a light top edge and a dark outline. So the stack does not look like loose cards on the board. */
 #stack .pile { transition: height .15s ease; }
 #stack { position: fixed; top: 56px; right: calc(var(--side-gap) + 8px); z-index: 25; width: calc(var(--stack-w) + 20px); display: grid; gap: 8px; padding: 8px 10px 10px; background: linear-gradient(180deg, color-mix(in srgb, var(--surface-3) 96%, #fff), var(--surface-3)); border: 1px solid color-mix(in srgb, var(--line-bright) 92%, #fff); border-radius: 12px;
@@ -593,7 +584,6 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 #log { overflow-anchor: none; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; overflow-y: auto; flex: 1; min-height: 0; font-size: 12px; color: var(--muted); scrollbar-width: thin; }
 .log-entry { padding: 2px 0; border-bottom: 1px solid var(--surface-2); display: flex; gap: 6px; align-items: flex-start; }
 .log-entry .thumb { width: 32px; border-radius: 3px; flex: none; cursor: pointer; }
-/* A new turn is a divider in the log: the text in brass between two lines, with space above it */
 .log-entry.log-turn { align-items: center; gap: 8px; margin-top: 10px; padding: 3px 0; border-bottom: 0; color: var(--accent-2);
   font-size: 11px; font-weight: 700; letter-spacing: .06em; }
 .log-entry.log-turn::before, .log-entry.log-turn::after { content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--accent-2) 35%, transparent); }
@@ -744,7 +734,6 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #zoom.text-card .detail .type-line { flex: 1; }
 #zoom .detail .kind-chip, #zoom .detail .set { flex: none; font-size: 10px; font-weight: 700; line-height: 1; padding: 3px 5px; border-radius: 4px; }
 #zoom .detail .kind-chip { color: var(--accent-2); border: 1px solid var(--accent-2); }
-/* The set code is shown in the colour of its rarity symbol */
 #zoom .detail .set { letter-spacing: .06em; color: #0d1016; background: #d8dbe0; }
 #zoom .detail .set[data-rarity="Uncommon"] { background: linear-gradient(135deg, #e4ecf2, #8fa3b3); }
 #zoom .detail .set[data-rarity="Rare"] { background: linear-gradient(135deg, #f5dc8a, #b8902e); }
@@ -752,13 +741,11 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #zoom .detail .set[data-rarity="Special"] { background: linear-gradient(135deg, #d9c2ff, #8a5cd6); }
 #zoom .detail .kind-chip:empty, #zoom .detail .set:empty, #zoom:not(.text-card) .detail .foot { display: none; }
 #zoom.text-card .detail .from { flex: none; padding: 3px 10px; border-radius: 5px; background: var(--zone-glow); color: #15121c; font-size: 11.5px; font-weight: 700; }
-/* The text box shows each keyword line, ability and paragraph on its own row, with a line between rows */
 #zoom.text-card .detail .text { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; display: flex; flex-direction: column; white-space: normal;
   border-radius: 6px; background: #12161e; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 22%, transparent); }
 #zoom.text-card .text > * { padding: 7px 10px; }
 #zoom.text-card .text > * + * { border-top: 1px solid #262e3b; }
 #zoom.text-card .text .rem { font-style: italic; color: var(--muted); }
-/* A modal spell's modes are indented under the line that offers them */
 #zoom.text-card .text > .mode-option { position: relative; padding-left: 22px; }
 #zoom.text-card .text > * + .mode-option { border-top: 0; padding-top: 0; }
 #zoom.text-card .text > .mode-option::before { content: '•'; position: absolute; left: 11px; }
@@ -845,7 +832,6 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #game-over .sub { margin: 0; font-size: 13px; letter-spacing: .26em; text-transform: uppercase; color: #aeb8c6; }
 /* Which game of the match this was, shown above the result */
 #game-over .stage { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: #aeb8c6; }
-/* The match score shows each player's games won. The winner of a finished match is shown in gold. */
 #game-over .tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 #game-over .tally-player { display: flex; align-items: center; gap: 9px; padding: 5px 12px 5px 5px; border-radius: 999px;
   background: #0d1016d9; border: 1px solid var(--line-bright); }
@@ -972,7 +958,6 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 /* In a cramped group the corner icons are too small to read, so they are hidden. The preview still shows them on hover. */
 .group.cramped .card .corner { display: none; }
 .card.tapped { transform: rotate(90deg) scale(.9); }
-/* Mana and tap symbols are inline with the text, at the text size */
 .sym { height: 1em; width: 1em; vertical-align: -0.12em; margin: 0 1px; }
 #zoom .sym { height: 1.05em; width: 1.05em; }
 /* A land that can pay the current cost. Paying is not a choice among options, so the board does not dim for it. */
@@ -1143,7 +1128,6 @@ html[data-motion="reduced"] .card.phased::after { animation: none; }
   animation: turn-sweep 1.6s cubic-bezier(.2,.8,.3,1) forwards;
 }
 
-/* A light sweeps across the banner as it appears */
 .turn-banner::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%); background: linear-gradient(105deg, transparent 38%, #ffffff5c 47%, #ffffffad 50%, #ffffff5c 53%, transparent 62%); animation: turn-sheen 1.1s cubic-bezier(.3,.6,.4,1) .26s; }
 @keyframes turn-sheen { to { transform: translateX(120%); } }
 

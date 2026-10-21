@@ -1,5 +1,3 @@
-// The end of a quest tournament's draft. It replaces the usual save dialog
-
 import { Backdrop } from '../dialog';
 import { t } from '../text';
 import type { Actions } from '../actions';

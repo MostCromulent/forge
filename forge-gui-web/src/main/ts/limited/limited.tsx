@@ -137,7 +137,6 @@ function severalCap(opponents: number): number {
   return Math.min(7, opponents);
 }
 
-/** A deck's colours in words: White–Green, a phrase for four or five colours, or Colourless. */
 function colourName(colors: string): string {
   const names = [...colors].map(c => COLOUR_NAMES[c]).filter(Boolean).map(key => t(key));
   if (!names.length) return t('lblColorless');
@@ -145,7 +144,6 @@ function colourName(colors: string): string {
   return names.join('–');
 }
 
-/** Your deck beside the heading: its colours, its size, and a button back to the editor. */
 function YourDeck({ pool, actions }: { pool: PoolRow; actions: Actions }) {
   return (
     <span class="your-deck">

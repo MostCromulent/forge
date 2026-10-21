@@ -31,7 +31,6 @@ interface Panel {
 const SORTS: [ZoneSort, TextKey][] = [['order', 'lblWebZoneSortOrder'], ['name', 'lblWebZoneSortName'], ['type', 'lblWebZoneSortType'],
   ['mana', 'lblWebZoneSortManaValue']];
 
-/** Each zone's name as the page shows it. */
 const ZONE_NAMES: Record<ZoneType, TextKey> = {
   Hand: 'lblWebZoneHand', Library: 'lblLibrary', Graveyard: 'lblGraveyard', Battlefield: 'lblWebZoneBattlefield',
   Exile: 'lblExile', Flashback: 'lblWebZoneFlashback', Command: 'lblWebZoneCommand', Stack: 'lblStack',

@@ -285,7 +285,6 @@ export function DeckFinder({ model, actions, seat, close }: {
                   <span>{sourceName(id)}</span><span class="dk-count">{count}</span>
                 </button>
               ))}
-              {/* The categories are shown only while the net decks source is selected */}
               {inNet && categories.size > 1 && (
                 <div class="net-cats">
                   <button class="source" aria-pressed={filter.source === NET} onClick={() => change({ source: NET })}>
@@ -301,7 +300,6 @@ export function DeckFinder({ model, actions, seat, close }: {
               {/* Core asks for the category in a dialog on the host's screen, so only the host can answer it */}
               <button class="get-net" hidden={!model.host} onClick={() => actions.fetchNetDecks()}>{t('lblWebFinderDownloadNetDecks')}</button>
             </section>
-            {/* Options for the next generated deck, as desktop's lobby offers them under its generators */}
             {filter.source === 'generated' && model.deckGen && (
               <section class="gen-options">
                 <h4>{t('lblWebFinderGeneratorOptions')}</h4>
@@ -389,7 +387,6 @@ export function DeckFinder({ model, actions, seat, close }: {
 const KEY_SETS = new WeakMap<DeckMatches, ReadonlySet<string>>();
 const keySet = (m: DeckMatches) => KEY_SETS.get(m) ?? KEY_SETS.set(m, new Set(m.keys)).get(m)!;
 
-/** Every finder filter beyond the bar, matching desktop's deck filters. */
 function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actions, commander: boolean): FilterKind<DeckFilter>[] {
   const legality = t('lblWebFilterGroupLegality');
   const contents = t('lblWebFilterGroupContents');
@@ -485,11 +482,9 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
         pick={() => { set({ ...f, favourites: true }); done(); }} />,
     },
   ];
-  // Brackets apply only to Commander
   return commander ? kinds : kinds.filter(k => k.id !== 'bracket');
 }
 
-/** The colour identity panel. It sets the colours, and whether a deck must have exactly them or may have fewer. */
 function IdentityPanel({ value, apply }: { value: DeckFilter['identity']; apply: (v: DeckFilter['identity']) => void }) {
   const [letters, setLetters] = useState(value?.letters ?? '');
   const [exactly, setExactly] = useState(value?.exactly ?? false);
@@ -548,7 +543,6 @@ function Hit({ deck: d, chosen, choose, use, source, forComputer, star }: {
   );
 }
 
-/** The deck's colours and its name. */
 function Title({ deck }: { deck: DeckSummary }) {
   return (
     <span class="dk-hit-title">
@@ -575,7 +569,6 @@ function Chosen({ details, formats, forComputer }: { details: DeckDetails; forma
         </div>
         <p class="sizes">{s.sideboard ? t('lblWebEditorSizes', s.total, s.sideboard, s.lands) : t('lblWebFinderSizesNoSideboard', s.total, s.lands)}</p>
         <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? t('lblWebFinderLegalForFormat')}</p>
-        {/* The formats the deck's cards are legal in, worded as in the desktop chooser */}
         {formats && <p class="deck-formats">{formats}</p>}
         {forComputer && details.aiSkips && (
           <p class="ai-skips-note">
@@ -644,7 +637,6 @@ function BracketPanel({ bracket }: { bracket: Bracket }) {
   );
 }
 
-/** How long ago a time was, in plain words such as "just now" or "3 days ago". */
 function ago(millis: number): string {
   const minutes = Math.round((Date.now() - millis) / 60000);
   if (minutes < 2) return t('lblWebFinderJustNow');

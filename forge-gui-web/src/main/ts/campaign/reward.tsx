@@ -104,7 +104,6 @@ function Gift({ icon, amount, title, text, lines, button, next }: {
   );
 }
 
-/** Cards a reward gave, shown face up like an opened pack, or cards lost to ante, drawn dimmed and grey. */
 function CardsStop({ step, zoom, next }: { step: RewardStep; zoom: (image: string) => void; next: () => void }) {
   const lost = step.outcome === 'lost';
   return (

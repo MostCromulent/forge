@@ -238,7 +238,6 @@ function LibraryPile({ model, count }: { model: Model; count: number }) {
   );
 }
 
-/** The key the player has bound to send a question's answer. */
 function OkKey() {
   return <kbd>{keyName(boundKeys().ok)}</kbd>;
 }
@@ -492,7 +491,6 @@ function ColourOption({ symbol, picked, onClick }: { symbol: string; picked: boo
   );
 }
 
-/** Whether every option is a line of text, with no card, player or mana symbol to draw. */
 function onlyWords(req: ChoicesRequest): boolean {
   return req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player && !o.symbol);
 }

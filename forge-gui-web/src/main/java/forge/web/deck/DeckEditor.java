@@ -387,7 +387,6 @@ public final class DeckEditor {
         });
     }
 
-    /** Sets how many of each basic land the main deck holds. */
     String setLands(final Map<String, Integer> countsByLand) {
         for (final Map.Entry<String, Integer> e : countsByLand.entrySet()) {
             if (!BASICS.containsKey(e.getKey())) {

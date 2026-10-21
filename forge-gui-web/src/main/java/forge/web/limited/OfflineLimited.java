@@ -52,13 +52,11 @@ public final class OfflineLimited implements IHasForgeLog {
     private final AtomicBoolean openingPacks = new AtomicBoolean();
     /** A match seats at most eight players, so a game against several opponents has at most seven. */
     private static final int MOST_OPPONENTS = 7;
-    /** Whether this session is playing a limited gauntlet, and the result of its last game. */
     private volatile boolean gauntletRunning;
     public volatile LimitedResult lastResult;
     /** The pool the gauntlet returns to, and the game type its rounds are played as, while one is running. */
     private volatile Event gauntletBack;
     private volatile GameType gauntletType;
-    /** The draft against the computer, while one is being played. */
     private volatile OfflineDraft draft;
     /** What the draft is played for when the Limited pages did not start it, or null. */
     private volatile DraftOwner owner;
@@ -250,7 +248,6 @@ public final class OfflineLimited implements IHasForgeLog {
         }
     }
 
-    /** Stops the draft without saving it, and tells its owner. */
     private void discardDraft() {
         final DraftOwner was = owner;
         endDraft();

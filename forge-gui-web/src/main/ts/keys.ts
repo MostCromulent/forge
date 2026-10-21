@@ -46,7 +46,6 @@ export function rebind(keys: KeyBindings, action: keyof KeyBindings, key: string
   return next;
 }
 
-/** A key's display name. */
 export function keyName(key: string): string {
   return key === ' ' ? 'Space' : key.length === 1 ? key.toUpperCase() : key;
 }

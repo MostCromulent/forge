@@ -127,7 +127,6 @@ public final class CardCatalog {
                 rules.getManaCost().getCMC(), heading(card));
     }
 
-    /** These cards as rows, in the given order, each with the data that extras adds. */
     public static List<CatalogueRow> rows(final Iterable<PaperCard> cards, final Function<PaperCard, Extra> extras) {
         final List<CatalogueRow> out = new ArrayList<>();
         cards.forEach(card -> out.add(toBrowser(row(card), null, 0, extras.apply(card))));

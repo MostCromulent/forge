@@ -155,7 +155,6 @@ export function sealedTicket(options: LimitedOptions): Ticket<SealedValue> {
   };
 }
 
-/** The label of the button that opens the pool. It gives the number of packs when the form asked for it. */
 export function sealedAction(v: SealedValue): string {
   const n = packCount(v);
   return n ? t('lblWebSetupOpenNPacks', n) : v.product === 'Prerelease' ? t('lblWebSetupOpenKit') : t('lblWebSetupOpenPacks');
@@ -183,7 +182,6 @@ interface DraftTable {
   seated: number;
 }
 
-/** The pod sizes on offer: from the number of players seated, but at least two, up to eight. */
 function podChoices(seated: number): number[] {
   const out: number[] = [];
   for (let n = Math.max(2, seated); n <= 8; n++) out.push(n);
@@ -195,7 +193,6 @@ function podStart(recommended: number, seated: number): number {
   return Math.min(8, Math.max(recommended, Math.max(2, seated)));
 }
 
-/** The pod a product drafts at: a single-set block's recommended pod, or a full pod of eight for everything else. */
 function productPod(options: LimitedOptions, v: DraftValue): number {
   return (v.product === 'Block' || v.product === 'FantasyBlock') ? draftBlockOf(options, v)?.podSize ?? 8 : 8;
 }

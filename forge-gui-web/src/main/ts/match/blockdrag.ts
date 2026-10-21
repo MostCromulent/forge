@@ -124,7 +124,6 @@ export function initBlockDrag(actions: Actions): void {
   });
 }
 
-/** The attacking card under the pointer, if there is one. */
 function attackerAt(model: Model, x: number, y: number): HTMLElement | null {
   const attackers = (game(model)?.CombatView ?? []).flatMap(b => b.attackers ?? []);
   for (const el of document.elementsFromPoint(x, y)) {
@@ -163,7 +162,6 @@ function blocking(blocker: number, attacker: number): boolean {
     && (has(b.blockers, blocker) || has(b.plannedBlockers, blocker)));
 }
 
-/** The attacker the blocker is blocking now, if any. */
 function blocked(blocker: number): number | undefined {
   const band = (game(current!)?.CombatView ?? []).find(b => has(b.blockers, blocker) || has(b.plannedBlockers, blocker));
   return band?.attackers?.find(r => r)?.ref;

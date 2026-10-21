@@ -28,10 +28,8 @@ type Drag = { from: 'pack' | 'pick'; index: number };
 type Held = { card: DraftCard; index: number };
 
 const DRAG_TYPE = 'application/x-forge-draft';
-/** With less than this much time left, the clock turns amber. */
 const CLOCK_LOW_MS = 15_000;
 
-/** How long the rest of a pack takes to slide off, how long a new pack takes to slide in, and the delay between columns. */
 const PASS_MS = 300;
 const ARRIVE_MS = 400;
 const COLUMN_STAGGER_MS = 22;
@@ -170,7 +168,6 @@ function TableMenu({ state, faces }: { state: DraftState; faces: string[] }) {
   );
 }
 
-/** A button in the pack's head that opens a panel under it. */
 function HeadMenu({ label, children, class: cls }: { label: ComponentChildren; children: (close: () => void) => ComponentChildren; class?: string }) {
   return (
     <Dropdown cls="table-menu" button={(open, toggle) => (
@@ -232,7 +229,6 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
   const seat = (i: number) => <>{faces[i] && <img alt="" src={faces[i]} />}<strong>{state.seats[i].name}</strong></>;
   return (
     <section class="draft-panel draft-pack">
-      {/* The pick and its clock. A bar along the bottom of this line also counts down. The next line shows where packs go */}
       <div class="draft-panel-head pick-line">
         <b class="pick-title">{t('lblWebDraftPackPickOf', state.pack, state.pick, state.packSize)}</b>
         {left > 0 && <span class={left < CLOCK_LOW_MS ? 'clock low' : 'clock'} title={t('ttWebDraftTimeLeft')}>{clockText(left)}</span>}
@@ -471,7 +467,6 @@ function typeHeading(type: string): string {
   return t(found ? found[2] : 'lblOther');
 }
 
-/** The end of the draft, as on desktop: save it under a name, or leave without saving. */
 function SaveDraft({ model, state, actions }: { model: Model; state: DraftState; actions: Actions }) {
   const [name, setName] = useState(() => `${state.product} ${shortDay()}`);
   const [discarding, setDiscarding] = useState(false);

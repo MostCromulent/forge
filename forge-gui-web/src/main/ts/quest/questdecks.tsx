@@ -1,5 +1,3 @@
-// Quest's Decks page: every deck of the quest as a plate. Beside them, the selected deck shows its curve, its list and its actions
-
 import { useEffect, useState } from 'preact/hooks';
 import { DeckPanel, Plate } from '../campaign/deckplate';
 import type { Actions } from '../actions';

@@ -42,7 +42,6 @@ export const ICONS = {
 export const iconSvg = (shapes: string, cls?: string): string =>
   `<svg${cls ? ` class="${cls}"` : ''} viewBox="0 0 24 24" aria-hidden="true">${shapes}</svg>`;
 
-/** An icon as a component. */
 export function Icon({ d, cls }: { d: string; cls?: string }) {
   return <svg class={cls} viewBox="0 0 24 24" aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />;
 }

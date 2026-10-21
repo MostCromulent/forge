@@ -1,5 +1,3 @@
-// Planar Conquest. It shows the saved conquests, and inside an open one, the bar shared by every page above the page itself
-
 import { Shelf as Cards } from '../shelf';
 import { changeUi, ui } from '../ui';
 import { isPortrait } from '../form';
@@ -114,7 +112,6 @@ function DevWheel({ actions }: { actions: Actions }) {
   );
 }
 
-/** The page of the open tab. */
 function Page({ tab, model, actions }: { tab: ConquestTab; model: Model; actions: Actions }) {
   switch (tab) {
     case 'aether': return <Aether model={model} actions={actions} />;

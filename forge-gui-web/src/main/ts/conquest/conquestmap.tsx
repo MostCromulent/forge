@@ -1,5 +1,3 @@
-// The plane's map in Planar Conquest, where the planeswalker moves and battles
-
 // Only a tile's picture shows its state. White is used only for the player's place and the selected tile
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';

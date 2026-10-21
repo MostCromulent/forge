@@ -324,7 +324,6 @@ function shiftBoard(travelled: Set<string>, wait: number): void {
   joining.forEach(({ was, top }, i) => sendTo(was, tops[i], 1, 0, top, SHIFT_MS));
 }
 
-/** Whether two places are more than a few pixels apart, centre to centre. */
 function apart(a: DOMRect, b: DOMRect): boolean {
   return Math.hypot(a.left + a.width / 2 - b.left - b.width / 2, a.top + a.height / 2 - b.top - b.height / 2) > 4;
 }
@@ -505,7 +504,6 @@ function stackItemFor(key: string): HTMLElement | null {
   return stackItems().find(el => el.querySelector('img')?.dataset.key === key) ?? null;
 }
 
-/** Where a card is drawn now: its own element, its stack item, or the top of the pile it joined. */
 function elementFor(key: string): HTMLElement | null {
   return cardElement(key) ?? stackItemFor(key) ?? pileTopFor(key);
 }
@@ -606,7 +604,6 @@ export function showCount(tile: HTMLElement): void {
 const fizzled = new Set<string>();
 /** How long a spell that failed takes to break apart on the stack. */
 export const FIZZLE_MS = 520;
-/** A card's width over its height. */
 const CARD_ASPECT = 5 / 7;
 
 export function noteFizzled(key: string): void {

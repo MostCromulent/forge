@@ -302,7 +302,6 @@ public final class DeckSession implements IHasForgeLog {
         }
     }
 
-    /** The editor, when the deck open in it is built from a collection, or null. */
     private synchronized DeckEditor collectionEditor() {
         return editor != null && editor.collection() != null ? editor : null;
     }
@@ -321,7 +320,6 @@ public final class DeckSession implements IHasForgeLog {
     private record EventPool(String id, Deck deck, GameType format) {
     }
 
-    /** The pool whose deck is open, or null. */
     public synchronized String openPoolName() {
         return editor != null && editor.target() instanceof DeckEditor.Group ? editor.deck().getName() : null;
     }

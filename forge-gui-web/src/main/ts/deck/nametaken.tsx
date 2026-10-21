@@ -1,5 +1,3 @@
-// Shown when a deck being saved has the same name as a saved deck
-
 import { t } from '../text';
 import { Backdrop } from '../dialog';
 

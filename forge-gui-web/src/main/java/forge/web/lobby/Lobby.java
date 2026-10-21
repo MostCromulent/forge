@@ -330,7 +330,6 @@ public final class Lobby {
         return lobby.getSlot(index).getType() == LobbySlotType.AI;
     }
 
-    /** The extra sections a seat needs under the variants that are on. */
     private static List<DeckSection> sectionsFor(final GameLobby lobby, final int index) {
         final List<DeckSection> out = new ArrayList<>();
         if (lobby.hasVariant(GameType.Planechase)) {
@@ -350,7 +349,6 @@ public final class Lobby {
         return extras.computeIfAbsent(index, i -> Collections.synchronizedMap(new EnumMap<>(DeckSection.class)));
     }
 
-    /** Sends the deck of every seat whose deck this browser sends. */
     private void composeMine() {
         final GameLobby lobby = view();
         for (int i = 0; lobby != null && i < lobby.getNumberOfSlots(); i++) {

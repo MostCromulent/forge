@@ -16,7 +16,6 @@ const ART_STYLES: [string, TextKey][] = [
   ['showcase', 'lblArtStyleShowcase'], ['extended art', 'lblArtStyleExtendedArt'], ['retro frame', 'lblArtStyleRetroFrame'], ['promo', 'lblArtStylePromo'],
 ];
 
-/** The printing picker's text for how many copies a section holds. */
 const IN_SECTION: Record<DeckSection, TextKey> = {
   Main: 'lblWebCardMenuInMain', Sideboard: 'lblWebCardMenuInSideboard', Commander: 'lblWebCardMenuInCommander',
   Avatar: 'lblWebCardMenuInAvatar', Planes: 'lblWebCardMenuInPlanes', Schemes: 'lblWebCardMenuInSchemes',
@@ -31,7 +30,6 @@ export interface MenuAt {
   y: number;
 }
 
-/** The named card in a section, or undefined when the section does not hold it. */
 function cardIn(state: EditorState, zone: Zone | DeckSection, name: string): EditorCard | undefined {
   const cards = zone === 'Main' ? state.main.flatMap(g => g.cards) : zone === 'Sideboard' ? state.sideboard
     : zone === 'Commander' ? state.commanders : [];

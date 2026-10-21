@@ -254,7 +254,6 @@ function Stack({ card, zone, landed, handlers, takeOut }: {
   );
 }
 
-/** One card in a section as a line with its count, name and cost. On hover it shows buttons for one fewer, one more and a move to the other section. */
 function Line({ card, zone, landed, actions, handlers, mainOnly, takeOut }: {
   card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; actions: Actions; handlers: CardHandlers; mainOnly?: boolean; takeOut: () => void;
 }) {

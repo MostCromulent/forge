@@ -123,7 +123,6 @@ html[data-motion="reduced"] .ticket-foot .big { transition: none; }
 .opp-row { display: grid; grid-template-columns: 26px 54px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 18px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); font-size: 13.5px; }
 .opp-row .n { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
 .opp-row .muted { font-size: 12.5px; }
-/* Each row's Play button is drawn plain until the row is hovered or the button has keyboard focus. Then it takes the brass style. */
 .opp-play { padding: 4px 16px; font-size: 12.5px; background: none; border-color: transparent; color: var(--muted); }
 .opp-row:hover, .opp-row:focus-within { background: color-mix(in srgb, var(--accent-2) 5%, transparent); }
 .opp-row:hover .opp-play, .opp-play:focus-visible { background: var(--brass); border-color: color-mix(in srgb, var(--accent-2) 52%, #fff); color: var(--on-brass); font-weight: 650; }

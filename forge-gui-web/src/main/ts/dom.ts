@@ -12,7 +12,6 @@ export function byId<T extends HTMLElement = HTMLElement>(id: string): T {
   return el as T;
 }
 
-/** Creates an element with a class list. Nearly every hand-built element on the page starts this way. */
 export function make<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): HTMLElementTagNameMap[K] {
   const el = document.createElement(tag);
   el.className = className;

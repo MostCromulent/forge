@@ -45,7 +45,6 @@ function colourLetter(colors: string): string {
   return colors.length === 1 && 'WUBRG'.includes(colors) ? colors : 'C';
 }
 
-/** The heading of a card's colour group: its colour, Multicolor or Colorless. */
 export const colourHeading = (colors: string): string => t(COLOUR_HEADINGS[colourLetter(colors)]);
 
 /** The deck as a text list that other sites and desktop Forge can read. Each section has a heading, then one line per card with a count and a name. */

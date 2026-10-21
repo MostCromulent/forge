@@ -99,7 +99,6 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
 // The seat types a netplay lobby can hold. Offline shows only the first two
 const KIND: Record<string, TextKey> = { LOCAL: 'lblWebLobbyKindYou', AI: 'lblAI', OPEN: 'lblWebLobbyKindOpen', REMOTE: 'lblWebLobbyKindRemote' };
 
-/** The label for a seat type. A type this page does not know is shown as it is. */
 const kindName = (type: string): string => (KIND[type] ? t(KIND[type]) : type);
 
 const PLAYER_ICON = <Icon d={ICONS.user} />;
@@ -251,7 +250,6 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
       {seat.team != null && <TeamTab team={seat.team} teams={lobby.teams} change={lobby.host || mine ? team => actions.setTeam(index, team) : null} />}
       <div class={hasDeck && seat.mayEdit && !dealt && seat.commanderChoices.length > 1 ? 'sleeve-slot three' : 'sleeve-slot'}
         hidden={beforePools} data-image={commander ?? undefined}>
-        {/* No sleeve is shown until a deck is chosen, so the slot is empty */}
         <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt && !commander ? ' card-art' : ''}`} title={dealt ? '' : t('lblWebLobbyChooseDeck')}
           data-label={seat.mayEdit ? t('lblWebLobbyChooseDeck') : (waiting ? '' : t('lblNoDeck'))}
           disabled={!seat.mayEdit || dealt} onClick={() => choose('deck')}

@@ -35,7 +35,6 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   const [text, setText] = useState('');
   const [picking, setPicking] = useState(false);
   const log = useRef<HTMLDivElement>(null);
-  // Scroll the newest line into view when a line arrives or the panel opens
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [model.chat.length, open]);

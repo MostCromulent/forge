@@ -3,7 +3,6 @@
 .qu-save .ev-line .cq-coin { margin-left: 6px; }
 .qu-save.current { border-color: color-mix(in srgb, var(--accent-2) 60%, #000); }
 
-/* The duels list, shown next to the side panel */
 .qu-list { min-width: 0; overflow-y: auto; padding: 20px 28px 90px; display: grid; gap: 14px; align-content: start; background: radial-gradient(100% 80% at 50% 40%, #131a26 0%, #080b11 100%); }
 .qu-list-head { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
 .qu-list-head h2 { margin: 0; font: 700 22px/1.2 Georgia, "Times New Roman", serif; letter-spacing: .02em; }
@@ -11,7 +10,6 @@
 .qu-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
 .qu-status .cq-chip b { font-weight: 700; color: var(--text); }
 
-/* An opponent card. Its picture is at the top, with its name, difficulty and deck below. */
 .qu-events { display: grid; grid-template-columns: repeat(auto-fill, minmax(224px, 1fr)); gap: 14px; align-items: stretch; }
 .qu-ev { display: grid; grid-template-rows: 172px minmax(0, 1fr); padding: 0; overflow: hidden; border-radius: 12px; background: var(--surface); text-align: left; color: var(--text); }
 .qu-ev .a { background: #111 center 22% / cover; position: relative; }
@@ -26,7 +24,6 @@
 .qu-ev:hover { border-color: var(--line-bright); }
 .qu-ev[aria-pressed="true"] { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2), 0 0 18px var(--accent-glow); }
 
-/* Difficulty is shown as four bars of rising height. Filled bars are bright. The difficulty word is shown beside them. */
 .qu-diff { display: inline-flex; align-items: flex-end; gap: 3px; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .qu-diff i { width: 5px; border-radius: 1.5px; background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--line-bright); }
 .qu-diff i:nth-child(1) { height: 6px; } .qu-diff i:nth-child(2) { height: 9px; } .qu-diff i:nth-child(3) { height: 12px; } .qu-diff i:nth-child(4) { height: 15px; }
@@ -71,7 +68,6 @@
 .qu-list-head .sp { flex: 1; }
 .qu-list-head button { font-size: 12.5px; padding: 5px 12px; }
 
-/* The bazaar. The stalls are listed down the left side. The open stall's items are shown to the right. */
 .qu-bazaar { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 0; flex: 1; }
 .qu-stalls { display: grid; align-content: start; gap: 8px; padding: 18px; border-right: 1px solid var(--line); overflow-y: auto; }
 .qu-stall { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: var(--surface); text-align: left; }

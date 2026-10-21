@@ -217,7 +217,6 @@ function asSyntax(f: CatalogueFilter): string {
   ].filter(Boolean).join(' ');
 }
 
-/** Every catalogue filter beyond the bar, matching desktop's card filters. */
 function catalogueKinds(state: EditorState, model: Model, actions: Actions): FilterKind<CatalogueFilter>[] {
   const rules = t('lblWebFilterGroupRules');
   const numbers = t('lblWebFilterGroupNumbers');
@@ -262,7 +261,6 @@ function catalogueKinds(state: EditorState, model: Model, actions: Actions): Fil
       },
     },
     {
-      // Lists Forge's formats, including blocks, under Forge's own headings, as desktop's format filter does
       id: 'format', group: printing, label: t('lblFormat'),
       chip: f => f.format,
       clear: f => ({ ...f, format: null }),

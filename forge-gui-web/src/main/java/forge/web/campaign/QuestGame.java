@@ -149,7 +149,6 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return data.getName();
     }
 
-    /** The save file with this name, or null when there is none. */
     public static File find(final String name) {
         if (name == null) {
             return null;
@@ -297,7 +296,6 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return quest().getDeckConstructionRules() == DeckConstructionRules.Commander ? GameType.Commander : GameType.Quest;
     }
 
-    /** Why a quest deck cannot use a name, or null when it can. */
     private static String deckNameProblem(final String name) {
         final String problem = DeckStore.nameProblem(name);
         if (problem != null) {

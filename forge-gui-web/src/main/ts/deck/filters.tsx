@@ -27,7 +27,6 @@ export function FilterBar<F>({ kinds, filter, set, clearAll, narrowed, children 
   const [open, setOpen] = useState<{ kind: string | null } | null>(null);
   const [find, setFind] = useState('');
   const root = useRef<HTMLDivElement>(null);
-  // A press outside the bar, or Escape, closes the menu
   useEffect(() => {
     if (!open) return;
     const away = (e: Event) => { if (!root.current?.contains(e.target as Node)) setOpen(null); };
@@ -171,7 +170,6 @@ export function Words({ value, placeholder, apply, names, typing }: {
   );
 }
 
-/** A range as chip text, such as "2–4", "≥ 2" or "≤ 4". */
 export function rangeWords(from: number | null, to: number | null): string | null {
   if (from === null && to === null) return null;
   if (from !== null && to !== null) return from === to ? String(from) : `${from}–${to}`;

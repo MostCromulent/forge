@@ -38,7 +38,6 @@ export interface CampaignHooks {
   hello(model: Model, msg: Hello): void;
   /** Stores a campaign message in the model. Returns false for any other message. */
   message(model: Model, msg: ServerMessage): boolean;
-  /** The campaign actions, added to the page actions. */
   actions(send: Send, model: Model, schedule: () => void): Omit<Actions, keyof PageActions>;
   /** The pages of the campaign mode that is open. */
   Page: FunctionComponent<{ model: Model; actions: Actions }>;

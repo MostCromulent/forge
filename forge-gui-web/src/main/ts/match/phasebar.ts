@@ -251,7 +251,6 @@ function swapOwner(owner: HTMLElement, name: string): void {
   for (const part of owner.children) part.animate([{ opacity: 0 }, { opacity: 1 }], timing);
 }
 
-/** Draws one pip per step of the current phase, showing which steps are past and which is now. */
 function drawPips(root: HTMLElement, phase: Phase, step: number, marker: TurnMarker | undefined, myTurn: boolean): void {
   reconcile(root, phase.steps, i => i,
     () => {

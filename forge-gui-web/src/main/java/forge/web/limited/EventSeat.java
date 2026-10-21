@@ -30,7 +30,6 @@ public final class EventSeat {
     private final LocalGame local;
     /** The host's table, for any seat. Every seat's session runs in the host's process, where the draft runs. */
     private final Supplier<ServerGameLobby> hostTable;
-    /** Tells every seat that a pod seat's player left or came back. */
     private final Runnable seatsChanged;
     /** This table's draft. Each new table gets a new draft. */
     private volatile OnlineDraft draft;

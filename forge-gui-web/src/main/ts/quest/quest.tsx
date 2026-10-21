@@ -1,5 +1,3 @@
-// Quest: the saved quests as a shelf. Inside a quest, every page shares the bar above it
-
 import { Shelf as Cards } from '../shelf';
 import { ui } from '../ui';
 import type { QuestTab } from '../campaign/register';
@@ -71,7 +69,6 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   );
 }
 
-/** The page of the open tab. */
 function Page({ tab, fantasy, model, actions }: { tab: QuestTab; fantasy: boolean; model: Model; actions: Actions }) {
   switch (tab) {
     case 'decks': return <Decks page={model.questDecks!} model={model} actions={actions} />;

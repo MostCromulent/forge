@@ -1,5 +1,3 @@
-// A conquest's commanders and planeswalkers on one page, with a panel beside them for the chosen one and its deck
-
 import { useEffect, useState } from 'preact/hooks';
 import { imageUrl } from '../images';
 import { FIVE_COLOURS } from '../symbols';
@@ -106,7 +104,6 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
   );
 }
 
-/** A short summary of a commander's deck: no deck, an invalid deck with its size, or its size. */
 function DeckLine({ commander }: { commander: ConquestCommanderRow }) {
   if (!commander.deckSize) return <>{t('lblNoDeck')}</>;
   return commander.problem

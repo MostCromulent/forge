@@ -159,7 +159,6 @@ final class Legality {
         return deck.getCommanders();
     }
 
-    /** A card's problem in this deck, or null when it has none. */
     private static Problem problemInDeck(final PaperCard card, final int count, final Check check,
             final Function<PaperCard, Problem> problems) {
         final int most = check.deckFormat().getMaxCardCopies(card);

@@ -307,7 +307,6 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         byChannel.clear();
     }
 
-    /** How many sessions have a browser attached right now. */
     int playersHere() {
         return (int) byId.values().stream().filter(WebSession::attached).count();
     }
@@ -416,7 +415,6 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         return new Presence(people);
     }
 
-    /** Tells every browser who is here, whenever that changes. */
     void announcePresence() {
         final Presence now = presence();
         byId.values().forEach(session -> session.tell(now));

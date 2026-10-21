@@ -32,7 +32,6 @@ public final class PendingRequests implements IHasForgeLog {
         this.who = who;
     }
 
-    /** Describes a request for the log: its kind, its message, and how many options it offers. */
     private static String described(final JsonObject request) {
         final StringBuilder out = new StringBuilder(request.get("kind").getAsString());
         if (request.has("message") && request.get("message").isJsonPrimitive()) {

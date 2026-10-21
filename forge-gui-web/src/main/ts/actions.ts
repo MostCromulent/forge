@@ -35,7 +35,6 @@ export interface PageActions {
   quitMatch(): void;
   /** Leaves a finished match for the start page. */
   leave(): void;
-  /** Answers one of the game's open requests. */
   answer(requestId: number, value: unknown): void;
   toggleStop(phase: PhaseType, mine: boolean): void;
   /** Sets all the stops of one row at once. Phases not listed are turned off. */
@@ -61,7 +60,6 @@ export interface PageActions {
   /** Tries again to take a seat after a join found no free seat. */
   join(): void;
 
-  /** Opens the Limited pages for a kind of event. */
   limitedOpen(kind: EventKind, resume: boolean): void;
   draftStart(d: Omit<DraftStart, 't'>): void;
   /** Picks the card at index from the pack shown in draft state step. */
@@ -150,7 +148,6 @@ export interface PageActions {
   /** Deletes one of your own decks by its finder key. */
   deleteDeck(key: string): void;
   favouriteDeck(key: string, on: boolean): void;
-  /** Requests a page of the catalogue. */
   queryCatalogue(q: Omit<CatalogueQuery, 't' | 'request'>): void;
   readImport(text: string, format: string, cardPool: string | null, unrestricted: boolean): void;
   fetchImport(url: string): void;

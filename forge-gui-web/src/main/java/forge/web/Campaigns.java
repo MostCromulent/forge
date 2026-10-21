@@ -21,7 +21,6 @@ import java.util.function.Consumer;
 public interface Campaigns {
     Campaigns NONE = new Campaigns() { };
 
-    /** What the campaign modes need of the session they belong to. */
     interface Host {
         boolean hosting();
 

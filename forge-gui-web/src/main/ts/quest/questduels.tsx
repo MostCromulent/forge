@@ -1,5 +1,3 @@
-// Quest's Duels page: the opponents on offer as tiles. Beside them are the chosen opponent and what the player brings to the duel
-
 import { useState } from 'preact/hooks';
 import { DeckRow, SidePanel } from '../campaign/campaign';
 import { artUrl } from '../sleeves';

@@ -1,5 +1,3 @@
-// A conquest's owned and exiled cards. This is the trade page with Conquest's wording
-
 import { TYPES as CARD_TYPES } from '../deck/catalogue';
 import { TradePage, type TradeWords } from '../campaign/trade';
 import type { Actions } from '../actions';

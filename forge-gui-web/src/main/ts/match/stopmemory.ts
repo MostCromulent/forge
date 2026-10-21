@@ -5,7 +5,6 @@ import { storeJson, storedJson } from '../storage';
 
 const KEY = 'forge.guestStops';
 
-/** Sends the server the stops stored in this browser, if there are any. */
 export function restoreStops(setStops: (mine: boolean, phases: PhaseType[]) => void): void {
   const saved = storedJson<{ mine: PhaseType[]; others: PhaseType[] } | null>(KEY, null);
   if (saved) {

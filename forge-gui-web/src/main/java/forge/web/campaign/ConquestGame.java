@@ -116,7 +116,6 @@ public final class ConquestGame implements Campaign {
         return new File(ForgeConstants.CONQUEST_SAVE_DIR, name.replace(' ', '_'));
     }
 
-    /** The open conquest's commander with this name, or null. */
     static ConquestCommander commander(final String name) {
         for (final ConquestCommander c : model().getCommanders()) {
             if (c.getName().equals(name)) {

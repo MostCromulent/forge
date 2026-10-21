@@ -1,5 +1,3 @@
-// Quest's Bazaar: the stalls down one side, and the open stall's goods. Each item has one button that shows its price and buys it
-
 import { useEffect } from 'preact/hooks';
 import { balance } from '../campaign/campaign';
 import { PricedButton } from '../campaign/trade';

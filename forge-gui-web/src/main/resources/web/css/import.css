@@ -1,5 +1,3 @@
-/* The deck importer. The pasted text is on the left, with a mark for each line in a gutter. A line with a problem gets a tinted background. The result list is on the right. */
-
 /* The importer is drawn above the deck finder, because it can be opened from the deck finder */
 .importer-back { z-index: 70; }
 .importer {

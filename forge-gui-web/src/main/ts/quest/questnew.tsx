@@ -1,5 +1,3 @@
-// Starting a quest: mobile's questions, asked one at a time. The ticket beside them shows the quest as it will be
-
 import { useEffect, useState } from 'preact/hooks';
 import { Pick, StepForm, type Step, type Ticket } from '../stepform';
 import { ColourToggles, toggled } from '../symbols';

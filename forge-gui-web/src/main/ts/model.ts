@@ -45,7 +45,6 @@ export interface Model {
   playerDetails: Map<number, PlayerDetail>;
   /** The options for a right-click on a stack item, from the server's last answer. */
   stackMenu: StackMenu | null;
-  /** Chat with the other players, shown in the lobby and beside the board. */
   chat: ChatEntry[];
   /** Everyone on this server who has set a name. */
   presence: Person[];

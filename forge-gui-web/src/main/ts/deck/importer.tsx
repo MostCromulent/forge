@@ -51,7 +51,6 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   const result = model.importResult;
   const fetched = result?.fetched ?? null;
 
-  // The list is read again once the text or the check has not changed for READ_DELAY_MS
   useEffect(() => {
     if (fetching) return;
     const timer = setTimeout(() => {
@@ -230,7 +229,6 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   );
 }
 
-/** Shown on the result side before anything is pasted. It lists the forms a list can take. */
 function Guide() {
   return (
     <div class="guide">

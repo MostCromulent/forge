@@ -212,7 +212,6 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
   });
 }
 
-/** Clears the last game's drawer state: the card last tapped and the prompts it opened for or over. */
 export function resetHand(): void {
   played = null;
   openedFor = null;

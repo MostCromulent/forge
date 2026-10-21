@@ -135,7 +135,6 @@ function eventStatus(lobby: LobbyTable): string {
   return t('lblWebEventPoolsOut');
 }
 
-/** The first question when earlier events are kept: set up a new one, or play one of those again. */
 function SetupChoice({ draft, count, choose }: { draft: boolean; count: number; choose: (view: SetupView) => void }) {
   return (
     <div class="setup-choice">

@@ -1,5 +1,3 @@
-// Quest's Challenges page: the challenges on offer as tiles. Beside them are the chosen challenge's terms and what the player brings
-
 import { useState } from 'preact/hooks';
 import { SidePanel } from '../campaign/campaign';
 import { Brings, Difficulty, WorldButtons } from './questduels';

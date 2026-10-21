@@ -446,7 +446,6 @@ function layout(pile: HTMLElement, n: number): void {
   });
 }
 
-/** Clears the last game's stack state. That is the spells awaiting payment, the phone chip's item count, and the prompt during which it was folded. */
 export function resetStack(): void {
   awaiting.clear();
   countSeen = 0;

@@ -196,7 +196,6 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         return console;
     }
 
-    /** Shows the name of the start-up step that is running. */
     public void starting(final String what) {
         SwingUtilities.invokeLater(() -> busy(what));
     }

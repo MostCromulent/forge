@@ -126,7 +126,6 @@ html:not([data-form="portrait"]) #prompt.strike .cancel::before {
 #options header .close { background: none; border: none; color: var(--muted); display: grid; place-items: center; padding: 4px; }
 #options svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #options .rows { overflow-y: auto; scrollbar-width: thin; padding: 6px 14px 12px; }
-/* Each setting has two columns: its name, and its control at the right edge */
 #options h4 { display: flex; align-items: baseline; justify-content: space-between; margin: 20px 0 2px; color: var(--muted); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; }
 #options h4:first-child { margin-top: 8px; }
 #options .section-action { padding: 0; background: none; border: 0; color: var(--muted); font-size: 11px; letter-spacing: 0; text-transform: none; }
@@ -157,7 +156,6 @@ html:not([data-form="portrait"]) #prompt.strike .cancel::before {
 #options .tiles .tab.on { fill: #8fc3ff; stroke: none; }
 #options .tiles .yours { fill: color-mix(in srgb, var(--text) 22%, var(--surface-3)); stroke: var(--muted); }
 #options .hint { color: var(--muted); font-size: 11.5px; line-height: 1.4; margin-top: 1px; }
-/* An on/off setting is a switch, gold when on. A choice is a menu. */
 #options .switch { justify-self: end; position: relative; width: 38px; height: 22px; padding: 0; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface-2); }
 #options .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: left .12s; }
 #options .switch[aria-checked="true"] { background: var(--accent-2); border-color: var(--accent-2); }
@@ -180,7 +178,6 @@ input.level.off::-moz-range-progress { background: none; }
 input.level.off::-moz-range-thumb { background: var(--surface); border-color: var(--muted); }
 input.level:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; border-radius: 4px; }
 #options .slider span { color: var(--muted); font-size: 11.5px; text-align: right; font-variant-numeric: tabular-nums; }
-/* A key binding is drawn as a keycap. The Edit button uses the same style. */
 #options .setting .key-bind, #options .setting .edit { justify-self: end; height: 30px; padding: 0 14px; background: linear-gradient(180deg, var(--surface-3), var(--surface-2)); border: 1px solid var(--line-bright); border-radius: 6px; color: var(--text); font-size: 12px; box-shadow: 0 1px 2px #0009, inset 0 1px 0 #ffffff12; }
 #options .setting .key-bind:hover, #options .setting .edit:hover { border-color: var(--accent-2); }
 #options .backup { display: flex; gap: 8px; justify-self: end; }

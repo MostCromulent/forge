@@ -1,6 +1,3 @@
-// Parts shared by every campaign mode. These are the page that lists the saves or shows an open save, the bar above an open save's pages,
-// a currency balance, the statistics, the preferences and the reward reveal.
-
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl, skinIconUrl } from '../images';
@@ -16,12 +13,10 @@ import { changeUi, eased, type UiState } from '../ui';
 import { Reveal, type Owed } from './reward';
 import { Backdrop } from '../dialog';
 
-/** A currency balance shown as its icon and amount. The currency's name is the icon's alt text and tooltip. */
 export function Purse({ icon, n, label }: { icon: string; n: number; label: string }) {
   return <span class="cq-coin" title={label}><img alt={label} src={skinIconUrl(icon)} /><b>{formatNumber(n)}</b></span>;
 }
 
-/** The amount of a currency the bar reports for the player, looked up by the currency's icon. */
 export const balance = (bar: Bar | null, icon: string): number => bar?.balances.find(b => b.icon === icon)?.amount ?? 0;
 
 /**
@@ -96,7 +91,6 @@ export function SidePanel({ kicker, where, title, art, label, zoom, setZoom, chi
   );
 }
 
-/** The deck a match is played with, and a button to change it. */
 export function DeckRow({ image, name, line, problem, zoom, change }: {
   image?: string | null; name: string; line: string; problem: boolean; zoom: (image: string) => void; change?: () => void;
 }) {

@@ -69,7 +69,6 @@ const TWO_LINE_BELOW = 0.72;
 /** How much smaller the smallest zone may get in a layout that keeps every other zone larger. */
 const SMALLEST_SLACK = 0.06;
 
-/** The counts the sizing needs for one group in a row: slots, cards fanned behind them, and battles. */
 interface GroupStats {
   el: HTMLElement;
   slots: number;

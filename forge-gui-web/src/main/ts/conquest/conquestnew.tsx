@@ -76,7 +76,6 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
   );
 }
 
-/** The ticket's picture of the choices so far: the plane's art, then the commander's card, then both cards. */
 function Picture({ value, options }: { value: NewValue; options: ConquestOptions }) {
   const commander = options.commanders?.find(c => c.name === value.commander);
   const walker = options.planeswalkers?.find(c => c.name === value.planeswalker);
@@ -102,10 +101,8 @@ function TicketCard({ card }: { card: ConquestCardOption }) {
   );
 }
 
-/** One of the shown choices, picked at random. */
 const anyOf = <T,>(shown: T[]) => shown[Math.floor(Math.random() * shown.length)];
 
-/** The planes as tiles, filtered by a search. The description of the plane under the pointer is shown below the tiles. */
 function PlaneTiles({ planes, pick }: { planes: ConquestPlaneOption[]; pick: (plane: string) => void }) {
   const [looking, setLooking] = useState<ConquestPlaneOption | null>(null);
   const [typed, setTyped] = useState('');

@@ -1,5 +1,3 @@
-// Quest's Tournaments page: the drafts on offer as tiles. Once one is entered, it is drawn as a bracket with the player's next match beside it
-
 import { useState } from 'preact/hooks';
 import { balance } from '../campaign/campaign';
 import { PricedButton } from '../campaign/trade';

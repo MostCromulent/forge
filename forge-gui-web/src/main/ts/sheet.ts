@@ -75,7 +75,6 @@ export function sheet(id: string, isOpen: boolean, close: () => void): void {
   }
 }
 
-/** How far a finger must move before a swipe counts. */
 const SWIPE_PX = 60;
 
 /** A swipe down from a sheet's handle closes it. Lower down, the same swipe scrolls the sheet's content. */

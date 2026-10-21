@@ -45,7 +45,6 @@ final class DraftView {
         return card(card, packNumber, pickNumber, false);
     }
 
-    /** The same pick, moved to the sideboard or to the main deck. */
     static DraftCard moved(final DraftCard c, final boolean sideboard) {
         return new DraftCard(c.name(), c.image(), c.cost(), c.mv(), c.colors(), c.type(), c.text(), c.pt(), c.rarity(), c.rank(), c.pack(),
                 c.pick(), sideboard);

@@ -101,7 +101,6 @@ public final class DeckCatalog {
     /** A Commander deck's bracket, cached the same way. It is worked out only for decks listed in Commander. */
     private static final Map<Deck, Integer> BRACKETS = new MapMaker().weakKeys().makeMap();
 
-    /** Clears the cached facts for a deck that was changed in storage. */
     static void changed(final Deck deck) {
         FACTS.remove(deck);
         VERDICTS.remove(deck);
@@ -157,7 +156,6 @@ public final class DeckCatalog {
             reasons.add(new BracketReason(BracketReasonKind.earlyCombos, combos + " · " + text.getMessage("lblCommanderBracketEarlyGame"),
                     text.getMessage("lblWebBracketBriefEarlyCombo"), early, r.getEarlyGameCombosBracket(), text.getMessage("lblCommanderBracketReasonEarlyGameCombo")));
         }
-        // The reasons that raised the bracket most come first
         reasons.sort(Comparator.comparingInt(BracketReason::raises).reversed());
         return new Bracket(r.getBracket(), reasons, clear);
     }

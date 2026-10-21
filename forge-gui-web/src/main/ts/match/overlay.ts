@@ -282,7 +282,6 @@ export function notePick(key: number): void {
 /** Whether the last paint drew the aim arrow. Mouse moves repaint only while it is drawn. */
 let aiming = false;
 
-/** Whether a target is being chosen, with the arrow following the pointer. */
 export function isAiming(): boolean {
   return aiming;
 }
@@ -453,7 +452,6 @@ function center(el: HTMLElement): Point {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
-/** Whether a point is inside a box, or within pad of it. */
 function within(r: DOMRect, at: Point, pad: number): boolean {
   return at.x >= r.left - pad && at.x <= r.right + pad && at.y >= r.top - pad && at.y <= r.bottom + pad;
 }

@@ -1,5 +1,3 @@
-// A deck's plate in a list of a campaign's decks, and the panel beside the list for the deck being viewed
-
 import type { ComponentChildren } from 'preact';
 import { artUrl } from '../sleeves';
 import { imageUrl } from '../images';
@@ -8,7 +6,6 @@ import { t } from '../text';
 
 export function Plate({ name, image, colors, selected, pressed, pick, lines, tag }: {
   name: string; image?: string | null; colors: string; selected: boolean; pressed: boolean; pick: () => void; lines: ComponentChildren[];
-  /** The text of the tag on a selected plate. It defaults to Selected. */
   tag?: string;
 }) {
   return (
@@ -24,7 +21,6 @@ export function Plate({ name, image, colors, selected, pressed, pick, lines, tag
   );
 }
 
-/** The panel beside a list of decks. It shows the deck's card, name and chips, any reason it cannot be played, its details and the foot buttons. */
 export function DeckPanel({ image, title, chips, problem, details, children }: {
   image?: string | null; title: string; chips: ComponentChildren; problem?: string | null; details?: ComponentChildren; children: ComponentChildren;
 }) {
