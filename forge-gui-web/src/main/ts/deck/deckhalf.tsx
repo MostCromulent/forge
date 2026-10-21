@@ -2,11 +2,10 @@
 
 import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useState } from 'preact/hooks';
-import { isPortrait } from '../form';
 import { flyingFor, land } from '../flight';
 import { drawHand, headingText, regroup, type GroupBy } from './decklist';
 import { imageUrl, smallImage } from '../images';
-import { Curve } from './deckview';
+import { Curve, useDeckView } from './deckview';
 import { Pip, Pips, SymbolText } from '../symbols';
 import type { Actions } from '../actions';
 import type { CardHandlers } from './drag';
@@ -16,7 +15,6 @@ import { t } from '../text';
 import { Backdrop, Dropdown } from '../dialog';
 
 const GROUP_KEY = 'forge.groupBy';
-const VIEW_KEY = 'forge.deckView';
 const HAND = 7;
 
 export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
@@ -314,16 +312,6 @@ function SampleHand({ hand, again, more, close }: { hand: EditorCard[]; again: (
 
 function showProblems(): void {
   document.querySelector('.editor-page .ed-line.bad, .editor-page .commander .flag')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-}
-
-/** Whether a deck is drawn as cards or as a list, and a setter for it. The editor and the deck finder share this choice. */
-export function useDeckView(): [boolean, (asCards: boolean) => void] {
-  // Stacked cards are too small to read on a phone. In portrait the deck opens as a list until the player changes the view.
-  const [cards, setCards] = useState(() => (stored(VIEW_KEY) ?? (isPortrait() ? 'list' : 'cards')) !== 'list');
-  return [cards, asCards => {
-    setCards(asCards);
-    store(VIEW_KEY, asCards ? 'cards' : 'list');
-  }];
 }
 
 function storedGroup(): GroupBy {

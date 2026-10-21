@@ -357,7 +357,7 @@ public final class DeckCatalog {
                 return null;
             }
             return new DeckDetails(key, deck.getName(), problem(deck, format, pool), colors(deck), stats(deck),
-                    DeckEditor.groups(deck.getMain(), NO_FLAGS), DeckEditor.cards(deck.get(DeckSection.Sideboard), NO_FLAGS),
+                    CardCatalog.groups(deck.getMain(), NO_FLAGS), CardCatalog.cards(deck.get(DeckSection.Sideboard), NO_FLAGS),
                     deck.getSleeveArtKey(),
                     deck.getSleeveArtOffset(),
                     format == GameType.Commander ? bracket(deck) : null, aiSkipNames(deck));

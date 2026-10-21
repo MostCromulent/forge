@@ -5,6 +5,7 @@ import { useDismiss } from '../hooks';
 import { Catalogue } from './catalogue';
 import { CardMenu, PrintingPicker, type MenuAt } from './cardmenu';
 import { DeckHalf } from './deckhalf';
+import { DECK_FORMATS } from './deckview';
 import { addCard } from './preferred';
 import { saveText } from '../dom';
 import { startDrag, verdictFor, type CardHandlers, type Carried, type Verdict } from './drag';
@@ -14,15 +15,9 @@ import { HeadControls, PageHeader } from '../header';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { DeckSection, EditorState } from '../protocol';
-import { t, type TextKey } from '../text';
+import { t } from '../text';
 import { Backdrop } from '../dialog';
 import { ICONS, Icon } from '../icons';
-
-/** The formats a deck can be built for, as the lobby names them. */
-export const DECK_FORMATS: [string, TextKey][] = [
-  ['Constructed', 'lblConstructed'], ['Commander', 'lblCommander'], ['Brawl', 'lblBrawl'], ['Oathbreaker', 'lblOathbreaker'],
-  ['TinyLeaders', 'lblTinyLeaders'],
-];
 
 export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   const state = model.editor;

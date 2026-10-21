@@ -1,9 +1,30 @@
 // Draws a deck outside the editor, for the deck finder, the importer and the campaigns. It shows the mana curve and the cards by heading.
 
+import { useState } from 'preact/hooks';
+import { isPortrait } from '../form';
 import { imageUrl } from '../images';
 import type { EditorCard } from '../protocol';
-import { t } from '../text';
+import { store, stored } from '../storage';
+import { t, type TextKey } from '../text';
 import { headingText } from './decklist';
+
+const VIEW_KEY = 'forge.deckView';
+
+/** The formats a deck can be built for, as the lobby names them. */
+export const DECK_FORMATS: [string, TextKey][] = [
+  ['Constructed', 'lblConstructed'], ['Commander', 'lblCommander'], ['Brawl', 'lblBrawl'], ['Oathbreaker', 'lblOathbreaker'],
+  ['TinyLeaders', 'lblTinyLeaders'],
+];
+
+/** Whether a deck is drawn as cards or as a list, and a setter for it. The editor and the deck finder share this choice. */
+export function useDeckView(): [boolean, (asCards: boolean) => void] {
+  // Stacked cards are too small to read on a phone. In portrait the deck opens as a list until the player changes the view.
+  const [cards, setCards] = useState(() => (stored(VIEW_KEY) ?? (isPortrait() ? 'list' : 'cards')) !== 'list');
+  return [cards, asCards => {
+    setCards(asCards);
+    store(VIEW_KEY, asCards ? 'cards' : 'list');
+  }];
+}
 
 /** A deck's mana curve as bars at most px tall. The average is shown beside the heading when it is given. */
 // Bar heights are in pixels because a percentage of an auto-sized row resolves to zero

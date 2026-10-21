@@ -397,7 +397,7 @@ public final class ConquestGame implements Campaign {
         final Deck deck = commander.getDeck();
         return new DeckDetails("conquest:" + commander.getName(), commander.getName(), commander.getDeckProblem(),
                 CardCatalog.wubrg(commander.getCard().getRules().getColorIdentity()), DeckCatalog.stats(deck),
-                DeckEditor.groups(deck.getMain(), DeckCatalog.NO_FLAGS), List.of(), null, 0, null);
+                CardCatalog.groups(deck.getMain(), DeckCatalog.NO_FLAGS), List.of(), null, 0, null);
     }
 
     /** The cards owned and not exiled, or the exiled cards. */

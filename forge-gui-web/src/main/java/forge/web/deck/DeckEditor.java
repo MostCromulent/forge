@@ -19,12 +19,7 @@ import forge.util.ImageUtil;
 import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.storage.IStorage;
-import forge.web.images.Foil;
-import forge.web.protocol.JsonCodec;
-import forge.web.protocol.ToBrowser.EditorCard;
-import forge.web.protocol.ToBrowser.EditorGroup;
 import forge.web.protocol.ToBrowser.EditorLand;
-import forge.web.protocol.ToBrowser.EditorPrinting;
 import forge.web.protocol.ToBrowser.EditorSection;
 import forge.web.protocol.ToBrowser.EditorState;
 import forge.web.protocol.ToBrowser.LandSet;
@@ -576,9 +571,9 @@ public final class DeckEditor {
         return new EditorState(deck.getName(), check.label(), check.format().name(),
                 check.pool() == null ? null : check.pool().getName(), check.unrestricted(),
                 target instanceof Device ? "device" : "storage", copyOf,
-                cards(deck.get(DeckSection.Commander), legality), df.hasCommander(), wanted, df.getMaxCardCopies() == Integer.MAX_VALUE ? null : df.getMaxCardCopies(),
+                CardCatalog.cards(deck.get(DeckSection.Commander), legality), df.hasCommander(), wanted, df.getMaxCardCopies() == Integer.MAX_VALUE ? null : df.getMaxCardCopies(),
                 Legality.identityLetters(leaders),
-                groups(deck.getMain(), legality), cards(deck.get(DeckSection.Sideboard), legality), lands(),
+                CardCatalog.groups(deck.getMain(), legality), CardCatalog.cards(deck.get(DeckSection.Sideboard), legality), lands(),
                 DeckCatalog.stats(deck), legality.verdict(), !undo.isEmpty(), landed,
                 limited(), landSet, limited() ? LandSets.ALL : collection == null ? List.of()
                         : collection.landSets().apply(deck).stream().map(e -> new LandSet(e.getCode(), e.getName())).toList(),
@@ -592,7 +587,7 @@ public final class DeckEditor {
         }
         final List<EditorSection> out = new ArrayList<>();
         for (final DeckSection section : DeckSection.NONTRADITIONAL_SECTIONS) {
-            out.add(new EditorSection(section, section.getLocalizedName(), cards(deck.get(section), legality)));
+            out.add(new EditorSection(section, section.getLocalizedName(), CardCatalog.cards(deck.get(section), legality)));
         }
         return out;
     }
@@ -955,49 +950,6 @@ public final class DeckEditor {
     private List<EditorLand> lands() {
         final List<EditorLand> out = new ArrayList<>();
         BASICS.forEach((name, letter) -> out.add(new EditorLand(name, letter, deck.getMain().countByName(name), landAllowed(name))));
-        return out;
-    }
-
-    public static List<EditorGroup> groups(final CardPool pool, final Legality.Result legality) {
-        final Map<String, List<EditorCard>> byHeading = new LinkedHashMap<>();
-        CardCatalog.HEADINGS.forEach(h -> byHeading.put(h, new ArrayList<>()));
-        final Map<String, String> headings = new LinkedHashMap<>();
-        for (final Map.Entry<PaperCard, Integer> e : pool) {
-            headings.putIfAbsent(e.getKey().getName(), CardCatalog.heading(e.getKey()));
-        }
-        for (final EditorCard card : cards(pool, legality)) {
-            byHeading.get(headings.get(card.name())).add(card);
-        }
-        final List<EditorGroup> out = new ArrayList<>();
-        byHeading.forEach((heading, cards) -> {
-            if (!cards.isEmpty()) {
-                out.add(new EditorGroup(heading, cards));
-            }
-        });
-        return out;
-    }
-
-    /** A pool's cards, one per name, in mana value then name order. */
-    public static List<EditorCard> cards(final CardPool pool, final Legality.Result legality) {
-        final List<EditorCard> out = new ArrayList<>();
-        if (pool == null) {
-            return out;
-        }
-        final Map<String, List<Map.Entry<PaperCard, Integer>>> byName = new LinkedHashMap<>();
-        for (final Map.Entry<PaperCard, Integer> e : pool) {
-            byName.computeIfAbsent(e.getKey().getName(), n -> new ArrayList<>()).add(Map.entry(e.getKey(), e.getValue()));
-        }
-        byName.forEach((name, printings) -> {
-            printings.sort(Map.Entry.<PaperCard, Integer>comparingByValue().reversed());
-            final PaperCard shown = printings.get(0).getKey();
-            final CardRules rules = shown.getRules();
-            final List<EditorPrinting> split = printings.stream()
-                    .map(p -> new EditorPrinting(p.getKey().getImageKey(false), p.getValue())).toList();
-            out.add(new EditorCard(name, printings.stream().mapToInt(Map.Entry::getValue).sum(), Foil.key(shown),
-                    JsonCodec.manaCost(rules.getManaCost()), rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()),
-                    printings.size(), split, legality.flags().get(name), printings.stream().allMatch(p -> p.getKey().isFoil())));
-        });
-        out.sort(Comparator.comparingInt(EditorCard::mv).thenComparing(EditorCard::name));
         return out;
     }
 }

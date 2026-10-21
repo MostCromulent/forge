@@ -199,8 +199,8 @@ public final class DeckImport {
                 deck.getMain().countAll() + (commanderSection == null ? 0 : commanderSection.countAll()),
                 sideboard == null ? 0 : sideboard.countAll(), read.notImported(),
                 commanders.isEmpty() ? null : commanders.get(0).getName(), read.commanderChosen() != null,
-                colours, legality.verdict(), DeckEditor.groups(deck.getMain(), legality),
-                DeckEditor.cards(sideboard, legality));
+                colours, legality.verdict(), CardCatalog.groups(deck.getMain(), legality),
+                CardCatalog.cards(sideboard, legality));
         return new ImportResult(request, read.lines(), read.problems(), summary, read.name(), fetched);
     }
 

@@ -46,6 +46,7 @@ import forge.player.GamePlayerUtil;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.util.storage.IStorage;
+import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckEditor;
 import forge.web.deck.DeckStore;
@@ -1005,7 +1006,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
             case questDeckView -> {
                 channel.send(new DeckDetailsMessage(new DeckDetails("quest:" + deck.getName(), deck.getName(),
                         QuestUtil.getDeckConformanceProblemsBeforeGame(deck), DeckCatalog.colors(deck), DeckCatalog.stats(deck),
-                        DeckEditor.groups(deck.getMain(), DeckCatalog.NO_FLAGS), DeckEditor.cards(deck.get(DeckSection.Sideboard), DeckCatalog.NO_FLAGS),
+                        CardCatalog.groups(deck.getMain(), DeckCatalog.NO_FLAGS), CardCatalog.cards(deck.get(DeckSection.Sideboard), DeckCatalog.NO_FLAGS),
                         null, 0, null)));
                 return;
             }

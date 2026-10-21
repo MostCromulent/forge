@@ -2,17 +2,15 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { store, stored, storeJson, storedJson } from '../storage';
-import { useDeckView } from './deckhalf';
 import { AI_ICON, ColourToggles, Pips, toggled } from '../symbols';
 import { changeUi, ui } from '../ui';
-import { DECK_FORMATS } from './editor';
 import { normalize, rankByName } from '../search';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { Bracket, DeckDetails, DeckMatches, DeckQuery, DeckSummary, Seat } from '../protocol';
 import { Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } from './filters';
 import { t, type TextKey } from '../text';
-import { CardGroup, Curve } from './deckview';
+import { CardGroup, Curve, DECK_FORMATS, useDeckView } from './deckview';
 import { NewDeck } from './newdeck';
 import { NameTaken } from './nametaken';
 

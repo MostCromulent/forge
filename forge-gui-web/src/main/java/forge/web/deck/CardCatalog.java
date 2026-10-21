@@ -7,6 +7,7 @@ import forge.card.CardRules;
 import forge.card.CardType;
 import forge.card.ColorSet;
 import forge.deck.DeckSection;
+import forge.deck.CardPool;
 import forge.item.PaperCard;
 import forge.itemmanager.AdvancedSearchParser;
 import forge.itemmanager.SFilterUtil;
@@ -16,10 +17,14 @@ import forge.web.protocol.JsonCodec;
 import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.CataloguePage;
 import forge.web.protocol.ToBrowser.CatalogueRow;
+import forge.web.protocol.ToBrowser.EditorCard;
+import forge.web.protocol.ToBrowser.EditorPrinting;
+import forge.web.protocol.ToBrowser.EditorGroup;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -298,5 +303,48 @@ public final class CardCatalog {
             return "Battles";
         }
         return type.isEnchantment() ? "Enchantments" : "Artifacts";
+    }
+
+    public static List<EditorGroup> groups(final CardPool pool, final Legality.Result legality) {
+        final Map<String, List<EditorCard>> byHeading = new LinkedHashMap<>();
+        HEADINGS.forEach(h -> byHeading.put(h, new ArrayList<>()));
+        final Map<String, String> headings = new LinkedHashMap<>();
+        for (final Map.Entry<PaperCard, Integer> e : pool) {
+            headings.putIfAbsent(e.getKey().getName(), heading(e.getKey()));
+        }
+        for (final EditorCard card : cards(pool, legality)) {
+            byHeading.get(headings.get(card.name())).add(card);
+        }
+        final List<EditorGroup> out = new ArrayList<>();
+        byHeading.forEach((heading, cards) -> {
+            if (!cards.isEmpty()) {
+                out.add(new EditorGroup(heading, cards));
+            }
+        });
+        return out;
+    }
+
+    /** A pool's cards, one per name, in mana value then name order. */
+    public static List<EditorCard> cards(final CardPool pool, final Legality.Result legality) {
+        final List<EditorCard> out = new ArrayList<>();
+        if (pool == null) {
+            return out;
+        }
+        final Map<String, List<Map.Entry<PaperCard, Integer>>> byName = new LinkedHashMap<>();
+        for (final Map.Entry<PaperCard, Integer> e : pool) {
+            byName.computeIfAbsent(e.getKey().getName(), n -> new ArrayList<>()).add(Map.entry(e.getKey(), e.getValue()));
+        }
+        byName.forEach((name, printings) -> {
+            printings.sort(Map.Entry.<PaperCard, Integer>comparingByValue().reversed());
+            final PaperCard shown = printings.get(0).getKey();
+            final CardRules rules = shown.getRules();
+            final List<EditorPrinting> split = printings.stream()
+                    .map(p -> new EditorPrinting(p.getKey().getImageKey(false), p.getValue())).toList();
+            out.add(new EditorCard(name, printings.stream().mapToInt(Map.Entry::getValue).sum(), Foil.key(shown),
+                    JsonCodec.manaCost(rules.getManaCost()), rules.getManaCost().getCMC(), letters(rules.getColor()),
+                    printings.size(), split, legality.flags().get(name), printings.stream().allMatch(p -> p.getKey().isFoil())));
+        });
+        out.sort(Comparator.comparingInt(EditorCard::mv).thenComparing(EditorCard::name));
+        return out;
     }
 }
