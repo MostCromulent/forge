@@ -556,12 +556,15 @@ public final class WebSession implements IHasForgeLog {
         if (campaigns.deckCommand(channel, command) || stage instanceof Playing) {
             return;
         }
-        final boolean closing = command instanceof Bare b && b.t() == Plain.editorClose;
-        // Send the pools first, because closing the editor lists every deck again before the page changes
-        if (closing && stage instanceof Event) {
-            channel.send(OfflineEvents.pools());
-        }
-        decks.onCommand(channel, command);
+        final boolean closing = command instanceof Bare b && b.t() == Plain.editorClose && stage instanceof Event;
+        // The deck thread keeps editor saves and imports off the socket threads, in order with deck searches
+        decks.inTurn(() -> {
+            // Send the pools first, because closing the editor lists every deck again before the page changes
+            if (closing) {
+                channel.send(OfflineEvents.pools());
+            }
+            decks.onCommand(channel, command);
+        });
     }
 
     private void claimHost(final BrowserChannel channel) {
