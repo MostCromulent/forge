@@ -308,6 +308,16 @@ public final class FModel {
         }
     }
 
+    //mobile lowers this to leave room on the bar for its own startup steps after the card databases are loaded
+    public static volatile int progressCeiling = 1000;
+
+    private static void updateProgressBar(IProgressBar progressBar, int value) {
+        FThreads.invokeInEdtLater(() -> {
+            progressBar.setMaximum(1000);
+            progressBar.setValue(value);
+        });
+    }
+
     /** Loads the data card-based deck generation draws on, when the preference asks for it. Needs every card read. */
     public static synchronized void loadDeckGenMatrix() {
         if (deckGenMatrixLoaded || !getPreferences().getPrefBoolean(FPref.DECKGEN_CARDBASED)) {
@@ -320,16 +330,6 @@ public final class FModel {
     }
 
     private static volatile boolean deckGenMatrixLoaded = false;
-
-    //mobile lowers this to leave room on the bar for its own startup steps after the card databases are loaded
-    public static volatile int progressCeiling = 1000;
-
-    private static void updateProgressBar(IProgressBar progressBar, int value) {
-        FThreads.invokeInEdtLater(() -> {
-            progressBar.setMaximum(1000);
-            progressBar.setValue(value);
-        });
-    }
 
     public static boolean isdeckGenMatrixLoaded(){
         return deckGenMatrixLoaded;

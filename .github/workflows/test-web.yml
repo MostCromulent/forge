@@ -66,4 +66,5 @@ jobs:
         run: |
           export DISPLAY=":1"
           Xvfb :1 -screen 0 800x600x8 &
-          mvn -U -B -Pweb -pl forge-gui-web -am test
+          # -am builds the modules the web module needs. The filter runs only the web module's tests, which the main jobs do not run
+          mvn -U -B -Pweb -pl forge-gui-web -am test -Dtest='forge.web.**' -Dsurefire.failIfNoSpecifiedTests=false
