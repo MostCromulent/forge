@@ -230,7 +230,7 @@ final class Legality {
                 : Localizer.getInstance().getMessage("lblWebLegalityCardIs", name, flag);
     }
 
-    /** "a", "a, and b", "a, b, and c". */
+    /** "a", "a and b", "a, b and c". */
     private static String joined(final List<String> parts) {
         if (parts.size() == 1) {
             return parts.get(0);

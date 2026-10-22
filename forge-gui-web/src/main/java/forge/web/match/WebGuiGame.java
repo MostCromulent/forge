@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import forge.ImageKeys;
 import forge.LobbyPlayer;
 import forge.card.MagicColor;
@@ -871,7 +872,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final Predicate<JsonElement> indicesOk = Answers.indexList(items.size(), min, max);
         final JsonElement reply = ask(request, v -> v.isJsonObject() && v.getAsJsonObject().has("indices") && indicesOk.test(v.getAsJsonObject().get("indices")));
         final JsonObject r = reply.getAsJsonObject();
-        return new OrderResult<>(Answers.pick(items, r.get("indices")), r.has("remember") && r.get("remember").getAsBoolean());
+        return new OrderResult<>(Answers.pick(items, r.get("indices")), r.get("remember") instanceof JsonPrimitive p && p.isBoolean() && p.getAsBoolean());
     }
 
     @Override

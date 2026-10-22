@@ -31,7 +31,7 @@ import { createPacer } from './match/pacer';
 import { setVersion } from './links';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { rememberStops, restoreStops } from './match/stopmemory';
-import { byId, relayout, saveText } from './dom';
+import { byId, isTyping, relayout, saveText } from './dom';
 import { initNotices, showNotice } from './notices';
 import { forgetWakeLock, keepAwake } from './wakelock';
 import { deleteDeviceDeck, listDeviceDecks, putDeviceDeck } from './deck/devicedecks';
@@ -151,7 +151,7 @@ document.addEventListener('keydown', e => {
     shift: e.shiftKey,
     alt: e.altKey,
     meta: e.metaKey,
-    typing: !!target && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
+    typing: isTyping(target),
   }, model, ui, boundKeys(), shortcutKeys());
   if (!command) {
     return;

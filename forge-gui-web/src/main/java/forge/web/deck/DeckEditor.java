@@ -10,7 +10,6 @@ import forge.deck.DeckFormat;
 import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.deck.DeckgenUtil;
-import forge.deck.io.DeckSerializer;
 import forge.game.GameType;
 import forge.gamemodes.limited.CommanderDraftUtil;
 import forge.item.PaperCard;
@@ -619,7 +618,7 @@ public final class DeckEditor {
     private String save() {
         try {
             if (target instanceof Device d) {
-                sink.deviceDeck(d.id(), String.join("\n", DeckSerializer.serializeDeck(deck)), check.format());
+                sink.deviceDeck(d.id(), DeckSession.text(deck), check.format());
                 saved = true;
                 return null;
             }

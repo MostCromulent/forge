@@ -476,7 +476,8 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .dk-cards.deck-cols { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px 10px; }
 .dk-cards .deck-stack { cursor: default; }
 .deck-stack .gc { position: absolute; left: 4px; top: 4px; padding: 0 5px; border-radius: 999px; background: #000c; font: 700 9.5px/15px ui-monospace, Consolas, monospace; color: var(--accent-2); }
-.group { margin-bottom: 14px; }
+/* The board's rows also have groups, which this spacing is not for */
+.group:not(#match *) { margin-bottom: 14px; }
 .group h4 { display: flex; justify-content: space-between; margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
 .none { color: var(--muted); padding: 18px; }
 
@@ -506,7 +507,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .dk-cardname { text-align: left; background: none; border: 0; padding: 5px 8px; border-radius: 4px; }
 .dk-cardname:hover { background: var(--surface-2); }
 .dk-cardname[aria-pressed="true"] { background: var(--surface-2); color: var(--accent-2); }
-.prints { overflow: auto; display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); align-content: start; max-height: 380px; }
+.art-picker .prints { overflow: auto; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); align-content: start; }
 .print { padding: 4px; display: grid; gap: 4px; justify-items: center; font-size: 11px; color: var(--muted); }
 .print img { width: 100%; border-radius: 4px; display: block; }
 .print[aria-pressed="true"] { border-color: var(--accent-2); }
@@ -573,7 +574,6 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .sleeves.picking .art-picker { min-height: 0; height: 100%; grid-template-rows: auto 1fr; }
 .art-picker .names, .art-picker .prints { min-height: 0; }
 .art-picker .name-list, .art-picker .prints { max-height: none; }
-.prints { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); align-content: start; }
 
 /* Card art is saved on the deck. So when no deck is chosen, the saved art tiles are disabled. */
 .saved.no-deck .art-tile { opacity: .4; pointer-events: none; }
@@ -835,7 +835,7 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .menu-button::after { content: ' \25BE'; font-size: 10px; color: var(--muted); font-weight: 400; }
 .menu-button:disabled { opacity: 1; cursor: default; }
 .menu-button:disabled::after { content: none; }
-.count { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; width: max-content; }
+.count[role="group"] { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; width: max-content; }
 .count button { font: inherit; font-size: 12.5px; padding: 1px 9px; border: 0; border-radius: 0; background: none; color: var(--muted); font-variant-numeric: tabular-nums; }
 .count button + button { border-left: 1px solid var(--line); }
 .count button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-2); font-weight: 700; }

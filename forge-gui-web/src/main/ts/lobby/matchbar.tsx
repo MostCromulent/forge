@@ -332,10 +332,7 @@ function Addresses({ list }: { list: Address[] }) {
     return <p class="muted">{t('lblWebMatchBarWorkingOutAddress')}</p>;
   }
   return <>{list.map(a => (
-    <button key={a.url} class="share-row" onClick={async () => {
-      await navigator.clipboard.writeText(a.url);
-      setCopied(a.url);
-    }}>
+    <button key={a.url} class="share-row" onClick={() => navigator.clipboard?.writeText(a.url).then(() => setCopied(a.url), () => {})}>
       <span class="share-label">{a.label}</span><code class="share-url">{a.url}</code>
       <span class="share-copy">{t(copied === a.url ? 'lblWebMatchBarCopied' : 'lblCopy')}</span>
     </button>

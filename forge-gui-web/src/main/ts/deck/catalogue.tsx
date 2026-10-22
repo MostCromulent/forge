@@ -257,10 +257,7 @@ function catalogueKinds(state: EditorState, model: Model, actions: Actions): Fil
       id: 'sets', group: printing, label: t('lblSets'),
       chip: f => (f.sets.length ? f.sets.join(', ') : null),
       clear: f => ({ ...f, sets: [] }),
-      panel: (f, set, done) => {
-        if (!model.cardSets) actions.askCardSets();
-        return <SetsPanel sets={model.cardSets} value={f.sets} apply={sets => { set({ ...f, sets }); done(); }} />;
-      },
+      panel: (f, set, done) => <SetsPanel sets={model.cardSets} ask={actions.askCardSets} value={f.sets} apply={sets => { set({ ...f, sets }); done(); }} />,
     },
     {
       id: 'format', group: printing, label: t('lblFormat'),
@@ -312,9 +309,10 @@ function catalogueKinds(state: EditorState, model: Model, actions: Actions): Fil
 }
 
 /** Lists every set, searchable by name or code. A ticked set stays listed whatever is typed. Apply applies the ticked sets. */
-function SetsPanel({ sets, value, apply }: { sets: readonly LimitedEdition[] | null; value: readonly string[]; apply: (codes: string[]) => void }) {
+function SetsPanel({ sets, ask, value, apply }: { sets: readonly LimitedEdition[] | null; ask: () => void; value: readonly string[]; apply: (codes: string[]) => void }) {
   const [find, setFind] = useState('');
   const [ticked, setTicked] = useState<Set<string>>(() => new Set(value));
+  useEffect(() => { if (!sets) ask(); }, []);
   if (!sets) return <p class="fnote">{t('lblWebEventLoading')}</p>;
   const words = find.trim().toLowerCase();
   const shown = sets.filter(s => ticked.has(s.code) || !words || s.name.toLowerCase().includes(words) || s.code.toLowerCase() === words);

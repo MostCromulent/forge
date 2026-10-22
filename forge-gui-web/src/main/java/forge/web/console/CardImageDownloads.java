@@ -226,8 +226,8 @@ final class CardImageDownloads {
         return label;
     }
 
-    private Predicate<PaperCard> chosenCards() {
-        final Choice choice = (Choice) choices.getSelectedItem();
+    /** The cards a choice covers. "My decks" reads every stored deck, so the count calls this off the window's thread. */
+    private static Predicate<PaperCard> cardsOf(final Choice choice) {
         return choice == null ? c -> false : choice.cards() != null ? choice.cards() : inMyDecks();
     }
 
@@ -242,8 +242,9 @@ final class CardImageDownloads {
         }
         downloadButton.setEnabled(false);
         downloadState.setText(" ");
-        final Predicate<PaperCard> cards = chosenCards();
+        final Choice choice = (Choice) choices.getSelectedItem();
         FThreads.invokeInBackgroundThread(() -> {
+            final Predicate<PaperCard> cards = cardsOf(choice);
             int total = 0;
             int saved = 0;
             for (final PaperCard card : Iterables.concat(FModel.getMagicDb().getCommonCards().getAllCards(),
@@ -289,7 +290,7 @@ final class CardImageDownloads {
         downloadState.setText(TEXT.getMessage("lblWebImagesKeepPlaying"));
         downloadState.setForeground(MUTED);
         window.pack();
-        running = new GuiDownloadFilteredCardImages(chosenCards());
+        running = new GuiDownloadFilteredCardImages(cardsOf((Choice) choices.getSelectedItem()));
         downloadStarted = 0;
         // Once the service has listed what is missing, its start command runs at once. The count shown earlier was the confirmation.
         running.initialize(new WebDownloads.Text(""), new WebDownloads.Text(""), new Bar(), new Starter(), this::finished, null, null);

@@ -74,3 +74,8 @@ export function onPressOutside(inside: string, away: () => void, on: 'pointerdow
     if (!(e.target instanceof Element && e.target.closest(inside))) away();
   });
 }
+
+/** Whether the element takes typed text, so a key or a layout change must leave it alone. */
+export function isTyping(el: Element | null): boolean {
+  return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || (el instanceof HTMLElement && el.isContentEditable);
+}

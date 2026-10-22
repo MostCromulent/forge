@@ -660,7 +660,7 @@ public final class DeckSession implements IHasForgeLog {
     }
 
     /** A deck as the text of a .dck file. The serializer ends some lines with Windows line endings and some with plain ones, so all are made plain. */
-    private static String text(final Deck deck) {
+    static String text(final Deck deck) {
         return String.join("\n", DeckSerializer.serializeDeck(deck)).replace("\r\n", "\n");
     }
 

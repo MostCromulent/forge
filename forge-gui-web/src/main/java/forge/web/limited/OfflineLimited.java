@@ -70,8 +70,9 @@ public final class OfflineLimited implements IHasForgeLog {
     }
 
     public static final Commands<OfflineLimited> COMMANDS = new Commands<OfflineLimited>()
-            .on(PoolEdit.class, (l, ch, e) -> l.editPool(ch, e.name()))
-            .on(PoolDelete.class, (l, ch, d) -> l.deletePool(ch, d.name()))
+            // Opening and deleting a pool read files, so they run on the deck thread in order with the editor's commands
+            .on(PoolEdit.class, (l, ch, e) -> l.decks.inTurn(() -> l.editPool(ch, e.name())))
+            .on(PoolDelete.class, (l, ch, d) -> l.decks.inTurn(() -> l.deletePool(ch, d.name())))
             .on(SealedCreate.class, OfflineLimited::createSealed)
             .on(DraftStart.class, OfflineLimited::startDraft)
             .on(DraftSave.class, OfflineLimited::saveDraft)

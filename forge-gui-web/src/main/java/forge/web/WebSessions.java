@@ -186,6 +186,10 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
 
     @Override
     public void disconnected(final BrowserChannel channel) {
+        // Stopping the server closes every browser's socket after the timer has stopped
+        if (timer.isShutdown()) {
+            return;
+        }
         final WebSession session = byChannel.remove(channel);
         if (session != null) {
             netLog.info("{} left.", session.label());

@@ -506,6 +506,9 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         if (resource.endsWith(".png")) {
             return "image/png";
         }
+        if (resource.endsWith(".jpg")) {
+            return "image/jpeg";
+        }
         if (resource.endsWith(".webmanifest")) {
             return "application/manifest+json";
         }

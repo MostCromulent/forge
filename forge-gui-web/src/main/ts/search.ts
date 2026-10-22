@@ -1,8 +1,8 @@
-// Searches a long list by name with the same rules as desktop's ListChooser, so both clients find the same cards in the same order
+// Searches a long list by name with desktop's ListChooser rules, so both clients find the same cards in the same order. Letters of every script are kept, so translated labels can be found too
 
 /** Converts to lower case, strips accents, and keeps only letters, digits and spaces. */
 export function normalize(s: string): string {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, '');
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '');
 }
 
 /** The start and end of the typed text in the original name. These are positions before normalizing, which can shorten the name. */

@@ -597,6 +597,7 @@ export function resetTable(): void {
   forgetPictures();
   resetStarter();
   seating = null;
+  shownSeat = null;
   outSaid = false;
   document.getElementById('out-banner')?.remove();
   resetSchemes();
@@ -635,9 +636,12 @@ function hitAvatar(avatar: HTMLElement, amount: number): void {
   document.body.append(wash);
   wash.addEventListener('animationend', () => wash.remove());
   replay(avatar, amount >= 5 ? 'hit-hard' : 'hit', 'hit', 'hit-hard');
-  avatar.addEventListener('animationend', e => {
-    if (e.target === avatar) avatar.classList.remove('hit', 'hit-hard');
-  });
+  const settled = (e: AnimationEvent) => {
+    if (e.target !== avatar) return;
+    avatar.classList.remove('hit', 'hit-hard');
+    avatar.removeEventListener('animationend', settled);
+  };
+  avatar.addEventListener('animationend', settled);
   const glow = make('span', 'avatar-hit');
   avatar.append(glow);
   glow.addEventListener('animationend', () => glow.remove());
