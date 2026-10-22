@@ -4,7 +4,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.deck.Deck;
-import forge.gamemodes.match.HostedMatch;
+import forge.game.Game;
+import forge.game.GameState;
+import forge.player.PlayerControllerHuman;
 import forge.web.match.BrowserModel;
 import forge.web.match.MatchProbe;
 import org.testng.Assert;
@@ -13,12 +15,17 @@ import org.testng.annotations.Test;
 import org.testng.asserts.SoftAssert;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /** Tests what one message to a client may contain. It reads every message from ten turns of the computer playing itself. */
 public class BatchBoundaryTest {
+    private static final String SPARK = "Spark Elemental";
+
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
@@ -41,6 +48,13 @@ public class BatchBoundaryTest {
         return game == null || !game.has("Turn") ? 0 : game.get("Turn").getAsInt();
     }
 
+    private static long named(final BrowserModel model, final Set<Integer> cards, final String name) {
+        final Map<Integer, JsonObject> objects = MatchProbe.objects(model);
+        return cards.stream().map(objects::get).filter(card -> card != null && card.has("CurrentState"))
+                .map(card -> objects.get(card.getAsJsonObject("CurrentState").get("ref").getAsInt()))
+                .filter(state -> state != null && state.has("Name") && name.equals(state.get("Name").getAsString())).count();
+    }
+
     private static String zone(final JsonObject move, final String end) {
         final JsonElement place = move.get(end);
         return place == null || place.isJsonNull() ? "" : place.getAsJsonObject().get("zone").getAsString();
@@ -49,16 +63,23 @@ public class BatchBoundaryTest {
     @Test(timeOut = 360000)
     public void aMessageHoldsWholeActionsAndNoMoreThanOne() throws Exception {
         final Deck red = TestDecks.of("Red", "Mountain", 22, "Shock", 10, "Goblin Piker", 14, "Raging Goblin", 14);
-        TestMatch.play(red, red, gui -> new TestBrowser(gui, true), (local, gui, browser) -> {
-            for (int i = 0; i < 3000; i++) {
-                final HostedMatch match = local.hostedMatch();
-                if (match != null && match.getGame() != null && browser.all("state").size() > 1) {
-                    break;
-                }
-                Thread.sleep(10);
-            }
+        TestMatch.play(red, red, gui -> TestBrowser.held(gui, 0), (local, gui, browser) -> {
+            // The game waits on the web seat in its first main phase, so the state can be placed while nothing else changes the game
+            Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
+            final Game played = local.hostedMatch().getGame();
+            // GameState calls the first player "human" and the second "ai", whoever controls them
+            final String web = played.getPlayers().get(0).getController() instanceof PlayerControllerHuman ? "human" : "ai";
+            // Each side has a Spark Elemental, which is sacrificed at every end step, so a card is sure to leave a battlefield
+            final GameState state = new GameState();
+            final String hand = "Mountain;Shock;Raging Goblin;Goblin Piker";
+            final String library = String.join(";", Collections.nCopies(6, "Mountain;Shock;Raging Goblin;Goblin Piker"));
+            state.parse(List.of("activeplayer=" + web, "activephase=MAIN1", "removesummoningsickness=true", "humanlife=20", "ailife=20",
+                    "humanbattlefield=Mountain;Mountain;Mountain;" + SPARK, "humanhand=" + hand, "humanlibrary=" + library,
+                    "aibattlefield=Mountain;Mountain;Mountain;" + SPARK, "aihand=" + hand, "ailibrary=" + library));
+            TestMatch.apply(state, played);
             // The computer takes the web seat, so both sides cast spells and nobody is asked anything
             local.spectate();
+            browser.release();
             // Ten turns of this deck cover every case below many times, and a whole game takes much longer
             for (int i = 0; i < 30000 && browser.gameOver.getCount() > 0 && turn(browser) < 10; i++) {
                 Thread.sleep(10);
@@ -66,11 +87,18 @@ public class BatchBoundaryTest {
 
             final BrowserModel replay = new BrowserModel();
             Set<Integer> before = Set.of();
+            boolean placed = false;
             final List<String> leftUnsaid = new ArrayList<>();
             int left = 0, castThenResolved = 0, resolvedIntoNextTurn = 0, landThenCast = 0, resolutions = 0, lands = 0, casts = 0;
             for (final JsonObject message : browser.all("state")) {
                 replay.applyStateMessage(message);
                 final Set<Integer> after = onBattlefields(replay);
+                // Placing the state removes whatever was played before it without a move, so the checks start once both Elementals are in play
+                if (!placed) {
+                    placed = named(replay, after, SPARK) == 2;
+                    before = after;
+                    continue;
+                }
                 if (message.get("full").getAsBoolean()) {
                     before = after;
                     continue;

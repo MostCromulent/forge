@@ -187,10 +187,13 @@ public final class LocalGame implements IHasForgeLog {
         client.connect();
         try {
             if (!ready.await(JOIN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                // A refused client keeps reconnecting, and every game here has the same address, so it would take a seat in the next one
+                endMatch();
                 throw new IllegalStateException(Localizer.getInstance().getMessage("lblWebLocalGameNoFreeSeat"));
             }
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
+            endMatch();
             throw new IllegalStateException("Interrupted while joining", e);
         }
     }

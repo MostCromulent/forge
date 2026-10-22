@@ -19,7 +19,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class ActiveClientTest {
@@ -59,17 +58,7 @@ public class ActiveClientTest {
                 ai + "hand=",
                 ai + "battlefield=" + aiBattlefield,
                 ai + "library=Forest;Forest;Forest;Forest;Forest"));
-        apply(state, game);
-    }
-
-    /** Applies the state on the game thread and waits until the cards are placed. */
-    private static void apply(final GameState state, final Game game) throws InterruptedException {
-        final CountDownLatch placed = new CountDownLatch(1);
-        game.getAction().invoke(() -> {
-            state.applyToGame(game);
-            placed.countDown();
-        });
-        Assert.assertTrue(placed.await(30, TimeUnit.SECONDS), "the game never placed the cards");
+        TestMatch.apply(state, game);
     }
 
     @Test(timeOut = 180000)
@@ -215,7 +204,7 @@ public class ActiveClientTest {
                     ai + "graveyard=",
                     ai + "hand=",
                     ai + "library=Forest;Forest;Forest;Forest;Forest"));
-            apply(state, game);
+            TestMatch.apply(state, game);
             WebTestSupport.remoteGui(local.hostedMatch()).updateGameView();
             final Player seat = game.getPlayers().get(webFirst ? 0 : 1);
             final int turn = game.getPhaseHandler().getTurn();

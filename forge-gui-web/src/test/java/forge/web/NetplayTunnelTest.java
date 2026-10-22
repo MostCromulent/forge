@@ -290,6 +290,7 @@ public class NetplayTunnelTest extends SessionsTest {
 
             final App app = join("Secure", "https://localhost:" + port + "/?token=" + GUEST_TOKEN, SslContextBuilder.forClient().trustManager(trusting).build());
             Assert.assertTrue(app.seated.await(60, TimeUnit.SECONDS), "the app never took a seat over TLS");
+            app.leave();
             proxy.close().sync();
         } finally {
             group.shutdownGracefully(0, 2, TimeUnit.SECONDS);
