@@ -311,3 +311,9 @@ const isPlayerZone = (name: ZoneType): name is PlayerZone => PLAYER_ZONES.has(na
 export const zone = (model: Model, player: PlayerView | undefined, name: ZoneType): CardView[] =>
   isPlayerZone(name) ? derefAll(model, player?.[name]) : [];
 export const stateOf = (model: Model, card: CardView): Partial<CardStateView> => deref(model, card.CurrentState) ?? {};
+
+/** What the player can attack: their opponents still in the game, and those opponents' planeswalkers and battles. */
+export function attackTargets(model: Model, player: PlayerView | undefined): number[] {
+  return derefAll(model, player?.Opponents).filter(p => !p.HasLost).flatMap(p => [p.$key,
+    ...zone(model, p, 'Battlefield').filter(c => /Planeswalker|Battle/.test(stateOf(model, c).Type ?? '')).map(c => c.$key)]);
+}

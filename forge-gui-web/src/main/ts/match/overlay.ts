@@ -1,6 +1,6 @@
 // Draws the arrows over the board. They point from attackers to what they attack, from blockers to what they block, and from spells to their targets.
 
-import { combatShown, game, derefAll, players, zone, type Model } from '../model';
+import { attackTargets, combatShown, game, derefAll, players, zone, type Model } from '../model';
 import { byId, onRelayout, reducedMotion } from '../dom';
 import { cardElement, pileTopFor } from './motion';
 import { ui } from '../ui';
@@ -413,20 +413,21 @@ function retreat(mark: HTMLElement, cardStays: boolean, afterHit: boolean): void
   run.finished.then(() => mark.remove(), () => mark.remove());
 }
 
-/** In a two-player game, maps each attacker at a player to whether it is blocked. */
+/** When the attacking player can attack only one player and nothing else, maps each attacker to whether it is blocked. */
 function atLoneFace(model: Model): Map<number, boolean> {
   const out = new Map<number, boolean>();
-  const everyone = players(model);
-  if (everyone.length !== 2 || !combatShown(model)) return out;
-  const faces = new Set(everyone.map(p => p.$key));
-  for (const band of game(model)?.CombatView ?? []) {
+  if (!combatShown(model)) return out;
+  const g = game(model);
+  const targets = attackTargets(model, players(model).find(p => p.$key === g?.PlayerTurn?.ref));
+  if (targets.length !== 1) return out;
+  for (const band of g?.CombatView ?? []) {
     const blocked = present(band.blockers).length > 0 || present(band.plannedBlockers).length > 0;
-    if (band.defender && faces.has(band.defender.ref)) present(band.attackers).forEach(a => out.set(a.ref, blocked));
+    if (band.defender?.ref === targets[0]) present(band.attackers).forEach(a => out.set(a.ref, blocked));
   }
   return out;
 }
 
-/** The unblocked attackers at a player in a two-player game. Only these get a chevron. */
+/** The unblocked attackers when there is only one thing to attack. Only these get a chevron. Any other attack is drawn as an arrow. */
 export function chargingAtPlayer(model: Model): Set<number> {
   return new Set([...atLoneFace(model)].filter(([, blocked]) => !blocked).map(([key]) => key));
 }

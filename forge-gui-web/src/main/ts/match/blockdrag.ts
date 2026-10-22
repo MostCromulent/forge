@@ -1,10 +1,10 @@
 // A dragged block or attack sends the same clicks the engine already accepts. Each click waits until the one before it shows on the board.
 
 import { byId, q, make, placeBeside } from '../dom';
-import { game, me, opponents, stateOf, type Model } from '../model';
+import { attackTargets, game, me, opponents, stateOf, type Model } from '../model';
 import { setDragArrow } from './overlay';
 import type { Actions } from '../actions';
-import type { CardView, PlayerView, Ref } from '../protocol';
+import type { CardView, Ref } from '../protocol';
 import { t } from '../text';
 import { trackDrag } from '../press';
 
@@ -28,16 +28,18 @@ export function declaringBlocks(model: Model): boolean {
     && (game(model)?.CombatView ?? []).some(b => b.defender?.ref === mine);
 }
 
-/** The opponent the attack prompt is declaring attackers against. The prompt highlights that opponent. */
-function currentDefender(model: Model): PlayerView | undefined {
+const defenders = (model: Model): number[] => attackTargets(model, me(model));
+
+/** The player, planeswalker or battle the attack prompt is declaring attackers against. The prompt highlights it. */
+function currentDefender(model: Model): number | undefined {
   const lit = model.prompt?.highlighted ?? [];
-  return opponents(model).find(p => lit.includes(p.$key));
+  return defenders(model).find(key => lit.includes(key));
 }
 
-/** The attack prompt highlights the defending player. The priority prompt later in the same step does not. */
+/** The attack prompt highlights the defender. The priority prompt later in the same step does not. */
 function declaringAttacks(model: Model): boolean {
   return game(model)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && game(model)?.PlayerTurn?.ref === me(model)?.$key
-    && opponents(model).filter(p => !p.HasLost).length > 1 && !!currentDefender(model);
+    && defenders(model).length > 1 && currentDefender(model) !== undefined;
 }
 
 let act: Actions | null = null;
@@ -51,7 +53,7 @@ let turning: number | null = null;
 /** The engine starts every attack at the first opponent. So once per attack prompt this switches it to the player you attacked last. */
 function followDefender(model: Model): void {
   const at = declaringAttacks(model) ? currentDefender(model) : undefined;
-  if (!at) {
+  if (at === undefined) {
     turned = false;
     turning = null;
     return;
@@ -59,15 +61,16 @@ function followDefender(model: Model): void {
   if (!turned) {
     turned = true;
     const wanted = opponents(model).find(p => p.Name === lastDefender && !p.HasLost);
-    if (wanted && wanted.$key !== at.$key && act) {
+    if (wanted && wanted.$key !== at && act) {
       turning = wanted.$key;
       act.selectPlayer(wanted.$key);
       return;
     }
   }
-  if (turning !== null && at.$key !== turning) return;
+  if (turning !== null && at !== turning) return;
   turning = null;
-  lastDefender = at.Name ?? null;
+  const player = opponents(model).find(p => p.$key === at);
+  if (player) lastDefender = player.Name ?? null;
 }
 
 /** Marks the table while blockers or attackers are being declared, so a touch on your creatures drags instead of scrolling. */
@@ -133,9 +136,12 @@ function attackerAt(model: Model, x: number, y: number): HTMLElement | null {
   return null;
 }
 
-/** The opponent whose seat or portrait is under the pointer, while they are still in the game. */
+/** The planeswalker or battle under the pointer, else the opponent whose seat or portrait is, while they are still in the game. */
 function defenderAt(model: Model, x: number, y: number): { key: number; face: HTMLElement } | null {
+  const targets = defenders(model);
   for (const el of document.elementsFromPoint(x, y)) {
+    const card = el.closest<HTMLElement>('#opponent .card');
+    if (card && targets.includes(Number(card.dataset.key))) return { key: Number(card.dataset.key), face: card };
     const seat = el.closest<HTMLElement>('#opponent .seat');
     const player = seat && opponents(model).find(p => p.$key === Number(seat.dataset.player));
     if (seat && player && !player.HasLost) return { key: player.$key, face: q(seat, '.avatar') };
@@ -143,14 +149,15 @@ function defenderAt(model: Model, x: number, y: number): { key: number; face: HT
   return null;
 }
 
-/** Attacks the defender with the creature, using the clicks a player would make. It clicks the player first, unless the prompt already targets them. */
+/** Attacks the defender with the creature, using the clicks a player would make. It clicks the defender first, unless the prompt already targets it. */
 async function declare(actions: Actions, attacker: number, defender: number): Promise<void> {
   const attacking = () => (game(current!)?.CombatView ?? []).some(b => b.defender?.ref === defender && has(b.attackers, attacker));
   // A click on a creature already attacking the prompt's defender removes it from the attack, so it is not clicked
   if (!current || attacking()) return;
-  if (currentDefender(current)?.$key !== defender) {
-    actions.selectPlayer(defender);
-    if (!await until(() => currentDefender(current!)?.$key === defender)) return;
+  if (currentDefender(current) !== defender) {
+    if (opponents(current).some(p => p.$key === defender)) actions.selectPlayer(defender);
+    else actions.selectCard(defender, false, 0, 0);
+    if (!await until(() => currentDefender(current!) === defender)) return;
   }
   actions.selectCard(attacker, false, 0, 0);
   await until(attacking);
