@@ -104,13 +104,13 @@ public final class WebService implements IHasForgeLog {
         }
     }
 
-    /** Whether the router is asked to forward the port whenever the server starts. Kept between runs. */
+    /** Whether the router is asked to forward the port whenever the server starts. Shares desktop's UPnP choice, and the console has no way to ask, so only ALWAYS forwards. */
     public boolean forwardPort() {
-        return Boolean.parseBoolean(FModel.getNetPreferences().getPref(FNetPref.WEB_PORT_FORWARD));
+        return "ALWAYS".equalsIgnoreCase(FModel.getNetPreferences().getPref(FNetPref.UPnP));
     }
 
     public synchronized void forwardPort(final boolean value) {
-        FModel.getNetPreferences().setPref(FNetPref.WEB_PORT_FORWARD, String.valueOf(value));
+        FModel.getNetPreferences().setPref(FNetPref.UPnP, value ? "ALWAYS" : "NEVER");
         FModel.getNetPreferences().save();
         if (!value) {
             closeForward();

@@ -2,13 +2,19 @@ package forge.web.protocol;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import forge.card.CardRarity;
+import forge.card.GamePieceType;
+import forge.game.Direction;
+import forge.game.EvenOdd;
+import forge.game.GameType;
+import forge.game.phase.PhaseType;
+import forge.game.zone.ZoneType;
 import forge.trackable.TrackableProperty;
 import forge.trackable.TrackableTypes;
 import forge.trackable.TrackableTypes.TrackableType;
 import forge.util.Localizer;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
@@ -247,23 +253,19 @@ public final class ProtocolTypes {
             }
             return name;
         }
-        if (enums.isEmpty()) {
-            return "string";
-        }
-        throw new IllegalStateException("No TypeScript for property " + prop + ": add its JSON form to JsonCodec and here");
+        throw new IllegalStateException("No TypeScript for property " + prop + ": add its JSON form to JsonCodec and here, or its enum to enumTypes");
     }
 
-    /** Which enum each EnumType property holds. It is read by reflection from TrackableTypes' private table, and is empty if that table has changed. */
+    /** Which enum each EnumType property holds. EnumType returns the one type made for a class, so each lookup finds the property's own type. */
     private static Map<TrackableType<?>, Class<?>> enumTypes() {
         final Map<TrackableType<?>, Class<?>> out = new IdentityHashMap<>();
-        try {
-            final Field f = TrackableTypes.class.getDeclaredField("enumTypes");
-            f.setAccessible(true);
-            final Map<?, ?> table = (Map<?, ?>) f.get(null);
-            table.forEach((k, v) -> out.put((TrackableType<?>) v, (Class<?>) k));
-        } catch (final ReflectiveOperationException | RuntimeException e) {
-            // With an empty table, tsOf types every enum property as string
-        }
+        out.put(TrackableTypes.EnumType(CardRarity.class), CardRarity.class);
+        out.put(TrackableTypes.EnumType(Direction.class), Direction.class);
+        out.put(TrackableTypes.EnumType(EvenOdd.class), EvenOdd.class);
+        out.put(TrackableTypes.EnumType(GamePieceType.class), GamePieceType.class);
+        out.put(TrackableTypes.EnumType(GameType.class), GameType.class);
+        out.put(TrackableTypes.EnumType(PhaseType.class), PhaseType.class);
+        out.put(TrackableTypes.EnumType(ZoneType.class), ZoneType.class);
         return out;
     }
 }
