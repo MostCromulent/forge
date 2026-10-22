@@ -23,6 +23,8 @@ const ICONS: Record<WheelOutcome, string> = {
 export const CHAOS_MARK = LINES.chaos;
 
 const SPIN_MS = 4200;
+/** How far through the spin the wedge faces are turned for the stop. The dial is past its pull-back and near full speed. */
+const FLIP_AT = .15;
 
 /** The dial's angle at x, from 0 to 1 through the spin. It pulls back a little, runs and slows, carries a few degrees past the spot and settles back, so it feels heavy. */
 function turned(x: number, to: number): number {
@@ -86,11 +88,17 @@ export function mountWheel(host: HTMLElement, labels: Record<WheelOutcome, strin
       const to = -45 * spot - 360 * 4;
       const start = performance.now();
       let peg = 0;
+      let flipped = false;
       await new Promise<void>(stopped => {
         const frame = (now: number) => {
           const x = Math.min(1, (now - start) / SPIN_MS);
           const angle = x < 1 ? turned(x, to) : to;
           spin.style.transform = `rotate(${angle}deg)`;
+          // The faces are turned for where the dial will stop while it is turning fastest, so none of them turns over as it lands
+          if (x > FLIP_AT && !flipped) {
+            flipped = true;
+            upright(spot);
+          }
           // The needle drags on each peg that passes under it
           const at = Math.floor((angle + 22.5) / 45);
           if (at !== peg) {
