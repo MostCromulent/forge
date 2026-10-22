@@ -42,7 +42,7 @@ const SEAL = 9;
 const SOFT = 'cubic-bezier(.22,.8,.26,1)';
 /** The delay before a card of each rarity flips, counted from the flip of the card before it. */
 const GAP: Record<string, number> = { Common: 70, BasicLand: 70, Uncommon: 200, Rare: 500, Special: 500, MythicRare: 900 };
-const isRare = (rarity: string): boolean => rarity === 'Rare' || rarity === 'Special' || rarity === 'MythicRare';
+export const isRare = (rarity: string): boolean => rarity === 'Rare' || rarity === 'Special' || rarity === 'MythicRare';
 
 // A crimped edge as polygon points: n teeth between two heights
 const teeth = (n: number, y0: string, y1: string): string[] => Array.from({ length: n + 1 }, (_, k) => `${(100 * k / n).toFixed(1)}% ${k % 2 ? y0 : y1}`);

@@ -1,7 +1,8 @@
 // The Aether. The server decides which cards match the filters, what a pull costs and which card is pulled
 
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { skinIconUrl, imageUrl } from '../images';
+import { isRare } from './conquestpack';
 import { balance } from '../campaign/campaign';
 import { PricedButton } from '../campaign/trade';
 import { ColourToggles, Pip, Pips } from '../symbols';
@@ -22,6 +23,11 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
   const [zoom, setZoom] = useState<string | null>(null);
   useEffect(() => { actions.conquestAether({ colors: '', type: '', rarity: '', cmc: '', pull: false }); }, []);
   useEffect(() => { if (a?.pulled) setRecent(r => [a.pulled!, ...r].slice(0, MOST_RECENT)); }, [a?.pulled]);
+  // Each pull is counted in the render that first shows it, so its animation starts with the new card. A card shown before it fades out under it
+  const shown = useRef<PackCard | null>(null);
+  const turn = useRef<{ card: PackCard | null; count: number; before: PackCard | null }>({ card: null, count: 0, before: null });
+  if (a?.pulled && a.pulled !== turn.current.card) turn.current = { card: a.pulled, count: turn.current.count + 1, before: shown.current };
+  shown.current = a?.pulled ?? null;
   if (!a) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   const ask = (patch: Partial<Pick<ConquestAetherState, 'colors' | 'type' | 'rarity' | 'cmc'>>, pull = false) =>
     actions.conquestAether({ colors: a.colors, type: a.type, rarity: a.rarity, cmc: a.cmc, pull, ...patch });
@@ -45,8 +51,14 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
         {a.pulled
           ? (
             <div class="cq-ae-card">
-              <button class="cq-ae-face" onClick={() => setZoom(a.pulled!.image)}><img alt={a.pulled.name} src={imageUrl(a.pulled.image)} /></button>
-              <div class="what"><span class="new-card">{t('lblNew')}</span><b>{a.pulled.name}</b></div>
+              <div key={`card${turn.current.count}`} class={`cq-ae-box${turn.current.before ? '' : ' from-orb'}${isRare(a.pulled.rarity) ? ' rare' : ''}`}>
+                {turn.current.before
+                  ? <img class="cq-ae-ghost" alt="" src={imageUrl(turn.current.before.image)} />
+                  : <img class="cq-ae-orb cq-ae-ghost" alt="" src={skinIconUrl('IMG_MULTIVERSE')} />}
+                <span class="cq-ae-aura" />
+                <button class="cq-ae-face" onClick={() => setZoom(a.pulled!.image)}><span class="cq-ae-turn"><span class="cq-ae-back" /><img alt={a.pulled.name} src={imageUrl(a.pulled.image)} /></span></button>
+              </div>
+              <div key={`name${turn.current.count}`} class="what"><span class="new-card">{t('lblNew')}</span><b>{a.pulled.name}</b></div>
               {pull}
             </div>
           )

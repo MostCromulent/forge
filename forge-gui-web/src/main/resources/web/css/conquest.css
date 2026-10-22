@@ -313,7 +313,7 @@ html[data-motion="reduced"] .cq-dl.done .cq-dl-flare { animation: none; opacity:
 .cq-rv-card.up .cq-rv-in { transform: rotateY(0deg); }
 .cq-rv-face { position: absolute; inset: 0; border-radius: 6px; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 5px 14px #000b; overflow: hidden; background: #141a26; }
 .cq-rv-face img { width: 100%; height: 100%; display: block; object-fit: cover; }
-.cq-rv-back { transform: rotateY(180deg); border: 1px solid #574319; background: radial-gradient(circle, #f0c05a55 0 9%, transparent 10%), repeating-linear-gradient(135deg, #2d2513 0 8px, #251e0f 8px 16px); }
+.cq-rv-back, .cq-ae-back { transform: rotateY(180deg); border: 1px solid #574319; background: radial-gradient(circle, #f0c05a55 0 9%, transparent 10%), repeating-linear-gradient(135deg, #2d2513 0 8px, #251e0f 8px 16px); }
 .cq-rv-card.rare.up .cq-rv-face { box-shadow: 0 0 0 2px var(--gold), 0 0 22px #f0c05a88; }
 .cq-rv-card.mythic.up .cq-rv-face { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--gold), 0 0 38px 6px #f0c05acc; }
 .cq-rv-card.dup.up img { filter: grayscale(.6) brightness(.4); }
@@ -452,9 +452,38 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-ae-pull { display: inline-flex; align-items: center; padding: 13px 28px; font-size: 17px; font-variant-numeric: tabular-nums; }
 .cq-ae-pull .cq-shard { margin-right: 8px; }
 .cq-ae-count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.cq-ae-face { padding: 0; border: 0; background: none; border-radius: 12px; }
 .cq-ae-face img { display: block; width: 250px; aspect-ratio: 63 / 88; border-radius: 12px; background: var(--surface-2); box-shadow: 0 16px 44px #000c, 0 0 40px #8040ff44; }
 .cq-ae-card .what { display: flex; align-items: center; gap: 10px; font-size: 16px; }
+/* The orb takes the card's height, so the Pull button stays where it is when a card replaces the orb */
+.cq-ae-core .cq-ae-orb { margin: 59px 10px 60px; }
+.cq-ae-core .cq-chips, .cq-ae-card .what { min-height: 26px; }
+/* A pulled card grows out of the orb face down, then turns face up as a pack's cards do. A glow of aether drifts around it while it is shown */
+@property --cq-swirl { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.cq-ae-box { position: relative; }
+.cq-ae-ghost { position: absolute; opacity: 0; pointer-events: none; }
+.cq-ae-ghost:not(.cq-ae-orb) { inset: 0; width: 100%; height: 100%; border-radius: 12px; animation: cq-ae-leave .22s cubic-bezier(.4,0,.2,1); }
+.cq-ae-ghost.cq-ae-orb { left: 10px; top: 59px; animation: cq-ae-orb-out .32s cubic-bezier(.4,0,.2,1); }
+@keyframes cq-ae-leave { from { opacity: 1; } to { opacity: 0; transform: translateY(12px) scale(.94); } }
+@keyframes cq-ae-orb-out { from { opacity: 1; } to { opacity: 0; transform: scale(.8); } }
+.cq-ae-aura { position: absolute; inset: -16px; border-radius: 26px; pointer-events: none; opacity: .62; mix-blend-mode: screen; filter: blur(20px);
+  background: conic-gradient(from var(--cq-swirl), #7a5cff, #3bd0e0 22%, #b48cff 45%, #5a6cff 68%, #c06cff 84%, #7a5cff);
+  animation: cq-ae-aura-in .38s .08s cubic-bezier(.4,0,.2,1) both, cq-ae-swirl 7s linear infinite, cq-ae-breathe 3.2s 1.2s ease-in-out infinite; }
+.cq-ae-face { position: relative; display: block; padding: 0; border: 0; background: none; border-radius: 12px; animation: cq-ae-grow .82s .08s cubic-bezier(.4,0,.2,1) both; }
+/* The turn is on its own element, because the fade-in on the button would flatten it and show the face through the back */
+.cq-ae-turn { display: block; transform-style: preserve-3d; animation: inherit; animation-name: cq-ae-turn; }
+.cq-ae-box.from-orb :is(.cq-ae-aura, .cq-ae-face) { animation-delay: 0s, 0s, 1.1s; }
+.cq-ae-face img, .cq-ae-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.cq-ae-back { position: absolute; inset: 0; border-radius: 12px; box-shadow: 0 16px 44px #000c; }
+.cq-ae-box.rare .cq-ae-face img { animation: cq-ae-rare 1.4s .88s ease-out both; }
+.cq-ae-card .what { animation: cq-ae-show .24s .86s both; }
+@keyframes cq-ae-aura-in { from { opacity: 0; transform: scale(.4); } }
+@keyframes cq-ae-swirl { to { --cq-swirl: 360deg; } }
+@keyframes cq-ae-breathe { 50% { opacity: .42; } }
+@keyframes cq-ae-grow { 0% { opacity: 0; transform: scale(.4); } 45% { opacity: 1; transform: none; } }
+@keyframes cq-ae-turn { 0%, 45% { transform: perspective(1000px) rotateY(180deg); } 100% { transform: perspective(1000px) rotateY(0deg); } }
+@keyframes cq-ae-rare { 30% { box-shadow: 0 16px 44px #000c, 0 0 70px #f0c05acc; } to { box-shadow: 0 16px 44px #000c, 0 0 40px #f0c05a55; } }
+@keyframes cq-ae-show { from { opacity: 0; } }
+html[data-motion="reduced"] .cq-ae-card * { animation: none; }
 .cq-ae-card .what .new-card { position: static; }
 .cq-ae-recent { position: absolute; left: 24px; bottom: 66px; display: flex; gap: 10px; }
 .cq-ae-recent button { padding: 0; border: 0; background: none; border-radius: 4px; }
