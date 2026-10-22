@@ -164,4 +164,68 @@ public class AutoPaymentTest extends SimulationTest {
         // the Orrery is needed either way and covers the cost alone, so the Ring stays untapped
         AssertJUnit.assertTrue(ring.isUntapped());
     }
+
+    @Test
+    public void payWithUtopiaSprawlChosenColor() {
+        Game game = initAndCreateGame();
+        Player p = game.getPlayers().get(1);
+
+        Card forest = addCard("Forest", p);
+        Card sprawl = addCard("Utopia Sprawl", p);
+        sprawl.setChosenColors(List.of("blue"));
+        sprawl.attachToEntity(forest, null);
+        Card merfolk = addCardToZone("Coral Merfolk", p, ZoneType.Hand); // {1}{U}
+
+        game.getPhaseHandler().devModeSet(PhaseType.MAIN1, p);
+        game.getAction().checkStateEffects(true);
+
+        SpellAbility sa = merfolk.getFirstSpellAbility();
+        sa.setActivatingPlayer(p);
+        AssertJUnit.assertTrue(ComputerUtilMana.canPayManaCost(sa, p, 0, false));
+        AssertJUnit.assertTrue(ComputerUtilMana.payManaCost(sa.getPayCosts(), p, sa, false));
+        AssertJUnit.assertTrue(forest.isTapped());
+    }
+
+    @Test
+    public void fertileGroundIgnoresMostCommonColorInHand() {
+        Game game = initAndCreateGame();
+        Player p = game.getPlayers().get(1);
+
+        Card forest = addCard("Forest", p);
+        addCard("Fertile Ground", p).attachToEntity(forest, null);
+        addCard("Forest", p);
+        for (int i = 0; i < 3; i++) {
+            addCardToZone("Coral Merfolk", p, ZoneType.Hand);
+        }
+        Card goblin = addCardToZone("Goblin Piker", p, ZoneType.Hand); // {1}{R}
+
+        game.getPhaseHandler().devModeSet(PhaseType.MAIN1, p);
+        game.getAction().checkStateEffects(true);
+
+        SpellAbility sa = goblin.getFirstSpellAbility();
+        sa.setActivatingPlayer(p);
+        AssertJUnit.assertTrue(ComputerUtilMana.canPayManaCost(sa, p, 0, false));
+        // blue is the most common color in hand, but the extra mana has to be red
+        AssertJUnit.assertTrue(ComputerUtilMana.payManaCost(sa.getPayCosts(), p, sa, false));
+    }
+
+    @Test
+    public void fertileGroundMakesTheColorItWasPlannedFor() {
+        Game game = initAndCreateGame();
+        Player p = game.getPlayers().get(1);
+
+        Card forest = addCard("Forest", p);
+        addCard("Fertile Ground", p).attachToEntity(forest, null);
+        addCard("Plains", p);
+        Card firstWing = addCardToZone("Azorius First-Wing", p, ZoneType.Hand); // {W}{U}
+
+        game.getPhaseHandler().devModeSet(PhaseType.MAIN1, p);
+        game.getAction().checkStateEffects(true);
+
+        SpellAbility sa = firstWing.getFirstSpellAbility();
+        sa.setActivatingPlayer(p);
+        AssertJUnit.assertTrue(ComputerUtilMana.canPayManaCost(sa, p, 0, false));
+        // the Plains pays {W}, so the extra mana has to be blue
+        AssertJUnit.assertTrue(ComputerUtilMana.payManaCost(sa.getPayCosts(), p, sa, false));
+    }
 }

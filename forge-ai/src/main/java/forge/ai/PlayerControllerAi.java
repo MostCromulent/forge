@@ -61,6 +61,7 @@ public class PlayerControllerAi extends PlayerController {
     private final AiController brains;
 
     private boolean pilotsNonAggroDeck = false;
+    private ManaCostShard shardBeingPaid;
 
     public PlayerControllerAi(Game game, Player p, LobbyPlayer lp) {
         super(game, p, lp);
@@ -70,6 +71,17 @@ public class PlayerControllerAi extends PlayerController {
 
     public boolean pilotsNonAggroDeck() {
         return pilotsNonAggroDeck;
+    }
+
+    // lets mana triggered while paying, like Fertile Ground's, take this shard's color
+    public void runPayingShard(ManaCostShard shard, Runnable proc) {
+        ManaCostShard previous = shardBeingPaid;
+        shardBeingPaid = shard;
+        try {
+            proc.run();
+        } finally {
+            shardBeingPaid = previous;
+        }
     }
 
     public void setupAutoProfile(Deck deck) {
@@ -1083,6 +1095,9 @@ public class PlayerControllerAi extends PlayerController {
         // You may switch on sa.getApi() here and use sa.getParam("AILogic")
         CardCollectionView hand = player.getCardsIn(ZoneType.Hand);
         if (sa.getApi() == ApiType.Mana) {
+            if (shardBeingPaid != null) {
+                return ComputerUtilMana.chooseColorForShard(shardBeingPaid, colors.getColor());
+            }
             hand = CardCollection.combine(hand, player.getCardsIn(ZoneType.Stack));
         }
         final String c = ComputerUtilCard.getMostProminentColor(hand);
