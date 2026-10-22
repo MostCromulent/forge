@@ -114,7 +114,9 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
   const top = text.trim() ? rows.find(canAdd) : undefined;
   const searched = page?.ranked ? text.trim() : '';
   const add = (name: string, to: DeckSection = adding ?? 'Main') => {
-    liftCard(name, to);
+    // A card with no room left is still sent, because the server knows the few cards that raise the limit. It is not shown moving
+    const row = rows.find(r => r.name === name);
+    if (!row || canAdd(row)) liftCard(name, to);
     addCard(actions, state, name, to);
   };
   const remove = (name: string) => actions.edit({ op: 'remove', name, from: adding ?? 'Main', count: 1 });
@@ -337,17 +339,32 @@ function liftCard(name: string, to: string): void {
   else if (at?.dataset.image) liftFromLine(smallImage(imageUrl(at.dataset.image)), at.getBoundingClientRect(), `${to}:${name}`);
 }
 
+/** The card whose last click took a copy out, until the next click that starts afresh. */
+let takenOut: string | null = null;
+
 function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly, add, remove, makeCommander, handlers }: {
   row: CatalogueRow; count: number; top: boolean; limit: number; room: number; limited: boolean; commanderWanted: boolean; mainOnly: boolean;
   add: (name: string, to?: DeckSection) => void; remove: (name: string) => void; makeCommander: (name: string) => void;
   handlers: CardHandlers;
 }) {
   const full = room <= 0;
+  // With every copy the player has already in the deck, a click takes one out instead of adding one they do not have
+  const takesOut = full && count > 0 && (limited || limit === row.count);
+  const click = (e: MouseEvent) => {
+    // The second click of a double-click would put the copy straight back
+    if (e.detail > 1 && takenOut === row.name) return;
+    takenOut = null;
+    if (commanderWanted) makeCommander(row.name);
+    else if (takesOut) {
+      takenOut = row.name;
+      remove(row.name);
+    } else add(row.name);
+  };
   return (
     <div class={`slot${count ? ' indeck' : ''}${row.problem ? ' bad' : ''}${top ? ' top' : ''}`} data-card={row.name} data-from="catalogue">
       {top && <span class="enter">{commanderWanted ? t('lblWebCataloguePressEnterChoose') : t('lblWebCataloguePressEnterAdd')}</span>}
-      <button class="tile" data-image={row.image} data-act={commanderWanted ? t('lblWebCardMenuMakeCommander') : t('lblAdd')}
-        {...handlers(row.name, 'catalogue', row.image, 1)} onClick={() => (commanderWanted ? makeCommander(row.name) : add(row.name))}>
+      <button class="tile" data-image={row.image} data-act={commanderWanted ? t('lblWebCardMenuMakeCommander') : t(takesOut ? 'lblRemove' : 'lblAdd')}
+        {...handlers(row.name, 'catalogue', row.image, 1)} onClick={click}>
         <span class="tile-name">{row.name}</span>
         <img loading="lazy" alt="" draggable={false} src={smallImage(imageUrl(row.image))} onError={hideBroken} />
         {count > 0 && <span class="badge">{count}</span>}
