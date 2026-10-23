@@ -63,18 +63,21 @@ export function countsInDeck(state: EditorState): Map<string, number> {
   return counts;
 }
 
-/** The copy limit the editor shows. The server enforces the exact limit, which a few cards raise. A main-only collection allows one of each card. A collection that counts copies allows no more than the player owns. */
-export function copyLimit(state: EditorState, name: string, owned?: number | null): number {
+/**
+ * The most copies of a card the deck may hold. A card's own rules replace the format's limit. A main-only collection allows one of each card.
+ * A collection that counts copies allows no more than the player owns.
+ */
+export function copyLimit(state: EditorState, name: string, owned?: number | null, ownLimit?: number | null): number {
   if (BASICS.has(name)) return Infinity;
   if (state.mainOnly) return 1;
-  const rule = state.copyLimit ?? Infinity;
+  const rule = ownLimit ?? state.copyLimit ?? Infinity;
   return owned == null ? rule : Math.min(rule, owned);
 }
 
 /** How many more copies of a card the deck can take. In limited mode this is what the pool has left. Otherwise it is the room under the copy limit. */
 function roomFor(state: EditorState, row: CatalogueRow, inDeck: number): number {
   if (state.limited) return state.sideboard.find(c => c.name === row.name)?.count ?? 0;
-  return copyLimit(state, row.name, row.count) - inDeck;
+  return copyLimit(state, row.name, row.count, row.ownLimit) - inDeck;
 }
 
 export function Catalogue({ model, actions, state, handlers, adding, stopAdding }: {
@@ -117,9 +120,10 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
   const top = text.trim() ? rows.find(canAdd) : undefined;
   const searched = page?.ranked ? text.trim() : '';
   const add = (name: string, to: DeckSection = adding ?? 'Main') => {
-    // A card with no room left is still sent, because the server knows the few cards that raise the limit. It is not shown moving
+    // A card with no room left is not sent. Its tile already shows that the deck holds as many as it may
     const row = rows.find(r => r.name === name);
-    if (!row || canAdd(row)) liftCard(name, to);
+    if (row && !canAdd(row)) return;
+    liftCard(name, to);
     addCard(actions, state, name, to);
   };
   const remove = (name: string) => actions.edit({ op: 'remove', name, from: adding ?? 'Main', count: 1 });
@@ -175,7 +179,7 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
           showThem={() => setFilter(f => ({ ...f, showAll: true }))} />}
         {view === 'cards'
           ? rows.map(row => <Tile key={row.name} row={row} count={counts.get(row.name) ?? 0} top={row === top}
-              limit={extra ? Infinity : copyLimit(state, row.name, row.count)} room={room(row, counts.get(row.name) ?? 0)} limited={state.limited}
+              limit={extra ? Infinity : copyLimit(state, row.name, row.count, row.ownLimit)} room={room(row, counts.get(row.name) ?? 0)} limited={state.limited}
               commanderWanted={wanted} mainOnly={state.mainOnly || !!extra} add={add} remove={remove}
               makeCommander={makeCommander} handlers={handlers} />)
           : <Table rows={rows} counts={counts} room={room} add={add} remove={remove} handlers={handlers} />}

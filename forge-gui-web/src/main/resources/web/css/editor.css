@@ -139,7 +139,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .deck-head h3 { margin: 0 0 2px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
 .deck-head .sizes { margin: 0; color: var(--muted); font-size: 12.5px; }
 .deck-head .verdict { margin: 4px 0 8px; }
-.deck-head .curve h4 { margin: 0 0 5px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
+.deck-head .curve h4 { margin: 0 0 10px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
 .deck-head .curve h4 span { text-transform: none; letter-spacing: 0; color: var(--text); font-weight: 600; }
 .deck-numbers { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .breakdown h4 { margin: 0 0 4px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }

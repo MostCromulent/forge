@@ -6,6 +6,7 @@ import forge.card.CardEdition;
 import forge.card.CardRules;
 import forge.card.CardType;
 import forge.card.ColorSet;
+import forge.deck.DeckFormat;
 import forge.deck.DeckSection;
 import forge.deck.CardPool;
 import forge.game.GameFormat;
@@ -235,7 +236,16 @@ public final class CardCatalog {
         return new CatalogueRow(row.card().getName(), Foil.key(row.card()), row.cost(), row.mv(),
                 row.colours(), rules.getType().toString(), pt(rules), row.heading(), inDeck, problem,
                 extra == null ? null : extra.isNew(), extra == null ? null : extra.value(), extra == null ? null : extra.count(),
-                extra == null ? null : extra.owned(), extra == null ? null : extra.note(), extra == null ? null : extra.key());
+                extra == null ? null : extra.owned(), extra == null ? null : extra.note(), extra == null ? null : extra.key(), ownLimit(row.card()));
+    }
+
+    /** The copy limit a card sets for itself, as DeckFormat reads it. A basic land is left out, because the page knows those have none. */
+    private static Integer ownLimit(final PaperCard card) {
+        if (card.getRules().getType().isBasicLand()) {
+            return null;
+        }
+        final Integer limit = DeckFormat.canHaveSpecificNumberInDeck(card);
+        return limit != null ? limit : DeckFormat.canHaveAnyNumberOf(card) ? Integer.MAX_VALUE : null;
     }
 
     public static String pt(final CardRules rules) {
