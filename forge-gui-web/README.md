@@ -133,7 +133,7 @@ Git ignores the page bundle (`src/main/resources/web/js/`) and the two generated
 
 ## Tests
 
-The Java tests and Vitest run with `mvn -Pweb -pl forge-gui-web -am test`, and CI runs them. They catch changes elsewhere in Forge that would break this module without anyone noticing. `-Drun.stress.tests=true` adds whole games and events played over netplay.
+The Java tests and Vitest run with `mvn -Pweb -pl forge-gui-web -am test`, and CI runs them. They catch changes elsewhere in Forge that would break this module without anyone noticing. `-Drun.stress.tests=true` adds the Quest and Conquest tests that play whole matches.
 
 A few tests fail on purpose when something outside this module changes, because the page depends on it. When one of them fails after a change elsewhere, the fix belongs in this module:
 
