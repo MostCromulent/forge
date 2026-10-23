@@ -67,6 +67,8 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     /** Where cards shown to the host are sent. The open campaign's reward screen shows them. */
     private volatile BiConsumer<String, List<PaperCard>> cardsSink = (title, cards) -> { };
     private final HostRequests hostRequests = new HostRequests();
+    /** Set while a core game mode, such as the limited gauntlet, starts a match for the host's browser. */
+    private volatile SoloTable soloTable;
 
     public void setCardsSink(final BiConsumer<String, List<PaperCard>> sink) {
         cardsSink = sink;
@@ -81,40 +83,8 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         return hostRequests;
     }
 
-    /** Starts a core game mode's match for the host's browser. begin starts it, and the table then adopts it. */
-    public interface SoloStart {
-        void start(HostedMatch match, GameRules rules, List<RegisteredPlayer> players, RegisteredPlayer human, Runnable begin);
-    }
-
-    /** The host browser's table, where a match that a core game mode starts is played. seatGui is the server's GUI for the browser's seat. */
-    public record SoloTable(Supplier<IGuiGame> seatGui, SoloStart start) { }
-
-    /** Set while a core game mode, such as the limited gauntlet, starts a match for the host's browser. */
-    private volatile SoloTable soloTable;
-
     public void playSolo(final SoloTable table) {
         soloTable = table;
-    }
-
-    /** A core game mode's match, moved to the browser's table so the browser plays it over its loopback connection. */
-    private static final class SoloMatch extends HostedMatch {
-        private final SoloTable table;
-
-        SoloMatch(final SoloTable table) {
-            this.table = table;
-        }
-
-        // Every startMatch overload ends here, and a core game mode's match has one human
-        @Override
-        public void startMatch(final GameRules rules, final Set<GameType> variants, final List<RegisteredPlayer> players,
-                final Map<RegisteredPlayer, IGuiGame> guis, final MusicPlaylist playlist) {
-            if (guis == null || guis.size() != 1) {
-                super.startMatch(rules, variants, players, guis, playlist);
-                return;
-            }
-            table.start().start(this, rules, players, guis.keySet().iterator().next(),
-                    () -> super.startMatch(rules, variants, players, guis, playlist));
-        }
     }
 
     static String resolveAssetsDir() {
@@ -332,10 +302,6 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         return ImageKeys.BOOSTER_PREFIX + edition.getCode() + (edition.getCntBoosterPictures() > 1 ? "_1" : "");
     }
 
-    /** A picture that the browser draws itself: a skin icon by its FSkinProp, or a file by its path. It only identifies which picture is meant. */
-    public record WebSkinImage(FSkinProp prop, String path) implements ISkinImage {
-    }
-
     @Override public ISkinImage getSkinIcon(final FSkinProp skinProp) { return new WebSkinImage(skinProp, null); }
     @Override public ISkinImage getUnskinnedIcon(final String path) { return new WebSkinImage(null, path); }
     @Override public ISkinImage getCardArt(final PaperCard card, final boolean backFace) { return null; }
@@ -371,4 +337,37 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     @Override public void showSpellShop() { }
     @Override public void showBazaar() { }
     @Override public UpnpServiceConfiguration getUpnpPlatformService() { return new DefaultUpnpServiceConfiguration(); }
+
+    /** Starts a core game mode's match for the host's browser. begin starts it, and the table then adopts it. */
+    public interface SoloStart {
+        void start(HostedMatch match, GameRules rules, List<RegisteredPlayer> players, RegisteredPlayer human, Runnable begin);
+    }
+
+    /** The host browser's table, where a match that a core game mode starts is played. seatGui is the server's GUI for the browser's seat. */
+    public record SoloTable(Supplier<IGuiGame> seatGui, SoloStart start) { }
+
+    /** A core game mode's match, moved to the browser's table so the browser plays it over its loopback connection. */
+    private static final class SoloMatch extends HostedMatch {
+        private final SoloTable table;
+
+        SoloMatch(final SoloTable table) {
+            this.table = table;
+        }
+
+        // Every startMatch overload ends here, and a core game mode's match has one human
+        @Override
+        public void startMatch(final GameRules rules, final Set<GameType> variants, final List<RegisteredPlayer> players,
+                final Map<RegisteredPlayer, IGuiGame> guis, final MusicPlaylist playlist) {
+            if (guis == null || guis.size() != 1) {
+                super.startMatch(rules, variants, players, guis, playlist);
+                return;
+            }
+            table.start().start(this, rules, players, guis.keySet().iterator().next(),
+                    () -> super.startMatch(rules, variants, players, guis, playlist));
+        }
+    }
+
+    /** A picture that the browser draws itself: a skin icon by its FSkinProp, or a file by its path. It only identifies which picture is meant. */
+    public record WebSkinImage(FSkinProp prop, String path) implements ISkinImage {
+    }
 }

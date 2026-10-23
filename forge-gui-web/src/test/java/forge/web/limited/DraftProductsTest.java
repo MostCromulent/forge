@@ -14,6 +14,7 @@ import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
 
+/** Tests the forge-gui draft builders that the web calls with the choices desktop would prompt for. */
 public class DraftProductsTest {
     @BeforeClass
     public void setUp() {
@@ -22,7 +23,7 @@ public class DraftProductsTest {
 
     /** Fails if a full draft prompts, or builds a product other than three generic packs. */
     @Test
-    public void fullDraftsThreeGenericPacks() {
+    public void createFullDraftDealsThreeGenericPacks() {
         final BoosterDraft draft = BoosterDraft.createFullDraft();
         assertEquals(draft.getNumRounds(), 3);
         draft.initializeBoosters();
@@ -32,7 +33,7 @@ public class DraftProductsTest {
 
     /** Fails if a combo is parsed differently from desktop's prompted path. */
     @Test
-    public void aBlockComboGivesThoseSets() {
+    public void createBlockDraftUsesTheComboSets() {
         final CardBlock innistrad = FModel.getBlocks().get("Innistrad");
         final BoosterDraft draft = BoosterDraft.createBlockDraft(LimitedPoolType.Block, innistrad, "ISD/ISD/DKA");
         assertEquals(draft.getNumRounds(), 3);

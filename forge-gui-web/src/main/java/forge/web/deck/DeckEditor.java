@@ -37,11 +37,6 @@ import java.util.function.Supplier;
 
 /** One deck open in the browser's editor. Every change is checked against the engine's limits, applied and saved at once. */
 public final class DeckEditor {
-    /** The name a new deck starts with, until its commander or the player names it. */
-    static String newDeckName() {
-        return Localizer.getInstance().getMessage("lblNewDeck");
-    }
-
     private static final int MOST_UNDO = 100;
     /** The message key for the reply to renaming, duplicating or deleting a pool's deck. */
     private static final String GROUP_OWNS_IT = "lblWebEditorPoolOwnsDeck";
@@ -51,44 +46,6 @@ public final class DeckEditor {
     static final String NOT_OWNED = "lblWebCollectionNotOwned";
     /** The basics the land row offers, with the colour each needs. Wastes needs none. */
     private static final Map<String, String> BASICS = new LinkedHashMap<>();
-
-    static {
-        BASICS.put("Plains", "W");
-        BASICS.put("Island", "U");
-        BASICS.put("Swamp", "B");
-        BASICS.put("Mountain", "R");
-        BASICS.put("Forest", "G");
-        BASICS.put("Wastes", "C");
-    }
-
-    sealed interface Target permits Stored, Device, Group {
-    }
-
-    /** A folder of the host's decks: a format's own, or a subfolder of it. */
-    record Stored(IStorage<Deck> storage) implements Target {
-    }
-
-    /** A guest's browser, which stores the deck under this id. */
-    record Device(String id) implements Target {
-    }
-
-    /** A sealed or draft pool. The deck is the human deck of the group with its name, and the group's opponents stay unchanged. */
-    record Group(IStorage<DeckGroup> storage) implements Target {
-    }
-
-    /** A game mode's own cards, which a deck of that mode is built from. cards is read at each use, and saved runs after each save. mainOnly keeps every section except the main deck unchanged. */
-    public record Collection(String owner, Supplier<CardPool> cards, Predicate<PaperCard> isNew,
-            Function<Deck, List<CardEdition>> landSets, Runnable saved, boolean mainOnly) {
-    }
-
-    /** Tells a guest's browser that its deck changed. text is the deck as .dck text, or null when it was deleted. */
-    interface DeviceSink {
-        void deviceDeck(String id, String text, GameType format);
-    }
-
-    private record Snapshot(Deck deck, Check check) {
-    }
-
     private final DeckStore.Storages storages;
     private final boolean guest;
     private final DeviceSink sink;
@@ -108,6 +65,20 @@ public final class DeckEditor {
     private String landed;
     /** The edition new basic lands come from, or null for the usual printing. */
     private String landSet;
+
+    /** The name a new deck starts with, until its commander or the player names it. */
+    static String newDeckName() {
+        return Localizer.getInstance().getMessage("lblNewDeck");
+    }
+
+    static {
+        BASICS.put("Plains", "W");
+        BASICS.put("Island", "U");
+        BASICS.put("Swamp", "B");
+        BASICS.put("Mountain", "R");
+        BASICS.put("Forest", "G");
+        BASICS.put("Wastes", "C");
+    }
 
     /** saved says the deck was opened from where target saves it. A new deck, or one that is only being viewed, was not. */
     DeckEditor(final Deck deck, final boolean readOnly, final boolean saved, final Target target, final Check check,
@@ -811,22 +782,6 @@ public final class DeckEditor {
         }
     }
 
-    /** Built once here. StaticData's sorted list is built lazily without a lock, so two editors opening at once could read it half sorted. */
-    private static final class LandSets {
-        static final List<LandSet> ALL = build();
-
-        private static List<LandSet> build() {
-            final List<CardEdition> editions = new ArrayList<>();
-            for (final CardEdition e : StaticData.instance().getEditions()) {
-                if (e.hasBasicLands()) {
-                    editions.add(e);
-                }
-            }
-            editions.sort(Comparator.reverseOrder());
-            return editions.stream().map(e -> new LandSet(e.getCode(), e.getName())).toList();
-        }
-    }
-
     /** The printing a new copy uses: the one the deck already holds if it holds only one, otherwise the preferred art. */
     private PaperCard printingFor(final String name) {
         PaperCard only = null;
@@ -937,5 +892,49 @@ public final class DeckEditor {
         final List<EditorLand> out = new ArrayList<>();
         BASICS.forEach((name, letter) -> out.add(new EditorLand(name, letter, deck.getMain().countByName(name), landAllowed(name))));
         return out;
+    }
+
+    sealed interface Target permits Stored, Device, Group {
+    }
+
+    /** A folder of the host's decks: a format's own, or a subfolder of it. */
+    record Stored(IStorage<Deck> storage) implements Target {
+    }
+
+    /** A guest's browser, which stores the deck under this id. */
+    record Device(String id) implements Target {
+    }
+
+    /** A sealed or draft pool. The deck is the human deck of the group with its name, and the group's opponents stay unchanged. */
+    record Group(IStorage<DeckGroup> storage) implements Target {
+    }
+
+    /** A game mode's own cards, which a deck of that mode is built from. cards is read at each use, and saved runs after each save. mainOnly keeps every section except the main deck unchanged. */
+    public record Collection(String owner, Supplier<CardPool> cards, Predicate<PaperCard> isNew,
+            Function<Deck, List<CardEdition>> landSets, Runnable saved, boolean mainOnly) {
+    }
+
+    /** Tells a guest's browser that its deck changed. text is the deck as .dck text, or null when it was deleted. */
+    interface DeviceSink {
+        void deviceDeck(String id, String text, GameType format);
+    }
+
+    private record Snapshot(Deck deck, Check check) {
+    }
+
+    /** Built once here. StaticData's sorted list is built lazily without a lock, so two editors opening at once could read it half sorted. */
+    private static final class LandSets {
+        static final List<LandSet> ALL = build();
+
+        private static List<LandSet> build() {
+            final List<CardEdition> editions = new ArrayList<>();
+            for (final CardEdition e : StaticData.instance().getEditions()) {
+                if (e.hasBasicLands()) {
+                    editions.add(e);
+                }
+            }
+            editions.sort(Comparator.reverseOrder());
+            return editions.stream().map(e -> new LandSet(e.getCode(), e.getName())).toList();
+        }
     }
 }

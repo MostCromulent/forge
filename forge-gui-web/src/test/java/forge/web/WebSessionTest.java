@@ -2,20 +2,33 @@ package forge.web;
 
 import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
 public class WebSessionTest {
+    /** Each holds a timer thread until it is shut down. */
+    private final List<WebSessions> opened = new ArrayList<>();
+
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
     }
 
-    private static WebSessions opened() {
-        return new WebSessions(new WebGuiBase(), 60_000, () -> { });
+    @AfterMethod(alwaysRun = true)
+    public void shutDown() {
+        opened.forEach(WebSessions::shutdown);
+        opened.clear();
+    }
+
+    private WebSessions opened() {
+        final WebSessions sessions = new WebSessions(new WebGuiBase(), 60_000, () -> { });
+        opened.add(sessions);
+        return sessions;
     }
 
     /** Connects a browser and has it claim the host's seat. No browser gets the seat just by connecting. */
@@ -64,7 +77,7 @@ public class WebSessionTest {
     @Test
     public void browsersBeyondTheLimitAreTurnedAwayUntilOthersLeave() {
         final WebSessions sessions = opened();
-        final List<TestBrowser> attached = new java.util.ArrayList<>();
+        final List<TestBrowser> attached = new ArrayList<>();
         for (int i = 0; i < WebSessions.MOST_SESSIONS; i++) {
             final TestBrowser r = new TestBrowser();
             sessions.connected(r, "b" + i, false);
@@ -80,6 +93,5 @@ public class WebSessionTest {
         final TestBrowser next = new TestBrowser();
         sessions.connected(next, "extra", false);
         Assert.assertFalse(next.closed, "a browser was turned away although another had left");
-        sessions.shutdown();
     }
 }

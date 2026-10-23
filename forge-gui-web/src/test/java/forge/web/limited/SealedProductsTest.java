@@ -16,25 +16,17 @@ import java.util.Map;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
+/** Tests forge-gui's sealed pool builder as the web calls it without desktop's prompts, and the sealed lists the web offers. */
 public class SealedProductsTest {
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
     }
 
-    private static CardBlock block(final String name) {
-        for (final CardBlock b : FModel.getBlocks()) {
-            if (b.getName().equals(name)) {
-                return b;
-            }
-        }
-        throw new AssertionError("No block called " + name);
-    }
-
     /** Fails if a combo is parsed differently from desktop's prompted path. */
     @Test
-    public void aBlockComboGivesPacksOfThoseSets() {
-        final CardBlock innistrad = block("Innistrad");
+    public void createBlockUsesTheComboSets() {
+        final CardBlock innistrad = FModel.getBlocks().get("Innistrad");
         final String combo = SealedCardPoolGenerator.blockCombos(innistrad).stream()
                 .filter(c -> c.contains("ISD") && c.contains("DKA")).findFirst().orElseThrow();
         final List<String> codes = new ArrayList<>();
@@ -67,7 +59,8 @@ public class SealedProductsTest {
         }
         assertEquals(lists.blocks().size(), offered);
         final DraftProducts.Block innistrad = lists.blocks().stream().filter(b -> b.name().equals("Innistrad")).findFirst().orElseThrow();
-        assertEquals(innistrad.combos(), SealedCardPoolGenerator.blockCombos(block("Innistrad")));
-        assertEquals(innistrad.packs(), block("Innistrad").getCntBoostersSealed());
+        final CardBlock desktop = FModel.getBlocks().get("Innistrad");
+        assertEquals(innistrad.combos(), SealedCardPoolGenerator.blockCombos(desktop));
+        assertEquals(innistrad.packs(), desktop.getCntBoostersSealed());
     }
 }

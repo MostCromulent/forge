@@ -121,6 +121,13 @@ final class TestBrowser implements BrowserChannel {
         closed = true;
     }
 
+    /** Ends the thread a playing browser answers on. Call it once its match has ended. */
+    void stop() {
+        if (actions != null) {
+            actions.shutdownNow();
+        }
+    }
+
     /** Lets a held browser continue. From its own first main phase it uses each "Zone:Card Name" in turn. */
     void release(final String... cardNames) {
         for (final String name : cardNames) {
@@ -153,6 +160,13 @@ final class TestBrowser implements BrowserChannel {
     JsonObject last(final String type) {
         final List<JsonObject> matches = all(type);
         return matches.isEmpty() ? null : matches.get(matches.size() - 1);
+    }
+
+    /** The turn in the latest state, or 0 before the first turn. */
+    int turn() {
+        final JsonObject state = last("state");
+        final JsonObject game = state == null ? null : MatchProbe.objects(model).get(state.get("root").getAsInt());
+        return game == null || !game.has("Turn") ? 0 : game.get("Turn").getAsInt();
     }
 
     /** The earliest message of the type that matches wanted, or null if none arrived in time. */
@@ -218,8 +232,6 @@ final class TestBrowser implements BrowserChannel {
         return latest;
     }
 
-    // The same waits, but they fail with why if no matching message arrives in time
-
     JsonObject awaitMatching(final String type, final Predicate<JsonObject> wanted, final String why) throws InterruptedException {
         return found(awaitMatching(type, wanted), why);
     }
@@ -236,6 +248,7 @@ final class TestBrowser implements BrowserChannel {
         return found(awaitLobby(wanted), why);
     }
 
+    /** The waits that take a why fail with it when no matching message arrived in time. */
     private static JsonObject found(final JsonObject message, final String why) {
         Assert.assertNotNull(message, why);
         return message;

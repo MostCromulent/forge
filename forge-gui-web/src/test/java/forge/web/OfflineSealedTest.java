@@ -16,13 +16,13 @@ import java.util.UUID;
 
 /** Tests offline sealed driven from a browser. A pool is made, kept, opened, played and removed through the session's messages. */
 public class OfflineSealedTest extends SessionsTest {
+    private final List<String> made = new ArrayList<>();
+
     /** Core asks its questions through the installed GUI. The sessions must use the same GUI so the questions reach the browser. */
     @Override
     WebGuiBase gui() {
         return (WebGuiBase) GuiBase.getInterface();
     }
-
-    private final List<String> made = new ArrayList<>();
 
     @Override
     void afterDisconnecting() {

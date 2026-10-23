@@ -87,16 +87,7 @@ import java.util.zip.CRC32;
 
 /** The HTTP and WebSocket server on the web port. It serves the page, card images, sounds, the browsers' sockets and the app tunnel. It listens on every interface so that a player on another machine can open a link. The tokens in the links are new on each launch and keep everyone else out. */
 public final class WebServer implements AutoCloseable, IHasForgeLog {
-    public interface Endpoint {
-        /** The id tells browsers apart across a reload. mayHost says the browser connected through the host's link. */
-        void connected(BrowserChannel channel, String clientId, boolean mayHost);
-        void disconnected(BrowserChannel channel);
-        void onMessage(BrowserChannel channel, JsonObject message);
-    }
-
     private static final String COOKIE = "forge_token";
-    /** Which link a request came in on. It is stored on a socket's channel by the request that opened it. */
-    private enum Access { NONE, GUEST, HOST }
     private static final AttributeKey<Access> ACCESS = AttributeKey.valueOf("forge.access");
     private static final AttributeKey<Boolean> KEEP_ALIVE = AttributeKey.valueOf("forge.keepAlive");
     /** For content that never changes at its address, such as a card picture of one printing or a hashed script chunk. The browser keeps it permanently. */
@@ -120,6 +111,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     /** How long a download is waited on before the browser is told there is no image. */
     private static final int FETCH_TIMEOUT_SECONDS = 15;
     private static final int PING_SECONDS = 30;
+    // -Dforge.web.pageDir=<the web resource folder> serves the page from disk, so an edit needs only a reload
+    private static final String PAGE_DIR = System.getProperty("forge.web.pageDir");
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
     private final ServerTraffic traffic = new ServerTraffic();
     private final Endpoint endpoint;
@@ -128,6 +121,18 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     // The shared fetcher tries a path only once per run and does not call back again, so a key that failed is not retried
     private final Set<String> unavailableImages = ConcurrentHashMap.newKeySet();
     private final Channel channel;
+    /** The page as served. It is built once, unless the page is read from a folder that may change. */
+    private volatile byte[] page;
+    private volatile byte[] styles;
+
+    public interface Endpoint {
+        /** The id tells browsers apart across a reload. mayHost says the browser connected through the host's link. */
+        void connected(BrowserChannel channel, String clientId, boolean mayHost);
+        void disconnected(BrowserChannel channel);
+        void onMessage(BrowserChannel channel, JsonObject message);
+    }
+    /** Which link a request came in on. It is stored on a socket's channel by the request that opened it. */
+    private enum Access { NONE, GUEST, HOST }
 
     public WebServer(final Endpoint endpoint, final String hostToken, final String guestToken) throws InterruptedException {
         this(endpoint, hostToken, guestToken, configuredPort());
@@ -427,9 +432,6 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         }
     }
 
-    // -Dforge.web.pageDir=<the web resource folder> serves the page from disk, so an edit needs only a reload
-    private static final String PAGE_DIR = System.getProperty("forge.web.pageDir");
-
     private static String contentType(final String resource) {
         if (resource.endsWith(".html")) {
             return "text/html; charset=utf-8";
@@ -551,10 +553,6 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         crc.update(body);
         return "\"" + Long.toHexString(crc.getValue()) + "-" + Integer.toHexString(body.length) + "\"";
     }
-
-    /** The page as served. It is built once, unless the page is read from a folder that may change. */
-    private volatile byte[] page;
-    private volatile byte[] styles;
 
     /**
      * The page, with a hash of each stylesheet's and script's contents in its address, so the browser keeps them until they change.

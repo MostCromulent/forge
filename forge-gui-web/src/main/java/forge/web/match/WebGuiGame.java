@@ -1,6 +1,7 @@
 package forge.web.match;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonArray;
@@ -82,6 +83,58 @@ import java.util.function.Predicate;
 
 /** One player's view of a match for the browser. Game calls run on one dispatch thread. Browser replies arrive on the socket thread. */
 public class WebGuiGame extends NetworkGuiGame {
+    public static final Commands<WebGuiGame> COMMANDS = new Commands<WebGuiGame>()
+            .on(Reply.class, (g, ch, r) -> g.requests.complete(r.id(), r.value()))
+            .on(KeyCommand.class, WebGuiGame::keyCommand)
+            .on(SelectCard.class, play((g, controller, click) -> {
+                final CardView card = g.lookup(click.key(), TrackableTypes.CardViewType);
+                if (card != null) {
+                    final BrowserClick at = new BrowserClick(click.menu(), click.x(), click.y());
+                    g.lastClick.set(at);
+                    controller.selectCard(card, null, at);
+                }
+            }))
+            .on(Plain.ok, play((g, controller, c) -> controller.selectButtonOk()))
+            .on(Plain.cancel, play((g, controller, c) -> controller.selectButtonCancel()))
+            .on(Plain.concede, play((g, controller, c) -> controller.concede()))
+            .on(DrawOfferCommand.class, play((g, controller, d) -> controller.drawOfferAction(d.action())))
+            .on(AutoDecisionCommand.class, play((g, controller, a) -> g.autoDecisions(controller, a)))
+            .on(Plain.endTurn, play((g, controller, c) -> {
+                YieldController.endTurn(controller, g.getCurrentPlayer());
+                // The yield is set here at once, so the chip beside the phase pill shows it immediately
+                g.send(g.controlsMessage());
+            }))
+            .on(Plain.stopYield, play((g, controller, c) -> {
+                // Ends whichever pass is running. It comes from a second press of End Turn, or a click on the chip that names the pass
+                YieldController.stopYielding(controller, g.getCurrentPlayer(), g);
+                g.send(g.controlsMessage());
+            }))
+            .on(Plain.undo, play((g, controller, c) -> controller.undoLastAction()))
+            // The host records the player's actions and asks how many times to repeat them, as desktop's dock buttons do
+            .on(Plain.macroRecord, play((g, controller, c) -> controller.macros().setRememberedActions()))
+            .on(Plain.macroRepeat, play((g, controller, c) -> controller.macros().repeatRememberedActions()))
+            .on(Plain.autoPass, play((g, controller, c) -> {
+                WebSettings.set(g.settings, controller, "autoPassNoActions", String.valueOf(!g.settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)));
+                g.send(g.controlsMessage());
+            }))
+            .on(PhaseCommand.class, play((g, controller, p) -> {
+                if (p.t() == PhaseAction.toggleStop) {
+                    g.toggleStop(p.phase(), p.mine());
+                    g.send(g.controlsMessage());
+                } else {
+                    g.toggleMarker(p.phase(), p.mine());
+                }
+            }))
+            .on(UseMana.class, play((g, controller, m) -> controller.useMana(m.color())))
+            .on(StackYield.class, play((g, controller, yield) -> {
+                final StackItemView item = g.lookup(yield.key(), TrackableTypes.StackItemViewType);
+                if (item != null && yield.action() != null) {
+                    g.stackYield(controller, item, yield.action());
+                    g.send(g.stackMenuMessage(controller, item));
+                }
+            }))
+            .on(AutoYieldTop.class, play((g, controller, y) -> g.autoYieldTop(controller, y.yes())))
+            .on(NextGame.class, play((g, controller, n) -> controller.nextGameDecision(n.decision())));
     private final ReentrantLock mirrorLock = new ReentrantLock();
     private final ExecutorService dispatch = Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder().setNameFormat("WebClient").setDaemon(true).build());
@@ -119,6 +172,8 @@ public class WebGuiGame extends NetworkGuiGame {
     private volatile Runnable onGameOver;
     /** What the game did since the last state message, in order. Only the dispatch thread fills and empties it. */
     private final List<Record> events = new ArrayList<>();
+    /** Run when the game opens. For a guest, the host decides when that happens. */
+    private volatile Runnable onOpen = () -> { };
 
     public void onGameOver(final Runnable listener) {
         onGameOver = listener;
@@ -310,9 +365,6 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         return visible;
     }
-
-    /** Run when the game opens. For a guest, the host decides when that happens. */
-    private volatile Runnable onOpen = () -> { };
 
     public void whenOpened(final Runnable action) {
         onOpen = action;
@@ -525,9 +577,6 @@ public class WebGuiGame extends NetworkGuiGame {
     protected void updateCurrentPlayer(final PlayerView player) {
     }
 
-    private static Ref cardRef(final CardView card) {
-        return PromptState.cardRef(card);
-    }
 
     @Override
     public void showPromptMessage(final PlayerView playerView, final String message, final CardView card) {
@@ -540,13 +589,15 @@ public class WebGuiGame extends NetworkGuiGame {
         prompt.buttons(label1, label2, enable1, enable2, focus1);
     }
 
+    /**
+     * A choice among cards opens the zones that hold them, as on desktop. A maximum of 0 only highlights the cards. A new pick
+     * in the same choice has the same cards, so their zones are left as they are. Zones change before the prompt does, because
+     * the prompt sends the zones the last choice closed, and this choice may reopen them.
+     */
     @Override
     public void setSelection(final Selection selection) {
         final Selection before = getSelection();
         super.setSelection(selection);
-        // A choice among cards opens the zones that hold them, as on desktop. A maximum of 0 only highlights the cards.
-        // A new pick in the same choice has the same cards, so their zones are left as they are.
-        // Zones change before the prompt does. The prompt sends the zones the last choice closed, and this choice may reopen them.
         if (!selection.cards().equals(before.cards()) || selection.max() != before.max()) {
             synchronized (zonesLock) {
                 hideZones(selectionZonesShown);
@@ -565,10 +616,10 @@ public class WebGuiGame extends NetworkGuiGame {
         super.setWeaklySelectable(cards);
         final List<Ref> playable = new ArrayList<>();
         final List<Ref> autoTap = new ArrayList<>();
-        for (final CardView c : new HashSet<>(Lists.newArrayList(cards))) {
-            playable.add(cardRef(c));
+        for (final CardView c : Sets.newHashSet(cards)) {
+            playable.add(PromptState.cardRef(c));
             if (getWeakSelectableStrength(c) >= 2) {
-                autoTap.add(cardRef(c));
+                autoTap.add(PromptState.cardRef(c));
             }
         }
         sendPlayable(playable, autoTap);
@@ -716,17 +767,17 @@ public class WebGuiGame extends NetworkGuiGame {
             if (item instanceof CardView card) {
                 // Temporary views (pile splits, getCardForUi copies, LKI) have no mirror entry to refer to
                 out.add(isInMirror(card)
-                        ? new RequestOption(label, cardRef(card), null, null, null)
+                        ? new RequestOption(label, PromptState.cardRef(card), null, null, null, null, null)
                         : new RequestOption(label, null, card.getName(),
-                                card.getCurrentState() == null ? null : Foil.key(card, card.getCurrentState()), null));
+                                card.getCurrentState() == null ? null : Foil.key(card, card.getCurrentState()), null, null, null));
             } else if (item instanceof PlayerView player) {
-                out.add(new RequestOption(label, null, null, null, Ref.player(player.getId())));
+                out.add(new RequestOption(label, null, null, null, Ref.player(player.getId()), null, null));
             } else if (item instanceof PaperCard paper) {
-                out.add(new RequestOption(label, null, paper.getName(), Foil.key(paper), null));
+                out.add(new RequestOption(label, null, paper.getName(), Foil.key(paper), null, null, null));
             } else if (item instanceof CardFaceView face) {
-                out.add(new RequestOption(label, null, face.getName(), ImageKeys.CARD_PREFIX + face.getName(), null));
+                out.add(new RequestOption(label, null, face.getName(), ImageKeys.CARD_PREFIX + face.getName(), null, null, null));
             } else if (item instanceof SpellAbilityView ability && ability.getHostCard() != null && isInMirror(ability.getHostCard())) {
-                out.add(new RequestOption(label, null, null, null, null, cardRef(ability.getHostCard()), null));
+                out.add(new RequestOption(label, null, null, null, null, PromptState.cardRef(ability.getHostCard()), null));
             } else {
                 // A colour is offered as a colour value or, by some effects, as its English name
                 final MagicColor.Color colour = item instanceof MagicColor.Color c ? c
@@ -849,7 +900,7 @@ public class WebGuiGame extends NetworkGuiGame {
             final List<T> items, final List<T> selected, final FSerializableFunction<T, String> display,
             final List<Integer> stackKeys, final BrowserClick at, final List<Integer> onDefault) {
         return new ChoicesRequest(kind, message, min, max, options(items, display), Answers.indicesOf(items, selected), stackKeys,
-                at == null ? null : at.x(), at == null ? null : at.y(), onDefault);
+                at == null ? null : at.x(), at == null ? null : at.y(), onDefault, null);
     }
 
     /** Asks the browser to pick from a list. {@code onDefault} is the answer used when the browser cannot answer. */
@@ -875,7 +926,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final String bottom = loc.getMessage("lblClosestToTop").equals(top) ? loc.getMessage("lblClosestToBottom")
                 : loc.getMessage("lblClosestToBottom").equals(top) ? loc.getMessage("lblClosestToTop") : null;
         final OrderRequest request = new OrderRequest(title, top, bottom, min, max, options(items, null), preselected,
-                showRememberCheckbox, cardRef(referenceCard), new OrderAnswer(preselected, false));
+                showRememberCheckbox, PromptState.cardRef(referenceCard), new OrderAnswer(preselected, false));
         final Predicate<JsonElement> indicesOk = Answers.indexList(items.size(), min, max);
         final JsonElement reply = ask(request, v -> v.isJsonObject() && v.getAsJsonObject().has("indices") && indicesOk.test(v.getAsJsonObject().get("indices")));
         final JsonObject r = reply.getAsJsonObject();
@@ -893,7 +944,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     private int askOption(final String title, final String message, final CardView card, final List<String> labels, final int defaultIndex) {
         final int def = Math.max(0, Math.min(defaultIndex, labels.size() - 1));
-        final OptionRequest request = new OptionRequest(title, message, card != null && isInMirror(card) ? cardRef(card) : null,
+        final OptionRequest request = new OptionRequest(title, message, card != null && isInMirror(card) ? PromptState.cardRef(card) : null,
                 new ArrayList<>(labels), def);
         return ask(request, Answers.singleIndex(labels.size())).getAsInt();
     }
@@ -954,24 +1005,6 @@ public class WebGuiGame extends NetworkGuiGame {
         return askChoices(title, need, max, list, null, null, Answers.range(0, need));
     }
 
-    /** A click from the browser. The right button reports button 3, which the attack and block prompts read as taking a card out of combat. */
-    private record BrowserClick(boolean menu, int x, int y) implements ITriggerEvent {
-        @Override
-        public int getButton() {
-            return menu ? 3 : 1;
-        }
-
-        @Override
-        public int getX() {
-            return x;
-        }
-
-        @Override
-        public int getY() {
-            return y;
-        }
-    }
-
     /** Lists, forgets or switches off remembered decisions through the controller, as desktop's dialog does. */
     private void autoDecisions(final IGameController controller, final AutoDecisionCommand command) {
         final YieldController yields = controller.getYieldController();
@@ -982,7 +1015,7 @@ public class WebGuiGame extends NetworkGuiGame {
         switch (command.action()) {
             case remove -> forget(controller, yields, command.key(), abilityScope);
             case clear -> {
-                final List<String> keys = new ArrayList<>(Lists.newArrayList(yields.getAutoYields()));
+                final List<String> keys = Lists.newArrayList(yields.getAutoYields());
                 yields.getAutoTriggers().forEach(e -> keys.add(e.getKey()));
                 keys.forEach(key -> forget(controller, yields, key, abilityScope));
             }
@@ -1027,15 +1060,16 @@ public class WebGuiGame extends NetworkGuiGame {
         if (open) {
             return;
         }
+        final Localizer loc = Localizer.getInstance();
         if (update.result() == DrawOfferMessage.Result.ACCEPTED) {
-            send(new Notice(Localizer.getInstance().getMessage("lblWebGameDrawAgreed"), Localizer.getInstance().getMessage("lblWebGameDrawAccepted"), false));
+            send(new Notice(loc.getMessage("lblWebGameDrawAgreed"), loc.getMessage("lblWebGameDrawAccepted"), false));
             return;
         }
         final List<String> declined = update.entries().stream()
                 .filter(e -> e.vote() == DrawOffer.Vote.DECLINED && e.player() != null)
-                .map(e -> isLocalPlayer(e.player()) ? Localizer.getInstance().getMessage("lblWebLobbyKindYou") : e.player().getName()).toList();
-        send(new Notice(Localizer.getInstance().getMessage("lblWebGameDrawDeclined"), declined.isEmpty() ? Localizer.getInstance().getMessage("lblWebGameGoesOn")
-                : Localizer.getInstance().getMessage("lblWebGameDeclined", String.join(", ", declined)), false));
+                .map(e -> isLocalPlayer(e.player()) ? loc.getMessage("lblWebLobbyKindYou") : e.player().getName()).toList();
+        send(new Notice(loc.getMessage("lblWebGameDrawDeclined"), declined.isEmpty() ? loc.getMessage("lblWebGameGoesOn")
+                : loc.getMessage("lblWebGameDeclined", String.join(", ", declined)), false));
     }
 
     /** An ability as a menu item: its first line, as desktop's menu shows it. */
@@ -1087,7 +1121,7 @@ public class WebGuiGame extends NetworkGuiGame {
             lethal.add(0);
         }
         final DistributeRequest request = new DistributeRequest(title, damage, 0,
-                options(recipients, null), cardRef(attacker), maySkip, Ints.asList(Answers.defaultCombatSplit(blockers, damage, defender != null)), lethal);
+                options(recipients, null), PromptState.cardRef(attacker), maySkip, Ints.asList(Answers.defaultCombatSplit(blockers, damage, defender != null)), lethal);
         final JsonElement reply = ask(request, Answers.amounts(recipients.size(), damage, 0, maySkip));
         if (reply.isJsonNull()) {
             return null;
@@ -1118,7 +1152,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final String title = Localizer.getInstance().getMessage("lbLAssignAmountForEffect", amountLabel,
                 effectSource == null ? "" : effectSource.getName());
         final DistributeRequest request = new DistributeRequest(title, amount, perMin, options(recipients, null),
-                cardRef(effectSource), false, Ints.asList(def), null);
+                PromptState.cardRef(effectSource), false, Ints.asList(def), null);
         final JsonArray reply = ask(request, Answers.amounts(recipients.size(), amount, perMin, false)).getAsJsonArray();
         final Map<Object, Integer> result = new LinkedHashMap<>();
         for (int i = 0; i < recipients.size(); i++) {
@@ -1169,11 +1203,6 @@ public class WebGuiGame extends NetworkGuiGame {
         return newMain;
     }
 
-    /** A command run through the player's controller. It runs only once the controller exists. */
-    private interface Play<T> {
-        void run(WebGuiGame gui, IGameController controller, T command);
-    }
-
     private static <T extends Record> Handler<WebGuiGame, T> play(final Play<T> action) {
         return (g, ch, command) -> {
             final IGameController controller = g.getGameController();
@@ -1182,59 +1211,6 @@ public class WebGuiGame extends NetworkGuiGame {
             }
         };
     }
-
-    public static final Commands<WebGuiGame> COMMANDS = new Commands<WebGuiGame>()
-            .on(Reply.class, (g, ch, r) -> g.requests.complete(r.id(), r.value()))
-            .on(KeyCommand.class, WebGuiGame::keyCommand)
-            .on(SelectCard.class, play((g, controller, click) -> {
-                final CardView card = g.lookup(click.key(), TrackableTypes.CardViewType);
-                if (card != null) {
-                    final BrowserClick at = new BrowserClick(click.menu(), click.x(), click.y());
-                    g.lastClick.set(at);
-                    controller.selectCard(card, null, at);
-                }
-            }))
-            .on(Plain.ok, play((g, controller, c) -> controller.selectButtonOk()))
-            .on(Plain.cancel, play((g, controller, c) -> controller.selectButtonCancel()))
-            .on(Plain.concede, play((g, controller, c) -> controller.concede()))
-            .on(DrawOfferCommand.class, play((g, controller, d) -> controller.drawOfferAction(d.action())))
-            .on(AutoDecisionCommand.class, play((g, controller, a) -> g.autoDecisions(controller, a)))
-            .on(Plain.endTurn, play((g, controller, c) -> {
-                YieldController.endTurn(controller, g.getCurrentPlayer());
-                // The yield is set here at once, so the chip beside the phase pill shows it immediately
-                g.send(g.controlsMessage());
-            }))
-            .on(Plain.stopYield, play((g, controller, c) -> {
-                // Ends whichever pass is running. It comes from a second press of End Turn, or a click on the chip that names the pass
-                YieldController.stopYielding(controller, g.getCurrentPlayer(), g);
-                g.send(g.controlsMessage());
-            }))
-            .on(Plain.undo, play((g, controller, c) -> controller.undoLastAction()))
-            // The host records the player's actions and asks how many times to repeat them, as desktop's dock buttons do
-            .on(Plain.macroRecord, play((g, controller, c) -> controller.macros().setRememberedActions()))
-            .on(Plain.macroRepeat, play((g, controller, c) -> controller.macros().repeatRememberedActions()))
-            .on(Plain.autoPass, play((g, controller, c) -> {
-                WebSettings.set(g.settings, controller, "autoPassNoActions", String.valueOf(!g.settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)));
-                g.send(g.controlsMessage());
-            }))
-            .on(PhaseCommand.class, play((g, controller, p) -> {
-                if (p.t() == PhaseAction.toggleStop) {
-                    g.toggleStop(p.phase(), p.mine());
-                    g.send(g.controlsMessage());
-                } else {
-                    g.toggleMarker(p.phase(), p.mine());
-                }
-            }))
-            .on(UseMana.class, play((g, controller, m) -> controller.useMana(m.color())))
-            .on(StackYield.class, play((g, controller, yield) -> {
-                final StackItemView item = g.lookup(yield.key(), TrackableTypes.StackItemViewType);
-                if (item != null && yield.action() != null) {
-                    g.stackYield(controller, item, yield.action());
-                    g.send(g.stackMenuMessage(controller, item));
-                }
-            }))
-            .on(AutoYieldTop.class, play((g, controller, y) -> g.autoYieldTop(controller, y.yes())))
-            .on(NextGame.class, play((g, controller, n) -> controller.nextGameDecision(n.decision())));
 
     public void onCommand(final BrowserChannel channel, final Record command) {
         if (command instanceof Reply) {
@@ -1321,5 +1297,28 @@ public class WebGuiGame extends NetworkGuiGame {
             return null;
         }
         return gv.getTracker().getObj(type, DeltaPacket.getIdFromDeltaKey(key));
+    }
+
+    /** A click from the browser. The right button reports button 3, which the attack and block prompts read as taking a card out of combat. */
+    private record BrowserClick(boolean menu, int x, int y) implements ITriggerEvent {
+        @Override
+        public int getButton() {
+            return menu ? 3 : 1;
+        }
+
+        @Override
+        public int getX() {
+            return x;
+        }
+
+        @Override
+        public int getY() {
+            return y;
+        }
+    }
+
+    /** A command run through the player's controller. It runs only once the controller exists. */
+    private interface Play<T> {
+        void run(WebGuiGame gui, IGameController controller, T command);
     }
 }

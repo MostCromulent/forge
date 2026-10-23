@@ -45,7 +45,7 @@ public final class DeckImport {
 
     /** What reading a list found, and the deck it makes. commanderChosen is set when the commander was picked because only one card could be the commander. */
     public record Read(List<ImportLine> lines, List<ImportProblem> problems, Deck deck, String name, String commanderChosen,
-            int notImported) {
+            int notImported, Legality.Result legality) {
     }
 
     public static Read read(final String text, final Check check) {
@@ -167,9 +167,9 @@ public final class DeckImport {
             lineOf.putIfAbsent(first.getName(), i);
         }
         final String chosen = chooseCommander(deck, check, problems);
-        final Map<String, String> flags = Legality.check(deck, check).flags();
+        final Legality.Result legality = Legality.check(deck, check);
         final List<ImportProblem> cardProblems = new ArrayList<>();
-        flags.forEach((card, flag) -> {
+        legality.flags().forEach((card, flag) -> {
             final Integer at = lineOf.get(card);
             if (at != null) {
                 kinds[at] = ImportLineKind.problem;
@@ -185,12 +185,12 @@ public final class DeckImport {
             marks.add(new ImportLine(kind));
         }
         deck.setName(name == null ? "" : name.trim());
-        return new Read(marks, problems, deck, name == null ? null : name.trim(), chosen, notImported);
+        return new Read(marks, problems, deck, name == null ? null : name.trim(), chosen, notImported, legality);
     }
 
-    static ImportResult result(final int request, final Read read, final Check check, final Fetched fetched) {
+    static ImportResult result(final int request, final Read read, final String name, final Check check, final Fetched fetched) {
         final Deck deck = read.deck();
-        final Legality.Result legality = Legality.check(deck, check);
+        final Legality.Result legality = read.legality();
         final List<PaperCard> commanders = Legality.commanders(deck, check);
         final CardPool commanderSection = deck.get(DeckSection.Commander);
         final CardPool sideboard = deck.get(DeckSection.Sideboard);
@@ -201,7 +201,7 @@ public final class DeckImport {
                 commanders.isEmpty() ? null : commanders.get(0).getName(), read.commanderChosen() != null,
                 colours, legality.verdict(), CardCatalog.groups(deck.getMain(), legality),
                 CardCatalog.cards(sideboard, legality));
-        return new ImportResult(request, read.lines(), read.problems(), summary, read.name(), fetched);
+        return new ImportResult(request, read.lines(), read.problems(), summary, name, fetched);
     }
 
     /** A line that names no card. The closest known name is offered when it is close enough to be the intended card. */

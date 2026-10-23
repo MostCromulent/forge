@@ -460,7 +460,6 @@ public final class ToBrowser {
 
     static final List<Class<? extends Record>> EVENTS = Wire.marked(Event.class);
 
-
     /** Why this player chooses who goes first: the player won the coin toss, or lost the last game. */
     public enum StarterChoice { toss, lastGame }
 
@@ -562,7 +561,6 @@ public final class ToBrowser {
     public record MatchScore(Ref player, int won) {
     }
 
-    // Requests are questions the game waits on. The browser answers with {t: 'reply', id, value}
 
     /**
      * Which fields are set depends on the option: a card on the table, a card that is not (a split pile, a card face), or a player.
@@ -570,9 +568,6 @@ public final class ToBrowser {
      */
     public record RequestOption(String label, @Nullable Ref card, @Nullable String name, @Nullable String imageKey,
             @Nullable Ref player, @Nullable Ref source, @Nullable String symbol) {
-        public RequestOption(final String label, final Ref card, final String name, final String imageKey, final Ref player) {
-            this(label, card, name, imageKey, player, null, null);
-        }
     }
 
     public enum ChoiceKind { choices, reveal }
@@ -585,12 +580,6 @@ public final class ToBrowser {
     public record ChoicesRequest(ChoiceKind kind, @Nullable String message, int min, int max, List<RequestOption> options,
             List<Integer> selected, @Nullable List<Integer> stackKeys, @Nullable Integer atX, @Nullable Integer atY,
             @Name("default") List<Integer> defaultAnswer, @Nullable Ref aiSkipsOf) {
-        public ChoicesRequest(final ChoiceKind kind, final String message, final int min, final int max, final List<RequestOption> options,
-                final List<Integer> selected, final List<Integer> stackKeys, final Integer atX, final Integer atY,
-                final List<Integer> defaultAnswer) {
-            this(kind, message, min, max, options, selected, stackKeys, atX, atY, defaultAnswer, null);
-        }
-
         public ChoicesRequest warningOf(final Ref player) {
             return new ChoicesRequest(kind, message, min, max, options, selected, stackKeys, atX, atY, defaultAnswer, player);
         }
@@ -599,8 +588,8 @@ public final class ToBrowser {
     public record OrderAnswer(List<Integer> indices, boolean remember) {
     }
 
-    @Request("order")
     /** bottom is the label of the other end, for an order with a top and a bottom such as a library. */
+    @Request("order")
     public record OrderRequest(@Nullable String title, @Nullable String top, @Nullable String bottom, int min, int max, List<RequestOption> options,
             List<Integer> selected, boolean remember, @Nullable Ref card, @Name("default") OrderAnswer defaultAnswer) {
     }
@@ -702,8 +691,6 @@ public final class ToBrowser {
 
     /** Every message record. The TypeScript is generated from these. */
     static final List<Class<? extends Record>> MESSAGES = Wire.marked(Message.class);
-
-
 
     static final List<Class<? extends Record>> REQUESTS = Wire.marked(Request.class);
 

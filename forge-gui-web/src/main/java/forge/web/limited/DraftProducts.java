@@ -67,23 +67,6 @@ final class DraftProducts {
         return SealedCardPoolGenerator.createImported(importCube(cubeId), packs);
     }
 
-    public record Block(String name, int packs, List<String> combos) {
-    }
-
-    public record Edition(String code, String name) {
-    }
-
-    public record SealedLists(List<Block> blocks, List<Block> fantasyBlocks, List<Edition> prereleases, List<String> templates) {
-    }
-
-    /** A draftable block: its pack count, its sets and desktop's preset combinations. combos is empty when the set of each pack is chosen. */
-    public record DraftBlock(String name, int packs, List<String> sets, List<String> combos) {
-    }
-
-    public record DraftLists(List<DraftBlock> blocks, List<DraftBlock> fantasyBlocks, List<String> cubes, List<String> themes,
-            String lastCube) {
-    }
-
     public static DraftLists draft() {
         final List<String> cubes = BoosterDraft.loadCustomDrafts().stream().map(CustomLimited::getName).sorted().toList();
         final List<ThemedChaosDraft> themes = new ArrayList<>();
@@ -110,8 +93,9 @@ final class DraftProducts {
     private static List<DraftBlock> draftBlocks(final IStorage<CardBlock> storage) {
         final List<DraftBlock> out = new ArrayList<>();
         for (final CardBlock b : storage) {
-            if (isDraftableBlock(b) && !BoosterDraft.blockSets(b).isEmpty()) {
-                out.add(new DraftBlock(b.getName(), b.getCntBoostersDraft(), BoosterDraft.blockSets(b), draftCombos(b)));
+            final List<String> sets = isDraftableBlock(b) ? BoosterDraft.blockSets(b) : List.of();
+            if (!sets.isEmpty()) {
+                out.add(new DraftBlock(b.getName(), b.getCntBoostersDraft(), sets, draftCombos(b)));
             }
         }
         return out;
@@ -144,5 +128,22 @@ final class DraftProducts {
             }
         }
         return out;
+    }
+
+    public record Block(String name, int packs, List<String> combos) {
+    }
+
+    public record Edition(String code, String name) {
+    }
+
+    public record SealedLists(List<Block> blocks, List<Block> fantasyBlocks, List<Edition> prereleases, List<String> templates) {
+    }
+
+    /** A draftable block: its pack count, its sets and desktop's preset combinations. combos is empty when the set of each pack is chosen. */
+    public record DraftBlock(String name, int packs, List<String> sets, List<String> combos) {
+    }
+
+    public record DraftLists(List<DraftBlock> blocks, List<DraftBlock> fantasyBlocks, List<String> cubes, List<String> themes,
+            String lastCube) {
     }
 }

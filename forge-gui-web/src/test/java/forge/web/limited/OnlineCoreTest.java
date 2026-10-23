@@ -25,7 +25,7 @@ public class OnlineCoreTest {
 
     // Fails if configuring a sealed event from a built pool runs the prompting constructor. That constructor hangs until the time limit
     @Test(timeOut = 30_000)
-    public void configureWithABuiltGenerator() {
+    public void configureEventKeepsABuiltGenerator() {
         final ServerGameLobby lobby = new ServerGameLobby();
         lobby.createEvent(EventFormat.SEALED);
         final SealedCardPoolGenerator gen = SealedCardPoolGenerator.createFull(6);
@@ -35,7 +35,7 @@ public class OnlineCoreTest {
 
     // Fails if startGame seats a slot that sits out. Two ready seats with one sitting out are too few to play
     @Test
-    public void aSeatSittingOutIsNotSeated() {
+    public void startGameLeavesOutASeatSittingOut() {
         final ServerGameLobby lobby = new ServerGameLobby();
         final Deck deck = new Deck("Forests");
         deck.getMain().add(StaticData.instance().getCommonCards().getCard("Forest"), 40);

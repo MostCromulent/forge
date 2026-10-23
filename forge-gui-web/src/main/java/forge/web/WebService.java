@@ -12,6 +12,8 @@ import java.util.function.Consumer;
 
 /** The web server, in a form the console can stop and start again. The tokens are kept across a restart, so old links still work. */
 public final class WebService implements IHasForgeLog {
+    /** Set at launch for a server that should keep running after its browsers leave, such as one with no window to turn the option off in. */
+    public static final boolean KEEP_OPEN = Boolean.getBoolean("forge.web.keepOpen");
     private final WebGuiBase ui;
     private final long idleMillis;
     private final Runnable onQuit;
@@ -21,8 +23,6 @@ public final class WebService implements IHasForgeLog {
     private final String guestToken;
     private WebServer server;
     private volatile WebSessions sessions;
-    /** Set at launch for a server that should keep running after its browsers leave, such as one with no window to turn the option off in. */
-    public static final boolean KEEP_OPEN = Boolean.getBoolean("forge.web.keepOpen");
     private boolean quitWhenEmpty = !KEEP_OPEN;
     private volatile PortForward forward;
     private volatile Forwarding forwarding = Forwarding.OFF;

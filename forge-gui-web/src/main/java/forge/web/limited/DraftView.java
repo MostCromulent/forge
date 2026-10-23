@@ -41,9 +41,6 @@ final class DraftView {
         return List.of(pickingSeat);
     }
 
-    static DraftCard card(final PaperCard card, final int packNumber, final int pickNumber) {
-        return card(card, packNumber, pickNumber, false);
-    }
 
     static DraftCard moved(final DraftCard c, final boolean sideboard) {
         return new DraftCard(c.name(), c.image(), c.cost(), c.mv(), c.colors(), c.type(), c.text(), c.pt(), c.rarity(), c.rank(), c.pack(),

@@ -74,10 +74,7 @@ final class BrowserEvents {
         if (event instanceof GameEventAttackersDeclared e && e.player() != null) {
             final List<Attack> attacks = new ArrayList<>();
             for (final Map.Entry<GameEntityView, CardView> attack : e.attackersMap().entries()) {
-                final GameEntityView defender = attack.getKey();
-                attacks.add(new Attack(Ref.card(attack.getValue().getId()),
-                        defender instanceof CardView c ? Ref.card(c.getId())
-                                : defender instanceof PlayerView p ? Ref.player(p.getId()) : null));
+                attacks.add(new Attack(Ref.card(attack.getValue().getId()), entity(attack.getKey())));
             }
             return new AttackersDeclared(Ref.player(e.player().getId()), attacks);
         }
@@ -86,7 +83,7 @@ final class BrowserEvents {
             for (final Multimap<CardView, CardView> blockersByAttacker : e.blockers().values()) {
                 for (final Map.Entry<CardView, CardView> block : blockersByAttacker.entries()) {
                     // The engine lists an unblocked attacker as blocked by itself
-                    if (block.getKey().getId() != block.getValue().getId()) {
+                    if (!block.getKey().equals(block.getValue())) {
                         blocks.add(new Block(Ref.card(block.getValue().getId()), Ref.card(block.getKey().getId())));
                     }
                 }
@@ -112,9 +109,7 @@ final class BrowserEvents {
             return new CardCounters(Ref.card(e.card().getId()));
         }
         if (event instanceof GameEventCardAttachment e && e.equipment() != null) {
-            final GameEntityView to = e.newTarget();
-            return new CardAttached(Ref.card(e.equipment().getId()),
-                    to instanceof CardView c ? Ref.card(c.getId()) : to instanceof PlayerView p ? Ref.player(p.getId()) : null);
+            return new CardAttached(Ref.card(e.equipment().getId()), entity(e.newTarget()));
         }
         if (event instanceof GameEventShuffle e && e.player() != null) {
             return new Shuffled(Ref.player(e.player().getId()));
@@ -130,6 +125,10 @@ final class BrowserEvents {
 
     private static Ref player(final PlayerView player) {
         return player == null ? null : Ref.player(player.getId());
+    }
+
+    private static Ref entity(final GameEntityView entity) {
+        return entity instanceof CardView c ? Ref.card(c.getId()) : entity instanceof PlayerView p ? Ref.player(p.getId()) : null;
     }
 
     static Place place(final ZoneView zone) {

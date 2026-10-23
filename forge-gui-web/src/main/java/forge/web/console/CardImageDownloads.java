@@ -138,7 +138,7 @@ final class CardImageDownloads {
         downloadCancel.addActionListener(e -> stopDownload());
         downloadCancel.setVisible(false);
         body.add(section(TEXT.getMessage("lblWebImagesOptional"), TEXT.getMessage("lblWebImagesDownloadTitle"),
-                TEXT.getMessage("lblWebImagesDownloadAbout"), null, downloadBar, pick, counts,
+                TEXT.getMessage("lblWebImagesDownloadAbout"), downloadBar, pick, counts,
                 line(downloadState, downloadCancel, downloadButton)));
         body.add(Box.createVerticalStrut(12));
         final JButton close = new JButton(TEXT.getMessage("lblClose"));
@@ -156,8 +156,8 @@ final class CardImageDownloads {
     }
 
     /** One tool section: its name, what it does, its state and its buttons. */
-    private static JPanel section(final String tag, final String title, final String about, final String note,
-            final JProgressBar bar, final JComponent... rows) {
+    private static JPanel section(final String tag, final String title, final String about, final JProgressBar bar,
+            final JComponent... rows) {
         final JPanel section = new JPanel();
         section.setLayout(new BoxLayout(section, BoxLayout.PAGE_AXIS));
         section.setAlignmentX(0f);
@@ -168,11 +168,7 @@ final class CardImageDownloads {
         heading.setFont(heading.getFont().deriveFont(Font.PLAIN, 14f));
         section.add(heading);
         section.add(Box.createVerticalStrut(6));
-        section.add(wrapped(about, null));
-        if (note != null) {
-            section.add(Box.createVerticalStrut(4));
-            section.add(wrapped(note, MUTED));
-        }
+        section.add(wrapped(about));
         // While the tool is working, the bar is shown above the last row, which holds the buttons
         for (int i = 0; i < rows.length; i++) {
             section.add(Box.createVerticalStrut(8));
@@ -185,12 +181,9 @@ final class CardImageDownloads {
         return section;
     }
 
-    private static JLabel wrapped(final String text, final Color color) {
+    private static JLabel wrapped(final String text) {
         final JLabel label = plain(new JLabel("<html><div style='width:" + TEXT_WIDTH + "px'>" + text + "</div></html>"));
         label.setAlignmentX(0f);
-        if (color != null) {
-            label.setForeground(color);
-        }
         return label;
     }
 

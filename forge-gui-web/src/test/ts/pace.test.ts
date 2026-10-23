@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { asksPlayer, behindItsBoard, passingFor, worthSeeing } from '../../main/ts/match/pace';
 import type { Controls, GameEvent, Prompt } from '../../main/ts/protocol';
 
@@ -70,8 +70,9 @@ describe('behindItsBoard', () => {
     expect(got).toEqual(['sound']);
     take({ t: 'state' });
     expect(got).toEqual(['sound', 'state']);
-    vi.useRealTimers();
   });
+  // A failed check must not leave the fake clock on for the next test
+  afterEach(() => { vi.useRealTimers(); });
 });
 
 describe('asksPlayer', () => {

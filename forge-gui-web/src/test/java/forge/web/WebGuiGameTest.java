@@ -74,7 +74,7 @@ public class WebGuiGameTest {
                 continue;
             }
             final Method impl = WebGuiGame.class.getMethod(m.getName(), m.getParameterTypes());
-            Assert.assertEquals(impl.getDeclaringClass(), WebGuiGame.class, pm.name() + " has no WebGuiGame override or documented default");
+            Assert.assertEquals(impl.getDeclaringClass(), WebGuiGame.class, pm.name() + " has no WebGuiGame override");
         }
     }
 }

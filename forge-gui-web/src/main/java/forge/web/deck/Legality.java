@@ -180,7 +180,7 @@ final class Legality {
     private static List<String> deckItems(final Deck deck, final DeckFormat df, final List<PaperCard> commanders,
             final boolean noCardProblems) {
         final String engine = df.getDeckConformanceProblem(deck);
-        // The engine decides whether the deck is legal. The code below only lists every fault, where the engine names the first.
+        // The engine decides whether the deck is legal
         if (engine == null) {
             return List.of();
         }

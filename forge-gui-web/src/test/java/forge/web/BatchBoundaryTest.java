@@ -42,11 +42,6 @@ public class BatchBoundaryTest {
         return cards;
     }
 
-    private static int turn(final TestBrowser browser) {
-        final JsonObject last = browser.last("state");
-        final JsonObject game = last == null ? null : MatchProbe.objects(browser.model).get(last.get("root").getAsInt());
-        return game == null || !game.has("Turn") ? 0 : game.get("Turn").getAsInt();
-    }
 
     private static long named(final BrowserModel model, final Set<Integer> cards, final String name) {
         final Map<Integer, JsonObject> objects = MatchProbe.objects(model);
@@ -81,7 +76,7 @@ public class BatchBoundaryTest {
             local.spectate();
             browser.release();
             // Ten turns of this deck cover every case below many times, and a whole game takes much longer
-            for (int i = 0; i < 30000 && browser.gameOver.getCount() > 0 && turn(browser) < 10; i++) {
+            for (int i = 0; i < 30000 && browser.gameOver.getCount() > 0 && browser.turn() < 10; i++) {
                 Thread.sleep(10);
             }
 

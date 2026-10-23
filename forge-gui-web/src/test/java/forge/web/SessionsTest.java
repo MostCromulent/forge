@@ -27,6 +27,8 @@ import java.util.function.Supplier;
 abstract class SessionsTest {
     WebSessions sessions;
     final List<TestBrowser> browsers = new CopyOnWriteArrayList<>();
+    /** Tracked by message, not by id, because a restarted match numbers its questions from the start again. */
+    final Set<JsonObject> answered = Collections.newSetFromMap(new IdentityHashMap<>());
 
     @BeforeClass
     public void startSessions() {
@@ -135,9 +137,6 @@ abstract class SessionsTest {
         }, "the web seat never had priority with an empty stack");
         sessions.onMessage(host, message("dev", "action", "winGame"));
     }
-
-    /** Tracked by message, not by id, because a restarted match numbers its questions from the start again. */
-    final Set<JsonObject> answered = Collections.newSetFromMap(new IdentityHashMap<>());
 
     /** Gives each question its default answer until the web seat has priority. Only then has the game dealt its zones and is safe to end. */
     void awaitPriority(final TestBrowser host) {

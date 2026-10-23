@@ -91,11 +91,6 @@ public class ActiveClientTest {
                 .anyMatch(z -> zone.equals(z.getAsJsonObject().get("zone").getAsString()));
     }
 
-    private static int turn(final TestBrowser browser) {
-        final JsonObject state = browser.last("state");
-        final JsonObject game = state == null ? null : MatchProbe.objects(browser.model).get(state.get("root").getAsInt());
-        return game == null || !game.has("Turn") ? 0 : game.get("Turn").getAsInt();
-    }
 
     private static boolean atPriority(final TestBrowser browser) {
         final JsonObject prompt = browser.last("prompt");
@@ -108,8 +103,8 @@ public class ActiveClientTest {
 
     // Answers the pre-game prompts with OK, then waits at the first priority prompt and returns that turn's number
     private static int keepAndHoldPriority(final WebGuiGame gui, final TestBrowser browser) throws InterruptedException {
-        for (int i = 0; i < 6000 && !(turn(browser) > 0 && okEnabled(browser) && atPriority(browser)); i++) {
-            if (turn(browser) == 0 && okEnabled(browser)) {
+        for (int i = 0; i < 6000 && !(browser.turn() > 0 && okEnabled(browser) && atPriority(browser)); i++) {
+            if (browser.turn() == 0 && okEnabled(browser)) {
                 // A press sent before the host registers the input is dropped, so press again if no new prompt follows
                 final int prompts = browser.all("prompt").size();
                 TestBrowser.command(gui, TestBrowser.action("ok"));
@@ -120,7 +115,7 @@ public class ActiveClientTest {
                 Thread.sleep(10);
             }
         }
-        final int held = turn(browser);
+        final int held = browser.turn();
         Assert.assertTrue(held > 0, "the web seat never got priority; last prompt " + browser.last("prompt"));
         return held;
     }
@@ -165,9 +160,8 @@ public class ActiveClientTest {
             final int split = cardKey(game, ZoneType.Hand, true, "Fire // Ice", false);
             final int ownFaceDown = cardKey(game, ZoneType.Battlefield, true, "Grizzly Bears", true);
             final int theirFaceDown = cardKey(game, ZoneType.Battlefield, false, "Grizzly Bears", true);
-            for (int i = 0; i < 1000 && !MatchProbe.objects(browser.model).keySet().containsAll(List.of(delver, split, ownFaceDown, theirFaceDown)); i++) {
-                Thread.sleep(10);
-            }
+            SessionsTest.awaitTrue(() -> MatchProbe.objects(browser.model).keySet().containsAll(List.of(delver, split, ownFaceDown, theirFaceDown)),
+                    "the browser never got the cards");
 
             Assert.assertEquals(faces(gui, browser, delver).size(), 2, "a double-faced card shows both faces");
             Assert.assertEquals(faces(gui, browser, split).size(), 3, "a split card shows the whole card and each half");
@@ -210,9 +204,8 @@ public class ActiveClientTest {
             final int turn = game.getPhaseHandler().getTurn();
             browser.release();
             // Wait for the web seat's next turn, past the upkeep that asks for the payment
-            for (int i = 0; i < 6000 && !(game.getPhaseHandler().getTurn() > turn && game.getPhaseHandler().getPhase().isAfter(PhaseType.UPKEEP)); i++) {
-                Thread.sleep(10);
-            }
+            SessionsTest.awaitTrue(() -> game.getPhaseHandler().getTurn() > turn && game.getPhaseHandler().getPhase().isAfter(PhaseType.UPKEEP),
+                    () -> "the next turn's upkeep never ended: turn " + game.getPhaseHandler().getTurn() + " in " + game.getPhaseHandler().getPhase());
             Assert.assertEquals(game.getPhaseHandler().getPlayerTurn(), seat, "the web seat's next turn never came: turn "
                     + game.getPhaseHandler().getTurn() + " in " + game.getPhaseHandler().getPhase());
             boolean gruntSurvived = false;

@@ -43,6 +43,9 @@ public final class CardCatalog {
     /** The order in which a decklist is written. The headings and the type sort use this order. */
     static final List<String> HEADINGS = List.of("Creatures", "Planeswalkers", "Instants", "Sorceries", "Artifacts",
             "Enchantments", "Battles", "Lands");
+    private static final Map<DeckSection, CardCatalog> SECTIONS = new ConcurrentHashMap<>();
+    private static final Pattern NOT_NAME_CHARACTER = Pattern.compile("[^a-z0-9 ]");
+    private final List<Row> rows;
 
     /** filters is the search syntax that the filter bar's chips add. It is read separately from the text, so a typed name is still ranked. */
     public record Query(String text, String colours, String type, String filters, String sort, int offset, boolean showAll) {
@@ -55,8 +58,6 @@ public final class CardCatalog {
     private record Row(PaperCard card, String normalised, String colours, String cost, int mv, String heading) {
     }
 
-    private final List<Row> rows;
-
     private CardCatalog(final List<Row> rows) {
         this.rows = rows;
     }
@@ -68,16 +69,9 @@ public final class CardCatalog {
         return new CardCatalog(rows);
     }
 
-    // The holder class builds the catalogue once, on first use, on whichever thread asks first
-    private static final class Holder {
-        static final CardCatalog INSTANCE = build();
-    }
-
     static CardCatalog get() {
         return Holder.INSTANCE;
     }
-
-    private static final Map<DeckSection, CardCatalog> SECTIONS = new ConcurrentHashMap<>();
 
     /** The cards for a section other than the main deck, such as planes or schemes. Built the first time it is requested. */
     public static CardCatalog of(final DeckSection section) {
@@ -93,21 +87,6 @@ public final class CardCatalog {
             }
             return new CardCatalog(rows);
         });
-    }
-
-    private static final class Sets {
-        static final ToBrowser.CardSets ALL = build();
-
-        private static ToBrowser.CardSets build() {
-            final List<CardEdition> editions = new ArrayList<>();
-            for (final CardEdition e : StaticData.instance().getEditions()) {
-                if (!e.getAllCardsInSet().isEmpty()) {
-                    editions.add(e);
-                }
-            }
-            editions.sort(Comparator.reverseOrder());
-            return new ToBrowser.CardSets(editions.stream().map(e -> new ToBrowser.LimitedEdition(e.getCode(), e.getName())).toList());
-        }
     }
 
     public static ToBrowser.CardSets sets() {
@@ -278,8 +257,6 @@ public final class CardCatalog {
                 + (colours.hasRed() ? "R" : "") + (colours.hasGreen() ? "G" : "");
     }
 
-    private static final Pattern NOT_NAME_CHARACTER = Pattern.compile("[^a-z0-9 ]");
-
     /** Lower case, with accents stripped and only letters, digits and spaces kept. Desktop's ListChooser compares names the same way. */
     static String normalize(final String s) {
         return NOT_NAME_CHARACTER.matcher(StringUtils.stripAccents(s.toLowerCase())).replaceAll("");
@@ -392,5 +369,25 @@ public final class CardCatalog {
                     pool != null && !pool.getFilterPrinted().test(card) ? Localizer.getInstance().getMessage("lblWebDeckCatalogNotIn", pool.getName()) : null));
         }
         return out;
+    }
+
+    // The holder class builds the catalogue once, on first use, on whichever thread asks first
+    private static final class Holder {
+        static final CardCatalog INSTANCE = build();
+    }
+
+    private static final class Sets {
+        static final ToBrowser.CardSets ALL = build();
+
+        private static ToBrowser.CardSets build() {
+            final List<CardEdition> editions = new ArrayList<>();
+            for (final CardEdition e : StaticData.instance().getEditions()) {
+                if (!e.getAllCardsInSet().isEmpty()) {
+                    editions.add(e);
+                }
+            }
+            editions.sort(Comparator.reverseOrder());
+            return new ToBrowser.CardSets(editions.stream().map(e -> new ToBrowser.LimitedEdition(e.getCode(), e.getName())).toList());
+        }
     }
 }

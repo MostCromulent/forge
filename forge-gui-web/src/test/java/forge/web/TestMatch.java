@@ -25,14 +25,17 @@ final class TestMatch {
     static <B extends BrowserChannel> void play(final Deck web, final Deck computer, final Function<WebGuiGame, B> browserFor,
             final Body<B> body) throws Exception {
         final LocalGame local = new LocalGame();
+        final WebGuiGame gui = new WebGuiGame();
+        final B browser = browserFor.apply(gui);
         try {
-            final WebGuiGame gui = new WebGuiGame();
-            final B browser = browserFor.apply(gui);
             gui.attach(browser);
             GuiBase.getInterface().invokeInEdtAndWait(() -> local.startMatch("Web Player", web, "AI", computer, gui));
             body.run(local, gui, browser);
         } finally {
             GuiBase.getInterface().invokeInEdtAndWait(local::shutdown);
+            if (browser instanceof TestBrowser played) {
+                played.stop();
+            }
         }
     }
 

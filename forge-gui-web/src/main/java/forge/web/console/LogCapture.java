@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 import javax.swing.JTextPane;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Element;
@@ -16,6 +17,12 @@ import javax.swing.text.StyledDocument;
 final class LogCapture {
     /** Enough lines to see what just happened without holding a whole session's output. */
     private static final int MAX_LINES = 300;
+    private static final Pattern THROWN = Pattern.compile("^[\\w.$]+(Exception|Error)(:.*)?$");
+    private static final Pattern LINE_END = Pattern.compile("(?<=\n)");
+    // Red for errors and the stack traces under them, amber for warnings. Other lines use the log's own colour.
+    private static final SimpleAttributeSet PLAIN = new SimpleAttributeSet();
+    private static final SimpleAttributeSet ERROR = colour(new Color(0xff, 0x6b, 0x5c));
+    private static final SimpleAttributeSet WARNING = colour(new Color(0xf2, 0xc3, 0x44));
 
     private final StringBuilder pending = new StringBuilder();
     private final JTextPane text;
@@ -35,7 +42,7 @@ final class LogCapture {
     }
 
     private PrintStream tee(final PrintStream original) {
-        // var keeps the anonymous type, so drain() can be called. ByteArrayOutputStream's flush declares IOException.
+        // var keeps the anonymous type, so drain() can be called
         final var copyOf = new ByteArrayOutputStream() {
             void drain() {
                 final String chunk = toString(StandardCharsets.UTF_8);
@@ -78,10 +85,15 @@ final class LogCapture {
         }
         final StyledDocument doc = text.getStyledDocument();
         try {
-            for (final String line : chunk.split("(?<=\n)")) {
-                doc.insertString(doc.getLength(), line, styleOf(line));
-                if (line.contains("[ERROR]")) {
+            final String[] lines = LINE_END.split(chunk);
+            for (int i = 0; i < lines.length; i++) {
+                final SimpleAttributeSet style = styleOf(lines[i]);
+                if (lines[i].contains("[ERROR]")) {
                     onError.run();
+                }
+                // A line that trim() would remove at once is not inserted
+                if (i >= lines.length - MAX_LINES) {
+                    doc.insertString(doc.getLength(), lines[i], style);
                 }
             }
         } catch (final BadLocationException e) {
@@ -91,11 +103,6 @@ final class LogCapture {
         text.setCaretPosition(doc.getLength());
         return true;
     }
-
-    // Red for errors and the stack traces under them, amber for warnings. Other lines use the log's own colour.
-    private static final SimpleAttributeSet PLAIN = new SimpleAttributeSet();
-    private static final SimpleAttributeSet ERROR = colour(new Color(0xff, 0x6b, 0x5c));
-    private static final SimpleAttributeSet WARNING = colour(new Color(0xf2, 0xc3, 0x44));
 
     private static SimpleAttributeSet colour(final Color c) {
         final SimpleAttributeSet set = new SimpleAttributeSet();
@@ -112,7 +119,7 @@ final class LogCapture {
             return carried = WARNING;
         }
         final String bare = line.strip();
-        final boolean thrown = bare.matches("^[\\w.$]+(Exception|Error)(:.*)?$");
+        final boolean thrown = THROWN.matcher(bare).matches();
         final boolean trace = thrown || line.startsWith("\t") || line.startsWith(" ") || bare.startsWith("Caused by")
                 || bare.startsWith("at ") || bare.startsWith("...");
         if (carried != PLAIN && (trace || bare.isEmpty())) {

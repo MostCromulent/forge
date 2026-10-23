@@ -84,7 +84,10 @@ import static forge.web.console.ConsoleWidgets.stack;
 import static forge.web.console.ConsoleWidgets.warning;
 import static forge.web.console.ConsoleWidgets.wrapped;
 
-/** The desktop window that starts and stops the server. Without it, a player who closes their tab has no sign that Forge is still running. */
+/**
+ * The desktop window that starts and stops the server. Without it, a player who closes their tab has no sign that Forge is still running.
+ * As a progress bar it shows the card reader's progress.
+ */
 public final class ServerConsole implements IProgressBar, IHasForgeLog {
     private static final Localizer TEXT = Localizer.getInstance();
     /** Card loading prints tens of thousands of lines, so the text is added on a timer instead of line by line. */
@@ -670,8 +673,8 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         text = new JTextPane();
         text.setEditable(false);
         text.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        text.setBackground(new Color(0x10, 0x14, 0x1c));
-        text.setForeground(new Color(0xc8, 0xd1, 0xdb));
+        text.setBackground(TrafficGraph.BACKGROUND);
+        text.setForeground(TrafficGraph.LABEL);
         text.setMargin(new Insets(6, 8, 6, 8));
         capture = new LogCapture(text, () -> {
             if (!details.isVisible()) {
@@ -781,44 +784,6 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         }
     }
 
-    /** A lamp, filled while lit and an empty ring while not. */
-    private static final class Light extends JComponent {
-        private static final int SIZE = 11;
-        private final Color off;
-        private boolean on;
-
-        Light() {
-            this(DARK);
-        }
-
-        /** off is the colour of the empty ring. Use it for a lamp whose unlit state is not an error. */
-        Light(final Color off) {
-            this.off = off;
-            final Dimension size = new Dimension(SIZE, SIZE);
-            setPreferredSize(size);
-            setMinimumSize(size);
-            setMaximumSize(size);
-        }
-
-        void lit(final boolean value) {
-            on = value;
-            repaint();
-        }
-
-        @Override
-        protected void paintComponent(final Graphics g) {
-            final Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(on ? LIT : off);
-            if (on) {
-                g2.fillOval(0, 0, SIZE - 1, SIZE - 1);
-            } else {
-                g2.drawOval(0, 0, SIZE - 1, SIZE - 1);
-            }
-            g2.dispose();
-        }
-    }
-
     private void quit() {
         if (quitting) {
             return;
@@ -826,8 +791,6 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         quitting = true;
         onQuit.run();
     }
-
-    // The card reader's progress shows on the bar
 
     @Override
     public void setDescription(final String s0) {
@@ -876,5 +839,43 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 frame.dispose();
             }
         });
+    }
+
+    /** A lamp, filled while lit and an empty ring while not. */
+    private static final class Light extends JComponent {
+        private static final int SIZE = 11;
+        private final Color off;
+        private boolean on;
+
+        Light() {
+            this(DARK);
+        }
+
+        /** off is the colour of the empty ring. Use it for a lamp whose unlit state is not an error. */
+        Light(final Color off) {
+            this.off = off;
+            final Dimension size = new Dimension(SIZE, SIZE);
+            setPreferredSize(size);
+            setMinimumSize(size);
+            setMaximumSize(size);
+        }
+
+        void lit(final boolean value) {
+            on = value;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(final Graphics g) {
+            final Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(on ? LIT : off);
+            if (on) {
+                g2.fillOval(0, 0, SIZE - 1, SIZE - 1);
+            } else {
+                g2.drawOval(0, 0, SIZE - 1, SIZE - 1);
+            }
+            g2.dispose();
+        }
     }
 }

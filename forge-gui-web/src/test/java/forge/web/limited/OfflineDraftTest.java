@@ -16,13 +16,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class OfflineDraftTest {
+    private final BlockingQueue<DraftState> shown = new LinkedBlockingQueue<>();
+    private volatile String failed;
+
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
     }
-
-    private final BlockingQueue<DraftState> shown = new LinkedBlockingQueue<>();
-    private volatile String failed;
 
     /** A draft of three full packs against one computer seat, so a pack comes back after every pick. */
     private OfflineDraft twoSeats() {

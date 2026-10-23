@@ -41,6 +41,8 @@ import java.util.function.Supplier;
 
 /** The host's offline sealed and draft pools, stored where desktop stores them. This class lists the setup form's options, makes pools and drafts, and lists saved pools. */
 public final class OfflineEvents {
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ISO_LOCAL_DATE.withZone(ZoneId.systemDefault());
+
     private OfflineEvents() {
     }
 
@@ -78,8 +80,6 @@ public final class OfflineEvents {
         return latest;
     }
 
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ISO_LOCAL_DATE.withZone(ZoneId.systemDefault());
-
     /** When a pool's folder or any file in it last changed on disk, or 0 if it has no folder. */
     private static long changed(final File folder) {
         long time = folder.lastModified();
@@ -91,7 +91,7 @@ public final class OfflineEvents {
     }
 
     public static LimitedPools pools() {
-        return new LimitedPools(rows(sealed(), ForgeConstants.DECK_SEALED_DIR), rows(storage(EventKind.draft), ForgeConstants.DECK_DRAFT_DIR));
+        return new LimitedPools(rows(storage(EventKind.sealed), ForgeConstants.DECK_SEALED_DIR), rows(storage(EventKind.draft), ForgeConstants.DECK_DRAFT_DIR));
     }
 
     private static List<PoolRow> rows(final IStorage<DeckGroup> storage, final String dir) {

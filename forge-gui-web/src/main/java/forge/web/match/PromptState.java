@@ -25,7 +25,7 @@ final class PromptState {
 
     private final Consumer<Prompt> send;
     private String message = "";
-    /** "toss" or "lastGame" while the player is asked who starts. The value says whether the player won the toss or lost the last game. */
+    /** Set while the player is asked who starts. It says whether the player won the toss or lost the last game. */
     private StarterChoice starterChoice;
     private boolean priority;
     private Ref card;

@@ -28,9 +28,6 @@ import java.util.Map;
 
 /** What the options dialog reads and writes: a player's own settings (see {@link PlayerSettings}) and the phase stops. */
 public final class WebSettings implements IHasForgeLog {
-    private WebSettings() {
-    }
-
     private static final Map<String, FPref> BOOLEAN_PREFS = Map.ofEntries(
             Map.entry("interruptAttackers", FPref.YIELD_INTERRUPT_ON_ATTACKERS),
             Map.entry("interruptOpponentSpell", FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL),
@@ -41,14 +38,19 @@ public final class WebSettings implements IHasForgeLog {
             Map.entry("suppressAfterYield", FPref.YIELD_SUPPRESS_AFTER_END),
             Map.entry("suppressOwnTurn", FPref.YIELD_SUPPRESS_ON_OWN_TURN),
             Map.entry("autoPassNoActions", FPref.YIELD_AUTO_PASS_NO_ACTIONS));
-
     /** When each yield suggestion is offered again after it is declined, by its DeclineScope name. */
     private static final Map<String, FPref> SCOPE_PREFS = Map.of(
             "suggestStackYield", FPref.YIELD_DECLINE_SCOPE_STACK_YIELD,
             "suggestNoActions", FPref.YIELD_DECLINE_SCOPE_NO_ACTIONS);
-
     /** Forge's keyboard shortcut preferences. The page offers each one where it has the matching action. */
     private static final List<FPref> SHORTCUTS = Arrays.stream(FPref.values()).filter(p -> p.name().startsWith("SHORTCUT_")).toList();
+    /** The sound sets in Forge's sound folder. They are read only once, because every settings update sends them. */
+    private static final Supplier<List<String>> SOUND_SETS = Suppliers.memoize(() -> List.of(SoundSystem.instance.getAvailableSoundSets()));
+    private static final List<String> TABLE_SETTINGS = List.of("filteredHands", "mulliganRule", "aiProfile", "ante", "undoMode");
+    private static final List<String> UNDO_MODES = List.of(ForgeConstants.UNDO_MODE_OFF, ForgeConstants.UNDO_MODE_SINGLE, ForgeConstants.UNDO_MODE_FREE);
+
+    private WebSettings() {
+    }
 
     public static ServerSettings values(final PlayerSettings player) {
         return new ServerSettings(
@@ -141,13 +143,6 @@ public final class WebSettings implements IHasForgeLog {
         }
         player.save();
     }
-
-    /** The sound sets in Forge's sound folder. They are read only once, because every settings update sends them. */
-    private static final Supplier<List<String>> SOUND_SETS = Suppliers.memoize(() -> List.of(SoundSystem.instance.getAvailableSoundSets()));
-
-    private static final List<String> TABLE_SETTINGS = List.of("filteredHands", "mulliganRule", "aiProfile", "ante", "undoMode");
-
-    private static final List<String> UNDO_MODES = List.of(ForgeConstants.UNDO_MODE_OFF, ForgeConstants.UNDO_MODE_SINGLE, ForgeConstants.UNDO_MODE_FREE);
 
     /** Sets one of the host's table rules. Returns false for a value Forge does not know. */
     private static boolean setTableRule(final PlayerSettings player, final String key, final String value) {

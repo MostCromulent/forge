@@ -31,6 +31,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class WebServerTest {
     private final HttpClient http = HttpClient.newHttpClient();
@@ -96,11 +98,8 @@ public class WebServerTest {
         host.sendClose(WebSocket.NORMAL_CLOSURE, "").get(5, TimeUnit.SECONDS);
     }
 
-    private void awaitConnected() throws InterruptedException {
-        for (int i = 0; i < 3000 && connected == null; i++) {
-            Thread.sleep(20);
-        }
-        Assert.assertNotNull(connected, "the socket never reached the endpoint");
+    private void awaitConnected() {
+        SessionsTest.awaitTrue(() -> connected != null, "the socket never reached the endpoint");
     }
 
     @Test
@@ -192,7 +191,7 @@ public class WebServerTest {
     public void thePageLinksOneVersionedStylesheetThatIsKept() throws Exception {
         final String page = get("/?token=secret", null).body();
         Assert.assertEquals(page.split("rel=\"stylesheet\"", -1).length - 1, 1, "the page links more than one stylesheet");
-        final java.util.regex.Matcher versioned = java.util.regex.Pattern.compile("href=\"(css/page\\.css\\?v=[0-9a-f]+)\"").matcher(page);
+        final Matcher versioned = Pattern.compile("href=\"(css/page\\.css\\?v=[0-9a-f]+)\"").matcher(page);
         Assert.assertTrue(versioned.find(), "the stylesheet has no version");
         final HttpResponse<String> styles = get("/" + versioned.group(1) + "&token=secret", null);
         Assert.assertTrue(styles.headers().firstValue("cache-control").orElse("").contains("immutable"));
@@ -223,14 +222,10 @@ public class WebServerTest {
         final List<String> texts = new CopyOnWriteArrayList<>();
         final WebSocket ws = openSocket(origin(), texts);
         ws.sendText("{\"t\":\"ping\"}", true).get(5, TimeUnit.SECONDS);
-        for (int i = 0; i < 3000 && received.isEmpty(); i++) {
-            Thread.sleep(20);
-        }
+        SessionsTest.awaitTrue(() -> !received.isEmpty(), "the endpoint never got the browser's message");
         Assert.assertEquals(received.get(0).get("t").getAsString(), "ping");
         connected.send(JsonCodec.message("pong"));
-        for (int i = 0; i < 3000 && texts.isEmpty(); i++) {
-            Thread.sleep(20);
-        }
+        SessionsTest.awaitTrue(() -> !texts.isEmpty(), "the browser never got the server's message");
         Assert.assertTrue(texts.get(0).contains("pong"));
         ws.sendClose(WebSocket.NORMAL_CLOSURE, "").get(5, TimeUnit.SECONDS);
     }

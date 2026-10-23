@@ -30,15 +30,11 @@ public class LoopbackGameTest {
         GuiBase.getInterface().invokeInEdtAndWait(r);
     }
 
-    private static void awaitGameStarted(final LocalGame local, final TestBrowser browser) throws InterruptedException {
-        for (int i = 0; i < 3000; i++) {
+    private static void awaitGameStarted(final LocalGame local, final TestBrowser browser) {
+        SessionsTest.awaitTrue(() -> {
             final HostedMatch match = local.hostedMatch();
-            if (match != null && match.getGame() != null && browser.all("state").size() > 1) {
-                return;
-            }
-            Thread.sleep(10);
-        }
-        Assert.fail("game did not start");
+            return match != null && match.getGame() != null && browser.all("state").size() > 1;
+        }, "game did not start");
     }
 
     static void assertSameIgnoringZone(final Map<Integer, JsonObject> incremental, final Map<Integer, JsonObject> fresh) {

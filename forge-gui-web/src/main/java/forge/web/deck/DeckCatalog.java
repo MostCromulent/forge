@@ -68,8 +68,23 @@ public final class DeckCatalog {
             "White", "W", "Blue", "U", "Black", "B", "Red", "R", "Green", "G");
     /** The finder lists a deck's cards without problem marks. The verdict line states the problems. */
     public static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), Map.of(), Set.of(), List.of());
+    /** Kept per deck object, not per contents, because working out a deck's formats reads every printing of its cards. */
+    private static final Map<Deck, Facts> FACTS = new MapMaker().weakKeys().makeMap();
+    private static final Map<Deck, Map<String, Optional<String>>> VERDICTS = new MapMaker().weakKeys().makeMap();
+    /** A Commander deck's bracket, cached the same way. It is worked out only for decks listed in Commander. */
+    private static final Map<Deck, Integer> BRACKETS = new MapMaker().weakKeys().makeMap();
+    /** Held while any code reads or changes a deck. A deck loads its sections on first read, and that is not safe from two threads. */
+    public static final Object DECKS = new Object();
+    /** The most cards a problem sentence names before it counts the rest. */
+    private static final int NAMED_CARDS = 3;
 
     private final Map<String, Entry> byKey = new ConcurrentHashMap<>();
+    /** The categories that the browser asked for and core downloaded. They are kept so a refresh does not lose them. */
+    private final List<NetDeckCategory> netCategories = new ArrayList<>();
+    /** The card pool of the last refresh. Generators build from it, and every verdict checks against it. */
+    private volatile GameFormat pool;
+    /** Whether this catalogue serves a guest's browser. A guest's own decks are the ones on its device. */
+    private boolean guest;
 
     /** A generator's deck is built when first requested and then kept, so the panel and the match see the same cards. */
     private record Entry(DeckProxy proxy, boolean generated, Deck built) {
@@ -88,16 +103,6 @@ public final class DeckCatalog {
         }
         return out;
     }
-
-    /** What a deck's summary says at any table. */
-    private record Facts(String colors, int played, int sideboard, List<String> legalIn, String formats, int averageMana) {
-    }
-
-    /** Kept per deck object, not per contents, because working out a deck's formats reads every printing of its cards. */
-    private static final Map<Deck, Facts> FACTS = new MapMaker().weakKeys().makeMap();
-    private static final Map<Deck, Map<String, Optional<String>>> VERDICTS = new MapMaker().weakKeys().makeMap();
-    /** A Commander deck's bracket, cached the same way. It is worked out only for decks listed in Commander. */
-    private static final Map<Deck, Integer> BRACKETS = new MapMaker().weakKeys().makeMap();
 
     static void changed(final Deck deck) {
         FACTS.remove(deck);
@@ -181,12 +186,6 @@ public final class DeckCatalog {
                 .computeIfAbsent(table, t -> Optional.ofNullable(problem(deck, format, pool))).orElse(null);
     }
 
-    /** The categories that the browser asked for and core downloaded. They are kept so a refresh does not lose them. */
-    private final List<NetDeckCategory> netCategories = new ArrayList<>();
-
-    /** Held while any code reads or changes a deck. A deck loads its sections on first read, and that is not safe from two threads. */
-    public static final Object DECKS = new Object();
-
     /** Asks core for a net deck category. Core picks one through the browser and downloads it. */
     public void loadNetDecks(final GameType format) {
         // Picking waits for the host's answer, so the decks are locked only to record the pick
@@ -197,16 +196,6 @@ public final class DeckCatalog {
             }
         }
     }
-
-    /** The card pool of the last refresh. Generators build from it, and every verdict checks against it. */
-    private volatile GameFormat pool;
-
-    /** A deck that a guest stores in its browser, and the format it was built for. */
-    public record OnDevice(Deck deck, GameType format) {
-    }
-
-    /** Whether this catalogue serves a guest's browser. A guest's own decks are the ones on its device. */
-    private boolean guest;
 
     /** Rebuilds the catalogue and returns its decks. At a Draft table these are event pools. When event is not null, only that event's pools are listed. */
     public List<DeckSummary> refresh(final GameType format, final GameFormat pool, final boolean guest, final Map<String, OnDevice> device,
@@ -497,7 +486,7 @@ public final class DeckCatalog {
             byKey.put(key, new Entry(proxy));
             final Deck deck = proxy.getDeck();
             final Facts facts = factsOf(deck, proxy);
-            // An illegal deck is shown with a mark instead of hidden, so nobody searches for a deck that is there
+            // An illegal deck is listed with its problem, and the finder's legal-only filter decides whether it is shown
             final boolean linked = LINKED.equals(tag);
             out.add(new DeckSummary(key, proxy.getName(), tag, facts.colors(), null, null, facts.played(),
                     facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), facts.formats(),
@@ -574,9 +563,6 @@ public final class DeckCatalog {
         return format.getDeckFormat().getDeckConformanceProblem(deck);
     }
 
-    /** The most cards a problem sentence names before it counts the rest. */
-    private static final int NAMED_CARDS = 3;
-
     /** The pool's verdict on a deck as one sentence. It names the cards that fail GameFormat's two checks, in GameFormat's order. */
     static String poolProblem(final GameFormat pool, final Deck deck) {
         if (pool.getDeckConformanceProblem(deck) == null) {
@@ -638,7 +624,7 @@ public final class DeckCatalog {
     public static void forgetSleeveArt(final String imageKey) {
         final var prefs = FModel.getPreferences();
         final FPref pref = FPref.UI_SLEEVE_ART_LIBRARY;
-        final Map<String, Integer> library = new LinkedHashMap<>(SleeveArt.parseLibrary(prefs.getPref(pref)));
+        final Map<String, Integer> library = SleeveArt.parseLibrary(prefs.getPref(pref));
         if (library.remove(imageKey) != null) {
             prefs.setPref(pref, SleeveArt.formatLibrary(library));
             prefs.save();
@@ -652,10 +638,18 @@ public final class DeckCatalog {
         }
         final var prefs = FModel.getPreferences();
         final FPref pref = FPref.UI_SLEEVE_ART_LIBRARY;
-        final Map<String, Integer> library = new LinkedHashMap<>(SleeveArt.parseLibrary(prefs.getPref(pref)));
+        final Map<String, Integer> library = SleeveArt.parseLibrary(prefs.getPref(pref));
         library.remove(imageKey);
         library.put(imageKey, SleeveArt.clampOffset(offset));
         prefs.setPref(pref, SleeveArt.formatLibrary(library));
         prefs.save();
+    }
+
+    /** What a deck's summary says at any table. */
+    private record Facts(String colors, int played, int sideboard, List<String> legalIn, String formats, int averageMana) {
+    }
+
+    /** A deck that a guest stores in its browser, and the format it was built for. */
+    public record OnDevice(Deck deck, GameType format) {
     }
 }

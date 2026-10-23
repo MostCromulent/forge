@@ -121,7 +121,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
         serial.execute(() -> {
             // The timer made the pick, so a click that arrived at the same time is not counted too
             pending = null;
-            picks.add(DraftView.card(card, packNum, pickInPack));
+            picks.add(DraftView.card(card, packNum, pickInPack, false));
             view.log(DraftLogKind.own, Localizer.getInstance().getMessage("lblWebOnlineDraftOutOfTime", card.getName()));
         });
     }
@@ -233,7 +233,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
         }
         final List<Integer> movedHere = moved.stream().map(s -> Math.floorMod(s - me, n)).toList();
         final int pick = pickNumber + 1;
-        final List<DraftCard> cards = pack.stream().map(c -> DraftView.card(c, packNumber, pick)).toList();
+        final List<DraftCard> cards = pack.stream().map(c -> DraftView.card(c, packNumber, pick, false)).toList();
         final int left = clockEnd == 0 ? 0 : (int) Math.max(0, clockEnd - System.currentTimeMillis());
         publish.accept(view.state(newPack, step -> new DraftState(step, e == null || e.getProductDescription() == null ? "" : e.getProductDescription(), packNumber,
                 e == null ? 0 : e.getNumRounds(), pick, packSize, DraftView.passDirection(packNumber), seats, cards, List.copyOf(picks), movedHere,

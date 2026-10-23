@@ -58,6 +58,7 @@ public final class BrowserModel {
         }
     }
 
+    /** Applies a state message as the page would. Only tests use this, to rebuild the page's model from what was sent. */
     public synchronized void applyStateMessage(final JsonObject msg) {
         if (msg.get("full").getAsBoolean()) {
             reset(msg.get("root").getAsInt());
@@ -109,6 +110,7 @@ public final class BrowserModel {
         return stateMessage(true, -1, objects, Map.of(), List.of());
     }
 
+    /** Only tests use this, to compare a model with another without sharing its objects. */
     synchronized Map<Integer, JsonObject> objectsCopy() {
         final Map<Integer, JsonObject> copy = new LinkedHashMap<>();
         objects.forEach((k, v) -> copy.put(k, v.deepCopy()));

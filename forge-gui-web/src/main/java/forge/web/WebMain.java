@@ -41,7 +41,7 @@ public final class WebMain implements IHasForgeLog {
         // The console opens before the cards are read, because reading them takes long enough to look like a failure
         final ServerConsole console = ServerConsole.open(ui, quit::countDown);
         FModel.initialize(console, prefs -> null, false);
-        // The data for card-based deck generation takes seconds to load and is used only for archetype decks, so the server starts without it
+        // The data for card-based deck generation takes seconds to load, so the server starts without it and loads it in the background
         if (!FModel.getPreferences().getPrefBoolean(FPref.LOAD_CARD_SCRIPTS_LAZILY)) {
             final Thread deckGen = new Thread(FModel::loadDeckGenMatrix, "DeckGenData");
             deckGen.setDaemon(true);

@@ -110,14 +110,13 @@ public final class OfflineLimited implements IHasForgeLog {
     }
 
     private void editPool(final BrowserChannel channel, final String name) {
-        final Stage now = session.stage();
-        final DeckGroup group = now instanceof Event e ? e.storage().get(name) : null;
+        final Event e = session.stage() instanceof Event event ? event : null;
+        final DeckGroup group = e == null ? null : e.storage().get(name);
         if (group == null) {
             channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionNoPool", name)));
             return;
         }
-        final Event e = (Event) now;
-        decks.openPool(group.getHumanDeck(), e.storage(), poolType(e, group.getHumanDeck()), channel);
+        decks.openPool(group.getHumanDeck(), e.storage(), poolType(e.type(), group.getHumanDeck()), channel);
     }
 
     private void deletePool(final BrowserChannel channel, final String name) {
@@ -310,21 +309,17 @@ public final class OfflineLimited implements IHasForgeLog {
                 ? GameType.CommanderDraft : type;
     }
 
-    private static GameType poolType(final Event event, final Deck human) {
-        return poolType(event.type(), human);
-    }
 
     /** Plays a pool's deck against one opponent, several at once, or each in turn as a gauntlet. Afterwards it returns to the pool. */
     private void playPool(final BrowserChannel channel, final PoolPlay play) {
-        final Stage from = session.stage();
-        final DeckGroup group = from instanceof Event e ? e.storage().get(play.name()) : null;
+        final Event event = session.stage() instanceof Event e ? e : null;
+        final DeckGroup group = event == null ? null : event.storage().get(play.name());
         if (!session.hosting() || group == null) {
             return;
         }
-        final Event event = (Event) from;
         final List<Deck> ai = group.getAiDecks();
         final Deck human = group.getHumanDeck();
-        final GameType limitedType = poolType(event, human);
+        final GameType limitedType = poolType(event.type(), human);
         if (FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
             final String illegal = limitedType.getDeckFormat().getDeckConformanceProblem(human);
             if (illegal != null) {
@@ -390,24 +385,22 @@ public final class OfflineLimited implements IHasForgeLog {
                 LocalGame.storedIndex(FPref.UI_SLEEVES, seat), deck);
     }
 
-    /** Starts a pool's match from the Limited pages. Null when it could not start. */
-    private HostedMatch playLimited(final Event back, final GameType type, final List<LocalGame.Seat> seats) {
+    /** Starts a pool's match from the Limited pages. */
+    private void playLimited(final Event back, final GameType type, final List<LocalGame.Seat> seats) {
         final Stage from = session.stage();
         final Playing playing = new Playing(new WebGuiGame(session.settings()), false, false, back);
         if (!session.move(from, playing)) {
             playing.gui().close();
-            return null;
+            return;
         }
         session.attach(playing.gui());
         try {
             local.startLimitedMatch(seats, type, playing.gui());
-            return local.hostedMatch();
         } catch (final RuntimeException ex) {
             netLog.error(ex, "Could not start the match");
             local.endMatch();
             session.move(playing, back);
             session.tell(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
-            return null;
         }
     }
 

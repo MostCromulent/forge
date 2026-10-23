@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 
 /**
  * Questions the host asks outside a match. The calling thread waits for the browser's answer, as desktop waits for its dialog.
- * These are kept apart from {@link PendingRequests}, which holds one seat's questions during its game. These questions go to the
+ * These are kept apart from {@link forge.web.match.PendingRequests}, which holds one seat's questions during its game. These questions go to the
  * browser that holds the host's seat at the time. They are shown on any screen, and they time out because no game ends them.
  */
 final class HostRequests implements IHasForgeLog {

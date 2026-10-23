@@ -158,17 +158,13 @@ public final class OfflineDraft implements Draft {
                     packSize = pack.size();
                     roundPicks = 0;
                 }
-                send(passed, false);
+                send(passed, false, true);
                 return;
             }
         }
         draft.postDraftActions();
         pack = List.of();
-        send(passed, true);
-    }
-
-    private void send(final boolean passed, final boolean done) {
-        send(passed, done, true);
+        send(passed, true, true);
     }
 
     /** When newPack is false the step stays the same, so a card the player has selected in the pack stays selected. */
@@ -181,7 +177,7 @@ public final class OfflineDraft implements Draft {
             seats.add(new DraftSeat(name, p instanceof LimitedPlayerAI, p.getPackQueueSize(), false));
         }
         final int pick = roundPicks + 1;
-        final List<DraftCard> cards = pack.stream().map(c -> DraftView.card(c, round, pick)).toList();
+        final List<DraftCard> cards = pack.stream().map(c -> DraftView.card(c, round, pick, false)).toList();
         // Offline, all packs are passed at the same time, so a pass moves every seat's pack
         final List<Integer> moved = passed ? IntStream.range(0, seats.size()).boxed().toList() : List.of();
         publish.accept(view.state(newPack, step -> new DraftState(step, product, round, draft.getNumRounds(), pick, packSize,

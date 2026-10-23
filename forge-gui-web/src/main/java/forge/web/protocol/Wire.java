@@ -26,6 +26,13 @@ import java.util.stream.Stream;
 
 /** Turns the message records into JSON and back. A null component is left out of the JSON. Only components marked {@link Nullable} may be null. */
 public final class Wire {
+    /** The classes whose nested records make up the protocol. The campaign modes have their own class, so a build can leave them out. */
+    private static final List<Class<?>> HOLDERS = List.of(FromBrowser.class, ToBrowser.class, CampaignProtocol.class);
+    private static final Gson GSON = new Gson();
+    /** Writes every message to the browser. Nulls are kept, because a property sent as null has gone back to its default. */
+    public static final Gson WRITER = new GsonBuilder().serializeNulls().create();
+    private static final Map<Class<?>, RecordComponent[]> COMPONENTS = new ConcurrentHashMap<>();
+
     private Wire() {
     }
 
@@ -43,7 +50,10 @@ public final class Wire {
         String value() default "";
     }
 
-    /** A question the game waits on. The value is empty when a {@code kind} component names several kinds that share one shape. */
+    /**
+     * A question the game waits on. The browser answers with a {@code reply} command that carries the request's id.
+     * The value is empty when a {@code kind} component names several kinds that share one shape.
+     */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     @interface Request {
@@ -77,20 +87,12 @@ public final class Wire {
         String value();
     }
 
-    /** The classes whose nested records make up the protocol. The campaign modes have their own class, so a build can leave them out. */
-    private static final List<Class<?>> HOLDERS = List.of(FromBrowser.class, ToBrowser.class, CampaignProtocol.class);
-
     /** The protocol's records that carry a mark, sorted by name. The browser's types are written in this order. */
     @SuppressWarnings("unchecked")
     static List<Class<? extends Record>> marked(final Class<? extends Annotation> mark) {
         return HOLDERS.stream().flatMap(h -> Stream.of(h.getDeclaredClasses())).filter(c -> c.isAnnotationPresent(mark))
                 .sorted(Comparator.comparing(Class::getSimpleName)).<Class<? extends Record>>map(c -> (Class<? extends Record>) c).toList();
     }
-
-    private static final Gson GSON = new Gson();
-    /** Writes every message to the browser. Nulls are kept, because a property sent as null has gone back to its default. */
-    public static final Gson WRITER = new GsonBuilder().serializeNulls().create();
-    private static final Map<Class<?>, RecordComponent[]> COMPONENTS = new ConcurrentHashMap<>();
 
     /** The JSON for a message to the browser, with its {@code t}. */
     public static JsonObject encode(final Record message) {
@@ -168,17 +170,6 @@ public final class Wire {
         throw new IllegalArgumentException("No JSON form for " + value.getClass().getName());
     }
 
-    /** The command records by each name they handle. Built on first use, because FromBrowser's list is made through this class. */
-    private static final class ByName {
-        static final Map<String, Class<? extends Record>> COMMANDS = new HashMap<>();
-
-        static {
-            for (final Class<? extends Record> type : FromBrowser.COMMANDS) {
-                commandNames(type).forEach(name -> COMMANDS.put(name, type));
-            }
-        }
-    }
-
     /** Decodes a message from the browser into the record its {@code t} names. Returns null when no record has that name. */
     public static Record decode(final JsonObject message) {
         final JsonElement t = message.get("t");
@@ -243,6 +234,17 @@ public final class Wire {
             return c.getAccessor().invoke(record);
         } catch (final IllegalAccessException | InvocationTargetException e) {
             throw new IllegalStateException("Cannot read " + c.getName(), e);
+        }
+    }
+
+    /** The command records by each name they handle. Built on first use, because FromBrowser's list is made through this class. */
+    private static final class ByName {
+        static final Map<String, Class<? extends Record>> COMMANDS = new HashMap<>();
+
+        static {
+            for (final Class<? extends Record> type : FromBrowser.COMMANDS) {
+                commandNames(type).forEach(name -> COMMANDS.put(name, type));
+            }
         }
     }
 }

@@ -152,9 +152,6 @@ public class OnlineEventTest extends SessionsTest {
         sessions.onMessage(host, JsonCodec.message("leaveLobby"));
         host.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()), "the host never left the table");
         // The browser is told it left before the table is closed, so wait for the draft host to finish
-        for (int i = 0; i < 250 && !draftHost.isFinished(); i++) {
-            Thread.sleep(20);
-        }
-        Assert.assertTrue(draftHost.isFinished(), "the draft host outlived its table");
+        SessionsTest.awaitTrue(draftHost::isFinished, "the draft host outlived its table");
     }
 }

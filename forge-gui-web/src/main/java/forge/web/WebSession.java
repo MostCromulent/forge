@@ -20,8 +20,8 @@ import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckSession;
 import forge.web.images.SkinSprites;
 import forge.web.limited.Draft;
-import forge.web.limited.EventSeat;
 import forge.web.limited.DraftOwner;
+import forge.web.limited.EventSeat;
 import forge.web.limited.OfflineDraft;
 import forge.web.limited.OfflineEvents;
 import forge.web.limited.OfflineLimited;
@@ -42,308 +42,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /** One browser's session. Its current place is one {@link Stage}, which changes only through {@link #move}. */
 public final class WebSession implements IHasForgeLog {
-    /** Where the browser is. Each stage holds only what exists at that stage. */
-    public sealed interface Stage permits Menu, Opening, Setup, Event, InCampaign, Playing { }
-
-    /** The start page. For a guest, this is waiting for the host to open a game. */
-    public record Menu() implements Stage { }
-
-    /** Taking a seat. The table is built while the browser waits, and nothing may change it until the seat is taken. */
-    record Opening() implements Stage { }
-
-    /** Match setup, at a seat whose GUI the match will be played through. Invited means others can join. */
-    public record Setup(WebGuiGame gui, boolean invited) implements Stage { }
-
-    /** The Limited pages for a kind of event: the saved pools and the setup form. When pool is not null, that pool's opponents screen is shown. */
-    public record Event(EventKind kind, String pool) implements Stage {
-        public IStorage<DeckGroup> storage() {
-            return OfflineEvents.storage(kind);
-        }
-
-        public GameType type() {
-            return kind == EventKind.draft ? GameType.Draft : GameType.Sealed;
-        }
-    }
-
-    /** A campaign mode's pages. While save is null they list its saved games, otherwise they show the open save. */
-    public record InCampaign(String mode, String save) implements Stage { }
-
-    /** In a match, playing it or watching the computer play it. back is where leaving returns to: a pool, a campaign, or null for the table. */
-    public record Playing(WebGuiGame gui, boolean invited, boolean spectating, Stage back) implements Stage { }
-
     private static final int CARD_SEARCH_LIMIT = 60;
     /** Chat is shown to every player, so a message is limited to a length that a chat box can hold. */
     private static final int MOST_CHAT_CHARS = 500;
     /** Long enough for any name a player types, short enough to fit on a seat plate. */
     static final int MAX_NAME_LENGTH = 24;
-    private final Lobby lobby;
-    /** The deck editor and importer. They open beside the menu or the table and are not a stage of their own. */
-    private final DeckSession decks;
-    private final WebGuiBase ui;
-    private final WebSessions sessions;
-    /** True for the browser that claimed the host's seat. Only that browser may set up the table. */
-    private volatile boolean isHost;
-    /** Whether this browser connected through the host's link. Only such a browser may claim the host's seat. */
-    private final boolean mayHost;
-    private final LocalGame local = new LocalGame();
-    private volatile BrowserChannel browser;
-    private volatile Stage stage = new Menu();
-    /** This player's settings: a guest's own, or the host's, which are Forge's preferences. */
-    private volatile PlayerSettings settings = PlayerSettings.fresh();
-    /** The name this browser chose to play under. Null until it chooses one. */
-    private volatile String name;
-    /** The avatar chosen next to the name, held here before any seat exists. Null until it chooses one. */
-    private volatile Integer avatar;
-    /** A guest's last chosen sleeve, from its browser. Null until it chooses one, and the seat then keeps the sleeve it was given. */
-    private volatile Integer sleeve;
-    private final OfflineLimited limited;
-    /** This seat's part in the table's draft or sealed event. */
-    private final EventSeat eventSeat;
-    /** The campaign modes. A build without them uses Campaigns.NONE instead. */
-    private final Campaigns campaigns;
-
     private static final AtomicInteger SESSIONS = new AtomicInteger();
-    /**
-     * Tells sessions apart. A browser that is moved to another session, such as a seat handed over, sees the number change. The log also uses it,
-     * because the player may have no name yet, or the same name as another.
-     */
-    private final int number = SESSIONS.incrementAndGet();
-    /** When the browser last left, or 0 if it has never left. */
-    private volatile long leftAt;
-
-    /** This session's name in the log. */
-    String label() {
-        final String who = playerName();
-        return "#" + number + " " + (StringUtils.isBlank(who) ? "unnamed" : who);
-    }
-
-    /** How long the browser was gone before it came back just now, or -1 on its first connection. */
-    long secondsAway() {
-        final long left = leftAt;
-        return left == 0 ? -1 : (System.currentTimeMillis() - left) / 1000;
-    }
-
-    WebSession(final WebGuiBase ui, final WebSessions sessions, final boolean mayHost) {
-        this.mayHost = mayHost;
-        this.ui = ui;
-        this.sessions = sessions;
-        final Map<String, DeckCatalog.OnDevice> device = new ConcurrentHashMap<>();
-        this.lobby = new Lobby(local, () -> !isHost, device, ui);
-        this.decks = new DeckSession(lobby, ui, () -> isHost, () -> stage instanceof Setup, device);
-        this.limited = new OfflineLimited(this, ui, lobby, decks, local);
-        this.eventSeat = new EventSeat(this, ui, lobby, decks, local, sessions::hostLobby, sessions::seatsChanged);
-        this.campaigns = new CampaignSession(new CampaignHost());
-    }
-
-    /** Takes the host's seat. Host dialogs go to whoever holds the seat, so they are sent to this session. */
-    void becomeHost() {
-        isHost = true;
-        settings = PlayerSettings.saved();
-        campaigns.becameHost();
-        ui.setNoticeSink(notice -> {
-            final BrowserChannel b = browser;
-            if (b != null) {
-                b.send(notice);
-            }
-        });
-    }
-
-    boolean mayHost() {
-        return mayHost;
-    }
-
-    /** Where the browser is. Only {@link #move} changes it, apart from the session closing. */
-    public Stage stage() {
-        return stage;
-    }
-
-    /** Whether this session is holding a game open. This keeps the host's seat reserved. */
-    boolean hasGame() {
-        final Stage now = stage;
-        return now instanceof Setup || now instanceof Event || now instanceof InCampaign || now instanceof Playing;
-    }
-
-    /** Moves to the next stage only if the browser is still at the stage the caller saw. The old GUI is closed unless the new stage keeps it. */
-    public synchronized boolean move(final Stage from, final Stage next) {
-        if (stage != from) {
-            return false;
-        }
-        stage = next;
-        netLog.info("{}: {} to {}", label(), from.getClass().getSimpleName(), next.getClass().getSimpleName());
-        final WebGuiGame old = guiOf(from);
-        if (old != null && old != guiOf(next)) {
-            old.close();
-        }
-        tell(hello());
-        // The panel of who is here shows every stage: waiting, joining, at a table or playing
-        sessions.announcePresence();
-        return true;
-    }
-
-    private static WebGuiGame guiOf(final Stage stage) {
-        if (stage instanceof Setup s) {
-            return s.gui();
-        }
-        return stage instanceof Playing p ? p.gui() : null;
-    }
-
-    /** The host's seat was freed or taken, so a waiting browser is told again what it may do. */
-    void hostSeatChanged() {
-        if (!isHost) {
-            tell(hello());
-        }
-    }
-
-    public PlayerSettings settings() {
-        return settings;
-    }
-
-    /** The saved player name belongs to the host, so only a host that has not chosen a name plays under it. */
-    public String playerName() {
-        final String chosen = name;
-        return chosen != null || !isHost ? chosen : FModel.getPreferences().getPref(FPref.PLAYER_NAME);
-    }
-
-    Lobby lobby() {
-        return lobby;
-    }
-
-    LocalGame local() {
-        return local;
-    }
-
-    EventSeat eventSeat() {
-        return eventSeat;
-    }
-
-    public boolean attached() {
-        return browser != null;
-    }
-
-    public BrowserChannel browser() {
-        return browser;
-    }
-
-    /** Whether this guest holds a seat at the host's table. It keeps the seat while its browser is gone. */
-    boolean seatedAsGuest() {
-        final Stage now = stage;
-        return !isHost && (now instanceof Setup || now instanceof Playing p && p.invited());
-    }
-
-    /** This session's seat at the table it sits at, or -1. */
-    int seatIndex() {
-        return local.webSeat();
-    }
-
-    void handSeatToAi(final int seat) {
-        local.handToAi(seat);
-    }
-
-    public boolean hosting() {
-        return isHost;
-    }
-
-    /** The avatar chosen on the start page. The first avatar until one is chosen. */
-    public int avatarIndex() {
-        final Integer face = avatar;
-        return face == null ? 0 : face;
-    }
-
-    /** What this session is doing, for the panel that says who is here. */
-    Doing doing() {
-        final Stage now = stage;
-        if (now instanceof Playing p) {
-            return p.spectating() ? Doing.watching : Doing.playing;
-        }
-        if (now instanceof Setup) {
-            return Doing.table;
-        }
-        return now instanceof Opening ? Doing.joining : Doing.waiting;
-    }
-
-    public void tell(final Record message) {
-        final BrowserChannel b = browser;
-        if (b != null) {
-            b.send(message);
-        }
-    }
-
-    /** Shows the browser the game that a match is played through, when a browser is attached. */
-    public void attach(final WebGuiGame gui) {
-        final BrowserChannel b = browser;
-        if (b != null) {
-            gui.attach(b);
-        }
-    }
-
-    /** Whether this session has a game open that guests can take a seat in. */
-    boolean hostsGame() {
-        return local.isHost();
-    }
-
-    /** A browser connected, for the first time or again. It is shown the place that its stage records. */
-    synchronized void connected(final BrowserChannel channel) {
-        final BrowserChannel previous = browser;
-        browser = channel;
-        decks.attach(channel);
-        final Stage now = stage;
-        if (now instanceof Playing p && previous != null) {
-            p.gui().detach(previous);
-        }
-        channel.send(hello());
-        // These are the same for the whole run, so a browser gets them once instead of with every table change
-        channel.send(LobbyFormats.cardPools());
-        if (isHost) {
-            ui.hostRequests().replay(channel::send);
-        }
-        decks.reconnected(channel);
-        if (now instanceof Playing p) {
-            p.gui().attach(channel);
-            limited.resendResult(channel);
-            campaigns.reconnected(channel, now);
-        } else if (now instanceof Setup) {
-            // Match setup is drawn from the table, and only these messages describe the table
-            lobby.sendDecks(channel);
-            lobby.sendState(channel);
-            if (isHost && lobby.events().settingUpEvent()) {
-                sendEventOptions(channel);
-            }
-            eventSeat.reconnected(channel);
-        } else if (now instanceof Event) {
-            limited.sendLimited(channel);
-            final OfflineDraft draft = limited.draft();
-            if (draft != null && draft.latest() != null) {
-                channel.send(draft.latest());
-            }
-        } else if (now instanceof InCampaign) {
-            final OfflineDraft draft = limited.draft();
-            if (draft != null && draft.latest() != null) {
-                channel.send(draft.latest());
-            }
-            campaigns.reconnected(channel, now);
-        } else if (now instanceof Menu) {
-            // A guest that arrives while a game is open takes a seat without being asked, once it has a name
-            joinHostGame();
-        }
-    }
-
-    synchronized void disconnected(final BrowserChannel channel) {
-        if (browser != channel) {
-            return;
-        }
-        browser = null;
-        leftAt = System.currentTimeMillis();
-        decks.attach(null);
-        if (stage instanceof Playing p) {
-            p.gui().detach(channel);
-        }
-    }
-
     /** The commands the session handles itself. The rest belong to the deck editor, the Limited pages, the match or a campaign. */
     public static final Commands<WebSession> COMMANDS = new Commands<WebSession>()
             .on(Plain.decks, (s, ch, c) -> s.lobby.queueDecks(ch, s.decks::inTurn))
@@ -506,6 +215,283 @@ public final class WebSession implements IHasForgeLog {
                     WebSettings.setStops(s.settings, stops.mine(), stops.phases());
                 }
             });
+    private final Lobby lobby;
+    /** The deck editor and importer. They open beside the menu or the table and are not a stage of their own. */
+    private final DeckSession decks;
+    private final WebGuiBase ui;
+    private final WebSessions sessions;
+    /** True for the browser that claimed the host's seat. Only that browser may set up the table. */
+    private volatile boolean isHost;
+    /** Whether this browser connected through the host's link. Only such a browser may claim the host's seat. */
+    private final boolean mayHost;
+    private final LocalGame local = new LocalGame();
+    private volatile BrowserChannel browser;
+    private volatile Stage stage = new Menu();
+    /** This player's settings: a guest's own, or the host's, which are Forge's preferences. */
+    private volatile PlayerSettings settings = PlayerSettings.fresh();
+    /** The name this browser chose to play under. Null until it chooses one. */
+    private volatile String name;
+    /** The avatar chosen next to the name, held here before any seat exists. Null until it chooses one. */
+    private volatile Integer avatar;
+    /** A guest's last chosen sleeve, from its browser. Null until it chooses one, and the seat then keeps the sleeve it was given. */
+    private volatile Integer sleeve;
+    private final OfflineLimited limited;
+    /** This seat's part in the table's draft or sealed event. */
+    private final EventSeat eventSeat;
+    /** The campaign modes. A build without them uses Campaigns.NONE instead. */
+    private final Campaigns campaigns;
+    /**
+     * Tells sessions apart. A browser that is moved to another session, such as a seat handed over, sees the number change. The log also uses it,
+     * because the player may have no name yet, or the same name as another.
+     */
+    private final int number = SESSIONS.incrementAndGet();
+    /** When the browser last left, or 0 if it has never left. */
+    private volatile long leftAt;
+
+    /** Where the browser is. Each stage holds only what exists at that stage. */
+    public sealed interface Stage permits Menu, Opening, Setup, Event, InCampaign, Playing { }
+
+    /** The start page. For a guest, this is waiting for the host to open a game. */
+    public record Menu() implements Stage { }
+
+    /** Taking a seat. The table is built while the browser waits, and nothing may change it until the seat is taken. */
+    record Opening() implements Stage { }
+
+    /** Match setup, at a seat whose GUI the match will be played through. Invited means others can join. */
+    public record Setup(WebGuiGame gui, boolean invited) implements Stage { }
+
+    /** The Limited pages for a kind of event: the saved pools and the setup form. When pool is not null, that pool's opponents screen is shown. */
+    public record Event(EventKind kind, String pool) implements Stage {
+        public IStorage<DeckGroup> storage() {
+            return OfflineEvents.storage(kind);
+        }
+
+        public GameType type() {
+            return kind == EventKind.draft ? GameType.Draft : GameType.Sealed;
+        }
+    }
+
+    /** A campaign mode's pages. While save is null they list its saved games, otherwise they show the open save. */
+    public record InCampaign(String mode, String save) implements Stage { }
+
+    /** In a match, playing it or watching the computer play it. back is where leaving returns to: a pool, a campaign, or null for the table. */
+    public record Playing(WebGuiGame gui, boolean invited, boolean spectating, Stage back) implements Stage { }
+
+    /** This session's name in the log. */
+    String label() {
+        final String who = playerName();
+        return "#" + number + " " + (StringUtils.isBlank(who) ? "unnamed" : who);
+    }
+
+    /** How long the browser was gone before it came back just now, or -1 on its first connection. */
+    long secondsAway() {
+        final long left = leftAt;
+        return left == 0 ? -1 : (System.currentTimeMillis() - left) / 1000;
+    }
+
+    WebSession(final WebGuiBase ui, final WebSessions sessions, final boolean mayHost) {
+        this.mayHost = mayHost;
+        this.ui = ui;
+        this.sessions = sessions;
+        final Map<String, DeckCatalog.OnDevice> device = new ConcurrentHashMap<>();
+        this.lobby = new Lobby(local, () -> !isHost, device, ui);
+        this.decks = new DeckSession(lobby, ui, () -> isHost, () -> stage instanceof Setup, device);
+        this.limited = new OfflineLimited(this, ui, lobby, decks, local);
+        this.eventSeat = new EventSeat(this, ui, lobby, decks, local, sessions::hostLobby, sessions::seatsChanged);
+        this.campaigns = new CampaignSession(new CampaignHost());
+    }
+
+    /** Takes the host's seat. Host dialogs go to whoever holds the seat, so they are sent to this session. */
+    void becomeHost() {
+        isHost = true;
+        settings = PlayerSettings.saved();
+        campaigns.becameHost();
+        ui.setNoticeSink(notice -> {
+            final BrowserChannel b = browser;
+            if (b != null) {
+                b.send(notice);
+            }
+        });
+    }
+
+    boolean mayHost() {
+        return mayHost;
+    }
+
+    /** Where the browser is. Only {@link #move} changes it, apart from the session closing. */
+    public Stage stage() {
+        return stage;
+    }
+
+    /** Whether this session is holding a game open. This keeps the host's seat reserved. */
+    boolean hasGame() {
+        final Stage now = stage;
+        return now instanceof Setup || now instanceof Event || now instanceof InCampaign || now instanceof Playing;
+    }
+
+    /** Moves to the next stage only if the browser is still at the stage the caller saw. The old GUI is closed unless the new stage keeps it. */
+    public synchronized boolean move(final Stage from, final Stage next) {
+        if (stage != from) {
+            return false;
+        }
+        stage = next;
+        netLog.info("{}: {} to {}", label(), from.getClass().getSimpleName(), next.getClass().getSimpleName());
+        final WebGuiGame old = guiOf(from);
+        if (old != null && old != guiOf(next)) {
+            old.close();
+        }
+        tell(hello());
+        // The panel of who is here shows every stage: waiting, joining, at a table or playing
+        sessions.announcePresence();
+        return true;
+    }
+
+    private static WebGuiGame guiOf(final Stage stage) {
+        if (stage instanceof Setup s) {
+            return s.gui();
+        }
+        return stage instanceof Playing p ? p.gui() : null;
+    }
+
+    /** The host's seat was freed or taken, so a waiting browser is told again what it may do. */
+    void hostSeatChanged() {
+        if (!isHost) {
+            tell(hello());
+        }
+    }
+
+    public PlayerSettings settings() {
+        return settings;
+    }
+
+    /** The saved player name belongs to the host, so only a host that has not chosen a name plays under it. */
+    public String playerName() {
+        final String chosen = name;
+        return chosen != null || !isHost ? chosen : FModel.getPreferences().getPref(FPref.PLAYER_NAME);
+    }
+
+    Lobby lobby() {
+        return lobby;
+    }
+
+    LocalGame local() {
+        return local;
+    }
+
+    EventSeat eventSeat() {
+        return eventSeat;
+    }
+
+    public boolean attached() {
+        return browser != null;
+    }
+
+    public BrowserChannel browser() {
+        return browser;
+    }
+
+    /** Whether this guest holds a seat at the host's table. It keeps the seat while its browser is gone. */
+    boolean seatedAsGuest() {
+        final Stage now = stage;
+        return !isHost && (now instanceof Setup || now instanceof Playing p && p.invited());
+    }
+
+
+    public boolean hosting() {
+        return isHost;
+    }
+
+    /** The avatar chosen on the start page. The first avatar until one is chosen. */
+    public int avatarIndex() {
+        final Integer face = avatar;
+        return face == null ? 0 : face;
+    }
+
+    /** What this session is doing, for the panel that says who is here. */
+    Doing doing() {
+        final Stage now = stage;
+        if (now instanceof Playing p) {
+            return p.spectating() ? Doing.watching : Doing.playing;
+        }
+        if (now instanceof Setup) {
+            return Doing.table;
+        }
+        return now instanceof Opening ? Doing.joining : Doing.waiting;
+    }
+
+    public void tell(final Record message) {
+        final BrowserChannel b = browser;
+        if (b != null) {
+            b.send(message);
+        }
+    }
+
+    /** Shows the browser the game that a match is played through, when a browser is attached. */
+    public void attach(final WebGuiGame gui) {
+        final BrowserChannel b = browser;
+        if (b != null) {
+            gui.attach(b);
+        }
+    }
+
+
+    /** A browser connected, for the first time or again. It is shown the place that its stage records. */
+    synchronized void connected(final BrowserChannel channel) {
+        final BrowserChannel previous = browser;
+        browser = channel;
+        decks.attach(channel);
+        final Stage now = stage;
+        if (now instanceof Playing p && previous != null) {
+            p.gui().detach(previous);
+        }
+        channel.send(hello());
+        // These are the same for the whole run, so a browser gets them once instead of with every table change
+        channel.send(LobbyFormats.cardPools());
+        if (isHost) {
+            ui.hostRequests().replay(channel::send);
+        }
+        decks.reconnected(channel);
+        if (now instanceof Playing p) {
+            p.gui().attach(channel);
+            limited.resendResult(channel);
+            campaigns.reconnected(channel, now);
+        } else if (now instanceof Setup) {
+            // Match setup is drawn from the table, and only these messages describe the table
+            lobby.sendDecks(channel);
+            lobby.sendState(channel);
+            if (isHost && lobby.events().settingUpEvent()) {
+                sendEventOptions(channel);
+            }
+            eventSeat.reconnected(channel);
+        } else if (now instanceof Event) {
+            limited.sendLimited(channel);
+            final OfflineDraft draft = limited.draft();
+            if (draft != null && draft.latest() != null) {
+                channel.send(draft.latest());
+            }
+        } else if (now instanceof InCampaign) {
+            final OfflineDraft draft = limited.draft();
+            if (draft != null && draft.latest() != null) {
+                channel.send(draft.latest());
+            }
+            campaigns.reconnected(channel, now);
+        } else if (now instanceof Menu) {
+            // A guest that arrives while a game is open takes a seat without being asked, once it has a name
+            joinHostGame();
+        }
+    }
+
+    synchronized void disconnected(final BrowserChannel channel) {
+        if (browser != channel) {
+            return;
+        }
+        browser = null;
+        leftAt = System.currentTimeMillis();
+        decks.attach(null);
+        if (stage instanceof Playing p) {
+            p.gui().detach(channel);
+        }
+    }
 
     /**
      * The table can be changed only during setup: not while it is being built, and not once its match is played.
@@ -961,7 +947,7 @@ public final class WebSession implements IHasForgeLog {
             channel.send(error(problems.get(0)));
             return;
         }
-        // Saved before the match, so HostedMatch never shows the first-run name prompt
+        // Saves the seats' looks and the host's name. The name keeps HostedMatch from asking for one, as nameProfile does for other matches
         lobby.saveLooks();
         // Prepared before leaving the lobby. If the host backs out of desktop's illegal-deck question, the page stays where it was.
         final Runnable begin;

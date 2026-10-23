@@ -64,6 +64,26 @@ public final class Lobby {
     private final Map<Integer, String> deckKeys = new ConcurrentHashMap<>();
     /** True once the game was opened for others to join. Only then is a link worth showing. */
     private volatile boolean shareable;
+    /** Whether this browser is a guest's. A guest's own decks are the ones its browser stores. */
+    private final BooleanSupplier guest;
+    /** The UI whose thread is the only one that changes the table. */
+    private final WebGuiBase ui;
+    /** A guest's decks, keyed by the id its browser stores each one under. */
+    private final Map<String, DeckCatalog.OnDevice> device;
+    /** The format that the start page's deck finder lists. It is read only while no table is open, so it never affects a seat's deck. */
+    private volatile GameType browseFormat = GameType.Constructed;
+    /** Counts the tables this browser has sat at, so work started at one table can tell that it is now at another. */
+    private volatile int table;
+    /** Held while a deck list or the table is built and sent. Two threads then cannot both send the same list, or send an older table after a newer one. */
+    private final Object sentLock = new Object();
+    private BrowserChannel decksSentTo;
+    private Decks decksSent;
+    /** The format, card pool and rules this browser's deck list was last built for, recorded by {@link #settle()}. */
+    private GameType seenFormat;
+    private String seenCardPool;
+    private String seenRules;
+    /** Whether another player had a seat when the deck list was last built, so their arrival is noticed only once. */
+    private volatile boolean othersSeated;
 
     public Lobby(final LocalGame local, final BooleanSupplier guest, final Map<String, DeckCatalog.OnDevice> device, final WebGuiBase ui) {
         this.local = local;
@@ -72,13 +92,6 @@ public final class Lobby {
         this.guest = guest;
         this.device = device;
     }
-
-    /** Whether this browser is a guest's. A guest's own decks are the ones its browser stores. */
-    private final BooleanSupplier guest;
-    /** The UI whose thread is the only one that changes the table. */
-    private final WebGuiBase ui;
-    /** A guest's decks, keyed by the id its browser stores each one under. */
-    private final Map<String, DeckCatalog.OnDevice> device;
 
     public void setShareable(final boolean value) {
         shareable = value;
@@ -112,9 +125,6 @@ public final class Lobby {
         return GameType.Constructed;
     }
 
-    /** The format that the start page's deck finder lists. It is read only while no table is open, so it never affects a seat's deck. */
-    private volatile GameType browseFormat = GameType.Constructed;
-
     public void setBrowseFormat(final GameType format) {
         browseFormat = format;
     }
@@ -123,9 +133,6 @@ public final class Lobby {
     public int mySeat() {
         return local.webSeat();
     }
-
-    /** Counts the tables this browser has sat at, so work started at one table can tell that it is now at another. */
-    private volatile int table;
 
     public int table() {
         return table;
@@ -163,11 +170,6 @@ public final class Lobby {
         }
         return out;
     }
-
-    /** Held while a deck list or the table is built and sent. Two threads then cannot both send the same list, or send an older table after a newer one. */
-    private final Object sentLock = new Object();
-    private BrowserChannel decksSentTo;
-    private Decks decksSent;
 
     /** Skips the send when this browser already has this exact list. The list is always rebuilt, because building it records what the lobby shows. */
     public void sendDecks(final BrowserChannel to) {
@@ -283,8 +285,7 @@ public final class Lobby {
         }
         for (final Map.Entry<Integer, String> e : Map.copyOf(deckKeys).entrySet()) {
             final int i = e.getKey();
-            final boolean mine = i == local.webSeat() || (host() != null && i < lobby.getNumberOfSlots() && lobby.getSlot(i).getType() == LobbySlotType.AI);
-            if (i < lobby.getNumberOfSlots() && e.getValue().startsWith("gen:") && mine) {
+            if (i < lobby.getNumberOfSlots() && e.getValue().startsWith("gen:") && dealsFor(lobby, i)) {
                 setDeck(i, e.getValue());
             }
         }
@@ -794,7 +795,7 @@ public final class Lobby {
         extras.clear();
         composed.clear();
         commanderPicks.clear();
-        // decks() reads these under the same lock, from whichever thread asked for the list
+        // settle() reads the seen values under the same lock, from whichever thread asked for the list
         synchronized (DeckCatalog.DECKS) {
             seenFormat = null;
             seenCardPool = null;
@@ -802,12 +803,6 @@ public final class Lobby {
             othersSeated = false;
         }
     }
-
-    /** A table as its host set it up. It is kept across a match, so the next table opens with the same settings. */
-    public record Kept(GameType format, String cardPool, List<String> variants, int teams, List<KeptSeat> seats, Map<Integer, String> deckKeys,
-            Map<Integer, Map<DeckSection, Extra>> extras, Map<Integer, List<String>> commanderPicks) { }
-
-    private record KeptSeat(LobbySlotType type, String name, int avatar, int sleeve, int team, String aiProfile) { }
 
     /** The table this browser hosts, as it is now, or null when it hosts none. */
     public Kept keep() {
@@ -870,13 +865,6 @@ public final class Lobby {
         }
         local.pushLobby();
     }
-
-    /** The format, card pool and rules this browser's deck list was last built for, recorded by {@link #settle()}. */
-    private GameType seenFormat;
-    private String seenCardPool;
-    private String seenRules;
-    /** Whether another player had a seat when the deck list was last built, so their arrival is noticed only once. */
-    private volatile boolean othersSeated;
 
     /** True when the format, card pool or rules differ from those the last deck list was built for. */
     public boolean restrictionsChanged() {
@@ -1068,30 +1056,15 @@ public final class Lobby {
         bySeat.putAll(moved);
     }
 
-    /** The seats at this table that people hold from another browser or an app. */
-    public List<LobbySlot> remoteSeats() {
+    /** The named seats of one kind at this table, such as those people hold from another browser or an app. */
+    public List<LobbySlot> seatsOf(final LobbySlotType type) {
         final List<LobbySlot> out = new ArrayList<>();
         final GameLobby lobby = view();
         if (lobby != null) {
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 final LobbySlot slot = lobby.getSlot(i);
-                if (slot.getType() == LobbySlotType.REMOTE && slot.getName() != null) {
+                if (slot.getType() == type && slot.getName() != null) {
                     out.add(slot);
-                }
-            }
-        }
-        return out;
-    }
-
-    /** The names the computer plays under at this table. A person may not use these names. */
-    public List<String> computerNames() {
-        final List<String> out = new ArrayList<>();
-        final GameLobby lobby = view();
-        if (lobby != null) {
-            for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
-                final LobbySlot slot = lobby.getSlot(i);
-                if (slot.getType() == LobbySlotType.AI && slot.getName() != null) {
-                    out.add(slot.getName());
                 }
             }
         }
@@ -1311,4 +1284,10 @@ public final class Lobby {
         }
         FModel.getPreferences().save();
     }
+
+    /** A table as its host set it up. It is kept across a match, so the next table opens with the same settings. */
+    public record Kept(GameType format, String cardPool, List<String> variants, int teams, List<KeptSeat> seats, Map<Integer, String> deckKeys,
+            Map<Integer, Map<DeckSection, Extra>> extras, Map<Integer, List<String>> commanderPicks) { }
+
+    private record KeptSeat(LobbySlotType type, String name, int avatar, int sleeve, int team, String aiProfile) { }
 }

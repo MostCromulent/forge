@@ -2,8 +2,7 @@ package forge.web;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import forge.StaticData;
-import forge.deck.Deck;
+
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.WebSocketTunnel;
@@ -139,11 +138,6 @@ public class NetplayTunnelTest extends SessionsTest {
         return type.equals(s.get("type").getAsString()) && name.equals(s.get("name").getAsString());
     }
 
-    private static Deck forests() {
-        final Deck deck = new Deck("Forests");
-        deck.getMain().add(StaticData.instance().getCommonCards().getCard("Forest"), 60);
-        return deck;
-    }
 
     /** Fails if a netplay client with the invite link cannot take a seat, is missing from the table or the presence list, or is left out of the match. */
     @Test(timeOut = 120_000)
@@ -173,21 +167,12 @@ public class NetplayTunnelTest extends SessionsTest {
 
         sessions.onMessage(host, JsonCodec.message("decks"));
         // The list can arrive before hostAt clears the messages, and the server never sends the same list to a browser twice
-        final JsonObject decks = host.awaitDecks();
-        Assert.assertNotNull(decks, "no deck list arrived");
-        String deck = null;
-        for (final JsonElement d : decks.getAsJsonArray("decks")) {
-            final JsonObject o = d.getAsJsonObject();
-            if (deck == null && !o.has("problem") && !(o.has("generated") && o.get("generated").getAsBoolean())) {
-                deck = o.get("key").getAsString();
-            }
-        }
-        Assert.assertNotNull(deck, "no legal deck to choose");
+        final String deck = TestDecks.firstLegal(host.awaitDecks());
         final JsonObject choose = message("setSeat", "index", hostSeat);
         choose.addProperty("deck", deck);
         sessions.onMessage(host, choose);
         sessions.onMessage(host, message("ready", "ready", true));
-        app.client.send(UpdateLobbyPlayerEvent.deckUpdate(forests()));
+        app.client.send(UpdateLobbyPlayerEvent.deckUpdate(TestDecks.of("Forests", "Forest", 60)));
         app.client.send(UpdateLobbyPlayerEvent.isReadyUpdate(true));
         Assert.assertNotNull(host.awaitLobby(l -> l.get("canStart").getAsBoolean()),
                 "the host could not start with an app seated, ready and holding a deck");

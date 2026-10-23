@@ -143,8 +143,8 @@ public final class FromBrowser {
     public record SearchCards(String query) {
     }
 
-    @Command("printings")
     /** A card's printings. cardPool, when set, marks the printings outside it. */
+    @Command("printings")
     public record AskPrintings(String name, @Nullable String cardPool) {
     }
 
@@ -360,11 +360,12 @@ public final class FromBrowser {
     public record DraftSave(String name, boolean replace) {
     }
 
-    /** A saved pool, by name: open its opponents screen, open its deck in the editor, or delete it. */
+    /** Opens a saved pool's opponents screen. */
     @Command("poolOpen")
     public record PoolOpen(String name) {
     }
 
+    /** Opens a saved pool's deck in the editor. */
     @Command("poolEdit")
     public record PoolEdit(String name) {
     }
