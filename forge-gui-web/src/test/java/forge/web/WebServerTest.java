@@ -9,6 +9,7 @@ import forge.model.FModel;
 import forge.util.ImageUtil;
 import forge.web.images.CardThumbnails;
 import forge.web.images.Foil;
+import forge.web.images.ImageFiles;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
@@ -105,10 +106,10 @@ public class WebServerTest {
     @Test
     public void imageKeysThatClimbOutAreRefused() {
         for (final String key : new String[] {"i:../x", "i:a/../../x", "t:..\\x", "../x.jpg", "c:..|set", "b:..", "i:.."}) {
-            Assert.assertFalse(WebServer.safeImageKey(key), key);
+            Assert.assertFalse(ImageFiles.safeKey(key), key);
         }
         for (final String key : new String[] {"c:Lightning Bolt|M10", "t:w_1_1_soldier", "i:mana/w", "c:Who..What|UNH"}) {
-            Assert.assertTrue(WebServer.safeImageKey(key), key);
+            Assert.assertTrue(ImageFiles.safeKey(key), key);
         }
     }
 

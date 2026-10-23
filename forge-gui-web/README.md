@@ -76,7 +76,7 @@ The page is TypeScript, bundled by esbuild. Only `main.ts` talks to the server. 
 State lives in one of three places, and each change belongs in one of them:
 
 - `model` holds what the server said. The message handlers write it, and so do the few actions in `main.ts` that clear an answered question at once.
-- `ui` holds what this browser has arranged and the server never hears of, such as an open pile or a pinned preview. It is changed through `changeUi` and its variants in `ui.ts`.
+- `ui` holds what this browser has arranged and the server never hears of, such as an open pile or a pinned preview. It is changed through `changeUi` and its variants in `ui.ts`, which redraw the page. A renderer that changes it while drawing sets the field directly, because the frame it changes is already being drawn.
 - A component's own state holds what only that component uses.
 
 Nothing draws when it changes. Messages and `ui` changes schedule one redraw for the next animation frame, which draws the whole page from the state. The game's events since the last frame go to that frame, so each is shown once. During a match, game messages can be held back while the page shows something the player should see first, such as a turn's banner. Input that depends on the board is not sent while they are held.

@@ -1,4 +1,4 @@
-package forge.web.console;
+package forge.web;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -32,15 +32,15 @@ public final class ServerTraffic extends ChannelDuplexHandler {
         channel.attr(KIND).set(kind);
     }
 
-    long started() {
+    public long started() {
         return started;
     }
 
-    long received() {
+    public long received() {
         return received.sum();
     }
 
-    long sent(final Kind kind) {
+    public long sent(final Kind kind) {
         return sent[kind.ordinal()].sum();
     }
 

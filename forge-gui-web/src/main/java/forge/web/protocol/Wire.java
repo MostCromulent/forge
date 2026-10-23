@@ -1,6 +1,7 @@
 package forge.web.protocol;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
@@ -87,6 +88,8 @@ public final class Wire {
     }
 
     private static final Gson GSON = new Gson();
+    /** Writes every message to the browser. Nulls are kept, because a property sent as null has gone back to its default. */
+    public static final Gson WRITER = new GsonBuilder().serializeNulls().create();
     private static final Map<Class<?>, RecordComponent[]> COMPONENTS = new ConcurrentHashMap<>();
 
     /** The JSON for a message to the browser, with its {@code t}. */

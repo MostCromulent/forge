@@ -36,7 +36,10 @@ public final class ProtocolTypes {
     private ProtocolTypes() {
     }
 
-    /** args[0] is the file to write. args[1] is Forge's languages folder. args[2] is the compiled classes' folder, where the page's key list goes. */
+    /**
+     * Writes protocol.gen.ts, then the page's language keys through PageTextKeys. args[0] is the file to write. args[1] is Forge's languages
+     * folder, which the Localizer needs because some enums name themselves as they load. args[2] is the compiled classes' folder, where the page's key list goes.
+     */
     public static void main(final String[] args) throws IOException {
         Localizer.getInstance().initialize("en-US", args[1]);
         final Path file = Path.of(args[0]);

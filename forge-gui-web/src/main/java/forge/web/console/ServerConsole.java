@@ -9,6 +9,7 @@ import forge.util.Localizer;
 import forge.util.LogExporter;
 import forge.web.WebGuiBase;
 import forge.web.WebMain;
+import forge.web.ServerTraffic;
 import forge.web.WebService;
 import forge.web.images.ImageIndex;
 

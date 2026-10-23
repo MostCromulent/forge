@@ -27,6 +27,7 @@ import forge.util.Localizer;
 import forge.web.campaign.ConquestGame;
 import forge.web.deck.Check;
 import forge.web.deck.DeckImport;
+import forge.web.images.ImageFiles;
 import forge.web.match.LocalGame;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.JsonCodec;
@@ -866,10 +867,10 @@ public class ConquestSessionTest extends SessionsTest {
     public void aRebalancedCardWearsItsOriginalsArt() {
         final PaperCard rebalanced = FModel.getMagicDb().getCommonCards().getCard("A-Phylath, World Sculptor");
         Assert.assertTrue(rebalanced.isRebalanced());
-        final PaperCard original = forge.util.ImageUtil.getPaperCardFromImageKey(WebServer.artKey(rebalanced.getImageKey(false)));
+        final PaperCard original = forge.util.ImageUtil.getPaperCardFromImageKey(ImageFiles.artKey(rebalanced.getImageKey(false)));
         Assert.assertEquals(original.getName(), "Phylath, World Sculptor");
         Assert.assertEquals(original.getEdition(), rebalanced.getEdition());
-        Assert.assertEquals(WebServer.artKey(original.getImageKey(false)), original.getImageKey(false));
+        Assert.assertEquals(ImageFiles.artKey(original.getImageKey(false)), original.getImageKey(false));
     }
 
 }

@@ -74,7 +74,7 @@ function followDefender(model: Model): void {
 }
 
 /** Marks the table while blockers or attackers are being declared, so a touch on your creatures drags instead of scrolling. */
-export function renderBlockDrag(model: Model): void {
+export function renderCombatDrag(model: Model): void {
   current = model;
   followDefender(model);
   const blocks = declaringBlocks(model);
@@ -85,11 +85,11 @@ export function renderBlockDrag(model: Model): void {
 }
 
 /** Runs `then` once every block dragged so far shows on the board. So an OK pressed straight after a drop includes that block. */
-export function afterBlockDrags(then: () => void): void {
+export function afterCombatDrags(then: () => void): void {
   void queued.then(then);
 }
 
-export function initBlockDrag(actions: Actions): void {
+export function initCombatDrag(actions: Actions): void {
   act = actions;
   document.addEventListener('pointerdown', e => {
     const el = e.button === 0 ? (e.target as Element).closest<HTMLElement>('#me .battlefield .card') : null;

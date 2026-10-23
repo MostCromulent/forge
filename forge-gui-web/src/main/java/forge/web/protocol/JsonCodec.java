@@ -1,8 +1,6 @@
 package forge.web.protocol;
 
 import com.google.common.collect.Multiset;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
@@ -29,8 +27,6 @@ import java.util.function.Consumer;
 
 /** Writes netplay's changed properties as JSON for the browser. A property that refers to another object is written as {@code {"ref": key}}. */
 public final class JsonCodec {
-    public static final Gson GSON = new GsonBuilder().serializeNulls().create();
-
     private JsonCodec() {}
 
     public static JsonObject message(final String type) {

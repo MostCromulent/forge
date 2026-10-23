@@ -94,16 +94,13 @@ public final class WebSession implements IHasForgeLog {
     private volatile BrowserChannel browser;
     private volatile Stage stage = new Menu();
     /** This player's settings: a guest's own, or the host's, which are Forge's preferences. */
-    public volatile PlayerSettings settings = PlayerSettings.fresh();
+    private volatile PlayerSettings settings = PlayerSettings.fresh();
     /** The name this browser chose to play under. Null until it chooses one. */
     private volatile String name;
     /** The avatar chosen next to the name, held here before any seat exists. Null until it chooses one. */
     private volatile Integer avatar;
     /** A guest's last chosen sleeve, from its browser. Null until it chooses one, and the seat then keeps the sleeve it was given. */
     private volatile Integer sleeve;
-    /** Tells sessions apart. A browser that is moved to another session, such as a seat handed over, sees the number change. */
-    private final int serial = SERIALS.incrementAndGet();
-    private static final AtomicInteger SERIALS = new AtomicInteger();
     private final OfflineLimited limited;
     /** This seat's part in the table's draft or sealed event. */
     private final EventSeat eventSeat;
@@ -111,7 +108,10 @@ public final class WebSession implements IHasForgeLog {
     private final Campaigns campaigns;
 
     private static final AtomicInteger SESSIONS = new AtomicInteger();
-    /** Tells this session's log lines apart from another session's. The player may have no name yet, or the same name as another. */
+    /**
+     * Tells sessions apart. A browser that is moved to another session, such as a seat handed over, sees the number change. The log also uses it,
+     * because the player may have no name yet, or the same name as another.
+     */
     private final int number = SESSIONS.incrementAndGet();
     /** When the browser last left, or 0 if it has never left. */
     private volatile long leftAt;
@@ -197,6 +197,10 @@ public final class WebSession implements IHasForgeLog {
         if (!isHost) {
             tell(hello());
         }
+    }
+
+    public PlayerSettings settings() {
+        return settings;
     }
 
     /** The saved player name belongs to the host, so only a host that has not chosen a name plays under it. */
@@ -300,10 +304,7 @@ public final class WebSession implements IHasForgeLog {
         decks.reconnected(channel);
         if (now instanceof Playing p) {
             p.gui().attach(channel);
-            final LimitedResult result = limited.lastResult;
-            if (result != null) {
-                channel.send(result);
-            }
+            limited.resendResult(channel);
             campaigns.reconnected(channel, now);
         } else if (now instanceof Setup) {
             // Match setup is drawn from the table, and only these messages describe the table
@@ -462,8 +463,8 @@ public final class WebSession implements IHasForgeLog {
                 prefs.save();
                 s.lobby.queueDecks(ch, s.decks::inTurn);
             }))
-            .on(SearchCards.class, (s, ch, q) -> s.decks.inTurn(() -> ch.send(new CardSearch(DeckCatalog.searchCardNames(q.query(), CARD_SEARCH_LIMIT)))))
-            .on(AskPrintings.class, (s, ch, a) -> s.decks.inTurn(() -> ch.send(new Printings(a.name(), DeckCatalog.printings(a.name(),
+            .on(SearchCards.class, (s, ch, q) -> s.decks.inTurn(() -> ch.send(new CardSearch(CardCatalog.searchCardNames(q.query(), CARD_SEARCH_LIMIT)))))
+            .on(AskPrintings.class, (s, ch, a) -> s.decks.inTurn(() -> ch.send(new Printings(a.name(), CardCatalog.printings(a.name(),
                     a.cardPool() == null ? null : FModel.getFormats().getFormat(a.cardPool()))))))
             // LocalGame runs on the host UI thread, so host-side dialogs during setup never block a web server thread
             .on(Start.class, (s, ch, st) -> s.ui.invokeInEdtLater(() -> s.start(ch, st)))
@@ -881,7 +882,7 @@ public final class WebSession implements IHasForgeLog {
                 // The jar's manifest holds the version, so a server run from classes has none
                 WebSession.class.getPackage().getImplementationVersion(),
                 // The menu's volume slider and music need the settings before any match sends them with its controls
-                WebSettings.values(settings), serial);
+                WebSettings.values(settings), number);
     }
 
     private static Screen screen(final Stage stage) {

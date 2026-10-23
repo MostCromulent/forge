@@ -7,8 +7,7 @@ import type { DevAction } from '../protocol';
 import { t, type TextKey } from '../text';
 import { players, zone, type Model } from '../model';
 import { isPortrait } from '../form';
-import { ICONS } from '../icons';
-import { MenuIcon } from './gamemenu';
+import { ICONS, MenuIcon } from '../icons';
 
 type Entry = [DevAction, TextKey];
 

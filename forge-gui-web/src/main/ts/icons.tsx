@@ -45,3 +45,6 @@ export const iconSvg = (shapes: string, cls?: string): string =>
 export function Icon({ d, cls }: { d: string; cls?: string }) {
   return <svg class={cls} viewBox="0 0 24 24" aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />;
 }
+
+/** A menu item's icon. It goes at the start of the item, or at the end when `end` is set. */
+export const MenuIcon = ({ d, end, cls }: { d: string; end?: boolean; cls?: string }) => <Icon d={d} cls={['menu-icon', end ? 'end' : '', cls ?? ''].filter(Boolean).join(' ')} />;

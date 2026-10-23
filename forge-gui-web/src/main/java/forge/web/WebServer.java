@@ -5,29 +5,24 @@ import com.google.common.primitives.Longs;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import forge.ImageKeys;
-import forge.StaticData;
 import forge.gamemodes.net.WebSocketBytes;
 import forge.gamemodes.net.WebSocketTunnel;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.HostingServer;
 import forge.gui.GuiBase;
-import forge.item.PaperCard;
-import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.sound.MusicPlaylist;
 import forge.sound.SoundSystem;
 import forge.util.IHasForgeLog;
-import forge.util.ImageUtil;
 import forge.util.LogExporter;
-import forge.util.SleeveArt;
-import forge.web.console.ServerTraffic;
 import forge.web.images.CardThumbnails;
 import forge.web.images.Foil;
+import forge.web.images.ImageFiles;
 import forge.web.images.SkinSprites;
 import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.JsonCodec;
 import forge.web.protocol.PageText;
+import forge.web.protocol.Wire;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -191,61 +186,10 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         group.shutdownGracefully();
     }
 
-    private static final Pattern PARENT = Pattern.compile("(^|[/\\\\:|])\\.\\.([/\\\\|]|$)");
-
-    /** Refuses a key that contains "..". Forge joins a key onto a folder path unchanged, and deletes a folder found where an image should be. */
-    static boolean safeImageKey(final String key) {
-        return !PARENT.matcher(key).find();
-    }
-
-    private static boolean isImage(final File file) {
-        final String name = file.getName().toLowerCase(Locale.ROOT);
-        return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
-    }
-
-    private static File cardImage(final String imageKey) {
-        if (!safeImageKey(imageKey)) {
-            return null;
-        }
-        String key = imageKey;
-        final boolean backFace = key.endsWith(ImageKeys.BACKFACE_POSTFIX);
-        if (backFace) {
-            key = key.substring(0, key.length() - ImageKeys.BACKFACE_POSTFIX.length());
-        }
-        if (key.startsWith(ImageKeys.CARD_PREFIX)) {
-            final PaperCard card = ImageUtil.getPaperCardFromImageKey(key);
-            if (card == null) {
-                return null;
-            }
-            key = backFace ? card.getCardAltImageKey() : card.getCardImageKey();
-        }
-        final File file = ImageKeys.getImageFile(key);
-        return file != null && file.isFile() && isImage(file) ? file : null;
-    }
-
-    /** The key of the art that a card is drawn with. A rebalanced card has no picture, so it uses the key of the card it rebalances. */
-    static String artKey(final String imageKey) {
-        if (!imageKey.startsWith(ImageKeys.CARD_PREFIX) || !safeImageKey(imageKey)) {
-            return imageKey;
-        }
-        final PaperCard card = ImageUtil.getPaperCardFromImageKey(imageKey);
-        if (card == null || !card.isRebalanced() || !card.getName().startsWith("A-")) {
-            return imageKey;
-        }
-        final PaperCard original = StaticData.instance().getCommonCards().getCard(card.getName().substring(2), card.getEdition());
-        return original == null ? imageKey : original.getImageKey(imageKey.endsWith(ImageKeys.BACKFACE_POSTFIX));
-    }
-
-    /** The art crop the shared fetcher has cached for a card, or null when it has not been downloaded yet. */
-    private static File sleeveArtFile(final String imageKey) {
-        final File f = new File(ForgeConstants.CACHE_SLEEVE_PICS_DIR, SleeveArt.cacheFileName(imageKey));
-        return f.isFile() ? f : null;
-    }
-
     /** Never waits for the download. Otherwise the thread that serves every other request would wait too. */
     private void serveSleeveArt(final ChannelHandlerContext ctx, final String asked) throws IOException {
-        final String key = artKey(asked);
-        final File cached = sleeveArtFile(key);
+        final String key = ImageFiles.artKey(asked);
+        final File cached = ImageFiles.sleeveArt(key);
         if (cached != null) {
             respondImage(ctx, cached);
             return;
@@ -258,7 +202,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         final AtomicBoolean answered = new AtomicBoolean();
         GuiBase.getInterface().invokeInEdtLater(() -> GuiBase.getInterface().getImageFetcher().fetchSleeveArt(key, () -> {
             if (answered.compareAndSet(false, true)) {
-                final File fetched = sleeveArtFile(key);
+                final File fetched = ImageFiles.sleeveArt(key);
                 try {
                     if (fetched != null) {
                         respondImage(ctx, fetched);
@@ -280,12 +224,12 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     /** Downloads a missing image and answers the request when it arrives. small asks for the card at the size the board draws it. */
     private void serveImage(final ChannelHandlerContext ctx, final String key, final boolean small) throws IOException {
         final int foil = Foil.seed(key);
-        final File file = cardImage(key);
+        final File file = ImageFiles.card(key);
         if (file != null) {
             respondCardImage(ctx, file, small, foil);
             return;
         }
-        if (!safeImageKey(key) || unavailableImages.contains(key)
+        if (!ImageFiles.safeKey(key) || unavailableImages.contains(key)
                 || !FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
             notFound(ctx);
             return;
@@ -294,7 +238,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         GuiBase.getInterface().invokeInEdtLater(() -> GuiBase.getInterface().getImageFetcher().fetchImage(key, () -> {
             // Forge remembers a picture it could not find. Without this it would still report the picture as missing now that it exists.
             ImageKeys.clearMissingCards();
-            final File fetched = cardImage(key);
+            final File fetched = ImageFiles.card(key);
             if (answered.compareAndSet(false, true)) {
                 try {
                     if (fetched != null) {
@@ -325,7 +269,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         }
         CardThumbnails.of(file, small, foil).whenComplete((bytes, failed) -> {
             if (bytes != null) {
-                respond(ctx, HttpResponseStatus.OK, bytes, imageType(file), null, KEEP_FOREVER, null);
+                respond(ctx, HttpResponseStatus.OK, bytes, ImageFiles.type(file), null, KEEP_FOREVER, null);
                 return;
             }
             netLog.warn("Could not draw {}: {}", file, failed.getMessage());
@@ -337,12 +281,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         });
     }
 
-    private static String imageType(final File file) {
-        return file.getName().endsWith(".png") ? "image/png" : "image/jpeg";
-    }
-
     private void respondImage(final ChannelHandlerContext ctx, final File file) throws IOException {
-        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), imageType(file), null, KEEP_FOREVER, null);
+        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), ImageFiles.type(file), null, KEEP_FOREVER, null);
     }
 
     /** True when the socket's page came from this server, whichever address the browser reached it by. */
@@ -872,7 +812,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 browser = new BrowserChannel() {
                     @Override
                     public void send(final JsonObject message) {
-                        ch.writeAndFlush(new TextWebSocketFrame(JsonCodec.GSON.toJson(message)));
+                        ch.writeAndFlush(new TextWebSocketFrame(Wire.WRITER.toJson(message)));
                     }
 
                     @Override

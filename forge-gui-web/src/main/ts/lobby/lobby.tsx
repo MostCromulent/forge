@@ -19,7 +19,7 @@ import { isPortrait } from '../form';
 import { t, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { DeckSummary, LobbyTable, Seat, SeatExtra } from '../protocol';
+import type { CommanderChoice, DeckSummary, LobbyTable, Seat, SeatExtra } from '../protocol';
 import { Backdrop, Dropdown } from '../dialog';
 import { ICONS, Icon } from '../icons';
 import { byId } from '../dom';
@@ -425,8 +425,8 @@ function IllegalDecks({ lobby }: { lobby: LobbyTable }) {
   );
 }
 
-const CHOICE_KIND: Record<string, TextKey> = {
-  default: 'lblWebLobbyCommanderBuiltWith', suggested: 'lblWebLobbyCommanderSuggested', other: 'lblWebLobbyCommanderOther',
+const CHOICE_KIND: Record<CommanderChoice['kind'], TextKey> = {
+  DEFAULT: 'lblWebLobbyCommanderBuiltWith', SUGGESTED: 'lblWebLobbyCommanderSuggested', OTHER: 'lblWebLobbyCommanderOther',
 };
 
 /** Picks which card leads a seat's deck at this table, from the cards that can, as desktop's lobby does. */
@@ -441,7 +441,7 @@ function CommanderPicker({ actions, index, seat, close }: { actions: Actions; in
               onClick={() => { actions.setSeat(index, { commander: i }); close(); }}>
               <img alt="" src={smallImage(imageUrl(c.image))} />
               <b>{c.name}</b>
-              <small>{t(CHOICE_KIND[c.kind] ?? 'lblWebLobbyCommanderOther')}</small>
+              <small>{t(CHOICE_KIND[c.kind])}</small>
             </button>
           ))}
         </div>

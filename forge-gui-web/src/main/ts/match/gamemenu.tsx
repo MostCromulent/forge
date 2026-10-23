@@ -11,12 +11,9 @@ import { t, type TextKey } from '../text';
 import { useClosing } from '../closing';
 import { changeUi, ui } from '../ui';
 import { Backdrop, Confirm } from '../dialog';
-import { ICONS, Icon } from '../icons';
+import { ICONS, MenuIcon } from '../icons';
 import { useTwoPress } from '../hooks';
 import { isPortrait } from '../form';
-
-/** A menu item's icon. It goes at the start of the item, or at the end when `end` is set. */
-export const MenuIcon = ({ d, end, cls }: { d: string; end?: boolean; cls?: string }) => <Icon d={d} cls={['menu-icon', end ? 'end' : '', cls ?? ''].filter(Boolean).join(' ')} />;
 
 /** Starts recording a macro, or stops the recording. */
 export function recordMacro(actions: Actions): void {

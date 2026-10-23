@@ -1,6 +1,7 @@
 package forge.web.console;
 
 import forge.util.Localizer;
+import forge.web.ServerTraffic;
 
 import java.awt.Dimension;
 import java.awt.Graphics;

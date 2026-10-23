@@ -8,23 +8,6 @@ import { isPortrait } from '../form';
 
 const PANELS = ['log', 'chat'] as const;
 
-
-/** Daybound and nightbound cards transform without a prompt. So at night the whole table changes, as well as the corner that shows day or night. */
-export function renderSky(model: Model): void {
-  const sky = byId('sky');
-  const time = model.controls?.dayTime;
-  sky.hidden = !time;
-  byId('match').classList.toggle('night', time === 'Night');
-  if (!time) {
-    return;
-  }
-  if (!sky.firstChild) {
-    sky.innerHTML = '<i class="orb" aria-hidden="true"></i><span class="when"></span>';
-  }
-  sky.dataset.time = time;
-  q(sky, '.when').textContent = time === 'Night' ? t('lblNight') : t('lblDay');
-}
-
 export function initSide(): void {
   const side = byId('side');
   const menu = Object.assign(document.createElement('button'), { id: 'menu-button', title: t('lblMenu') });

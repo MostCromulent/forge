@@ -53,7 +53,7 @@ public final class OfflineLimited implements IHasForgeLog {
     /** A match seats at most eight players, so a game against several opponents has at most seven. */
     private static final int MOST_OPPONENTS = 7;
     private volatile boolean gauntletRunning;
-    public volatile LimitedResult lastResult;
+    private volatile LimitedResult lastResult;
     /** The pool the gauntlet returns to, and the game type its rounds are played as, while one is running. */
     private volatile Event gauntletBack;
     private volatile GameType gauntletType;
@@ -393,7 +393,7 @@ public final class OfflineLimited implements IHasForgeLog {
     /** Starts a pool's match from the Limited pages. Null when it could not start. */
     private HostedMatch playLimited(final Event back, final GameType type, final List<LocalGame.Seat> seats) {
         final Stage from = session.stage();
-        final Playing playing = new Playing(new WebGuiGame(session.settings), false, false, back);
+        final Playing playing = new Playing(new WebGuiGame(session.settings()), false, false, back);
         if (!session.move(from, playing)) {
             playing.gui().close();
             return null;
@@ -418,7 +418,7 @@ public final class OfflineLimited implements IHasForgeLog {
     private boolean playRound(final Runnable start) {
         final Event back = gauntletBack;
         final Stage from = session.stage();
-        final Playing playing = new Playing(new WebGuiGame(session.settings), false, false, back);
+        final Playing playing = new Playing(new WebGuiGame(session.settings()), false, false, back);
         if (back == null || !session.move(from, playing)) {
             playing.gui().close();
             return false;
@@ -481,6 +481,14 @@ public final class OfflineLimited implements IHasForgeLog {
         lastResult = new LimitedResult(gauntlet.getCurrentRound(), gauntlet.getRounds(), gauntlet.getWins(), gauntlet.getLosses(),
                 game.isMatchOver(), wonMatch && gauntlet.getCurrentRound() < gauntlet.getRounds());
         session.tell(lastResult);
+    }
+
+    /** Sends a reconnecting browser the gauntlet result it was last shown. */
+    public void resendResult(final BrowserChannel channel) {
+        final LimitedResult result = lastResult;
+        if (result != null) {
+            channel.send(result);
+        }
     }
 
     /** Leaving a gauntlet ends it, as desktop's Quit does. */

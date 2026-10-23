@@ -8,10 +8,12 @@ import forge.card.CardType;
 import forge.card.ColorSet;
 import forge.deck.DeckSection;
 import forge.deck.CardPool;
+import forge.game.GameFormat;
 import forge.item.PaperCard;
 import forge.itemmanager.AdvancedSearchParser;
 import forge.itemmanager.SFilterUtil;
 import forge.model.FModel;
+import forge.util.Localizer;
 import forge.web.images.Foil;
 import forge.web.protocol.JsonCodec;
 import forge.web.protocol.ToBrowser;
@@ -20,9 +22,11 @@ import forge.web.protocol.ToBrowser.CatalogueRow;
 import forge.web.protocol.ToBrowser.EditorCard;
 import forge.web.protocol.ToBrowser.EditorPrinting;
 import forge.web.protocol.ToBrowser.EditorGroup;
+import forge.web.protocol.ToBrowser.Printing;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -345,6 +349,48 @@ public final class CardCatalog {
                     printings.size(), split, legality.flags().get(name), printings.stream().allMatch(p -> p.getKey().isFoil())));
         });
         out.sort(Comparator.comparingInt(EditorCard::mv).thenComparing(EditorCard::name));
+        return out;
+    }
+
+    /** Card names that start with the text come first, shortest first, then names that contain it. */
+    public static List<String> searchCardNames(final String query, final int limit) {
+        final String text = normalize(query == null ? "" : query);
+        if (text.isEmpty()) {
+            return new ArrayList<>();
+        }
+        final List<String> startsWith = new ArrayList<>();
+        final List<String> contains = new ArrayList<>();
+        for (final PaperCard card : StaticData.instance().getCommonCards().getUniqueCards()) {
+            final String name = normalize(card.getName());
+            if (name.startsWith(text)) {
+                startsWith.add(card.getName());
+            } else if (name.contains(text)) {
+                contains.add(card.getName());
+            }
+        }
+        startsWith.sort(Comparator.comparingInt(String::length));
+        startsWith.addAll(contains);
+        return new ArrayList<>(startsWith.subList(0, Math.min(limit, startsWith.size())));
+    }
+
+    /** Every printing of one card, newest first as in desktop's printing dialog. A specific printing can then be picked for a deck or a sleeve. */
+    public static List<Printing> printings(final String name, final GameFormat pool) {
+        final CardEdition.Collection editions = StaticData.instance().getEditions();
+        final List<PaperCard> cards = new ArrayList<>(StaticData.instance().getCommonCards().getAllCardsNoAlt(name));
+        cards.sort(Comparator.comparing((PaperCard card) -> editions.get(card.getEdition()) == null ? null : editions.get(card.getEdition()).getDate(),
+                Comparator.nullsLast(Comparator.reverseOrder())).thenComparing(PaperCard::getCollectorNumber, Comparator.nullsLast(Comparator.naturalOrder())));
+        final List<Printing> out = new ArrayList<>();
+        for (final PaperCard card : cards) {
+            final CardEdition edition = editions.get(card.getEdition());
+            final Calendar date = Calendar.getInstance();
+            if (edition != null) {
+                date.setTime(edition.getDate());
+            }
+            out.add(new Printing(card.getName(), card.getEdition(), card.getImageKey(false),
+                    edition == null ? card.getEdition() : edition.getName(), edition == null ? 0 : date.get(Calendar.YEAR),
+                    edition == null ? null : edition.getSectionForCollectorNumber(card.getCollectorNumber()),
+                    pool != null && !pool.getFilterPrinted().test(card) ? Localizer.getInstance().getMessage("lblWebDeckCatalogNotIn", pool.getName()) : null));
+        }
         return out;
     }
 }

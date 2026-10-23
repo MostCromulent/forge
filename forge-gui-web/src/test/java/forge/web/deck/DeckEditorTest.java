@@ -41,7 +41,7 @@ public class DeckEditorTest {
     // Fails if a card's printings are not listed newest first, or do not carry the style that the printing picker filters by
     @Test
     public void printingsAreNewestFirstAndCarryTheirStyle() {
-        final List<ToBrowser.Printing> printings = DeckCatalog.printings("Llanowar Elves", null);
+        final List<ToBrowser.Printing> printings = CardCatalog.printings("Llanowar Elves", null);
         for (int i = 1; i < printings.size(); i++) {
             Assert.assertTrue(printings.get(i - 1).year() >= printings.get(i).year(), "printing " + i + " is newer than the one before it");
         }
@@ -95,7 +95,7 @@ public class DeckEditorTest {
     @Test
     public void aCardIsAddedInTheChosenPrinting() {
         final DeckEditor e = editor(new Deck("Printings"), GameType.Constructed);
-        final List<ToBrowser.Printing> printings = DeckCatalog.printings("Llanowar Elves", null);
+        final List<ToBrowser.Printing> printings = CardCatalog.printings("Llanowar Elves", null);
         final String oldest = printings.get(printings.size() - 1).key();
         Assert.assertNull(e.addPrinting("Llanowar Elves", DeckSection.Main, oldest));
         final Map.Entry<PaperCard, Integer> held = e.deck().getMain().iterator().next();

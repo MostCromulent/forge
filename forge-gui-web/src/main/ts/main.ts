@@ -13,18 +13,18 @@ import { initSheets, matchHistory } from './sheet';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName, rememberedSleeve } from './identity';
 import { renderScreens, pageUnder, screenOf } from './screens';
-import { confirmShown } from './match/dialogs';
-import { renderMatch, resetTable } from './match/board';
+import { confirmShown } from './match/dialogparts';
+import { renderMatch, renderSky, resetTable } from './match/board';
 import { arriveAtMatch, zoomIntoMatch } from './match/entry';
 import { renderPrompt, flash, pressPromptButton } from './match/prompt';
 import { appendLog, initLog, logTints } from './match/log';
-import { initSide, renderSide, renderSky, showLog } from './match/side';
+import { initSide, renderSide, showLog } from './match/side';
 import { initDetail, nextFace, renderDetail } from './preview';
 import { initStack, showStack } from './match/stack';
 import { recordMacro } from './match/gamemenu';
 import { showShortcuts } from './options';
 import { initOverlay, drawOverlay } from './match/overlay';
-import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './match/blockdrag';
+import { afterCombatDrags, initCombatDrag, renderCombatDrag } from './match/combatdrag';
 import { boundKeys, initSettings, onServerSettings, rememberGuestAutoPass, restoreGuestSettings, setGuest, setting, shortcutKeys } from './settings';
 import { behindItsBoard, passingFor } from './match/pace';
 import { createPacer } from './match/pacer';
@@ -77,7 +77,7 @@ const actions = {
   ...wire,
   // Cancel during a pass stops the pass. The host accepts that at any time, even while the page catches up
   cancel: () => (pacer.holding() && passingFor(model.controls) ? wire.stopYield() : wire.cancel()),
-  ok: () => afterBlockDrags(() => wire.ok()),
+  ok: () => afterCombatDrags(() => wire.ok()),
   // An answered request is removed from the model at once, so its dialog closes without waiting for the server
   answer: (id, value) => {
     model.requests.delete(id);
@@ -131,7 +131,7 @@ initSheets();
 initDetail(actions);
 initStack(actions);
 initOverlay(schedule);
-initBlockDrag(actions);
+initCombatDrag(actions);
 initLog();
 initSide();
 initSettings(actions.setSetting, () => {
@@ -476,6 +476,6 @@ function render(): void {
   arriveAtMatch(enteringMatch);
   renderPrompt(model, actions);
   renderDetail(model);
-  renderBlockDrag(model);
+  renderCombatDrag(model);
   drawOverlay(model);
 }

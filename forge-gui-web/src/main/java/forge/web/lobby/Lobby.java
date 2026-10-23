@@ -1175,7 +1175,7 @@ public final class Lobby {
         }
         final List<String> leading = names(deck.getCommanders());
         return options.stream().map(o -> new CommanderChoice(String.join(" + ", names(o.getCommanders())),
-                o.getCommanders().get(0).getImageKey(false), o.getKind().name().toLowerCase(), names(o.getCommanders()).equals(leading))).toList();
+                o.getCommanders().get(0).getImageKey(false), o.getKind(), names(o.getCommanders()).equals(leading))).toList();
     }
 
     /** Returns whether the seat took the avatar. It does not when another seat already holds that avatar. */

@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import forge.card.CardRarity;
+import forge.deck.CommanderOptions;
 import forge.deck.DeckSection;
 import forge.game.GameLogEntryType;
 import forge.game.GameLogVerbosity;
@@ -221,7 +222,7 @@ public final class ToBrowser {
 
     /** A commander that can lead a seat's deck, as desktop's lobby offers it. name is the leader's name, two joined by +. image is the first one's picture.
      *  kind says whether it is the deck's own, one its file suggests, or another card in the deck. chosen says whether it leads now. */
-    public record CommanderChoice(String name, String image, String kind, boolean chosen) {
+    public record CommanderChoice(String name, String image, CommanderOptions.Kind kind, boolean chosen) {
     }
 
     /** A planar deck, scheme deck or avatar a seat brings: its name, its size, a detail such as modifiers, and a problem. */
@@ -265,11 +266,11 @@ public final class ToBrowser {
     }
 
     /**
-     * target is storage (the host's decks) or device (a guest's browser). copyOf names a read-only deck that the first change will copy.
+     * inBrowser says the deck is saved in a guest's browser, not in the host's decks. copyOf names a read-only deck that the first change will copy.
      * commanderZone says the format has a commander. copyLimit is the most copies allowed of a card other than a basic land, or null for no limit.
      */
     public record EditorState(String name, String check, String format, @Nullable String cardPool, boolean unrestricted,
-            String target, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderZone, boolean commanderWanted,
+            boolean inBrowser, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderZone, boolean commanderWanted,
             @Nullable Integer copyLimit, String identity,
             List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
             @Nullable String verdict, boolean canUndo, @Nullable String landed,

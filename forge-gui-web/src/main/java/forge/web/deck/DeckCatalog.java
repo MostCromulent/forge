@@ -34,13 +34,11 @@ import forge.web.protocol.ToBrowser.BracketReasonKind;
 import forge.web.protocol.ToBrowser.DeckDetails;
 import forge.web.protocol.ToBrowser.DeckStats;
 import forge.web.protocol.ToBrowser.DeckSummary;
-import forge.web.protocol.ToBrowser.Printing;
 import forge.web.protocol.ToBrowser.SavedSleeveArt;
 import forge.web.protocol.ToBrowser.TypeCount;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -659,47 +657,5 @@ public final class DeckCatalog {
         library.put(imageKey, SleeveArt.clampOffset(offset));
         prefs.setPref(pref, SleeveArt.formatLibrary(library));
         prefs.save();
-    }
-
-    /** Card names that start with the text come first, shortest first, then names that contain it. */
-    public static List<String> searchCardNames(final String query, final int limit) {
-        final String text = CardCatalog.normalize(query == null ? "" : query);
-        if (text.isEmpty()) {
-            return new ArrayList<>();
-        }
-        final List<String> startsWith = new ArrayList<>();
-        final List<String> contains = new ArrayList<>();
-        for (final PaperCard card : StaticData.instance().getCommonCards().getUniqueCards()) {
-            final String name = CardCatalog.normalize(card.getName());
-            if (name.startsWith(text)) {
-                startsWith.add(card.getName());
-            } else if (name.contains(text)) {
-                contains.add(card.getName());
-            }
-        }
-        startsWith.sort(Comparator.comparingInt(String::length));
-        startsWith.addAll(contains);
-        return new ArrayList<>(startsWith.subList(0, Math.min(limit, startsWith.size())));
-    }
-
-    /** Every printing of one card, newest first as in desktop's printing dialog. A specific printing can then be picked for a deck or a sleeve. */
-    public static List<Printing> printings(final String name, final GameFormat pool) {
-        final CardEdition.Collection editions = StaticData.instance().getEditions();
-        final List<PaperCard> cards = new ArrayList<>(StaticData.instance().getCommonCards().getAllCardsNoAlt(name));
-        cards.sort(Comparator.comparing((PaperCard card) -> editions.get(card.getEdition()) == null ? null : editions.get(card.getEdition()).getDate(),
-                Comparator.nullsLast(Comparator.reverseOrder())).thenComparing(PaperCard::getCollectorNumber, Comparator.nullsLast(Comparator.naturalOrder())));
-        final List<Printing> out = new ArrayList<>();
-        for (final PaperCard card : cards) {
-            final CardEdition edition = editions.get(card.getEdition());
-            final Calendar date = Calendar.getInstance();
-            if (edition != null) {
-                date.setTime(edition.getDate());
-            }
-            out.add(new Printing(card.getName(), card.getEdition(), card.getImageKey(false),
-                    edition == null ? card.getEdition() : edition.getName(), edition == null ? 0 : date.get(Calendar.YEAR),
-                    edition == null ? null : edition.getSectionForCollectorNumber(card.getCollectorNumber()),
-                    pool != null && !pool.getFilterPrinted().test(card) ? Localizer.getInstance().getMessage("lblWebDeckCatalogNotIn", pool.getName()) : null));
-        }
-        return out;
     }
 }

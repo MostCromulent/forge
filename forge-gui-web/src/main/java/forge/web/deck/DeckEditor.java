@@ -569,7 +569,7 @@ public final class DeckEditor {
         final boolean wanted = df.hasCommander() && (leaders.isEmpty() || (df.hasSignatureSpell() && deck.getSignatureSpell() == null));
         return new EditorState(deck.getName(), check.label(), check.format().name(),
                 check.pool() == null ? null : check.pool().getName(), check.unrestricted(),
-                target instanceof Device ? "device" : "storage", copyOf,
+                target instanceof Device, copyOf,
                 CardCatalog.cards(deck.get(DeckSection.Commander), legality), df.hasCommander(), wanted, df.getMaxCardCopies() == Integer.MAX_VALUE ? null : df.getMaxCardCopies(),
                 Legality.identityLetters(leaders),
                 CardCatalog.groups(deck.getMain(), legality), CardCatalog.cards(deck.get(DeckSection.Sideboard), legality), lands(),

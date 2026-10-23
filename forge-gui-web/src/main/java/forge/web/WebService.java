@@ -6,7 +6,6 @@ import forge.localinstance.properties.ForgeNetPreferences.FNetPref;
 import forge.model.FModel;
 import forge.util.IHasForgeLog;
 import forge.web.console.CloudflareTunnel;
-import forge.web.console.ServerTraffic;
 
 import java.io.File;
 import java.util.function.Consumer;

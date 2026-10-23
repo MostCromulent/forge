@@ -14,7 +14,7 @@ import { keyName, shortcutName } from '../keys';
 import { boundKeys, shortcutKeys } from '../settings';
 import { isPortrait } from '../form';
 import { notePick } from './overlay';
-import { declaringBlocks } from './blockdrag';
+import { declaringBlocks } from './combatdrag';
 import { sourceName, splitQuestion } from './asking';
 import type { CardView, PlayerView, PromptButton, Ref } from '../protocol';
 import { t } from '../text';

@@ -179,7 +179,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
 
 function saveState(state: EditorState): string {
   if (state.copyOf) return t('lblWebEditorSavesAsCopy', state.copyOf);
-  return state.target === 'device' ? t('lblWebEditorSavedInBrowser') : t('lblWebEditorSaved');
+  return state.inBrowser ? t('lblWebEditorSavedInBrowser') : t('lblWebEditorSaved');
 }
 
 function RenameField({ name, done }: { name: string; done: (name: string | null) => void }) {

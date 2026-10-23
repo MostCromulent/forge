@@ -42,7 +42,7 @@ public final class PageText implements IHasForgeLog {
             final JsonObject out = new JsonObject();
             out.addProperty("lang", lang);
             out.add("text", text);
-            json = JsonCodec.GSON.toJson(out).getBytes(StandardCharsets.UTF_8);
+            json = Wire.WRITER.toJson(out).getBytes(StandardCharsets.UTF_8);
         }
         return json;
     }
