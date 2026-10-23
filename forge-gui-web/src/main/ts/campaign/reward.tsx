@@ -66,7 +66,7 @@ export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed
   return (
     <Backdrop cls="cq-reveal">
       {step.kind === 'WHEEL' && <WheelStop key={at} step={step} emblem={first === 1 && at === 1 ? steps[0].amount : 0} next={next} />}
-      {step.kind === 'BOOSTER' && <PackStop key={at} step={step} release={n => setReleased(r => r + n)} zoom={setZoom} next={next} />}
+      {step.kind === 'BOOSTER' && <PackStop key={at} step={step} release={n => setReleased(r => r + n)} next={next} />}
       {step.kind === 'CONQUER_EMBLEMS' && <Gift icon="IMG_PW_BADGE_COMMON" amount={step.amount} title={t('lblWebConquestFirstConquest')} button={t('lblGreat')} next={next} />}
       {step.kind === 'SHARDS' && <Gift icon="IMG_AETHER_SHARD" amount={step.amount} title={t('lblReceivedAetherShards')} button={t('lblGreat')} next={next} />}
       {step.kind === 'EMBLEMS' && <Gift icon="IMG_PW_BADGE_COMMON" amount={step.amount} title={t('lblReceivedBonusPlaneswalkEmblems')} button={t('lblGreat')} next={next} />}
@@ -161,7 +161,7 @@ function flyShards(from: DOMRect, arrived: () => void): void {
     { duration: 600, easing: 'cubic-bezier(.5,0,.3,1)' }).finished.then(() => { mote.remove(); arrived(); }, () => mote.remove());
 }
 
-function PackStop({ step, release, zoom, next }: { step: RewardStep; release: (shards: number) => void; zoom: (image: string) => void; next: () => void }) {
+function PackStop({ step, release, next }: { step: RewardStep; release: (shards: number) => void; next: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const pack = useRef<Pack | null>(null);
   const [phase, setPhase] = useState<'sealed' | 'opening' | 'shown'>('sealed');
@@ -176,7 +176,6 @@ function PackStop({ step, release, zoom, next }: { step: RewardStep; release: (s
       art: step.chaos ? null : step.art ?? null, chaos: step.chaos, cards, hint: t('lblWebConquestClickToOpen'),
     }, {
       flipped: (card, rect) => { if (card.shards) flyShards(rect, () => { if (here.current) release(card.shards); }); },
-      zoom: card => zoom(card.image),
       opening: () => setPhase('opening'),
       shown: () => setPhase('shown'),
     });

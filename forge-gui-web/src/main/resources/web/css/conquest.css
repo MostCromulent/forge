@@ -305,9 +305,8 @@ html[data-motion="reduced"] .cq-dl.done .cq-dl-flare { animation: none; opacity:
 .cq-rv-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 12px; }
 .cq-rv-slot { position: relative; flex: 0 0 calc((100% - 7 * 12px) / 8); aspect-ratio: 63 / 88; perspective: 800px; }
 .cq-rv-card, .cq-rv-y, .cq-rv-in { position: absolute; inset: 0; }
-.cq-rv-card { padding: 0; border: 0; border-radius: 0; background: none; opacity: 0; will-change: transform; cursor: default; }
+.cq-rv-card { opacity: 0; will-change: transform; }
 .cq-rv-slot.shown .cq-rv-card { opacity: 1; }
-.cq-rv-card.up { cursor: zoom-in; }
 .cq-rv-y { will-change: transform; }
 .cq-rv-in { transform-style: preserve-3d; transform: rotateY(180deg); }
 .cq-rv-card.up .cq-rv-in { transform: rotateY(0deg); }
