@@ -350,6 +350,10 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
   handlers: CardHandlers;
 }) {
   const full = room <= 0;
+  // The count is shown against the most the deck may hold. In a limited deck that is the copies in the pool
+  const most = limited ? count + room : limit;
+  const why = limited ? (room ? t('lblWebCatalogueLeft', room) : t('lblWebCatalogueNoneLeft'))
+    : full && limit === row.count ? t('lblWebCatalogueNoneLeft') : limit === 1 ? t('lblWebCatalogueSingleton') : undefined;
   // With every copy the player has already in the deck, a click takes one out instead of adding one they do not have
   const takesOut = full && count > 0 && (limited || limit === row.count);
   const click = (e: MouseEvent) => {
@@ -363,7 +367,7 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
     } else add(row.name);
   };
   return (
-    <div class={`slot${count ? ' indeck' : ''}${row.problem ? ' bad' : ''}${top ? ' top' : ''}`} data-card={row.name} data-from="catalogue">
+    <div class={`slot${count ? ' indeck' : ''}${full && !commanderWanted ? ' full' : ''}${row.problem ? ' bad' : ''}${top ? ' top' : ''}`} data-card={row.name} data-from="catalogue">
       {top && <span class="enter">{commanderWanted ? t('lblWebCataloguePressEnterChoose') : t('lblWebCataloguePressEnterAdd')}</span>}
       <button class="tile" data-image={row.image} data-act={commanderWanted ? t('lblWebCardMenuMakeCommander') : t(takesOut ? 'lblRemove' : 'lblAdd')}
         {...handlers(row.name, 'catalogue', row.image, 1)} onClick={click}>
@@ -377,16 +381,12 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
         ? <div class="under centred"><button class="side" onClick={() => makeCommander(row.name)}>{t('lblWebCatalogueMakeCommander')}</button></div>
         : (
           <div class="under">
-            <button class="step" disabled={!count} aria-label={t('lblWebCatalogueRemoveOne', row.name)} onClick={() => remove(row.name)}>&minus;</button>
-            <span class={count ? 'n' : 'n zero'}>{count}</span>
-            <button class="step" disabled={full || !!row.problem} aria-label={t('lblWebCatalogueAddOne', row.name)} onClick={() => add(row.name)}>+</button>
-            {limited
-              ? <span class="why">{room ? t('lblWebCatalogueLeft', room) : t('lblWebCatalogueNoneLeft')}</span>
-              : full && limit < Infinity
-                ? limit === row.count
-                  ? <span class="why">{t('lblWebCatalogueNoneLeft')}</span>
-                  : <span class="why" title={limit === 1 ? t('lblWebCatalogueSingleton') : t('lblWebNOfM', count, limit)}>{count}/{limit}</span>
-                : mainOnly ? null : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblSide')}</button>}
+            <span class="stepper">
+              <button class="step" disabled={!count} aria-label={t('lblWebCatalogueRemoveOne', row.name)} onClick={() => remove(row.name)}>&minus;</button>
+              <span class={count ? 'n' : 'n zero'} title={why}>{count}{most < Infinity && <span class="of">/{most}</span>}</span>
+              <button class="step" disabled={full || !!row.problem} aria-label={t('lblWebCatalogueAddOne', row.name)} onClick={() => add(row.name)}>+</button>
+            </span>
+            {!limited && !full && !mainOnly && <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblSide')}</button>}
           </div>
         )}
     </div>

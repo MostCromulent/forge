@@ -538,8 +538,7 @@ html[data-form="portrait"] #editor .cat-grid .enter { display: none; }
 html[data-form="portrait"] #editor .catalogue .count-row select, html[data-form="portrait"] #editor .catalogue .count-row .seg button { min-height: 36px; }
 html[data-form="portrait"] #editor .cat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; padding: 8px 10px 64px; }
 /* A finger needs larger buttons than the 20px steppers used with a mouse. The Side button is removed from the tile, because a near miss would send a card to the sideboard. */
-html[data-form="portrait"] #editor .slot:not(:hover):not(.indeck) .under { opacity: 1; }
-html[data-form="portrait"] #editor .cat-grid .under { display: grid; grid-template-columns: 1fr auto 1fr; gap: 4px; }
+html[data-form="portrait"] #editor .cat-grid .under .stepper { flex: 1; display: grid; grid-template-columns: 1fr auto 1fr; gap: 4px; }
 html[data-form="portrait"] #editor .cat-grid .under .step { width: auto; height: 36px; font-size: 18px; }
 html[data-form="portrait"] #editor .cat-grid .under .n { min-width: 22px; font-size: 13px; }
 html[data-form="portrait"] #editor .cat-grid .under .side { display: none; }
