@@ -352,8 +352,6 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
   const full = room <= 0;
   // The count is shown against the most the deck may hold. In a limited deck that is the copies in the pool
   const most = limited ? count + room : limit;
-  const why = limited ? (room ? t('lblWebCatalogueLeft', room) : t('lblWebCatalogueNoneLeft'))
-    : full && limit === row.count ? t('lblWebCatalogueNoneLeft') : limit === 1 ? t('lblWebCatalogueSingleton') : undefined;
   // With every copy the player has already in the deck, a click takes one out instead of adding one they do not have
   const takesOut = full && count > 0 && (limited || limit === row.count);
   const click = (e: MouseEvent) => {
@@ -383,7 +381,7 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
           <div class="under">
             <span class="stepper">
               <button class="step" disabled={!count} aria-label={t('lblWebCatalogueRemoveOne', row.name)} onClick={() => remove(row.name)}>&minus;</button>
-              <span class={count ? 'n' : 'n zero'} title={why}>{count}{most < Infinity && <span class="of">/{most}</span>}</span>
+              <span class={count ? 'n' : 'n zero'}>{count}{most < Infinity && <span class="of">/{most}</span>}</span>
               <button class="step" disabled={full || !!row.problem} aria-label={t('lblWebCatalogueAddOne', row.name)} onClick={() => add(row.name)}>+</button>
             </span>
             {!limited && !full && !mainOnly && <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblSide')}</button>}
