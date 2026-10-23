@@ -297,7 +297,8 @@ export function CampaignPages<Tab extends string>({ model, actions, tabs, tab, s
   const bar = model.campaignBar!;
   return <>
     <CampaignBar bar={bar} tabs={tabs} tab={tab} setTab={setTab} held={reward ? owed : {}} prefs={() => setPrefs(true)}
-      leave={() => actions.campaignLeave()} under={!!reward} extra={extra} />
+      // Back returns to the first tab, the save's home page, before it leaves the save
+      leave={() => (tab === tabs[0][0] ? actions.campaignLeave() : setTab(tabs[0][0]))} under={!!reward} extra={extra} />
     {model.error && <p class="limited-error">{model.error}</p>}
     <div class="cq-main" inert={!!reward}>{page(priced)}</div>
     {prefs && <Prefs model={model} actions={actions} close={() => { setPrefs(false); setPriced(priced + 1); }} />}
