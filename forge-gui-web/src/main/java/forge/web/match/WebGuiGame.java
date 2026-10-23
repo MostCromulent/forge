@@ -237,7 +237,7 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     private static int rootKey(final GameView gv) {
-        return DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_GAME_VIEW, gv.getId());
+        return DeltaPacket.makeDeltaKey(gv);
     }
 
     @Override
@@ -322,7 +322,7 @@ public class WebGuiGame extends NetworkGuiGame {
     public void openView(final TrackableCollection<PlayerView> myPlayers) {
         final List<Integer> keys = new ArrayList<>();
         for (final PlayerView p : myPlayers) {
-            keys.add(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_PLAYER_VIEW, p.getId()));
+            keys.add(DeltaPacket.makeDeltaKey(p));
         }
         model.setLocalPlayers(keys);
         send(model.fullState());
@@ -477,7 +477,7 @@ public class WebGuiGame extends NetworkGuiGame {
     // The choices of desktop's right-click menu on a stack item
     private StackMenu stackMenuMessage(final IGameController controller, final StackItemView item) {
         final String yieldKey = item.getKey();
-        return new StackMenu(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, item.getId()),
+        return new StackMenu(DeltaPacket.makeDeltaKey(item),
                 item.isAbility() ? controller.shouldAutoYield(yieldKey) : null,
                 answersTrigger(item) ? controller.getTriggerDecision(yieldKey) : null);
     }
@@ -827,11 +827,11 @@ public class WebGuiGame extends NetworkGuiGame {
         for (final T choice : choices) {
             Integer found = null;
             if (choice instanceof StackItemView target) {
-                found = DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, target.getId());
+                found = DeltaPacket.makeDeltaKey(target);
             } else if (choice instanceof SpellAbilityView spell && spell.getHostCard() != null) {
                 for (final StackItemView item : gv.getStack()) {
                     if (item.getSourceCard() != null && item.getSourceCard().getId() == spell.getHostCard().getId()) {
-                        found = DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, item.getId());
+                        found = DeltaPacket.makeDeltaKey(item);
                         break;
                     }
                 }
@@ -1145,8 +1145,7 @@ public class WebGuiGame extends NetworkGuiGame {
             final PaperCard card = cards.get(i);
             final int[] c = counts.get(card);
             totals[i] = c[0] + c[1];
-            entries.add(new SideboardEntry(card.getName(),
-                    ImageKeys.CARD_PREFIX + card.getName() + "|" + card.getEdition() + "|" + card.getArtIndex(), totals[i]));
+            entries.add(new SideboardEntry(card.getName(), Foil.key(card), totals[i]));
             inMain.add(c[0]);
         }
         final JsonElement reply = ask(new SideboardRequest(message, entries, inMain, inMain), v -> {

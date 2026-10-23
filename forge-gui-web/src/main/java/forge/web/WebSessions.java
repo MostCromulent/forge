@@ -9,6 +9,7 @@ import forge.gamemodes.net.server.HostingServer;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
+import forge.web.lobby.Lobby;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.ToBrowser.Address;
 import forge.web.protocol.ToBrowser.ChatLine;
@@ -222,7 +223,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
 
     private boolean drafting() {
         final ServerGameLobby table = hostLobby();
-        return table != null && table.getDraftHost() != null && !table.getDraftHost().isFinished();
+        return table != null && Lobby.drafting(table);
     }
 
     /** The host gives a disconnected guest's seat to a waiting browser. That browser takes over the session that holds the seat. */

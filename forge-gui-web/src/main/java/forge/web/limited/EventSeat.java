@@ -13,6 +13,7 @@ import forge.web.WebSession;
 import forge.web.WebSession.Setup;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckSession;
+import forge.web.deck.DeckStore;
 import forge.web.lobby.Lobby;
 import forge.web.match.LocalGame;
 import forge.web.match.WebGuiGame;
@@ -155,11 +156,7 @@ public final class EventSeat {
             final Deck kept;
             synchronized (DeckCatalog.DECKS) {
                 // Two events of the same product on the same day get the same name. The newer pool must not replace the older one.
-                String name = pool.getName();
-                for (int n = 2; eventDecks.contains(name); n++) {
-                    name = pool.getName() + " (" + n + ")";
-                }
-                kept = new Deck(pool, name);
+                kept = new Deck(pool, DeckStore.freeName(eventDecks, pool.getName(), null));
                 eventDecks.add(kept);
             }
             final ServerGameLobby table = local.hostedLobby();

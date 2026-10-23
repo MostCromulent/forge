@@ -89,7 +89,7 @@ public final class DeckStore {
     }
 
     /** The wanted name, or "wanted (2)" and so on. Returns the first one whose file no deck other than mine uses. */
-    static String freeName(final IStorage<Deck> storage, final String wanted, final String mine) {
+    public static String freeName(final IStorage<Deck> storage, final String wanted, final String mine) {
         return freeName(storage.getItemNames(), wanted, mine);
     }
 

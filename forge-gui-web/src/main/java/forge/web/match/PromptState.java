@@ -91,20 +91,13 @@ final class PromptState {
             if (target instanceof PlayerView p) {
                 players.add(Ref.player(p.getId()));
             } else if (target instanceof StackItemView item) {
-                stack.add(key(item));
+                stack.add(DeltaPacket.makeDeltaKey(item));
             }
         }
         selectablePlayers = players;
         selectableStack = stack;
-        highlighted = selection.chosen().stream().map(PromptState::key).distinct().toList();
+        highlighted = selection.chosen().stream().map(DeltaPacket::makeDeltaKey).distinct().toList();
         changed();
-    }
-
-    /** The key the browser uses for a card, player or stack item. */
-    private static int key(final TrackableObject object) {
-        final int type = object instanceof CardView ? DeltaPacket.TYPE_CARD_VIEW
-                : object instanceof PlayerView ? DeltaPacket.TYPE_PLAYER_VIEW : DeltaPacket.TYPE_STACK_ITEM_VIEW;
-        return DeltaPacket.makeDeltaKey(type, object.getId());
     }
 
     synchronized void card(final CardView about) {

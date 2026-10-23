@@ -8,6 +8,7 @@ import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
 import forge.deck.DeckGroup;
+import forge.deck.DeckProxy;
 import forge.deck.DeckSection;
 import forge.deck.DeckgenUtil;
 import forge.game.GameType;
@@ -16,7 +17,6 @@ import forge.item.PaperCard;
 import forge.model.FModel;
 import forge.util.ImageUtil;
 import forge.util.Localizer;
-import forge.util.MyRandom;
 import forge.util.storage.IStorage;
 import forge.web.protocol.ToBrowser.EditorLand;
 import forge.web.protocol.ToBrowser.EditorSection;
@@ -123,7 +123,7 @@ public final class DeckEditor {
         this.copyOf = readOnly ? deck.getName() : null;
         this.saved = saved && !readOnly;
         this.owned = this.saved && target instanceof Stored ? deck.getName() : null;
-        this.landSet = limited() ? poolLandSet() : collection != null ? firstLandSet() : null;
+        this.landSet = limited() ? DeckProxy.getDefaultLandSet(deck).getCode() : collection != null ? firstLandSet() : null;
     }
 
     Collection collection() {
@@ -708,7 +708,7 @@ public final class DeckEditor {
         }
     }
 
-    /** Puts a card in the command zone as desktop's editors do. A partner joins the commander, any other card replaces it, and in Oathbreaker each slot holds one card. */
+    /** Puts a card in the command zone as desktop's editors do. A partner joins the commander, any other card replaces it, and in Oathbreaker each slot holds one card. Desktop keeps a copy of this rule in each of its editors, so there is no shared one to call. */
     private void placeCommander(final PaperCard card, final CardPool commanders) {
         if (check.format() == GameType.Oathbreaker) {
             final boolean oathbreaker = card.getRules().canBeOathbreaker();
@@ -809,19 +809,6 @@ public final class DeckEditor {
             final PaperCard fromSet = landSet == null ? null : StaticData.instance().getCommonCards().getCard(name, landSet);
             deck.getMain().add(fromSet != null ? fromSet : printingFor(name), wanted);
         }
-    }
-
-    /** A random edition with basic lands from among the pool's editions, as desktop's limited editor chooses. */
-    private String poolLandSet() {
-        final List<String> codes = new ArrayList<>();
-        for (final Map.Entry<PaperCard, Integer> e : deck.getAllCardsInASinglePool(false, true)) {
-            final CardEdition edition = StaticData.instance().getEditions().get(e.getKey().getEdition());
-            if (edition != null && edition.hasBasicLands() && !codes.contains(edition.getCode())) {
-                codes.add(edition.getCode());
-            }
-        }
-        return codes.isEmpty() ? CardEdition.Predicates.getRandomSetWithAllBasicLands(StaticData.instance().getEditions()).getCode()
-                : codes.get(MyRandom.getRandom().nextInt(codes.size()));
     }
 
     /** Built once here. StaticData's sorted list is built lazily without a lock, so two editors opening at once could read it half sorted. */

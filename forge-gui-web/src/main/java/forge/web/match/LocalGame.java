@@ -39,7 +39,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
 
-/** The netplay seat one browser plays from. It is a client of a server inside this process, and that server opens no socket. */
+/**
+ * The netplay seat one browser plays from. It is a client of a server inside this process, and that server opens no socket.
+ * NetConnectUtil.host is not used because it starts a server on a port and takes a desktop or mobile lobby screen.
+ */
 public final class LocalGame implements IHasForgeLog {
     private static final long JOIN_TIMEOUT_SECONDS = 15;
     /** How long a new table waits for the last table's connections to close. */

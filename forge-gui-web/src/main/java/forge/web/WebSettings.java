@@ -209,9 +209,7 @@ public final class WebSettings implements IHasForgeLog {
     }
 
     private static void applyTo(final IGameController controller, final FPref pref, final String value) {
-        if (controller.getYieldController() != null) {
-            controller.getYieldController().setPref(pref, value);
-        }
+        controller.getYieldController().setPref(pref, value);
         // The host's engine keeps no copy of the auto-yield mode. The client decides how a choice is stored.
         if (pref != FPref.UI_AUTO_DECISION_MODE) {
             controller.setYieldPref(pref, value);

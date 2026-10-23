@@ -39,7 +39,7 @@ final class CardDetails {
                 lines.add(parts[i]);
             }
         }
-        return new PlayerDetail(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_PLAYER_VIEW, player.getId()), player.getName(), lines);
+        return new PlayerDetail(DeltaPacket.makeDeltaKey(player), player.getName(), lines);
     }
 
     /** The faces of a card that this viewer may see. mayFlip adds the other face, and is true only for a viewer allowed to see it. */
@@ -54,7 +54,7 @@ final class CardDetails {
                 faces.add(face(card, card.getAlternateState(), game));
             }
         }
-        return new Detail(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_CARD_VIEW, card.getId()), faces);
+        return new Detail(DeltaPacket.makeDeltaKey(card), faces);
     }
 
     private static CardFace face(final CardView card, final CardStateView state, final GameView game) {

@@ -79,7 +79,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
             mySeat = seatIndex;
             if (packNum != packNumber) {
                 view.log(DraftLogKind.pack, Localizer.getInstance().getMessage("lblDraftLogPackHeader", packNum,
-                        Localizer.getInstance().getMessage(packNum % 2 == 1 ? "lblDraftLogPassingRight" : "lblDraftLogPassingLeft")));
+                        Localizer.getInstance().getMessage(DraftView.passDirection(packNum) > 0 ? "lblDraftLogPassingRight" : "lblDraftLogPassingLeft")));
             }
             pack = List.copyOf(cards);
             packNumber = packNum;

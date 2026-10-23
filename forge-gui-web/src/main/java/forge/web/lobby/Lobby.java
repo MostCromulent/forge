@@ -937,7 +937,7 @@ public final class Lobby {
     }
 
     /** Seats stay unchanged while their players draft, because each player's seat is where their packs go. */
-    static boolean drafting(final ServerGameLobby lobby) {
+    public static boolean drafting(final ServerGameLobby lobby) {
         return lobby.getDraftHost() != null && !lobby.getDraftHost().isFinished();
     }
 
