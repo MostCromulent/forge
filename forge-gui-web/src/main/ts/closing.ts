@@ -1,4 +1,4 @@
-// A closing element plays its exit animation first (dialogs.css), as the chat dock does. It is removed when that animation ends
+// A closing element plays its exit animation first (dialogs.css). It is removed when that animation ends
 
 import { useState } from 'preact/hooks';
 import { reducedMotion } from './dom';
@@ -6,9 +6,16 @@ import { reducedMotion } from './dom';
 /** Longer than any exit animation (dialogs.css). */
 const GIVE_UP_MS = 400;
 
-/** A close that waits for the exit animation. The element gets `closing`, and the end of its own animation closes it. */
+/**
+ * A close that waits for the exit animation. The element gets `closing`, and the end of its own animation closes it. An element
+ * that stays drawn once closed, such as the chat dock, loses `closing` again.
+ */
 export function useClosing(close: () => void): { closing: boolean; shut: () => void; gone: (e: AnimationEvent) => void } {
   const [closing, setClosing] = useState(false);
+  const done = () => {
+    setClosing(false);
+    close();
+  };
   return {
     closing,
     shut: () => {
@@ -18,9 +25,9 @@ export function useClosing(close: () => void): { closing: boolean; shut: () => v
       }
       setClosing(true);
       // Close anyway if no animation runs, for example when no style gives it one
-      setTimeout(close, GIVE_UP_MS);
+      setTimeout(done, GIVE_UP_MS);
     },
-    gone: e => { if (closing && e.target === e.currentTarget) close(); },
+    gone: e => { if (closing && e.target === e.currentTarget) done(); },
   };
 }
 

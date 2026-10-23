@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { t } from '../text';
 import { toggled } from '../symbols';
+import { useDismiss } from '../hooks';
 
 export interface FilterKind<F> {
   id: string;
@@ -27,21 +28,8 @@ export function FilterBar<F>({ kinds, filter, set, clearAll, narrowed, children 
   const [open, setOpen] = useState<{ kind: string | null } | null>(null);
   const [find, setFind] = useState('');
   const root = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const away = (e: Event) => { if (!root.current?.contains(e.target as Node)) setOpen(null); };
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      e.stopPropagation();
-      setOpen(null);
-    };
-    document.addEventListener('pointerdown', away, true);
-    document.addEventListener('keydown', key, true);
-    return () => {
-      document.removeEventListener('pointerdown', away, true);
-      document.removeEventListener('keydown', key, true);
-    };
-  }, [open]);
+  // The bar also sits in the deck finder's dialog, which Escape would otherwise close too
+  useDismiss(!!open, root, () => setOpen(null), true);
   useEffect(() => setFind(''), [open === null]);
   const inUse = kinds.filter(k => k.chip(filter) !== null);
   const shown = kinds.filter(k => k.label.toLowerCase().includes(find.trim().toLowerCase()));
@@ -132,6 +120,9 @@ export function AnyOf<V extends string>({ options, value, apply }: {
 }
 
 /** A panel for a range of numbers. An empty end means no limit at that end. */
+/** A number range. Either end can be null for no limit at that end. A null range sets no limit. */
+export type Range = { from: number | null; to: number | null } | null;
+
 export function Between({ from, to, apply, min = 0 }: {
   from: number | null; to: number | null; apply: (from: number | null, to: number | null) => void; min?: number;
 }) {

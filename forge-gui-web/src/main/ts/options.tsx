@@ -205,7 +205,6 @@ export function SectionHeading({ name, keys }: { name: string; keys: boolean }) 
   );
 }
 
-export const CloseIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>;
 
 /** The frame shared by the options dialog and the game menu's dialogs. label names the dialog when the title is a phrase. */
 export function OptionsDialog({ title, label, kind, head, rail, footer, close, children }: {
@@ -219,7 +218,7 @@ export function OptionsDialog({ title, label, kind, head, rail, footer, close, c
         <header>
           <b>{title}</b>
           {head ?? <span class="spacer" />}
-          <button class="close" title={t('lblWebOptionsCloseEsc')} onClick={shut}><CloseIcon /></button>
+          <button class="close" title={t('lblWebOptionsCloseEsc')} onClick={shut}><Icon d={ICONS.x} /></button>
         </header>
         {rail ? <div class="split"><nav class="rail" role="tablist">{rail}</nav><div class="rows">{children}</div></div> : <div class="rows">{children}</div>}
         {footer && <footer>{footer}</footer>}

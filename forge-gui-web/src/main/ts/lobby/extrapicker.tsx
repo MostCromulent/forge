@@ -3,19 +3,17 @@
 import { useEffect, useState } from 'preact/hooks';
 import { imageUrl } from '../images';
 import { normalize } from '../search';
-import { t, type TextKey } from '../text';
+import { t, type TextKey, signed } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ExtraChoice, Seat } from '../protocol';
-import { Backdrop } from '../dialog';
+import { Backdrop, CloseButton } from '../dialog';
 
 type ExtraKind = 'planes' | 'schemes' | 'vanguard';
 
 const SECTION: Record<ExtraKind, string> = { planes: 'Planes', schemes: 'Schemes', vanguard: 'Avatar' };
 const TITLE: Record<ExtraKind, TextKey> = { planes: 'lblWebLobbyChoosePlanarDeck', schemes: 'lblWebLobbyChooseSchemeDeck', vanguard: 'lblWebLobbyChooseVanguard' };
 
-/** "+1" or "−3", as the modifiers are printed. */
-export const signed = (n: number): string => (n < 0 ? `−${-n}` : `+${n}`);
 
 export function ExtraPicker({ model, actions, index, seat, kind, close }: {
   model: Model; actions: Actions; index: number; seat: Seat; kind: ExtraKind; close: () => void;
@@ -35,7 +33,7 @@ export function ExtraPicker({ model, actions, index, seat, kind, close }: {
         <header class="finder-head">
           <h2>{t(TITLE[kind])}</h2>
           <span class="seat-note">{t('lblWebLobbyForSeat', seat.name ?? '')}</span>
-          <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
+          <CloseButton onClick={close} />
         </header>
         <div class="extra-body">
           <input class="find" type="search" placeholder={t('lblWebLobbySearchByName')} value={query} onInput={e => setQuery(e.currentTarget.value)} />

@@ -1,9 +1,9 @@
 // The deck finder's options for starting a new deck. They are a deck site link, building from scratch, pasting a list, or a deck file.
 
 import { useEffect, useRef } from 'preact/hooks';
-import { SITES } from './importer';
+import { SITES, LINK_EXAMPLE } from './importer';
 import { t } from '../text';
-import { Backdrop } from '../dialog';
+import { Backdrop, CloseButton } from '../dialog';
 
 export function NewDeck({ link, setLink, fetchLink, build, pasteList, addFile, close }: {
   link: string; setLink: (link: string) => void; fetchLink: (url: string) => void;
@@ -24,13 +24,13 @@ export function NewDeck({ link, setLink, fetchLink, build, pasteList, addFile, c
       <div class="dialog new-deck">
         <div class="dialog-head">
           <h3>{t('lblNewDeck')}</h3>
-          <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
+          <CloseButton onClick={close} />
         </div>
         <section>
           <h4>{t('lblWebFinderFromSite')}</h4>
           <p>{t('lblWebFinderFromSiteHint', SITES)}</p>
           <div class="linkfield">
-            <input ref={linkField} class="find" placeholder="https://moxfield.com/decks/…" value={link}
+            <input ref={linkField} class="find" placeholder={LINK_EXAMPLE} value={link}
               onInput={e => setLink(e.currentTarget.value)}
               onPaste={e => { fetchLink(e.clipboardData?.getData('text') ?? ''); e.preventDefault(); }}
               onKeyDown={e => { if (e.key === 'Enter') fetchLink(link); }} />

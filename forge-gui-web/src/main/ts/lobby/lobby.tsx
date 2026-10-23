@@ -69,7 +69,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           {/* This button adds a seat where it will appear. The player count above can also add seats */}
           {lobby.host && !lim && lobby.seats.length < lobby.maxSeats && (
             <button class="add-seat" onClick={() => actions.setPlayerCount(lobby.seats.length + 1)}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>{t('lblWebLobbyAddSeat')}
+              <Icon d={ICONS.plus} />{t('lblWebLobbyAddSeat')}
             </button>
           )}
         </div>
@@ -269,7 +269,7 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
           onClick={() => choose('sleeve')}>{t('lblWebLobbyChangeSleeve')}</button>
       </div>
       <button class="drop" aria-label={t('lblWebLobbyRemoveSeat')} hidden={mine || !lobby.host || lobby.seats.length <= 2}
-        onClick={() => actions.removeSeat(index)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
+        onClick={() => actions.removeSeat(index)}><Icon d={ICONS.x} /></button>
       <div class="plate-body">
         <div class="who">
           {/* A seat nobody has taken has no portrait to show */}

@@ -1,8 +1,9 @@
-// The page's popup parts: the dimmed layer under every dialog, the two-button confirm dialog, and a button that opens a panel
+// The page's popup parts: the dimmed layer under every dialog, the two-button confirm dialog, a button that opens a panel, and a dialog's close button
 
 import type { ComponentChildren, JSX } from 'preact';
 import { useRef, useState } from 'preact/hooks';
 import { useDismiss } from './hooks';
+import { t } from './text';
 
 /** The layer under a dialog, of class layer and cls. A press that starts on the layer dismisses the dialog. A press that starts in the dialog does not, even if it ends outside, as a text selection can. */
 export function Backdrop({ layer = 'backdrop', cls, dismiss, children, ...rest }: {
@@ -47,4 +48,8 @@ export function Dropdown({ cls, block, button, children }: {
       {open && children(() => setOpen(false))}
     </Wrap>
   );
+}
+
+export function CloseButton({ onClick }: { onClick: () => void }) {
+  return <button class="dk-close" title={t('lblClose')} onClick={onClick}>&times;</button>;
 }

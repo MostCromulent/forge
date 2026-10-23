@@ -9,7 +9,7 @@ import { hoverable } from '../preview';
 import { artUrl } from '../sleeves';
 import { q, make } from '../dom';
 import type { CardClick } from './cards';
-import { t, type TextKey } from '../text';
+import { t, type TextKey, signed } from '../text';
 
 export type CommandKind = 'plane' | 'scheme' | 'avatar' | 'commander' | 'signature' | 'dice' | 'effect';
 
@@ -146,7 +146,6 @@ export function renderEmblems(root: HTMLElement, model: Model, player: PlayerVie
 function tileBand(kind: CommandKind, state: Partial<CardStateView>, tax: number): string {
   if (kind === 'avatar') {
     const mods = avatarModifiers(state.RulesText);
-    const signed = (n: number) => (n < 0 ? `−${-n}` : `+${n}`);
     return mods ? t('lblWebLobbyAvatarMods', signed(mods[0]), signed(mods[1])) : '';
   }
   if (kind === 'signature') return t('lblWebBoardSignature');

@@ -13,13 +13,15 @@ import type { Model } from '../model';
 import type { ImportAction, ImportFix, ImportProblem } from '../protocol';
 import { t } from '../text';
 import { CardGroup } from './deckview';
-import { Backdrop } from '../dialog';
+import { Backdrop, CloseButton } from '../dialog';
 import { NameTaken } from './nametaken';
 
 const READ_DELAY_MS = 300;
 const LINE_PX = 22;
 const MARKS: Record<string, string> = { read: '✓', problem: '!', ignored: '–', heading: '' };
 export const SITES = 'Moxfield, Archidekt, TappedOut, MTGGoldfish';
+export const LINK_EXAMPLE = 'https://moxfield.com/decks/…';
+const LIST_EXAMPLE = '4 Lightning Bolt\n1 Sol Ring (C21) 263\n\nSideboard\n2 Duress';
 /** The storage key for text not yet imported, so closing the dialog by mistake loses nothing. */
 const DRAFT_KEY = 'forge.importDraft';
 
@@ -125,7 +127,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
         <header class="imp-head">
           <h2>{t('lblWebImportTitle')}</h2>
           <span class="muted">{t('lblWebImportSubtitle')}</span>
-          <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
+          <CloseButton onClick={close} />
         </header>
         <div class="imp-sub">
           <label class="namefield">{t('lblDeckName')}
@@ -140,7 +142,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
           <div class="paste">
             <h4>{t('lblWebImportFromLink')} <span>{SITES}</span></h4>
             <div class="linkfield">
-              <input class="find" placeholder="https://moxfield.com/decks/…" value={url}
+              <input class="find" placeholder={LINK_EXAMPLE} value={url}
                 onInput={e => setUrl(e.currentTarget.value)}
                 onPaste={e => { const pasted = e.clipboardData?.getData('text') ?? ''; setUrl(pasted); fetch(pasted); e.preventDefault(); }}
                 onKeyDown={e => { if (e.key === 'Enter') fetch(url); }} />
@@ -162,7 +164,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
                       {lines.map((_, i) => <div key={i} class={`wash k-${marks[i]?.kind ?? ''}${lit.has(i) ? ' lit' : ''}`} style={{ top: `${i * LINE_PX}px` }} />)}
                     </div>
                     <textarea ref={area} wrap="off" spellcheck={false} value={text} readOnly={!!fetched}
-                      placeholder={'4 Lightning Bolt\n1 Sol Ring (C21) 263\n\nSideboard\n2 Duress'}
+                      placeholder={LIST_EXAMPLE}
                       onInput={e => typed(e.currentTarget.value)}
                       onScroll={e => {
                         // The gutter marks and the washes are drawn beside and behind the text, so they must scroll with it
@@ -233,7 +235,7 @@ function Guide() {
   return (
     <div class="guide">
       <p>{t('lblWebImportGuideOnePerLine')}</p>
-      <pre>{'4 Lightning Bolt\n1 Sol Ring (C21) 263\n\nSideboard\n2 Duress'}</pre>
+      <pre>{LIST_EXAMPLE}</pre>
       <p class="muted">{t('lblWebImportGuideSections')}</p>
       <p class="muted">{t('lblWebImportGuideLinks', SITES)}</p>
     </div>

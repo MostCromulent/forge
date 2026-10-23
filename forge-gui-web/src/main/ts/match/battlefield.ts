@@ -1,7 +1,7 @@
 // Draws one player's permanents. It sorts them into rows, piles identical ones, and sizes the cards to fit the board.
 
 import { reconcile } from './reconcile';
-import { createCard, updateCard, setPileCount, type CardClick } from './cards';
+import { createCard, updateCard, setPileCount, type CardClick, TAPPED_SCALE } from './cards';
 import { combatShown, stateOf, type Model } from '../model';
 import { mergeInto, spreadFrom } from './motion';
 import { chargingAtPlayer } from './overlay';
@@ -103,7 +103,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   // A phone sets a minimum card width in pixels. Below it a card cannot be read or tapped.
   const minWidth = px(style, '--min-card-w');
   const minFit = minWidth ? Math.max(MIN_FIT, minWidth / w) : MIN_FIT;
-  const slotW = h * 0.9 + 2 * air;
+  const slotW = h * TAPPED_SCALE + 2 * air;
   // A group's width at card size 1, on one line or split over two
   const groupUnit = (g: GroupStats, lines: number) => {
     const total = g.slots * slotW + g.steps * w * fan + g.battles * (h - w);
@@ -111,7 +111,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     return lines === 1 ? total : total / 2 + slotW + g.depth * w * fan + (g.battles ? h - w : 0);
   };
   // The gap between a group's two lines leaves room for an attacker on the back line to move forward, with its chevron
-  const lineGap = (fit: number) => 14 + (h - w * 0.9) / 2 * fit;
+  const lineGap = (fit: number) => 14 + (h - w * TAPPED_SCALE) / 2 * fit;
   const live = (z: Zone) => z.filter(g => g.slots > 0);
   const rowGap = (r: number) => px(fieldStyle, r === 1 ? '--row-gap-1' : '--row-gap-0') || (r === 1 ? 52 : 40);
   const zoneWidth = (z: Zone, s: Omit<Sized, 'raw'>, gap: number) =>

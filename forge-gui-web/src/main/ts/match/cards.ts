@@ -13,6 +13,9 @@ import { drawStickers } from './stickers';
 import { ICONS, iconSvg } from '../icons';
 import { frameColour, ptShift } from './rules';
 
+/** A tapped card is drawn rotated and at this scale (board.css). */
+export const TAPPED_SCALE = 0.9;
+
 /** What happens when a card is clicked. On the board it is selected, in a dialog it toggles an option. menu is true for a right-click. */
 export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void;
 

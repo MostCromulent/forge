@@ -5,11 +5,11 @@ import type { CardMoved, GameEvent, Place } from '../protocol';
 import type { CardView, PlayerView } from '../protocol';
 import { cssUrl, playerSleeveUrl } from '../looks';
 import { echoSound } from '../audio';
-import { TAPPED_SCALE, unmake } from './leaving';
+import { unmake } from './leaving';
 import type { Model } from '../model';
-import { make, reducedMotion } from '../dom';
+import { make, reducedMotion, easeOut } from '../dom';
 import { cardImageSrc } from '../images';
-import { lastPicture } from './cards';
+import { lastPicture, TAPPED_SCALE } from './cards';
 
 /** Where a card was drawn and its old element, so a trip can still run after the element has left the page. */
 interface Snapshot {
@@ -377,8 +377,7 @@ const MORPH_MS = 220;
 function morph(el: HTMLElement, wasTapped: boolean, oldSize: { w: number; h: number } | undefined): void {
   const isTapped = el.classList.contains('tapped');
   const turn = (wasTapped ? 90 : 0) - (isTapped ? 90 : 0);
-  // A tapped card is also drawn at nine tenths of its size
-  const size = (oldSize?.w && el.offsetWidth ? oldSize.w / el.offsetWidth : 1) * (wasTapped ? .9 : 1) / (isTapped ? .9 : 1);
+  const size = (oldSize?.w && el.offsetWidth ? oldSize.w / el.offsetWidth : 1) * (wasTapped ? TAPPED_SCALE : 1) / (isTapped ? TAPPED_SCALE : 1);
   if (!turn && Math.abs(size - 1) < 0.02) return;
   el.animate([{ rotate: `${turn}deg`, scale: String(size) }, { rotate: '0deg', scale: '1' }], { duration: MORPH_MS, easing: EASE });
 }
@@ -462,7 +461,7 @@ function whereNow(held: Waiting): DOMRect {
     return held.rect;
   }
   // The flight eases out, so it covers most of the distance early
-  const p = 1 - (1 - t) ** 3;
+  const p = easeOut(t);
   const mix = (a: number, b: number) => a + (b - a) * p;
   return new DOMRect(mix(held.from.left, held.rect.left), mix(held.from.top, held.rect.top),
     mix(held.from.width, held.rect.width), mix(held.from.height, held.rect.height));

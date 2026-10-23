@@ -2,7 +2,7 @@
 
 import { reconcile } from './reconcile';
 import { cardImageSrc, hideOnError, setImage, symbolUrl } from '../images';
-import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLocal, type Model } from '../model';
+import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLocal, type Model, offersPicks } from '../model';
 import { renderHand, resetHand } from './hand';
 import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
@@ -50,8 +50,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   noticeLosses(model, actions);
   // A prompt that offers cards or players to pick, or a spell to pick on the stack, dims everything else (board.css). Paying a cost does not count.
   const p = model.prompt;
-  byId('match').classList.toggle('picking', !!stackPick(model) || (!!p && !p.paying
-    && (p.selectable.length > 0 || p.selectablePlayers.length > 0 || p.selectableStack.length > 0)));
+  byId('match').classList.toggle('picking', !!stackPick(model) || (!!p && !p.paying && offersPicks(p)));
   // The click position is sent with the click, so an ability list opens on the card, as the desktop menu does
   const select: CardClick = (el, menu, e) => {
     const key = Number(el.dataset.key);

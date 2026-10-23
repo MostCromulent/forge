@@ -1,7 +1,7 @@
 // The game menu behind the prompt's ⋯ button. It keeps the auto-pass settings one click from the prompt.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { CloseIcon, OnOff, OptionsDialog, PlaymatChoice, Row, SectionHeading } from '../options';
+import { OnOff, OptionsDialog, PlaymatChoice, Row, SectionHeading } from '../options';
 import { SETTINGS, setting, type SettingDef } from '../settings';
 import { DevItems } from './devmenu';
 import type { Actions } from '../actions';
@@ -11,7 +11,7 @@ import { t, type TextKey } from '../text';
 import { useClosing } from '../closing';
 import { changeUi, ui } from '../ui';
 import { Backdrop, Confirm } from '../dialog';
-import { ICONS, MenuIcon } from '../icons';
+import { ICONS, MenuIcon, Icon } from '../icons';
 import { useTwoPress } from '../hooks';
 import { isPortrait } from '../form';
 
@@ -154,7 +154,7 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
               <span class="decision-key" title={e.key}>{e.key}</span>
               <button class="decision-forget" title={t('lblWebGameMenuForgetThis')} aria-label={t('lblWebGameMenuForgetX', e.key)}
                 onClick={() => actions.autoDecisions('remove', e.key)}>
-                <CloseIcon />
+                <Icon d={ICONS.x} />
               </button>
             </div>
           ))}

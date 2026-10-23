@@ -1,6 +1,6 @@
 // The coin toss for a match's first game, drawn alone over the board. It uses mobile's art and motion (Coin3D.pose)
 
-import { byId, make, q, reducedMotion } from '../dom';
+import { byId, make, q, reducedMotion, easeOut } from '../dom';
 import { leave } from '../closing';
 
 /** How long the coin is in the air, and how long it then rests before it is removed. */
@@ -57,7 +57,7 @@ export function tossCoin(heads: boolean, caption: string, then: () => void): voi
   const pose = (s: number) => {
     const t = Math.min(1, s / FLIGHT_S);
     const rested = Math.max(0, s - FLIGHT_S);
-    const spun = 1 - (1 - t) ** 3;
+    const spun = easeOut(t);
     // A wobble that fades as the coin falls, the tilt it rests at, and a rocking motion after it lands
     const fade = 1 - t;
     const lean = Math.min(1, Math.max(0, (t - .55) / .45));

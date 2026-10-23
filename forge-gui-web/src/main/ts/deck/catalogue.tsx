@@ -5,7 +5,7 @@ import { imageUrl, hideBroken, smallImage } from '../images';
 import { lift, liftFromLine } from '../flight';
 import { ColourToggles, SymbolText, toggled } from '../symbols';
 import { useDebounced } from '../hooks';
-import { AnyOf, Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } from './filters';
+import { AnyOf, Between, FilterBar, type FilterKind, OneOf, rangeWords, Words, type Range } from './filters';
 import type { Actions } from '../actions';
 import type { CardHandlers } from './drag';
 import type { Model } from '../model';
@@ -181,8 +181,6 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
   );
 }
 
-/** A number range. Either end can be null for no limit at that end. A null range sets no limit. */
-type Range = { from: number | null; to: number | null } | null;
 
 /** The catalogue filters beyond the bar. Most are sent as Forge's search syntax, which the server reads. */
 interface CatalogueFilter {

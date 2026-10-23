@@ -1,11 +1,10 @@
 // Animates a permanent that goes to a graveyard or exile. The effect is drawn from the card's image on a canvas over the card.
 
 import { reducedMotion } from '../dom';
+import { TAPPED_SCALE } from './cards';
 
 type Destination = 'Graveyard' | 'Exile';
 
-/** A tapped card is drawn rotated and at this scale (board.css). */
-export const TAPPED_SCALE = 0.9;
 /** How long after the effect starts the card is fully gone. The zone tile may show the card after this time. */
 const GONE_MS: Record<Destination, number> = { Graveyard: 870, Exile: 540 };
 /** The exile zone's colour (theme.css), used for the glow of an exiled card. */

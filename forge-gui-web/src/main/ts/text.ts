@@ -101,3 +101,6 @@ export function format<T>(pattern: string, args: readonly T[]): (string | T)[] {
   if (text || !out.length) out.push(text);
   return out;
 }
+
+/** A number with its sign, as a card's modifiers are written: +2 or −1. */
+export const signed = (n: number): string => (n < 0 ? `−${-n}` : `+${n}`);

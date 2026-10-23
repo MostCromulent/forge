@@ -11,6 +11,7 @@ import type { Actions } from './actions';
 import type { Person } from './protocol';
 import { t, type TextKey } from './text';
 import { Dropdown } from './dialog';
+import { useClosing } from './closing';
 import { isPortrait } from './form';
 
 /** The roster text for what each person is doing. */
@@ -30,7 +31,7 @@ function Crown() {
 /** When rename is given, your own row gets an edit button. Only the menu page passes it, so the name can only change there. */
 export function Dock({ model, actions, rename }: { model: Model; actions: Actions; rename?: () => void }) {
   const [open, setOpen] = useState(false);
-  const [closing, setClosing] = useState(false);
+  const { closing, shut, gone } = useClosing(() => setOpen(false));
   const [listed, setListed] = useState(false);
   const [text, setText] = useState('');
   const [picking, setPicking] = useState(false);
@@ -103,13 +104,8 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   return (<>
     <section class={inMatch ? 'dock open in-match' : closing ? 'dock open closing' : 'dock open'} aria-label={t('lblWebDockWhoIsHere')}
       onPointerDown={sawArrivals}
-      onAnimationEnd={e => {
-        // The panel closes only after its slide-down animation ends, so the bar replaces it without a jump
-        if (e.animationName === 'dock-sink') {
-          setClosing(false);
-          setOpen(false);
-        }
-      }}>
+      // The panel closes only after its slide-down animation ends, so the bar replaces it without a jump
+      onAnimationEnd={gone}>
       {inMatch ? (
         <button class="dock-head" aria-expanded={listed} onClick={() => setListed(!listed)}>
           <span class="faces" aria-hidden="true">
@@ -122,7 +118,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
           <Chevron up={!listed} />
         </button>
       ) : (
-        <button class="dock-head" aria-expanded onClick={() => setClosing(true)}>
+        <button class="dock-head" aria-expanded onClick={shut}>
           <span class="live" aria-hidden="true" />
           <b>{t('lblWebDockOnThisServer')}</b>
           <span class="dock-count">{people.length}</span>

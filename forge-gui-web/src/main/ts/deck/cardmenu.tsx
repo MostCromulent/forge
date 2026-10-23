@@ -1,6 +1,8 @@
 // A card's menu in the editor. It offers every move a drag can make, so no action needs dragging.
 
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
+import { useDismiss } from '../hooks';
 import { imageUrl } from '../images';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -39,11 +41,14 @@ function cardIn(state: EditorState, zone: Zone | DeckSection, name: string): Edi
 export function CardMenu({ at, state, actions, close, printings }: {
   at: MenuAt; state: EditorState; actions: Actions; close: () => void; printings: (zone: DeckSection | null) => void;
 }) {
-  useEffect(() => {
-    const away = () => close();
-    document.addEventListener('pointerdown', away);
-    return () => document.removeEventListener('pointerdown', away);
-  }, []);
+  const root = useRef<HTMLDivElement>(null);
+  useDismiss(true, root, close);
+  const shell = (items: ComponentChildren) => (
+    <div ref={root} class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }}>
+      <span class="menu-cap">{at.name}</span>
+      {items}
+    </div>
+  );
   const act = (run: () => void) => () => {
     run();
     close();
@@ -53,20 +58,15 @@ export function CardMenu({ at, state, actions, close, printings }: {
   const other: DeckSection = zone === 'Main' ? 'Sideboard' : 'Main';
   // A main-only collection deck has only a main deck. Each card uses the printing the player owns.
   if (state.mainOnly) {
-    return (
-      <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
-        <span class="menu-cap">{at.name}</span>
+    return shell(<>
         {zone === null
           ? <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Main', count: 1 }))}>{t('lblWebCardMenuAddToDeck')}</button>
           : <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: 1 }))}>{t('lblWebCardMenuRemoveOne')}</button>}
-      </div>
-    );
+      </>);
   }
   // A pool's cards only move between the pool and the deck. There is no separate sideboard and no printing to choose.
   if (state.limited) {
-    return (
-      <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
-        <span class="menu-cap">{at.name}</span>
+    return shell(<>
         <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Main', count: 1 }))}>{t('lblWebCardMenuAddToDeck')}</button>
         {zone !== null && <>
           <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: 1 }))}>{t('lblWebCardMenuReturnOne')}</button>
@@ -81,12 +81,9 @@ export function CardMenu({ at, state, actions, close, printings }: {
             {t('lblWebCardMenuMakeCommander')}
           </button>
         )}
-      </div>
-    );
+      </>);
   }
-  return (
-    <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
-      <span class="menu-cap">{at.name}</span>
+  return shell(<>
       {zone === null && <>
         <button role="menuitem" onClick={act(() => addCard(actions, state, at.name, 'Main'))}>{t('lblWebCardMenuAddToMain')}</button>
         <button role="menuitem" onClick={act(() => addCard(actions, state, at.name, 'Sideboard'))}>{t('lblWebCardMenuAddToSideboard')}</button>
@@ -125,8 +122,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
           </button>
         )}
       </>}
-    </div>
-  );
+    </>);
 }
 
 /** Shows every printing as a picture, filtered by set or style as in desktop's dialog. Steppers move copies between printings, so the total never changes. Each step is saved at once, so there is no Cancel. */

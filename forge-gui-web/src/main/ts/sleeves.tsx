@@ -8,6 +8,9 @@ import { t } from './text';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { Printing, Seat } from './protocol';
+import { CloseButton } from './dialog';
+import { ICONS, Icon } from './icons';
+import { useDebounced } from './hooks';
 
 const SEARCH_DEBOUNCE_MS = 250;
 export const CENTRE = 500;
@@ -30,7 +33,7 @@ export function SleevePicker({ model, actions, index, seat, close }: {
       <div class={picking ? 'sleeves picking' : 'sleeves'}>
         <header class="sleeves-head">
           <h2>{t(picking ? 'lblChooseaCard' : 'lblWebSleevesChooseSleeve')}</h2>
-          <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
+          <CloseButton onClick={close} />
         </header>
         <div class="sleeves-body">
           {/* Every card-art choice is written to the seat's deck. Without a deck the choice would be silently dropped */}
@@ -45,7 +48,7 @@ export function SleevePicker({ model, actions, index, seat, close }: {
                   {/* The saved sleeves belong to the host, so only the host can remove one */}
                   {model.host && (
                     <button class="drop" title={t('lblWebSleevesRemoveArt')} aria-label={t('lblWebSleevesRemoveArt')}
-                      onClick={() => actions.forgetSleeveArt(art.key)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
+                      onClick={() => actions.forgetSleeveArt(art.key)}><Icon d={ICONS.x} /></button>
                   )}
                 </span>
               ))}
@@ -85,11 +88,10 @@ function ArtPicker({ model, actions, back, use }: {
   useEffect(() => {
     find.current?.focus();
   }, []);
+  const searched = useDebounced(typed, SEARCH_DEBOUNCE_MS);
   useEffect(() => {
-    if (typed === null) return;
-    const timer = setTimeout(() => actions.searchCards(typed), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [typed]);
+    if (searched !== null) actions.searchCards(searched);
+  }, [searched]);
   // Use only the printings of the chosen name. A reply for an earlier name belongs to a different card
   const printings = name !== null && model.printings?.name === name ? model.printings.list : [];
   const pick = (print: Printing) => {

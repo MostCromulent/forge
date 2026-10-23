@@ -13,17 +13,24 @@ export function useDebounced<T>(value: T, ms = 200): T {
   return settled;
 }
 
-/** Closes a popup on Escape, or on a press outside its root element. */
-export function useDismiss(open: boolean, root: RefObject<HTMLElement>, close: () => void): void {
+/**
+ * Closes a popup on Escape, or on a press outside its root element. A popup inside a dialog passes inDialog: it then hears the
+ * press and the key before the dialog does, and Escape closes only the popup.
+ */
+export function useDismiss(open: boolean, root: RefObject<HTMLElement>, close: () => void, inDialog = false): void {
   useEffect(() => {
     if (!open) return;
     const outside = (e: PointerEvent) => { if (!root.current?.contains(e.target as Node)) close(); };
-    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-    document.addEventListener('pointerdown', outside);
-    document.addEventListener('keydown', escape);
+    const escape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (inDialog) e.stopPropagation();
+      close();
+    };
+    document.addEventListener('pointerdown', outside, inDialog);
+    document.addEventListener('keydown', escape, inDialog);
     return () => {
-      document.removeEventListener('pointerdown', outside);
-      document.removeEventListener('keydown', escape);
+      document.removeEventListener('pointerdown', outside, inDialog);
+      document.removeEventListener('keydown', escape, inDialog);
     };
   }, [open]);
 }

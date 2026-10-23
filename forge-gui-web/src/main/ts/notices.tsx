@@ -3,6 +3,7 @@
 import { t } from './text';
 import type { Model } from './model';
 import type { Notice } from './protocol';
+import { reducedMotion } from './dom';
 
 let model: Model | null = null;
 let redraw = (): void => {};
@@ -29,7 +30,7 @@ export function showNotice(notice: Notice, view?: () => void, label?: string): v
 function dismissNotice(id: number): void {
   if (!model) return;
   const going = model.notices.find(n => n.id === id);
-  if (going && !going.leaving && document.documentElement.dataset.motion !== 'reduced') {
+  if (going && !going.leaving && !reducedMotion()) {
     model.notices = model.notices.map(n => (n.id === id ? { ...n, leaving: true } : n));
     setTimeout(() => dismissNotice(id), NOTICE_OUT_MS);
   } else {

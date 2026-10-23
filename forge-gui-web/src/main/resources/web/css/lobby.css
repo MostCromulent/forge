@@ -635,8 +635,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .dock.open.closing { animation: dock-sink .18s ease-in forwards; }
 @keyframes dock-rise { from { transform: translateY(calc(100% - 44px)); } }
 @keyframes dock-sink { to { transform: translateY(calc(100% - 44px)); } }
-/* With reduced motion the animations still run, but take 1ms. They cannot be removed because closing waits for the animation to end. */
-html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced"] .dock.open.closing { animation-duration: 1ms; }
+html[data-motion="reduced"] .dock.open { animation: none; }
 /* In a match, the dock is one of the panels in the side column. So it uses the log panel's frame and lines instead of its own. */
 .dock.in-match { position: static; width: auto; max-height: none; flex: 1; min-height: 0; background: var(--bg); border: 1px solid var(--line);
   border-radius: 8px; box-shadow: inset 0 1px 0 #ffffff12; }

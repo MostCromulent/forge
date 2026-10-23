@@ -3,6 +3,7 @@
 import { cardImageSrc } from '../images';
 import { deref, derefAll, type Model } from '../model';
 import type { CardView, PlayerView } from '../protocol';
+import { escapeHtml } from '../dom';
 
 type Kind = 'name' | 'art' | 'ability' | 'pt';
 
@@ -63,7 +64,6 @@ function cut(src: string, slot: number): string {
   return `background-image:url('${src.replace(/'/g, '%27')}');background-size:${size};background-position:${at}`;
 }
 
-const escape = (s: string) => s.replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
 
 /** The markup for a layer of stickers over a card's image. Names go along the name line, art on the art, abilities across the text box and power/toughness in the corner. */
 function stickersHtml(model: Model, card: CardView | undefined): string {
@@ -88,7 +88,7 @@ function stickersHtml(model: Model, card: CardView | undefined): string {
     const from = source(model, owner, sticker);
     if (sticker.kind === 'ability' || !from || !CUTS[from.slot]) {
       const top = sticker.kind === 'ability' ? 64 + 12 * abilities++ : 64;
-      out.push(`<span class="stk words" style="top:${top}%" title="${escape(sticker.text)}">${escape(sticker.text)}</span>`);
+      out.push(`<span class="stk words" style="top:${top}%" title="${escapeHtml(sticker.text)}">${escapeHtml(sticker.text)}</span>`);
       continue;
     }
     const [, , w, h] = CUTS[from.slot];

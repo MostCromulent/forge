@@ -1,6 +1,7 @@
 // Sets the pace of the page. A board that shows another player's play stays shown for a moment before the next board replaces it
 
 import type { Controls, GameEvent, Prompt, Ref } from '../protocol';
+import { offersPicks } from '../model';
 
 /** Public zones. A card that enters or leaves one of them is worth showing. */
 const OPEN = new Set(['Battlefield', 'Stack', 'Graveyard', 'Exile', 'Command']);
@@ -42,8 +43,7 @@ export function passingFor(controls: Controls | null | undefined): boolean {
  * While the game passes priority for them, Cancel only stops the passing. That does not count as a question.
  */
 export function asksPlayer(prompt: Prompt, passing = false): boolean {
-  return prompt.priority || prompt.ok.enabled || (prompt.cancel.enabled && !passing) || prompt.selectable.length > 0 || prompt.selectablePlayers.length > 0
-    || prompt.selectableStack.length > 0;
+  return prompt.priority || prompt.ok.enabled || (prompt.cancel.enabled && !passing) || offersPicks(prompt);
 }
 
 let behind = false;

@@ -9,7 +9,7 @@ import type { Model } from '../model';
 import type { LobbyTable, PastEvent } from '../protocol';
 import { GameMenu, PlayerCount } from './matchbar';
 import { t, shortDay } from '../text';
-import { Backdrop, Confirm } from '../dialog';
+import { Backdrop, Confirm, CloseButton } from '../dialog';
 
 /** What the setup dialog shows. 'choose' asks for a new event or an earlier one. The other two show that choice's form. */
 type SetupView = 'choose' | 'new' | 'earlier';
@@ -60,7 +60,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
       {lobby.host && !lim.started && setting && (
         <Backdrop dismiss={close}>
           <div class="dialog event-setup" role="dialog" aria-label={draft ? t('lblWebEventSetUpTheDraft') : t('lblWebEventSetUpSealedEvent')}>
-            <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
+            <CloseButton onClick={close} />
             {view === 'choose' && lim.pastEvents.length > 0
               ? <SetupChoice draft={draft} count={lim.pastEvents.length} choose={setView} />
               : view === 'earlier'

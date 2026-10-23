@@ -4,6 +4,7 @@ import type { JSX } from 'preact';
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { reducedMotion } from './dom';
 import { t } from './text';
+import { normalize } from './search';
 
 // The answered step folds into its line while the next one opens. Both take the same time, so they finish together
 const FOLD_MS = 320;
@@ -241,7 +242,7 @@ function unfold(panel: HTMLElement): void {
 /** A list to choose from, filtered by the typed text. */
 export function Pick({ items, placeholder, pick }: { items: [string, string][]; placeholder: string; pick: (id: string) => void }) {
   const [filter, setFilter] = useState('');
-  const shown = items.filter(([, label]) => label.toLowerCase().includes(filter.trim().toLowerCase()));
+  const shown = items.filter(([, label]) => normalize(label).includes(normalize(filter.trim())));
   return (
     <div class="pick">
       <input type="search" placeholder={placeholder} value={filter} onInput={e => setFilter(e.currentTarget.value)} />

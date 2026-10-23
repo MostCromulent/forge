@@ -1,4 +1,4 @@
-// Helpers for hand-built markup. Lookups throw with the selector when an element is missing. Also element, pointer, motion, relayout and file-save helpers
+// Helpers for hand-built markup. Lookups throw with the selector when an element is missing. Also element, pointer, motion, relayout, file-save, easing and escaping helpers
 
 export function q<T extends HTMLElement = HTMLElement>(root: ParentNode, selector: string): T {
   const el = root.querySelector<T>(selector);
@@ -78,4 +78,14 @@ export function onPressOutside(inside: string, away: () => void, on: 'pointerdow
 /** Whether the element takes typed text, so a key or a layout change must leave it alone. */
 export function isTyping(el: Element | null): boolean {
   return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || (el instanceof HTMLElement && el.isContentEditable);
+}
+
+/** A cubic ease-out: quick at first, slowing to a stop at 1. */
+export const easeOut = (t: number): number => 1 - (1 - t) ** 3;
+
+const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
+/** Text made safe to put in markup built as a string. */
+export function escapeHtml(s: string): string {
+  return String(s).replace(/[&<>"']/g, c => ESCAPES[c]);
 }

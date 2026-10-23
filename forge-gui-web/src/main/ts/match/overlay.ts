@@ -1,7 +1,7 @@
 // Draws the arrows over the board. They point from attackers to what they attack, from blockers to what they block, and from spells to their targets.
 
-import { attackTargets, combatShown, game, derefAll, players, zone, type Model } from '../model';
-import { byId, onRelayout, reducedMotion } from '../dom';
+import { attackTargets, combatShown, game, derefAll, players, zone, type Model, offersPicks } from '../model';
+import { byId, onRelayout, reducedMotion, easeOut } from '../dom';
 import { cardElement, pileTopFor } from './motion';
 import { ui } from '../ui';
 import { isPortrait } from '../form';
@@ -293,7 +293,7 @@ const LET_GO = 4;
 /** Draws the aim arrow while targets are chosen. A target choice is a prompt that names a card and also offers picks. */
 function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
   const p = model.prompt;
-  const aimed = !!p?.card && !p.paying && !p.priority && (p.selectable.length > 0 || p.selectablePlayers.length > 0 || p.selectableStack.length > 0)
+  const aimed = !!p?.card && !p.paying && !p.priority && offersPicks(p)
     && !(model.zones.length > 0 && !ui.zonesMinimised);
   const key = String(p?.card?.ref);
   // While its targets are chosen, a spell is already on the stack awaiting payment. An ability's card is on the board.
@@ -381,7 +381,7 @@ function placeCharges(keys: Set<number>, landed = false): void {
     mark.style.top = `${down
       ? Math.min(r.bottom - sink, (field?.bottom ?? Infinity) - height * (MARK_H - MARK_TOP) / MARK_H)
       : Math.max(r.top + sink, (field?.top ?? -Infinity) + height * (MARK_H - MARK_TOP) / MARK_H)}px`;
-    if (arriving && document.documentElement.dataset.motion !== 'reduced') {
+    if (arriving && !reducedMotion()) {
       // The chevron moves out from the attacker as it grows and fades in. This is the retreat animation in reverse.
       const back = down ? -1 : 1;
       mark.animate([
@@ -519,8 +519,7 @@ function reach(a: Point, b: Point, to: HTMLElement, pad: number): number {
   const round = to.classList.contains('avatar');
   const bend = bendOf(a, b);
   for (let t = 0; t <= 1; t += 0.005) {
-    const u = 1 - t;
-    const p = { x: u * u * a.x + 2 * u * t * bend.x + t * t * b.x, y: u * u * a.y + 2 * u * t * bend.y + t * t * b.y };
+    const p = curveAt(a, bend, b, t);
     if (round ? Math.hypot(p.x - c.x, p.y - c.y) <= r.width / 2 + pad : within(r, p, pad)) return t;
   }
   return 1;
@@ -551,14 +550,13 @@ function growth(from: HTMLElement, to: HTMLElement, kind: ArrowKind, grows: bool
   drawnNow.set(key, first);
   const t = Math.min(1, (performance.now() - first) / GROW_MS);
   if (t < 1) growing = true;
-  return 1 - (1 - t) ** 3;
+  return easeOut(t);
 }
 
 function arrow(ctx: CanvasRenderingContext2D, a: Point, full: Point, kind: ArrowKind, grown = 1): void {
   const whole = bendOf(a, full);
   // A growing arrow, or one stopped at its target's edge, is the full curve cut short. So it follows the path it will end on.
-  const u = 1 - grown;
-  const end = grown < 1 ? { x: u * u * a.x + 2 * u * grown * whole.x + grown * grown * full.x, y: u * u * a.y + 2 * u * grown * whole.y + grown * grown * full.y } : full;
+  const end = grown < 1 ? curveAt(a, whole, full, grown) : full;
   const bend = grown < 1 ? { x: a.x + (whole.x - a.x) * grown, y: a.y + (whole.y - a.y) * grown } : whole;
   // Not drawn while still too short for a head
   if (grown < 1 && Math.hypot(end.x - a.x, end.y - a.y) < NECK * SCALE * 1.5) return;
@@ -584,12 +582,15 @@ function arrow(ctx: CanvasRenderingContext2D, a: Point, full: Point, kind: Arrow
   ctx.restore();
 }
 
+/** The point a fraction t along the quadratic curve from a to b, bent towards bend. */
+function curveAt(a: Point, bend: Point, b: Point, t: number): Point {
+  const u = 1 - t;
+  return { x: u * u * a.x + 2 * u * t * bend.x + t * t * b.x, y: u * u * a.y + 2 * u * t * bend.y + t * t * b.y };
+}
+
 /** Cuts the quadratic curve short where it comes within `back` pixels of its end. Returns the new control point and end. */
 function trim(a: Point, bend: Point, b: Point, back: number): [Point, Point] {
-  const at = (t: number): Point => {
-    const u = 1 - t;
-    return { x: u * u * a.x + 2 * u * t * bend.x + t * t * b.x, y: u * u * a.y + 2 * u * t * bend.y + t * t * b.y };
-  };
+  const at = (t: number): Point => curveAt(a, bend, b, t);
   let t = 1;
   while (t > 0.5 && Math.hypot(at(t).x - b.x, at(t).y - b.y) < back) t -= 0.005;
   return [{ x: a.x + (bend.x - a.x) * t, y: a.y + (bend.y - a.y) * t }, at(t)];
@@ -602,8 +603,7 @@ function taper(ctx: CanvasRenderingContext2D, a: Point, bend: Point, b: Point, h
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const u = 1 - t;
-    const x = u * u * a.x + 2 * u * t * bend.x + t * t * b.x;
-    const y = u * u * a.y + 2 * u * t * bend.y + t * t * b.y;
+    const { x, y } = curveAt(a, bend, b, t);
     const dx = 2 * u * (bend.x - a.x) + 2 * t * (b.x - bend.x);
     const dy = 2 * u * (bend.y - a.y) + 2 * t * (b.y - bend.y);
     const len = Math.hypot(dx, dy) || 1;

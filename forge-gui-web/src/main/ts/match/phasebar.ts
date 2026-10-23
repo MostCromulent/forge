@@ -3,7 +3,7 @@
 import { reconcile } from './reconcile';
 import { deref, game, isLocal, me, opponents, players, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
-import { byId, q, replay, make, onPressOutside, reducedMotion } from '../dom';
+import { byId, q, replay, make, onPressOutside, reducedMotion, easeOut, escapeHtml } from '../dom';
 import { changeUi, ui } from '../ui';
 import { t, tNodes, type TextKey } from '../text';
 import type { Actions } from '../actions';
@@ -195,7 +195,6 @@ function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number,
 
 /** The pill's animations match its CSS transitions (--pill-ms in board.css) in length and easing. */
 const PILL_MS = 240;
-const easeOut = (t: number): number => 1 - (1 - t) ** 3;
 
 /** The brass highlight behind the current phase is one element that slides between segments. A CSS gradient cannot transition from one segment to the next. */
 let slideKey = '';
@@ -419,10 +418,4 @@ function wireGrid(panel: HTMLElement, actions: Actions): void {
     const mine = b.dataset.mine === 'true';
     b.onclick = () => actions.setStops(mine, b.dataset.clear !== undefined ? [] : undefined);
   }
-}
-
-const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-
-function escapeHtml(s: string): string {
-  return String(s).replace(/[&<>"']/g, c => ESCAPES[c]);
 }

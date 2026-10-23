@@ -8,13 +8,14 @@ import { normalize, rankByName } from '../search';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { Bracket, DeckDetails, DeckMatches, DeckQuery, DeckSummary, Seat } from '../protocol';
-import { Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } from './filters';
+import { Between, FilterBar, type FilterKind, OneOf, rangeWords, Words, type Range } from './filters';
 import { t, type TextKey } from '../text';
 import { CardGroup, Curve, DECK_FORMATS, useDeckView } from './deckview';
 import { NewDeck } from './newdeck';
 import { NameTaken } from './nametaken';
+import { CloseButton } from '../dialog';
+import { useDebounced } from '../hooks';
 
-const SEARCH_DEBOUNCE_MS = 200;
 /** Each net-deck category is a separate source. They share one source button, which lists the categories under it. */
 const NET = 'net';
 const isNet = (source: string) => source.startsWith(`${NET} `);
@@ -23,8 +24,6 @@ type SortKey = 'name' | 'colors' | 'formats' | 'size' | 'legal' | 'bracket';
 const SORTS: [SortKey, TextKey][] = [['name', 'lblWebEditorSortName'], ['colors', 'lblWebEditorSortColour'], ['formats', 'lblWebFinderSortFormat'],
   ['size', 'lblWebFinderSortSize'], ['legal', 'lblWebFinderSortLegalFirst'], ['bracket', 'lblWebFinderSortBracket']];
 
-/** A number range. Either end can be null for no limit at that end. A null range sets no limit. */
-type Range = { from: number | null; to: number | null } | null;
 /** The filters the server answers, because only the server reads every deck's cards. */
 type DeckQueryKind = DeckQuery['kind'];
 
@@ -155,10 +154,8 @@ export function DeckFinder({ model, actions, seat, close }: {
   const find = useRef<HTMLInputElement>(null);
 
   // Each row of a long list requests an image, so the search waits for a pause in typing
-  useEffect(() => {
-    const timer = setTimeout(() => change({ query: typed }), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [typed]);
+  const query = useDebounced(typed);
+  useEffect(() => change({ query }), [query]);
   useEffect(() => {
     find.current?.focus();
   }, []);
@@ -270,7 +267,7 @@ export function DeckFinder({ model, actions, seat, close }: {
               setAdding(false);
               if (picked) take(picked);
             }} />
-            <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
+            <CloseButton onClick={close} />
           </span>
         </header>
         <div class="finder-body">

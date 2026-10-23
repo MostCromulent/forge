@@ -256,12 +256,16 @@ const AUTO_PASS = 'autoPassNoActions';
 /** Keeps a guest's auto-pass choice in its browser, as set() keeps its other server settings. */
 export function rememberGuestAutoPass(on: boolean): void {
   if (guest && guestSettings()[AUTO_PASS] !== on) {
-    storeJson(GUEST_KEY, { ...guestSettings(), [AUTO_PASS]: on });
+    rememberGuest(AUTO_PASS, on);
   }
 }
 
 function guestSettings(): Record<string, SettingValue> {
   return storedJson(GUEST_KEY, {});
+}
+
+function rememberGuest(key: string, value: SettingValue): void {
+  storeJson(GUEST_KEY, { ...guestSettings(), [key]: value });
 }
 
 export function set(key: string, value: SettingValue): void {
@@ -270,9 +274,7 @@ export function set(key: string, value: SettingValue): void {
   if (def.server) {
     (server as Record<string, SettingValue>)[key] = value;
     saveOnServer(key, String(value));
-    if (guest) {
-      storeJson(GUEST_KEY, { ...guestSettings(), [key]: value });
-    }
+    if (guest) rememberGuest(key, value);
   } else {
     local[key] = value;
     storeJson(LOCAL_KEY, local);
@@ -308,7 +310,7 @@ function saveShortcut(pref: string, codes: string): void {
   if (!s) return;
   s.keys = codes;
   saveOnServer(pref, codes);
-  if (guest) storeJson(GUEST_KEY, { ...guestSettings(), [pref]: codes });
+  if (guest) rememberGuest(pref, codes);
 }
 
 /** Gives a shortcut preference its keys. Any other shortcut or page key with the same keys is cleared, so a key does one thing. */

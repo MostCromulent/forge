@@ -261,6 +261,11 @@ export function cardMenu(model: Model): ChoicesRequest | null {
     && oldest.options.every(o => !o.card && !o.imageKey && !o.player) ? oldest : null;
 }
 
+/** Whether the prompt lets the player pick a card, a player or a stack item. */
+export function offersPicks(p: Prompt): boolean {
+  return p.selectable.length > 0 || p.selectablePlayers.length > 0 || p.selectableStack.length > 0;
+}
+
 /** Whether a request is about cards. It is laid out on the dimmed board, not in a dialog. Words, numbers and colours still use a dialog. */
 export function cardPrompt(req: Request): boolean {
   if (req.kind === 'order' || req.kind === 'manipulate' || req.kind === 'distribute') return true;
