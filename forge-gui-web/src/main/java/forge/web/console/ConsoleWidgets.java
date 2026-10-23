@@ -118,7 +118,7 @@ final class ConsoleWidgets {
     /** A wrapped text's height depends on its width, so both are set again whenever the text changes. */
     static void reword(final JTextArea area, final String words, final int width) {
         area.setText(words);
-        // Leave room on the right. On a scaled display a line that just fits is drawn a little wider, and its last letters would be cut off.
+        // Leave room on the right. On a scaled display a line that just fits is drawn a little wider, and its last letters would be cut off
         area.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, width / 20));
         area.setPreferredSize(null);
         area.setSize(width, Short.MAX_VALUE);

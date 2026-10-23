@@ -19,7 +19,7 @@ final class LogCapture {
     private static final int MAX_LINES = 300;
     private static final Pattern THROWN = Pattern.compile("^[\\w.$]+(Exception|Error)(:.*)?$");
     private static final Pattern LINE_END = Pattern.compile("(?<=\n)");
-    // Red for errors and the stack traces under them, amber for warnings. Other lines use the log's own colour.
+    // Red for errors and the stack traces under them, amber for warnings. Other lines use the log's own colour
     private static final SimpleAttributeSet PLAIN = new SimpleAttributeSet();
     private static final SimpleAttributeSet ERROR = colour(new Color(0xff, 0x6b, 0x5c));
     private static final SimpleAttributeSet WARNING = colour(new Color(0xf2, 0xc3, 0x44));
@@ -64,7 +64,7 @@ final class LogCapture {
                 }
             }
 
-            // Card loading prints tens of thousands of lines. Writing one byte at a time is too slow for that.
+            // Card loading prints tens of thousands of lines. Writing one byte at a time is too slow for that
             @Override
             public void write(final byte[] bytes, final int off, final int len) {
                 original.write(bytes, off, len);

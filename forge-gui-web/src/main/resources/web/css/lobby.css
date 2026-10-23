@@ -476,7 +476,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .dk-cards .deck-stack { cursor: default; }
 .deck-stack .gc { position: absolute; left: 4px; top: 4px; padding: 0 5px; border-radius: 999px; background: #000c; font: 700 9.5px/15px ui-monospace, Consolas, monospace; color: var(--accent-2); }
 /* The board's rows also have groups, which this spacing is not for */
-.group:not(#match *) { margin-bottom: 14px; }
+.group:not(:where(#match *)) { margin-bottom: 14px; }
 .group h4 { display: flex; justify-content: space-between; margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
 .none { color: var(--muted); padding: 18px; }
 

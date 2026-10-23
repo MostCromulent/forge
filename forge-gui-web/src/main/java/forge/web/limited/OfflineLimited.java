@@ -77,7 +77,7 @@ public final class OfflineLimited implements IHasForgeLog {
             .on(DraftStart.class, OfflineLimited::startDraft)
             .on(DraftSave.class, OfflineLimited::saveDraft)
             .on(Plain.draftDiscard, (l, ch, c) -> l.discardDraft())
-            // The gauntlet starts its own rounds. Like any match, a round starts on the host UI thread.
+            // The gauntlet starts its own rounds. Like any match, a round starts on the host UI thread
             .on(Plain.gauntletNext, (l, ch, c) -> l.ui.invokeInEdtLater(() -> {
                 final LimitedResult result = l.lastResult;
                 if (l.gauntletRunning && result != null && result.nextRound()) {
@@ -309,8 +309,7 @@ public final class OfflineLimited implements IHasForgeLog {
                 ? GameType.CommanderDraft : type;
     }
 
-
-    /** Plays a pool's deck against one opponent, several at once, or each in turn as a gauntlet. Afterwards it returns to the pool. */
+/** Plays a pool's deck against one opponent, several at once, or each in turn as a gauntlet. Afterwards it returns to the pool. */
     private void playPool(final BrowserChannel channel, final PoolPlay play) {
         final Event event = session.stage() instanceof Event e ? e : null;
         final DeckGroup group = event == null ? null : event.storage().get(play.name());

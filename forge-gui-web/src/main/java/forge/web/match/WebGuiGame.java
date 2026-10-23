@@ -577,8 +577,7 @@ public class WebGuiGame extends NetworkGuiGame {
     protected void updateCurrentPlayer(final PlayerView player) {
     }
 
-
-    @Override
+@Override
     public void showPromptMessage(final PlayerView playerView, final String message, final CardView card) {
         cancelAwaitNextInput();
         prompt.message(message, card);

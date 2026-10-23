@@ -99,7 +99,7 @@ final class TrafficGraph extends JComponent {
         g2.drawLine(0, plotTop, w, plotTop);
         g2.drawLine(0, h - 4, w, h - 4);
         final int[] xs = xs();
-        // Paint the tallest layer first. Each lower layer then covers the part of the layer above that is not that layer's own kind.
+        // Paint the tallest layer first. Each lower layer then covers the part of the layer above that is not that layer's own kind
         for (int k = KINDS.length - 1; k >= 0; k--) {
             g2.setColor(KIND_COLOURS[k]);
             g2.fillPolygon(xs, ys(stacked[k], top, plotTop, plotHeight), SAMPLES + 2);

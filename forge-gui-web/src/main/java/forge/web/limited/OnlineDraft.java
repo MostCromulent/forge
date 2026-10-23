@@ -104,7 +104,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
                     view.log(DraftLogKind.own, Localizer.getInstance().getMessage("lblWebOnlineDraftYouPicked", pending.getName()));
                     pending = null;
                 }
-                // The pack picked from has been passed on. The next pack arrives as a separate event.
+                // The pack picked from has been passed on. The next pack arrives as a separate event
                 pack = List.of();
                 clockEnd = 0;
             } else {

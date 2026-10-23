@@ -231,7 +231,7 @@ public final class DeckCatalog {
                 });
                 return out;
             }
-            // Each commander format has its own decks. Only Commander has its own precons.
+            // Each commander format has its own decks. Only Commander has its own precons
             add(out, format, switch (format) {
                 case Commander -> DeckProxy.getAllCommanderDecks();
                 case Oathbreaker -> DeckProxy.getAllOathbreakerDecks();
@@ -308,7 +308,7 @@ public final class DeckCatalog {
     private static Deck buildCommander(final String key) {
         // gen:commander:<format>:<random or cardgen>
         final String[] parts = key.split(":");
-        // Built so the computer can play it, because the key does not say who will play it. A person can play any deck the computer can.
+        // Built so the computer can play it, because the key does not say who will play it. A person can play any deck the computer can
         final List<DeckProxy> legends = CommanderDeckGenerator.getCommanderDecks(GameType.valueOf(parts[2]).getDeckFormat(), true,
                 "cardgen".equals(parts[3]));
         return legends.isEmpty() ? null : legends.get(MyRandom.getRandom().nextInt(legends.size())).getDeck();
@@ -461,7 +461,7 @@ public final class DeckCatalog {
     private void addCommanderGenerators(final List<DeckSummary> out, final GameType format) {
         final Localizer text = Localizer.getInstance();
         final List<String> kinds = new ArrayList<>(List.of("random"));
-        // The card-based generator reads data that Forge learned from real decks. That data loads at startup only when the settings ask for it.
+        // The card-based generator reads data that Forge learned from real decks. That data loads at startup only when the settings ask for it
         if (FModel.isdeckGenMatrixLoaded()) {
             kinds.add("cardgen");
         }
@@ -473,7 +473,7 @@ public final class DeckCatalog {
         }
     }
 
-    // Colours are empty when they are not known until the deck is built. A colour filter treats empty colours as no match.
+    // Colours are empty when they are not known until the deck is built. A colour filter treats empty colours as no match
     private static void generated(final List<DeckSummary> out, final String key, final String name, final String note,
             final String colours) {
         out.add(new DeckSummary(key, name, GENERATED, colours, true, note, null, null, null, null, null, null, null, true,

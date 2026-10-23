@@ -199,7 +199,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             respondImage(ctx, cached);
             return;
         }
-        // Only a card has art to crop. The fetcher never answers for a token or an effect such as the Ring.
+        // Only a card has art to crop. The fetcher never answers for a token or an effect such as the Ring
         if (!key.startsWith(ImageKeys.CARD_PREFIX)) {
             notFound(ctx);
             return;
@@ -241,7 +241,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         }
         final AtomicBoolean answered = new AtomicBoolean();
         GuiBase.getInterface().invokeInEdtLater(() -> GuiBase.getInterface().getImageFetcher().fetchImage(key, () -> {
-            // Forge remembers a picture it could not find. Without this it would still report the picture as missing now that it exists.
+            // Forge remembers a picture it could not find. Without this it would still report the picture as missing now that it exists
             ImageKeys.clearMissingCards();
             final File fetched = ImageFiles.card(key);
             if (answered.compareAndSet(false, true)) {
@@ -397,7 +397,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 .set(HttpHeaderNames.CONTENT_TYPE, type)
                 .set(HttpHeaderNames.CACHE_CONTROL, cacheControl)
                 .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
-        // A 304 has no body. A length on it would say that the body the browser already has is empty.
+        // A 304 has no body. A length on it would say that the body the browser already has is empty
         if (status != HttpResponseStatus.NOT_MODIFIED) {
             resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, body.length);
         }
@@ -632,9 +632,9 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 final QueryStringDecoder q = new QueryStringDecoder(req.uri());
                 final boolean socket = "/ws".equals(q.path());
                 final boolean netplay = WebSocketTunnel.PATH.equals(q.path());
-                // A netplay client is not a page and sends no origin to check. So a cookie must not let it in, and only its link's token does.
+                // A netplay client is not a page and sends no origin to check. So a cookie must not let it in, and only its link's token does
                 final Access access = netplay ? accessOf(param(q, "token")) : access(req, q);
-                // The token keeps other pages out. The origin check stops them from opening a socket with a stolen cookie.
+                // The token keeps other pages out. The origin check stops them from opening a socket with a stolen cookie
                 if (access == Access.NONE || (socket && !sameOrigin(req)) || (netplay && !HostingServer.isHosting())) {
                     req.release();
                     respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain");
@@ -652,7 +652,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
 
         private void route(final ChannelHandlerContext ctx, final boolean netplay) {
             if (netplay) {
-                // Desktop or mobile Forge. From here on the host's netplay server owns the connection, as it does for one made in this process.
+                // Desktop or mobile Forge. From here on the host's netplay server owns the connection, as it does for one made in this process
                 ServerTraffic.carrying(ctx.channel(), ServerTraffic.Kind.GAME);
                 ctx.pipeline().addLast(
                         new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()

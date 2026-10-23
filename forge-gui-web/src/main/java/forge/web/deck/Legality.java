@@ -67,7 +67,7 @@ final class Legality {
     static Result check(final Deck deck, final Check check) {
         final DeckFormat df = check.deckFormat();
         final List<PaperCard> commanders = commanders(deck, check);
-        // A Commander Draft's sideboard is the rest of the drafted pool. The deck's rules do not apply to it.
+        // A Commander Draft's sideboard is the rest of the drafted pool. The deck's rules do not apply to it
         final CardPool all = df == DeckFormat.CommanderDraft ? played(deck) : deck.getAllCardsInASinglePool(df.hasCommander(), false);
         final Map<String, PaperCard> byName = new LinkedHashMap<>();
         for (final Map.Entry<PaperCard, Integer> e : all) {
@@ -78,7 +78,7 @@ final class Legality {
         final Map<String, String> kinds = new LinkedHashMap<>();
         final Set<String> overLimit = new HashSet<>();
         for (final Map.Entry<String, PaperCard> e : byName.entrySet()) {
-            // Count as the engine does. A card with its own copy limit is counted in the main deck only.
+            // Count as the engine does. A card with its own copy limit is counted in the main deck only
             final int count = DeckFormat.canHaveSpecificNumberInDeck(e.getValue()) != null ? deck.getMain().countByName(e.getKey())
                     : all.countByName(e.getKey());
             final Problem problem = problemInDeck(e.getValue(), count, check, problems);
@@ -120,7 +120,7 @@ final class Legality {
         final String letters = identityLetters(commanders);
         final String outside = letters.isEmpty() ? Localizer.getInstance().getMessage("lblWebLegalityOutsideColourless")
                 : Localizer.getInstance().getMessage("lblWebLegalityOutside", String.join(" ", letters.split("")));
-        // The short form of a ban leaves out the format. A card outside the identity or the format keeps the full text.
+        // The short form of a ban leaves out the format. A card outside the identity or the format keeps the full text
         final Problem bannedHere = new Problem(Localizer.getInstance().getMessage("lblWebLegalityBannedIn", formatName(check)),
                 Localizer.getInstance().getMessage("lblWebLegalityBanned"), false);
         final Problem notLegalHere = new Problem(Localizer.getInstance().getMessage("lblWebLegalityNotLegalIn", formatName(check)));
@@ -185,7 +185,7 @@ final class Legality {
             return List.of();
         }
         final List<String> items = new ArrayList<>();
-        // The command zone counts toward the deck's size, as players count it. A Commander deck is 100 cards.
+        // The command zone counts toward the deck's size, as players count it. A Commander deck is 100 cards
         final int slots = !df.hasCommander() ? 0 : df.hasSignatureSpell() ? 2 : 1;
         final CardPool commanderSection = deck.get(DeckSection.Commander);
         final int size = deck.getMain().countAll() + (slots > 0 && commanderSection != null ? commanderSection.countAll() : 0);

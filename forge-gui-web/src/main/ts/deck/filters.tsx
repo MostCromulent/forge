@@ -119,10 +119,10 @@ export function AnyOf<V extends string>({ options, value, apply }: {
   );
 }
 
-/** A panel for a range of numbers. An empty end means no limit at that end. */
 /** A number range. Either end can be null for no limit at that end. A null range sets no limit. */
 export type Range = { from: number | null; to: number | null } | null;
 
+/** A panel for a range of numbers. An empty end means no limit at that end. */
 export function Between({ from, to, apply, min = 0 }: {
   from: number | null; to: number | null; apply: (from: number | null, to: number | null) => void; min?: number;
 }) {

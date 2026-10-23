@@ -74,7 +74,7 @@ final class DevMode implements IHasForgeLog {
         channel.send(new DevState(controller.canPlayUnlimitedLands(), controller.mayLookAtAllCards()));
     }
 
-    // Desktop reads the state from a file on the machine running Forge. Here the browser sends the text.
+    // Desktop reads the state from a file on the machine running Forge. Here the browser sends the text
     private static void setUp(final Game game, final IGuiGame gui, final String text, final BrowserChannel channel) {
         if (game.getPhaseHandler().getPriorityPlayer() == null) {
             channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDevStateNotSetUp"), Localizer.getInstance().getMessage("lblWebDevWaitPriority"), false));
@@ -96,7 +96,7 @@ final class DevMode implements IHasForgeLog {
                 channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDevStateNotSetUp"), String.valueOf(e.getMessage()), true));
                 return;
             }
-            // Placing cards fires no game event. Another task could run at the same time and send the old board, so this task sends it.
+            // Placing cards fires no game event. Another task could run at the same time and send the old board, so this task sends it
             if (gui instanceof RemoteClientGuiGame remote) {
                 remote.updateGameView();
             }

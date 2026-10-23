@@ -179,7 +179,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
                 return null;
             }
         }
-        // Nobody becomes host by arriving. A browser asks for the seat, and the first to ask while it is free gets it.
+        // Nobody becomes host by arriving. A browser asks for the seat, and the first to ask while it is free gets it
         final WebSession session = new WebSession(ui, this, mayHost);
         byId.put(key, session);
         return session;
@@ -255,11 +255,11 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     void dropPlayer(final String name) {
         final WebSession seat = seatedGuest(name);
         final WebSession h = host;
-        // The draft host handles a drafter who has left. It holds the seat until the player returns.
+        // The draft host handles a drafter who has left. It holds the seat until the player returns
         if (seat == null || h == null || seat.attached() || drafting()) {
             return;
         }
-        // A match cannot lose a player, so the AI keeps playing. A table's seat opens when the guest's connection closes.
+        // A match cannot lose a player, so the AI keeps playing. A table's seat opens when the guest's connection closes
         h.local().handToAi(seat.local().webSeat());
         seat.gameGone();
         announcePresence();
@@ -365,7 +365,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             return;
         }
         spread(new ChatLine(who, text, false));
-        // Desktop and mobile players at the table read netplay's chat. Each browser at the table drops the copy from netplay, because it already got the line here.
+        // Desktop and mobile players at the table read netplay's chat. Each browser at the table drops the copy from netplay, because it already got the line here
         if (HostingServer.isHosting()) {
             FServerManager.getInstance().broadcast(new MessageEvent(who, text));
         }

@@ -561,8 +561,7 @@ public final class ToBrowser {
     public record MatchScore(Ref player, int won) {
     }
 
-
-    /**
+/**
      * Which fields are set depends on the option: a card on the table, a card that is not (a split pile, a card face), or a player.
      * An ability gives the card it comes from as its source. A colour gives its mana symbol's letter.
      */

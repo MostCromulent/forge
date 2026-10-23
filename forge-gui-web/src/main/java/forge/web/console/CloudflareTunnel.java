@@ -129,7 +129,7 @@ public final class CloudflareTunnel implements IHasForgeLog {
                 return;
             }
             tell(State.CONNECTING);
-            // Use 127.0.0.1, not localhost. The program may resolve localhost to an IPv6 address that the server is not bound to.
+            // Use 127.0.0.1, not localhost. The program may resolve localhost to an IPv6 address that the server is not bound to
             process = new ProcessBuilder(program.getPath(), "tunnel", "--no-autoupdate", "--url", "http://127.0.0.1:" + port)
                     .redirectErrorStream(true).start();
             final String named = readAddress(process);

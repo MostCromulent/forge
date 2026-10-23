@@ -8,7 +8,7 @@ export type { TextKey };
 
 /** The headings of Forge's format files, as the card pool pickers show them. */
 export const CARD_POOL_NAMES: Record<CardPoolGroup['kind'], TextKey> = {
-  Sanctioned: 'lblSanctioned', Casual: 'lblWebMatchBarCasualPools', Archived: 'lblArchived', Block: 'lblBlock',
+  Sanctioned: 'lblSanctioned', Casual: 'lblWebMatchBarCasual', Archived: 'lblArchived', Block: 'lblBlock',
 };
 
 type Arg = string | number;

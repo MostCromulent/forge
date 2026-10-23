@@ -71,7 +71,7 @@ public final class WebService implements IHasForgeLog {
         fresh.quitWhenEmpty(quitWhenEmpty);
         sessions = fresh;
         server = bound;
-        // The address carries the host's token. netLog also writes this line to the network log file.
+        // The address carries the host's token. netLog also writes this line to the network log file
         netLog.info("Forge web UI: {}", bound.url());
         netLog.info("The web server has started on port {}.", bound.port());
         if (throughCloudflare()) {
@@ -138,7 +138,7 @@ public final class WebService implements IHasForgeLog {
         final PortForward asking = new PortForward(port);
         forward = asking;
         setForwarding(Forwarding.ASKING);
-        // The answer takes no lock. It arrives on a UPnP thread, and stop() may wait for that thread while holding this object's lock.
+        // The answer takes no lock. It arrives on a UPnP thread, and stop() may wait for that thread while holding this object's lock
         asking.open(accepted -> {
             if (forward == asking) {
                 if (accepted) {

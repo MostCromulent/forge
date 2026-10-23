@@ -289,7 +289,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             final boolean viaRouter = !service.throughCloudflare();
             forwardPort.setSelected(wanted);
             forwardLight.lit(now == WebService.Forwarding.FORWARDED);
-            // A refusal only means UPnP did not forward the port. It may still be forwarded by hand, so the link stays usable.
+            // A refusal only means UPnP did not forward the port. It may still be forwarded by hand, so the link stays usable
             refused.setText(TEXT.getMessage("lblWebConsoleRefused", service.port()));
             forwardHelp.setVisible(viaRouter && now == WebService.Forwarding.REFUSED);
             final String words = switch (now) {
@@ -433,7 +433,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             netField.setVisible(true);
             startHelp.setVisible(failure != null);
             if (failure != null) {
-                // A failed bind only says that the port is taken. Another Forge is the likely holder, because desktop Forge hosts on the same port.
+                // A failed bind only says that the port is taken. Another Forge is the likely holder, because desktop Forge hosts on the same port
                 reword(startFailure, failure instanceof BindException ? TEXT.getMessage("lblWebConsolePortInUse", service.port())
                         : TEXT.getMessage("lblWebConsoleStartFailed"), HELP_WIDTH);
                 details.setVisible(true);
@@ -669,7 +669,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         foot.setAlignmentX(0f);
         main.add(foot);
 
-        // A styled pane, so errors and warnings can be coloured. It wraps long lines, because a stack trace is wider than the window.
+        // A styled pane, so errors and warnings can be coloured. It wraps long lines, because a stack trace is wider than the window
         text = new JTextPane();
         text.setEditable(false);
         text.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
@@ -712,7 +712,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 quit();
             }
         });
-        // The rows sit at the top of a scrolling pane. They keep their own heights, and a screen that is too short can still scroll to them all.
+        // The rows sit at the top of a scrolling pane. They keep their own heights, and a screen that is too short can still scroll to them all
         final JPanel top = new JPanel(new BorderLayout());
         top.add(main, BorderLayout.NORTH);
         final JScrollPane scroll = new JScrollPane(top, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);

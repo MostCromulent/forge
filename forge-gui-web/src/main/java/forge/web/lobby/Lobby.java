@@ -405,7 +405,7 @@ public final class Lobby {
         final String avatar = labelOf(index, DeckSection.Avatar);
         if (index == local.webSeat()) {
             local.updateOwnSeat(UpdateLobbyPlayerEvent.deckUpdate(deck));
-            // A deck readies a seat that is alone. With others seated, the seat waits for Ready. Sent only on a change, because the chat reports each one.
+            // A deck readies a seat that is alone. With others seated, the seat waits for Ready. Sent only on a change, because the chat reports each one
             final boolean ready = deck != null && !withOthers(lobby);
             if (lobby.getSlot(index).isReady() != ready) {
                 local.updateOwnSeat(UpdateLobbyPlayerEvent.isReadyUpdate(ready));
@@ -474,7 +474,7 @@ public final class Lobby {
                 } else {
                     lobby.removeVariant(v);
                 }
-                // The archenemy's role set the teams. Without it, every seat goes back to a team of its own.
+                // The archenemy's role set the teams. Without it, every seat goes back to a team of its own
                 if (v == GameType.Archenemy && !on) {
                     for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                         lobby.getSlot(i).setTeam(i);
@@ -606,7 +606,7 @@ public final class Lobby {
             final List<String> illegal = new ArrayList<>();
             final List<String> problems = problems(illegal);
             final GameFormat cardPool = cardPool();
-            // Only the machine running the game can start it. Everyone else waits for the host.
+            // Only the machine running the game can start it. Everyone else waits for the host
             return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
                     cardPool == null ? null : cardPool.getName(),
                     LobbyFormats.VARIANTS.stream().map(LobbyFormats::explainedVariant).toList(), variantsOn(lobby),
@@ -621,7 +621,7 @@ public final class Lobby {
     private Seat seat(final GameLobby lobby, final int index) {
         final LobbySlot slot = lobby.getSlot(index);
         final Deck deck = deckAt(index);
-        // A player may edit their own seat, and the host may also edit the computer's seats. Another player's seat belongs to that player.
+        // A player may edit their own seat, and the host may also edit the computer's seats. Another player's seat belongs to that player
         final boolean mayEdit = index == local.webSeat() || (local.isHost() && slot.getType() == LobbySlotType.AI);
         return new Seat(slot.getName(), slot.getType(), index == local.webSeat(), mayEdit,
                 slot.isReady(), slot.getAvatarIndex(), slot.getSleeveIndex(), key(index),
@@ -766,7 +766,7 @@ public final class Lobby {
                         illegal.add(deck.getName() + ": " + problem);
                     }
                 }
-                // A missing avatar always stops the match, as in startGame. With legality checks on, a planar or scheme deck fault is listed as illegal.
+                // A missing avatar always stops the match, as in startGame. With legality checks on, a planar or scheme deck fault is listed as illegal
                 if (lobby.hasVariant(GameType.Vanguard)
                         && (deck == null || deck.get(DeckSection.Avatar) == null || deck.get(DeckSection.Avatar).isEmpty())) {
                     out.add(Localizer.getInstance().getMessage("lblNoSelectedVanguardAvatarForPlayer", String.valueOf(slot.getName())));
@@ -889,14 +889,14 @@ public final class Lobby {
             if (wanted != GameType.Constructed) {
                 lobby.setCardPool(null);
             }
-            // Decks are cleared before the variants change. That change is announced at once, and the seats are then dealt their new decks.
+            // Decks are cleared before the variants change. That change is announced at once, and the seats are then dealt their new decks
             deckKeys.clear();
             composed.clear();
             commanderPicks.clear();
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 lobby.getSlot(i).setDeck(null);
             }
-            // Constructed means no format variant. It is not a variant of its own.
+            // Constructed means no format variant. It is not a variant of its own
             for (final GameType other : LobbyFormats.FORMATS) {
                 if (other != GameType.Constructed) {
                     lobby.removeVariant(other);

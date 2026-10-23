@@ -200,7 +200,7 @@ public final class WebSession implements IHasForgeLog {
                     s.ui.runBackgroundTask("Dev mode", () -> DevMode.run(s.local, d, ch));
                 }
             }))
-            // A setting changed before a match is used to set up the match. During a match the game is told as well.
+            // A setting changed before a match is used to set up the match. During a match the game is told as well
             .on(SetSetting.class, (s, ch, set) -> {
                 if (s.stage instanceof Playing p) {
                     p.gui().setSetting(set);
@@ -396,8 +396,7 @@ public final class WebSession implements IHasForgeLog {
         return !isHost && (now instanceof Setup || now instanceof Playing p && p.invited());
     }
 
-
-    public boolean hosting() {
+public boolean hosting() {
         return isHost;
     }
 
@@ -434,8 +433,7 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-
-    /** A browser connected, for the first time or again. It is shown the place that its stage records. */
+/** A browser connected, for the first time or again. It is shown the place that its stage records. */
     synchronized void connected(final BrowserChannel channel) {
         final BrowserChannel previous = browser;
         browser = channel;
@@ -572,7 +570,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     private void seatCommand(final BrowserChannel channel, final SeatCommand seat) {
-        // A guest's seat is emptied by sending the guest away, which opens it. The seat itself is removed only once it is empty.
+        // A guest's seat is emptied by sending the guest away, which opens it. The seat itself is removed only once it is empty
         if (!isHost || seat.t() == SeatAction.aiSeat || !sessions.releaseGuestAt(seat.index())) {
             switch (seat.t()) {
                 case openSeat -> lobby.openSeat(seat.index());
@@ -674,7 +672,7 @@ public final class WebSession implements IHasForgeLog {
         final String seatName = name;
         final Opening joining = new Opening();
         final Stage from = stage;
-        // Only one seat is taken at a time. The stage shows that a join is in progress until it succeeds or fails.
+        // Only one seat is taken at a time. The stage shows that a join is in progress until it succeeds or fails
         if (isHost || !(from instanceof Menu) || !sessions.hostHasGame() || sessions.hostPlaying() || browser == null || seatName == null
                 || !move(from, joining)) {
             return;
@@ -753,7 +751,7 @@ public final class WebSession implements IHasForgeLog {
         if (from == null) {
             tell(new ChatLine(null, text, false));
         } else if (isHost) {
-            // Every browser already has its players' lines from the server's own chat (WebSessions.say). So the host passes on only the other players' lines.
+            // Every browser already has its players' lines from the server's own chat (WebSessions.say). So the host passes on only the other players' lines
             sessions.relay(from, text);
         }
     }
@@ -949,7 +947,7 @@ public final class WebSession implements IHasForgeLog {
         }
         // Saves the seats' looks and the host's name. The name keeps HostedMatch from asking for one, as nameProfile does for other matches
         lobby.saveLooks();
-        // Prepared before leaving the lobby. If the host backs out of desktop's illegal-deck question, the page stays where it was.
+        // Prepared before leaving the lobby. If the host backs out of desktop's illegal-deck question, the page stays where it was
         final Runnable begin;
         try {
             begin = local.prepare();
@@ -1095,7 +1093,7 @@ public final class WebSession implements IHasForgeLog {
 
         @Override
         public void startMatch(final InCampaign back, final Consumer<WebGuiGame> start, final Runnable failed, final Consumer<GameView> gameOver) {
-            // A match is started on the host UI thread, like a table's match. The campaign's code waits for it.
+            // A match is started on the host UI thread, like a table's match. The campaign's code waits for it
             ui.invokeInEdtAndWait(() -> startCampaignMatch(back, start, failed, gameOver));
         }
 

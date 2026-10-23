@@ -125,7 +125,7 @@ public final class CardCatalog {
     public CataloguePage query(final int request, final Query q, final Function<PaperCard, String> problemOf,
             final Predicate<PaperCard> commanderOnly, final ToIntFunction<String> inDeck, final Function<PaperCard, Extra> extras) {
         final String typed = q.text() == null ? "" : q.text().trim();
-        // Desktop's own parser reads search syntax such as c:bg or mv<=3. Plain text is a name, ranked the way desktop ranks names.
+        // Desktop's own parser reads search syntax such as c:bg or mv<=3. Plain text is a name, ranked the way desktop ranks names
         final Predicate<PaperCard> syntax = usesSyntax(typed) ? SFilterUtil.buildTextFilter(typed, false, true, false, false, false) : null;
         final String text = syntax == null ? normalize(typed) : "";
         final Predicate<PaperCard> chips = q.filters() == null || q.filters().isBlank() ? null

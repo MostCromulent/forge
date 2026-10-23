@@ -1,6 +1,6 @@
 // A closing element plays its exit animation first (dialogs.css). It is removed when that animation ends
 
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { reducedMotion } from './dom';
 
 /** Longer than any exit animation (dialogs.css). */
@@ -12,7 +12,9 @@ const GIVE_UP_MS = 400;
  */
 export function useClosing(close: () => void): { closing: boolean; shut: () => void; gone: (e: AnimationEvent) => void } {
   const [closing, setClosing] = useState(false);
+  const giveUp = useRef(0);
   const done = () => {
+    clearTimeout(giveUp.current);
     setClosing(false);
     close();
   };
@@ -25,7 +27,7 @@ export function useClosing(close: () => void): { closing: boolean; shut: () => v
       }
       setClosing(true);
       // Close anyway if no animation runs, for example when no style gives it one
-      setTimeout(done, GIVE_UP_MS);
+      giveUp.current = window.setTimeout(done, GIVE_UP_MS);
     },
     gone: e => { if (closing && e.target === e.currentTarget) done(); },
   };

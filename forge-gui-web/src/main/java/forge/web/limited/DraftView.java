@@ -41,15 +41,14 @@ final class DraftView {
         return List.of(pickingSeat);
     }
 
-
-    static DraftCard moved(final DraftCard c, final boolean sideboard) {
+static DraftCard moved(final DraftCard c, final boolean sideboard) {
         return new DraftCard(c.name(), c.image(), c.cost(), c.mv(), c.colors(), c.type(), c.text(), c.pt(), c.rarity(), c.rank(), c.pack(),
                 c.pick(), sideboard);
     }
 
     static DraftCard card(final PaperCard card, final int packNumber, final int pickNumber, final boolean sideboard) {
         final CardRules rules = card.getRules();
-        // A ranked card scores at least 1. Desktop's rounding can show 0.
+        // A ranked card scores at least 1. Desktop's rounding can show 0
         final double score = CardRanker.getRawScore(card);
         return new DraftCard(card.getName(), Foil.key(card), JsonCodec.manaCost(rules.getManaCost()),
                 rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()), rules.getType().toString(),

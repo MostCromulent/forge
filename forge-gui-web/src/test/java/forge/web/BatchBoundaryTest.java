@@ -42,8 +42,7 @@ public class BatchBoundaryTest {
         return cards;
     }
 
-
-    private static long named(final BrowserModel model, final Set<Integer> cards, final String name) {
+private static long named(final BrowserModel model, final Set<Integer> cards, final String name) {
         final Map<Integer, JsonObject> objects = MatchProbe.objects(model);
         return cards.stream().map(objects::get).filter(card -> card != null && card.has("CurrentState"))
                 .map(card -> objects.get(card.getAsJsonObject("CurrentState").get("ref").getAsInt()))

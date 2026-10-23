@@ -88,7 +88,7 @@ public final class WebSettings implements IHasForgeLog {
     public static void set(final PlayerSettings player, final IGameController controller, final String key, final String value) {
         final FPref pref = BOOLEAN_PREFS.get(key);
         if (pref != null) {
-            // The host decides from its own copy of these, set when the game opened. A change during a game must reach that copy too.
+            // The host decides from its own copy of these, set when the game opened. A change during a game must reach that copy too
             setEverywhere(player, controller, pref, String.valueOf(Boolean.parseBoolean(value)));
         } else if (SCOPE_PREFS.containsKey(key)) {
             setEverywhere(player, controller, SCOPE_PREFS.get(key), DeclineScope.fromPref(value).name());
@@ -135,7 +135,7 @@ public final class WebSettings implements IHasForgeLog {
             }
             final boolean effects = "soundVolume".equals(key);
             player.set(effects ? FPref.UI_VOL_SOUNDS : FPref.UI_VOL_MUSIC, value);
-            // A volume of zero turns the sound off. The desktop client reads the on/off preference, not the volume.
+            // A volume of zero turns the sound off. The desktop client reads the on/off preference, not the volume
             player.set(effects ? FPref.UI_ENABLE_SOUNDS : FPref.UI_ENABLE_MUSIC, volume > 0);
         } else {
             netLog.warn("Web client: unknown setting {}", key);
@@ -194,7 +194,7 @@ public final class WebSettings implements IHasForgeLog {
 
     /** Gives a game this player's settings, with two exceptions. Auto-pass always respects the interrupts. Playable cards and the lands that auto-tap would use are always highlighted. */
     public static void applyAll(final PlayerSettings player, final IGameController controller) {
-        // Each setting is pushed after the engine sets its first values from the shared preferences. So a guest plays by its own settings.
+        // Each setting is pushed after the engine sets its first values from the shared preferences. So a guest plays by its own settings
         for (final FPref pref : YieldController.SYNCED_PREFS) {
             final boolean always = pref == FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS || pref == FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS
                     || pref == FPref.UI_SHOW_AUTOTAP_PREVIEW;
@@ -205,7 +205,7 @@ public final class WebSettings implements IHasForgeLog {
 
     private static void applyTo(final IGameController controller, final FPref pref, final String value) {
         controller.getYieldController().setPref(pref, value);
-        // The host's engine keeps no copy of the auto-yield mode. The client decides how a choice is stored.
+        // The host's engine keeps no copy of the auto-yield mode. The client decides how a choice is stored
         if (pref != FPref.UI_AUTO_DECISION_MODE) {
             controller.setYieldPref(pref, value);
         }

@@ -263,7 +263,7 @@ public final class DeckEditor {
         if (have == 0 || from == to) {
             return Localizer.getInstance().getMessage("lblWebEditorNoneToMove", String.valueOf(name));
         }
-        // A drafted commander that is removed goes back to the pool. A commander that was never drafted is dropped.
+        // A drafted commander that is removed goes back to the pool. A commander that was never drafted is dropped
         final boolean leaving = commanderDraft() && from == DeckSection.Commander;
         final DeckSection home = leaving ? DeckSection.Sideboard : to;
         return change(name, () -> {
@@ -534,7 +534,7 @@ public final class DeckEditor {
 
     EditorState state() {
         final DeckFormat df = check.deckFormat();
-        // A collection's deck has a commander that its format does not know about. The catalogue starts filtered to that commander's colours.
+        // A collection's deck has a commander that its format does not know about. The catalogue starts filtered to that commander's colours
         final List<PaperCard> leaders = collection != null ? deck.getCommanders() : Legality.commanders(deck, check);
         final Legality.Result legality = Legality.check(deck, check);
         final boolean wanted = df.hasCommander() && (leaders.isEmpty() || (df.hasSignatureSpell() && deck.getSignatureSpell() == null));
@@ -808,7 +808,7 @@ public final class DeckEditor {
         final int most = df.getMaxCardCopies(card);
         final int byLimit = most == Integer.MAX_VALUE ? Integer.MAX_VALUE
                 : most - deck.getAllCardsInASinglePool(df.hasCommander(), false).countByName(card.getName());
-        // A basic land is unlimited. Any other card is limited to the number owned, however many the rules allow.
+        // A basic land is unlimited. Any other card is limited to the number owned, however many the rules allow
         if (collection == null || BASICS.containsKey(card.getName())) {
             return byLimit;
         }

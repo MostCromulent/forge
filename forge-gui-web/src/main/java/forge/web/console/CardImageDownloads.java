@@ -107,7 +107,7 @@ final class CardImageDownloads {
         choices.addItem(new Choice(TEXT.getMessage("lblWebImagesMyDecks"), null));
         choices.addItem(new Choice(TEXT.getMessage("lblWebImagesAllCards"), c -> true));
         for (final GameFormat format : FModel.getFormats().getFilterList()) {
-            // A named format selects the cards its rules allow. A format without a name selects the printings in its sets.
+            // A named format selects the cards its rules allow. A format without a name selects the printings in its sets
             choices.addItem(new Choice(format.getName(), format.getName() == null ? format.getFilterPrinted() : format.getFilterRules()));
         }
         choices.setMaximumSize(choices.getPreferredSize());
@@ -285,7 +285,7 @@ final class CardImageDownloads {
         window.pack();
         running = new GuiDownloadFilteredCardImages(cardsOf((Choice) choices.getSelectedItem()));
         downloadStarted = 0;
-        // Once the service has listed what is missing, its start command runs at once. The count shown earlier was the confirmation.
+        // Once the service has listed what is missing, its start command runs at once. The count shown earlier was the confirmation
         running.initialize(new WebDownloads.Text(""), new WebDownloads.Text(""), new Bar(), new Starter(), this::finished, null, null);
     }
 

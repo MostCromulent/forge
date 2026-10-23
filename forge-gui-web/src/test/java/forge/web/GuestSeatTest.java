@@ -333,8 +333,7 @@ public class GuestSeatTest extends SessionsTest {
         return false;
     }
 
-
-    /** The last messages each browser got and the stack of each relevant thread, for a wait that timed out. */
+/** The last messages each browser got and the stack of each relevant thread, for a wait that timed out. */
     private static String diagnosis(final TestBrowser... browsers) {
         final StringBuilder out = new StringBuilder();
         for (final TestBrowser b : browsers) {

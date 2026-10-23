@@ -138,8 +138,7 @@ public class NetplayTunnelTest extends SessionsTest {
         return type.equals(s.get("type").getAsString()) && name.equals(s.get("name").getAsString());
     }
 
-
-    /** Fails if a netplay client with the invite link cannot take a seat, is missing from the table or the presence list, or is left out of the match. */
+/** Fails if a netplay client with the invite link cannot take a seat, is missing from the table or the presence list, or is left out of the match. */
     @Test(timeOut = 120_000)
     public void anAppSitsDownByTheInviteLinkAndFollowsTheHostIntoTheMatch() throws Exception {
         final TestBrowser host = hostAt("invite");

@@ -36,12 +36,12 @@ public final class WebMain implements IHasForgeLog {
         ExceptionHandler.registerErrorHandling();
         GuiBase.logHWInfo();
         final CountDownLatch quit = new CountDownLatch(1);
-        // The console uses the player's language. The language is known before FModel loads the rest.
+        // The console uses the player's language. The language is known before FModel loads the rest
         Localizer.getInstance().initialize(FModel.getPreferences().getPref(FPref.UI_LANGUAGE), ForgeConstants.LANG_DIR);
         // The console opens before the cards are read, because reading them takes long enough to look like a failure
         final ServerConsole console = ServerConsole.open(ui, quit::countDown);
         FModel.initialize(console, prefs -> null, false);
-        // The data for card-based deck generation takes seconds to load, so the server starts without it and loads it in the background
+        // The data for card-based deck generation takes seconds to load, so the server starts without it. With lazy card loading it is not loaded at all
         if (!FModel.getPreferences().getPrefBoolean(FPref.LOAD_CARD_SCRIPTS_LAZILY)) {
             final Thread deckGen = new Thread(FModel::loadDeckGenMatrix, "DeckGenData");
             deckGen.setDaemon(true);
@@ -50,7 +50,7 @@ public final class WebMain implements IHasForgeLog {
         // Two tokens: one for the host's own link, and one for every link given to another player
         final WebService service = new WebService(ui, IDLE_MILLIS, quit::countDown, console != null,
                 newToken(), newToken());
-        // Ctrl+C or a machine shutdown skips the finally below. Without this hook a forwarded port would stay open on the router.
+        // Ctrl+C or a machine shutdown skips the finally below. Without this hook a forwarded port would stay open on the router
         Runtime.getRuntime().addShutdownHook(new Thread(service::stop, "ForgeWebShutdown"));
         try {
             if (console != null) {
@@ -60,7 +60,7 @@ public final class WebMain implements IHasForgeLog {
             try {
                 service.start();
             } catch (final Exception e) {
-                // The console stays open to show the error and to let the host start again. Without a console there is nothing to wait for.
+                // The console stays open to show the error and to let the host start again. Without a console there is nothing to wait for
                 if (console == null) {
                     throw e;
                 }
@@ -93,7 +93,7 @@ public final class WebMain implements IHasForgeLog {
      * defaults, applies the given ones, and starts the server again on the same address.
      */
     private static void resetOnInput(final WebService service) {
-        // Nobody is connected between tests. Without this call that would end the process.
+        // Nobody is connected between tests. Without this call that would end the process
         service.quitWhenEmpty(false);
         final Thread reader = new Thread(() -> {
             try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {

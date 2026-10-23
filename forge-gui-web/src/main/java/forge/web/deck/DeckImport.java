@@ -69,7 +69,7 @@ public final class DeckImport {
         final List<ImportProblem> problems = new ArrayList<>();
         String name = null;
         int notImported = 0;
-        // Reading starts in the main deck. A legendary card before any heading stays there, and chooseCommander picks the commander later.
+        // Reading starts in the main deck. A legendary card before any heading stays there, and chooseCommander picks the commander later
         DeckSection section = DeckSection.Main;
         // A deck file is read the way Forge reads its own decks, because the list recognizer does not understand its card lines
         final boolean file = Arrays.stream(raw).anyMatch(l -> l.trim().equalsIgnoreCase("[metadata]"));
@@ -152,7 +152,7 @@ public final class DeckImport {
                 continue;
             }
             final PaperCard first = listed.toFlatList().get(0);
-            // The listed printing only identifies the card name. The editor uses the owned printings when the deck is made.
+            // The listed printing only identifies the card name. The editor uses the owned printings when the deck is made
             final boolean taken = collection == null || first.getRules().getType().isBasicLand() || owned.contains(first.getName());
             if (!taken) {
                 kinds[i] = ImportLineKind.problem;

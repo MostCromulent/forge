@@ -91,8 +91,7 @@ public class ActiveClientTest {
                 .anyMatch(z -> zone.equals(z.getAsJsonObject().get("zone").getAsString()));
     }
 
-
-    private static boolean atPriority(final TestBrowser browser) {
+private static boolean atPriority(final TestBrowser browser) {
         final JsonObject prompt = browser.last("prompt");
         return prompt.has("priority") && prompt.get("priority").getAsBoolean();
     }

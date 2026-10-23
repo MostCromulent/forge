@@ -343,7 +343,7 @@ public final class DeckSession implements IHasForgeLog {
         editor = null;
         channel.send(new EditorMessage(null));
         lobby.sendDecks(channel);
-        // A deck that was never saved has nothing to put on the seat. Examples are an untouched new deck, or a precon that was only viewed.
+        // A deck that was never saved has nothing to put on the seat. Examples are an untouched new deck, or a precon that was only viewed
         if (seat == null || seat < 0 || !atTable.getAsBoolean() || (!done.saved() && !eventPool)) {
             return null;
         }
@@ -405,7 +405,7 @@ public final class DeckSession implements IHasForgeLog {
         }
         final List<PaperCard> commanders = Legality.commanders(deck, check);
         final DeckFormat df = check.deckFormat();
-        // A commander deck without a commander shows only cards that can be its commander. A Background is shown only once the deck has a commander.
+        // A commander deck without a commander shows only cards that can be its commander. A Background is shown only once the deck has a commander
         final Predicate<PaperCard> commanderOnly = df.hasCommander() && commanders.isEmpty()
                 ? c -> df.isLegalCommander(c.getRules()) && !c.getRules().getType().hasSubtype("Background")
                 : null;
@@ -415,7 +415,7 @@ public final class DeckSession implements IHasForgeLog {
         final CardPool inDeck = deck.getAllCardsInASinglePool(true, false);
         final Function<PaperCard, String> problems = Legality.cardProblems(check, commanders);
         final DeckEditor.Collection collection = e == null ? null : e.collection();
-        // A collection that counts copies gives how many of each card it holds. That is also the most a deck can use.
+        // A collection that counts copies gives how many of each card it holds. That is also the most a deck can use
         final CardPool owned = collection == null || collection.mainOnly() ? null : collection.cards().get();
         return (e == null ? CardCatalog.get() : e.catalogue()).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
                 q.offset(), q.showAll()), problems, only, inDeck::countByName,
@@ -451,7 +451,7 @@ public final class DeckSession implements IHasForgeLog {
         final DeckEditor.Collection collection = editor == null ? null : editor.collection();
         final Check check = collection != null ? editor.check() : check(c.format(), c.cardPool(), c.unrestricted());
         final Deck deck = DeckImport.read(c.text(), check, collection).deck();
-        // A list read against a collection is for the deck open on that collection. It does not make a deck of its own.
+        // A list read against a collection is for the deck open on that collection. It does not make a deck of its own
         if (collection != null && c.action() != FromBrowser.ImportAction.add && c.action() != FromBrowser.ImportAction.replace) {
             return;
         }

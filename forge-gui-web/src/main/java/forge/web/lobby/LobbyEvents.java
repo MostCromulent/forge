@@ -201,7 +201,7 @@ public final class LobbyEvents {
             }
             lobby.clearCurrentEvent();
             lobby.selectEventForMatch(null, false);
-            // Sitting out applies only to events. A Constructed table neither shows it nor clears it, so it is cleared here.
+            // Sitting out applies only to events. A Constructed table neither shows it nor clears it, so it is cleared here
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 lobby.getSlot(i).setSittingOut(false);
             }

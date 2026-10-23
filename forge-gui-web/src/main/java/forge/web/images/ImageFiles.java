@@ -2,10 +2,10 @@ package forge.web.images;
 
 import forge.ImageKeys;
 import forge.StaticData;
-import forge.util.SleeveArt;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.util.ImageUtil;
+import forge.util.SleeveArt;
 
 import java.io.File;
 import java.util.Locale;
@@ -14,6 +14,9 @@ import java.util.regex.Pattern;
 /** Where the page's card pictures and sleeve art are saved, and which keys are safe to look up. */
 public final class ImageFiles {
     private static final Pattern PARENT = Pattern.compile("(^|[/\\\\:|])\\.\\.([/\\\\|]|$)");
+
+    private ImageFiles() {
+    }
 
     /** Refuses a key that contains "..". Forge joins a key onto a folder path unchanged, and deletes a folder found where an image should be. */
     public static boolean safeKey(final String key) {
@@ -65,7 +68,7 @@ public final class ImageFiles {
         return f.isFile() ? f : null;
     }
 
-
+    /** The content type of a saved picture. */
     public static String type(final File file) {
         return file.getName().endsWith(".png") ? "image/png" : "image/jpeg";
     }

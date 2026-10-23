@@ -232,7 +232,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         for (final T choice : all) {
             options.add(display == null ? String.valueOf(choice) : display.apply(choice));
         }
-        // Sets are shown as their packs and cards as themselves. This is how a bonus booster's set or a reward card is chosen.
+        // Sets are shown as their packs and cards as themselves. This is how a bonus booster's set or a reward card is chosen
         final boolean packs = !all.isEmpty() && all.stream().allMatch(CardEdition.class::isInstance);
         final boolean cards = !all.isEmpty() && all.stream().allMatch(PaperCard.class::isInstance);
         final List<String> images = packs ? all.stream().map(e -> boosterImage((CardEdition) e)).toList()
@@ -317,7 +317,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     }
     @Override public void copyToClipboard(final String text) { }
     @Override public void showCardList(final String title, final String message, final List<PaperCard> list) { cardsSink.accept(title, list); }
-    // The box's first pack is shown, and true asks for the rest together. A box is then two steps of a reveal, not thirty-six.
+    // The box's first pack is shown, and true asks for the rest together. A box is then two steps of a reveal, not thirty-six
     @Override public boolean showBoxedProduct(final String title, final String message, final List<PaperCard> list) {
         cardsSink.accept(title, list);
         return true;

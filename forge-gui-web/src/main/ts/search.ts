@@ -1,4 +1,4 @@
-// Searches a long list by name with desktop's ListChooser rules, so both clients find the same cards in the same order. Letters of every script are kept, so translated labels can be found too
+// Searches a long list by name, ranked as desktop's ListChooser ranks it. Unlike ListChooser, letters of every script are kept, so translated labels can be found
 
 /** Converts to lower case, strips accents, and keeps only letters, digits and spaces. */
 export function normalize(s: string): string {

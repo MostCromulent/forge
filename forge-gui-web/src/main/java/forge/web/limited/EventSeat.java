@@ -53,7 +53,7 @@ public final class EventSeat {
     public void newTable(final WebGuiGame gui) {
         reportedGone = false;
         toldDrafting = false;
-        // An event from an earlier table's draft can still arrive. It does not belong to this table, so it is ignored.
+        // An event from an earlier table's draft can still arrive. It does not belong to this table, so it is ignored
         final OnlineDraft[] self = new OnlineDraft[1];
         final OnlineDraft made = new OnlineDraft(gui.dispatchExecutor(), this::eventView, this::podSeat, this::seatHeld,
                 local::sendToHost, state -> {
@@ -134,7 +134,7 @@ public final class EventSeat {
     }
 
     private void show(final DraftState state) {
-        // The first pack moves the browser to the draft. The hello message tells it that it is in the draft.
+        // The first pack moves the browser to the draft. The hello message tells it that it is in the draft
         if (!toldDrafting) {
             toldDrafting = true;
             session.tell(session.hello());
@@ -155,7 +155,7 @@ public final class EventSeat {
             final IStorage<Deck> eventDecks = FModel.getDecks().getNetworkEventDecks();
             final Deck kept;
             synchronized (DeckCatalog.DECKS) {
-                // Two events of the same product on the same day get the same name. The newer pool must not replace the older one.
+                // Two events of the same product on the same day get the same name. The newer pool must not replace the older one
                 kept = new Deck(pool, DeckStore.freeName(eventDecks, pool.getName(), null));
                 eventDecks.add(kept);
             }

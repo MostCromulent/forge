@@ -9,7 +9,6 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class WebSessionTest {
     /** Each holds a timer thread until it is shut down. */
     private final List<WebSessions> opened = new ArrayList<>();

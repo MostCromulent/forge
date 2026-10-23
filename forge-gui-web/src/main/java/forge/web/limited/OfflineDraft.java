@@ -127,7 +127,7 @@ public final class OfflineDraft implements Draft {
             final LimitedPlayer me = draft.getHumanPlayer();
             final Deck human = new Deck(me.getDeck(), name);
             human.setDraftNotes(me.getSerializedDraftNotes());
-            // Desktop gives the deck this tag. Both clients use it to recognise the pool later.
+            // Desktop gives the deck this tag. Both clients use it to recognise the pool later
             if (draft.isCommanderDraft()) {
                 human.getTags().add(COMMANDER_DRAFT);
             }
