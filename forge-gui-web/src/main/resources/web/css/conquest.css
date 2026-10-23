@@ -453,7 +453,9 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-opt[aria-checked="true"] b { color: var(--accent-2); font-weight: 700; }
 .cq-ae-stage { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 24px 150px; overflow-y: auto; background: radial-gradient(70% 60% at 50% 45%, #1a1030 0%, #080b11 100%); }
 .cq-ae-core, .cq-ae-card { display: grid; justify-items: center; gap: 16px; }
-.cq-ae-orb { width: 230px; height: 230px; filter: drop-shadow(0 0 40px #8040ff55); }
+.cq-ae-orb { display: block; width: 230px; height: 230px; filter: drop-shadow(0 0 40px #8040ff55); }
+/* The orb's glow runs past its region of the skin's sprite sheet, which cuts it off in straight lines. A round fade hides them. The glow around it is on the wrapper, because a mask would also cut that */
+.cq-ae-orb img { display: block; width: 100%; height: 100%; mask-image: radial-gradient(closest-side, #000 93%, transparent); }
 .cq-ae-pull { display: inline-flex; align-items: center; padding: 13px 28px; font-size: 17px; font-variant-numeric: tabular-nums; }
 .cq-ae-pull .cq-shard { margin-right: 8px; }
 .cq-ae-count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }

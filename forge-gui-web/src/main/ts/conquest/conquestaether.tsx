@@ -54,7 +54,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
               <div key={`card${turn.current.count}`} class={`cq-ae-box${turn.current.before ? '' : ' from-orb'}${isRare(a.pulled.rarity) ? ' rare' : ''}`}>
                 {turn.current.before
                   ? <img class="cq-ae-ghost" alt="" src={imageUrl(turn.current.before.image)} />
-                  : <img class="cq-ae-orb cq-ae-ghost" alt="" src={skinIconUrl('IMG_MULTIVERSE')} />}
+                  : <span class="cq-ae-orb cq-ae-ghost"><img alt="" src={skinIconUrl('IMG_MULTIVERSE')} /></span>}
                 <span class="cq-ae-aura" />
                 <button class="cq-ae-face" onClick={() => setZoom(a.pulled!.image)}><span class="cq-ae-turn"><span class="cq-ae-back" /><img alt={a.pulled.name} src={imageUrl(a.pulled.image)} /></span></button>
               </div>
@@ -64,7 +64,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
           )
           : (
             <div class="cq-ae-core">
-              <img class="cq-ae-orb" alt="" src={skinIconUrl('IMG_MULTIVERSE')} />
+              <span class="cq-ae-orb"><img alt="" src={skinIconUrl('IMG_MULTIVERSE')} /></span>
               <div class="cq-chips">
                 {RARITIES.map((name, i) => <span key={name} class="cq-chip">{a.byRarity[i]} {t(name)}</span>)}
               </div>
