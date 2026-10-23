@@ -333,7 +333,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 }
 
 /* Commanders and planeswalkers use the same card style. The selected one is shown in detail next to the list. */
-.cq-party { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 372px; min-height: 0; }
+.cq-party { position: relative; display: grid; grid-template-columns: minmax(0, 2fr) minmax(372px, 1fr); min-height: 0; }
 .cq-party-list { padding: 18px 24px 80px; overflow-y: auto; display: grid; gap: 22px; align-content: start; }
 .cq-party-list h4 { margin: 0 0 10px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; gap: 10px; align-items: baseline; }
 .cq-party-list h4 span { letter-spacing: 0; text-transform: none; font-weight: 400; font-size: 12.5px; font-variant-numeric: tabular-nums; }
@@ -351,7 +351,10 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-cmd.in-use[aria-pressed="true"] { box-shadow: 0 0 0 1px var(--accent-2), 0 0 0 3px var(--text); }
 .cq-cmd .tag { position: absolute; right: 8px; bottom: 8px; background: #0b0e14e6; text-transform: uppercase; letter-spacing: .06em; font-size: 10.5px; }
 .cq-cmd-detail { padding: 20px; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
-.cq-cmd-detail img.cq-card { width: 216px; aspect-ratio: 63 / 88; border-radius: 11px; justify-self: center; box-shadow: 0 12px 30px #000b; }
+/* The card is beside its name and chips, so the deck list below starts higher */
+.cq-cmd-top { display: flex; gap: 18px; align-items: start; }
+.cq-cmd-about { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.cq-cmd-detail img.cq-card { width: 168px; flex: none; aspect-ratio: 63 / 88; border-radius: 9px; box-shadow: 0 12px 30px #000b; }
 .cq-cmd-detail h3 { margin: 0; font-size: 18px; }
 .cq-cmd-detail .dk-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 0; overflow: visible; }
 .cq-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

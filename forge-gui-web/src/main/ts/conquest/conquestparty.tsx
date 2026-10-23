@@ -109,9 +109,13 @@ function WalkerPanel({ walker, actions }: { walker: ConquestWalkerRow; actions: 
   return (
     <aside class="cq-side">
       <div class="cq-cmd-detail">
-        <img class="cq-card" alt={walker.name} src={imageUrl(walker.image)} data-image={walker.image} />
-        <h3>{walker.name}</h3>
-        <div class="cq-chips"><span class="cq-chip">{t('lblPlaneswalker')}</span></div>
+        <div class="cq-cmd-top">
+          <img class="cq-card" alt={walker.name} src={imageUrl(walker.image)} data-image={walker.image} />
+          <div class="cq-cmd-about">
+            <h3>{walker.name}</h3>
+            <div class="cq-chips"><span class="cq-chip">{t('lblPlaneswalker')}</span></div>
+          </div>
+        </div>
       </div>
       <div class="cq-foot">
         <button class="primary cq-big" disabled={walker.selected} onClick={() => actions.conquestWalker(walker.name)}>

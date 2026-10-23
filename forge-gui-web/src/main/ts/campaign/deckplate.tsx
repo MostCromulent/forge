@@ -28,10 +28,14 @@ export function DeckPanel({ image, title, chips, problem, details, children }: {
   return (
     <aside class="cq-side">
       <div class="cq-cmd-detail">
-        {image && <img class="cq-card" alt={title} src={imageUrl(image)} data-image={image} />}
-        <h3>{title}</h3>
-        <div class="cq-chips">{chips}</div>
-        {problem && <p class="cq-warn">{problem}</p>}
+        <div class="cq-cmd-top">
+          {image && <img class="cq-card" alt={title} src={imageUrl(image)} data-image={image} />}
+          <div class="cq-cmd-about">
+            <h3>{title}</h3>
+            <div class="cq-chips">{chips}</div>
+            {problem && <p class="cq-warn">{problem}</p>}
+          </div>
+        </div>
         {details}
       </div>
       <div class="cq-foot">{children}</div>

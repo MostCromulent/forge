@@ -91,7 +91,10 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
   const opening: CatalogueFilter = owned && leader ? { ...NO_FILTER, identity: leader } : NO_FILTER;
   const [filter, setFilter] = useState<CatalogueFilter>(opening);
   const [view, setView] = useState<'cards' | 'table'>(() => storedView());
-  const query = { text, colours: [...colours].join(''), type, filters: asSyntax(filter), sort, showAll: filter.showAll,
+  // Only the colours the deck's colour identity allows can be picked. A collection's deck follows its identity filter instead
+  const within = owned ? filter.identity : state.commanders.length ? state.identity : null;
+  const pickable = within != null ? `${within}C` : undefined;
+  const query = { text, colours: [...colours].filter(c => !pickable || pickable.includes(c)).join(''), type, filters: asSyntax(filter), sort, showAll: filter.showAll,
     identity: owned ? filter.identity ?? undefined : undefined, sets: filter.sets, format: filter.format ?? undefined,
     section: adding ?? undefined };
   // A section other than the main deck lists only its own kind of card, with no copy limit. No commander is chosen from it
@@ -145,7 +148,7 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
               </tbody>
             </table>
           </span>
-          <ColourToggles label={t('lblColors')} colourless pressed={c => colours.has(c)} toggle={c => setColours(toggled(colours, c))} />
+          <ColourToggles label={t('lblColors')} colourless only={pickable} pressed={c => colours.has(c)} toggle={c => setColours(toggled(colours, c))} />
           <select class="type-by" aria-label={t('lblCardType')} value={type} onChange={e => setType(e.currentTarget.value)}>
             {TYPES.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
           </select>
@@ -164,7 +167,7 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
             </select>}
         <span class="seg" role="group" aria-label={t('lblView')}>
           <button aria-pressed={view === 'cards'} onClick={() => { setView('cards'); store(VIEW_KEY, 'cards'); }}>{t('lblCards')}</button>
-          <button aria-pressed={view === 'table'} onClick={() => { setView('table'); store(VIEW_KEY, 'table'); }}>{t('lblWebCatalogueViewTable')}</button>
+          <button aria-pressed={view === 'table'} onClick={() => { setView('table'); store(VIEW_KEY, 'table'); }}>{t('lblWebDraftList')}</button>
         </span>
       </div>
       <div class={view === 'cards' ? 'cat-grid' : 'cat-table'} data-list onScroll={more}>
@@ -376,7 +379,9 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
             {limited
               ? <span class="why">{room ? t('lblWebCatalogueLeft', room) : t('lblWebCatalogueNoneLeft')}</span>
               : full && limit < Infinity
-                ? <span class="why">{limit === row.count ? t('lblWebCatalogueNoneLeft') : limit === 1 ? t('lblWebCatalogueSingleton') : t('lblWebNOfM', count, limit)}</span>
+                ? limit === row.count
+                  ? <span class="why">{t('lblWebCatalogueNoneLeft')}</span>
+                  : <span class="why" title={limit === 1 ? t('lblWebCatalogueSingleton') : t('lblWebNOfM', count, limit)}>{count}/{limit}</span>
                 : mainOnly ? null : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblSide')}</button>}
           </div>
         )}

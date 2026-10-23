@@ -501,7 +501,7 @@ html[data-form="portrait"] #first-reveal .reveal-name { font-size: 12px; }
 html[data-form="portrait"] #first-reveal p { font-size: 22px; }
 
 html[data-form="portrait"] #editor .editor-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 6px; padding: 6px 10px; }
-html[data-form="portrait"] #editor .editor-head .wordmark-block, html[data-form="portrait"] #editor .editor-head .icon-button, html[data-form="portrait"] #editor .editor-head > .legality, html[data-form="portrait"] #editor .editor-head > .check-fixed, html[data-form="portrait"] #editor .editor-head .word { display: none; }
+html[data-form="portrait"] #editor .editor-head .wordmark-block, html[data-form="portrait"] #editor .editor-head .icon-button, html[data-form="portrait"] #editor .editor-head > .legality, html[data-form="portrait"] #editor .editor-head > .check-fixed, html[data-form="portrait"] #editor .editor-head .deck-owner, html[data-form="portrait"] #editor .editor-head .word { display: none; }
 html[data-form="portrait"] #editor .editor-head .head-right { display: contents; }
 html[data-form="portrait"] #editor .editor-head .deck-name { min-width: 0; min-height: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; font-size: 16px; }
 html[data-form="portrait"] #editor .editor-head .save-state { font-size: 11.5px; }
@@ -551,12 +551,21 @@ html[data-form="portrait"] #editor .deck-half .zone-body { overflow: visible; }
 html[data-form="portrait"] #editor .deck-half .side-zone { max-height: none; }
 /* The deck's sizes and legality are next to the curve. The format it is checked against and the sample hand button share the line below. */
 html[data-form="portrait"] #editor .deck-head { padding: 8px 10px; gap: 4px 10px; align-items: center; }
-html[data-form="portrait"] #editor .deck-head > div:first-child { display: contents; }
+html[data-form="portrait"] #editor .deck-head > .deck-about { display: contents; }
 html[data-form="portrait"] #editor .deck-head .sizes { grid-area: 1 / 1; align-self: end; }
 html[data-form="portrait"] #editor .deck-head .verdict { grid-area: 2 / 1; align-self: start; }
 html[data-form="portrait"] #editor .deck-head .curve { grid-area: 1 / 2 / 3 / 3; }
 html[data-form="portrait"] #editor .deck-head .deck-check { grid-area: 3 / 1; }
 html[data-form="portrait"] #editor .deck-head button.small { grid-area: 3 / 2; justify-self: end; }
+/* The commander's card takes a narrow first column, beside the deck's sizes and legality */
+html[data-form="portrait"] #editor .deck-head.with-commander { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr) auto; }
+html[data-form="portrait"] #editor .deck-head.with-commander > :is(.cmd-cards, .cmd-card) { grid-area: 1 / 1 / 3 / 2; align-self: start; }
+html[data-form="portrait"] #editor .deck-head.with-commander :is(.cmd-card, .card-outline.cmd-card) { width: 52px; }
+html[data-form="portrait"] #editor .deck-head.with-commander .sizes { grid-area: 1 / 2; align-self: start; }
+html[data-form="portrait"] #editor .deck-head.with-commander .verdict { grid-area: 2 / 2; }
+html[data-form="portrait"] #editor .deck-head.with-commander .deck-numbers { grid-area: 1 / 3 / 3 / 4; }
+html[data-form="portrait"] #editor .deck-head.with-commander .deck-check { grid-area: 3 / 1 / 4 / 3; }
+html[data-form="portrait"] #editor .deck-head.with-commander button.small { grid-area: 3 / 3; }
 /* The deck name is already in the editor head above */
 html[data-form="portrait"] #editor .deck-head h3 { display: none; }
 html[data-form="portrait"] #editor .deck-head .verdict { margin: 0; }

@@ -41,10 +41,20 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
     const place = document.querySelector<HTMLElement>(`.deck-half [data-from="${zone}"][data-card="${CSS.escape(state.landed)}"]`);
     land(place, place?.closest('.zone-body'), place?.closest('.zone')?.querySelector('h4'));
   }, [state]);
+  const group = (g: typeof groups[number]) => (
+    <div key={g.heading} class="group">
+      <h4><span class="hn" title={headingText(g.heading)}>{headingText(g.heading)}</span><span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
+      {g.cards.map(c => cards
+        ? <Stack key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} handlers={handlers} />
+        : <Line key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} actions={actions} handlers={handlers} mainOnly={state.mainOnly} />)}
+    </div>
+  );
   return (
     <section class="deck-half" data-list>
-      <div class="deck-head">
-        <div>
+      {/* A card dropped anywhere on the heading becomes the commander */}
+      <div class={hasCommander ? 'deck-head with-commander' : 'deck-head'} data-zone={hasCommander && !state.mainOnly ? 'Commander' : undefined}>
+        {hasCommander && <Commanders actions={actions} state={state} handlers={handlers} />}
+        <div class="deck-about">
           <h3>{state.name} <span class="pips"><Pips colors={state.identity} /></span></h3>
           <p class="sizes">{state.limited
             ? t('lblWebEditorSizesLimited', state.stats.total, state.stats.lands, state.stats.sideboard)
@@ -53,6 +63,7 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
           {state.verdict
             ? <p class="verdict no">{state.verdict} {flagged && <button class="link" onClick={showProblems}>{t('lblWebEditorShowThem')}</button>}</p>
             : <p class="verdict yes">{t('lblWebEditorLegalFor', state.check)}</p>}
+          {state.commanders.filter(c => c.problem).map(c => <p key={c.name} class="flag">! {c.problem}</p>)}
           {check && <div class="deck-check">{check}</div>}
           <button class="small" disabled={!state.stats.main} onClick={() => setHand(drawHand(state, HAND))}>{t('lblWebEditorSampleHand')}</button>
         </div>
@@ -61,7 +72,6 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
           <Breakdown title={t('lblWebEditorManaSymbols')} counts={state.stats.symbols} />
         </div>
       </div>
-      {hasCommander && <CommanderZone actions={actions} state={state} handlers={handlers} />}
       <div class="zone main-zone" data-zone="Main">
         <h4>
           <span class="zn">{t('lblMainDeck')}</span>
@@ -82,14 +92,9 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
         </h4>
         <div class={cards ? 'zone-body deck-cols' : 'zone-body cols'}>
           {state.main.length === 0 && <p class="none">{state.commanderWanted ? t('lblWebEditorChooseCommanderFirst') : t('lblWebEditorClickToAdd')}</p>}
-          {groups.map(g => (
-            <div key={g.heading} class="group">
-              <h4>{headingText(g.heading)}<span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
-              {g.cards.map(c => cards
-                ? <Stack key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} handlers={handlers} />
-                : <Line key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} actions={actions} handlers={handlers} mainOnly={state.mainOnly} />)}
-            </div>
-          ))}
+          {cards
+            ? groups.map(group)
+            : twoColumns(groups).map((column, i) => <div key={i}>{column.map(group)}</div>)}
         </div>
       </div>
       {!state.limited && !state.mainOnly && <div class="zone side-zone" data-zone="Sideboard">
@@ -121,7 +126,8 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
       )}
       <div class="land-row">
         <span class="band-lab">{t('lblWebEditorBasicLands')}</span>
-        {state.lands.map(l => (
+        {/* A land outside the commander's colours is listed only while the deck holds some, so they can be taken out */}
+        {state.lands.filter(l => (l.allowed && (!state.commanders.length || (state.identity || 'C').includes(l.letter))) || l.count).map(l => (
           <span key={l.name} class={l.allowed ? 'land' : 'land off'} title={l.allowed ? l.name : t('lblWebEditorLandOutside', l.name)}>
             <Pip letter={l.letter} />
             <button class="step" disabled={!l.count} aria-label={t('lblWebEditorOneFewer', l.name)}
@@ -205,38 +211,44 @@ function AddSection({ sections, addTo }: { sections: EditorSection[]; addTo: (se
   );
 }
 
-function CommanderZone({ actions, state, handlers }: { actions: Actions; state: EditorState; handlers: CardHandlers }) {
-  // A main-only collection deck keeps the commander it was made for. No card can be dropped here or removed
+/** The commanders' cards at the start of the deck's heading, or an empty outline until one is chosen. */
+function Commanders({ actions, state, handlers }: { actions: Actions; state: EditorState; handlers: CardHandlers }) {
+  // A main-only collection deck keeps the commander it was made for. It cannot be dragged out or changed
   const kept = state.mainOnly;
+  if (!state.commanders.length) {
+    return <span class="card-outline cmd-card" title={t('lblWebEditorChooseCommanderHint')}>{t('lblCommander')}</span>;
+  }
   return (
-    <div class="zone commander-zone" data-zone={kept ? undefined : 'Commander'}>
-      <h4><span class="zn">{t('lblCommander')}</span><span class="count">{state.commanders.length}</span></h4>
-      {state.commanders.length === 0
-        ? (
-          <div class="commander-empty">
-            <span class="card-outline">{t('lblCommander')}</span>
-            <div>
-              <b>{t('lblWebEditorChooseCommander')}</b>
-              <p>{t('lblWebEditorChooseCommanderHint')}</p>
-            </div>
+    <div class="cmd-cards">
+      {state.commanders.map(c => (
+        <div key={c.name} class={c.problem ? 'cmd-card bad' : 'cmd-card'} title={c.problem ?? undefined}>
+          <div class="cmd-art" data-image={c.image} data-card={c.name} data-from="Commander" {...(kept ? {} : handlers(c.name, 'Commander', c.image, 1))}>
+            <img alt={c.name} src={smallImage(imageUrl(c.image))} draggable={false} />
+            <span class="cmd-tag">{t('lblCommander')}</span>
           </div>
-        )
-        : state.commanders.map(c => (
-          <div key={c.name} class="commander" data-image={c.image} data-card={c.name} data-from="Commander"
-            {...(kept ? {} : handlers(c.name, 'Commander', c.image, 1))}>
-            <img alt="" src={smallImage(imageUrl(c.image))} />
-            <div>
-              <div class="cname">{c.name} <span class="cost"><SymbolText text={c.cost} /></span></div>
-              {c.problem && <div class="flag">! {c.problem}</div>}
-              {!kept && <p class="cnote">{state.identity
-                ? t('lblWebEditorIdentityNote', state.identity.split('').join(' '))
-                : t('lblWebEditorIdentityColourlessNote')}</p>}
-            </div>
-            {!kept && <button class="small" onClick={() => actions.edit({ op: 'move', name: c.name, from: 'Commander', to: 'Main', count: 1 })}>{t('lblWebEditorChangeCommander')}</button>}
-          </div>
-        ))}
+          {!kept && <button class="link" onClick={() => actions.edit({ op: 'move', name: c.name, from: 'Commander', to: 'Main', count: 1 })}>{t('lblWebEditorChangeCommander')}</button>}
+        </div>
+      ))}
     </div>
   );
+}
+
+/** Splits the groups into two columns of about equal height, keeping their order. A heading counts as two lines. */
+function twoColumns<G extends { cards: unknown[] }>(groups: G[]): [G[], G[]] {
+  const lines = (g: G) => g.cards.length + 2;
+  const total = groups.reduce((n, g) => n + lines(g), 0);
+  let split = 0;
+  let shortest = Infinity;
+  let left = 0;
+  for (let i = 0; i <= groups.length; i++) {
+    const taller = Math.max(left, total - left);
+    if (taller < shortest) {
+      shortest = taller;
+      split = i;
+    }
+    if (i < groups.length) left += lines(groups[i]);
+  }
+  return [groups.slice(0, split), groups.slice(split)];
 }
 
 /** One card in a section, drawn as its picture with the copy count on it. Cards in a column overlap so their names stay visible. */
@@ -311,7 +323,7 @@ function SampleHand({ hand, again, more, close }: { hand: EditorCard[]; again: (
 }
 
 function showProblems(): void {
-  document.querySelector('.editor-page .ed-line.bad, .editor-page .commander .flag')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  document.querySelector('.editor-page .ed-line.bad, .editor-page .deck-head .flag')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 function storedGroup(): GroupBy {

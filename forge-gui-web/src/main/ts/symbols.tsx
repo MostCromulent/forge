@@ -36,13 +36,15 @@ export function toggled<T>(set: ReadonlySet<T>, item: T): Set<T> {
 }
 
 /** A row of colour buttons, each pressed or not. colourless adds C. title gives the hover text for a colour. */
-export function ColourToggles({ pressed, toggle, label, colourless, title }: {
+export function ColourToggles({ pressed, toggle, label, colourless, only, title }: {
   pressed: (letter: string) => boolean; toggle: (letter: string) => void; label: string; colourless?: boolean;
+  /** The letters of the only colours to offer. */
+  only?: string;
   title?: (letter: string, name: string) => string;
 }) {
   return (
     <div class="colours" role="group" aria-label={label}>
-      {(colourless ? COLOURS : FIVE_COLOURS).map(([letter, name]) => (
+      {(colourless ? COLOURS : FIVE_COLOURS).filter(([letter]) => !only || only.includes(letter)).map(([letter, name]) => (
         <button key={letter} class="colour" aria-label={t(name)} aria-pressed={pressed(letter)} title={title?.(letter, t(name))}
           onClick={() => toggle(letter)}><Pip letter={letter} /></button>
       ))}
