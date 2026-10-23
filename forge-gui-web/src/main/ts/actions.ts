@@ -37,8 +37,8 @@ export interface PageActions {
   leave(): void;
   answer(requestId: number, value: unknown): void;
   toggleStop(phase: PhaseType, mine: boolean): void;
-  /** Sets all the stops of one row at once. Phases not listed are turned off. */
-  setStops(mine: boolean, phases: PhaseType[]): void;
+  /** Sets all the stops of one row at once. Phases not listed are turned off. With no phases, the row gets Forge's default stops. */
+  setStops(mine: boolean, phases?: PhaseType[]): void;
   /** Starts or stops passing priority until this phase. */
   toggleMarker(phase: PhaseType, mine: boolean): void;
   /** Requests a card's rules text or a player's details. The answer arrives later in the model. */

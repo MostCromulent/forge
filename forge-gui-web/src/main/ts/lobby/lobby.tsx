@@ -214,7 +214,7 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
   const hasDeck = seat.deck != null || seat.deckName != null;
   // Momir Basic and MoJhoSto give every seat its deck at the start, so there is none to choose
   const format = lobby.formats.find(f => f.id === lobby.format);
-  const dealt = format?.group === 'Other';
+  const dealt = !!format && format.deckCards == null;
   // A Limited seat has no deck to choose until its pool is out. Until then it shows whether it is ready
   const lim = lobby.limited;
   const beforePools = !!lim && !lim.activeEventId;

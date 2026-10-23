@@ -2,7 +2,6 @@
 
 import { cardMenu, cardPrompt, oldestRequest, stackPick, type Model } from './model';
 import type { UiState } from './ui';
-import { t } from './text';
 
 export type KeyCommand =
   | 'closeOptions' | 'closeConcede' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closeZones' | 'closePicker' | 'declineHostChoice'
@@ -209,9 +208,9 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
     return escape && pick.min === 0 ? 'cancel' : null;
   }
   const prompt = model.prompt;
-  if (shortcut === 'SHORTCUT_ALPHASTRIKE') return prompt?.cancel?.enabled && prompt.cancel.label === t('lblAlphaStrike') ? 'cancel' : null;
+  if (shortcut === 'SHORTCUT_ALPHASTRIKE') return prompt?.cancel?.enabled && prompt.cancel.kind === 'alphaStrike' ? 'cancel' : null;
   if (ok && prompt?.ok?.enabled) return 'ok';
   // Escape means cancel, so it never triggers the alpha strike button
-  if (escape && prompt?.cancel?.enabled && prompt.cancel.label !== t('lblAlphaStrike')) return 'cancel';
+  if (escape && prompt?.cancel?.enabled && prompt.cancel.kind !== 'alphaStrike') return 'cancel';
   return shortcut && shortcut in SHORTCUT_COMMANDS ? SHORTCUT_COMMANDS[shortcut as keyof typeof SHORTCUT_COMMANDS] : null;
 }

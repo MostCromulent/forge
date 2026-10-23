@@ -813,10 +813,9 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const optional = req.min < req.options.length;
   const rememberBox = req.remember
     && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> {t('lblWebDialogRememberOrder')}</label>;
-  // A library order has a label at both ends. Any other order has a label only on the first item
-  const library = !listed && (req.top === t('lblClosestToTop') || req.top === t('lblClosestToBottom'));
-  const otherEnd = req.top === t('lblClosestToTop') ? t('lblClosestToBottom') : t('lblClosestToTop');
-  const railed = !listed && !optional && !!req.top && !library;
+  // An order with a top and a bottom, such as a library, has a label at both ends. Any other order has a label only on the first item
+  const twoEnds = !listed && !!req.bottom;
+  const railed = !listed && !optional && !!req.top && !twoEnds;
   const nudge = (by: number, pos: number) => (
     <button class={by < 0 ? 'earlier' : 'later'} disabled={by < 0 ? pos === 0 : pos === chosen.length - 1}
       aria-label={t(by < 0 ? 'lblWebDialogMoveEarlier' : 'lblWebDialogMoveLater')} onClick={() => step(by)}>{by < 0 ? '‹' : '›'}</button>
@@ -850,7 +849,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
               {/* The number is the card's place in the order, which is what the dialog asks for */}
               <span class="order-number">{pos + 1}</span>
               {!listed && !railed && pos === 0 && req.top && <span class="order-end">{req.top}</span>}
-              {library && pos === chosen.length - 1 && pos > 0 && <span class="order-end">{otherEnd}</span>}
+              {twoEnds && pos === chosen.length - 1 && pos > 0 && <span class="order-end">{req.bottom}</span>}
               {/* Drawn under every card but shown only for the held card, so holding a card does not move anything else in the dialog */}
               {!listed && <span class="order-nudge">{nudge(-1, pos)}{nudge(1, pos)}</span>}
               {/* The held ability's arrows replace its grip, so they appear where the player is already looking */}

@@ -7,6 +7,7 @@ import forge.gamemodes.match.Selection;
 import forge.gamemodes.net.DeltaPacket;
 import forge.trackable.TrackableObject;
 import forge.util.Localizer;
+import forge.web.protocol.ToBrowser.ButtonKind;
 import forge.web.protocol.ToBrowser.Prompt;
 import forge.web.protocol.ToBrowser.PromptButton;
 import forge.web.protocol.ToBrowser.Ref;
@@ -14,18 +15,22 @@ import forge.web.protocol.ToBrowser.StarterChoice;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /** The prompt shown to the browser. Both the dispatch thread and the host UI thread change it, so every change is made and sent under one lock. */
 final class PromptState {
+    private static final Map<ButtonKind, String> KIND_KEYS = Map.of(ButtonKind.ok, "lblOK", ButtonKind.auto, "lblAuto",
+            ButtonKind.endTurn, "lblEndTurn", ButtonKind.alphaStrike, "lblAlphaStrike", ButtonKind.callBack, "lblCallBack");
+
     private final Consumer<Prompt> send;
     private String message = "";
     /** "toss" or "lastGame" while the player is asked who starts. The value says whether the player won the toss or lost the last game. */
     private StarterChoice starterChoice;
     private boolean priority;
     private Ref card;
-    private PromptButton ok = new PromptButton("", false);
-    private PromptButton cancel = new PromptButton("", false);
+    private PromptButton ok = new PromptButton("", false, null);
+    private PromptButton cancel = new PromptButton("", false, null);
     private boolean focusOk;
     private boolean paying;
     private boolean endsTurn;
@@ -56,14 +61,24 @@ final class PromptState {
 
     synchronized void buttons(final String label1, final String label2, final boolean enable1, final boolean enable2,
             final boolean focus1) {
-        ok = new PromptButton(label1, enable1);
-        cancel = new PromptButton(label2, enable2);
+        ok = new PromptButton(label1, enable1, kindOf(label1));
+        cancel = new PromptButton(label2, enable2, kindOf(label2));
         focusOk = focus1;
         // Only a mana payment offers Auto. During a payment the browser keeps the card being paid for in its waiting slot
-        paying = Localizer.getInstance().getMessage("lblAuto").equals(label1);
+        paying = ok.kind() == ButtonKind.auto;
         // At priority the engine labels the cancel button End Turn only when it ends the turn, and Undo when it undoes
-        endsTurn = Localizer.getInstance().getMessage("lblEndTurn").equals(label2);
+        endsTurn = cancel.kind() == ButtonKind.endTurn;
         changed();
+    }
+
+    private static ButtonKind kindOf(final String label) {
+        final Localizer loc = Localizer.getInstance();
+        for (final ButtonKind kind : ButtonKind.values()) {
+            if (loc.getMessage(KIND_KEYS.get(kind)).equals(label)) {
+                return kind;
+            }
+        }
+        return null;
     }
 
     /** Sets what the waiting prompt offers and what has been chosen so far. This replaces the marks of the last prompt. */

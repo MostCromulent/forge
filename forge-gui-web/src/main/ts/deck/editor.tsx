@@ -15,7 +15,7 @@ import { HeadControls, PageHeader } from '../header';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { DeckSection, EditorState } from '../protocol';
-import { t } from '../text';
+import { CARD_POOL_NAMES, t } from '../text';
 import { Backdrop } from '../dialog';
 import { ICONS, Icon } from '../icons';
 
@@ -208,7 +208,7 @@ function CheckControl({ model, state, actions }: { model: Model; state: EditorSt
 export function CheckSelect({ model, value, change }: {
   model: Model; value: string; change: (format: string, cardPool: string | null, unrestricted: boolean) => void;
 }) {
-  const pools = model.cardPools.length ? model.cardPools : [{ name: 'Sanctioned', formats: model.cardFormats }];
+  const pools = model.cardPools.length ? model.cardPools : [{ kind: 'Sanctioned' as const, formats: model.cardFormats }];
   return (
     <label class="legality set">
       {t('lblWebEditorCheckAgainst')}
@@ -219,7 +219,7 @@ export function CheckSelect({ model, value, change }: {
       }}>
         <option value="Constructed|">{t('lblWebEditorConstructedAnyCards')}</option>
         {pools.map(group => (
-          <optgroup key={group.name} label={t('lblWebEditorConstructedPool', group.name)}>
+          <optgroup key={group.kind} label={t('lblWebEditorConstructedPool', t(CARD_POOL_NAMES[group.kind]))}>
             {group.formats.map(f => <option key={f} value={`Constructed|${f}`}>{f}</option>)}
           </optgroup>
         ))}

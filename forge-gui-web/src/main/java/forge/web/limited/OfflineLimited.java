@@ -459,7 +459,11 @@ public final class OfflineLimited implements IHasForgeLog {
         }
     }
 
-    /** A gauntlet game ended. The win or loss is recorded after every game, as in desktop's limited result. */
+    /**
+     * A gauntlet game ended. The win or loss is recorded after every game, as in desktop's limited result. LimitedWinLoseController
+     * is not used because it needs a result screen's buttons and the host's Match, and this page's GameView is a netplay copy with no Match.
+     * So the winner is found by name.
+     */
     private void recordGauntletGame(final Playing playing) {
         final GameView game = playing.gui().getGameView();
         if (!gauntletRunning || game == null) {

@@ -9,7 +9,7 @@ import { t, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import { Dropdown } from '../dialog';
-import type { Address, Format, LobbyTable } from '../protocol';
+import type { Address, CardPoolGroup, Format, LobbyTable } from '../protocol';
 
 /** name is the button's accessible name, for a label with no words. */
 function Popup({ label, name, disabled, children, wide, onOpen }: {
@@ -38,16 +38,15 @@ function Field({ name, grow, children }: { name: string; grow?: boolean; childre
 function limitedFormats(): (Format & { kind: 'draft' | 'sealed' })[] {
   return [
     { id: 'Draft', kind: 'draft', name: t('lblDraft'), group: 'Limited', desc: t('lblWebMatchBarDescDraft'),
-      facts: [t('lblWebMatchBarFactPicks'), t('lblWebFactLife', 20)], play: t('lblWebMatchBarPlayDraft') },
+      facts: [t('lblWebMatchBarFactPicks'), t('lblWebFactLife', 20)], play: t('lblWebMatchBarPlayDraft'), deckCards: 40, deckAtLeast: false },
     { id: 'Sealed', kind: 'sealed', name: t('lblSealed'), group: 'Limited', desc: t('lblWebMatchBarDescSealed'),
-      facts: [t('lblWebMatchBarFactPool'), t('lblWebFactLife', 20)], play: t('lblWebMatchBarPlaySealed') },
+      facts: [t('lblWebMatchBarFactPool'), t('lblWebFactLife', 20)], play: t('lblWebMatchBarPlaySealed'), deckCards: 40, deckAtLeast: false },
   ];
 }
 
-/** A game's deck size in a few words, read from its first fact. It is "60+ cards", "100 cards", or "no deck" when the deck is dealt. */
+/** A game's deck size in a few words: "60+ cards", "100 cards", or "no deck" when the deck is dealt. */
 function deckMark(format: Format): string {
-  const size = /^(\d+\+?)/.exec(format.facts[0] ?? '')?.[1];
-  return size ? t('lblWebNCards', size) : t('lblNoDeck');
+  return format.deckCards == null ? t('lblNoDeck') : t('lblWebNCards', `${format.deckCards}${format.deckAtLeast ? '+' : ''}`);
 }
 
 const GROUP_ICONS: Record<string, ComponentChildren> = {
@@ -235,7 +234,7 @@ function MatchLength({ lobby, actions }: { lobby: LobbyTable; actions: Actions }
 function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
   const details = model.cardPoolDetails;
   const lines = new Map((details?.lines ?? []).map(l => [l.name, l.line]));
-  const group = (name: string) => model.cardPools.find(g => g.name === name)?.formats ?? [];
+  const group = (kind: CardPoolGroup['kind']) => model.cardPools.find(g => g.kind === kind)?.formats ?? [];
   return (
     <Popup label={lobby.cardPool ?? t('lblWebMatchBarAnyCards')} disabled={!lobby.host} wide
       onOpen={() => { if (!details) actions.askCardPoolDetails(); }}>

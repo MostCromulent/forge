@@ -383,7 +383,10 @@ public class WebGuiGame extends NetworkGuiGame {
         return known == null ? event : new GameEventZone(zone.zoneType(), zone.player(), zone.mode(), known, zone.sa());
     }
 
-    /** Finds each seated player's name in the engine's match summary ("Alice: 1 Bob: 0 "). A name that contains a colon or space is still read whole. */
+    /**
+     * Finds each seated player's name in the engine's match summary ("Alice: 1 Bob: 0 "). A name that contains a colon or space is still read whole.
+     * The outcome event carries only this summary, and it is not translated, so this works in every language.
+     */
     private List<MatchScore> matchScore(final String summary) {
         final GameView gv = getGameView();
         if (gv == null || summary == null) {
@@ -867,7 +870,11 @@ public class WebGuiGame extends NetworkGuiGame {
         final int min = Math.max(0, items.size() - remainingMax);
         final int max = Math.max(min, items.size() - Math.max(remainingObjectsMin, 0));
         final List<Integer> preselected = destChoices == null || destChoices.isEmpty() ? Answers.range(0, min) : Answers.range(sourceChoices.size(), items.size());
-        final OrderRequest request = new OrderRequest(title, top, min, max, options(items, null), preselected,
+        // The engine labels a library, graveyard or planar deck order at its top, and the page labels the bottom
+        final Localizer loc = Localizer.getInstance();
+        final String bottom = loc.getMessage("lblClosestToTop").equals(top) ? loc.getMessage("lblClosestToBottom")
+                : loc.getMessage("lblClosestToBottom").equals(top) ? loc.getMessage("lblClosestToTop") : null;
+        final OrderRequest request = new OrderRequest(title, top, bottom, min, max, options(items, null), preselected,
                 showRememberCheckbox, cardRef(referenceCard), new OrderAnswer(preselected, false));
         final Predicate<JsonElement> indicesOk = Answers.indexList(items.size(), min, max);
         final JsonElement reply = ask(request, v -> v.isJsonObject() && v.getAsJsonObject().has("indices") && indicesOk.test(v.getAsJsonObject().get("indices")));

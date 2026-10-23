@@ -204,7 +204,7 @@ test('a tournament is entered, drafted, built and its first match reached', asyn
   await concede(page);
   const result = page.locator('#game-over .actions');
   await result.getByRole('button', { name: 'Forfeit Tournament' }).click();
-  await expect(result.locator('.ask')).toHaveText(/forfeit the tournament/);
+  await expect(result.locator('.ask')).toHaveText(/forfeits the tournament/);
   await result.getByRole('button', { name: 'Cancel' }).click();
   await expect(result.locator('.ask')).toHaveCount(0);
   await result.getByRole('button', { name: 'Forfeit Tournament' }).click();

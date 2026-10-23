@@ -249,8 +249,8 @@ function drawPrompt(model: Model, actions: Actions): void {
   setButton(q<HTMLButtonElement>(root, '.ok'), elsewhere ? undefined : p.ok);
   setButton(q<HTMLButtonElement>(root, '.cancel'), elsewhere ? undefined : p.cancel);
   // When declaring attackers, each button says what it will do. The host's OK label is the same whether nothing attacks or everything does.
-  const strike = p.ok.enabled && p.cancel.label === t('lblAlphaStrike');
-  const attackers = p.ok.enabled && p.cancel.label === t('lblCallBack')
+  const strike = p.ok.enabled && p.cancel.kind === 'alphaStrike';
+  const attackers = p.ok.enabled && p.cancel.kind === 'callBack'
     ? countAttacking(model) : 0;
   root.classList.toggle('attack', strike || attackers > 0);
   root.classList.toggle('strike', strike);
@@ -266,7 +266,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     setButton(cancel, { label: t('lblWebPromptClearAttackers'), enabled: p.cancel.enabled });
   }
   // Declaring blockers has only the OK button. Its label says what it will do, as for attackers.
-  const blocks = declaringBlocks(model) && !p.priority && p.ok.enabled && !p.cancel.enabled && p.ok.label === t('lblOK');
+  const blocks = declaringBlocks(model) && !p.priority && p.ok.enabled && !p.cancel.enabled && p.ok.kind === 'ok';
   const mine = me(model)?.$key;
   const blockers = blocks ? new Set((game(model)?.CombatView ?? []).flatMap(b => [...b.blockers ?? [], ...b.plannedBlockers ?? []])
     .filter(r => r && (model.objects.get(r.ref) as CardView | undefined)?.Controller?.ref === mine).map(r => r?.ref)).size : 0;
@@ -333,7 +333,7 @@ function renderPromptCard(img: HTMLImageElement, model: Model, ref: Ref | null |
   img.hidden = !src;
 }
 
-function setButton(button: HTMLButtonElement, spec: PromptButton | undefined): void {
+function setButton(button: HTMLButtonElement, spec: Pick<PromptButton, 'label' | 'enabled'> | undefined): void {
   setSymbolText(q(button, '.label'), spec?.label);
   button.disabled = !spec?.enabled;
   button.hidden = !spec?.label;

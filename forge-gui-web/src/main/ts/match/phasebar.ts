@@ -87,12 +87,6 @@ const fullName = (phase: PhaseType): string => {
   return s ? t(s[2]) : '';
 };
 const phaseOf = (step: number): number => PHASES.findIndex(p => p.steps.includes(step));
-/** Forge's default stops (the PHASE_HUMAN_ and PHASE_AI_ preferences). A row can be reset to them. Keep them matched to the preferences by hand. */
-const DEFAULT_STOPS: Record<'mine' | 'theirs', PhaseType[]> = {
-  mine: ['MAIN1', 'COMBAT_DECLARE_BLOCKERS', 'MAIN2'],
-  theirs: ['COMBAT_BEGIN', 'COMBAT_DECLARE_ATTACKERS', 'COMBAT_DECLARE_BLOCKERS', 'END_OF_TURN'],
-};
-
 let wired = false;
 let stopYield: (() => void) | null = null;
 
@@ -423,7 +417,7 @@ function wireGrid(panel: HTMLElement, actions: Actions): void {
   }
   for (const b of panel.querySelectorAll<HTMLElement>('.row-tool')) {
     const mine = b.dataset.mine === 'true';
-    b.onclick = () => actions.setStops(mine, b.dataset.clear !== undefined ? [] : DEFAULT_STOPS[mine ? 'mine' : 'theirs']);
+    b.onclick = () => actions.setStops(mine, b.dataset.clear !== undefined ? [] : undefined);
   }
 }
 

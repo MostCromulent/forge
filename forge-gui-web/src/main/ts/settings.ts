@@ -155,12 +155,18 @@ export const SETTINGS: SettingDef[] = [
   },
   {
     section: t('lblWebOptionsSectionTable'), key: 'mulliganRule', label: t('cbpMulliganRule'), type: 'choice', server: true, hostOnly: true,
-    options: ['London', 'Vancouver', 'Paris', 'Original', 'Houston'].map(r => [r, r]), def: 'London',
+    get options(): [string, string][] {
+      return (server.mulliganRules ?? []).map(r => [r, r]);
+    },
+    def: 'London',
   },
   {
     section: t('lblWebOptionsSectionTable'), key: 'aiProfile', label: t('cbpAiProfiles'), hint: t('lblWebOptionsAiProfileHint'),
     type: 'choice', server: true, hostOnly: true,
-    options: ['Default', 'Cautious', 'Reckless', 'Experimental', 'Random (Every Match)', 'Random (Every Game)'].map(p => [p, p]), def: 'Default',
+    get options(): [string, string][] {
+      return (server.aiProfiles ?? []).map(p => [p, p]);
+    },
+    def: 'Default',
   },
   {
     section: t('lblWebOptionsSectionTable'), key: 'filteredHands', label: t('cbFilteredHands'), hint: t('lblWebOptionsFilteredHandsHint'),

@@ -74,7 +74,9 @@ public final class WebSettings implements IHasForgeLog {
                 SOUND_SETS.get(),
                 player.getBoolean(FPref.FILTERED_HANDS),
                 MulliganDefs.GetRuleByName(player.get(FPref.MULLIGAN_RULE)).name(),
+                Arrays.stream(MulliganDefs.MulliganRule.values()).map(Enum::name).toList(),
                 player.get(FPref.UI_CURRENT_AI_PROFILE),
+                AiProfileUtil.getProfilesDisplayList(),
                 player.getBoolean(FPref.UI_ANTE),
                 player.get(FPref.UI_UNDO_MODE),
                 SHORTCUTS.stream().map(p -> new ShortcutPref(p.name(), Localizer.getInstance().getMessage("lbl" + p.name()), player.get(p), p.getDefault())).toList());
@@ -228,11 +230,11 @@ public final class WebSettings implements IHasForgeLog {
         return out;
     }
 
-    /** Sets every stop in one row: the listed phases on and the rest off. Returns the phases that changed. */
+    /** Sets every stop in one row: the listed phases on and the rest off, or Forge's default stops when phases is null. Returns the phases that changed. */
     public static List<PhaseType> setStops(final PlayerSettings player, final boolean mine, final List<PhaseType> phases) {
         final List<PhaseType> changed = new ArrayList<>();
         for (final PhaseType phase : PhaseType.values()) {
-            final boolean stop = phases.contains(phase);
+            final boolean stop = phases == null ? phase.ordinal() > 0 && Boolean.parseBoolean(stopKey(phase, mine).getDefault()) : phases.contains(phase);
             if (phase.ordinal() > 0 && player.getBoolean(stopKey(phase, mine)) != stop) {
                 player.set(stopKey(phase, mine), stop);
                 changed.add(phase);

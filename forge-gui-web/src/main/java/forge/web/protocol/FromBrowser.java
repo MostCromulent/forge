@@ -274,9 +274,9 @@ public final class FromBrowser {
     public record AutoYieldTop(boolean yes) {
     }
 
-    /** Sets every stop of one row instead of toggling them. So a browser can restore its remembered stops without knowing the server's. */
+    /** Sets every stop of one row instead of toggling them, so a browser can restore its remembered stops. Null phases means Forge's defaults. */
     @Command("setStops")
-    public record SetStops(boolean mine, List<PhaseType> phases) {
+    public record SetStops(boolean mine, @Nullable List<PhaseType> phases) {
     }
 
     public enum PhaseAction { toggleStop, toggleMarker }

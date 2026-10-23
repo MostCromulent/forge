@@ -193,11 +193,21 @@ public final class ToBrowser {
     public record CardPoolLine(String name, String line) {
     }
 
-    public record CardPoolGroup(String name, List<String> formats) {
+    /** The headings of Forge's format files. */
+    public enum CardPoolKind { Sanctioned, Casual, Archived, Block }
+
+    public record CardPoolGroup(CardPoolKind kind, List<String> formats) {
     }
 
-    /** A format as the lobby offers it: its group, a description, short facts about its deck and life, and what changes in a match. */
-    public record Format(String id, String name, String group, String desc, List<String> facts, String play) {
+    /** Constructed formats, the Commander family, the rest, and the casual variants. Limited is the page's own group for Draft and Sealed. */
+    public enum FormatGroup { Constructed, Commander, Other, Variant, Limited }
+
+    /**
+     * A format as the lobby offers it: its group, a description, short facts about its deck and life, and what changes in a match.
+     * deckCards is the deck size a player builds to, or null when every deck is dealt. deckAtLeast means the deck may be larger.
+     */
+    public record Format(String id, String name, FormatGroup group, String desc, List<String> facts, String play, @Nullable Integer deckCards,
+            boolean deckAtLeast) {
     }
 
     /** sittingOut means the seat sits out the next match. aiProfile is how an AI seat plays. */
@@ -453,14 +463,17 @@ public final class ToBrowser {
     /** Why this player chooses who goes first: the player won the coin toss, or lost the last game. */
     public enum StarterChoice { toss, lastGame }
 
-    @Message("prompt")
     /** endsTurn is true when the cancel button ends the turn, as the end turn shortcut does, and not when it undoes or declines. */
+    @Message("prompt")
     public record Prompt(String message, boolean priority, @Nullable Ref card, PromptButton ok, PromptButton cancel,
             boolean focusOk, boolean paying, boolean endsTurn, List<Ref> selectable, int selectableMin, List<Ref> selectablePlayers,
             List<Integer> selectableStack, List<Integer> highlighted, @Nullable StarterChoice starterChoice) {
     }
 
-    public record PromptButton(String label, boolean enabled) {
+    /** The engine's buttons the page treats specially. Each is known by its label, which is the only thing the engine sends. */
+    public enum ButtonKind { ok, auto, endTurn, alphaStrike, callBack }
+
+    public record PromptButton(String label, boolean enabled, @Nullable ButtonKind kind) {
     }
 
     @Message("playable")
@@ -499,8 +512,8 @@ public final class ToBrowser {
             String suggestStackYield, String suggestNoActions, boolean suppressAfterYield, boolean suppressOwnTurn,
             String autoYieldMode, GameLogVerbosity logDetail, boolean devMode,
             String highlightColor, int soundVolume, int musicVolume, String soundSet, List<String> soundSets,
-            boolean filteredHands, String mulliganRule,
-            String aiProfile, boolean ante, String undoMode, List<ShortcutPref> shortcuts) {
+            boolean filteredHands, String mulliganRule, List<String> mulliganRules,
+            String aiProfile, List<String> aiProfiles, boolean ante, String undoMode, List<ShortcutPref> shortcuts) {
     }
 
     /** One of Forge's keyboard shortcut preferences: its name, its label, and its keys and default keys as Java key codes separated by spaces. */
@@ -586,7 +599,8 @@ public final class ToBrowser {
     }
 
     @Request("order")
-    public record OrderRequest(@Nullable String title, @Nullable String top, int min, int max, List<RequestOption> options,
+    /** bottom is the label of the other end, for an order with a top and a bottom such as a library. */
+    public record OrderRequest(@Nullable String title, @Nullable String top, @Nullable String bottom, int min, int max, List<RequestOption> options,
             List<Integer> selected, boolean remember, @Nullable Ref card, @Name("default") OrderAnswer defaultAnswer) {
     }
 

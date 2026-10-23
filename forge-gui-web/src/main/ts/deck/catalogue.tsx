@@ -13,7 +13,7 @@ import type { CataloguePage, CatalogueQuery, CatalogueRow, DeckSection, EditorSt
 import { store, stored } from '../storage';
 import { addCard, choosesPrintings, preferredPrinting } from './preferred';
 import { CARD_TYPES } from './decklist';
-import { t, type TextKey } from '../text';
+import { CARD_POOL_NAMES, t, type TextKey } from '../text';
 
 export const TYPES: [string, TextKey][] = [['any', 'lblWebCatalogueAnyType'], ...CARD_TYPES.map(([type, , heading]): [string, TextKey] => [type.toLowerCase(), heading])];
 const SORTS: [string, TextKey][] = [['name', 'lblWebEditorSortName'], ['mv', 'lblWebCatalogueSortManaValue'], ['colour', 'lblWebEditorSortColour'],
@@ -266,7 +266,7 @@ function catalogueKinds(state: EditorState, model: Model, actions: Actions): Fil
       panel: (f, set, done) => (
         <div class="fopts" role="radiogroup">
           {model.cardPools.flatMap(group => [
-            <span key={group.name} class="mhead">{group.name}</span>,
+            <span key={group.kind} class="mhead">{t(CARD_POOL_NAMES[group.kind])}</span>,
             ...group.formats.map(name => (
               <button key={name} role="radio" aria-checked={f.format === name} class={f.format === name ? 'fopt on' : 'fopt'}
                 onClick={() => { set({ ...f, format: name }); done(); }}><i class="dot" />{name}</button>

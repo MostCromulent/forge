@@ -666,12 +666,14 @@ function takeHit(amount: number): void {
 const STAR_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1l1.9 4.2 4.6.5-3.4 3.1 1 4.5L8 11l-4.1 2.3 1-4.5L1.5 5.7l4.6-.5z"/></svg>';
 const HOURGLASS_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3 1h10v2l-3.6 5L13 13v2H3v-2l3.6-5L3 3zm2 2l3 4 3-4z"/></svg>';
 
+const DESIGNATIONS: Record<string, TextKey> = { 'The Monarch': 'lblTheMonarch', 'The Initiative': 'lblTheInitiative', 'The Ring': 'lblTheRing' };
+
 /** The label on a command zone effect's plaque. An emblem or a lasting designation is named, and anything else is an effect. */
 function effectKind(card: CardView, state: Partial<CardStateView>): { label: string; lasting: boolean } {
   if (card.IsEmblem) return { label: t('lblEmblem'), lasting: true };
   // The designation's name is the card name the server sends
-  const named = /^The (Monarch|Initiative|Ring)$/.exec(state.Name ?? '');
-  return named ? { label: named[1], lasting: true } : { label: t('lblEffect'), lasting: false };
+  const named = DESIGNATIONS[state.Name ?? ''];
+  return named ? { label: t(named), lasting: true } : { label: t('lblEffect'), lasting: false };
 }
 
 /** When a portrait has more kinds of effect than this, they are merged into a single plaque. */
