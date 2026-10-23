@@ -1,4 +1,4 @@
-// The editor's left half. Cards the deck can't use are hidden until a filter shows them.
+// The editor's left half. Cards the deck can't use are hidden until a filter shows them
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl, hideBroken, smallImage } from '../images';
@@ -85,7 +85,7 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
   const [colours, setColours] = useState<Set<string>>(() => new Set());
   const [type, setType] = useState('any');
   const [sort, setSort] = useState('name');
-  // A collection deck may use any owned card. The list opens filtered to the deck's colour identity. A main-only deck with no identity opens on colourless cards.
+  // A collection deck may use any owned card. The list opens filtered to the deck's colour identity. A main-only deck with no identity opens on colourless cards
   const owned = !!state.collection;
   const leader = state.mainOnly ? state.identity || 'C' : state.identity || undefined;
   const opening: CatalogueFilter = owned && leader ? { ...NO_FILTER, identity: leader } : NO_FILTER;
@@ -94,16 +94,16 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
   const query = { text, colours: [...colours].join(''), type, filters: asSyntax(filter), sort, showAll: filter.showAll,
     identity: owned ? filter.identity ?? undefined : undefined, sets: filter.sets, format: filter.format ?? undefined,
     section: adding ?? undefined };
-  // A section other than the main deck lists only its own kind of card, with no copy limit. No commander is chosen from it.
+  // A section other than the main deck lists only its own kind of card, with no copy limit. No commander is chosen from it
   const extra = adding ? state.sections.find(s => s.section === adding) : undefined;
   const wanted = state.commanderWanted && !extra;
 
-  // A page with a source is left over from a collection's own list. It is not this deck's catalogue.
+  // A page with a source is left over from a collection's own list. It is not this deck's catalogue
   const page = model.catalogue && !model.catalogue.source ? model.catalogue : null;
-  // The deck's rules decide which cards are shown. A change of commander or check asks for the first page again.
+  // The deck's rules decide which cards are shown. A change of commander or check asks for the first page again
   const more = useCataloguePages(actions, query, page, [text, query.colours, type, query.filters, sort, filter.showAll, query.identity,
     filter.sets.join(), filter.format, state.check, state.identity, state.commanderWanted, adding]);
-  // Each card is shown in the printing this browser prefers. This applies to the tile, the table, the preview and the drag.
+  // Each card is shown in the printing this browser prefers. This applies to the tile, the table, the preview and the drag
   const rows = (page?.rows ?? []).map(row => {
     const key = choosesPrintings(state) ? preferredPrinting(row.name) : undefined;
     return key ? { ...row, image: key } : row;
@@ -180,7 +180,6 @@ export function Catalogue({ model, actions, state, handlers, adding, stopAdding 
     </section>
   );
 }
-
 
 /** The catalogue filters beyond the bar. Most are sent as Forge's search syntax, which the server reads. */
 interface CatalogueFilter {
@@ -274,7 +273,7 @@ function catalogueKinds(state: EditorState, model: Model, actions: Actions): Fil
       ),
     },
     {
-      // The commander's colours are a deck rule, so the chip is fixed. A collection's deck has no such rule, so its chip can change.
+      // The commander's colours are a deck rule, so the chip is fixed. A collection's deck has no such rule, so its chip can change
       id: 'identity', group: deck, label: t('lblColorIdentity'),
       chip: f => (state.collection ? f.identity?.split('').join(' ') ?? null : state.identity.split('').join(' ')),
       from: () => t('lblCommander'),
@@ -301,7 +300,7 @@ function catalogueKinds(state: EditorState, model: Model, actions: Actions): Fil
         value={f.showAll ? 'show' : 'hide'} pick={v => { set({ ...f, showAll: v === 'show' }); done(); }} />,
     },
   ];
-  // A limited deck's catalogue is its pool, so nothing in it is unusable. Only a chosen commander sets an identity.
+  // A limited deck's catalogue is its pool, so nothing in it is unusable. Only a chosen commander sets an identity
   return kinds.filter(k => (k.id !== 'unusable' || !(state.limited || state.collection)) && (k.id !== 'source' || !!state.collection)
     && (k.id !== 'identity' || !!state.collection || (!!state.identity && !state.commanderWanted)));
 }
@@ -434,7 +433,7 @@ function Empty({ text, identity, hidden, showThem }: { text: string; identity: s
   );
 }
 
-// A deck without its commander lists only cards that can be its commander. The count line says so.
+// A deck without its commander lists only cards that can be its commander. The count line says so
 function shownLine(total: number | undefined, text: string, commandersOnly: boolean): string {
   if (total === undefined) return t('lblWebCatalogueReading');
   const one = total === 1;

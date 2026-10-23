@@ -1,4 +1,4 @@
-// Game rules used by the board, the hand and the preview. Nothing is drawn here.
+// Game rules used by the board, the hand and the preview. Nothing is drawn here
 
 /** The commander damage that loses the game, and the amount at which the portrait starts to warn of it. */
 export const COMMANDER_LETHAL = 21;

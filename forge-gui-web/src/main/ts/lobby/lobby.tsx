@@ -1,6 +1,5 @@
-// Match setup: the seats, their decks and the table's rules, for a game against the computer or at an online table
-
-// The browser joins the game through a client even when it hosts. So your own seat arrives as REMOTE, and the page finds it by its "mine" flag
+// Match setup: the seats, their decks and the table's rules, for a game against the computer or at an online table. The browser joins
+// through a client even when it hosts, so your own seat arrives as REMOTE and the page finds it by its "mine" flag
 
 import { useEffect, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from '../ui';
@@ -357,7 +356,7 @@ function ExtraRow({ name, counted = true, extra, mayEdit, open }: {
   );
 }
 
-// Your own name, and the computer's at a table you host, is edited in place. It is saved when the field loses focus. A right click gives the computer a new one.
+// Your own name, and the computer's at a table you host, is edited in place. It is saved when the field loses focus. A right click gives the computer a new one
 function SeatName({ seat, rename }: { seat: Seat; rename: (name: string) => void }) {
   // Typing changes the DOM directly, outside Preact. So each edit ends by redrawing the field with the server's name
   const [edits, setEdits] = useState(0);

@@ -62,7 +62,7 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
   const pathKey = state.path.map(key).join('>');
   useLayoutEffect(() => {
     if (state.path.length < 2) {
-      // A map with no path ends a walk in progress. Any battle queued after the walk is dropped.
+      // A map with no path ends a walk in progress. Any battle queued after the walk is dropped
       battleWanted.current = false;
       setWalk(null);
       return;

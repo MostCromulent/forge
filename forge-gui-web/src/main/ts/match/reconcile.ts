@@ -1,4 +1,4 @@
-// Matches a container's children to a list by key. Existing elements are updated and moved, new ones are created and missing ones are removed.
+// Matches a container's children to a list by key. Existing elements are updated and moved, new ones are created and missing ones are removed
 
 /** Uses moveBefore where the browser supports it. insertBefore removes the element and adds it back, which ends its transitions. */
 function place(parent: HTMLElement, el: HTMLElement, next: ChildNode | null): void {

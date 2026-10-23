@@ -304,10 +304,10 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 /* Damage is made obvious. The life number grows for a moment, its badge flashes, and the amount floats up from the avatar. */
 .avatar .life.hurt { animation: life-hurt .5s ease-out; }
 .avatar .life.healed { animation: life-healed .5s ease-out; }
-@keyframes life-hurt { 30% { transform: scale(1.5); color: #ffb4a2; border-color: #ff7a59; box-shadow: 0 0 14px #ff7a59; } }
+@keyframes life-hurt { 30% { transform: scale(1.5); color: #ffb4a2; border-color: var(--damage); box-shadow: 0 0 14px var(--damage); } }
 @keyframes life-healed { 30% { transform: scale(1.35); color: #bfe9ff; border-color: #5cc8ff; box-shadow: 0 0 14px #5cc8ff; } }
 .avatar .life-change { position: absolute; left: 50%; bottom: -4px; z-index: 5; transform: translateX(-50%); font-size: 22px; font-weight: 800; pointer-events: none; text-shadow: 0 2px 6px #000, 0 0 14px #000; animation: life-float 1.1s ease-out forwards; }
-.avatar .life-change.hurt { color: #ff7a59; }
+.avatar .life-change.hurt { color: var(--damage); }
 .avatar .life-change.healed { color: #5cc8ff; }
 @keyframes life-float { from { opacity: 0; transform: translate(-50%, 6px) scale(.7); } 25% { opacity: 1; transform: translate(-50%, -6px) scale(1.1); } to { opacity: 0; transform: translate(-50%, -46px) scale(1); } }
 .zone-tiles { display: grid; grid-auto-flow: column; grid-auto-columns: var(--tile-w); gap: 6px; }
@@ -767,18 +767,18 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #zoom.text-card .text .ab.long .ac { white-space: normal; justify-self: start; }
 /* Loyalty up is blue and loyalty down is orange-red, the same pair the P/T uses */
 #zoom.text-card .text .ac.plus { color: #7cc8ff; border-color: #7cc8ff73; }
-#zoom.text-card .text .ac.minus { color: #ff7a59; border-color: #ff7a5973; }
+#zoom.text-card .text .ac.minus { color: var(--damage); border-color: #ff7a5973; }
 #zoom.text-card .text .notes { margin-top: auto; display: grid; gap: 2px; font-size: 11.5px; color: #c5cdd8; background: #0d1016; }
 #zoom.text-card .detail .foot { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 30px; padding-right: 64px; }
 #zoom .detail .foot .chip { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #0d1016cc; border: 1px solid var(--line-bright); white-space: nowrap; }
 #zoom .detail .foot .counter { color: #7cc8ff; border-color: #7cc8ff66; }
-#zoom .detail .foot .damage { color: #ff7a59; border-color: #ff7a5966; }
+#zoom .detail .foot .damage { color: var(--damage); border-color: #ff7a5966; }
 #zoom.text-card .detail .pt { position: absolute; right: 5px; bottom: 4px; font-size: 17px; font-weight: 800; line-height: 1; padding: 5px 10px; border-radius: 7px;
   font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--frame) 30%, #0d1016);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 65%, transparent), 0 2px 6px #000a; }
 #zoom.text-card .detail .pt i { font-style: normal; }
 #zoom.text-card .detail .pt [data-shift="up"] { color: #7cc8ff; }
-#zoom.text-card .detail .pt [data-shift="down"] { color: #ff7a59; }
+#zoom.text-card .detail .pt [data-shift="down"] { color: var(--damage); }
 /* A planeswalker's loyalty is drawn in a shield, as it is printed */
 #zoom.text-card .detail .pt.shield { width: 40px; padding: 7px 0 10px; border-radius: 0; text-align: center; background: #1c1f26; color: #fff;
   clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%); box-shadow: inset 0 0 0 2px #cfd3da; }
@@ -856,7 +856,7 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
   mask: radial-gradient(circle, #000 0, transparent 68%); animation: win-rays-in 1.2s .25s ease-out both, win-rays-turn 60s .25s linear infinite; }
 @keyframes win-rays-in { from { opacity: 0; } 60% { opacity: 1; } to { opacity: .55; } }
 @keyframes win-rays-turn { to { rotate: 360deg; } }
-#game-over .win-mote { position: absolute; left: calc(50% + var(--at)); top: calc(50% + 60px); z-index: -1; width: 3px; height: 3px; border-radius: 50%; background: #ffe9b0; box-shadow: 0 0 6px #f2c344;
+#game-over .win-mote { position: absolute; left: calc(50% + var(--at)); top: calc(50% + 60px); z-index: -1; width: 3px; height: 3px; border-radius: 50%; background: #ffe9b0; box-shadow: 0 0 6px var(--accent-2);
   pointer-events: none; animation: win-mote 2.8s var(--wait) ease-out both; }
 @keyframes win-mote { from { opacity: 0; translate: 0 0; } 20% { opacity: 1; } to { opacity: 0; translate: var(--drift) -190px; } }
 html[data-motion="reduced"] #game-over .win-rays { animation: none; opacity: .55; }
@@ -921,7 +921,7 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 .card .pt { display: none; position: absolute; right: 4px; bottom: 4px; background: #000c; border-radius: 4px; padding: 0 4px; font-size: 12px; font-weight: 700; }
 .card .pt.on { display: block; }
 .card .pt i { font-style: normal; }
-.card .pt .hurt, .card .pt [data-shift="down"] { color: #ff7a59; }
+.card .pt .hurt, .card .pt [data-shift="down"] { color: var(--damage); }
 /* Blue means above the printed value and orange-red means below. The two colours differ in lightness and on the blue-orange axis. */
 .card .pt [data-shift="up"] { color: #7cc8ff; }
 /* Counters go where desktop draws its counter tabs: on the left edge, under the title bar */
@@ -1025,7 +1025,7 @@ body.dragging-block #zoom { display: none; }
 /* The card also flashes white for a few frames. The flash is easier to notice than the shake. */
 .card .hit-white { position: absolute; inset: 0; z-index: 3; border-radius: var(--radius); background: #fff; pointer-events: none; animation: hit-white .18s ease-out forwards; }
 @keyframes hit-white { from { opacity: .85; } to { opacity: 0; } }
-.card .hit-number { position: absolute; left: 50%; top: 28%; z-index: 4; transform: translateX(-50%); color: #ff7a59; font-size: 26px; font-weight: 800; pointer-events: none; text-shadow: 0 2px 6px #000, 0 0 12px #000; animation: hit-number 1s ease-out forwards; }
+.card .hit-number { position: absolute; left: 50%; top: 28%; z-index: 4; transform: translateX(-50%); color: var(--damage); font-size: 26px; font-weight: 800; pointer-events: none; text-shadow: 0 2px 6px #000, 0 0 12px #000; animation: hit-number 1s ease-out forwards; }
 @keyframes hit-number { from { opacity: 0; transform: translate(-50%, 10px) scale(.6); } 25% { opacity: 1; transform: translate(-50%, 0) scale(1.15); } to { opacity: 0; transform: translate(-50%, -30px) scale(1); } }
 /* A change to power, toughness or loyalty makes its badge grow for a moment */
 .card .pt.changed { animation: pt-changed .45s ease-out; }

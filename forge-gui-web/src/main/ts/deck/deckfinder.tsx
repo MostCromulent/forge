@@ -1,4 +1,4 @@
-// Choosing a deck. One query searches every source at once, and a panel beside the results shows the chosen deck's cards.
+// Choosing a deck. One query searches every source at once, and a panel beside the results shows the chosen deck's cards
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { store, stored, storeJson, storedJson } from '../storage';
@@ -120,7 +120,7 @@ function sourceCounts(decks: readonly DeckSummary[]): Map<string, number> {
 export function DeckFinder({ model, actions, seat, close }: {
   model: Model; actions: Actions; seat?: { index: number; seat: Seat }; close: () => void;
 }) {
-  // A guest's stars are stored in the guest's browser. The host's stars are stored with Forge's decks.
+  // A guest's stars are stored in the guest's browser. The host's stars are stored with Forge's decks
   const [guestStars, setGuestStars] = useState<string[]>(() => {
     const stars = storedJson<unknown>(GUEST_STARS, []);
     return Array.isArray(stars) ? stars : [];
@@ -136,7 +136,7 @@ export function DeckFinder({ model, actions, seat, close }: {
     setGuestStars(next);
   };
   const [chosen, setChosen] = useState<string | null>(seat?.seat.deck ?? null);
-  // A deck file being saved. It is kept until the list shows it, in case its name is taken.
+  // A deck file being saved. It is kept until the list shows it, in case its name is taken
   const [file, setFile] = useState<string | null>(null);
   const before = useRef<ReadonlySet<string>>(new Set());
   const picker = useRef<HTMLInputElement>(null);
@@ -145,9 +145,9 @@ export function DeckFinder({ model, actions, seat, close }: {
   const [deleting, setDeleting] = useState(false);
   const [typed, setTyped] = useState('');
   const format = model.lobby?.format ?? ui.browse?.format ?? 'Constructed';
-  // A Commander table's bracket limit is the starting bracket filter. The player can remove it, as the table's warning can be ignored.
+  // A Commander table's bracket limit is the starting bracket filter. The player can remove it, as the table's warning can be ignored
   const tableBracket = model.lobby?.format === 'Commander' && model.lobby.maxBracket < 5 ? model.lobby.maxBracket : null;
-  // For a computer seat the finder opens on decks the computer plays in full. The player can widen this like any other filter.
+  // For a computer seat the finder opens on decks the computer plays in full. The player can widen this like any other filter
   const forComputer = seat?.seat.type === 'AI';
   const [filter, setFilter] = useState<DeckFilter>(() => ({ ...FINDER_DEFAULTS, colours: new Set(), bracket: tableBracket, aiPlays: forComputer }));
   const change = (part: Partial<DeckFilter>) => setFilter(f => ({ ...f, ...part }));
@@ -159,7 +159,7 @@ export function DeckFinder({ model, actions, seat, close }: {
   useEffect(() => {
     find.current?.focus();
   }, []);
-  // Only the server reads every deck's cards. It is asked again when the deck list is rebuilt, because that renews the keys.
+  // Only the server reads every deck's cards. It is asked again when the deck list is rebuilt, because that renews the keys
   useEffect(() => { if (filter.card) actions.deckQuery('card', filter.card); }, [filter.card, model.decks]);
   useEffect(() => { if (filter.sideboard) actions.deckQuery('sideboard', filter.sideboard); }, [filter.sideboard, model.decks]);
   useEffect(() => { if (filter.set) actions.deckQuery('set', filter.set); }, [filter.set, model.decks]);
@@ -175,26 +175,26 @@ export function DeckFinder({ model, actions, seat, close }: {
     }
   };
   const summary = decks.find(d => d.key === chosen);
-  // Only the player's own saved decks can be deleted. A precon, a generated deck or a net deck can only be copied.
+  // Only the player's own saved decks can be deleted. A precon, a generated deck or a net deck can only be copied
   const deletable = !!summary && !summary.readOnly && !summary.generated;
   const edit = () => {
     if (!chosen) return;
     actions.openEditor({ key: chosen, seat: seat?.index, copy: !!summary?.readOnly });
     close();
   };
-  // From a seat the importer replaces the finder. From the start page the finder stays open under it to show the saved deck.
+  // From a seat the importer replaces the finder. From the start page the finder stays open under it to show the saved deck
   const importer = (more: { text?: string; url?: string; sync?: boolean } = {}) => {
     if (seat) close();
     changeUi(u => { u.importer = { from: seat ? 'seat' : 'start', seat: seat?.index, ...more }; });
   };
-  // A deck file is already a deck, so it is saved unchanged. Any other text is a list for the importer to read.
+  // A deck file is already a deck, so it is saved unchanged. Any other text is a list for the importer to read
   const take = (dropped: File) => void dropped.text().then(text => {
     if (!/^\s*\[metadata\]/im.test(text)) return importer({ text });
     before.current = new Set(decks.map(d => d.key));
     setFile(text);
     actions.addDeckFile(text, format);
   });
-  // The saved deck is the one new to the list. If it replaced a deck, it is the deck with its name.
+  // The saved deck is the one new to the list. If it replaced a deck, it is the deck with its name
   useEffect(() => {
     if (!file || model.nameTaken) return;
     const name = /^Name=(.*)$/im.exec(file)?.[1].trim();
@@ -227,7 +227,7 @@ export function DeckFinder({ model, actions, seat, close }: {
     setTyped('');
     setFilter(f => ({ ...FINDER_DEFAULTS, colours: new Set(), sort: f.sort }));
   };
-  // Picks a random deck from those the filters let through. Each press picks a different deck while there is another.
+  // Picks a random deck from those the filters let through. Each press picks a different deck while there is another
   const random = () => {
     const pool = list.length > 1 ? list.filter(d => d.key !== chosen) : list;
     if (!pool.length) return;
@@ -414,7 +414,7 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
     {
       id: 'legal', group: legality, label: t('lblWebFinderLegalIn'),
       chip: f => model.deckCardPool ?? (f.cardFormat === 'any' ? null : f.cardFormat),
-      // The lobby's card pool is a rule of the match. It is shown here but can only be changed in the lobby.
+      // The lobby's card pool is a rule of the match. It is shown here but can only be changed in the lobby
       from: () => (model.deckCardPool ? fromTable : null),
       fixed: () => !!model.deckCardPool,
       clear: f => ({ ...f, cardFormat: 'any' }),
@@ -500,7 +500,7 @@ const SOURCE_NAMES: Record<string, TextKey> = {
 };
 const sourceName = (id: string) => (SOURCE_NAMES[id] ? t(SOURCE_NAMES[id]) : id.charAt(0).toUpperCase() + id.slice(1));
 
-// The source tag is shown only while every source is listed. With one source picked, the rail already shows it.
+// The source tag is shown only while every source is listed. With one source picked, the rail already shows it
 function Hit({ deck: d, chosen, choose, use, source, forComputer, star }: {
   deck: DeckSummary; chosen: boolean; choose: () => void; use: () => void; source: boolean; forComputer: boolean;
   star: (on: boolean) => void;

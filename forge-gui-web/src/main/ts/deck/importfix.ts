@@ -1,4 +1,4 @@
-// The importer's fixes edit the pasted text directly. Most keep every line in place so the line numbers of other problems stay correct.
+// The importer's fixes edit the pasted text directly. Most keep every line in place so the line numbers of other problems stay correct
 
 // A card line has an optional count, the name, then any suffix a site adds, such as a set code, a number or a foil mark
 const CARD_LINE = /^(\s*(?:\d+x?\s+)?)(.+?)(\s*(?:[[(].*|\*F\*.*)?)$/;

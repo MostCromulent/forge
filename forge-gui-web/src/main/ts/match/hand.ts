@@ -16,7 +16,6 @@ import { zoneTitle } from './zones';
 import { frameColour, manaValue } from './rules';
 import { starterShowing } from './starter';
 
-
 // Sorts by colour as Arena does. Each single colour comes in WUBRG order, then multicoloured, colourless, and lands last
 function colourRank(colours: number, type: string): number {
   return /\bLand\b/.test(type) ? 7 : 'WUBRGMC'.indexOf(frameColour(colours, type));

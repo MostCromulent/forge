@@ -1,6 +1,4 @@
-// The deck importer. A pasted or loaded list is checked line by line before it becomes a deck.
-
-// The server marks every line of the list. Each fix edits the text. Nothing is saved until the player presses Import.
+// The deck importer. The server marks every line of a pasted or loaded list, each fix edits the text, and nothing is saved until the player presses Import
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CheckSelect } from './editor';
@@ -72,7 +70,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
       }
     }
   }, [result]);
-  // After Import the dialog waits for the server. A taken name asks what to do. Any other reply means the import is done.
+  // After Import the dialog waits for the server. A taken name asks what to do. Any other reply means the import is done
   useEffect(() => {
     if (sent && !model.nameTaken && (model.decks !== sent.decks || model.editor !== sent.editor)) {
       store(DRAFT_KEY, null);

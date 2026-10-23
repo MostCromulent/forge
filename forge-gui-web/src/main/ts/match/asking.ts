@@ -1,4 +1,4 @@
-// Shortens a question to one line. The engine's prompt text also holds the source card's rules text, its id and the engine's own notes.
+// Shortens a question to one line. The engine's prompt text also holds the source card's rules text, its id and the engine's own notes
 
 import { deref, stateOf, type Model } from '../model';
 import type { CardView, Ref } from '../protocol';

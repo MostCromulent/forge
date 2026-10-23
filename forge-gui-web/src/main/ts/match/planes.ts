@@ -1,4 +1,4 @@
-// The face-up planes affect the whole table. So they are shown in a dock on the divider between the halves, with the planar die beside them.
+// The face-up planes affect the whole table. So they are shown in a dock on the divider between the halves, with the planar die beside them
 
 import { reconcile } from './reconcile';
 import { cardImageSrc, setImage } from '../images';

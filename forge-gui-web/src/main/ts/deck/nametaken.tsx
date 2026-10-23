@@ -1,3 +1,5 @@
+// Asks what to do when a deck's name is already taken: replace the deck, or keep both
+
 import { t } from '../text';
 import { Backdrop } from '../dialog';
 

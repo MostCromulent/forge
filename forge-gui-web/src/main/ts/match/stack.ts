@@ -1,4 +1,4 @@
-// The stack holds the spells and abilities waiting to resolve. It is drawn as a pile beside the board, or as a chip under the phase strip on a phone.
+// The stack holds the spells and abilities waiting to resolve. It is drawn as a pile beside the board, or as a chip under the phase strip on a phone
 
 import { reconcile } from './reconcile';
 import { lastPicture } from './cards';
@@ -16,7 +16,7 @@ import { t } from '../text';
 import type { CardView, GameEvent, StackItemView } from '../protocol';
 import { oncePer } from '../sheet';
 
-// The item that resolves next is at the top of the pile. The other items are offset downward behind it.
+// The item that resolves next is at the top of the pile. The other items are offset downward behind it
 const STEP_MAX = 42;
 const STEP_MIN = 14;
 const PUSH_Y = 26;
@@ -66,7 +66,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     onRelayout(() => place(root));
   }
   const items: StackItemView[] = derefAll(model, game(model)?.Stack);
-  // A spell's card flies onto the stack. An ability or a trigger has no card move, so it grows into place instead.
+  // A spell's card flies onto the stack. An ability or a trigger has no card move, so it grows into place instead
   const flown = new Set([...awaiting.keys(), ...[...journeys(events)].filter(([, m]) => m.to?.zone === 'Stack').map(([k]) => k)]);
   noteAwaiting(model, items, events);
   if (ui.hoveredStackItem !== null && !items.some(i => i.$key === ui.hoveredStackItem)) {
@@ -77,7 +77,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   root.classList.toggle('chip', portrait);
   const count = items.length + awaiting.size;
   if (portrait) {
-    // The list opens when a new item arrives and you have priority. It stays folded if you folded it during this same prompt.
+    // The list opens when a new item arrives and you have priority. It stays folded if you folded it during this same prompt
     if (count > countSeen && model.prompt?.priority && foldedFor !== model.prompt) ui.stackCollapsed = false;
     // The list folds for a prompt answered on the board or from the hand, because the list would cover those cards
     const asked = model.prompt;
@@ -86,14 +86,14 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     }
     const top = items[0];
     const source = top ? deref(model, top.SourceCard) as CardView | undefined : undefined;
-    // A spell still being paid for has no item yet. Its name comes from the card it was cast from.
+    // A spell still being paid for has no item yet. Its name comes from the card it was cast from
     const paying = top ? '' : [...awaiting.values()][0]?.name ?? '';
     q(root, '.head b').textContent = top
       ? `${t('lblStack')} \u00b7 ${source ? stateOf(model, source).Name ?? '' : ''} (${deref(model, top.ActivatingPlayer)?.Name ?? ''})`
       : paying ? `${t('lblStack')} \u00b7 ${paying} (${me(model)?.Name ?? ''})` : t('lblStack');
-    // The dock is drawn after this and can change height. That moves the phase strip the chip is placed on.
+    // The dock is drawn after this and can change height. That moves the phase strip the chip is placed on
     requestAnimationFrame(() => place(root));
-    // The list opens over the half with fewer of the top item's targets, so they stay in view. On a tie it opens over the opponent's half.
+    // The list opens over the half with fewer of the top item's targets, so they stay in view. On a tie it opens over the opponent's half
     const targets = top ? stackTargets(model, top) : [];
     const mine = targets.filter(o => o.$key === me(model)?.$key || document.querySelector(`#me .card[data-key="${o.$key}"]`)).length;
     root.classList.toggle('over-them', mine >= targets.length - mine);
@@ -115,7 +115,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   collapse.textContent = t(collapsed ? 'lblShow' : 'lblWebStackHide');
   collapse.title = t(collapsed ? 'lblWebStackShowTitle' : 'lblWebStackHideTitle');
   const pile = q(root, '.pile');
-  // A spell awaiting payment is placed at the top, where its item will appear. So paying for it moves nothing.
+  // A spell awaiting payment is placed at the top, where its item will appear. So paying for it moves nothing
   const entries: (StackItemView | string)[] = [...awaiting.keys(), ...items];
   showLeaving(pile, new Set(entries.map(e => typeof e === 'string' ? `awaiting-${e}` : String(e.$key))), events);
   const arriving: { el: HTMLElement; source: string }[] = [];
@@ -188,7 +188,7 @@ function renderStorm(stack: HTMLElement, count: number, stacked: boolean): void 
   const pile = q(stack, '.pile');
   const going = parseFloat(pile.style.height);
   const easing = pile.offsetParent && Number.isFinite(going) ? going - pile.offsetHeight : 0;
-  // Checks whether the stack has items, not whether the panel shows. The panel is still fading out after it empties.
+  // Checks whether the stack has items, not whether the panel shows. The panel is still fading out after it empties
   const prompt = document.getElementById('prompt');
   if (!stacked && prompt) {
     const at = prompt.getBoundingClientRect();
@@ -203,10 +203,10 @@ function renderStorm(stack: HTMLElement, count: number, stacked: boolean): void 
 // The panel starts at the top of the board and ends above the hand
 function place(root: HTMLElement): void {
   if (isPortrait()) {
-    // The chip covers the phase strip while the stack has items. Its list opens down over your cards or up over the opponent's.
+    // The chip covers the phase strip while the stack has items. Its list opens down over your cards or up over the opponent's
     const strip = byId('phase-strip').getBoundingClientRect();
     const above = root.classList.contains('over-them') && !ui.stackCollapsed;
-    // The chip's head is taller than the strip so a finger can tap it. So the head is centred on the strip.
+    // The chip's head is taller than the strip so a finger can tap it. So the head is centred on the strip
     const over = Math.max(0, (q(root, '.head').offsetHeight - strip.height) / 2);
     root.style.top = above ? 'auto' : `${Math.round(strip.top - over)}px`;
     root.style.bottom = above ? `${Math.round(innerHeight - strip.bottom - over)}px` : 'auto';
@@ -235,10 +235,10 @@ function noteAwaiting(model: Model, items: StackItemView[], events: readonly Gam
     }
   }
   for (const [key, spell] of awaiting) {
-    // A cancelled cast is undone without an event. The card is then back in a zone the browser can see.
+    // A cancelled cast is undone without an event. The card is then back in a zone the browser can see
     const back = model.objects.get(Number(key)) as CardView | undefined;
     const given = model.prompt?.priority && Date.now() - spell.since > SETTLE_MS;
-    // A card revealed earlier in the game can still name Hand while it is cast. So the zone it names must also contain it.
+    // A card revealed earlier in the game can still name Hand while it is cast. So the zone it names must also contain it
     const returned = !!back?.Zone && back.Zone !== 'Stack' && players(model).some(p => zone(model, p, back.Zone!).some(c => c.$key === back.$key));
     if (onStack.has(key) || returned || given) {
       awaiting.delete(key);
@@ -285,7 +285,7 @@ function createItem(model: Model): HTMLElement {
     hoverCard(img);
   });
   el.addEventListener('pointerdown', e => longPress(e, () => inspectCard(img)));
-  // The desktop stack menu. It offers auto-yield, always accept or decline your optional trigger, and yield to the stack.
+  // The desktop stack menu. It offers auto-yield, always accept or decline your optional trigger, and yield to the stack
   el.addEventListener('contextmenu', e => {
     e.preventDefault();
     const key = Number(el.dataset.key);
@@ -411,19 +411,19 @@ function updateItem(el: HTMLElement, model: Model, item: StackItemView): void {
   img.dataset.zoom = src;
   q(el, '.frame').textContent = state.Name ?? '';
   q(el, '.who').textContent = deref(model, item.ActivatingPlayer)?.Name ?? '';
-  // A spell's image shows what it does. An ability needs its text.
+  // A spell's image shows what it does. An ability needs its text
   q(el, '.desc').textContent = item.Ability || !src ? (item.Description ?? '') : '';
   const targets = stackTargets(model, item).map(t => t.Name ?? stateOf(model, t).Name ?? '?');
   q(el, '.targets').textContent = targets.length ? `→ ${targets.join(', ')}` : '';
 }
 
-// A strip of every item stays visible. A deep stack puts the items closer together.
+// A strip of every item stays visible. A deep stack puts the items closer together
 function layout(pile: HTMLElement, n: number): void {
   const items = [...pile.children] as HTMLElement[];
   if (!items.length) {
     return;
   }
-  // A phone shows the stack as a numbered list. The offset pile of cards is for desktop only.
+  // A phone shows the stack as a numbered list. The offset pile of cards is for desktop only
   if (isPortrait()) {
     pile.style.height = '';
     items.forEach((el, i) => {

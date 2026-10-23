@@ -300,7 +300,7 @@ export function Manipulate({ req, model, answer }: { req: ManipulateRequest; mod
   const ghost = useRef<HTMLElement | null>(null);
   const bothEnds = req.toBottom || req.toTop;
   const row = useRef<HTMLDivElement>(null);
-  // One row holds each end's cards, or an empty place for an end with none, and the pile between them. A phone stacks the ends instead (portrait.css).
+  // One row holds each end's cards, or an empty place for an end with none, and the pile between them. A phone stacks the ends instead (portrait.css)
   useCardFit(row, isPortrait() ? 0 : Math.max(piles.top.length, 1) + (bothEnds ? Math.max(piles.bottom.length, 1) : 0) + 1, { gap: 18 });
 
   // Each end's cards, and the empty place of an end with none, in page order

@@ -1,4 +1,4 @@
-// The player's preferred printing of each card, stored in this browser. The catalogue shows it, and a card new to a deck is added in it.
+// The player's preferred printing of each card, stored in this browser. The catalogue shows it, and a card new to a deck is added in it
 
 import type { Actions } from '../actions';
 import type { DeckSection, EditorState } from '../protocol';

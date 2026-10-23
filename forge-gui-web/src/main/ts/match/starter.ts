@@ -1,4 +1,4 @@
-// Who goes first. This covers the coin toss, the choice made by the toss's winner or the last game's loser, and the reveal over the board.
+// Who goes first. This covers the coin toss, the choice made by the toss's winner or the last game's loser, and the reveal over the board
 
 import { isLocal, me, players, type Model } from '../model';
 import { coinInAir, dropCoin, readyCoin, tossCoin } from './coin';

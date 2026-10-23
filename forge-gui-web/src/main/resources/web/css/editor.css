@@ -1,4 +1,4 @@
-/* The deck editor reuses the deck finder's parts. This file holds only the editor's own layout and states. */
+/* The deck editor reuses the deck finder's parts. This file holds the editor's own layout and states, and the controls other pages share: small and link buttons, the pill select, segmented buttons, menus, flags and badges */
 
 #editor { height: 100%; }
 /* In landscape, the editor is a panel the same size as the deck selector, over the page it was opened from. Notices are drawn above it, and the chat chip below it. */
@@ -17,7 +17,7 @@ html:not([data-form="portrait"]) #editor .editor-head :is(.wordmark-block, .icon
 .deck-name-field { font-size: 16px; font-weight: 650; min-width: 260px; }
 .save-state { color: var(--muted); font-size: 12px; }
 .editor-head .legality, .imp-sub .legality, .finder-head .legality { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
-/* A format choice uses the lobby's brass pill style. It is a rounded select with its own caret and an accent-coloured fill. */
+/* A brass pill select: a rounded select with its own caret and an accent-coloured fill */
 .pill-select { position: relative; display: inline-flex; }
 .pill-select select {
   appearance: none; background: var(--accent-soft); color: var(--text); border: 1px solid var(--accent-2); border-radius: 999px;
@@ -167,9 +167,9 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .ed-line:hover { background: var(--surface-2); padding-left: 4px; }
 .ed-line:hover .ra { display: inline-flex; }
 .ed-line:hover .cost { display: none; }
-/* In the card view, each group is one column. Each card overlaps the one before it but leaves that card's name visible. */
 .zone > h4 .view-seg { text-transform: none; letter-spacing: 0; }
 .zone > h4 .view-seg button { padding: 2px 9px; font-size: 11.5px; }
+/* In the card view, each group is one column. Each card overlaps the one before it but leaves that card's name visible. */
 .zone-body.deck-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px 10px; align-content: start; }
 .deck-cols .group h4 { white-space: nowrap; gap: 6px; }
 .deck-stack { position: relative; cursor: grab; }
@@ -254,7 +254,6 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .print-cell .under { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .picker .actions { align-items: center; }
 .picker .actions .hint { margin: 0 auto 0 0; }
-span.deck-name { border-bottom: 0 !important; }
 .editor-head .check-fixed { color: var(--muted); font-size: 12px; padding-left: 14px; border-left: 1px solid var(--line); }
 .land-row .land-set { font-size: 12px; padding: 2px 22px 2px 8px; max-width: 220px; }
 /* A deck built from a game mode's own cards shows its owner before its name. Cards not yet played with are marked as new. */

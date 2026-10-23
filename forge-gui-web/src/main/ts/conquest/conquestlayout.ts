@@ -1,4 +1,4 @@
-// The positions of a plane's regions and places on the Conquest map. Sizes are in pixels.
+// The positions of a plane's regions and places on the Conquest map. Sizes are in pixels
 
 import type { ConquestState } from '../protocol';
 

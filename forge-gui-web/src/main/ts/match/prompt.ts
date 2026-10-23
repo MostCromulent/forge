@@ -1,4 +1,4 @@
-// The prompt shows the game's question and its buttons. It is at the bottom of the side column, or in the dock on a phone. Its border glows while the game waits on you, and its rail says whose move it is.
+// The prompt shows the game's question and its buttons. It is at the bottom of the side column, or in the dock on a phone. Its border glows while the game waits on you, and its rail says whose move it is
 
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from '../images';
 import { askingCard, cardPrompt, deref, game, me, oldestRequest, stackPick, stackTopSource, stateOf, type Model } from '../model';
@@ -24,9 +24,8 @@ import { isSilent } from '../volume';
 let built = false;
 /** The row of tools. On a phone it is moved out of the prompt and onto the player's bar. */
 let tools: HTMLElement;
-/** The prompt last drawn, and how many prompts have arrived. A test script waits for a higher count instead of a fixed time. */
+/** The prompt last drawn. */
 let shown: Model['prompt'] = null;
-let arrived = 0;
 
 /** The glints are dashes along an outline of the box, not a rotating gradient. So they move at one speed on long and short edges. */
 const GLINT_LAYERS = ['halo', 'mid', 'core'];
@@ -121,7 +120,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     root.addEventListener('click', e => showPressed((e.target as Element).closest('button')));
     tools.addEventListener('click', e => { if (!root.contains(tools)) showPressed((e.target as Element).closest('button')); });
     buildGlints(root);
-    // Long text is cut to two lines in the phone's dock. A tap shows the rest.
+    // Long text is cut to two lines in the phone's dock. A tap shows the rest
     q(root, '.message').onclick = () => root.classList.toggle('open');
     q(root, '.message').addEventListener('pointerdown', e => longPress(e, () => {
       const about = q<HTMLImageElement>(root, '.prompt-card');
@@ -147,7 +146,6 @@ function drawPrompt(model: Model, actions: Actions): void {
   okKey.hidden = !keys.ok;
   if (model.prompt !== shown) {
     shown = model.prompt;
-    root.dataset.seq = String(++arrived);
     root.classList.remove('open');
     if (isPortrait()) replay(root, 'pulse');
   }
@@ -180,7 +178,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   endTurnButton.title = endingTurn ? t('lblWebPromptEndingTurnTip')
     : t('lblWebPromptEndTurnTip', shortcut('SHORTCUT_ENDTURN'));
   q(tools, '.more').classList.toggle('open', !!ui.gameMenu);
-  // While a macro is recording or recorded, the prompt has a button for it. A press stops the recording or plays the macro again.
+  // While a macro is recording or recorded, the prompt has a button for it. A press stops the recording or plays the macro again
   const macro = q<HTMLButtonElement>(tools, '.macro');
   macro.hidden = ui.macro === 'none';
   macro.classList.toggle('recording', ui.macro === 'recording');
@@ -200,7 +198,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   const req = oldestRequest(model);
   const onBoard = !!req && cardPrompt(req);
   root.classList.toggle('answering', onBoard);
-  // A pick of a spell on the stack has no dialog. So its question and its cancel button are shown here.
+  // A pick of a spell on the stack has no dialog. So its question and its cancel button are shown here
   const pick = stackPick(model);
   if (pick) {
     setSymbolText(q(root, '.message'), pick.message ?? '');
@@ -213,7 +211,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     root.classList.remove('priority', 'attack', 'strike', 'blocks', 'no-blocks');
     return;
   }
-  // A question about cards is answered on the board. The prompt names its source, or says the question is waiting if it is folded away.
+  // A question about cards is answered on the board. The prompt names its source, or says the question is waiting if it is folded away
   if (req && onBoard) {
     const folded = ui.requestFolded === req.id;
     const ref = askingCard(model, req);
@@ -232,7 +230,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   }
   const p = model.prompt;
   if (!p) return;
-  // Several prompts start with a short line naming the phase. It becomes the title instead of being repeated under it.
+  // Several prompts start with a short line naming the phase. It becomes the title instead of being repeated under it
   const lines = (p.message ?? '').trim().split('\n');
   // A heading is short, has no sentence-ending punctuation, and is not a card name followed by its number
   const heading = lines.length > 1 && lines[0].length <= 24 && !/[.!?]$/.test(lines[0]) && !/\(\d+\)$/.test(lines[0]);
@@ -248,7 +246,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   renderPlayerChoices(root, model, elsewhere ? [] : p.selectablePlayers ?? [], actions);
   setButton(q<HTMLButtonElement>(root, '.ok'), elsewhere ? undefined : p.ok);
   setButton(q<HTMLButtonElement>(root, '.cancel'), elsewhere ? undefined : p.cancel);
-  // When declaring attackers, each button says what it will do. The host's OK label is the same whether nothing attacks or everything does.
+  // When declaring attackers, each button says what it will do. The host's OK label is the same whether nothing attacks or everything does
   const strike = p.ok.enabled && p.cancel.kind === 'alphaStrike';
   const attackers = p.ok.enabled && p.cancel.kind === 'callBack'
     ? countAttacking(model) : 0;
@@ -265,7 +263,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     setButton(ok, { label: t('lblWebPromptAttackWith', attackers), enabled: true });
     setButton(cancel, { label: t('lblWebPromptClearAttackers'), enabled: p.cancel.enabled });
   }
-  // Declaring blockers has only the OK button. Its label says what it will do, as for attackers.
+  // Declaring blockers has only the OK button. Its label says what it will do, as for attackers
   const blocks = declaringBlocks(model) && !p.priority && p.ok.enabled && !p.cancel.enabled && p.ok.kind === 'ok';
   const mine = me(model)?.$key;
   const blockers = blocks ? new Set((game(model)?.CombatView ?? []).flatMap(b => [...b.blockers ?? [], ...b.plannedBlockers ?? []])

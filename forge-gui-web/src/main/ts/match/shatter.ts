@@ -20,11 +20,11 @@ interface Timing {
   fly: number; crack: number; brk: number; burst: number; title: number; end: number;
 }
 
-// Tuned on a 1440 by 900 board. A seat's portrait has no build-up. It breaks and bursts at once, with no slow motion.
+// Tuned on a 1440 by 900 board. A seat's portrait has no build-up. It breaks and bursts at once, with no slow motion
 const FINAL: Timing = { fly: 0.75, crack: 1.0, brk: 1.22, burst: 1.3, title: 2.23, end: 4.78 };
 const SEAT: Timing = { fly: 0, crack: 0, brk: 0, burst: 0.07, title: Infinity, end: 2.45 };
 const GRAVITY = 1500;
-// Playback speed of the final burst. Slowing the clock does not change the path of any piece.
+// Playback speed of the final burst. Slowing the clock does not change the path of any piece
 const BURST_PACE = 0.75;
 
 /** Whether this browser can show the effect. If not, the seat just empties and the title shows at once. */
@@ -162,7 +162,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
   const T = o.final ? FINAL : SEAT;
   const W = window.innerWidth, H = window.innerHeight;
   const seatR = o.from.width / 2;
-  // The final portrait is sized to the board. A seat's portrait keeps its size on the seat.
+  // The final portrait is sized to the board. A seat's portrait keeps its size on the seat
   const R = o.final ? Math.min(140, Math.max(95, Math.min(W, H) * 0.145)) : seatR;
   const k = R / 130;
 
@@ -244,7 +244,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       const real = Math.min(0.05, (now - last) / 1000);
       last = now;
       const before = t;
-      // Just after the burst, playback is slowest for a moment. It then speeds up to BURST_PACE and stays there.
+      // Just after the burst, playback is slowest for a moment. It then speeds up to BURST_PACE and stays there
       let scale = 1;
       if (o.final && t >= T.burst) {
         const s = t - T.burst;
@@ -345,7 +345,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
         }
         if (d.pos[1] + to[1] > H * 2) d.shown = false;
       }
-      // The glow elements of the burst. Their CSS adds their light to what is behind them instead of covering it.
+      // The glow elements of the burst. Their CSS adds their light to what is behind them instead of covering it
       const x = to[0] + impact[0], y = to[1] + impact[1];
       const rise = Math.min(1, s / 0.025);
       const core = (0.25 + 1.15 * ease(s / 0.3)) * k;

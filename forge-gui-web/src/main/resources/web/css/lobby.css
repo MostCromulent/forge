@@ -438,8 +438,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .verdict { margin: 0; font-size: 13px; }
 .verdict.yes { color: var(--muted); }
 
-/* A Commander deck's bracket, shown as a small mark in lists and on seats */
-/* The bracket mark is styled as a bronze medal, so it is not mistaken for a count or a deck size next to it */
+/* A Commander deck's bracket, shown as a small mark in lists and on seats. It is a bronze medal, so it is not mistaken for a count or a deck size */
 .bracket-mark, .bnum { --bronze: linear-gradient(180deg, #f0c493 0%, #c98a52 48%, #9a5f2f 100%);
   background: var(--bronze); color: #2b1608; border: 1px solid #5c3416; box-shadow: inset 0 1px 0 #ffe3c288, 0 1px 2px #0008; }
 .bracket-mark { display: inline-grid; place-items: center; min-width: 21px; height: 19px; padding: 0 5px; border-radius: 6px; flex: none;
@@ -465,7 +464,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .bracket-more .reason b { font-size: 12.5px; }
 .bracket-more .to { font-size: 10.5px; font-weight: 700; color: var(--accent-2); align-self: center; }
 .bracket-more .cards, .bracket-more .because { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
-.bracket-more .because { color: var(--faint, var(--muted)); font-size: 11.5px; }
+.bracket-more .because { color: var(--faint); font-size: 11.5px; }
 .bracket-more .clearline { margin: 0; font-size: 11.5px; color: var(--muted); }
 /* A game changer card, highlighted in the deck's list */
 .dk-line.changer { background: color-mix(in srgb, var(--accent-2) 9%, transparent); }
@@ -539,7 +538,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .pip { display: inline-block; width: 17px; height: 17px; border-radius: 50%; }
 .pips { display: inline-flex; gap: 2px; vertical-align: middle; }
 
-.shown { margin: 0; color: var(--faint, var(--muted)); font-size: 12px; }
+.shown { margin: 0; color: var(--faint); font-size: 12px; }
 .dk-hit .size { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 46px; text-align: right; }
 
 .sizes { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
@@ -723,10 +722,9 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .finder-head .legality { margin-left: 16px; }
 .finder-foot .delete-deck { margin-right: auto; color: var(--danger); }
 /* Delete asks for confirmation once, in the footer, because the finder is already a dialog */
-.finder-foot .delete-line { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; }
+.finder-foot :is(.delete-line, .linked-line) { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; }
 .finder-foot .delete-line b { color: var(--text); }
 .finder-foot .danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
-.finder-foot .linked-line { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; }
 .dialog.new-deck { width: min(92vw, 440px); gap: 16px; }
 .new-deck section { display: grid; gap: 8px; }
 .new-deck h4 { margin: 0; font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--accent-2); }

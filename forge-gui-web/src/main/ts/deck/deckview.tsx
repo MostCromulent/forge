@@ -1,4 +1,4 @@
-// Draws a deck outside the editor, for the deck finder, the importer and the campaigns. It shows the mana curve and the cards by heading.
+// Deck views that the editor, the deck finder, the importer and the campaigns share: the mana curve and the cards by heading
 
 import { useState } from 'preact/hooks';
 import { isPortrait } from '../form';
@@ -18,7 +18,7 @@ export const DECK_FORMATS: [string, TextKey][] = [
 
 /** Whether a deck is drawn as cards or as a list, and a setter for it. The editor and the deck finder share this choice. */
 export function useDeckView(): [boolean, (asCards: boolean) => void] {
-  // Stacked cards are too small to read on a phone. In portrait the deck opens as a list until the player changes the view.
+  // Stacked cards are too small to read on a phone. In portrait the deck opens as a list until the player changes the view
   const [cards, setCards] = useState(() => (stored(VIEW_KEY) ?? (isPortrait() ? 'list' : 'cards')) !== 'list');
   return [cards, asCards => {
     setCards(asCards);
@@ -26,8 +26,7 @@ export function useDeckView(): [boolean, (asCards: boolean) => void] {
   }];
 }
 
-/** A deck's mana curve as bars at most px tall. The average is shown beside the heading when it is given. */
-// Bar heights are in pixels because a percentage of an auto-sized row resolves to zero
+/** A deck's mana curve as bars at most px tall. The average is shown beside the heading when it is given. Heights are in pixels, because a percentage of an auto-sized row resolves to zero. */
 export function Curve({ curve, spells, average, px }: { curve: number[]; spells: number[]; average?: number; px: number }) {
   const tallest = Math.max(1, ...curve);
   return (

@@ -1,11 +1,10 @@
-// Which layout the page uses. Portrait is a phone or tablet held upright. Everything else uses the desktop layout.
+// Which layout the page uses. Portrait is a phone or tablet held upright. Everything else uses the desktop layout
 
 import { isTyping } from './dom';
 
 const QUERY = '(orientation: portrait) and (max-width: 899px)';
 
 let portrait = false;
-
 
 export function initForm(onChange: () => void): void {
   const media = matchMedia(QUERY);

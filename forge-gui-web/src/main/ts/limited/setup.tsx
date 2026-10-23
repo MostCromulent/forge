@@ -1,4 +1,4 @@
-// Desktop asks the same questions as a chain of dialogs. Here, as on desktop, the answers decide which questions come next
+// The Draft and Sealed setup questions. Desktop asks them as a chain of dialogs. Here, as on desktop, the answers decide which questions come next
 
 import { useState } from 'preact/hooks';
 import type { LimitedOptions, SealedBlock } from '../protocol';

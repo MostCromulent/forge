@@ -9,7 +9,6 @@ import type { ConquestCommanderRow, ConquestWalkerRow } from '../protocol';
 import { t } from '../text';
 import { CardGroup, Curve } from '../deck/deckview';
 
-
 /** The filter for both lists: any of these colours, and for a commander the plane it comes from. A planeswalker has no origin. */
 interface PartyFilter { colours: string[]; plane: string | null }
 const NO_FILTER: PartyFilter = { colours: [], plane: null };

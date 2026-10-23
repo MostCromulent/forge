@@ -1,4 +1,4 @@
-// Delays game messages while the page shows something the player should see first. That is a turn's banner or another player's play.
+// Delays game messages while the page shows something the player should see first. That is a turn's banner or another player's play
 
 import { announceComing } from './turnbanner';
 import { asksPlayer, passingFor, setBoardBehind, worthSeeing } from './pace';

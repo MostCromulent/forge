@@ -1,4 +1,4 @@
-// Sets the pace of the page. A board that shows another player's play stays shown for a moment before the next board replaces it
+// Decides which messages are worth pausing on, and whether the page is behind the game. pacer.ts holds each board on screen for its moment
 
 import type { Controls, GameEvent, Prompt, Ref } from '../protocol';
 import { offersPicks } from '../model';

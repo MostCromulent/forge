@@ -1,4 +1,4 @@
-// The editor's right half. It shows the deck as the deck finder does, but editable.
+// The editor's right half. It shows the deck as the deck finder does, but editable
 
 import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useState } from 'preact/hooks';
@@ -29,7 +29,7 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
   const groups = regroup(state, by);
   // A deck that is only the wrong size has no flagged card to show
   const flagged = [...state.main.flatMap(g => g.cards), ...state.sideboard, ...state.commanders].some(card => card.problem);
-  // A double-click on a card removes one copy. A pool's cards cannot leave the pool, so in limited mode the copy moves to the other section.
+  // A double-click on a card removes one copy. A pool's cards cannot leave the pool, so in limited mode the copy moves to the other section
   const takeOut = (name: string, zone: 'Main' | 'Sideboard') => (state.limited
     ? actions.edit({ op: 'move', name, from: zone, to: zone === 'Main' ? 'Sideboard' : 'Main', count: 1 })
     : actions.edit({ op: 'remove', name, from: zone, count: 1 }));
@@ -206,7 +206,7 @@ function AddSection({ sections, addTo }: { sections: EditorSection[]; addTo: (se
 }
 
 function CommanderZone({ actions, state, handlers }: { actions: Actions; state: EditorState; handlers: CardHandlers }) {
-  // A main-only collection deck keeps the commander it was made for. No card can be dropped here or removed.
+  // A main-only collection deck keeps the commander it was made for. No card can be dropped here or removed
   const kept = state.mainOnly;
   return (
     <div class="zone commander-zone" data-zone={kept ? undefined : 'Commander'}>

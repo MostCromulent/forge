@@ -1,4 +1,4 @@
-// Sorts the host's single block of rules text into the parts of a printed card. A line that is not recognised stays a line of text.
+// Sorts the host's single block of rules text into the parts of a printed card. A line that is not recognised stays a line of text
 
 import { t } from '../text';
 import type { KeywordText } from '../protocol';

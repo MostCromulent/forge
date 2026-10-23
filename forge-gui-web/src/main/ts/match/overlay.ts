@@ -1,4 +1,4 @@
-// Draws the arrows over the board. They point from attackers to what they attack, from blockers to what they block, and from spells to their targets.
+// Draws the arrows over the board. They point from attackers to what they attack, from blockers to what they block, and from spells to their targets
 
 import { attackTargets, combatShown, game, derefAll, players, zone, type Model, offersPicks } from '../model';
 import { byId, onRelayout, reducedMotion, easeOut } from '../dom';
@@ -48,7 +48,7 @@ let repaintQueued = false;
 
 export function initOverlay(schedule: () => void): void {
   onRelayout(schedule);
-  // Scrolling the log or a zone panel moves the cards the arrows point at. So only the arrows are redrawn, at most once a frame.
+  // Scrolling the log or a zone panel moves the cards the arrows point at. So only the arrows are redrawn, at most once a frame
   document.addEventListener('scroll', repaintSoon, true);
   document.addEventListener('pointermove', e => {
     if (e.pointerType !== 'mouse') return;
@@ -69,7 +69,7 @@ function repaintSoon(): void {
 export function drawOverlay(model: Model): void {
   drawn = model;
   paint(model);
-  // A card animation starts a frame after the change that causes it. So the first frames repaint even if nothing is moving yet.
+  // A card animation starts a frame after the change that causes it. So the first frames repaint even if nothing is moving yet
   cancelAnimationFrame(settleFrame);
   const since = performance.now();
   const settle = () => {
@@ -132,11 +132,11 @@ function paintArrows(model: Model): void {
     return;
   }
   const atFace = atLoneFace(model);
-  // In the combat damage step the chevrons are removed. The attackers stay marked.
+  // In the combat damage step the chevrons are removed. The attackers stay marked
   const landed = g.Phase === 'COMBAT_DAMAGE';
   placeCharges(landed ? new Set() : chargingAtPlayer(model), landed);
   drawDrag(ctx);
-  // A phone marks targets with numbered tags. An arrow from the stack would cross the whole board and cover what it points at.
+  // A phone marks targets with numbered tags. An arrow from the stack would cross the whole board and cover what it points at
   const phone = isPortrait();
   if (phone) paintTags(model);
   else {
@@ -160,13 +160,13 @@ function paintArrows(model: Model): void {
       }
     });
   }
-  // Draws an arrow from a creature to each attacker it must block. Without it, an illegal block is refused and nothing on screen says why.
+  // Draws an arrow from a creature to each attacker it must block. Without it, an illegal block is refused and nothing on screen says why
   if (g.Phase === 'COMBAT_DECLARE_BLOCKERS') {
     for (const card of players(model).flatMap(p => zone(model, p, 'Battlefield'))) {
       present(card.MustBlockCards).forEach(attacker => ribbon(elementFor(card.$key), elementFor(attacker.ref), KINDS.mustBlock));
     }
   }
-  // Another player's spell or ability always shows its arrows, because you did not see it aimed. Your own items show arrows only under the pointer.
+  // Another player's spell or ability always shows its arrows, because you did not see it aimed. Your own items show arrows only under the pointer
   for (const item of phone ? [] : derefAll(model, g.Stack) as StackItemView[]) {
     const theirs = !!item.ActivatingPlayer && !model.localPlayers.includes(item.ActivatingPlayer.ref);
     if (theirs || item.$key === ui.hoveredStackItem) {
@@ -220,7 +220,7 @@ function paintTags(model: Model): void {
   const want = new Map<HTMLElement, number[]>();
   for (const [key, numbers] of tags) {
     const el = elementFor(key);
-    // A card in a hidden opponent seat is tagged on that opponent's tab. On a phone with the player list closed, it is tagged on the players button.
+    // A card in a hidden opponent seat is tagged on that opponent's tab. On a phone with the player list closed, it is tagged on the players button
     const tab = document.querySelector<HTMLElement>(`.seat-tab[data-key="${el?.closest<HTMLElement>('.seat')?.dataset.player ?? key}"]`);
     const shown = el && el.offsetParent !== null ? el : tab && tab.offsetParent === null ? document.getElementById('seat-switch') : tab;
     if (shown) want.set(shown, [...(want.get(shown) ?? []), ...numbers]);
@@ -296,7 +296,7 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
   const aimed = !!p?.card && !p.paying && !p.priority && offersPicks(p)
     && !(model.zones.length > 0 && !ui.zonesMinimised);
   const key = String(p?.card?.ref);
-  // While its targets are chosen, a spell is already on the stack awaiting payment. An ability's card is on the board.
+  // While its targets are chosen, a spell is already on the stack awaiting payment. An ability's card is on the board
   const from = aimed ? onStack(key) ?? cardElement(key) ?? pileTopFor(key) : null;
   aiming = !!from;
   if (from && p) {
@@ -304,7 +304,7 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
     const clicked = lastAim?.key === key ? lastAim.targets : [];
     lastAim = { key, targets: [...new Set([...p.highlighted, ...clicked])] };
   } else {
-    // The payment prompt no longer names the targets. So the last picked targets are drawn from the awaiting slot, through any prompts before payment.
+    // The payment prompt no longer names the targets. So the last picked targets are drawn from the awaiting slot, through any prompts before payment
     const slot = lastAim && !p?.priority ? onStack(lastAim.key) : null;
     const waiting = slot?.classList.contains('awaiting') ? slot : null;
     if (waiting && lastAim) {
@@ -327,7 +327,7 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
   const over = hit ?? (held ? aimedAt : null);
   aimedAt = over;
   if (over) {
-    // Drawn at full length at once. The arrow already reached the pointer, so only its head moves onto the target.
+    // Drawn at full length at once. The arrow already reached the pointer, so only its head moves onto the target
     ribbon(from, over, KINDS.target, false);
     glow(over, KINDS.target);
   } else {
@@ -335,7 +335,7 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
   }
 }
 
-// The attack mark's drawing (board.css) is 64 by 54 units. Its chevrons run from 16 below the top to 13.7 above the bottom.
+// The attack mark's drawing (board.css) is 64 by 54 units. Its chevrons run from 16 below the top to 13.7 above the bottom
 const MARK_W = 64;
 const MARK_H = 54;
 const MARK_TOP = 16;
@@ -373,7 +373,7 @@ function placeCharges(keys: Set<number>, landed = false): void {
     // The chevrons are placed about an eighth of the card's width clear of it, so the last one is not hidden behind the card
     const sink = height * MARK_BELOW / MARK_H - card.offsetWidth * .12;
     const down = !!card.closest('#opponent');
-    // A crowded battlefield scrolls. So the chevron is kept inside the battlefield's box and off the phase pill outside it.
+    // A crowded battlefield scrolls. So the chevron is kept inside the battlefield's box and off the phase pill outside it
     const field = card.closest('.battlefield')?.getBoundingClientRect();
     mark.classList.toggle('down', down);
     mark.style.width = `${width}px`;
@@ -382,7 +382,7 @@ function placeCharges(keys: Set<number>, landed = false): void {
       ? Math.min(r.bottom - sink, (field?.bottom ?? Infinity) - height * (MARK_H - MARK_TOP) / MARK_H)
       : Math.max(r.top + sink, (field?.top ?? -Infinity) + height * (MARK_H - MARK_TOP) / MARK_H)}px`;
     if (arriving && !reducedMotion()) {
-      // The chevron moves out from the attacker as it grows and fades in. This is the retreat animation in reverse.
+      // The chevron moves out from the attacker as it grows and fades in. This is the retreat animation in reverse
       const back = down ? -1 : 1;
       mark.animate([
         { opacity: 0, translate: `0 ${back * height * 0.7}px`, scale: '.55' },
@@ -479,7 +479,7 @@ let queued: { from: HTMLElement; to: HTMLElement; kind: ArrowKind; grows: boolea
 
 function ribbon(fromEl: HTMLElement | null, toEl: HTMLElement | null, kind: ArrowKind, grows = true): void {
   if (!fromEl || !toEl || fromEl === toEl) return;
-  // The engine can list a block as both declared and planned. The declared one is queued first, so only it is drawn.
+  // The engine can list a block as both declared and planned. The declared one is queued first, so only it is drawn
   if (queued.some(q => q.from === fromEl && q.to === toEl)) return;
   queued.push({ from: fromEl, to: toEl, kind, grows });
 }
@@ -495,7 +495,7 @@ function drawQueued(ctx: CanvasRenderingContext2D): void {
     const from = arrows.map(q => center(q.from));
     const middle = { x: from.reduce((n, p) => n + p.x, 0) / from.length, y: from.reduce((n, p) => n + p.y, 0) / from.length };
     const c = center(to);
-    // The direction across the arrows' approach. Each arrow aims a little off the middle, by its source's position along it.
+    // The direction across the arrows' approach. Each arrow aims a little off the middle, by its source's position along it
     const len = Math.hypot(c.x - middle.x, c.y - middle.y) || 1;
     const across = { x: -(c.y - middle.y) / len, y: (c.x - middle.x) / len };
     const order = arrows.map((_, i) => i)
@@ -555,7 +555,7 @@ function growth(from: HTMLElement, to: HTMLElement, kind: ArrowKind, grows: bool
 
 function arrow(ctx: CanvasRenderingContext2D, a: Point, full: Point, kind: ArrowKind, grown = 1): void {
   const whole = bendOf(a, full);
-  // A growing arrow, or one stopped at its target's edge, is the full curve cut short. So it follows the path it will end on.
+  // A growing arrow, or one stopped at its target's edge, is the full curve cut short. So it follows the path it will end on
   const end = grown < 1 ? curveAt(a, whole, full, grown) : full;
   const bend = grown < 1 ? { x: a.x + (whole.x - a.x) * grown, y: a.y + (whole.y - a.y) * grown } : whole;
   // Not drawn while still too short for a head

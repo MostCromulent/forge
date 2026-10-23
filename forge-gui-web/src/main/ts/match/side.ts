@@ -1,4 +1,4 @@
-// The column beside the board. It holds the game log and, in a networked game, the chat dock. Each panel collapses to its tab.
+// The column beside the board. It holds the game log and, in a networked game, the chat dock. Each panel collapses to its tab
 
 import { byId, q, relayout } from '../dom';
 import { changeUi, eased, rememberSidePanels, ui, type UiState } from '../ui';

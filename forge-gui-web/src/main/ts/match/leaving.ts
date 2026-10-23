@@ -1,4 +1,4 @@
-// Animates a permanent that goes to a graveyard or exile. The effect is drawn from the card's image on a canvas over the card.
+// Animates a permanent that goes to a graveyard or exile. The effect is drawn from the card's image on a canvas over the card
 
 import { reducedMotion } from '../dom';
 import { TAPPED_SCALE } from './cards';
@@ -198,7 +198,7 @@ function wormhole(job: Job): (t: number) => boolean {
   rc.beginPath();
   rc.roundRect(RIM / 2, RIM / 2, pw - RIM, ph - RIM, Math.max(0, pw * 0.05 - RIM / 2));
   rc.stroke();
-  // The rim is warped into the hole the same way as the card. It is on its own layer so it can glow.
+  // The rim is warped into the hole the same way as the card. It is on its own layer so it can glow
   const rimSrc = rc.getImageData(0, 0, pw, ph).data, rimOut = rc.getImageData(0, 0, pw, ph), rpx = rimOut.data;
   const [red, green, blue] = EXILE_RGB.split(',').map(Number);
   for (let j = 0; j < rpx.length; j += 4) {

@@ -1,4 +1,4 @@
-// The game menu behind the prompt's ⋯ button. It keeps the auto-pass settings one click from the prompt.
+// The game menu behind the prompt's ⋯ button. It keeps the auto-pass settings one click from the prompt
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { OnOff, OptionsDialog, PlaymatChoice, Row, SectionHeading } from '../options';

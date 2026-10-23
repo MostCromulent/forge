@@ -20,7 +20,7 @@ import type { CardView, PlayerView, PromptButton, ZoneType } from '../protocol';
 import { t, type TextKey } from '../text';
 import { manaValue } from './rules';
 
-// One open zone. It is either a zone the game asks to show or a pile the player opened by clicking.
+// One open zone. It is either a zone the game asks to show or a pile the player opened by clicking
 interface Panel {
   player: number;
   zone: ZoneType;
@@ -66,15 +66,15 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
   }
   const root = byId('zones');
   const open = panels.size > 0;
-  // With no zone open, nothing is folded either. So the folded state is cleared when the last zone closes.
+  // With no zone open, nothing is folded either. So the folded state is cleared when the last zone closes
   if (!open && ui.zonesMinimised) {
     changeUi(u => { u.zonesMinimised = false; });
   }
   root.hidden = !open;
-  // Back closes the zones the player opened. The game closes the zones it showed.
+  // Back closes the zones the player opened. The game closes the zones it showed
   sheet('zones', isPortrait() && open && ui.openZones.size > 0, () => changeUi(u => { u.openZones.clear(); }));
   root.classList.toggle('minimised', ui.zonesMinimised);
-  // A zone the game shows is a question about its cards, laid out on the board like other questions. A zone opened only to look at stays a window.
+  // A zone the game shows is a question about its cards, laid out on the board like other questions. A zone opened only to look at stays a window
   root.classList.toggle('asking', [...panels.values()].some(p => p.forced));
   if (!open) {
     root.replaceChildren();
@@ -84,7 +84,7 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
     drawBar(root, model, [...panels.values()]);
     return;
   }
-  // Add the shelf again only when it is missing. Removing an open dialog from the page resets its scroll and loses the search box's focus.
+  // Add the shelf again only when it is missing. Removing an open dialog from the page resets its scroll and loses the search box's focus
   const box = shelf(root);
   if (root.firstElementChild !== box || root.childElementCount !== 1) root.replaceChildren(box);
   const drawn = [...panels.entries()].filter(([k, p]) => !p.forced || !chosen || k === chosen);
@@ -106,7 +106,7 @@ function fitZones(): void {
   const asked = [...root.querySelectorAll<HTMLElement>('.zone-panel.asking')];
   for (const el of asked) {
     const row = q(el, '.cards');
-    // A long zone does not shrink its cards below the size used in a pile opened to look at. It scrolls instead.
+    // A long zone does not shrink its cards below the size used in a pile opened to look at. It scrolls instead
     fitCards(row, el, root, row.querySelectorAll(':scope > :not(.back:not(.selectable))').length, { gap: 14, wrap: true, least: 1.45, share: asked.length });
   }
 }
@@ -190,7 +190,7 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   fold.hidden = !p.forced;
   const asking = p.forced;
   el.classList.toggle('asking', asking);
-  // On the board the fold button goes beside the answer, as in a question. A phone answers from the dock, so it stays in the header.
+  // On the board the fold button goes beside the answer, as in a question. A phone answers from the dock, so it stays in the header
   const beside = asking && !isPortrait();
   const home = beside ? q(el, 'footer') : q(el, 'header');
   if (fold.parentElement !== home) {
@@ -205,7 +205,7 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
     done.disabled = true;
     putAway(el, () => togglePile(p.player, p.zone));
   };
-  // A zone the game shows has the prompt's question and its OK button. It leaves out the other button, which is the way out of priority.
+  // A zone the game shows has the prompt's question and its OK button. It leaves out the other button, which is the way out of priority
   const prompt = p.forced ? model.prompt : null;
   const question = p.forced ? prompt?.message || t('lblWebZoneWaitingOnYou') : '';
   q(el, '.zone-hint').textContent = question;
@@ -323,7 +323,7 @@ function drawBar(root: HTMLElement, model: Model, panels: Panel[]): void {
   q(bar, 'b').textContent = panels.length > 1 ? t('lblWebZoneOpenZones') : `${player?.Name ?? ''} \u00b7 ${zoneTitle(first.zone)}`;
   q(bar, '.zone-count').textContent = count;
   q(bar, '.zone-unfold').onclick = () => changeUi(u => { u.zonesMinimised = false; });
-  // Folding is not closing. So the close button still closes only the zones the player opened.
+  // Folding is not closing. So the close button still closes only the zones the player opened
   const shut = q(bar, '.zone-shut');
   shut.hidden = panels.every(p => p.forced);
   shut.onclick = () => changeUi(u => {

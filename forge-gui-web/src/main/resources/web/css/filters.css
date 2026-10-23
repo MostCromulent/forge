@@ -34,7 +34,7 @@
 .mi.used { color: var(--muted); }
 .mnone { margin: 4px 10px 8px; color: var(--faint); font-size: 12.5px; }
 
-.fpanel { width: 260px; display: grid; gap: 10px; padding: 10px !important; }
+.fpanel, .filter-menu .fpanel { width: 260px; display: grid; gap: 10px; padding: 10px; }
 .fpanel h5 { margin: 0; font-size: 13px; }
 .fpanel .colours { align-self: auto; justify-self: start; margin: 0; }
 .fnote { margin: 0; color: var(--muted); font-size: 12.5px; }

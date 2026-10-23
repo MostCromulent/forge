@@ -205,7 +205,6 @@ export function SectionHeading({ name, keys }: { name: string; keys: boolean }) 
   );
 }
 
-
 /** The frame shared by the options dialog and the game menu's dialogs. label names the dialog when the title is a phrase. */
 export function OptionsDialog({ title, label, kind, head, rail, footer, close, children }: {
   title: string; label?: string; kind?: string; head?: ComponentChildren; rail?: ComponentChildren; footer?: ComponentChildren; close: () => void;
@@ -337,7 +336,7 @@ function seconds(ms: number): string {
   return new Intl.NumberFormat(textLanguage(), { minimumFractionDigits: 1, maximumFractionDigits: 2 }).format(ms / 1000);
 }
 
-// A theme is a plain CSS file. The player can import one, export the current one, or edit it here. Typed CSS applies at once.
+// A theme is a plain CSS file. The player can import one, export the current one, or edit it here. Typed CSS applies at once
 function CssEditor({ def, value }: { def: SettingDef; value: string }) {
   const file = useRef<HTMLInputElement>(null);
   return (
@@ -361,7 +360,7 @@ function CssEditor({ def, value }: { def: SettingDef; value: string }) {
   );
 }
 
-// Click, then press the new key, with Ctrl or Shift if wanted. Escape keeps the old key and Backspace removes it, as on desktop.
+// Click, then press the new key, with Ctrl or Shift if wanted. Escape keeps the old key and Backspace removes it, as on desktop
 function ShortcutControl({ value, change }: { value: string; change: (value: string) => void }) {
   const [listening, setListening] = useState(false);
   return (
@@ -380,7 +379,7 @@ function ShortcutControl({ value, change }: { value: string; change: (value: str
   );
 }
 
-// Click, then press the new key. Escape leaves the key as it was.
+// Click, then press the new key. Escape leaves the key as it was
 function KeyControl({ action, value }: { action: keyof KeyBindings; value: string }) {
   const [listening, setListening] = useState(false);
   return (

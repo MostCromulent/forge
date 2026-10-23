@@ -1,4 +1,4 @@
-// Lays out the whole match screen and redraws it from the model. Each piece is drawn by its own module.
+// Lays out the whole match screen and redraws it from the model. Each piece is drawn by its own module
 
 import { reconcile } from './reconcile';
 import { cardImageSrc, hideOnError, setImage, symbolUrl } from '../images';
@@ -12,14 +12,13 @@ import { foldStack, renderStack, resetStack } from './stack';
 import { renderPlanes } from './planes';
 import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';
 import { renderPhaseBar, stopWaiting } from './phasebar';
-import { forgetPictures } from './cards';
+import { forgetPictures, type CardClick } from './cards';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from '../looks';
 import { animateCardMoves, noteBoard, resetMotion, showCount } from './motion';
 import { boardBehind } from './pace';
 import { byId, q, replay, make, onPressOutside, relayout } from '../dom';
 import { setting } from '../settings';
 import { logTints } from './log';
-import type { CardClick } from './cards';
 import type { Actions } from '../actions';
 import type { CardView, GameEvent, PlayerView, ZoneType } from '../protocol';
 import { commandKind, renderEmblems } from './command';
@@ -36,7 +35,7 @@ import { t, type TextKey } from '../text';
 import { ICONS, iconSvg } from '../icons';
 import { COLOUR_BITS, COMMANDER_LETHAL, COMMANDER_WARNING } from './rules';
 
-// The Mana property counts the pool by Forge's mana bit (ManaAtom). The five colours use MagicColor's bits, and colourless has its own bit.
+// The Mana property counts the pool by Forge's mana bit (ManaAtom). The five colours use MagicColor's bits, and colourless has its own bit
 const MANA: [number, string][] = [...COLOUR_BITS, [32, 'C']];
 
 const SWORDS = iconSvg(ICONS.swords);
@@ -48,7 +47,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   noteBoard();
   showStarter(model, actions, events);
   noticeLosses(model, actions);
-  // A prompt that offers cards or players to pick, or a spell to pick on the stack, dims everything else (board.css). Paying a cost does not count.
+  // A prompt that offers cards or players to pick, or a spell to pick on the stack, dims everything else (board.css). Paying a cost does not count
   const p = model.prompt;
   byId('match').classList.toggle('picking', !!stackPick(model) || (!!p && !p.paying && offersPicks(p)));
   // The click position is sent with the click, so an ability list opens on the card, as the desktop menu does
@@ -56,7 +55,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
     const key = Number(el.dataset.key);
     if (isTouch(e) && !menu) {
       if (repeatTap(key, performance.now())) return;
-      // Read at the time of the tap. A card keeps the handler it was created with, long after the prompt of that time has gone.
+      // Read at the time of the tap. A card keeps the handler it was created with, long after the prompt of that time has gone
       const card = model.objects.get(key) as CardView | undefined;
       const tapped = { playable: el.classList.contains('playable'), selectable: el.classList.contains('selectable'),
         mine: card?.Controller?.ref === me(model)?.$key, attacking: !!card?.Attacking };
@@ -64,7 +63,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
         inspectCard(el);
         return;
       }
-      // Shown at once, because the server's answer can take a moment. Not shown while newer boards are queued, because the click is not sent then.
+      // Shown at once, because the server's answer can take a moment. Not shown while newer boards are queued, because the click is not sent then
       if (!boardBehind()) replay(el, 'pressed');
     }
     notePick(key);
@@ -137,7 +136,7 @@ function renderOpponents(root: HTMLElement, model: Model, onField: CardView[], a
       return el;
     },
     (el, p) => {
-      // A tabbed seat on desktop has the top half to itself. So it uses the two-player layout, with cards at full size.
+      // A tabbed seat on desktop has the top half to itself. So it uses the two-player layout, with cards at full size
       el.classList.toggle('compact', !tabbed || isPortrait());
       el.style.setProperty('--tint', tints.find(t => t.name === p.Name)?.colour ?? 'var(--muted)');
       renderSeat(el, model, p, onField, actions, select);
@@ -203,7 +202,7 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
       const el = make('button', 'seat-tab');
       el.setAttribute('role', 'tab');
       el.innerHTML = `<span class="pic"><img alt="" draggable="false"><i class="dot" aria-hidden="true"></i><span class="skull-mark">${SKULL}</span></span><span class="who"></span><span class="note"></span><b class="life"></b>`;
-      // A tab only shows a seat. To pick the player, the portrait inside the seat is clicked.
+      // A tab only shows a seat. To pick the player, the portrait inside the seat is clicked
       el.onclick = () => changeUi(u => {
         u.openSeat = Number(el.dataset.key);
         u.seatChosenTurn = Number(el.dataset.turn);
@@ -290,7 +289,6 @@ function renderOut(model: Model, actions: Actions): void {
 
 const SKULL = iconSvg(ICONS.skull);
 
-
 function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefined, onField: CardView[], actions: Actions, select: CardClick): void {
   if (!player) {
     root.replaceChildren();
@@ -340,7 +338,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
     const pill = q(root, '.zones-pill');
     pill.innerHTML = PILL_ZONES.map(([zoneName, icon]) => `<span data-zone="${zoneName}"><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><b></b></span>`).join('');
     pill.onclick = () => changeUi(u => { u.zonesFor = u.zonesFor === Number(root.dataset.player) ? null : Number(root.dataset.player); });
-    // Your player line is beside your hand. So the hand starts where the line ends, however wide its zones make it.
+    // Your player line is beside your hand. So the hand starts where the line ends, however wide its zones make it
     if (root.id === 'me') {
       new ResizeObserver(() => byId('match').style.setProperty('--line-w', `${q(root, '.player').offsetWidth + 32}px`))
         .observe(q(root, '.player'));
@@ -359,7 +357,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   showLife(q(root, '.life'), avatar, player.Life ?? 0, isLocal(model, player));
   q(root, '.name .who').textContent = player.Name ?? '';
   q(root, '.name').title = player.Name ?? '';
-  // A player out of the game keeps their seat. The seat is greyed and a skull is drawn over the portrait.
+  // A player out of the game keeps their seat. The seat is greyed and a skull is drawn over the portrait
   root.classList.toggle('out', !!player.HasLost);
   root.classList.toggle('turn', game(model)?.PlayerTurn?.ref === player.$key);
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
@@ -367,7 +365,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
   // The player who went first stays marked until turn 1 is over, for anyone who missed the reveal
   avatar.classList.toggle('first', wentFirst(player.$key) && (game(model)?.Turn ?? 0) <= 1);
-  // A player who has lost shows an empty portrait frame. The portrait has broken out of it, or breaks out now.
+  // A player who has lost shows an empty portrait frame. The portrait has broken out of it, or breaks out now
   avatar.classList.toggle('lost', !!player.HasLost);
   renderHandFan(q(root, '.hand-fan'), model, player);
   renderZoneTiles(q(root, '.zone-tiles'), model, player, select);
@@ -431,7 +429,7 @@ const MANA_NAMES: Record<string, TextKey> = {
   G: 'lblGreen', C: 'lblColorless',
 };
 
-// A hand is drawn as a few fanned card backs with its count. A click opens it in a window, for your own hand too.
+// A hand is drawn as a few fanned card backs with its count. A click opens it in a window, for your own hand too
 function renderHandFan(el: HTMLElement, model: Model, player: PlayerView): void {
   const count = zone(model, player, 'Hand').length;
   el.hidden = false;
@@ -459,7 +457,7 @@ const CORE_TYPES = ['Artifact', 'Battle', 'Creature', 'Enchantment', 'Instant', 
 function cardTypes(typeLines: readonly string[]): string[] {
   const found = new Set<string>();
   for (const line of typeLines) {
-    // Only the words before the dash are types. Subtypes such as "Forest" come after it.
+    // Only the words before the dash are types. Subtypes such as "Forest" come after it
     for (const word of line.split(/\s[-—]\s/)[0].split(/\s+/)) {
       if (CORE_TYPES.includes(word)) found.add(word);
     }
@@ -474,7 +472,7 @@ function graveyardTitle(count: number, types: string[]): string {
   return t('lblWebBoardGraveyardTitleTypes', cards, kinds, types.join(', '));
 }
 
-// Drawn on the same 24-unit grid as the other icons. The icons are a fan of cards for the hand, a deck, a headstone, and a ring for exile.
+// Drawn on the same 24-unit grid as the other icons. The icons are a fan of cards for the hand, a deck, a headstone, and a ring for exile
 const PILL_ZONES: [ZoneType, string][] = [
   ['Hand', '<rect x="9" y="6" width="9" height="13" rx="1.5" transform="rotate(14 13.5 12.5)"/><rect x="5.5" y="6" width="9" height="13" rx="1.5" transform="rotate(-10 10 12.5)"/>'],
   ['Library', '<rect x="5" y="7" width="11" height="14" rx="1.6"/><path d="M8.5 4h8.3a1.7 1.7 0 0 1 1.7 1.7V17"/>'],
@@ -487,7 +485,7 @@ let pillWired = false;
 function renderZonesPill(root: HTMLElement, model: Model, player: PlayerView): void {
   if (!pillWired) {
     pillWired = true;
-    // Closed by a tap anywhere else, and by the tap that picks a tile. Listening for click lets that tap reach the tile first.
+    // Closed by a tap anywhere else, and by the tap that picks a tile. Listening for click lets that tap reach the tile first
     onPressOutside('.zones-pill', () => { if (ui.zonesFor !== null) changeUi(u => { u.zonesFor = null; }); }, 'click');
   }
   const pill = q(root, '.zones-pill');
@@ -497,7 +495,7 @@ function renderZonesPill(root: HTMLElement, model: Model, player: PlayerView): v
   // Your own hand is shown along the bottom, so only another player's hand is counted here
   q(pill, '[data-zone="Hand"]').hidden = isLocal(model, player);
   const tiles = q(root, '.zone-tiles');
-  // Lit when a commander in its tiles can be cast. Marked when it has more tiles than the pill shows.
+  // Lit when a commander in its tiles can be cast. Marked when it has more tiles than the pill shows
   pill.classList.toggle('lit', !!tiles.querySelector('.zone-tile.selectable, .zone-tile[data-cast="yes"]'));
   pill.classList.toggle('more', tiles.childElementCount > PILL_ZONES.length - 1);
   const open = isPortrait() && ui.zonesFor === player.$key;
@@ -507,7 +505,7 @@ function renderZonesPill(root: HTMLElement, model: Model, player: PlayerView): v
 }
 
 function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, select: CardClick): void {
-  // A player with a commander has a Command tile for the whole game. It is empty while the commander is in another zone.
+  // A player with a commander has a Command tile for the whole game. It is empty while the commander is in another zone
   const commanded = (player.Commander ?? []).some(r => r);
   const zones: ZoneType[] = [...(commanded ? ['Command' as ZoneType] : []), 'Library', 'Graveyard', 'Exile',
     ...EXTRA_ZONES.map(([z]) => z).filter(z => zone(model, player, z).length > 0)];
@@ -524,7 +522,7 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, se
       const img = q<HTMLImageElement>(el, 'img');
       hideOnError(img);
       el.onclick = () => {
-        // A single commander is cast straight from its tile. With partners, the click opens the zone to choose one.
+        // A single commander is cast straight from its tile. With partners, the click opens the zone to choose one
         if (zoneName === 'Command' && el.dataset.cast) select(q(el, 'img'), false);
         else if (!el.classList.contains('hidden-deck')) togglePile(Number(el.closest<HTMLElement>('.seat')?.dataset.player), zoneName);
       };
@@ -605,7 +603,7 @@ export function resetTable(): void {
   resetGameOver();
 }
 
-// A life change is easy to miss as a number. So the amount floats up from the avatar and the life total animates.
+// A life change is easy to miss as a number. So the amount floats up from the avatar and the life total animates
 function showLife(el: HTMLElement, avatar: HTMLElement, life: number, local: boolean): void {
   const before = el.dataset.life === undefined ? life : Number(el.dataset.life);
   el.dataset.life = String(life);
@@ -626,7 +624,7 @@ function showLife(el: HTMLElement, avatar: HTMLElement, life: number, local: boo
   }
 }
 
-// Damage to another player shakes their portrait and adds a glow to it. A red flash also spreads from the screen edges near it.
+// Damage to another player shakes their portrait and adds a glow to it. A red flash also spreads from the screen edges near it
 function hitAvatar(avatar: HTMLElement, amount: number): void {
   const at = avatar.getBoundingClientRect();
   const wash = make('div', `hit-flash near${amount >= 5 ? ' hard' : ''}`);
@@ -649,7 +647,7 @@ function hitAvatar(avatar: HTMLElement, amount: number): void {
 function takeHit(amount: number): void {
   const match = byId('match');
   replay(match, amount >= 5 ? 'hit-hard' : 'hit', 'hit', 'hit-hard');
-  // animationend events from cards inside the board also reach this listener. So only the board's own animation ends the shake.
+  // animationend events from cards inside the board also reach this listener. So only the board's own animation ends the shake
   const settled = (e: AnimationEvent) => {
     if (e.target !== match) return;
     match.classList.remove('hit', 'hit-hard');

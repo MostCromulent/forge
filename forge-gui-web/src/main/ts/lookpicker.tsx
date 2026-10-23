@@ -1,4 +1,4 @@
-// A grid of every avatar in the skin. close is called with the chosen index, or null when dismissed. Avatars in taken cannot be chosen.
+// A grid of every avatar in the skin. close is called with the chosen index, or null when dismissed. Avatars in taken cannot be chosen
 
 import { t } from './text';
 import { Backdrop } from './dialog';

@@ -1,4 +1,4 @@
-// The command zone holds several kinds of card. Each kind is drawn in its own place, and this file draws the plaques beside a portrait.
+// The command zone holds several kinds of card. Each kind is drawn in its own place, and this file draws the plaques beside a portrait
 
 import type { CardStateView, CardView, PlayerView } from '../protocol';
 import { reconcile } from './reconcile';
@@ -83,10 +83,10 @@ function plaques(model: Model, cards: CardView[]): Plaque[] {
 // Draws the command zone except commanders and signature spells, which are on the Command tile among the zones
 export function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | undefined, cards: CardView[],
     select: CardClick): void {
-  // Planes, schemes and the planar die are drawn elsewhere. The other cards are shown beside the portrait.
+  // Planes, schemes and the planar die are drawn elsewhere. The other cards are shown beside the portrait
   reconcile(root, plaques(model, cards), p => p.card.$key,
     ({ card }) => {
-      // A card the player reads or activates is drawn as a card. A reminder such as the monarch is a round token.
+      // A card the player reads or activates is drawn as a card. A reminder such as the monarch is a round token
       const tile = commandKind(card, stateOf(model, card)) !== 'effect';
       const el = make('div', tile ? 'cmd-tile' : 'emblem');
       el.innerHTML = tile ? '<img alt="" draggable="false"><span class="band"></span>'
@@ -95,7 +95,7 @@ export function renderEmblems(root: HTMLElement, model: Model, player: PlayerVie
       if (tile) {
         noImageOnError(el, img);
       } else {
-        // Only the art is fetched, as for a card-art sleeve. If there is no art image, the art box is cut from the whole card.
+        // Only the art is fetched, as for a card-art sleeve. If there is no art image, the art box is cut from the whole card
         img.addEventListener('error', () => {
           if (!el.classList.contains('whole') && el.dataset.zoom) {
             el.classList.add('whole');

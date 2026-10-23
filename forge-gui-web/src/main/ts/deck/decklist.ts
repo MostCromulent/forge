@@ -1,4 +1,4 @@
-// Views of the editor's deck that the server does not send. The deck is regrouped, written out as a text list, or drawn as a sample hand.
+// Views of the editor's deck that the server does not send. The deck is regrouped, written out as a text list, or drawn as a sample hand
 
 import type { EditorCard, EditorGroup, EditorState } from '../protocol';
 import { COLOUR_NAMES } from '../symbols';
@@ -6,7 +6,7 @@ import { t, type TextKey } from '../text';
 
 export type GroupBy = 'type' | 'mv' | 'colour';
 
-// The colour headings in display order. M is for multicolour cards and C is for colourless cards.
+// The colour headings in display order. M is for multicolour cards and C is for colourless cards
 const COLOUR_ORDER = ['W', 'U', 'B', 'R', 'G', 'M', 'C'];
 const COLOUR_HEADINGS: Record<string, TextKey> = { ...COLOUR_NAMES, M: 'lblMulticolor' };
 

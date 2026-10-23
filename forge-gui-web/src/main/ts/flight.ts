@@ -7,7 +7,6 @@ const FLY_MS = 380;
 /** The lifted card copy, its start position, and a key that names the move. It is kept until the target is drawn. */
 let inFlight: { face: HTMLElement; from: DOMRect; key: string } | null = null;
 
-
 /** Copies a card's image at its current position. A card that shows only text, or has no loaded image, does not fly. */
 export function lift(img: HTMLImageElement | null | undefined, key: string): void {
   inFlight = !reducedMotion() && img?.complete && img.naturalWidth

@@ -9,7 +9,6 @@ const LOCAL_KEY = 'forge.settings';
 /** The server keeps a guest's settings only for the session. The browser stores them and sends them again on connecting. */
 const GUEST_KEY = 'forge.guestSettings';
 
-
 /** The playmats a player can show under the board. The last is the bare table, with no picture. */
 export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb: string | null }[] = [
   { id: 'nebula', name: 'lblWebPlaymatNebula', image: '/playmats/stormy-nebula.jpg', thumb: '/playmats/stormy-nebula-thumb.jpg' },
@@ -235,7 +234,7 @@ export function stored(def: SettingDef, value: SettingValue | undefined): Settin
   }
 }
 
-// The server sends its preference values with the rest of the turn controls
+// The server sends its preference values on connecting and with the rest of the turn controls
 export function onServerSettings(values: ServerSettings | undefined): void {
   server = values ?? {};
   apply();

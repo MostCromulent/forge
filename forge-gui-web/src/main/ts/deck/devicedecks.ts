@@ -1,4 +1,4 @@
-// A guest's decks are stored in this browser per site address. The same host reached by a different address shows none of them.
+// A guest's decks are stored in this browser per site address. The same host reached by a different address shows none of them
 
 export interface DeviceDeck {
   id: string;

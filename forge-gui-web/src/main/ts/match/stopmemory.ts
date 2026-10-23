@@ -1,4 +1,4 @@
-// Stores a guest's phase stops in its browser. The server keeps them only for the length of the guest's session.
+// Stores a guest's phase stops in its browser. The server keeps them only for the length of the guest's session
 
 import type { Controls, PhaseType } from '../protocol';
 import { storeJson, storedJson } from '../storage';

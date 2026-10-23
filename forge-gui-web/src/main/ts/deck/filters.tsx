@@ -1,4 +1,4 @@
-// The filter bar shared by the deck finder and the editor's catalogue. A chip set by the table or the deck is gold and names its source.
+// The filter bar shared by the deck finder and the editor's catalogue. A chip set by the table or the deck is gold and names its source
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';

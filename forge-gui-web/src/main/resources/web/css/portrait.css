@@ -170,7 +170,6 @@ html[data-form="portrait"] #match[hidden] ~ #zoom.sheet { --dock-h: 0px; }
 .sheet-actions :is(.sheet-prev, .sheet-next) { grid-column: span 1; min-height: 44px; font-size: 22px; line-height: 1; padding: 0; }
 .sheet-actions .sheet-at { grid-column: span 2; text-align: center; color: var(--muted); font-size: 12px; }
 .sheet-actions .sheet-act { background: var(--brass); color: var(--on-brass); font-weight: 800; border-color: var(--accent); }
-.sheet-actions [hidden] { display: none; }
 /* A button that is alone in its row fills the whole row */
 .sheet-actions .sheet-act:not([hidden]):has(+ .sheet-abilities[hidden]), .sheet-actions .sheet-flip[hidden] + .sheet-close { grid-column: 1 / -1; }
 /* A card's menu and the stack menu open at the pointer on a desktop. Here they are a sheet above the dock. */
@@ -524,7 +523,7 @@ html[data-form="portrait"] #editor .cat-bar { padding: 8px 10px 6px; }
 html[data-form="portrait"] #editor .cat-bar .fbar { gap: 6px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
 html[data-form="portrait"] #editor .cat-bar .search-wrap { grid-column: 1 / -1; }
 html[data-form="portrait"] #editor .cat-bar .find { height: 40px; font-size: 15px; }
-html[data-form="portrait"] #editor .search-tip { display: none !important; }
+html[data-form="portrait"] #editor .search-tip { display: none; }
 html[data-form="portrait"] #editor .cat-bar .colours { gap: 4px; padding: 4px; }
 html[data-form="portrait"] #editor .cat-bar .colour { width: 28px; height: 28px; }
 html[data-form="portrait"] #editor .cat-bar .type-by { height: 38px; min-width: 0; width: 100%; font-size: 13px; padding: 0 4px; }

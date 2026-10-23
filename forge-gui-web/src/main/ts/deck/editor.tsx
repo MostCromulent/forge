@@ -1,4 +1,4 @@
-// The deck editor. Every change is sent to the server, which saves it at once, so there is no Save button.
+// The deck editor. Every change is sent to the server, which saves it at once, so there is no Save button
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useDismiss } from '../hooks';
@@ -60,13 +60,13 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
       actions.edit({ op: 'move', name: carried.name, from: carried.from, to: v.zone, count: carried.count });
     }
   };
-  // Holding Alt at the press drags every copy. The command zone accepts any card because the server decides what can be a commander.
+  // Holding Alt at the press drags every copy. The command zone accepts any card because the server decides what can be a commander
   const handlers: CardHandlers = (name, from, image, count) => ({
-    // A long press opens the card's preview. Its More button opens this menu.
+    // A long press opens the card's preview. Its More button opens this menu
     'data-menu': '',
     onPointerDown: e => {
       const carried: Carried = { name, from, count: e.altKey ? Math.max(1, count) : 1 };
-      startDrag(e, carried, image, zone => verdictFor(carried, zone, state, true), v => dropped(carried, v));
+      startDrag(e, carried, image, zone => verdictFor(carried, zone, state), v => dropped(carried, v));
     },
     onContextMenu: e => {
       e.preventDefault();

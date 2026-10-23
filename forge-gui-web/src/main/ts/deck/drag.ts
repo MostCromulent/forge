@@ -1,4 +1,4 @@
-// Drags a card between the catalogue and the deck. It uses pointer events so the dragged chip can show what a drop will do.
+// Drags a card between the catalogue and the deck. It uses pointer events so the dragged chip can show what a drop will do
 
 import { copyLimit, countsInDeck } from './catalogue';
 import { imageUrl } from '../images';
@@ -35,8 +35,8 @@ const REMOVE: Record<Exclude<Zone, 'catalogue'>, TextKey> = {
 };
 const refused = (key: TextKey, ...args: number[]) => `${REFUSED} ${t(key, ...args)}`;
 
-/** What dropping a dragged card on a zone would do. commanderAllowed says whether the card can be the deck's commander. */
-export function verdictFor(carried: Carried, zone: Zone, state: EditorState, commanderAllowed: boolean): Verdict {
+/** What dropping a dragged card on a zone would do. The server decides whether a card can be the commander. */
+export function verdictFor(carried: Carried, zone: Zone, state: EditorState): Verdict {
   const n = carried.count;
   if (zone === carried.from) {
     return { zone, accepts: false, verb: carried.from === 'catalogue' ? t('lblWebEditorDragDropOnSection') : t('lblWebEditorDragAlreadyHere') };
@@ -47,9 +47,6 @@ export function verdictFor(carried: Carried, zone: Zone, state: EditorState, com
   if (zone === 'Commander') {
     if (!state.commanderZone) {
       return { zone, accepts: false, refused: true, verb: refused('lblWebEditorDragOnlyCommanderFormats') };
-    }
-    if (!commanderAllowed) {
-      return { zone, accepts: false, refused: true, verb: refused('lblWebEditorDragNotLegalCommander') };
     }
     return { zone, accepts: true, verb: state.commanders.length ? t('lblWebEditorDragReplaceCommander') : t('lblWebEditorDragMakeCommander') };
   }

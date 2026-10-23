@@ -1,4 +1,4 @@
-// Messages from the server in the corner of the screen. An error stays until clicked. Any other notice closes by itself.
+// Messages from the server or a screen, in the corner of the screen
 
 import { t } from './text';
 import type { Model } from './model';

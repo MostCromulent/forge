@@ -1,4 +1,4 @@
-// Builds and updates one card element. Every zone that shows a card uses this, so a card looks the same everywhere.
+// Builds and updates one card element. Every zone that shows a card uses this, so a card looks the same everywhere
 
 import { combatShown, commanderTax, deref, game, stateOf, type Model } from '../model';
 import { hoverable, inspectCard } from '../preview';
@@ -39,7 +39,7 @@ export function createCard(onClick: CardClick): HTMLDivElement {
   return el;
 }
 
-// Every card checks these lists on every render. Each message replaces a whole list, so a Set is cached per list object.
+// Every card checks these lists on every render. Each message replaces a whole list, so a Set is cached per list object
 const refSets = new WeakMap<readonly (Ref | number)[], Set<number>>();
 export const has = (refs: readonly (Ref | number)[] | null | undefined, key: number): boolean => {
   if (!refs) return false;
@@ -50,7 +50,6 @@ export const has = (refs: readonly (Ref | number)[] | null | undefined, key: num
   }
   return keys.has(key);
 };
-
 
 /** The last image shown for each card. It is used for a spell whose card is already hidden when its cast is shown. */
 const pictures = new Map<number, { src: string; zoom: string; name: string }>();
@@ -91,20 +90,20 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   el.classList.toggle('highlighted', has(model.prompt?.highlighted, card.$key));
   const attacking = !!card.Attacking && combatShown(model);
   el.classList.toggle('attacking', attacking);
-  // On a phone, an attacker gets a tag when a tap on your creature will block it. The game may have picked that attacker for you.
+  // On a phone, an attacker gets a tag when a tap on your creature will block it. The game may have picked that attacker for you
   const blockThis = attacking && game(model)?.Phase === 'COMBAT_DECLARE_BLOCKERS' && (model.prompt?.highlighted ?? []).includes(card.$key);
   q(el, '.combat-tag').textContent = blockThis ? t('lblWebPortraitBlockingThis') : '';
   el.classList.toggle('blocking', !!card.Blocking);
   el.classList.toggle('phased', !!card.PhasedOut);
   q(el, '.phase-tag').textContent = card.PhasedOut ? t('lblWebCardPhasedOut') : '';
-  // The chains animate on and off when the card is detained or released. A newly drawn board shows them without animation.
+  // The chains animate on and off when the card is detained or released. A newly drawn board shows them without animation
   const detained = !!card.Detained;
   if (el.dataset.detained !== undefined && (el.dataset.detained === '1') !== detained && el.closest('.battlefield') && !reducedMotion()) {
     replay(el, detained ? 'detaining' : 'releasing', 'detaining', 'releasing');
   }
   el.dataset.detained = detained ? '1' : '';
   el.classList.toggle('detained', detained);
-  // The board shows a small copy of the image. The preview (data-zoom) uses the full image.
+  // The board shows a small copy of the image. The preview (data-zoom) uses the full image
   const src = cardImageSrc(model, card);
   const small = visible ? smallImage(src) : '';
   if (setImage(q<HTMLImageElement>(el, 'img'), small)) {
@@ -137,7 +136,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   const power = creature ? `${state.Power ?? 0}/` : '';
   // A battle is drawn sideways, as it is printed and as every other client draws it
   el.classList.toggle('battle', /Battle/.test(type));
-  // Damage is subtracted from the toughness shown, as a player counts it. It is not listed separately.
+  // Damage is subtracted from the toughness shown, as a player counts it. It is not listed separately
   const toughness = creature ? `${(state.Toughness ?? 0) - damage}`
     : /Planeswalker/.test(type) ? `${state.Loyalty ?? ''}`
     : /Battle/.test(type) ? `${state.Defense ?? ''}` : '';
@@ -256,7 +255,7 @@ function mechanic(card: CardView, type: string): Node[] {
     }
     return [pips, label(card.AttractionLights.join(' '))];
   }
-  // Intensity has no maximum, so there is no track to draw. Only the number is shown.
+  // Intensity has no maximum, so there is no track to draw. Only the number is shown
   if (card.Intensity) return [label(t('lblWebCardIntensity', card.Intensity))];
   return [];
 }
@@ -278,7 +277,7 @@ function showBlocking(el: HTMLElement, card: CardView): void {
     : card.BlockAdditional ? t('lblWebCardMayBlockCount', card.BlockAdditional + 1) : '';
 }
 
-// New damage flashes the card white, shakes it and shows the amount flying off it. So combat can be followed without the log.
+// New damage flashes the card white, shakes it and shows the amount flying off it. So combat can be followed without the log
 function showDamage(el: HTMLElement, damage: number): void {
   const before = el.dataset.damage === undefined ? damage : Number(el.dataset.damage);
   el.dataset.damage = String(damage);
@@ -300,7 +299,7 @@ function showDamage(el: HTMLElement, damage: number): void {
 
 export function setPileCount(el: HTMLElement, count: number, opened: boolean): void {
   el.classList.toggle('pile', count > 1);
-  // Up to three copies show behind the top card. A pile of four or more shows four cards, and the badge shows the full count.
+  // Up to three copies show behind the top card. A pile of four or more shows four cards, and the badge shows the full count
   el.dataset.depth = String(Math.min(3, Math.max(0, count - 1)));
   const badge = q(el, '.count');
   badge.textContent = opened ? '×' : count > 1 ? `×${count}` : '';

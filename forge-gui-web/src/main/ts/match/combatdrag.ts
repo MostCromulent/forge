@@ -1,4 +1,4 @@
-// A dragged block or attack sends the same clicks the engine already accepts. Each click waits until the one before it shows on the board.
+// A dragged block or attack sends the same clicks the engine already accepts. Each click waits until the one before it shows on the board
 
 import { byId, q, make, placeBeside } from '../dom';
 import { attackTargets, game, me, opponents, stateOf, type Model } from '../model';
@@ -18,6 +18,13 @@ type Point = { x: number; y: number };
 let current: Model | null = null;
 /** The drags not yet shown on the board, chained in order, so a quick second drag waits for the first. */
 let queued: Promise<void> = Promise.resolve();
+let act: Actions | null = null;
+/** The name of the player you last attacked. The name is kept because each game of a match creates its players again. */
+let lastDefender: string | null = null;
+/** Whether this attack prompt has already been switched to lastDefender, or never needed to be. */
+let turned = false;
+/** The player this browser asked the prompt to switch to, until the switch shows. */
+let turning: number | null = null;
 
 const has = (refs: (Ref | null)[] | null | undefined, key: number) => (refs ?? []).some(r => r?.ref === key);
 
@@ -41,14 +48,6 @@ function declaringAttacks(model: Model): boolean {
   return game(model)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && game(model)?.PlayerTurn?.ref === me(model)?.$key
     && defenders(model).length > 1 && currentDefender(model) !== undefined;
 }
-
-let act: Actions | null = null;
-/** The name of the player you last attacked. The name is kept because each game of a match creates its players again. */
-let lastDefender: string | null = null;
-/** Whether this attack prompt has already been switched to lastDefender, or never needed to be. */
-let turned = false;
-/** The player this browser asked the prompt to switch to, until the switch shows. */
-let turning: number | null = null;
 
 /** The engine starts every attack at the first opponent. So once per attack prompt this switches it to the player you attacked last. */
 function followDefender(model: Model): void {

@@ -26,7 +26,7 @@ const KIND_AT: Kind[] = ['name', 'name', 'name', 'art', 'art', 'art', 'ability',
 /** Where an art sticker goes on the card, keyed by the sheet slot it came from. The values are left and top, as percentages of the card. */
 const ART_AT: Record<number, readonly [number, number]> = { 3: [52, 13], 4: [10, 22], 5: [32, 32] };
 
-export function applied(text: string | undefined): Applied[] {
+function applied(text: string | undefined): Applied[] {
   if (!text) return [];
   return text.split(/\r?\n/).slice(1).map(line => /^\s*(.*) \((name|art|ability|pt)\)\s*$/.exec(line))
     .filter((m): m is RegExpExecArray => !!m).map(m => ({ text: m[1], kind: m[2] as Kind }));
@@ -63,7 +63,6 @@ function cut(src: string, slot: number): string {
   const at = `${((x / (SHEET_W - w)) * 100).toFixed(1)}% ${((y / (SHEET_H - h)) * 100).toFixed(1)}%`;
   return `background-image:url('${src.replace(/'/g, '%27')}');background-size:${size};background-position:${at}`;
 }
-
 
 /** The markup for a layer of stickers over a card's image. Names go along the name line, art on the art, abilities across the text box and power/toughness in the corner. */
 function stickersHtml(model: Model, card: CardView | undefined): string {

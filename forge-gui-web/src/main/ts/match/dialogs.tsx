@@ -137,7 +137,7 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
   const setFolded = (on: boolean) => changeUi(u => { u.requestFolded = on ? req.id : null; });
   useEffect(() => () => withdrawAnswer(req.id), []);
   const foldable = !at && FOLDABLE.has(req.kind);
-  // A question about cards is drawn on the dimmed board with no box round it. A phone puts the fold button by the question and the answer along the bottom.
+  // A question about cards is drawn on the dimmed board with no box round it. A phone puts the fold button by the question and the answer along the bottom
   const onBoard = cardPrompt(req);
   const phone = isPortrait();
   const where = onBoard && whereFrom(model, req);

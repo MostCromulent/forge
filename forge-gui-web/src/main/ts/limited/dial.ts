@@ -1,4 +1,4 @@
-// The pack dial's geometry. It is kept apart from the drawing code so it can be tested without a page. Angles are in radians and y grows downwards
+// The pack dial's geometry, which the dial and the draft's seat list share. Angles are in radians and y grows downwards
 
 /** The angle of seat i of n. Seat 0 is at the bottom, and later seats run anticlockwise on screen, towards the player's right. */
 export function seatAngle(i: number, n: number): number {

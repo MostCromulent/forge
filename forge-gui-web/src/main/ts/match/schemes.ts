@@ -1,4 +1,4 @@
-// A scheme that is set in motion is shown to the whole table for a moment. Ongoing schemes are shown in a row under their archenemy's seat.
+// A scheme that is set in motion is shown to the whole table for a moment. Ongoing schemes are shown in a row under their archenemy's seat
 
 import { drawNamedTiles } from './planes';
 import { cardImageSrc, setImage } from '../images';

@@ -1,8 +1,7 @@
 // Animates each cardMoved event. A card moves from where it was before the board was redrawn to where it is now
 
 import { hoverable } from '../preview';
-import type { CardMoved, GameEvent, Place } from '../protocol';
-import type { CardView, PlayerView } from '../protocol';
+import type { CardMoved, GameEvent, Place, CardView, PlayerView } from '../protocol';
 import { cssUrl, playerSleeveUrl } from '../looks';
 import { echoSound } from '../audio';
 import { unmake } from './leaving';

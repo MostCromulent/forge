@@ -58,7 +58,7 @@ const send = connect(behindItsBoard(msg => pacer.receive(msg), 300), online => {
   }
 });
 
-// Otherwise a script error is only visible in the player's own browser. The first few are enough to tell what broke.
+// Otherwise a script error is only visible in the player's own browser. The first few are enough to tell what broke
 let reported = 0;
 const report = (text: string): void => {
   if (reported++ < 5) send({ t: 'pageError', text: text.slice(0, 1500) });
@@ -114,7 +114,6 @@ const actions = {
 // The page's own actions and model, for the browser console and for e2e probes
 Object.assign(window, { forge: { actions, model } });
 
-
 initUi(schedule, render);
 initForm(() => {
   // Panels that only one layout draws are closed when the layout changes
@@ -139,7 +138,7 @@ initSettings(actions.setSetting, () => {
   schedule();
 });
 
-// keys.ts decides what every key does, based on what is open
+// keys.ts decides what each key does, based on what is open, except Escape inside a dialog or menu
 document.addEventListener('keydown', e => {
   const target = e.target instanceof HTMLElement ? e.target : null;
   // Enter on a dialog button focused with Tab presses that button instead of confirming the answer
