@@ -21,7 +21,6 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
   const [chosen, setChosen] = useState<{ walker: boolean; name: string } | null>(null);
   const [typed, setTyped] = useState('');
   const [filter, setFilter] = useState<PartyFilter>(NO_FILTER);
-  const [reading, setReading] = useState(false);
   useEffect(() => { actions.conquestParty(); }, []);
 
   const lead = party?.commanders.find(c => c.selected);
@@ -29,7 +28,6 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
   const walker = chosen?.walker ? party?.planeswalkers.find(w => w.name === chosen.name) : undefined;
   // The panel's curve and list come from the deck's details. They are requested again when the shown commander or its deck size changes
   useEffect(() => { if (commander) actions.conquestViewDeck(commander.name); }, [commander?.name, commander?.deckSize]);
-  useEffect(() => setReading(false), [commander?.name, walker?.name]);
   if (!party) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
 
   const words = typed.trim().toLowerCase();
@@ -66,7 +64,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
           <h4>{t('lblCommanders')}<span>{party.commanders.length}</span></h4>
           <div class="cq-cmd-grid">
             {commanders.map(c => <Plate key={c.name} name={c.name} image={c.image} colors={c.colors} selected={c.selected}
-              pressed={c === commander} pick={() => setChosen({ walker: false, name: c.name })}
+              pressed={c === commander} pick={() => setChosen({ walker: false, name: c.name })} choose={() => actions.conquestLead(c.name)}
               lines={[`${c.origin} (${c.wins}W / ${c.losses}L)`, <DeckLine commander={c} />]} />)}
           </div>
         </section>
@@ -74,7 +72,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
           <h4>{t('lblPlaneswalkers')}<span>{party.planeswalkers.length}</span></h4>
           <div class="cq-cmd-grid">
             {walkers.map(w => <Plate key={w.name} name={w.name} image={w.image} colors={w.colors} selected={w.selected}
-              pressed={w === walker} pick={() => setChosen({ walker: true, name: w.name })} lines={[t('lblPlaneswalker')]} />)}
+              pressed={w === walker} pick={() => setChosen({ walker: true, name: w.name })} choose={() => actions.conquestWalker(w.name)} lines={[t('lblPlaneswalker')]} />)}
           </div>
         </section>
       </div>
@@ -86,14 +84,11 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
               <span class="cq-chip">{commander.wins}W / {commander.losses}L</span>
               <span class="cq-chip"><DeckLine commander={commander} /></span>
             </>}
-            details={<>
-              {details && commander.deckSize > 0 && <Curve curve={details.stats.curve} spells={details.stats.spells} px={44} />}
-              {reading && details && <div class="dk-cards" data-list>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>}
+            details={details && commander.deckSize > 0 && <>
+              <Curve curve={details.stats.curve} spells={details.stats.spells} px={44} />
+              <div class="dk-cards" data-list>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
             </>}>
-              <div class="cq-two">
-                <button aria-pressed={reading} disabled={!commander.deckSize} onClick={() => setReading(!reading)}>{t('lblViewDeck')}</button>
-                <button onClick={() => actions.conquestEditDeck(commander.name)}>{t('btnEditDeck')}</button>
-              </div>
+              <button onClick={() => actions.conquestEditDeck(commander.name)}>{t('btnEditDeck')}</button>
               <button class="primary cq-big" disabled={commander.selected} onClick={() => actions.conquestLead(commander.name)}>
                 {commander.selected ? t('lblSelected') : t('lblSelectCommander')}
               </button>
@@ -114,7 +109,7 @@ function WalkerPanel({ walker, actions }: { walker: ConquestWalkerRow; actions: 
   return (
     <aside class="cq-side">
       <div class="cq-cmd-detail">
-        <img class="cq-card" alt={walker.name} src={imageUrl(walker.image)} />
+        <img class="cq-card" alt={walker.name} src={imageUrl(walker.image)} data-image={walker.image} />
         <h3>{walker.name}</h3>
         <div class="cq-chips"><span class="cq-chip">{t('lblPlaneswalker')}</span></div>
       </div>

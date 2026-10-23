@@ -345,7 +345,10 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-cmd .t b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cq-cmd .t .l { font-size: 11.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .cq-cmd .t .l .cq-warn { font-size: 11.5px; }
-.cq-cmd[aria-pressed="true"] { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
+/* Gold marks the one in use. White marks the one shown in the panel */
+.cq-cmd.in-use { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
+.cq-cmd[aria-pressed="true"] { border-color: var(--text); box-shadow: 0 0 0 1px var(--text); }
+.cq-cmd.in-use[aria-pressed="true"] { box-shadow: 0 0 0 1px var(--accent-2), 0 0 0 3px var(--text); }
 .cq-cmd .tag { position: absolute; right: 8px; bottom: 8px; background: #0b0e14e6; text-transform: uppercase; letter-spacing: .06em; font-size: 10.5px; }
 .cq-cmd-detail { padding: 20px; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
 .cq-cmd-detail img.cq-card { width: 216px; aspect-ratio: 63 / 88; border-radius: 11px; justify-self: center; box-shadow: 0 12px 30px #000b; }

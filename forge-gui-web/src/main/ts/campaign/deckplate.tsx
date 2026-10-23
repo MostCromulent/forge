@@ -4,12 +4,13 @@ import { imageUrl } from '../images';
 import { Pip, Pips } from '../symbols';
 import { t } from '../text';
 
-export function Plate({ name, image, colors, selected, pressed, pick, lines, tag }: {
-  name: string; image?: string | null; colors: string; selected: boolean; pressed: boolean; pick: () => void; lines: ComponentChildren[];
+/** A commander, planeswalker or deck in a list. A click shows it in the panel, and a double click makes it the one in use. */
+export function Plate({ name, image, colors, selected, pressed, pick, choose, lines, tag }: {
+  name: string; image?: string | null; colors: string; selected: boolean; pressed: boolean; pick: () => void; choose: () => void; lines: ComponentChildren[];
   tag?: string;
 }) {
   return (
-    <button class="cq-cmd" aria-pressed={pressed} onClick={pick}>
+    <button class={selected ? 'cq-cmd in-use' : 'cq-cmd'} aria-pressed={pressed} onClick={pick} onDblClick={() => { if (!selected) choose(); }}>
       <div class="a" style={{ backgroundImage: image ? `url("${artUrl(image)}")` : undefined }} />
       {selected && <span class="cq-chip brass tag">{tag ?? t('lblSelected')}</span>}
       <div class="t">
@@ -27,7 +28,7 @@ export function DeckPanel({ image, title, chips, problem, details, children }: {
   return (
     <aside class="cq-side">
       <div class="cq-cmd-detail">
-        {image && <img class="cq-card" alt={title} src={imageUrl(image)} />}
+        {image && <img class="cq-card" alt={title} src={imageUrl(image)} data-image={image} />}
         <h3>{title}</h3>
         <div class="cq-chips">{chips}</div>
         {problem && <p class="cq-warn">{problem}</p>}

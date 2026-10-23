@@ -31,7 +31,7 @@ export function Decks({ page, model, actions }: { page: QuestDecks; model: Model
               : <button class="qu-new" onClick={() => setNaming(true)}><span class="plus" aria-hidden="true">+</span><b>{t('lblNewDeck')}</b></button>}
             {page.decks.map(d => (
               <Plate key={d.name} name={d.name} image={d.image} colors={d.colors} selected={d.current} tag={t('lblCurrentDeck2')}
-                pressed={d === deck} pick={() => setChosen(d.name)}
+                pressed={d === deck} pick={() => setChosen(d.name)} choose={() => actions.questDeckCurrent(d.name)}
                 lines={[d.problem ? <span class="cq-warn" title={d.problem}>{t('lblInvalidDeck')} · {d.size}</span> : t('lblWebNCards', d.size)]} />
             ))}
           </div>
