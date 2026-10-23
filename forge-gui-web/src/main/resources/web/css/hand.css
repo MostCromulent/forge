@@ -1,5 +1,7 @@
 /* The hand is placed low, so the bottom of each card is below the screen edge. A hovered card rises fully into view. */
-#hand { display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); padding-left: var(--line-w, 0px); }
+/* The room above the hand holds the cards' costs, which are drawn above their top edge, so they stay clear of the battlefield */
+#match { --hand-room: calc(var(--hand-w) * .12); }
+#hand { display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); margin-top: var(--hand-room); padding-left: var(--line-w, 0px); }
 /* When the log panel is folded, the hand uses the full width. It leaves space on the right for the prompt console. */
 #match.side-folded #hand { padding-right: calc(var(--prompt-w) + 16px); }
 #hand .card { width: var(--hand-w); height: var(--hand-h); }

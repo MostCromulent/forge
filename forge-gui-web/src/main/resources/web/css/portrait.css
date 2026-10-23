@@ -94,7 +94,7 @@ html[data-form="portrait"] #hand { padding-left: 0; padding-right: 0; }
 /* The hand is shown as a strip of card tops until its drawer is opened */
 html[data-form="portrait"] #match { --hand-w: 50px; --hand-h: 70px; }
 /* The card image shows its own cost, so no cost badge is drawn over it here. The exception is a changed cost in the open drawer. */
-html[data-form="portrait"] #hand { height: 52px; padding-top: 6px; box-sizing: border-box; overflow: hidden; }
+html[data-form="portrait"] #hand { height: 52px; margin-top: 0; padding-top: 6px; box-sizing: border-box; overflow: hidden; }
 html[data-form="portrait"] #hand .card .cost-badge:not(.changed), html[data-form="portrait"] #hand.strip .card .cost-badge { display: none; }
 html[data-form="portrait"] #hand::before { display: none; }
 html[data-form="portrait"] #hand.strip .card { pointer-events: none; }
