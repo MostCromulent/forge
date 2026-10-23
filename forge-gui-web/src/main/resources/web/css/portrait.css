@@ -121,6 +121,7 @@ html[data-form="portrait"] :is(#match, #dialog-layer) .sheet[hidden] { display: 
 /* The phase strip shows whose turn it is, the current step, and the steps on each side of it. A tap anywhere on it opens the stops. */
 html[data-form="portrait"] #phase-strip { padding: 0 6px; }
 html[data-form="portrait"] #phase-strip .pill { position: relative; width: 100%; height: 32px; box-sizing: border-box; border-radius: 16px; gap: 4px; padding: 0 8px 0 4px; min-width: 0; }
+html[data-form="portrait"] .turn-banner { height: 32px; padding: 0 16px; font-size: 12px; }
 /* The pill looks slim, but its touch area is taller */
 html[data-form="portrait"] #phase-strip .pill::before { content: ''; position: absolute; inset: -6px 0; }
 /* When space is short, the turn number is hidden before the player's name. It wraps whole onto a second line that the pill hides, because a cut-off number would look like a different turn. */
