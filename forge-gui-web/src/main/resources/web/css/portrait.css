@@ -337,7 +337,7 @@ html[data-form="portrait"] #lobby .play:disabled { opacity: 1; filter: saturate(
 html[data-form="portrait"] .battlefield .card.tapped .combat-tag:not(:empty) { left: -9px; top: 50%; transform: translate(-50%, -50%) rotate(-90deg); }
 html[data-form="portrait"] .battlefield .card.tapped :is(.count, .pt) { rotate: -90deg; }
 @media (hover: none) {
-  .zone-answer kbd, .dialog .actions kbd, .word-foot kbd, .word-keys { display: none; }
+  .zone-answer kbd, .dialog .actions kbd, .word-foot kbd, .word-keys, .cq-reveal-foot kbd { display: none; }
 }
 
 html[data-form="portrait"] #game-over .panel { max-width: 100%; box-sizing: border-box; padding: 0 16px; }

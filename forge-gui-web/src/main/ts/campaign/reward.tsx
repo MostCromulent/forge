@@ -9,6 +9,8 @@ import type { Reward, RewardStep } from '../protocol';
 import { t, formatNumber } from '../text';
 import { byId, make, reducedMotion } from '../dom';
 import { Backdrop } from '../dialog';
+import { boundKeys } from '../settings';
+import { keyName } from '../keys';
 
 /** The amounts the reveal has not shown yet, by the icon of the balance they were paid into. */
 export type Owed = Record<string, number>;
@@ -129,6 +131,18 @@ function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; n
     setPhase('spinning');
     void wheel.current!.spin(spot.current).then(() => setPhase('stopped'));
   };
+  const key = boundKeys().ok;
+  useEffect(() => {
+    if (phase !== 'ready') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== key || e.ctrlKey || e.altKey || e.metaKey || e.target instanceof HTMLInputElement) return;
+      // Space would also press a focused button, so the spin is not started twice
+      e.preventDefault();
+      spin();
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [phase, key]);
   return (
     <div class="cq-wheel-stop">
       {emblem > 0 && <p class="cq-wheel-first"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestFirstConquest')}</p>}
@@ -138,7 +152,7 @@ function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; n
       <div class="cq-reveal-foot">
         {phase === 'stopped'
           ? <button class="primary cq-big" onClick={next}>{t('lblGreat')}</button>
-          : <button class="primary cq-big" disabled={phase === 'spinning'} onClick={spin}>{t('lblWebConquestSpin')}</button>}
+          : <button class="primary cq-big" disabled={phase === 'spinning'} onClick={spin}>{t('lblWebConquestSpin')} <kbd>{keyName(key)}</kbd></button>}
       </div>
     </div>
   );

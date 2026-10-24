@@ -82,7 +82,9 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await expect(emblems.locator('b')).toHaveText('2');
   const layer = (selector: string) => page.locator(selector).evaluate(el => Number(getComputedStyle(el).zIndex));
   expect(await layer('.cq-purse')).toBeGreaterThan(await layer('.cq-reveal'));
-  await reveal.getByRole('button', { name: 'Spin' }).click();
+  // The OK key spins the wheel, and its button shows that key
+  await expect(reveal.getByRole('button', { name: 'Spin' }).locator('kbd')).toHaveText('Space');
+  await page.keyboard.press(' ');
   await expect(reveal.locator('.cq-dl.done')).toBeVisible({ timeout: 15_000 });
   await reveal.getByRole('button', { name: 'Great', exact: true }).click();
 
