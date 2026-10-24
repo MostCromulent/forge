@@ -57,6 +57,8 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent-2); f
 .catalogue .count-row { padding: 6px 14px 4px; }
 .catalogue .shown.commanders-only { color: var(--text); }
 .cat-grid { overflow: auto; padding: 12px 14px 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 18px 12px; align-content: start; }
+/* The deck editor's collection shows at most four cards in a row */
+#editor .cat-grid { grid-template-columns: repeat(auto-fill, minmax(max(118px, (100% - 37px) / 4), 1fr)); }
 .cat-table { overflow: auto; padding: 0 14px 20px; }
 .cat-table table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .cat-table th { position: sticky; top: 0; background: var(--bg); text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: 7px; border-bottom: 1px solid var(--line); }
