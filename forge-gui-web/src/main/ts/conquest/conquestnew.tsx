@@ -1,10 +1,11 @@
 // Starting a conquest. The form requests the planes, then a plane's commanders, then a commander's planeswalkers, as each choice is made
 
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { artUrl } from '../sleeves';
 import { imageUrl, hideBroken } from '../images';
 import { Pip, Pips } from '../symbols';
 import { StepForm, type Step, type Ticket } from '../stepform';
+import { reducedMotion } from '../dom';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ConquestCardOption, ConquestOptions, ConquestPlaneOption } from '../protocol';
@@ -103,20 +104,62 @@ function TicketCard({ card }: { card: ConquestCardOption }) {
 
 const anyOf = <T,>(shown: T[]) => shown[Math.floor(Math.random() * shown.length)];
 
+/**
+ * Random rolls through the shown choices in its own box, slowing down, then picks one. A second click stops on the pick at once.
+ * face is the choice the box shows, and under is the one before it, which the new face fades in over.
+ */
+function useRoll<T extends { name: string }>(shown: T[], pick: (name: string) => void) {
+  const [faces, setFaces] = useState<{ face: T | null; under: T | null }>({ face: null, under: null });
+  const timers = useRef<number[]>([]);
+  const stop = useRef<(() => void) | null>(null);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const show = (face: T) => setFaces(f => ({ face, under: f.face }));
+  const roll = () => {
+    if (stop.current) {
+      stop.current();
+      return;
+    }
+    const choice = anyOf(shown);
+    if (reducedMotion() || shown.length < 2) {
+      pick(choice.name);
+      return;
+    }
+    stop.current = () => {
+      timers.current.forEach(clearTimeout);
+      stop.current = null;
+      show(choice);
+      pick(choice.name);
+    };
+    const from = shown.indexOf(choice) + 1;
+    let at = 0;
+    for (let i = 0; i < ROLLS; i++) {
+      const face = i === ROLLS - 1 ? choice : shown[(from + i) % shown.length];
+      timers.current.push(window.setTimeout(() => show(face), at));
+      at += 40 * 1.15 ** i;
+    }
+    timers.current.push(window.setTimeout(() => stop.current?.(), at));
+  };
+  return { ...faces, roll };
+}
+const ROLLS = 12;
+
 function PlaneTiles({ planes, pick }: { planes: ConquestPlaneOption[]; pick: (plane: string) => void }) {
   const [looking, setLooking] = useState<ConquestPlaneOption | null>(null);
   const [typed, setTyped] = useState('');
   const words = typed.trim().toLowerCase();
   const shown = planes.filter(p => p.name.toLowerCase().includes(words));
+  const { face, under, roll } = useRoll(shown, pick);
   return (
     <div class="cq-pick">
       <input type="search" placeholder={t('lblSearch')} autocomplete="off" value={typed} onInput={e => setTyped(e.currentTarget.value)} />
       <div class="cq-plane-grid">
         {shown.length > 0 && (
-          <button class="cq-plane random" onPointerEnter={() => setLooking(null)} onFocus={() => setLooking(null)} onClick={() => pick(anyOf(shown).name)}>
-            <div class="a">?</div>
-            <b>{t('lblRandom')}</b>
-            <span>{t('lblWebConquestRandomPlane')}</span>
+          <button class="cq-plane random" onPointerEnter={() => setLooking(null)} onFocus={() => setLooking(null)} onClick={roll}>
+            <div class="a" style={under ? { backgroundImage: `url("${artUrl(under.art)}")` } : undefined}>
+              {face ? <span key={face.name} class="cq-roll" style={{ backgroundImage: `url("${artUrl(face.art)}")` }} /> : '?'}
+            </div>
+            <b>{face?.name ?? t('lblRandom')}</b>
+            <span>{face ? t('lblWebConquestEvents', face.events) : t('lblWebConquestRandomPlane')}</span>
           </button>
         )}
         {shown.map(p => (
@@ -136,17 +179,20 @@ function PlaneTiles({ planes, pick }: { planes: ConquestPlaneOption[]; pick: (pl
 /** Commanders or planeswalkers in one column, filtered by a search. Pointing at one shows its card. rows is null until the server has answered. */
 function CardPick({ rows, pick }: { rows: ConquestCardOption[] | null; pick: (name: string) => void }) {
   const [typed, setTyped] = useState('');
-  if (!rows) return <p class="hint">{t('lblWebConquestReading')}</p>;
   const words = typed.trim().toLowerCase();
-  const shown = rows.filter(r => r.name.toLowerCase().includes(words));
+  const shown = (rows ?? []).filter(r => r.name.toLowerCase().includes(words));
+  const { face, under, roll } = useRoll(shown, pick);
+  if (!rows) return <p class="hint">{t('lblWebConquestReading')}</p>;
   return (
     <div class="cq-pick">
       <input type="search" placeholder={t('lblSearch')} autocomplete="off" value={typed} onInput={e => setTyped(e.currentTarget.value)} />
       <div class="cq-pick-list" data-list>
         {shown.length > 0 && (
-          <button class="cq-pick-row random" onClick={() => pick(anyOf(shown).name)}>
-            <i>?</i>
-            <b>{t('lblRandom')}</b>
+          <button class="cq-pick-row random" onClick={roll}>
+            <i style={under ? { backgroundImage: `url("${artUrl(under.image)}")` } : undefined}>
+              {face ? <span key={face.name} class="cq-roll" style={{ backgroundImage: `url("${artUrl(face.image)}")` }} /> : '?'}
+            </i>
+            <b>{face?.name ?? t('lblRandom')}</b>
           </button>
         )}
         {shown.map(r => (

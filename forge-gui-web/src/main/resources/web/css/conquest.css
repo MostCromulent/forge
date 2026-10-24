@@ -441,6 +441,10 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-plane:hover b, .cq-plane:focus-visible b { color: var(--accent-2); }
 .cq-new { position: relative; }
 .cq-plane.random .a, .cq-pick-row.random > i { display: grid; place-items: center; font: normal 700 26px/1 Georgia, "Times New Roman", serif; color: var(--muted); }
+/* Random rolls through the choices in its own box. Each face fades in over the one before */
+.cq-plane.random .a, .cq-pick-row.random > i { position: relative; overflow: hidden; }
+.cq-roll { position: absolute; inset: 0; background-position: inherit; background-size: cover; animation: cq-roll .12s ease-out both; }
+@keyframes cq-roll { from { opacity: 0; } }
 .cq-plane-desc { margin: 10px 0 0; min-height: 3.1em; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 .cq-pick { display: grid; gap: 8px; }
 .cq-pick input { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; color: var(--text); font: inherit; }
