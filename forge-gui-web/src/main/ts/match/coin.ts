@@ -6,6 +6,8 @@ import { leave } from '../closing';
 /** How long the coin is in the air, and how long it then rests before it is removed. */
 const FLIGHT_S = 1.5;
 const REST_S = 1.2;
+/** How long the board shows before the coin appears, so the toss does not start the moment the match opens. */
+const DELAY_S = 0.5;
 /** Discs one pixel apart between the two faces. Together they draw the coin's edge. */
 const EDGE = Array.from({ length: 13 }, (_, k) => `<i class="coin-edge" style="transform: translateZ(${k - 6}px)"></i>`).join('');
 
@@ -29,11 +31,10 @@ export function tossCoin(heads: boolean, caption: string, then: () => void): voi
   root.setAttribute('role', 'status');
   root.innerHTML = `<div class="coin-scene"><span class="coin-shadow"></span><div class="coin"><i class="coin-side tails"></i>${EDGE}<i class="coin-side"></i></div></div><p></p>`;
   q(root, 'p').textContent = caption;
-  byId('match').append(root);
   const coin = q(root, '.coin');
   const shadow = q(root, '.coin-shadow');
   const turns = 3 + (heads ? 0 : .5);
-  const start = performance.now();
+  let start = 0;
   const end = () => {
     if (!inAir) return;
     inAir = false;
@@ -49,6 +50,7 @@ export function tossCoin(heads: boolean, caption: string, then: () => void): voi
   root.onclick = end;
   const frame = (now: number) => {
     if (!inAir) return;
+    start ||= now;
     const s = (now - start) / 1000;
     pose(s);
     if (s - FLIGHT_S >= REST_S) end();
@@ -73,7 +75,10 @@ export function tossCoin(heads: boolean, caption: string, then: () => void): voi
     shadow.style.opacity = String(.5 - lift / 700);
     root.classList.toggle('landed', t === 1);
   };
-  requestAnimationFrame(frame);
+  setTimeout(() => {
+    byId('match').append(root);
+    requestAnimationFrame(frame);
+  }, DELAY_S * 1000);
 }
 
 /** Removes a winner's coin that no question of who goes first opened under. */

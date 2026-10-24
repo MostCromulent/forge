@@ -9,6 +9,7 @@ test.describe.configure({ retries: 2 });
 async function settledBoard(p: Probe, state: string, table?: Table): Promise<void> {
   await board(p, state, table);
   await p.page.waitForTimeout(1500);
+  await expect(p.page.locator('#coin-toss')).toBeHidden();
 }
 
 /** Plays the first card in hand, or the first with the given name, as a tap does. It retries if a new turn's banner blocked the tap. */
