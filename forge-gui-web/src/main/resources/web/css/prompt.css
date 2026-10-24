@@ -18,8 +18,8 @@ html:not([data-form="portrait"]) #prompt:is(.waiting, .answering) { transition: 
 html:not([data-form="portrait"]) #prompt:is(.waiting, .answering)::after { transition: opacity .7s ease-out; }
 html:not([data-form="portrait"]) #prompt:is(.waiting, .answering) :is(.step, .message) { transition: color .7s ease-out; }
 html[data-motion="reduced"] #prompt, html[data-motion="reduced"] #prompt::after, html[data-motion="reduced"] #prompt :is(.step, .message) { transition: none !important; }
-/* Two glints run around the gold border while you hold priority. Each glint is three dashes centred on one point and blurred. */
-#prompt .glints { position: absolute; left: -1px; top: -1px; overflow: visible; pointer-events: none; filter: blur(.6px); opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility 0s linear .45s; }
+/* Two glints run around the gold border while you hold priority, over the outer edge of the rail. Each glint is three dashes centred on one point and blurred. */
+#prompt .glints { position: absolute; z-index: 1; left: -1px; top: -1px; overflow: visible; pointer-events: none; filter: blur(.6px); opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility 0s linear .45s; }
 #prompt.priority .glints { opacity: 1; visibility: visible; transition: opacity .45s ease; }
 #prompt .glints rect { fill: none; stroke-linecap: round; animation: 7s linear infinite; }
 /* Each layer starts offset by half its dash length, so all three centre on one point. The values are literal because var() does not animate here. */
