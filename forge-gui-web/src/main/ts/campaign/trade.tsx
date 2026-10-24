@@ -1,7 +1,7 @@
 // A campaign's card lists and the trade between them. Every price shown comes from the server
 
 import type { ComponentChildren } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl, skinIconUrl, hideBroken } from '../images';
 import { ColourToggles, toggled } from '../symbols';
 import { useDebounced } from '../hooks';
@@ -12,6 +12,9 @@ import type { Model } from '../model';
 import type { CatalogueRow } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
 import { Backdrop } from '../dialog';
+import { reducedMotion } from '../dom';
+import { balance, capBalance } from './campaign';
+import { flyShards } from './reward';
 
 /** A mode's name for one of its lists, and the text it shows for trading from that list. */
 export interface TradeWords {
@@ -24,6 +27,8 @@ export interface TradeWords {
   confirm: (n: number, total: string) => string;
   /** The badge on a card with the number of copies its list holds, for a list that counts copies. */
   count?: (n: number) => string;
+  /** Whether a trade from this list pays the player. Its cards then fade out and their price flies to the balance. */
+  pays?: boolean;
 }
 
 /** A picked card printing or product, with the key a trade uses for it and the number picked. */
@@ -91,6 +96,12 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
   // A trade changes the lists. Their sizes show the change, so the sizes are a dependency
   const more = useCataloguePages(actions, query, page, [text, query.colours, type, group, source, sizes]);
   useEffect(() => { setPicked(new Map()); setAsking(false); }, [source, sizes]);
+  /** The fades of the cards a trade took. The next page of cards ends them, because a card with copies left stays in it. */
+  const leaving = useRef<Animation[]>([]);
+  useEffect(() => {
+    leaving.current.forEach(a => a.cancel());
+    leaving.current = [];
+  }, [page]);
   const toggle = (pick: Pick) => {
     const next = new Map(picked);
     if (!next.delete(pick.key)) next.set(pick.key, pick);
@@ -109,6 +120,28 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
   const total = chosen.reduce((sum, c) => sum + c.value * c.count, 0);
   const said = words[source];
   const title = said.verb(n);
+  // The bar keeps the old balance and counts each card's price as it arrives
+  const payOut = () => {
+    let shown = balance(model.campaignBar, icon);
+    let flying = 0;
+    capBalance(icon, shown);
+    const land = (amount: number) => {
+      shown += amount;
+      capBalance(icon, --flying ? shown : null);
+    };
+    chosen.forEach((c, i) => {
+      const el = document.querySelector<HTMLElement>(`.cq-coll-grid .cq-cc[data-pick="${CSS.escape(c.key)}"]`);
+      const amount = c.value * c.count;
+      flying++;
+      if (!el || reducedMotion()) {
+        land(amount);
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      leaving.current.push(el.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: .85 }], { duration: 350, delay: i * 70, easing: 'ease-in', fill: 'forwards' }));
+      setTimeout(() => flyShards(rect, () => land(amount), icon), 150 + i * 70);
+    });
+  };
   return (
     <div class="cq-coll">
       <div class="cq-coll-bar">
@@ -137,7 +170,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
         {rows.map(row => {
           const pick = picked.get(keyOf(row));
           const card = (
-              <button key={keyOf(row)} class={`cq-cc${pick ? ' sel' : ''}${row.problem ? ' used' : ''}`} title={row.problem} data-image={row.image} data-act={t('lblChoose')}
+              <button key={keyOf(row)} class={`cq-cc${pick ? ' sel' : ''}${row.problem ? ' used' : ''}`} data-pick={keyOf(row)} title={row.problem} data-image={row.image} data-act={t('lblChoose')}
                 aria-pressed={!!pick} aria-disabled={!!row.problem}
                 onClick={() => (row.problem ? showNotice({ t: 'notice', title: row.problem, error: false }) : toggle(pickOf(row)))}>
                 <span class="cq-pic"><span class="nm">{row.name}</span><img loading="lazy" alt="" src={imageUrl(row.image)} onError={hideBroken} /></span>
@@ -181,7 +214,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
             </ul>
             <div class="actions">
               <button onClick={() => setAsking(false)}>{t('lblCancel')}</button>
-              <button class="primary" onClick={() => { setAsking(false); actions.trade(source, chosen.map(c => ({ key: c.key, count: c.count }))); }}>{t('lblOK')}</button>
+              <button class="primary" onClick={() => { setAsking(false); if (said.pays) payOut(); actions.trade(source, chosen.map(c => ({ key: c.key, count: c.count }))); }}>{t('lblOK')}</button>
             </div>
           </div>
         </Backdrop>

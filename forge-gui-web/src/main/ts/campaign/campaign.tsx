@@ -14,10 +14,21 @@ import { Reveal, type Owed } from './reward';
 import { Backdrop } from '../dialog';
 
 export function Purse({ icon, n, label }: { icon: string; n: number; label: string }) {
-  return <span class="cq-coin" title={label}><img alt={label} src={skinIconUrl(icon)} /><b>{formatNumber(n)}</b></span>;
+  return <span class="cq-coin" data-icon={icon} title={label}><img alt={label} src={skinIconUrl(icon)} /><b>{formatNumber(n)}</b></span>;
 }
 
 export const balance = (bar: Bar | null, icon: string): number => bar?.balances.find(b => b.icon === icon)?.amount ?? 0;
+
+// The most the bar shows of a balance, by icon, while a trade's amounts fly to it. The new balance can arrive before they do
+const ceilings = new Map<string, number>();
+let redrawBar = () => {};
+
+/** Sets the most the bar shows of a balance, or with null lets it show the server's amount again. */
+export function capBalance(icon: string, most: number | null): void {
+  if (most === null) ceilings.delete(icon);
+  else ceilings.set(icon, most);
+  redrawBar();
+}
 
 // The new items each tab has shown, by save and tab. A save's first bar counts as shown, so only what arrives while it is open is marked
 const shown = new Map<string, Set<string>>();
@@ -46,6 +57,11 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
   extra?: ComponentChildren; prefs?: () => void; leave: () => void; under: boolean;
 }) {
   const strip = useRef<HTMLElement>(null);
+  const [, redraw] = useState(0);
+  useEffect(() => {
+    redrawBar = () => redraw(n => n + 1);
+    return () => { redrawBar = () => {}; };
+  }, []);
   // A tab opened from a page, such as Change on the map, may be scrolled out of a narrow strip
   useEffect(() => { strip.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [tab]);
   const nav = (
@@ -57,7 +73,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
       ))}
     </nav>
   );
-  const balances = bar.balances.map(b => <Purse key={b.icon} icon={b.icon} n={b.amount - (held[b.icon] ?? 0)} label={b.label} />);
+  const balances = bar.balances.map(b => <Purse key={b.icon} icon={b.icon} n={Math.min(b.amount - (held[b.icon] ?? 0), ceilings.get(b.icon) ?? Infinity)} label={b.label} />);
   if (isPortrait()) {
     return (
       <PhoneHead back={{ label: t('lblBack'), go: leave }} title={bar.name} inert={under} tabs={nav}

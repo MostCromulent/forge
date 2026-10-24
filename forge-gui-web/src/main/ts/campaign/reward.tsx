@@ -158,16 +158,16 @@ function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; n
   );
 }
 
-/** Animates a duplicate's shards from the card to the bar's balance. The bar counts them when they arrive. */
-function flyShards(from: DOMRect, arrived: () => void): void {
-  const to = document.querySelector('.cq-purse .cq-coin')?.getBoundingClientRect();
+/** Animates an amount from a card to the bar's balance with that icon. The bar counts the amount when it arrives. */
+export function flyShards(from: DOMRect, arrived: () => void, icon = 'IMG_AETHER_SHARD'): void {
+  const to = document.querySelector(`.cq-purse .cq-coin[data-icon="${icon}"]`)?.getBoundingClientRect();
   if (!to || reducedMotion()) {
     arrived();
     return;
   }
   const mote = make('img', 'cq-mote');
   mote.alt = '';
-  mote.src = skinIconUrl('IMG_AETHER_SHARD');
+  mote.src = skinIconUrl(icon);
   document.body.append(mote);
   const x0 = from.left + from.width / 2, y0 = from.top + from.height * .4;
   mote.animate([{ transform: `translate(${x0}px, ${y0}px) scale(1.4)`, opacity: 1 },

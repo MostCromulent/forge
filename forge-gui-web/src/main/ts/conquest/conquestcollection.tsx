@@ -18,6 +18,7 @@ export function Collection({ model, actions }: { model: Model; actions: Actions 
       verb: n => (n === 1 ? t('lblExileCard') : t('lblExileNCard', n)),
       row: price => t('lblExileForNAE', price, SHARD),
       confirm: (n, total) => t('lblExileFollowCardsToReceiveNAE', cards(n), SHARD, total).trim(),
+      pays: true,
     },
     exile: {
       label: t('lblExile'),
