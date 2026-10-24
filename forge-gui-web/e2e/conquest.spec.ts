@@ -180,7 +180,9 @@ test('the Aether, the planes, the statistics and the preferences open', async ({
   await page.click('.chooser [data-kind=conquest]');
   await playFixture(page);
 
+  const collection = page.locator('.cq-tab[data-tab="collection"]');
   await page.locator('.cq-tab', { hasText: 'The Aether' }).click();
+  await expect(collection.locator('.new-card')).toHaveCount(0);
   const pull = page.locator('.cq-ae-pull');
   const cost = Number((await pull.innerText()).replace(/\D/g, ''));
   expect(cost).toBeGreaterThan(0);
@@ -194,6 +196,12 @@ test('the Aether, the planes, the statistics and the preferences open', async ({
   await page.locator('.cq-ae-face').click();
   await expect(page.locator('.cq-ae-core .cq-ae-orb')).toBeVisible();
   await expect(page.locator('.cq-ae-recent img')).toHaveCount(1);
+  // The pulled card marks the Collection tab as new until the tab is opened
+  await expect(collection.locator('.new-card')).toBeVisible();
+  await collection.click();
+  await expect(collection.locator('.new-card')).toHaveCount(0);
+  await page.locator('.cq-tab', { hasText: 'The Aether' }).click();
+  await expect(collection.locator('.new-card')).toHaveCount(0);
 
   // A price changed in the preferences is shown on the page behind them once they close
   await page.getByRole('button', { name: 'Preferences' }).click();

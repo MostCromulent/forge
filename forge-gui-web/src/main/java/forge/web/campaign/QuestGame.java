@@ -398,7 +398,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         if (quest.getMode() == QuestMode.Fantasy) {
             balances.add(new Balance("ICO_QUEST_LIFE", quest.getAssets().getLife(quest.getMode()), text.getMessage("lblLife")));
         }
-        return new CampaignBar(quest.getName(), quest.getRank() + " · " + world(quest.getWorld() == null ? null : quest.getWorld().getName()), balances);
+        return new CampaignBar(quest.getName(), quest.getRank() + " · " + world(quest.getWorld() == null ? null : quest.getWorld().getName()), balances, Map.of());
     }
 
     @Override

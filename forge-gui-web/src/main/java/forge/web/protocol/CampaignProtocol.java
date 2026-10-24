@@ -6,6 +6,7 @@ import forge.web.protocol.Wire.Message;
 import forge.web.protocol.Wire.Nullable;
 
 import java.util.List;
+import java.util.Map;
 
 /** The campaign modes' messages in both directions. They are kept apart from the other messages so a build can leave the campaigns out. */
 public final class CampaignProtocol {
@@ -199,9 +200,9 @@ public final class CampaignProtocol {
     public record Balance(String icon, int amount, String label) {
     }
 
-    /** What the bar above every campaign page shows: the save's name, a line under it, and its balances. */
+    /** What the bar above every campaign page shows: the save's name, a line under it, and its balances. fresh names the new items on each tab, by tab. */
     @Message("campaignBar")
-    public record CampaignBar(String name, String line, List<Balance> balances) {
+    public record CampaignBar(String name, String line, List<Balance> balances, Map<String, List<String>> fresh) {
     }
 
     /** A button of the result screen. action is nextGame, leave, restart, quit or forfeit. quit leaves a match that is not over. forfeit is a quit the player must confirm first. */

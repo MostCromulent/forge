@@ -19,6 +19,22 @@ export function Purse({ icon, n, label }: { icon: string; n: number; label: stri
 
 export const balance = (bar: Bar | null, icon: string): number => bar?.balances.find(b => b.icon === icon)?.amount ?? 0;
 
+// The new items each tab has shown, by save and tab. A save's first bar counts as shown, so only what arrives while it is open is marked
+const shown = new Map<string, Set<string>>();
+
+/** Whether a tab has a new item it has not shown yet. An open tab shows all of them. */
+function unseen(bar: Bar, tab: string, open: boolean): boolean {
+  const fresh = bar.fresh[tab] ?? [];
+  const key = `${bar.name}
+${tab}`;
+  const seen = shown.get(key);
+  if (!seen || open) {
+    shown.set(key, new Set([...(seen ?? []), ...fresh]));
+    return false;
+  }
+  return fresh.some(name => !seen.has(name));
+}
+
 /**
  * The bar shared by every page of a campaign. It shows the save's name and line, the mode's tabs, the balances and the back button.
  * extra is a dev tool: a control beside the balances, or on a phone a row of the header's menu.
@@ -36,7 +52,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
     <nav class="cq-tabs" ref={strip}>
       {tabs.map(([id, name]) => (
         <button key={id} class="cq-tab" data-tab={id} aria-current={id === tab ? 'page' : undefined} onClick={() => setTab(id)}>
-          {t(name)}{id === tab && <span class="cq-tab-line" />}
+          {t(name)}{unseen(bar, id, id === tab) && <span class="new-card">{t('lblNew')}</span>}{id === tab && <span class="cq-tab-line" />}
         </button>
       ))}
     </nav>

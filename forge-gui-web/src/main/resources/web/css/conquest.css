@@ -21,6 +21,8 @@ html:not([data-form="portrait"]) .cq-shell { width: min(1500px, 94vw); height: m
 .cq-tab:hover:not(:disabled) { color: var(--text); }
 .cq-tab:disabled { opacity: .45; }
 .cq-tab[aria-current="page"] { color: var(--accent-2); background: linear-gradient(180deg, transparent, var(--accent-soft)); }
+/* A tab with items that arrived since it was last open. The pill is the one the new cards carry in the list */
+.cq-tab .new-card { position: static; margin-left: 7px; padding: 1px 6px; font-size: 9.5px; vertical-align: 1px; box-shadow: none; }
 /* The open tab's underline is a separate element, so a tab change can animate it to the new tab */
 .cq-tab-line { position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: var(--accent-2); view-transition-name: cq-tab-line; }
 .cq-purse { margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 8px 0; }

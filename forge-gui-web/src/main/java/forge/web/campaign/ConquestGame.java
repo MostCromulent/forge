@@ -46,6 +46,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 /** Planar Conquest as one session plays it: the saves, the map, the party and its decks, the Aether, planeswalking and the battles. The conquest itself is Forge's, with one per process. So this class holds only what the session knows that the save does not. */
@@ -354,10 +355,24 @@ public final class ConquestGame implements Campaign {
         final ConquestData data = model();
         final ConquestPlane plane = data.getCurrentPlane();
         final Localizer text = Localizer.getInstance();
+        // The engine counts a card as new until the next game ends. A new card that can lead is also a new commander
+        final List<String> cards = new ArrayList<>();
+        for (final PaperCard card : data.getUnlockedCards()) {
+            if (data.isNewCard(card)) {
+                cards.add(card.getName());
+            }
+        }
+        final List<String> commanders = new ArrayList<>();
+        for (final ConquestCommander commander : data.getCommanders()) {
+            if (data.isNewCard(commander.getCard())) {
+                commanders.add(commander.getCard().getName());
+            }
+        }
         return new CampaignBar(data.getName(),
                 planeName(plane) + " \u00b7 " + data.getCurrentPlaneData().getConqueredCount() + " / " + plane.getEventCount(),
                 List.of(new Balance("IMG_AETHER_SHARD", data.getAEtherShards(), text.getMessage("lblAetherShards")),
-                        new Balance("IMG_PW_BADGE_COMMON", data.getPlaneswalkEmblems(), text.getMessage("lblPlaneswalkEmblems"))));
+                        new Balance("IMG_PW_BADGE_COMMON", data.getPlaneswalkEmblems(), text.getMessage("lblPlaneswalkEmblems"))),
+                Map.of("collection", cards, "party", commanders));
     }
 
     /** The commanders and planeswalkers the conquest has found. */
