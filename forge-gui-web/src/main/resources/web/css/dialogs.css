@@ -19,6 +19,9 @@
 .backdrop.closing { animation: backdrop-out .12s ease-in forwards; }
 .backdrop.closing > * { animation: box-out .12s ease-in forwards; }
 .card-menu.closing, .backdrop.closing > .card-menu { animation: menu-out .1s ease-in forwards; }
+/* A question on the dimmed board darkens the whole board, so it fades more slowly than a box */
+.backdrop.on-board { animation-duration: .25s; }
+.backdrop.on-board.closing, .backdrop.on-board.closing > * { animation-duration: .2s; }
 /* A screen rises in when it opens, as a box does (index.html holds a root for each screen) */
 :is(#menu, #lobby, #editor, #limited, #drafting, #campaign) > * { animation: box-in .18s ease-out; }
 /* A page that starts a match zooms in as it darkens. The board then zooms in when its seats are drawn (match/entry.ts). */

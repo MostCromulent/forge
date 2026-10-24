@@ -168,6 +168,7 @@ export function flyShards(from: DOMRect, arrived: () => void, icon = 'IMG_AETHER
   const mote = make('img', 'cq-mote');
   mote.alt = '';
   mote.src = skinIconUrl(icon);
+  mote.dataset.icon = icon;
   document.body.append(mote);
   const x0 = from.left + from.width / 2, y0 = from.top + from.height * .4;
   mote.animate([{ transform: `translate(${x0}px, ${y0}px) scale(1.4)`, opacity: 1 },

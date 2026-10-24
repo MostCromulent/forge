@@ -17,6 +17,7 @@ import { t, tNodes } from '../text';
 import { isPortrait } from '../form';
 import { cutFor } from './stickers';
 import { Backdrop } from '../dialog';
+import { leave } from '../closing';
 import { type Answer, useCardFit, offerAnswer, withdrawAnswer, FoldButton, OkKey, Button, ButtonRow, SECTION, OptionView, BoardCard } from './dialogparts';
 import { Manipulate, Order, Sideboard } from './arrange';
 
@@ -136,6 +137,16 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
   const folded = ui.requestFolded === req.id;
   const setFolded = (on: boolean) => changeUi(u => { u.requestFolded = on ? req.id : null; });
   useEffect(() => () => withdrawAnswer(req.id), []);
+  // The dialog is removed as soon as it is answered. A copy of it fades out in its place. Layout cleanup runs while it is still drawn
+  const back = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => () => {
+    const el = back.current;
+    if (!el || el.hidden) return;
+    const ghost = el.cloneNode(true) as HTMLElement;
+    ghost.inert = true;
+    el.after(ghost);
+    leave(ghost);
+  }, []);
   const foldable = !at && FOLDABLE.has(req.kind);
   // A question about cards is drawn on the dimmed board with no box round it. A phone puts the fold button by the question and the answer along the bottom
   const onBoard = cardPrompt(req);
@@ -144,7 +155,7 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
   const title = onBoard ? <QuestionLine model={model} req={req} text={heading || message || ''} /> : <SymbolText text={heading || message || ''} />;
   const fold = foldable && <button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>;
   return <>
-    <div class={at ? 'backdrop anchored' : onBoard ? 'backdrop on-board' : 'backdrop'} hidden={folded}>
+    <div ref={back} class={at ? 'backdrop anchored' : onBoard ? 'backdrop on-board' : 'backdrop'} hidden={folded}>
       <div class={at ? 'dialog at-card' : 'dialog'} style={at ? { left: `${at.x}px`, top: `${at.y}px` } : undefined}>
         <div class="dialog-head">
           <h3>{title}</h3>

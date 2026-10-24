@@ -43,6 +43,7 @@ export function Shop({ model, actions }: { model: Model; actions: Actions }) {
       verb: n => t('lblWebQuestSellN', n),
       row: price => `${COIN} ${price}`,
       confirm: (_, total) => t('lblWebQuestSellConfirm', COIN, total),
+      pays: true,
       count: n => `×${n}`,
     },
   };
