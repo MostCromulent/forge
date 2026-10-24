@@ -1,5 +1,6 @@
 // The game menu behind the prompt's ⋯ button. It keeps the auto-pass settings one click from the prompt
 
+import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { OnOff, OptionsDialog, PlaymatChoice, Row, SectionHeading } from '../options';
 import { SETTINGS, setting, type SettingDef } from '../settings';
@@ -28,11 +29,13 @@ export function ConcedeQuestion({ actions }: { actions: Actions }) {
     go={() => { close(); actions.concede(); }} goLabel={t('lblConcede')} danger cls="concede-ask" />;
 }
 
-/** The game menu. `dev` opens it at the dev items, for the shortcut that shows the dev panel. */
+/** The game menu. `dev` opens it at the dev items, for the shortcut that shows the dev panel. A desktop shows them beside the menu, and a phone in its place. */
 export function GameMenu({ model, actions, close, open, dev: atDev }: {
   model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'devSetup') => void; dev?: boolean;
 }) {
-  const [dev, setDev] = useState(!!atDev);
+  const phone = isPortrait();
+  const [dev, setDev] = useState(!!atDev && phone);
+  const [devBeside, setDevBeside] = useState(!!atDev && !phone);
   const [mats, setMats] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
   const { closing, shut, gone } = useClosing(close);
@@ -47,10 +50,12 @@ export function GameMenu({ model, actions, close, open, dev: atDev }: {
   const offer = model.drawOffer;
   return (
     <Backdrop cls={closing ? 'anchored closing' : 'anchored'} onAnimationEnd={gone} dismiss={shut}>
-      <div ref={menu} class={dev ? 'card-menu game-menu dev' : 'card-menu game-menu'} role="menu" aria-label={dev ? t('lblDevMode') : t('lblGame')}>
+      {/* Pointing at another row closes the dev items beside the menu */}
+      <div ref={menu} class={dev ? 'card-menu game-menu dev' : 'card-menu game-menu'} role="menu" aria-label={dev ? t('lblDevMode') : t('lblGame')}
+        onMouseOver={e => { if (!(e.target as Element).closest('.dev-entry')) setDevBeside(false); }}>
         {dev ? <DevItems model={model} actions={actions} back={() => setDev(false)} close={close} setUp={() => open('devSetup')} /> : <>
         <button type="button" role="menuitem" class={mats ? 'card-menu-item on' : 'card-menu-item'} aria-expanded={mats}
-          onClick={() => setMats(!mats)}><MenuIcon d={ICONS.playmat} />{t('lblWebPlaymat')}<MenuIcon d={ICONS.next} end /></button>
+          onClick={() => { setMats(!mats); setDevBeside(false); }}><MenuIcon d={ICONS.playmat} />{t('lblWebPlaymat')}<MenuIcon d={ICONS.next} end /></button>
         <div class="card-menu-sep" role="separator" />
         <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('stops')}>
           <MenuIcon d={ICONS.interrupts} />{t('lblYieldSettings')}
@@ -62,7 +67,7 @@ export function GameMenu({ model, actions, close, open, dev: atDev }: {
         }}><MenuIcon d={ICONS.macro} />{t(ui.macro === 'recording' ? 'lblWebGameMenuMacroStop' : 'lblWebGameMenuMacroRecord')}</button>
         <div class="card-menu-sep" role="separator" />
         {/* A desktop has the speaker beside this menu's button. A phone's tools have no room for it */}
-        {isPortrait() && <button type="button" role="menuitem" class="card-menu-item" onClick={() => { close(); changeUi(u => { u.volumeOpen = true; }); }}>
+        {phone && <button type="button" role="menuitem" class="card-menu-item" onClick={() => { close(); changeUi(u => { u.volumeOpen = true; }); }}>
           <MenuIcon d={ICONS.volume} />{t('lblWebHeadVolume')}
         </button>}
         <button type="button" role="menuitem" class="card-menu-item" onClick={() => { close(); changeUi(u => { u.optionsOpen = true; }); }}>
@@ -82,15 +87,32 @@ export function GameMenu({ model, actions, close, open, dev: atDev }: {
         {/* Only the host gets dev mode. The host's seat runs in the same process as the server, and a guest's does not */}
         {setting('devMode') && model.host && !model.spectating && <>
           <div class="card-menu-sep" role="separator" />
-          <button type="button" role="menuitem" class="card-menu-item dev-entry" onClick={() => setDev(true)}>
+          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={devBeside} class={devBeside ? 'card-menu-item dev-entry on' : 'card-menu-item dev-entry'}
+            onMouseEnter={phone ? undefined : () => { setDevBeside(true); setMats(false); }}
+            onClick={() => { if (phone) setDev(true); else { setDevBeside(true); setMats(false); } }}>
             <MenuIcon d={ICONS.dev} />{t('lblDevMode')}<MenuIcon d={ICONS.next} end />
           </button>
         </>}
         </>}
       </div>
       {mats && !dev && <PlaymatPicker beside={menu} />}
+      {devBeside && <DevBeside menu={menu}>
+        <DevItems model={model} actions={actions} close={close} setUp={() => open('devSetup')} />
+      </DevBeside>}
     </Backdrop>
   );
+}
+
+/** The dev items beside the game menu, level with its bottom edge. Their families open further left. */
+function DevBeside({ menu, children }: { menu: { current: HTMLDivElement | null }; children: ComponentChildren }) {
+  const panel = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = panel.current, beside = menu.current?.getBoundingClientRect();
+    if (!el || !beside) return;
+    el.style.right = `${innerWidth - beside.left + 8}px`;
+    el.style.bottom = `${innerHeight - beside.bottom}px`;
+  }, []);
+  return <div ref={panel} class="card-menu game-menu dev" role="menu" aria-label={t('lblDevMode')}>{children}</div>;
 }
 
 /** The playmats beside the game menu. A choice changes the table at once, so the board behind it is the preview. */

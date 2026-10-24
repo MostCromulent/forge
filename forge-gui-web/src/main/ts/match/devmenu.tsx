@@ -28,7 +28,7 @@ const FAMILY_ICONS: Record<string, string> = { place: ICONS.plus, exile: ICONS.b
  * on hover, a click or the right arrow. On a phone it opens as a page of its own with a row back.
  */
 export function DevItems({ model, actions, back, close, setUp }: {
-  model: Model; actions: Actions; back: () => void; close: () => void; setUp: () => void;
+  model: Model; actions: Actions; back?: () => void; close: () => void; setUp: () => void;
 }) {
   useEffect(() => {
     actions.dev('state');
@@ -81,8 +81,10 @@ export function DevItems({ model, actions, back, close, setUp }: {
   );
   return (
     <>
-      <button type="button" role="menuitem" class="card-menu-item dev-back" onMouseEnter={() => setOpen(null)} onClick={back}>‹ {t('lblDevMode')}</button>
-      <div class="card-menu-sep" role="separator" />
+      {back && <>
+        <button type="button" role="menuitem" class="card-menu-item dev-back" onMouseEnter={() => setOpen(null)} onClick={back}>‹ {t('lblDevMode')}</button>
+        <div class="card-menu-sep" role="separator" />
+      </>}
       {toggle('unlimitedLands', t('lblWebDevUnlimitedLands'), model.devState?.unlimitedLands)}
       {toggle('viewAll', t('lblWebDevViewAll'), model.devState?.viewAll)}
       <div class="card-menu-sep" role="separator" />
