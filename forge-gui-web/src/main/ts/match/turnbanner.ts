@@ -66,17 +66,19 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   const size = banner.getBoundingClientRect();
   banner.style.margin = `${Math.round((strip.clientHeight - size.height) / 2)}px auto auto ${Math.round((strip.clientWidth - size.width) / 2)}px`;
   strip.classList.add('announcing');
-  // The pill comes back when the banner starts to fade (84% of turn-sweep). So one fades in while the other fades out
-  const sweep = parseFloat(getComputedStyle(banner).animationDuration) * 1000;
+  // The pill comes back when the banner starts to fade out. So one fades in while the other fades out
+  const out = banner.getAnimations().find(a => (a as CSSAnimation).animationName === 'turn-out');
+  const fades = Number(out?.effect?.getTiming().delay ?? 0);
+  const sweep = Number(out?.effect?.getComputedTiming().endTime ?? 0);
   // Skip this if the next turn's banner is already shown. That happens when a turn passes at once
   setTimeout(() => {
     if ([...strip.querySelectorAll('.turn-banner')].at(-1) === banner) strip.classList.remove('announcing');
-  }, sweep * 0.84);
+  }, fades);
   // The turn continues just before the banner is fully gone
   setTimeout(then, Math.max(0, sweep - TURN_OVERLAP_MS));
   // The ::after light's animationend event also reaches the banner. So the name is checked, or the banner is removed early
   banner.addEventListener('animationend', e => {
-    if (e.animationName === 'turn-sweep') banner.remove();
+    if (e.animationName === 'turn-out') banner.remove();
   });
   return true;
 }
