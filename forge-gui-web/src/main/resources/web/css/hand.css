@@ -55,31 +55,36 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 /* The hovered card keeps the strip below it as part of its hover area. Without it, a pointer there would leave the card, the card would drop, and then rise again. */
 #hand .card:hover::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 25%; }
 
-/* A card playable from outside the hand gets a ring, not a fill. A fill would tint a face-down card or a card without art. */
-.card .haze, .card .halo, .card .rim { display: none; }
-/* Light marks what can be played now. A card that cannot keeps only the thin rim, which tells its zone */
-#hand .card.elsewhere .rim, #hand .card.elsewhere:is(.playable, .auto-tap) .halo {
-  display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter;
-}
-/* The rim is thinner than the castable outline. It shows where the card is, not that the card can be cast. */
-#hand .card.elsewhere .rim { inset: -2px; border: 1.5px solid var(--zone-glow); border-radius: 8px; opacity: .92; }
-#hand .card.elsewhere .halo {
-  inset: -5px; border: 5px solid color-mix(in srgb, var(--zone-glow) 42%, transparent); border-radius: 13px;
-  filter: url(#zone-warp-a) blur(3px);
-}
-/* Three copies of the filter start at different points in the loop, so neighbouring cards never animate in step */
-#hand .card.elsewhere:nth-child(3n+2) .halo { filter: url(#zone-warp-b) blur(3px); }
-#hand .card.elsewhere:nth-child(3n) .halo { filter: url(#zone-warp-c) blur(3px); }
-/* The rim moves outward to fit around the castable outline. That outline starts at the card's edge and paints over anything under it. */
-#hand .card.elsewhere.playable:not(.selectable) .rim { inset: -4px; border-radius: 10px; }
-#hand .card.elsewhere.auto-tap:not(.selectable) .rim { inset: -5px; border-radius: 11px; }
-#hand .card.elsewhere:hover .rim { opacity: 1; }
-#hand .card.elsewhere:hover .halo { border-color: color-mix(in srgb, var(--zone-glow) 62%, transparent); }
-html[data-motion="reduced"] #hand .card.elsewhere .halo { filter: blur(6px); }
+/* A card playable from outside the hand gets light round it, not a fill. A fill would tint a face-down card or a card without art.
+   The light is grey while the card cannot be cast, and the castable colour once it can. The zone is named in the card's preview */
+.card .haze, .card .halo { display: none; }
+#hand .card.elsewhere .halo { display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter;
+  --rise: #c8ced8; opacity: .7; transition: opacity .3s; }
+#hand .card.elsewhere:is(.playable, .auto-tap) .halo { --rise: var(--playable, #66ccff); opacity: 1; }
+/* The light's edge sits where the castable outline would, so it takes the outline's place */
+#hand .card.elsewhere:is(.playable, .auto-tap):not(.selectable) { outline-color: transparent; }
+/* These cards come first in the hand, and a gap sets them apart from the cards in it */
+#hand .card.elsewhere + .card:not(.elsewhere) { margin-left: calc(var(--step, 0px) + 28px); }
+/* Light rising from an edge just outside the card (index.html's rise filters). A pack's rares use it too (conquest.css).
+   The box reaches well past the card, because the light is cut off at the box. The light is behind the card, so it shows round
+   the card and in its rounded corners, and the edge follows the card's corners */
+:is(.rise, #hand .card.elsewhere .halo) { inset: -30px; filter: url(#rise-a); }
+:is(.rise, #hand .card.elsewhere .halo)::before { content: ''; position: absolute; inset: 28.5px; border: 1.5px solid color-mix(in srgb, var(--rise) 65%, #fff);
+  border-radius: calc(var(--radius, 6px) + 1.5px); }
+/* Three copies of the filter start at different points in the loop, so neighbouring cards never move in step */
+#hand .card.elsewhere:nth-child(3n+2) .halo { filter: url(#rise-b); }
+#hand .card.elsewhere:nth-child(3n) .halo { filter: url(#rise-c); }
+/* A card that cannot be cast yet keeps only the moving light, with no edge. A crisp edge means the card can be cast */
+#hand .card.elsewhere:not(.playable, .auto-tap) .halo { filter: url(#haze-a); }
+#hand .card.elsewhere:not(.playable, .auto-tap):nth-child(3n+2) .halo { filter: url(#haze-b); }
+#hand .card.elsewhere:not(.playable, .auto-tap):nth-child(3n) .halo { filter: url(#haze-c); }
+html[data-motion="reduced"] #hand .card.elsewhere:nth-child(n) .halo { filter: blur(4px); }
+#hand .card.elsewhere:is(.playable, .auto-tap):hover .halo { --rise: color-mix(in srgb, var(--playable, #66ccff) 80%, #fff); }
+html[data-motion="reduced"] :is(.rise, #hand .card.elsewhere .halo) { filter: blur(4px); }
 #hand .card.elsewhere:is(.playable, .auto-tap):hover .haze { display: block; position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: var(--radius); pointer-events: none; }
 #hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after {
   content: ''; position: absolute; bottom: 26%; width: 4px; height: 4px; border-radius: 50%;
-  background: var(--zone-glow); box-shadow: 0 0 7px 1px var(--zone-glow); opacity: 0;
+  background: var(--playable, #66ccff); box-shadow: 0 0 7px 1px var(--playable, #66ccff); opacity: 0;
   animation: elsewhere-rise 2.4s linear infinite;
 }
 #hand .card.elsewhere:hover .haze::before { left: 24%; }

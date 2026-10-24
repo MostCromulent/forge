@@ -331,14 +331,11 @@ html[data-motion="reduced"] .cq-wheel-stop .cq-dl::after { display: none; }
 /* A rare or mythic gets the moving light of a card playable from another zone (hand.css), in its rarity's colour, so it does not read as a selection */
 .cq-rv-card.rare { --rv-glow: var(--gold); }
 .cq-rv-card.mythic { --rv-glow: #ff8a3d; }
-.cq-rv-card.rare .cq-rv-y::before, .cq-rv-card.rare .cq-rv-y::after { content: ''; position: absolute; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .4s; mix-blend-mode: plus-lighter; }
-.cq-rv-card.rare .cq-rv-y::before { inset: -2px; border: 1.5px solid var(--rv-glow); border-radius: 8px; }
-.cq-rv-card.rare .cq-rv-y::after { inset: -6px; border: 6px solid color-mix(in srgb, var(--rv-glow) 50%, transparent); border-radius: 14px; filter: url(#zone-warp-a) blur(3px); }
-.cq-rv-slot:nth-child(3n+2) .cq-rv-card.rare .cq-rv-y::after { filter: url(#zone-warp-b) blur(3px); }
-.cq-rv-slot:nth-child(3n) .cq-rv-card.rare .cq-rv-y::after { filter: url(#zone-warp-c) blur(3px); }
-.cq-rv-card.rare.up .cq-rv-y::before { opacity: .95; }
-.cq-rv-card.rare.up .cq-rv-y::after { opacity: 1; }
-html[data-motion="reduced"] .cq-rv-card.rare .cq-rv-y::after { filter: blur(6px); }
+.cq-rv-card .rise { display: none; }
+.cq-rv-card.rare .rise { --rise: var(--rv-glow); display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter; opacity: 0; transition: opacity .4s; }
+.cq-rv-slot:nth-child(3n+2) .cq-rv-card.rare .rise { filter: url(#rise-b); }
+.cq-rv-slot:nth-child(3n) .cq-rv-card.rare .rise { filter: url(#rise-c); }
+.cq-rv-card.rare.up .rise { opacity: 1; }
 .cq-rv-card.dup.up img { filter: grayscale(.6) brightness(.4); }
 .cq-rv-plus { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); display: none; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px;
   background: #0b0e14f2; border: 1px solid var(--gold); color: var(--gold); font: 700 13px/1 system-ui, sans-serif; white-space: nowrap; z-index: 2; }

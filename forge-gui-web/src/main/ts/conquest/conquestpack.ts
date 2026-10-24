@@ -76,7 +76,7 @@ export function mountPack(host: HTMLElement, spec: PackSpec, hooks: PackHooks): 
       plus.append(shard, String(c.shards));
     }
     const cls = ['cq-rv-card', c.shards && 'dup', isRare(c.rarity) && 'rare', c.rarity === 'MythicRare' && 'mythic'].filter(Boolean).join('.');
-    const card = el(`div.${cls}`, {}, el('div.cq-rv-y', {}, el('div.cq-rv-in', {}, el('div.cq-rv-face.cq-rv-back'), face), plus));
+    const card = el(`div.${cls}`, {}, el('div.cq-rv-y', {}, el('i.rise'), el('div.cq-rv-in', {}, el('div.cq-rv-face.cq-rv-back'), face), plus));
     card.setAttribute('role', 'img');
     card.setAttribute('aria-label', c.name);
     return el('div.cq-rv-slot', {}, card);
