@@ -188,6 +188,12 @@ test('the Aether, the planes, the statistics and the preferences open', async ({
   await expect(page.locator('.cq-ae-card b')).not.toBeEmpty();
   await expect(page.locator('.cq-purse')).toContainText((3000 - cost).toLocaleString('en-GB'));
   await expect(page.locator('.cq-ae-recent img')).toHaveCount(1);
+  // The pulled card previews on hover. A click sends it to the collection and shows the orb again
+  await page.locator('.cq-ae-face img').hover();
+  await expect(page.locator('#zoom')).toBeVisible();
+  await page.locator('.cq-ae-face').click();
+  await expect(page.locator('.cq-ae-core .cq-ae-orb')).toBeVisible();
+  await expect(page.locator('.cq-ae-recent img')).toHaveCount(1);
 
   // A price changed in the preferences is shown on the page behind them once they close
   await page.getByRole('button', { name: 'Preferences' }).click();

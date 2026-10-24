@@ -35,7 +35,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
   const nav = (
     <nav class="cq-tabs" ref={strip}>
       {tabs.map(([id, name]) => (
-        <button key={id} class="cq-tab" aria-current={id === tab ? 'page' : undefined} onClick={() => setTab(id)}>
+        <button key={id} class="cq-tab" data-tab={id} aria-current={id === tab ? 'page' : undefined} onClick={() => setTab(id)}>
           {t(name)}{id === tab && <span class="cq-tab-line" />}
         </button>
       ))}

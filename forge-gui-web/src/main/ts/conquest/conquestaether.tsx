@@ -10,6 +10,7 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ConquestAetherState, ConquestOption, PackCard } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
+import { reducedMotion } from '../dom';
 
 const RARITIES: TextKey[] = ['lblCommon', 'lblUncommon', 'lblRare', 'lblMythic'];
 /** The number of cards pulled this visit that stay in view. */
@@ -20,14 +21,16 @@ const shard = (size: number) => <img class="cq-shard" alt={t('lblAetherShards')}
 export function Aether({ model, actions }: { model: Model; actions: Actions }) {
   const a = model.conquestAether;
   const [recent, setRecent] = useState<PackCard[]>([]);
-  const [zoom, setZoom] = useState<string | null>(null);
+  /** The pulled card the player sent to the collection. The stage shows the orb again until the next pull. */
+  const [sent, setSent] = useState<PackCard | null>(null);
   useEffect(() => { actions.conquestAether({ colors: '', type: '', rarity: '', cmc: '', pull: false }); }, []);
   useEffect(() => { if (a?.pulled) setRecent(r => [a.pulled!, ...r].slice(0, MOST_RECENT)); }, [a?.pulled]);
   // Each pull is counted in the render that first shows it, so its animation starts with the new card. A card shown before it fades out under it
   const shown = useRef<PackCard | null>(null);
   const turn = useRef<{ card: PackCard | null; count: number; before: PackCard | null }>({ card: null, count: 0, before: null });
   if (a?.pulled && a.pulled !== turn.current.card) turn.current = { card: a.pulled, count: turn.current.count + 1, before: shown.current };
-  shown.current = a?.pulled ?? null;
+  const card = a?.pulled && a.pulled !== sent ? a.pulled : null;
+  shown.current = card;
   if (!a) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   const ask = (patch: Partial<Pick<ConquestAetherState, 'colors' | 'type' | 'rarity' | 'cmc'>>, pull = false) =>
     actions.conquestAether({ colors: a.colors, type: a.type, rarity: a.rarity, cmc: a.cmc, pull, ...patch });
@@ -48,17 +51,19 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
         <Options title={t('lblCMC')} options={a.cmcs} chosen={a.cmc} pick={cmc => ask({ cmc })} two />
       </aside>
       <div class="cq-ae-stage">
-        {a.pulled
+        {card
           ? (
             <div class="cq-ae-card">
-              <div key={`card${turn.current.count}`} class={`cq-ae-box${turn.current.before ? '' : ' from-orb'}${isRare(a.pulled.rarity) ? ' rare' : ''}`}>
+              <div key={`card${turn.current.count}`} class={`cq-ae-box${turn.current.before ? '' : ' from-orb'}${isRare(card.rarity) ? ' rare' : ''}${card.rarity === 'MythicRare' ? ' mythic' : ''}`}>
                 {turn.current.before
                   ? <img class="cq-ae-ghost" alt="" src={imageUrl(turn.current.before.image)} />
                   : <span class="cq-ae-orb cq-ae-ghost"><img alt="" src={skinIconUrl('IMG_MULTIVERSE')} /></span>}
-                <span class="cq-ae-aura" />
-                <button class="cq-ae-face" onClick={() => setZoom(a.pulled!.image)}><span class="cq-ae-turn"><span class="cq-ae-back" /><img alt={a.pulled.name} src={imageUrl(a.pulled.image)} /></span></button>
+                <i class="rise" />
+                <button class="cq-ae-face" onClick={e => { toCollection(e.currentTarget.querySelector('img')!); setSent(card); }}>
+                  <span class="cq-ae-turn"><span class="cq-ae-back" /><img alt={card.name} src={imageUrl(card.image)} data-image={card.image} /></span>
+                </button>
               </div>
-              <div key={`name${turn.current.count}`} class="what"><span class="new-card">{t('lblNew')}</span><b>{a.pulled.name}</b></div>
+              <div key={`name${turn.current.count}`} class="what"><span class="new-card">{t('lblNew')}</span><b>{card.name}</b></div>
               {pull}
             </div>
           )
@@ -74,12 +79,30 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
         {(a.problem || (short && a.cost > 0)) && <p class="cq-warn">{a.problem ?? t('lblWebConquestTooFewShards')}</p>}
         <div class="cq-ae-count">{formatNumber(a.matching)} / {formatNumber(a.locked)}</div>
         <div class="cq-ae-recent">
-          {recent.map((c, i) => <button key={`${c.image}:${recent.length - i}`} title={c.name} onClick={() => setZoom(c.image)}><img alt={c.name} src={imageUrl(c.image)} /></button>)}
+          {recent.map((c, i) => <img key={`${c.image}:${recent.length - i}`} alt={c.name} src={imageUrl(c.image)} data-image={c.image} />)}
         </div>
       </div>
-      {zoom && <div class="backdrop cq-zoom-layer" onClick={() => setZoom(null)}><img class="cq-zoom" alt="" src={imageUrl(zoom)} /></div>}
     </div>
   );
+}
+
+/** Flies a copy of the pulled card into the Collection tab, which then lights up as the card arrives. */
+function toCollection(img: HTMLImageElement): void {
+  const tab = document.querySelector<HTMLElement>('.cq-tab[data-tab="collection"]');
+  if (!tab || reducedMotion()) return;
+  const from = img.getBoundingClientRect(), to = tab.getBoundingClientRect();
+  const face = new Image();
+  face.src = img.src;
+  face.alt = '';
+  Object.assign(face.style, { position: 'fixed', left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`,
+    zIndex: '60', pointerEvents: 'none', borderRadius: '12px', boxShadow: '0 16px 44px #000c' });
+  document.body.append(face);
+  const dx = to.left + to.width / 2 - (from.left + from.width / 2), dy = to.top + to.height / 2 - (from.top + from.height / 2);
+  void face.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${dx}px, ${dy}px) scale(.1)`, opacity: .3 }],
+    { duration: 600, easing: 'cubic-bezier(.5,0,.3,1)' }).finished.then(() => {
+    face.remove();
+    tab.animate([{ offset: 0, color: '#f2c344', textShadow: '0 0 12px #f2c344aa' }], { duration: 700, easing: 'ease-out' });
+  });
 }
 
 /** One of the filters, shown as tiles with one chosen. A rarity tile shows what a pull at that rarity costs. */
