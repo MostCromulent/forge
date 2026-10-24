@@ -202,15 +202,15 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
 .cq-wheel-stop { display: grid; justify-items: center; gap: 18px; }
 .cq-wheel-first { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gold-hi); }
 .cq-wheel-first img { width: 22px; height: 22px; }
-.cq-wheel-host { --d: min(440px, 56vh); padding: 34px 30px 26px; }
+.cq-wheel-host { --d: min(440px, 56vh); padding: 40px 36px 32px; }
 .cq-dl { position: relative; width: var(--d); height: var(--d); }
 .cq-dl-glow { position: absolute; inset: -22%; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, #7a5cff33 38%, #3bd0e014 56%, transparent 70%); animation: cq-breathe 5s ease-in-out infinite; }
-.cq-dl-rim { position: absolute; inset: -20px; border-radius: 50%;
+.cq-dl-rim { position: absolute; inset: -26px; border-radius: 50%;
   background: conic-gradient(from 30deg, #4a380f, #d9b85c 10%, #8a6a1e 22%, #3d2e0c 38%, #c9a544 52%, #6f5416 66%, #e8cd7d 78%, #5a4412 90%, #4a380f);
   box-shadow: 0 0 0 1px #000, 0 24px 60px #000c; }
 .cq-dl-rim::before { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: repeating-conic-gradient(from -.25deg, #0b0e14cc 0 .5deg, transparent .5deg 5deg);
   -webkit-mask: radial-gradient(circle, transparent calc(50% - 12px), #000 calc(50% - 11px)); mask: radial-gradient(circle, transparent calc(50% - 12px), #000 calc(50% - 11px)); }
-.cq-dl-rim::after { content: ''; position: absolute; inset: 15px; border-radius: 50%; background: #05070b; box-shadow: inset 0 0 0 1px #000, 0 0 0 1px #2a2008; }
+.cq-dl-rim::after { content: ''; position: absolute; inset: 21px; border-radius: 50%; background: #05070b; box-shadow: inset 0 0 0 1px #000, 0 0 0 1px #2a2008; }
 .cq-dl-spin { position: absolute; inset: 0; border-radius: 50%; }
 .cq-dl-disc { position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px #c9a54466, inset 0 0 50px #000; }
 .cq-dl-disc::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(from -22.7deg, #c9a544aa 0 .4deg, transparent .4deg 45deg); }
@@ -258,7 +258,7 @@ html[data-motion="reduced"] .cq-dl.done .cq-dl-flare { animation: none; opacity:
 @keyframes cq-wheel-in { from { opacity: 0; transform: translateY(18px) scale(.94) rotate(-24deg); filter: blur(3px); } }
 .cq-wheel-stop .cq-dl-glow { animation: cq-glow-in 1.15s .15s ease-out both, cq-breathe 5s 1.3s ease-in-out infinite; }
 @keyframes cq-glow-in { from { opacity: 0; transform: scale(.6); } }
-.cq-wheel-stop .cq-dl::after { content: ''; position: absolute; inset: -20px; border-radius: 50%; pointer-events: none; opacity: 0;
+.cq-wheel-stop .cq-dl::after { content: ''; position: absolute; inset: -26px; border-radius: 50%; pointer-events: none; opacity: 0;
   background: conic-gradient(transparent 0deg, #fff6d8cc 8deg, transparent 22deg); mask: radial-gradient(circle, transparent calc(50% - 13px), #000 calc(50% - 12px));
   animation: cq-glint .8s 1.3s ease-in-out; }
 @keyframes cq-glint { from { opacity: 0; transform: rotate(-60deg); } 20% { opacity: .5; } to { opacity: 0; transform: rotate(300deg); } }
