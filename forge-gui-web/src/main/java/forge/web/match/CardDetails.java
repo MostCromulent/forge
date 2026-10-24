@@ -1,5 +1,6 @@
 package forge.web.match;
 
+import forge.card.CardStateName;
 import forge.game.GameView;
 import forge.game.card.CardView;
 import forge.game.card.CardView.CardStateView;
@@ -66,6 +67,22 @@ final class CardDetails {
                 CardDetailUtil.composeCardText(state, game, true).trim(), Foil.key(card, state),
                 state.getColors() == null ? 0 : state.getColors().getColor(),
                 StringUtils.isEmpty(state.getSetCode()) ? null : state.getSetCode(),
-                state.getRarity());
+                state.getRarity(), turn(card, state));
+    }
+
+    /** The same turns as the desktop preview. An Aftermath card turns the other way, so its second half reads upright. */
+    private static Integer turn(final CardView card, final CardStateView state) {
+        if (card.isFaceDown()) {
+            return null;
+        }
+        if (card.isSplitCard()) {
+            // A view fills in keywords for its current state only, so the half's rules text is read instead
+            final boolean aftermath = card.hasRightSplitState() && card.getRightSplitState().getOracleText().contains("Aftermath");
+            if (aftermath && state.getState() == CardStateName.LeftSplit) {
+                return null;
+            }
+            return aftermath ? 270 : 90;
+        }
+        return state.isPlane() || state.isPhenomenon() ? 90 : null;
     }
 }

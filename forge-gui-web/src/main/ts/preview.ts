@@ -375,6 +375,9 @@ function drawDetail(model: Model): void {
     img.dataset.card = src;
     setImage(img, picture);
   }
+  const shot = q(zoom, '.shot');
+  shot.classList.toggle('turned', !!face?.turn);
+  shot.style.setProperty('--turn', `${face?.turn ?? 0}deg`);
   q(zoom, '.detail').hidden = !face;
   const nowPt = q(zoom, '.now-pt');
   nowPt.hidden = true;

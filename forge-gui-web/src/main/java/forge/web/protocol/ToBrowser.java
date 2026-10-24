@@ -534,9 +534,9 @@ public final class ToBrowser {
     public record Detail(int key, List<CardFace> faces) {
     }
 
-    /** One face of a card as the preview shows it. colors is the face's colour mask, in the same form as the Colors property. */
+    /** One face of a card as the preview shows it. colors is the face's colour mask, in the same form as the Colors property. turn is the clockwise turn in degrees that makes a sideways picture readable. */
     public record CardFace(@Nullable String name, String cost, String type, @Nullable String pt, String text,
-            @Nullable String imageKey, int colors, @Nullable String set, @Nullable CardRarity rarity) {
+            @Nullable String imageKey, int colors, @Nullable String set, @Nullable CardRarity rarity, @Nullable Integer turn) {
     }
 
     @Message("playerDetail")
