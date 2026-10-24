@@ -162,6 +162,9 @@ html[data-form="portrait"] #match .seat .hand-fan { display: none; }
 #zoom.sheet { right: auto; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; padding: 14px; box-sizing: border-box;
   background: var(--surface); border: 1px solid var(--line-bright); border-radius: 14px; box-shadow: 0 16px 50px #000d; }
 #zoom.sheet > .hint { display: none; }
+/* The sheet has no room above the card, so the zone's name sits on the card's bottom edge */
+html[data-form="portrait"] #zoom .from-tab { bottom: 0; transform: translate(-50%, 50%); padding: 4px 12px; font-size: 12px; }
+html[data-form="portrait"] #zoom.image-only:has(.from-tab:not(:empty)) { gap: 20px; }
 html[data-form="portrait"] #zoom.sheet { --zoom-w: min(62vw, calc((100dvh - var(--dock-h, 110px) - 250px) * 63 / 88)); }
 /* Outside a match there is no dock, so the sheet opens from the bottom of the screen */
 html[data-form="portrait"] #match[hidden] ~ #zoom.sheet { --dock-h: 0px; }

@@ -709,10 +709,12 @@ html[data-motion="reduced"] :is(.reveal-back, .reveal-panel.ai-skips, .ai-skips 
 #zoom.flipping.image-only > .shot, #zoom.flipping.text-card > .detail { animation: zoom-flip .26s cubic-bezier(.2, .7, .3, 1); }
 @keyframes zoom-flip { from { transform: perspective(900px) rotateY(-90deg); } to { transform: perspective(900px) rotateY(0deg); } }
 html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
-#zoom .from-tab { position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 50%); padding: 4px 12px; border-radius: 999px; background: var(--zone-glow);
-  color: #15121c; font: 800 12px/1.25 system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 14px #000a; }
+/* The zone a card is played from is named above its preview, clear of the card, as desktop names it above the card.
+   It is drawn like the hint below the preview, with its outline in the zone's colour */
+#zoom .from-tab { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -8px); padding: 4px 13px;
+  border: 1px solid var(--zone-glow); border-radius: 999px; background: var(--surface); color: var(--text); font: 600 13px/1.25 system-ui, sans-serif;
+  white-space: nowrap; box-shadow: 0 4px 14px #000a; }
 #zoom .from-tab:empty, #zoom.text-card .shot { display: none; }
-#zoom.image-only:has(.from-tab:not(:empty)) { gap: 20px; }
 /* The hint is a pill like the playable-from tab, so it stays readable over whatever is behind it */
 #zoom > .hint { padding: 4px 12px; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface); color: var(--text);
   font-size: 11px; font-weight: 600; text-shadow: 0 1px 3px #000; box-shadow: 0 4px 14px #000a; }

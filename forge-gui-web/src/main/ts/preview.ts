@@ -321,7 +321,10 @@ function placeZoom(zoom: HTMLElement, at: HTMLElement): void {
   if (after + w <= right) x = after;
   else if (before >= left) x = before;
   else x = right - card.right > card.left - left ? right - w : left;
-  const y = Math.min(Math.max(8, card.top + card.height / 2 - h / 2), window.innerHeight - h - 8);
+  // The zone's name sits above the preview, so the preview stays low enough to keep it on screen
+  const tab = zoom.querySelector<HTMLElement>('.from-tab');
+  const above = tab?.offsetParent ? tab.offsetHeight + 8 : 0;
+  const y = Math.min(Math.max(8 + above, card.top + card.height / 2 - h / 2), window.innerHeight - h - 8);
   zoom.classList.add('placed');
   zoom.style.left = `${Math.round(x)}px`;
   zoom.style.top = `${Math.round(y)}px`;
