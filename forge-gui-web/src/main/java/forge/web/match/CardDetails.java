@@ -70,7 +70,7 @@ final class CardDetails {
                 state.getRarity(), turn(card, state));
     }
 
-    /** The same turns as the desktop preview. An Aftermath card turns the other way, so its second half reads upright. */
+    /** The same turns as the desktop preview, except for an Aftermath card. It is printed upright, so only its second half turns, anticlockwise. */
     private static Integer turn(final CardView card, final CardStateView state) {
         if (card.isFaceDown()) {
             return null;
@@ -78,10 +78,10 @@ final class CardDetails {
         if (card.isSplitCard()) {
             // A view fills in keywords for its current state only, so the half's rules text is read instead
             final boolean aftermath = card.hasRightSplitState() && card.getRightSplitState().getOracleText().contains("Aftermath");
-            if (aftermath && state.getState() == CardStateName.LeftSplit) {
-                return null;
+            if (!aftermath) {
+                return 90;
             }
-            return aftermath ? 270 : 90;
+            return state.getState() == CardStateName.RightSplit ? Integer.valueOf(270) : null;
         }
         return state.isPlane() || state.isPhenomenon() ? 90 : null;
     }
