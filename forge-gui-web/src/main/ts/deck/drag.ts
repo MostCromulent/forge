@@ -14,6 +14,8 @@ export interface Carried {
   /** The zone the drag started from. It is catalogue for a card not in the deck yet. */
   from: Zone;
   count: number;
+  /** The copy limit the catalogue worked out for the card, which counts its own rules and the copies owned. */
+  limit?: number;
 }
 
 export interface Verdict {
@@ -58,7 +60,7 @@ export function verdictFor(carried: Carried, zone: Zone, state: EditorState): Ve
     return n > left ? { zone, accepts: false, refused: true, verb: refused('lblWebEditorDragNoneLeft') } : { zone, accepts: true, verb: t(ADD[zone], n) };
   }
   const have = countsInDeck(state).get(carried.name) ?? 0;
-  const limit = copyLimit(state, carried.name);
+  const limit = carried.limit ?? copyLimit(state, carried.name);
   if (have + n > limit) {
     return { zone, accepts: false, refused: true, verb: limit === 1 ? refused('lblWebEditorDragSingleton') : refused('lblWebEditorDragAtLimit', have, limit) };
   }
@@ -105,7 +107,7 @@ export function startDrag(e: PointerEvent, carried: Carried, image: string, judg
 }
 
 /** Pointer handlers for a draggable card. Its menu opens on right-click or from the More button in its preview. */
-export type CardHandlers = (name: string, from: Zone, image: string, count: number) => {
+export type CardHandlers = (name: string, from: Zone, image: string, count: number, limit?: number) => {
   'data-menu': string;
   onPointerDown: (e: PointerEvent) => void;
   onContextMenu: (e: MouseEvent) => void;

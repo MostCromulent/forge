@@ -245,7 +245,10 @@ public final class CardCatalog {
             return null;
         }
         final Integer limit = DeckFormat.canHaveSpecificNumberInDeck(card);
-        return limit != null ? limit : DeckFormat.canHaveAnyNumberOf(card) ? Integer.MAX_VALUE : null;
+        if (limit != null) {
+            return limit;
+        }
+        return DeckFormat.canHaveAnyNumberOf(card) ? Integer.MAX_VALUE : null;
     }
 
     public static String pt(final CardRules rules) {

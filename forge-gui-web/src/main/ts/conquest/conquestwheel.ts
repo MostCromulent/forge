@@ -65,7 +65,7 @@ export function mountWheel(host: HTMLElement, labels: Record<WheelOutcome, strin
   const needle = root.querySelector<HTMLElement>('.cq-dl-needle')!;
   // The labels are laid out again when the dial changes size, because they are placed in pixels
   const curve = () => root.querySelectorAll<HTMLElement>('.cq-dl-wedge').forEach((wedge, i) => curveLabel(wedge, labels[WHEEL_SPOTS[i]]));
-  curve();
+  // The observer also lays the labels out once when it starts
   new ResizeObserver(curve).observe(root);
   const show = (spot: number) => {
     spin.style.transform = `rotate(${-45 * spot}deg)`;
@@ -142,12 +142,12 @@ function curveLabel(wedge: HTMLElement, text: string): void {
   lines.forEach((l, k) => {
     const r = outer - k * line * scale;
     const total = lengthOf(l) * scale;
+    const h = line * scale;
     let along = 0;
     for (const ch of l) {
       const w = widthOf(ch) * scale;
       const span = document.createElement('span');
       span.textContent = ch;
-      const h = line * scale;
       span.style.cssText = `left: ${across / 2 - w / 2}px; top: ${centre - r - h / 2}px; width: ${w}px; height: ${h}px; font-size: ${size * scale}px;`
         + ` transform-origin: ${w / 2}px ${r + h / 2}px; transform: rotate(${(along + (w - spacing * scale) / 2 - total / 2) / r}rad);`;
       along += w;

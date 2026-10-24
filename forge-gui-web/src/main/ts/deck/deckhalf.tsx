@@ -126,7 +126,7 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
       )}
       <div class="land-row">
         <span class="band-lab">{t('lblWebEditorBasicLands')}</span>
-        {/* A land outside the commander's colours is listed only while the deck holds some, so they can be taken out */}
+        {/* A land the deck may not hold, or outside the commander's colours, is listed only while the deck holds some, so it can be taken out */}
         {state.lands.filter(l => (l.allowed && (!state.commanders.length || (state.identity || 'C').includes(l.letter))) || l.count).map(l => (
           <span key={l.name} class={l.allowed ? 'land' : 'land off'} title={l.allowed ? l.name : t('lblWebEditorLandOutside', l.name)}>
             <Pip letter={l.letter} />

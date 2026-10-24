@@ -61,11 +61,11 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
     }
   };
   // Holding Alt at the press drags every copy. The command zone accepts any card because the server decides what can be a commander
-  const handlers: CardHandlers = (name, from, image, count) => ({
+  const handlers: CardHandlers = (name, from, image, count, limit) => ({
     // A long press opens the card's preview. Its More button opens this menu
     'data-menu': '',
     onPointerDown: e => {
-      const carried: Carried = { name, from, count: e.altKey ? Math.max(1, count) : 1 };
+      const carried: Carried = { name, from, count: e.altKey ? Math.max(1, count) : 1, limit };
       startDrag(e, carried, image, zone => verdictFor(carried, zone, state), v => dropped(carried, v));
     },
     onContextMenu: e => {

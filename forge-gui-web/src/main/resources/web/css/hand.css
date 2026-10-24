@@ -65,9 +65,7 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 #hand .card.elsewhere:is(.playable, .auto-tap):not(.selectable) { outline-color: transparent; }
 /* These cards come first in the hand, and a gap sets them apart from the cards in it */
 #hand .card.elsewhere + .card:not(.elsewhere) { margin-left: calc(var(--step, 0px) + 28px); }
-/* Light rising from an edge just outside the card (index.html's rise filters). A pack's rares use it too (conquest.css).
-   The box reaches well past the card, because the light is cut off at the box. The light is behind the card, so it shows round
-   the card and in its rounded corners, and the edge follows the card's corners */
+/* Light rising from an edge just outside the card (index.html's rise filters). The box reaches past the card, because the light stops at the box */
 :is(.rise, #hand .card.elsewhere .halo) { inset: -30px; filter: url(#rise-a); }
 :is(.rise, #hand .card.elsewhere .halo)::before { content: ''; position: absolute; inset: 28.5px; border: 1.5px solid color-mix(in srgb, var(--rise) 65%, #fff);
   border-radius: calc(var(--radius, 6px) + 1.5px); }
@@ -78,9 +76,9 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 #hand .card.elsewhere:not(.playable, .auto-tap) .halo { filter: url(#haze-a); }
 #hand .card.elsewhere:not(.playable, .auto-tap):nth-child(3n+2) .halo { filter: url(#haze-b); }
 #hand .card.elsewhere:not(.playable, .auto-tap):nth-child(3n) .halo { filter: url(#haze-c); }
-html[data-motion="reduced"] #hand .card.elsewhere:nth-child(n) .halo { filter: blur(4px); }
 #hand .card.elsewhere:is(.playable, .auto-tap):hover .halo { --rise: color-mix(in srgb, var(--playable, #66ccff) 80%, #fff); }
-html[data-motion="reduced"] :is(.rise, #hand .card.elsewhere .halo) { filter: blur(4px); }
+/* nth-child(n) outranks the rules that hand out the filter copies */
+html[data-motion="reduced"] :is(.cq-rv-slot:nth-child(n) .rise, #hand .card.elsewhere:nth-child(n) .halo) { filter: blur(4px); }
 #hand .card.elsewhere:is(.playable, .auto-tap):hover .haze { display: block; position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: var(--radius); pointer-events: none; }
 #hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after {
   content: ''; position: absolute; bottom: 26%; width: 4px; height: 4px; border-radius: 50%;

@@ -219,7 +219,7 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
 /* Each wedge's icon and label scale with the dial and sit in from its edge. The label's letters follow the dial's curve (conquestwheel.ts) */
 .cq-dl-wedge { position: absolute; left: 50%; top: 0; width: 34%; margin-left: -17%; height: 50%; transform-origin: 50% 100%; display: grid; justify-items: center; align-content: start; padding-top: calc(var(--d) * .075);
   font: 600 calc(var(--d) * .025)/1.15 Georgia, "Times New Roman", serif; letter-spacing: .14em; text-transform: uppercase; color: #dfe5ee; text-align: center; transition: opacity .8s .15s; }
-.cq-dl-face { display: grid; justify-items: center; gap: calc(var(--d) * .014); }
+.cq-dl-face { display: grid; justify-items: center; }
 .cq-dl-word { position: absolute; inset: 0; pointer-events: none; }
 .cq-dl-word span { position: absolute; display: grid; place-items: center; text-align: center; white-space: pre; letter-spacing: 0; }
 .cq-dl-ic { height: calc(var(--d) * .072); display: flex; align-items: center; gap: 3px; color: #e6cf8e; }
@@ -329,10 +329,10 @@ html[data-motion="reduced"] .cq-wheel-stop .cq-dl::after { display: none; }
 .cq-rv-face img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .cq-rv-back, .cq-ae-back { transform: rotateY(180deg); border: 1px solid #574319; background: radial-gradient(circle, #f0c05a55 0 9%, transparent 10%), repeating-linear-gradient(135deg, #2d2513 0 8px, #251e0f 8px 16px); }
 /* A rare or mythic gets the moving light of a card playable from another zone (hand.css), in its rarity's colour, so it does not read as a selection */
-.cq-rv-card.rare { --rv-glow: var(--gold); }
-.cq-rv-card.mythic { --rv-glow: #ff8a3d; }
+.cq-rv-card.rare { --rise: var(--gold); }
+.cq-rv-card.mythic { --rise: #ff8a3d; }
 .cq-rv-card .rise { display: none; }
-.cq-rv-card.rare .rise { --rise: var(--rv-glow); display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter; opacity: 0; transition: opacity .4s; }
+.cq-rv-card.rare .rise { display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter; opacity: 0; transition: opacity .4s; }
 .cq-rv-slot:nth-child(3n+2) .cq-rv-card.rare .rise { filter: url(#rise-b); }
 .cq-rv-slot:nth-child(3n) .cq-rv-card.rare .rise { filter: url(#rise-c); }
 .cq-rv-card.rare.up .rise { opacity: 1; }
@@ -371,14 +371,12 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-cmd.in-use[aria-pressed="true"] { box-shadow: 0 0 0 1px var(--accent-2), 0 0 0 3px var(--text); }
 .cq-cmd .tag { position: absolute; right: 8px; bottom: 8px; background: #0b0e14e6; text-transform: uppercase; letter-spacing: .06em; font-size: 10.5px; }
 .cq-cmd-detail { padding: 20px; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
-/* The card is beside its name and chips, so the deck list below starts higher */
 .cq-cmd-top { display: flex; gap: 18px; align-items: start; }
 .cq-cmd-about { display: grid; gap: 12px; align-content: start; min-width: 0; }
 .cq-cmd-detail img.cq-card { width: 168px; flex: none; aspect-ratio: 63 / 88; border-radius: 9px; box-shadow: 0 12px 30px #000b; }
 .cq-cmd-detail h3 { margin: 0; font-size: 18px; }
 .cq-cmd-detail .dk-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 0; overflow: visible; }
 .cq-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.cq-two button[aria-pressed="true"] { border-color: var(--accent-2); color: var(--accent-2); }
 
 .cq-coll { position: relative; display: flex; flex-direction: column; min-height: 0; }
 .cq-coll-bar { display: flex; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }

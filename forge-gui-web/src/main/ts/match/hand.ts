@@ -167,7 +167,7 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     updateCard(el, model, c);
     const source = elsewhere.get(c.$key);
     el.classList.toggle('elsewhere', source !== undefined);
-    // CSS picks the glow's colour from the zone. The preview shows the zone's name when the card is hovered
+    // The preview shows the zone's name when the card is hovered
     if (source) {
       el.dataset.from = source;
     } else {

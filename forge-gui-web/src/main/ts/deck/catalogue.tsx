@@ -70,7 +70,8 @@ export function countsInDeck(state: EditorState): Map<string, number> {
 export function copyLimit(state: EditorState, name: string, owned?: number | null, ownLimit?: number | null): number {
   if (BASICS.has(name)) return Infinity;
   if (state.mainOnly) return 1;
-  const rule = ownLimit ?? state.copyLimit ?? Infinity;
+  // The server sends Java's largest int for a card a deck may hold any number of
+  const rule = (ownLimit === 2 ** 31 - 1 ? Infinity : ownLimit) ?? state.copyLimit ?? Infinity;
   return owned == null ? rule : Math.min(rule, owned);
 }
 
@@ -368,7 +369,7 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
     <div class={`slot${count ? ' indeck' : ''}${full && !commanderWanted ? ' full' : ''}${row.problem ? ' bad' : ''}${top ? ' top' : ''}`} data-card={row.name} data-from="catalogue">
       {top && <span class="enter">{commanderWanted ? t('lblWebCataloguePressEnterChoose') : t('lblWebCataloguePressEnterAdd')}</span>}
       <button class="tile" data-image={row.image} data-act={commanderWanted ? t('lblWebCardMenuMakeCommander') : t(takesOut ? 'lblRemove' : 'lblAdd')}
-        {...handlers(row.name, 'catalogue', row.image, 1)} onClick={click}>
+        {...handlers(row.name, 'catalogue', row.image, 1, limit)} onClick={click}>
         <span class="tile-name">{row.name}</span>
         <img loading="lazy" alt="" draggable={false} src={smallImage(imageUrl(row.image))} onError={hideBroken} />
         {count > 0 && <span class="badge">{count}</span>}
@@ -404,7 +405,7 @@ function Table({ rows, counts, room, add, remove, handlers }: {
           const count = counts.get(row.name) ?? 0;
           return (
             <tr key={row.name} class={row.problem ? 'bad' : undefined} data-image={row.image} data-card={row.name} data-from="catalogue"
-              {...handlers(row.name, 'catalogue', row.image, 1)}>
+              {...handlers(row.name, 'catalogue', row.image, 1, count + room(row, count))}>
               <td class="under">
                 <button class="step" disabled={!count} onClick={() => remove(row.name)}>&minus;</button>
                 <span class={count ? 'n' : 'n zero'}>{count}</span>

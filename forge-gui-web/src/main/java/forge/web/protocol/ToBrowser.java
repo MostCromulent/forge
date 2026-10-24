@@ -340,6 +340,7 @@ public final class ToBrowser {
     /**
      * In a collection, value is what exiling or retrieving the card is worth. problem is why it can't be exiled.
      * ownLimit is the most copies the card's own rules allow in any deck, in place of the format's limit, or null when its rules set none.
+     * It is Integer.MAX_VALUE for a card a deck may hold any number of.
      */
     public record CatalogueRow(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
             String heading, int inDeck, @Nullable String problem, @Nullable Boolean isNew, @Nullable Integer value, @Nullable Integer count,

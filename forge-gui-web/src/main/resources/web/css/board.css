@@ -709,8 +709,7 @@ html[data-motion="reduced"] :is(.reveal-back, .reveal-panel.ai-skips, .ai-skips 
 #zoom.flipping.image-only > .shot, #zoom.flipping.text-card > .detail { animation: zoom-flip .26s cubic-bezier(.2, .7, .3, 1); }
 @keyframes zoom-flip { from { transform: perspective(900px) rotateY(-90deg); } to { transform: perspective(900px) rotateY(0deg); } }
 html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
-/* The zone a card is played from is named above its preview, clear of the card, as desktop names it above the card.
-   It is drawn like the hint below the preview, with its outline in the zone's colour */
+/* The zone a card is played from is named above its preview, as desktop names it above the card. It is drawn like the hint, outlined in the zone's colour */
 #zoom .from-tab { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -8px); padding: 4px 13px;
   border: 1px solid var(--zone-glow); border-radius: 999px; background: var(--surface); color: var(--text); font: 600 13px/1.25 system-ui, sans-serif;
   white-space: nowrap; box-shadow: 0 4px 14px #000a; }

@@ -37,7 +37,9 @@ export function closeShownZones(model: Model): void {
 }
 
 /** The zones the game shows, unless OK has already answered the prompt they belong to. */
-export const shownZones = (model: Model) => (answered && model.prompt === answered ? [] : model.zones);
+export function shownZones(model: Model): Model['zones'] {
+  return answered && model.prompt === answered ? [] : model.zones;
+}
 
 const SORTS: [ZoneSort, TextKey][] = [['order', 'lblWebZoneSortOrder'], ['name', 'lblWebZoneSortName'], ['type', 'lblWebZoneSortType'],
   ['mana', 'lblWebZoneSortManaValue']];

@@ -71,7 +71,7 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent-2); f
 .tile img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 6px; object-fit: cover; box-shadow: 0 3px 10px #0007; }
 .tile-name { position: absolute; inset: 8px; font-size: 11px; color: var(--muted); text-align: left; }
 .tile:hover img { transform: translateY(-2px); box-shadow: 0 8px 20px #000a; }
-/* A card in the deck is marked by its count badge. A card the deck holds as many of as it may is dark */
+/* A card the deck holds as many of as it may is dark */
 .slot.full .tile img { filter: brightness(.78) saturate(.85); }
 .slot.top .tile img { outline: 2px solid var(--accent-2); outline-offset: 3px; box-shadow: 0 0 16px var(--accent-glow); }
 .badge {
@@ -138,7 +138,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .cmd-tag { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); padding: 0 6px; border-radius: 999px; background: var(--surface); border: 1px solid var(--zone-command);
   color: var(--zone-command); font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
 .cmd-card .link { font-size: 11.5px; }
-.card-outline.cmd-card { width: 70px; gap: 0; }
+.card-outline.cmd-card { width: 70px; }
 .deck-head h3 { margin: 0 0 2px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
 .deck-head .sizes { margin: 0; color: var(--muted); font-size: 12.5px; }
 .deck-head .verdict { margin: 4px 0 8px; }
