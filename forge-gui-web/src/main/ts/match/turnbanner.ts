@@ -49,7 +49,7 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   }
   const banner = make('div', `turn-banner${mine ? ' mine' : ''}`);
   const url = playerAvatarUrl(active);
-  const face = make(url ? 'img' : 'span', 'face');
+  const face = make(url ? 'img' : 'span', 'mugshot');
   if (face instanceof HTMLImageElement) {
     face.alt = '';
     face.src = url;
@@ -62,6 +62,9 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   // The banner replaces the pill instead of covering it, because the pill animates its own width
   const strip = byId('phase-strip');
   strip.append(banner);
+  // Auto margins can centre it on a half pixel, which blurs the text
+  const size = banner.getBoundingClientRect();
+  banner.style.margin = `${Math.round((strip.clientHeight - size.height) / 2)}px auto auto ${Math.round((strip.clientWidth - size.width) / 2)}px`;
   strip.classList.add('announcing');
   // The pill comes back when the banner starts to fade (84% of turn-sweep). So one fades in while the other fades out
   const sweep = parseFloat(getComputedStyle(banner).animationDuration) * 1000;
