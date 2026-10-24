@@ -5,12 +5,14 @@
 > [Card-Forge/forge](https://github.com/Card-Forge/forge) as a new module beside the desktop and mobile clients.
 > Until then it is not part of a Card-Forge release, and it changes often.
 
-Forge in a web browser with a modern interface. The host runs a small server on their computer. Players join by
-web link with no further install required. You can also play alone against the computer.
+**[Download the current pre-release build](https://github.com/MostCromulent/forge/releases/tag/web-snapshot)**
 
-It has fewer options than desktop Forge and is meant to be quick to learn. It is made for a mouse and keyboard
-first. Phones are only partly supported. You can set up and play a match on a phone, but the deck editor, Draft,
-Sealed, Planar Conquest and Quest are laid out for a computer screen.
+Forge in a web browser, with a modern interface that is intuitive for new players and easy to learn. Getting a
+game going takes little setup. The host runs Forge on their computer, and other players join from a link in
+their browser with nothing to install. You can also play alone against the computer.
+
+It supports cross-platform play, so players can join from any browser. It is designed for a mouse and keyboard.
+Mobile support is a work in progress, and not all features work on a phone yet.
 
 <p>
   <img src="forge-gui-web/docs/table.webp" width="49%" alt="Setting up a game against two AI opponents">
