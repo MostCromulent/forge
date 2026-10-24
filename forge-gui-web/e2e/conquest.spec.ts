@@ -86,12 +86,14 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await expect(reveal.getByRole('button', { name: 'Spin' }).locator('kbd')).toHaveText('Space');
   await page.keyboard.press(' ');
   await expect(reveal.locator('.cq-dl.done')).toBeVisible({ timeout: 15_000 });
-  await reveal.getByRole('button', { name: 'Great', exact: true }).click();
+  // The OK key also takes each step's default button after the spin
+  await expect(reveal.getByRole('button', { name: 'Great Space', exact: true })).toBeVisible();
+  await page.keyboard.press(' ');
 
   // The reward is a booster. The pack is opened and skipped, every card turns face up, and the reveal closes to the map
   await reveal.locator('.cq-pk').click({ force: true });
   await reveal.getByRole('button', { name: 'Skip' }).click();
-  await expect(reveal.getByRole('button', { name: 'Great', exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(reveal.getByRole('button', { name: 'Great Space', exact: true })).toBeVisible({ timeout: 30_000 });
   const cards = await reveal.locator('.cq-rv-card').count();
   expect(cards).toBeGreaterThan(0);
   await expect(reveal.locator('.cq-rv-card.up')).toHaveCount(cards);
@@ -99,7 +101,7 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await expect(page.locator('#zoom')).toBeHidden();
   await reveal.locator('.cq-rv-card.up').first().hover();
   await expect(page.locator('#zoom')).toBeVisible();
-  await reveal.getByRole('button', { name: 'Great', exact: true }).click();
+  await reveal.getByRole('button', { name: 'Great Space', exact: true }).click();
   await expect(reveal).toHaveCount(0);
   await expect(page.locator('.cq-tile.won')).toHaveCount(2);
 

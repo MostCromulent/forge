@@ -81,6 +81,24 @@ export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed
   );
 }
 
+/** Runs the step's default button when the OK key is pressed, as the wheel's spin does. null turns the key off. */
+function useOkKey(run: (() => void) | null): string {
+  const key = boundKeys().ok;
+  useEffect(() => {
+    if (!run) return;
+    const onKey = (e: KeyboardEvent) => {
+      // A held key would run through every step. A zoomed card takes the key first
+      if (e.key !== key || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.target instanceof HTMLInputElement || document.querySelector('.cq-zoom-layer')) return;
+      // Space would also press a focused button, so the button is not pressed twice
+      e.preventDefault();
+      run();
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [run, key]);
+  return keyName(key);
+}
+
 /** A message line that ends in an amount of credits, as Quest's results write them. It captures the words and the amount separately. */
 const CREDIT_LINE = /^(.*?):?\s+(-?\d+) credits?\.?$/;
 
@@ -101,7 +119,7 @@ function Gift({ icon, amount, title, text, lines, button, next }: {
           })}
         </ul>
       )}
-      <button class="primary" onClick={next}>{button}</button>
+      <button class="primary" onClick={next}>{button} <kbd>{useOkKey(next)}</kbd></button>
     </div>
   );
 }
@@ -116,7 +134,7 @@ function CardsStop({ step, zoom, next }: { step: RewardStep; zoom: (image: strin
           <button key={i} class="cq-cards-card" aria-label={c.name} onClick={() => zoom(c.image)}><img alt={c.name} src={imageUrl(c.image)} /></button>
         ))}
       </div>
-      <div class="cq-reveal-foot"><button class="primary cq-big" onClick={next}>{t('lblOK')}</button></div>
+      <div class="cq-reveal-foot"><button class="primary cq-big" onClick={next}>{t('lblOK')} <kbd>{useOkKey(next)}</kbd></button></div>
     </div>
   );
 }
@@ -131,18 +149,7 @@ function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; n
     setPhase('spinning');
     void wheel.current!.spin(spot.current).then(() => setPhase('stopped'));
   };
-  const key = boundKeys().ok;
-  useEffect(() => {
-    if (phase !== 'ready') return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== key || e.ctrlKey || e.altKey || e.metaKey || e.target instanceof HTMLInputElement) return;
-      // Space would also press a focused button, so the spin is not started twice
-      e.preventDefault();
-      spin();
-    };
-    addEventListener('keydown', onKey);
-    return () => removeEventListener('keydown', onKey);
-  }, [phase, key]);
+  const key = useOkKey(phase === 'ready' ? spin : phase === 'stopped' ? next : null);
   return (
     <div class="cq-wheel-stop">
       {emblem > 0 && <p class="cq-wheel-first"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestFirstConquest')}</p>}
@@ -151,8 +158,8 @@ function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; n
       <p class="cq-wheel-name">{phase === 'stopped' ? wheelLabels()[step.outcome as WheelOutcome] : ''}</p>
       <div class="cq-reveal-foot">
         {phase === 'stopped'
-          ? <button class="primary cq-big" onClick={next}>{t('lblGreat')}</button>
-          : <button class="primary cq-big" disabled={phase === 'spinning'} onClick={spin}>{t('lblWebConquestSpin')} <kbd>{keyName(key)}</kbd></button>}
+          ? <button class="primary cq-big" onClick={next}>{t('lblGreat')} <kbd>{key}</kbd></button>
+          : <button class="primary cq-big" disabled={phase === 'spinning'} onClick={spin}>{t('lblWebConquestSpin')} <kbd>{key}</kbd></button>}
       </div>
     </div>
   );
@@ -195,6 +202,7 @@ function PackStop({ step, release, next }: { step: RewardStep; release: (shards:
       shown: () => setPhase('shown'),
     });
   }, []);
+  const key = useOkKey(phase === 'shown' ? next : null);
   const title = step.total > 1 ? t('lblReceivedBoosterPackNOfTotal', step.number, step.total).replace('\n', ' ') : t('lblReceivedBoosterPack');
   return (
     // A click anywhere while the cards are moving or flipping shows them all at once
@@ -206,7 +214,7 @@ function PackStop({ step, release, next }: { step: RewardStep; release: (shards:
           <span class="cq-dup-line">{t('lblReceivedAetherShardsForDuplicateCards')}<img alt="" src={skinIconUrl('IMG_AETHER_SHARD')} /><b>{formatNumber(duplicates)}</b></span>
         )}
         {phase === 'shown'
-          ? <button class="primary cq-big" onClick={e => { e.stopPropagation(); next(); }}>{t('lblGreat')}</button>
+          ? <button class="primary cq-big" onClick={e => { e.stopPropagation(); next(); }}>{t('lblGreat')} <kbd>{key}</kbd></button>
           : <button onClick={e => { e.stopPropagation(); pack.current?.finish(); }}>{t('lblSkip')}</button>}
       </div>
     </div>

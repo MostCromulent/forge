@@ -42,9 +42,9 @@ test('a quest duel is conceded and the loss is shown on the Duels page', async (
   // The match results and then the booster are shown over the Duels page
   const reveal = page.locator('.cq-reveal');
   await expect(reveal.locator('.cq-gift h3')).toHaveText('Gameplay Results');
-  await reveal.getByRole('button', { name: 'OK', exact: true }).click();
+  await reveal.getByRole('button', { name: 'OK Space', exact: true }).click();
   await expect(reveal.locator('.cq-cards-card').first()).toBeVisible();
-  await reveal.getByRole('button', { name: 'OK', exact: true }).click();
+  await reveal.getByRole('button', { name: 'OK Space', exact: true }).click();
   await expect(reveal).toHaveCount(0);
   await expect(page.locator('.qu-status .cq-chip').nth(1)).toHaveText('1 Losses');
 });
@@ -104,7 +104,7 @@ test('a booster is bought in the Spell Shop and its cards revealed', async ({ pa
 
   const reveal = page.locator('.cq-reveal');
   await expect(reveal.locator('.cq-cards-card').first()).toBeVisible();
-  await reveal.getByRole('button', { name: 'OK', exact: true }).click();
+  await reveal.getByRole('button', { name: 'OK Space', exact: true }).click();
   await expect(reveal).toHaveCount(0);
   await expect(credits).toHaveText((before - price).toLocaleString('en-GB'));
 });
