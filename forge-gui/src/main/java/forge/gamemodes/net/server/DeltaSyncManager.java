@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Iterator;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -84,6 +85,7 @@ public class DeltaSyncManager implements IHasForgeLog {
     private final Map<Integer, TrackableObject> registeredByKey = new HashMap<>();
     // Used to block stale cross-reference replacements
     private final Map<Integer, CardView> authoritativeInstances = new HashMap<>();
+    private final Set<TrackableObject> walkedInstances = Collections.newSetFromMap(new IdentityHashMap<>());
     // Per-object detail of the current collectDeltas call, logged as one line
     private final StringBuilder walkTrace = new StringBuilder();
 
@@ -125,6 +127,7 @@ public class DeltaSyncManager implements IHasForgeLog {
             Set<Integer> visited = new HashSet<>();
             try {
                 authoritativeInstances.clear();
+                walkedInstances.clear();
                 preScanZoneCollections(gameView, authoritativeInstances);
                 walkAndCollect(gameView, objectDeltas, newObjects, visited);
                 currentObjectIds = visited;
@@ -218,11 +221,9 @@ public class DeltaSyncManager implements IHasForgeLog {
         TrackableObject auth = authoritativeInstances.get(deltaKey);
         if (auth != null && auth != obj) return;
 
-        // Dedup: skip if same instance already processed this pass
-        if (!currentObjectIds.add(deltaKey)) {
-            if (registeredByKey.get(deltaKey) == obj) return;
-            // Different instance at same key — replacement (zone change)
-        }
+        // By instance, not key: two copies of a card can share a key and hold each other in a collection
+        if (!walkedInstances.add(obj)) return;
+        currentObjectIds.add(deltaKey);
 
         collectObjectDelta(obj, objectDeltas, newObjects);
 
