@@ -244,10 +244,10 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
   background: radial-gradient(circle, transparent 60%, #9a85ff00 63%, #b8a8ff59 66%, #9a85ff00 69%, transparent 72%); filter: blur(1px); }
 .cq-dl.done .cq-dl-wave { animation: cq-wave 1.6s cubic-bezier(.25,.6,.3,1) forwards; }
 @keyframes cq-wave { 0% { opacity: 0; scale: .12; } 20% { opacity: .9; } 100% { opacity: 0; scale: 1.02; } }
-.cq-dl-flare { position: absolute; left: 50%; top: 0; width: 34%; margin-left: -17%; height: 50%; z-index: 1; pointer-events: none; opacity: 0; clip-path: polygon(50% 100%, 0 0, 100% 0);
-  background: radial-gradient(70% 95% at 50% 100%, #7a5cff70, #7a5cff1a 60%, transparent 85%); }
+.cq-dl-flare { position: absolute; inset: 0; z-index: 1; border-radius: 50%; pointer-events: none; opacity: 0; mask: conic-gradient(from -22.5deg, #000 0 45deg, transparent 0);
+  background: radial-gradient(circle closest-side, #7a5cff70, #7a5cff40 65%, #7a5cff2e); }
 .cq-dl.done .cq-dl-flare { animation: cq-vein 1.2s .25s ease-out forwards; }
-@keyframes cq-vein { 0% { opacity: 0; clip-path: polygon(50% 100%, 46% 80%, 54% 80%); } 50% { opacity: 1; } 100% { opacity: .9; clip-path: polygon(50% 100%, 0 0, 100% 0); } }
+@keyframes cq-vein { 0% { opacity: 0; scale: .15; } 50% { opacity: 1; } 100% { opacity: .9; scale: 1; } }
 .cq-dl.done .cq-dl-hub { color: #b8a8ff; }
 .cq-dl.done .cq-dl-wedge:not(.hit) { opacity: .5; }
 .cq-wheel-name { margin: -6px 0 0; min-height: 1.2em; font: 400 26px/1.2 Georgia, "Times New Roman", serif; letter-spacing: .22em; text-transform: uppercase; color: #e9e2ff; text-shadow: 0 0 22px #7a5cff77; }
