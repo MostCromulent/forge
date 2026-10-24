@@ -252,6 +252,20 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
 @keyframes cq-name-in { from { opacity: 0; letter-spacing: .45em; } }
 html[data-motion="reduced"] :is(.cq-dl-needle.drag, .cq-dl.done .cq-dl-wave, .cq-wheel-name) { animation: none; }
 html[data-motion="reduced"] .cq-dl.done .cq-dl-flare { animation: none; opacity: .9; }
+/* The wheel arrives in steps: the screen darkens, light gathers, the dial rises and turns into place, a glint runs round its rim, then the button comes in */
+.backdrop.cq-reveal:has(> .cq-wheel-stop) { animation-duration: .4s; }
+.cq-wheel-stop .cq-dl { animation: cq-wheel-in .9s .4s cubic-bezier(.25,.6,.3,1) both; }
+@keyframes cq-wheel-in { from { opacity: 0; transform: translateY(18px) scale(.94) rotate(-24deg); filter: blur(3px); } }
+.cq-wheel-stop .cq-dl-glow { animation: cq-glow-in 1.15s .15s ease-out both, cq-breathe 5s 1.3s ease-in-out infinite; }
+@keyframes cq-glow-in { from { opacity: 0; transform: scale(.6); } }
+.cq-wheel-stop .cq-dl::after { content: ''; position: absolute; inset: -20px; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: conic-gradient(transparent 0deg, #fff6d8cc 8deg, transparent 22deg); mask: radial-gradient(circle, transparent calc(50% - 13px), #000 calc(50% - 12px));
+  animation: cq-glint .8s 1.3s ease-in-out; }
+@keyframes cq-glint { from { opacity: 0; transform: rotate(-60deg); } 20% { opacity: .5; } to { opacity: 0; transform: rotate(300deg); } }
+.cq-wheel-stop > :is(.cq-wheel-first, .cq-reveal-foot) { animation: cq-rise-in .35s 1.4s ease-out both; }
+@keyframes cq-rise-in { from { opacity: 0; transform: translateY(8px); } }
+html[data-motion="reduced"] .cq-wheel-stop :is(.cq-dl, .cq-dl-glow, .cq-wheel-first, .cq-reveal-foot) { animation: none; }
+html[data-motion="reduced"] .cq-wheel-stop .cq-dl::after { display: none; }
 
 /* A booster pack, shown over the slots its cards will fill */
 .cq-pack-stop { width: min(1080px, 100%); display: grid; justify-items: center; gap: 14px; }
