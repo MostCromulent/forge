@@ -43,8 +43,11 @@ import forge.web.protocol.ToBrowser.*;
 import org.apache.commons.lang3.EnumUtils;
 
 import java.io.File;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -733,7 +736,7 @@ public final class ConquestGame implements Campaign {
             regions.add(new ConquestRegionRow(region.getName(), art.card().getImageKey(art.backFace()), CardCatalog.wubrg(region.getColorSet()),
                     conquered, plane.getRowsPerRegion() * plane.getCols()));
         }
-        final List<ConquestLocation> toChosen = chosen.equals(here) ? null : data.getPath(chosen);
+        final List<ConquestLocation> toChosen = chosen.equals(here) ? null : route(chosen);
         final ConquestCommander commander = data.getSelectedCommander();
         return new ConquestState(planeName(plane), plane.getRowsPerRegion(), plane.getCols(), regions, cells, place(here),
                 data.getPlaneswalker().getDisplayName(), data.getPlaneswalker().getImageKey(false), place(chosen),
@@ -782,7 +785,7 @@ public final class ConquestGame implements Campaign {
             return;
         }
         final ConquestLocation loc = new ConquestLocation(plane, region, row, col);
-        if (loc.equals(data.getCurrentLocation()) || data.getPath(loc) != null) {
+        if (loc.equals(data.getCurrentLocation()) || route(loc) != null) {
             selection = loc;
         }
     }
@@ -793,11 +796,45 @@ public final class ConquestGame implements Campaign {
         if (selection == null || selection.getPlane() != data.getCurrentPlane() || selection.equals(data.getCurrentLocation())) {
             return null;
         }
-        final List<ConquestLocation> walked = data.moveTo(selection);
+        final List<ConquestLocation> walked = route(selection);
         if (walked != null) {
+            data.moveTo(selection);
             selection = null;
         }
         return walked;
+    }
+
+    /**
+     * The shortest walk from the player's position to a place along the map's lines, or null when there is none. Every place between the ends is conquered.
+     * The engine's path may step between two places that are not conquered, and the map draws no line there.
+     */
+    private List<ConquestLocation> route(final ConquestLocation to) {
+        final ConquestData data = model();
+        final ConquestPlaneData planeData = data.getCurrentPlaneData();
+        // ConquestLocation has no hashCode, so the search keys places by their position
+        final Map<ConquestPlace, ConquestLocation> cameFrom = new HashMap<>();
+        final ArrayDeque<ConquestLocation> queue = new ArrayDeque<>();
+        cameFrom.put(place(data.getCurrentLocation()), data.getCurrentLocation());
+        queue.add(data.getCurrentLocation());
+        while (!queue.isEmpty()) {
+            final ConquestLocation at = queue.poll();
+            if (at.equals(to)) {
+                final List<ConquestLocation> path = new ArrayList<>(List.of(at));
+                for (ConquestLocation step = at; !step.equals(data.getCurrentLocation()); ) {
+                    step = cameFrom.get(place(step));
+                    path.add(step);
+                }
+                Collections.reverse(path);
+                return path;
+            }
+            for (final ConquestLocation next : at.getNeighbors()) {
+                final boolean tied = planeData.hasConquered(at) || planeData.hasConquered(next);
+                if (tied && (planeData.hasConquered(next) || next.equals(to)) && cameFrom.putIfAbsent(place(next), at) == null) {
+                    queue.add(next);
+                }
+            }
+        }
+        return null;
     }
 
     /** Why a battle cannot start at the player's position, or null if it can. */

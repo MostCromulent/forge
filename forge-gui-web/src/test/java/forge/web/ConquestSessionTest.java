@@ -176,6 +176,32 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(new ConquestData(data.getDirectory()).getCurrentLocation(), next);
     }
 
+    // Fails if a walk steps between two places that are not conquered, where the map draws no line
+    @Test(timeOut = 120_000)
+    public void aWalkFollowsTheLines() throws Exception {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final ConquestPlane plane = data.getCurrentPlane();
+        Assert.assertTrue(plane.getRowsPerRegion() >= 2 && plane.getCols() >= 3, "the plane is too small for this map");
+        // A row of three with only the first conquered, and the row above it conquered. The engine's shortest path runs along the open row
+        final List<ConquestLocation> won = List.of(new ConquestLocation(plane, 0, 0, 0), new ConquestLocation(plane, 0, 1, 0),
+                new ConquestLocation(plane, 0, 1, 1), new ConquestLocation(plane, 0, 1, 2));
+        for (final ConquestLocation loc : won) {
+            data.addWin(loc.getEvent().createBattle(loc, 0));
+        }
+        data.saveData();
+        final TestBrowser host = hostInConquest(data);
+        final ConquestLocation end = new ConquestLocation(plane, 0, 0, 2);
+        sessions.onMessage(host, message("conquestSelect", "region", 0, "row", end.getRow(), "col", end.getCol()));
+        send(host, JsonCodec.message("conquestMove"));
+        final JsonArray path = host.awaitNewest("conquestState", s -> s.getAsJsonArray("path").size() > 0, "the move sent no path").getAsJsonArray("path");
+        Assert.assertEquals(path.size(), 5, "the walk is not the shortest one along the lines: " + path);
+        for (int i = 1; i < path.size() - 1; i++) {
+            final JsonObject step = path.get(i).getAsJsonObject();
+            final ConquestLocation loc = new ConquestLocation(plane, step.get("region").getAsInt(), step.get("row").getAsInt(), step.get("col").getAsInt());
+            Assert.assertTrue(data.getCurrentPlaneData().hasConquered(loc), "the walk crosses a place not conquered: " + path);
+        }
+    }
+
     // Fails if Battle starts a match with a deck Conquest does not allow
     @Test(timeOut = 120_000)
     public void anIllegalDeckDoesNotBattle() throws Exception {
