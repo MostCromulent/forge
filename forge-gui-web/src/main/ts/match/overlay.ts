@@ -7,6 +7,7 @@ import { ui } from '../ui';
 import { isPortrait } from '../form';
 import { tagsFor } from './portrait';
 import type { CardView, Ref, Refs, StackItemView, TrackedObject } from '../protocol';
+import { shownZones } from './zones';
 
 // Attack, block and target arrows differ in brightness as well as hue, so a player with red-green colour blindness can still tell them apart
 interface ArrowKind {
@@ -294,7 +295,7 @@ const LET_GO = 4;
 function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
   const p = model.prompt;
   const aimed = !!p?.card && !p.paying && !p.priority && offersPicks(p)
-    && !(model.zones.length > 0 && !ui.zonesMinimised);
+    && !(shownZones(model).length > 0 && !ui.zonesMinimised);
   const key = String(p?.card?.ref);
   // While its targets are chosen, a spell is already on the stack awaiting payment. An ability's card is on the board
   const from = aimed ? onStack(key) ?? cardElement(key) ?? pileTopFor(key) : null;

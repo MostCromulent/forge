@@ -20,6 +20,7 @@ import type { CardView, PlayerView, PromptButton, Ref } from '../protocol';
 import { t } from '../text';
 import { ICONS, iconSvg } from '../icons';
 import { isSilent } from '../volume';
+import { shownZones } from './zones';
 
 let built = false;
 /** The row of tools. On a phone it is moved out of the prompt and onto the player's bar. */
@@ -73,7 +74,7 @@ export function renderPrompt(model: Model, actions: Actions): void {
   const before = built ? root.offsetHeight : 0;
   drawPrompt(model, actions);
   // On a phone, the buttons are hidden while a dialog or zone asks the question and neither button can answer it
-  const asking = !!oldestRequest(model) || (model.zones.length > 0 && !ui.zonesMinimised);
+  const asking = !!oldestRequest(model) || (shownZones(model).length > 0 && !ui.zonesMinimised);
   root.classList.toggle('blocked', isPortrait() && asking && !model.prompt?.selectablePlayers?.length
     && q<HTMLButtonElement>(root, '.ok').disabled && q<HTMLButtonElement>(root, '.cancel').disabled);
   const after = root.offsetHeight;

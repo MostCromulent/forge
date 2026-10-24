@@ -28,6 +28,17 @@ interface Panel {
   forced: boolean;
 }
 
+/** The prompt that OK answered while the game showed zones. */
+let answered: Model['prompt'] = null;
+
+/** Hides the zones the game shows until the next prompt. The host sends their closing with that prompt, which can wait behind another player's play. */
+export function closeShownZones(model: Model): void {
+  if (model.zones.length && model.prompt?.ok?.enabled) answered = model.prompt;
+}
+
+/** The zones the game shows, unless OK has already answered the prompt they belong to. */
+export const shownZones = (model: Model) => (answered && model.prompt === answered ? [] : model.zones);
+
 const SORTS: [ZoneSort, TextKey][] = [['order', 'lblWebZoneSortOrder'], ['name', 'lblWebZoneSortName'], ['type', 'lblWebZoneSortType'],
   ['mana', 'lblWebZoneSortManaValue']];
 
@@ -54,9 +65,10 @@ export function togglePile(playerKey: number, zoneName: ZoneType): void {
 
 export function renderZones(model: Model, actions: Actions, select: CardClick): void {
   const panels = new Map<string, Panel>();
-  for (const z of model.zones) panels.set(`${z.player.ref}/${z.zone}`, { player: z.player.ref, zone: z.zone, forced: true });
+  const shown = shownZones(model);
+  for (const z of shown) panels.set(`${z.player.ref}/${z.zone}`, { player: z.player.ref, zone: z.zone, forced: true });
   // Several zones the game shows for one question, such as every graveyard for a target, are chips. Only the chosen zone's cards are drawn
-  const chips = model.zones.length > 1 ? [...panels.keys()] : [];
+  const chips = shown.length > 1 ? [...panels.keys()] : [];
   if (!chips.length) ui.zoneChoice = null;
   const chosen = chips.length ? chosenZone(model, chips) : null;
   for (const k of ui.openZones) {

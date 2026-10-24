@@ -36,6 +36,7 @@ import { initNotices, showNotice } from './notices';
 import { forgetWakeLock, keepAwake } from './wakelock';
 import { deleteDeviceDeck, listDeviceDecks, putDeviceDeck } from './deck/devicedecks';
 import type { Send, ServerMessage } from './protocol';
+import { closeShownZones } from './match/zones';
 
 const model = createModel();
 const pacer = createPacer(model, apply);
@@ -77,7 +78,14 @@ const actions = {
   ...wire,
   // Cancel during a pass stops the pass. The host accepts that at any time, even while the page catches up
   cancel: () => (pacer.holding() && passingFor(model.controls) ? wire.stopYield() : wire.cancel()),
-  ok: () => afterCombatDrags(() => wire.ok()),
+  // The zones the game shows close at once, as an answered dialog does. Not while the page catches up, because then OK is not sent
+  ok: () => {
+    if (!pacer.holding()) {
+      closeShownZones(model);
+      schedule();
+    }
+    afterCombatDrags(() => wire.ok());
+  },
   // An answered request is removed from the model at once, so its dialog closes without waiting for the server
   answer: (id, value) => {
     model.requests.delete(id);
