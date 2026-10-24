@@ -67,9 +67,8 @@
 <div id="leave-ask" hidden><p data-text="lblWebPortraitLeaveMatch"></p><button class="stay" data-text="lblWebPortraitStay"></button><button class="leave" data-text="lblLeave"></button></div>
 <div id="turn-upright" data-text="lblWebPortraitTurnUpright"></div>
 <div id="banner" hidden data-text="lblWebReconnecting"></div>
-<!-- The halo around a card you may play from another zone. Noise pushes its edge about: the two frequencies walk
-     a closed loop, so the field keeps changing in one direction and the fifteen-second seam falls nowhere. Three
-     copies at different points in that loop, handed out by position in the hand, so a row of them is never in step (hand.css). -->
+<!-- The glow round a sealed pack (conquest.css). Noise pushes its edge about. The two frequencies walk a closed loop,
+     so the field keeps changing in one direction with no jump. The two copies start at different points in that loop. -->
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position: absolute">
   <filter id="zone-warp-a" x="-60%" y="-60%" width="220%" height="220%">
     <feTurbulence type="turbulence" baseFrequency="0.058 0.068" numOctaves="3" seed="2" result="n">
@@ -85,83 +84,76 @@
     </feTurbulence>
     <feDisplacementMap in="SourceGraphic" in2="n" scale="18" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
-  <filter id="zone-warp-c" x="-60%" y="-60%" width="220%" height="220%">
-    <feTurbulence type="turbulence" baseFrequency="0.048 0.059" numOctaves="3" seed="9" result="n">
-      <animate attributeName="baseFrequency" dur="15s" repeatCount="indefinite" begin="-10s"
-        values="0.058 0.068; 0.055 0.074; 0.048 0.077; 0.041 0.074; 0.038 0.068; 0.041 0.062; 0.048 0.059; 0.055 0.062; 0.058 0.068"/>
-    </feTurbulence>
-    <feDisplacementMap in="SourceGraphic" in2="n" scale="18" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-  <!-- The light rising round a card that can be played from another zone, or a rare in an opened pack (hand.css). Light seeps up
-       through moving noise from a bright edge. The card is 290 by 400 pixels at most, the room this filter allows round it -->
-  <filter id="rise-a" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="440" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="3" stitchTiles="stitch" x="-40" y="-40" width="288" height="96" result="tile"/>
-    <feTile in="tile" x="-40" y="-40" width="330" height="440" result="tiles"/>
-    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-96" dur="7s" repeatCount="indefinite"/></feOffset>
+  <!-- Light rising round a card playable from another zone, or a rare in an opened pack (hand.css). Moving noise cuts it into strands
+       that fade away from the card. The noise extends one loop below the region, so it never runs out. Fits a card up to about 230 by 340 -->
+  <filter id="rise-a" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="632" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="3" stitchTiles="stitch" x="-40" y="-40" width="352" height="192" result="tile"/>
+    <feTile in="tile" x="-40" y="-40" width="330" height="632" result="tiles"/>
+    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-192" dur="20s" repeatCount="indefinite"/></feOffset>
     <feColorMatrix in="moving" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.6 0 0 0 -1.05" result="mask"/>
-    <feGaussianBlur in="SourceGraphic" stdDeviation="4.5" result="spread"/>
-    <feComponentTransfer in="spread" result="wide"><feFuncA type="linear" slope="4"/></feComponentTransfer>
+    <feGaussianBlur in="SourceGraphic" stdDeviation="3.8" result="spread"/>
+    <feComponentTransfer in="spread" result="wide"><feFuncA type="gamma" amplitude="10" exponent="1.6"/></feComponentTransfer>
     <feComposite in="wide" in2="mask" operator="in" result="wisps"/>
-    <feDisplacementMap in="wisps" in2="moving" scale="5" xChannelSelector="R" yChannelSelector="G" result="licks"/>
+    <feDisplacementMap in="wisps" in2="moving" scale="4" xChannelSelector="R" yChannelSelector="G" result="licks"/>
     <feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="tight"/>
     <feMerge><feMergeNode in="licks"/><feMergeNode in="licks"/><feMergeNode in="tight"/><feMergeNode in="SourceGraphic"/></feMerge>
   </filter>
-  <filter id="rise-b" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="440" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="8" stitchTiles="stitch" x="-40" y="-40" width="288" height="96" result="tile"/>
-    <feTile in="tile" x="-40" y="-40" width="330" height="440" result="tiles"/>
-    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-96" dur="7s" begin="-2.3s" repeatCount="indefinite"/></feOffset>
+  <filter id="rise-b" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="632" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="8" stitchTiles="stitch" x="-40" y="-40" width="352" height="192" result="tile"/>
+    <feTile in="tile" x="-40" y="-40" width="330" height="632" result="tiles"/>
+    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-192" dur="20s" begin="-6.6s" repeatCount="indefinite"/></feOffset>
     <feColorMatrix in="moving" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.6 0 0 0 -1.05" result="mask"/>
-    <feGaussianBlur in="SourceGraphic" stdDeviation="4.5" result="spread"/>
-    <feComponentTransfer in="spread" result="wide"><feFuncA type="linear" slope="4"/></feComponentTransfer>
+    <feGaussianBlur in="SourceGraphic" stdDeviation="3.8" result="spread"/>
+    <feComponentTransfer in="spread" result="wide"><feFuncA type="gamma" amplitude="10" exponent="1.6"/></feComponentTransfer>
     <feComposite in="wide" in2="mask" operator="in" result="wisps"/>
-    <feDisplacementMap in="wisps" in2="moving" scale="5" xChannelSelector="R" yChannelSelector="G" result="licks"/>
+    <feDisplacementMap in="wisps" in2="moving" scale="4" xChannelSelector="R" yChannelSelector="G" result="licks"/>
     <feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="tight"/>
     <feMerge><feMergeNode in="licks"/><feMergeNode in="licks"/><feMergeNode in="tight"/><feMergeNode in="SourceGraphic"/></feMerge>
   </filter>
-  <filter id="rise-c" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="440" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="13" stitchTiles="stitch" x="-40" y="-40" width="288" height="96" result="tile"/>
-    <feTile in="tile" x="-40" y="-40" width="330" height="440" result="tiles"/>
-    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-96" dur="7s" begin="-4.6s" repeatCount="indefinite"/></feOffset>
+  <filter id="rise-c" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="632" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="13" stitchTiles="stitch" x="-40" y="-40" width="352" height="192" result="tile"/>
+    <feTile in="tile" x="-40" y="-40" width="330" height="632" result="tiles"/>
+    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-192" dur="20s" begin="-13.2s" repeatCount="indefinite"/></feOffset>
     <feColorMatrix in="moving" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.6 0 0 0 -1.05" result="mask"/>
-    <feGaussianBlur in="SourceGraphic" stdDeviation="4.5" result="spread"/>
-    <feComponentTransfer in="spread" result="wide"><feFuncA type="linear" slope="4"/></feComponentTransfer>
+    <feGaussianBlur in="SourceGraphic" stdDeviation="3.8" result="spread"/>
+    <feComponentTransfer in="spread" result="wide"><feFuncA type="gamma" amplitude="10" exponent="1.6"/></feComponentTransfer>
     <feComposite in="wide" in2="mask" operator="in" result="wisps"/>
-    <feDisplacementMap in="wisps" in2="moving" scale="5" xChannelSelector="R" yChannelSelector="G" result="licks"/>
+    <feDisplacementMap in="wisps" in2="moving" scale="4" xChannelSelector="R" yChannelSelector="G" result="licks"/>
     <feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="tight"/>
     <feMerge><feMergeNode in="licks"/><feMergeNode in="licks"/><feMergeNode in="tight"/><feMergeNode in="SourceGraphic"/></feMerge>
   </filter>
   <!-- The rise filters without their edge: only the moving light, for a card that cannot be cast yet (hand.css) -->
-  <filter id="haze-a" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="440" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="3" stitchTiles="stitch" x="-40" y="-40" width="288" height="96" result="tile"/>
-    <feTile in="tile" x="-40" y="-40" width="330" height="440" result="tiles"/>
-    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-96" dur="7s" repeatCount="indefinite"/></feOffset>
+  <filter id="haze-a" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="632" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="3" stitchTiles="stitch" x="-40" y="-40" width="352" height="192" result="tile"/>
+    <feTile in="tile" x="-40" y="-40" width="330" height="632" result="tiles"/>
+    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-192" dur="20s" repeatCount="indefinite"/></feOffset>
     <feColorMatrix in="moving" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.6 0 0 0 -1.05" result="mask"/>
-    <feGaussianBlur in="SourceGraphic" stdDeviation="4.5" result="spread"/>
-    <feComponentTransfer in="spread" result="wide"><feFuncA type="linear" slope="4"/></feComponentTransfer>
+    <feGaussianBlur in="SourceGraphic" stdDeviation="3.8" result="spread"/>
+    <feComponentTransfer in="spread" result="wide"><feFuncA type="gamma" amplitude="10" exponent="1.6"/></feComponentTransfer>
     <feComposite in="wide" in2="mask" operator="in" result="wisps"/>
-    <feDisplacementMap in="wisps" in2="moving" scale="5" xChannelSelector="R" yChannelSelector="G" result="licks"/>
+    <feDisplacementMap in="wisps" in2="moving" scale="4" xChannelSelector="R" yChannelSelector="G" result="licks"/>
     <feMerge><feMergeNode in="licks"/><feMergeNode in="licks"/></feMerge>
   </filter>
-  <filter id="haze-b" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="440" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="8" stitchTiles="stitch" x="-40" y="-40" width="288" height="96" result="tile"/>
-    <feTile in="tile" x="-40" y="-40" width="330" height="440" result="tiles"/>
-    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-96" dur="7s" begin="-2.3s" repeatCount="indefinite"/></feOffset>
+  <filter id="haze-b" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="632" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="8" stitchTiles="stitch" x="-40" y="-40" width="352" height="192" result="tile"/>
+    <feTile in="tile" x="-40" y="-40" width="330" height="632" result="tiles"/>
+    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-192" dur="20s" begin="-6.6s" repeatCount="indefinite"/></feOffset>
     <feColorMatrix in="moving" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.6 0 0 0 -1.05" result="mask"/>
-    <feGaussianBlur in="SourceGraphic" stdDeviation="4.5" result="spread"/>
-    <feComponentTransfer in="spread" result="wide"><feFuncA type="linear" slope="4"/></feComponentTransfer>
+    <feGaussianBlur in="SourceGraphic" stdDeviation="3.8" result="spread"/>
+    <feComponentTransfer in="spread" result="wide"><feFuncA type="gamma" amplitude="10" exponent="1.6"/></feComponentTransfer>
     <feComposite in="wide" in2="mask" operator="in" result="wisps"/>
-    <feDisplacementMap in="wisps" in2="moving" scale="5" xChannelSelector="R" yChannelSelector="G" result="licks"/>
+    <feDisplacementMap in="wisps" in2="moving" scale="4" xChannelSelector="R" yChannelSelector="G" result="licks"/>
     <feMerge><feMergeNode in="licks"/><feMergeNode in="licks"/></feMerge>
   </filter>
-  <filter id="haze-c" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="440" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="13" stitchTiles="stitch" x="-40" y="-40" width="288" height="96" result="tile"/>
-    <feTile in="tile" x="-40" y="-40" width="330" height="440" result="tiles"/>
-    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-96" dur="7s" begin="-4.6s" repeatCount="indefinite"/></feOffset>
+  <filter id="haze-c" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-40" y="-40" width="330" height="632" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0625" numOctaves="3" seed="13" stitchTiles="stitch" x="-40" y="-40" width="352" height="192" result="tile"/>
+    <feTile in="tile" x="-40" y="-40" width="330" height="632" result="tiles"/>
+    <feOffset in="tiles" dy="0" result="moving"><animate attributeName="dy" from="0" to="-192" dur="20s" begin="-13.2s" repeatCount="indefinite"/></feOffset>
     <feColorMatrix in="moving" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.6 0 0 0 -1.05" result="mask"/>
-    <feGaussianBlur in="SourceGraphic" stdDeviation="4.5" result="spread"/>
-    <feComponentTransfer in="spread" result="wide"><feFuncA type="linear" slope="4"/></feComponentTransfer>
+    <feGaussianBlur in="SourceGraphic" stdDeviation="3.8" result="spread"/>
+    <feComponentTransfer in="spread" result="wide"><feFuncA type="gamma" amplitude="10" exponent="1.6"/></feComponentTransfer>
     <feComposite in="wide" in2="mask" operator="in" result="wisps"/>
-    <feDisplacementMap in="wisps" in2="moving" scale="5" xChannelSelector="R" yChannelSelector="G" result="licks"/>
+    <feDisplacementMap in="wisps" in2="moving" scale="4" xChannelSelector="R" yChannelSelector="G" result="licks"/>
     <feMerge><feMergeNode in="licks"/><feMergeNode in="licks"/></feMerge>
   </filter>
   <!-- The same stir, smaller, on the cost of a card whose cost has changed (hand.css) -->
