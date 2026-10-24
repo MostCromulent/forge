@@ -216,11 +216,12 @@ html:not([data-form="portrait"]) .cq-foot { padding-bottom: 14px; }
 .cq-dl-disc::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(from -22.7deg, #c9a544aa 0 .4deg, transparent .4deg 45deg); }
 .cq-dl-disc::after { content: ''; position: absolute; inset: 0; border-radius: 50%;
   background: radial-gradient(circle at 32% 22%, #ffffff14 0, transparent 40%), radial-gradient(circle, transparent 0 27%, #c9a54433 27.4% 27.8%, transparent 28.2% 62%, #00000066 100%); }
-/* Each wedge's icon and label scale with the dial and sit in from its edge, where the wedge is wide enough to hold them. A long label wraps */
+/* Each wedge's icon and label scale with the dial and sit in from its edge. The label's letters follow the dial's curve (conquestwheel.ts) */
 .cq-dl-wedge { position: absolute; left: 50%; top: 0; width: 34%; margin-left: -17%; height: 50%; transform-origin: 50% 100%; display: grid; justify-items: center; align-content: start; padding-top: calc(var(--d) * .075);
   font: 600 calc(var(--d) * .025)/1.15 Georgia, "Times New Roman", serif; letter-spacing: .14em; text-transform: uppercase; color: #dfe5ee; text-align: center; transition: opacity .8s .15s; }
 .cq-dl-face { display: grid; justify-items: center; gap: calc(var(--d) * .014); }
-.cq-dl-face span { max-width: calc(var(--d) * .22); text-wrap: balance; }
+.cq-dl-word { position: absolute; inset: 0; pointer-events: none; }
+.cq-dl-word span { position: absolute; display: grid; place-items: center; text-align: center; white-space: pre; letter-spacing: 0; }
 .cq-dl-ic { height: calc(var(--d) * .072); display: flex; align-items: center; gap: 3px; color: #e6cf8e; }
 .cq-dl-ic svg { height: calc(var(--d) * .062); width: auto; }
 .cq-dl-ic img { height: calc(var(--d) * .062); width: calc(var(--d) * .062); }
@@ -568,6 +569,3 @@ html[data-motion="reduced"] .cq-ae-card * { animation: none; }
 .cq-pref-table input { width: 72px; padding: 5px 8px; text-align: right; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
 .cq-pref-table td.bad input { border-color: var(--select); }
 
-/* A wedge on the lower half of the dial would show its icon and label upside down. So its face is turned over as a whole, with the icon kept nearest the rim */
-.cq-dl-wedge.low .cq-dl-face { rotate: 180deg; }
-.cq-dl-wedge.low .cq-dl-ic { order: 2; }

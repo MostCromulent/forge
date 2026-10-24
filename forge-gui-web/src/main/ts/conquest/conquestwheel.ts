@@ -23,8 +23,8 @@ const ICONS: Record<WheelOutcome, string> = {
 export const CHAOS_MARK = LINES.chaos;
 
 const SPIN_MS = 4200;
-/** How far through the spin the wedge faces are turned for the stop. The dial is past its pull-back and near full speed. */
-const FLIP_AT = .15;
+/** How much of a wedge's 45 degrees its label may take, so labels in neighbouring wedges never meet. */
+const LABEL_ARC = 38 * Math.PI / 180;
 
 /** The dial's angle at x, from 0 to 1 through the spin. It pulls back a little, runs and slows, carries a few degrees past the spot and settles back, so it feels heavy. */
 function turned(x: number, to: number): number {
@@ -56,23 +56,19 @@ export function mountWheel(host: HTMLElement, labels: Record<WheelOutcome, strin
     <div class="cq-dl-glow"></div><div class="cq-dl-rim"></div>
     <div class="cq-dl-pegs">${WHEEL_SPOTS.map((_, i) => `<i style="rotate: ${45 * i + 22.5}deg"></i>`).join('')}</div>
     <div class="cq-dl-spin"><div class="cq-dl-disc" style="background: conic-gradient(from -22.5deg, ${stops})"></div>${
-      WHEEL_SPOTS.map((o, i) => `<div class="cq-dl-wedge" style="transform: rotate(${45 * i}deg)"><div class="cq-dl-face"><div class="cq-dl-ic">${ICONS[o]}</div><span></span></div></div>`).join('')
+      WHEEL_SPOTS.map((o, i) => `<div class="cq-dl-wedge" style="transform: rotate(${45 * i}deg)"><div class="cq-dl-face"><div class="cq-dl-ic">${ICONS[o]}</div></div><div class="cq-dl-word"></div></div>`).join('')
     }</div>
     <div class="cq-dl-flare"></div><div class="cq-dl-hub">${LINES.chaos}</div><div class="cq-dl-wave"></div><div class="cq-dl-needle"></div>
   </div>`;
   const root = host.firstElementChild as HTMLElement;
   const spin = root.querySelector<HTMLElement>('.cq-dl-spin')!;
   const needle = root.querySelector<HTMLElement>('.cq-dl-needle')!;
-  root.querySelectorAll<HTMLElement>('.cq-dl-wedge span').forEach((span, i) => { span.textContent = labels[WHEEL_SPOTS[i]]; });
-  // A wedge on the lower half of the dial turns its icon and label over, so they read the right way up. Which half a wedge is on depends on the spot the dial stopped at
-  const upright = (spot: number) => root.querySelectorAll<HTMLElement>('.cq-dl-wedge').forEach((wedge, i) => {
-    const at = (i - spot + WHEEL_SPOTS.length) % WHEEL_SPOTS.length;
-    wedge.classList.toggle('low', at > 2 && at < 6);
-  });
-  upright(0);
+  // The labels are laid out again when the dial changes size, because they are placed in pixels
+  const curve = () => root.querySelectorAll<HTMLElement>('.cq-dl-wedge').forEach((wedge, i) => curveLabel(wedge, labels[WHEEL_SPOTS[i]]));
+  curve();
+  new ResizeObserver(curve).observe(root);
   const show = (spot: number) => {
     spin.style.transform = `rotate(${-45 * spot}deg)`;
-    upright(spot);
     root.querySelectorAll('.cq-dl-wedge').forEach((wedge, i) => wedge.classList.toggle('hit', i === spot));
     root.classList.add('done');
   };
@@ -88,17 +84,11 @@ export function mountWheel(host: HTMLElement, labels: Record<WheelOutcome, strin
       const to = -45 * spot - 360 * 4;
       const start = performance.now();
       let peg = 0;
-      let flipped = false;
       await new Promise<void>(stopped => {
         const frame = (now: number) => {
           const x = Math.min(1, (now - start) / SPIN_MS);
           const angle = x < 1 ? turned(x, to) : to;
           spin.style.transform = `rotate(${angle}deg)`;
-          // The faces are turned for where the dial will stop while it is turning fastest, so none of them turns over as it lands
-          if (x > FLIP_AT && !flipped) {
-            flipped = true;
-            upright(spot);
-          }
           // The needle drags on each peg that passes under it
           const at = Math.floor((angle + 22.5) / 45);
           if (at !== peg) {
@@ -116,4 +106,53 @@ export function mountWheel(host: HTMLElement, labels: Record<WheelOutcome, strin
       show(spot);
     },
   };
+}
+
+let measurer: CanvasRenderingContext2D | null = null;
+
+/**
+ * Lays a label's letters along an arc just inside the wedge's icon, reading clockwise. A label too long for its wedge breaks between
+ * words onto a second arc further in, and a word that still does not fit is drawn smaller.
+ */
+function curveLabel(wedge: HTMLElement, text: string): void {
+  const word = wedge.querySelector<HTMLElement>('.cq-dl-word')!;
+  const face = wedge.querySelector<HTMLElement>('.cq-dl-face')!;
+  const across = wedge.offsetWidth, centre = wedge.offsetHeight;
+  if (!centre) return;
+  const style = getComputedStyle(wedge);
+  const size = parseFloat(style.fontSize);
+  const spacing = parseFloat(style.letterSpacing) || 0;
+  const line = size * 1.15;
+  measurer ??= document.createElement('canvas').getContext('2d');
+  const ctx = measurer!;
+  ctx.font = `${style.fontWeight} ${size}px ${style.fontFamily}`;
+  const widthOf = (ch: string) => ctx.measureText(ch).width + spacing;
+  const lengthOf = (s: string) => [...s].reduce((n, ch) => n + widthOf(ch), 0) - spacing;
+  // The first line's middle sits a little inside the icon
+  const outer = centre - (face.offsetTop + face.offsetHeight) - size * .35 - line / 2;
+  const room = outer * LABEL_ARC;
+  const lines: string[] = [];
+  for (const w of text.toUpperCase().split(/\s+/).filter(Boolean)) {
+    const last = lines.length - 1;
+    if (last >= 0 && lengthOf(`${lines[last]} ${w}`) <= room) lines[last] += ` ${w}`;
+    else lines.push(w);
+  }
+  const scale = Math.min(1, room / Math.max(...lines.map(lengthOf)));
+  const letters: HTMLElement[] = [];
+  lines.forEach((l, k) => {
+    const r = outer - k * line * scale;
+    const total = lengthOf(l) * scale;
+    let along = 0;
+    for (const ch of l) {
+      const w = widthOf(ch) * scale;
+      const span = document.createElement('span');
+      span.textContent = ch;
+      const h = line * scale;
+      span.style.cssText = `left: ${across / 2 - w / 2}px; top: ${centre - r - h / 2}px; width: ${w}px; height: ${h}px; font-size: ${size * scale}px;`
+        + ` transform-origin: ${w / 2}px ${r + h / 2}px; transform: rotate(${(along + (w - spacing * scale) / 2 - total / 2) / r}rad);`;
+      along += w;
+      letters.push(span);
+    }
+  });
+  word.replaceChildren(...letters);
 }
