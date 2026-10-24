@@ -2,6 +2,7 @@
 
 import { deref, game, isLocal, players, type Model } from '../model';
 import { byId, make } from '../dom';
+import { playerAvatarUrl } from '../looks';
 import { t } from '../text';
 import type { GameView, PlayerView, Ref, StateMessage } from '../protocol';
 
@@ -47,7 +48,19 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
     return false;
   }
   const banner = make('div', `turn-banner${mine ? ' mine' : ''}`);
-  banner.textContent = mine ? t('lblWebPhaseYourTurn') : t('lblWebBoardPlayersTurn', active.Name ?? '');
+  const url = playerAvatarUrl(active);
+  const face = make(url ? 'img' : 'span', 'face');
+  if (face instanceof HTMLImageElement) {
+    face.alt = '';
+    face.src = url;
+  } else {
+    face.textContent = (active.Name ?? '?').slice(0, 1).toUpperCase();
+  }
+  const whose = make('b', '');
+  whose.textContent = mine ? t('lblWebPhaseYourTurn') : t('lblWebBoardPlayersTurn', active.Name ?? '');
+  const number = make('small', '');
+  number.textContent = t('lblWebBoardTurnNumber', turnNumber ?? 0);
+  banner.append(face, whose, number);
   // The banner replaces the pill instead of covering it, because the pill animates its own width
   const strip = byId('phase-strip');
   strip.append(banner);

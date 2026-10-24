@@ -1123,22 +1123,27 @@ html[data-motion="reduced"] .card.phased::after { animation: none; }
   /* The pill's height, so the banner takes the pill's place without growing past it */
   display: flex;
   align-items: center;
+  gap: 10px;
   height: 38px;
-  padding: 0 22px;
+  box-sizing: border-box;
+  padding: 0 18px 0 4px;
   border-radius: 999px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 68%, #fff) 0%, var(--accent-2) 45%, color-mix(in srgb, var(--accent-2) 72%, #000) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 80%, #fff), color-mix(in srgb, var(--accent-2) 90%, #000));
   border: 1px solid color-mix(in srgb, var(--accent-2) 52%, #fff);
-  box-shadow: 0 2px 0 color-mix(in srgb, var(--accent-2) 42%, #000), 0 10px 24px #000a;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: .12em;
+  box-shadow: 0 8px 20px #000a;
   white-space: nowrap;
-  text-transform: uppercase;
   color: var(--on-brass);
+  --face-ring: var(--on-brass);
   animation: turn-sweep 1.6s cubic-bezier(.2,.8,.3,1) forwards;
 }
+.turn-banner .face { flex: none; width: 30px; height: 30px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--face-ring); display: grid; place-items: center; background: var(--surface-3); color: var(--text); font-size: 13px; font-weight: 700; }
+.turn-banner b { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.turn-banner small { margin-left: -2px; font-size: 11.5px; font-weight: 700; color: color-mix(in srgb, var(--accent) 76%, #000); }
+.turn-banner:not(.mine) { background: linear-gradient(180deg, var(--line-bright), var(--surface-3)); border-color: var(--faint); color: var(--text); --face-ring: var(--bg); }
+.turn-banner:not(.mine) small { color: color-mix(in srgb, var(--muted) 50%, var(--text)); }
 
-.turn-banner::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%); background: linear-gradient(105deg, transparent 38%, #ffffff5c 47%, #ffffffad 50%, #ffffff5c 53%, transparent 62%); animation: turn-sheen 1.1s cubic-bezier(.3,.6,.4,1) .26s; }
+.turn-banner::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%); background: linear-gradient(105deg, transparent 40%, #ffffff40 50%, transparent 60%); animation: turn-sheen 1.1s cubic-bezier(.3,.6,.4,1) .26s; }
+.turn-banner:not(.mine)::after { background: linear-gradient(105deg, transparent 40%, #ffffff1f 50%, transparent 60%); }
 @keyframes turn-sheen { to { transform: translateX(120%); } }
 
 /* The coin toss for a match's first game uses mobile's coin, shown alone over the board. It comes before who goes first is asked or shown (coin.ts). */
