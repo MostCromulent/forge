@@ -1133,17 +1133,12 @@ html[data-motion="reduced"] .card.phased::after { animation: none; }
   box-shadow: 0 8px 20px #000a;
   white-space: nowrap;
   color: var(--on-brass);
-  --face-ring: var(--on-brass);
   animation: turn-sweep 1.6s cubic-bezier(.2,.8,.3,1) forwards;
 }
-.turn-banner .face { flex: none; width: 30px; height: 30px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--face-ring); display: grid; place-items: center; background: var(--surface-3); color: var(--text); font-size: 13px; font-weight: 700; }
+.turn-banner .face { flex: none; width: 30px; height: 30px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--on-brass); display: grid; place-items: center; background: var(--surface-3); color: var(--text); font-size: 13px; font-weight: 700; }
 .turn-banner b { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.turn-banner small { margin-left: -2px; font-size: 11.5px; font-weight: 700; color: color-mix(in srgb, var(--accent) 76%, #000); }
-.turn-banner:not(.mine) { background: linear-gradient(180deg, var(--line-bright), var(--surface-3)); border-color: var(--faint); color: var(--text); --face-ring: var(--bg); }
-.turn-banner:not(.mine) small { color: color-mix(in srgb, var(--muted) 50%, var(--text)); }
 
 .turn-banner::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%); background: linear-gradient(105deg, transparent 40%, #ffffff40 50%, transparent 60%); animation: turn-sheen 1.1s cubic-bezier(.3,.6,.4,1) .26s; }
-.turn-banner:not(.mine)::after { background: linear-gradient(105deg, transparent 40%, #ffffff1f 50%, transparent 60%); }
 @keyframes turn-sheen { to { transform: translateX(120%); } }
 
 /* The coin toss for a match's first game uses mobile's coin, shown alone over the board. It comes before who goes first is asked or shown (coin.ts). */

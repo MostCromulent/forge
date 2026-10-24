@@ -58,9 +58,7 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   }
   const whose = make('b', '');
   whose.textContent = mine ? t('lblWebPhaseYourTurn') : t('lblWebBoardPlayersTurn', active.Name ?? '');
-  const number = make('small', '');
-  number.textContent = t('lblWebBoardTurnNumber', turnNumber ?? 0);
-  banner.append(face, whose, number);
+  banner.append(face, whose);
   // The banner replaces the pill instead of covering it, because the pill animates its own width
   const strip = byId('phase-strip');
   strip.append(banner);
