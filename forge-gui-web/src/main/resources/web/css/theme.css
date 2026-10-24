@@ -86,8 +86,9 @@
 [data-from="Command"] { --zone-glow: var(--zone-command); }
 [data-from="Library"] { --zone-glow: var(--zone-library); }
 /* The background is set on the root, not the body. The board's backdrop layers have a negative z-index, so they are drawn behind any background on the body. */
-/* The menus use the same centre-lit background as the table, one shade darker so their panels still contrast with it */
-html { background: radial-gradient(120% 90% at 50% 38%, #151a24 0%, #0b0e14 100%) fixed, var(--bg); }
+/* The menus are centre-lit like the table, with a cool light from the top and a warm glow from the bottom. The edge is just above --bg, so entering a match keeps the same floor. */
+html { background: radial-gradient(70% 45% at 50% -6%, #2d446645 0%, transparent 70%) fixed, radial-gradient(60% 40% at 50% 106%, #6b4a1a33 0%, transparent 70%) fixed,
+  radial-gradient(120% 90% at 50% 38%, #1c2330 0%, #121722 100%) fixed, var(--bg); }
 html, body { margin: 0; height: 100%; color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
 [hidden] { display: none !important; }
 button { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
