@@ -566,8 +566,8 @@ public final class ToBrowser {
     }
 
 /**
-     * Which fields are set depends on the option: a card on the table, a card that is not (a split pile, a card face), or a player.
-     * An ability gives the card it comes from as its source. A colour gives its mana symbol's letter.
+     * Which fields are set depends on the option: a card on the table, a card that is not (a split pile), or a player.
+     * A card name to name has only its imageKey, for its preview. An ability gives the card it comes from as its source. A colour gives its mana symbol's letter.
      */
     public record RequestOption(String label, @Nullable Ref card, @Nullable String name, @Nullable String imageKey,
             @Nullable Ref player, @Nullable Ref source, @Nullable String symbol) {

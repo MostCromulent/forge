@@ -335,7 +335,7 @@ function ColourOption({ symbol, picked, onClick }: { symbol: string; picked: boo
 }
 
 function onlyWords(req: ChoicesRequest): boolean {
-  return req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player && !o.symbol);
+  return req.options.every(o => !o.card && !o.name && !o.player && !o.symbol);
 }
 
 /** A label with the typed text highlighted. A label with mana symbols is not highlighted, because the mark would split a symbol. */
@@ -428,14 +428,15 @@ function WordChoices({ req, model, answer }: { req: ChoicesRequest; model: Model
           ))}
         </div>
       )}
-      <div ref={list} class="word-list" role="listbox" aria-multiselectable={!single}>
+      {/* A card name holds its picture's key, so hovering it previews the card */}
+      <div ref={list} class="word-list" role="listbox" aria-multiselectable={!single} data-list="">
         {shown.length === 0 && <p class="word-empty">{t('lblWebDialogNoMatch', typed)}</p>}
         {shown.map((i, pos) => {
           const on = chosen.has(i);
           const sticker = cutFor(model, labels[i]);
           return (
             <button key={i} type="button" tabIndex={-1} role="option" aria-selected={single ? pos === hi : on}
-              class={`word${pos === hi ? ' hi' : ''}${on ? ' on' : ''}`}
+              class={`word${pos === hi ? ' hi' : ''}${on ? ' on' : ''}`} data-image={req.options[i].imageKey}
               onClick={() => click(pos)} onDblClick={() => { if (single) answer([i]); }}>
               {!single && <span class="word-box" aria-hidden="true" />}
               {sticker && <span class="stk-cut" style={sticker} />}

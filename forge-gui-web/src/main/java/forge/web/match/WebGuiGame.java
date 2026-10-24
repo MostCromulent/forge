@@ -774,7 +774,8 @@ public class WebGuiGame extends NetworkGuiGame {
             } else if (item instanceof PaperCard paper) {
                 out.add(new RequestOption(label, null, paper.getName(), Foil.key(paper), null, null, null));
             } else if (item instanceof CardFaceView face) {
-                out.add(new RequestOption(label, null, face.getName(), ImageKeys.CARD_PREFIX + face.getName(), null, null, null));
+                // Naming a card offers every card in the game, so the names are a list of words and only a hovered one loads its picture
+                out.add(new RequestOption(label, null, null, ImageKeys.CARD_PREFIX + face.getName(), null, null, null));
             } else if (item instanceof SpellAbilityView ability && ability.getHostCard() != null && isInMirror(ability.getHostCard())) {
                 out.add(new RequestOption(label, null, null, null, null, PromptState.cardRef(ability.getHostCard()), null));
             } else {
