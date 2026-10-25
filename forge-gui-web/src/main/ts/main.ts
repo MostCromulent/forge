@@ -1,7 +1,7 @@
 // The controller. It is the only place that talks to the server, and it draws the model once per frame
 
 import { connect } from './net';
-import { createModel, applyState, cardMenu, isLocal, oldestRequest, players, stackPick } from './model';
+import { createModel, applyState, cardMenu, concedingEndsGame, isLocal, oldestRequest, players, stackPick } from './model';
 // The campaign modes. A build without them removes this line
 import './campaign/register';
 import { campaigns } from './campaigns';
@@ -78,9 +78,9 @@ const actions = {
   ...wire,
   // Cancel during a pass stops the pass. The host accepts that at any time, even while the page catches up
   cancel: () => (pacer.holding() && passingFor(model.controls) ? wire.stopYield() : wire.cancel()),
-  // The player has left the game, so the plays they would have watched are skipped
+  // When the concession ends the game, the plays the player would have watched are skipped
   concede: () => {
-    pacer.hurry();
+    if (concedingEndsGame(model)) pacer.hurry();
     wire.concede();
   },
   // The zones the game shows close at once, as an answered dialog does. Not while the page catches up, because then OK is not sent

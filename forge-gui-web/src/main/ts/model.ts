@@ -316,6 +316,15 @@ export const zone = (model: Model, player: PlayerView | undefined, name: ZoneTyp
   isPlayerZone(name) ? derefAll(model, player?.[name]) : [];
 export const stateOf = (model: Model, card: CardView): Partial<CardStateView> => deref(model, card.CurrentState) ?? {};
 
+/** Whether the local player conceding ends the game. That is when every other player still in it is an opponent, and none of them are opponents of each other. */
+export function concedingEndsGame(model: Model): boolean {
+  const foes = (p: PlayerView | undefined) => new Set(derefAll(model, p?.Opponents).map(o => o.$key));
+  const mine = me(model);
+  const mineFoes = foes(mine);
+  const left = players(model).filter(p => p !== mine && !p.HasLost);
+  return left.every(p => mineFoes.has(p.$key) && left.every(q => !foes(p).has(q.$key)));
+}
+
 /** What the player can attack: their opponents still in the game, and those opponents' planeswalkers and battles. */
 export function attackTargets(model: Model, player: PlayerView | undefined): number[] {
   return derefAll(model, player?.Opponents).filter(p => !p.HasLost).flatMap(p => [p.$key,
