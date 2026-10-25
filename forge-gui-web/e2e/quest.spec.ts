@@ -68,7 +68,7 @@ test('a quest deck is made, filled and chosen as current', async ({ page }) => {
   const plus = owned.locator('.step').last();
   for (let i = 1; i <= 3; i++) {
     await plus.click();
-    await expect(owned.locator('.badge')).toHaveText(String(i));
+    await expect(owned.locator('.under .n')).toHaveText(`${i}/3`);
   }
   await expect(plus).toBeDisabled();
   await page.evaluate(() => (window as any).forge.actions.edit({ op: 'lands', lands: [{ name: 'Island', count: 37 }] }));

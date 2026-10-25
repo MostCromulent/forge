@@ -372,7 +372,6 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
         {...handlers(row.name, 'catalogue', row.image, 1, limit)} onClick={click}>
         <span class="tile-name">{row.name}</span>
         <img loading="lazy" alt="" draggable={false} src={smallImage(imageUrl(row.image))} onError={hideBroken} />
-        {count > 0 && <span class="badge">{count}</span>}
         {row.isNew && <span class="new-card">{t('lblNew')}</span>}
       </button>
       {row.problem && <span class="flag">! {row.problem}</span>}
