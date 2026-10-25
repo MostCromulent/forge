@@ -1,9 +1,9 @@
 // Who goes first. This covers the coin toss, the choice made by the toss's winner or the last game's loser, and the reveal over the board
 
 import { isLocal, me, players, type Model } from '../model';
-import { coinInAir, dropCoin, readyCoin, tossCoin } from './coin';
+import { coinInAir, dropCoin, readyCoin, resetCoin, tossCoin } from './coin';
 import { playerAvatarUrl } from '../looks';
-import { byId, make } from '../dom';
+import { byId, make, replay } from '../dom';
 import { leave } from '../closing';
 import { redrawUi } from '../ui';
 import { keyName } from '../keys';
@@ -47,7 +47,8 @@ export function showStarter(model: Model, actions: Actions, events: readonly Gam
   }
   // Close the question once it is answered, by a key or by the board's own portraits, or if the game was conceded before anyone chose
   if (!choice || model.gameOver) {
-    leave(document.querySelector('#coin-toss.asking'));
+    // A panel already closing from its own button is left to finish, because a second leave removes it at once
+    leave(document.querySelector('#coin-toss.asking:not(.closing)'));
     if (!coinInAir()) dropCoin();
   }
 }
@@ -66,6 +67,9 @@ export function resetStarter(): void {
   firstPlayer = null;
   firstDue = false;
   tossed = false;
+  // A reveal from a match left mid-way never ends, because a hidden page does not run its animation
+  document.getElementById('first-reveal')?.remove();
+  resetCoin();
   readyCoin();
   choseStarter = false;
 }
@@ -98,7 +102,9 @@ function chooseFirst(model: Model, actions: Actions, choice: string): void {
   const asked = root;
   asked.onclick = null;
   asked.setAttribute('role', 'dialog');
-  const answer = (send: () => void) => {
+  // The chosen answer dims as a prompt button does. The panel's exit waits for it (board.css)
+  const answer = (button: HTMLElement, send: () => void) => {
+    replay(button, 'pressed');
     send();
     leave(asked);
   };
@@ -106,8 +112,8 @@ function chooseFirst(model: Model, actions: Actions, choice: string): void {
   const body = make('div', '');
   const question = make('h3', '');
   question.textContent = t(two ? 'lblWouldYouLiketoPlayorDraw' : 'lblWebBoardWhoGoesFirst');
-  body.append(question, two ? playOrDraw(model, () => answer(() => actions.ok()), () => answer(() => actions.cancel()))
-    : pickPlayer(everyone, key => answer(() => actions.selectPlayer(key))));
+  body.append(question, two ? playOrDraw(model, b => answer(b, () => actions.ok()), b => answer(b, () => actions.cancel()))
+    : pickPlayer(everyone, (key, b) => answer(b, () => actions.selectPlayer(key))));
   ask.append(body);
   asked.append(ask);
   // Laid out closed first, so that opening it is animated
@@ -116,24 +122,24 @@ function chooseFirst(model: Model, actions: Actions, choice: string): void {
 }
 
 /** The prompt's two answers, in the prompt's style and with its keys. */
-function playOrDraw(model: Model, play: () => void, draw: () => void): HTMLElement {
+function playOrDraw(model: Model, play: (button: HTMLElement) => void, draw: (button: HTMLElement) => void): HTMLElement {
   const row = make('div', 'first-answers');
   const p = model.prompt;
-  for (const [spec, cls, key, send] of [[p?.ok, 'primary', keyName(boundKeys().ok), play], [p?.cancel, '', 'Esc', draw]] as const) {
+  for (const [spec, cls, key, send] of [[p?.ok, 'primary ok', keyName(boundKeys().ok), play], [p?.cancel, 'cancel', 'Esc', draw]] as const) {
     const button = make('button', cls);
     button.type = 'button';
     button.textContent = spec?.label ?? '';
     const kbd = make('kbd', '');
     kbd.textContent = key;
     button.append(kbd);
-    button.onclick = send;
+    button.onclick = () => send(button);
     row.append(button);
   }
   return row;
 }
 
 /** A face for each player in turn order. Pointing at one numbers every seat by the turn it would play. */
-function pickPlayer(everyone: readonly PlayerView[], pick: (key: number) => void): HTMLElement {
+function pickPlayer(everyone: readonly PlayerView[], pick: (key: number, seat: HTMLElement) => void): HTMLElement {
   const row = make('div', 'first-seats');
   const seats = everyone.map((p, i) => {
     const seat = make('button', 'first-seat');
@@ -141,7 +147,7 @@ function pickPlayer(everyone: readonly PlayerView[], pick: (key: number) => void
     const name = make('span', 'reveal-name');
     name.textContent = p.Name ?? '';
     seat.append(face(p), name, make('i', 'turn'));
-    seat.onclick = () => pick(p.$key);
+    seat.onclick = () => pick(p.$key, seat);
     seat.onpointerenter = seat.onfocus = () => number(i);
     return seat;
   });

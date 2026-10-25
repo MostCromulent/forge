@@ -9,6 +9,7 @@ import type { Model } from '../model';
 import { make, reducedMotion, easeOut } from '../dom';
 import { cardImageSrc } from '../images';
 import { lastPicture, TAPPED_SCALE } from './cards';
+import { coinInAir } from './coin';
 
 /** Where a card was drawn and its old element, so a trip can still run after the element has left the page. */
 interface Snapshot {
@@ -92,12 +93,15 @@ export function mergeInto(keys: string[], rect: DOMRect): void {
 
 /** Set for a new table. Its cards reuse the old table's keys, so the old positions say nothing about where they come from. */
 let fresh = false;
+/** The opening hand's cards and where each is dealt from. They are dealt once who goes first has been shown. */
+let heldDeal: { key: string; start: DOMRect }[] = [];
 
 export function resetMotion(): void {
   for (const held of waiting.values()) {
     held.ghost?.remove();
   }
   waiting.clear();
+  heldDeal = [];
   resting.clear();
   fromHint.clear();
   intoHint.clear();
@@ -256,6 +260,18 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     }
     swell(onto, arrives, landings);
     land(key);
+  }
+  if (document.getElementById('match')?.classList.contains('starting')) {
+    // The opening hand is drawn while who goes first is shown, so its cards wait hidden (board.css). Their art is decoded meanwhile
+    for (const { el, start } of dealt.splice(0)) {
+      heldDeal.push({ key: el.dataset.key ?? '', start });
+      el.querySelector<HTMLImageElement>(':scope > img')?.decode().catch(() => {});
+    }
+  } else {
+    for (const { key, start } of heldDeal.splice(0)) {
+      const el = cardElement(key);
+      if (el?.closest('#hand')) dealt.push({ el, start });
+    }
   }
   // In a mulligan the old hand leaves before the first new card starts. Both hands move faster
   const swap = dealt.length > 0 && leavingHand.length > 0;
@@ -633,7 +649,8 @@ const RIFFLE_MS = 580;
 function riffle(player: number): void {
   const tile = document.querySelector<HTMLElement>(`.seat[data-player="${player}"] .zone-tile[data-zone="Library"]`);
   const rect = tile?.getBoundingClientRect();
-  if (!tile || !rect?.width || reducedMotion()) return;
+  // The opening shuffle comes while the board fades in and the coin is tossed. Its copies sit above the board, so they would show first
+  if (!tile || !rect?.width || reducedMotion() || coinInAir() || document.querySelector('#match:is(.held, .arriving)')) return;
   const sleeve = getComputedStyle(tile).getPropertyValue('--sleeve');
   const cards = 12, open = 150, firstDrop = 190, step = 24, settle = 80;
   const at = (ms: number) => ms / RIFFLE_MS;

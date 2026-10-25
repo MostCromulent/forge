@@ -7,7 +7,7 @@ import { hoverable, inspectCard } from '../preview';
 import { longPress } from '../press';
 import { stepName } from './phasebar';
 import { boardBehind } from './pace';
-import { byId, q, replay, reducedMotion } from '../dom';
+import { byId, q, playOnce, replay, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
 import { keyName, shortcutName } from '../keys';
@@ -57,16 +57,20 @@ function showPressed(button: Element | null): void {
   if (!(button instanceof HTMLButtonElement) || button.disabled) return;
   // An answer given while newer boards are still held back is not sent, so the press is not shown either
   if (boardBehind() && button.closest('.buttons')) return;
-  replay(button, 'pressed');
+  // The coin's panel keeps a pressed answer marked, because its exit waits for the press (board.css)
+  if (button.closest('#coin-toss')) replay(button, 'pressed');
+  else playOnce(button, 'pressed');
 }
 
-/** Shows the same feedback for a key bound to a prompt button: "ok", "cancel", "end-turn" or "undo". */
+/** Shows the same feedback for a key bound to a prompt button: "ok", "cancel", "end-turn" or "undo". Play and Draw under the coin take OK and Cancel's keys. */
 export function pressPromptButton(name: string): void {
-  showPressed(document.querySelector(`#match :is(#prompt, .tools) .${name}`));
+  showPressed(document.querySelector(`#coin-toss.asking .${name}`) ?? document.querySelector(`#match :is(#prompt, .tools) .${name}`));
 }
 
 /** How long the prompt takes to grow or shrink to a new prompt's height. */
 const RESIZE_MS = 160;
+/** The height the running resize ends at. */
+let resizingTo = 0;
 
 /** Draws the prompt and animates it to its new height. Content is aligned to the bottom, so any clipping during the animation hides the tools first. */
 export function renderPrompt(model: Model, actions: Actions): void {
@@ -77,9 +81,22 @@ export function renderPrompt(model: Model, actions: Actions): void {
   const asking = !!oldestRequest(model) || (shownZones(model).length > 0 && !ui.zonesMinimised);
   root.classList.toggle('blocked', isPortrait() && asking && !model.prompt?.selectablePlayers?.length
     && q<HTMLButtonElement>(root, '.ok').disabled && q<HTMLButtonElement>(root, '.cancel').disabled);
+  // A resize under way holds the prompt at its animated height. Its effect is lifted while the new height is measured
+  const running = root.getAnimations().find(a => a.id === 'prompt-resize');
+  const effect = running?.effect ?? null;
+  if (running) running.effect = null;
   const after = root.offsetHeight;
-  if (!before || Math.abs(after - before) < 3 || reducedMotion()) return;
-  for (const a of root.getAnimations()) if (a.id === 'prompt-resize') a.cancel();
+  if (running && after === resizingTo) {
+    running.effect = effect;
+    return;
+  }
+  running?.cancel();
+  if (!before || Math.abs(after - before) < 3 || reducedMotion()) {
+    root.style.overflow = '';
+    root.style.alignContent = '';
+    return;
+  }
+  resizingTo = after;
   root.style.overflow = 'clip';
   root.style.alignContent = 'end';
   const run = root.animate([{ height: `${before}px` }, { height: `${after}px` }], { duration: RESIZE_MS, easing: 'ease-out' });
@@ -148,7 +165,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   if (model.prompt !== shown) {
     shown = model.prompt;
     root.classList.remove('open');
-    if (isPortrait()) replay(root, 'pulse');
+    if (isPortrait()) playOnce(root, 'pulse');
   }
   root.classList.toggle('spectating', !!model.spectating);
   // A spectator keeps the volume and the game menu, but has no turn to pass or undo
@@ -340,5 +357,5 @@ function setButton(button: HTMLButtonElement, spec: Pick<PromptButton, 'label' |
 
 export function flash(): void {
   const root = byId('prompt');
-  replay(root, 'flash');
+  playOnce(root, 'flash');
 }

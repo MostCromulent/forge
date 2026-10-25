@@ -217,7 +217,8 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   done.onclick = () => {
     // A second press during the close animation would open it again
     done.disabled = true;
-    putAway(el, () => togglePile(p.player, p.zone));
+    // It closes rather than toggles, because the window can be closed another way, such as by Escape, before the animation ends
+    putAway(el, () => changeUi(u => { u.openZones.delete(`${p.player}/${p.zone}`); }));
   };
   // A zone the game shows has the prompt's question and its OK button. It leaves out the other button, which is the way out of priority
   const prompt = p.forced ? model.prompt : null;

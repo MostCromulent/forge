@@ -37,6 +37,16 @@ export function replay(el: HTMLElement, add: string, ...remove: string[]): void 
   el.classList.add(add);
 }
 
+/** Plays a class's animation as replay does, then takes the class off when that animation ends. A class left on plays its animation again each time a hidden element is shown. */
+export function playOnce(el: HTMLElement, add: string, ...remove: string[]): void {
+  el.classList.remove(add, ...remove);
+  const before = new Set(el.getAnimations());
+  el.classList.add(add);
+  const started = el.getAnimations().filter(a => !before.has(a));
+  // A cancelled animation was replaced by a newer play of the class, which then owns it
+  Promise.all(started.map(a => a.finished)).then(() => el.classList.remove(add), () => {});
+}
+
 /** Places el gap pixels below and right of a point. It flips or moves back where it would leave the window. */
 export function placeBeside(el: HTMLElement, x: number, y: number, gap: number): void {
   const left = x + gap + el.offsetWidth > innerWidth - 8 ? x - gap - el.offsetWidth : x + gap;

@@ -1046,6 +1046,20 @@ body.dragging-block #zoom { display: none; }
   animation: phase-sheen 4s ease-in-out infinite; }
 @keyframes phase-sheen { from { background-position: 160% 0; } to { background-position: -110% 0; } }
 html[data-motion="reduced"] .card.phased::after { animation: none; }
+/* While attackers or blockers are declared, a creature that can't take part dims under a struck sword or shield (match/battlefield.ts).
+   It waits a moment, because the host sends the list of creatures that can just after the prompt */
+.card .barred-mark { display: none; }
+.battlefield .card.barred > img, .battlefield .card.barred .frame { filter: grayscale(.7) brightness(.42); transition-delay: .1s; }
+.battlefield .card.barred .barred-mark { display: grid; justify-items: center; gap: 3px; position: absolute; left: 50%; top: 40%; z-index: 4; transform: translate(-50%, -50%);
+  pointer-events: auto; animation: barred-in .2s ease-out .1s both; }
+.card .barred-mark svg { width: calc(30px * var(--fit, 1)); height: calc(30px * var(--fit, 1)); overflow: visible; filter: drop-shadow(0 2px 4px #000); }
+.card .barred-mark g { fill: none; stroke: #e6edf3; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.card .barred-mark .under { stroke: #000; stroke-width: 5; stroke-linecap: round; }
+.card .barred-mark .strike { stroke: #ffa366; stroke-width: 2.4; stroke-linecap: round; }
+.card .barred-mark b { padding: 1px 7px; border-radius: 999px; background: #0e1116e6; border: 1px solid #556275; color: var(--text);
+  font-size: calc(8.5px * var(--fit, 1)); font-weight: 700; white-space: nowrap; }
+@keyframes barred-in { from { opacity: 0; scale: .8; } }
+html[data-motion="reduced"] .battlefield .card.barred .barred-mark { animation: none; }
 .card .phase-tag { display: none; }
 .battlefield .card.phased .phase-tag { display: block; position: absolute; left: 50%; top: 44%; z-index: 4; transform: translateX(-50%);
   padding: 1px 7px; border-radius: 999px; background: #0e1116e6; border: 1px solid #c9d8ff; color: #dfe8ff;
@@ -1109,7 +1123,9 @@ html[data-motion="reduced"] .card.phased::after { animation: none; }
 #phase-strip .pill { transition: opacity .16s ease, background-color .15s ease, border-color var(--pill-ms) var(--pill-ease), box-shadow var(--pill-ms) var(--pill-ease); }
 #phase-strip.announcing .pill, #phase-strip.announcing .stops { opacity: 0; pointer-events: none; }
 /* Who goes first and how the game ended are shown in the middle of the board, so the pill is hidden for them too */
-#match:has(#first-reveal, #coin-toss) #phase-strip .pill, #match.ending #phase-strip .pill { opacity: 0; pointer-events: none; }
+#match:has(#first-reveal, #coin-toss) #phase-strip .pill, #match:is(.starting, .ending) #phase-strip .pill { opacity: 0; pointer-events: none; }
+/* The opening hand is dealt and the mulligan is asked only after who goes first has been shown (match/board.ts) */
+#match.starting :is(#prompt, #hand .card) { visibility: hidden; }
 .turn-banner {
   /* Centred by layout, not by a half-width shift. turnbanner.ts rounds the margins to whole pixels, so its text stays sharp */
   position: absolute;
@@ -1146,6 +1162,9 @@ html[data-motion="reduced"] .card.phased::after { animation: none; }
 #coin-toss { position: fixed; inset: 0 calc(var(--side-w) + 16px) 0 0; z-index: 70; display: grid; place-content: center; justify-items: center; gap: 36px;
   background: radial-gradient(closest-side, #070910d9, #07091000); animation: backdrop-in .25s ease-out; cursor: pointer; --opening: .6s cubic-bezier(.3,.7,.3,1); transition: gap var(--opening); }
 #coin-toss.closing { animation: backdrop-out .2s ease-in forwards; }
+/* A chosen answer dims as a prompt button does (prompt.css), and the panel waits for that before it fades */
+#coin-toss button.pressed { animation: pressed .18s ease-out; }
+#coin-toss.closing:has(button.pressed) { animation-delay: .18s; }
 #coin-toss .coin-scene { position: relative; width: 200px; height: 200px; perspective: 900px; transition: scale var(--opening), margin var(--opening); }
 #coin-toss .coin { position: absolute; inset: 0; transform-style: preserve-3d; }
 #coin-toss .coin i { position: absolute; inset: 0; border-radius: 50%; }

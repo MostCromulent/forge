@@ -2,6 +2,7 @@ package forge.web.match;
 
 import forge.game.event.GameEvent;
 import forge.game.event.GameEventBlockersDeclared;
+import forge.game.event.GameEventFlipCoin;
 import forge.game.event.GameEventGameOutcome;
 import forge.game.player.PlayerView;
 import forge.sound.EventVisualizer;
@@ -11,7 +12,7 @@ import forge.web.protocol.ToBrowser.Sound;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/** Picks the sound a game event makes. Only the sound's name is sent, and the browser plays it. Two of the sounds depend on whose view this is. */
+/** Picks the sound a game event makes. Only the sound's name is sent, and the browser plays it. Two of the sounds depend on whose view this is, and the opening coin toss sends none. */
 final class BrowserSounds {
     private final EventVisualizer sounds;
 
@@ -22,6 +23,12 @@ final class BrowserSounds {
                 final PlayerView local = currentPlayer.get();
                 return local != null && local.getLobbyPlayerName().equals(event.winningPlayerName())
                         ? SoundEffectType.WinDuel : SoundEffectType.LoseDuel;
+            }
+
+            // The page plays the opening toss's sound itself, in time with the coin (coin.ts)
+            @Override
+            public SoundEffectType visit(final GameEventFlipCoin event) {
+                return event.startingToss() ? null : super.visit(event);
             }
 
             @Override

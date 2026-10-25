@@ -2,7 +2,9 @@
 
 import { reconcile } from './reconcile';
 import { createCard, updateCard, setPileCount, type CardClick, TAPPED_SCALE } from './cards';
-import { combatShown, stateOf, type Model } from '../model';
+import { combatShown, me, stateOf, type Model } from '../model';
+import { declaringBlocks } from './combatdrag';
+import { ICONS } from '../icons';
 import { mergeInto, spreadFrom } from './motion';
 import { chargingAtPlayer } from './overlay';
 import { q, make } from '../dom';
@@ -340,6 +342,41 @@ function isSick(model: Model, card: CardView): boolean {
   return !!card.Sickness && /Creature/.test(state.Type ?? '') && !state.Keywords?.some(k => k.icon === 'IMG_ABILITY_HASTE');
 }
 
+/** The part of combat this player is declaring. While they declare, the host sends the creatures that can still attack or block as the playable cards. */
+function declaring(model: Model): 'attack' | 'block' | null {
+  const p = model.prompt;
+  if (!p || p.priority || model.spectating) return null;
+  if (p.cancel.kind === 'alphaStrike' || p.cancel.kind === 'callBack') return 'attack';
+  return declaringBlocks(model) ? 'block' : null;
+}
+
+/**
+ * Dims a creature of yours that the host left out of the attack or block being declared, and strikes through a sword or shield.
+ * A tapped or phased-out creature already looks unable, and a summoning-sick one keeps its Zz. So the strike means an ability or effect.
+ * The host sends no reason, so only Defender, which is on the card, is named.
+ */
+function showBarred(el: HTMLElement, model: Model, card: CardView): void {
+  const step = declaring(model);
+  const state = stateOf(model, card);
+  const barred = !!step && card.Zone === 'Battlefield' && card.Controller?.ref === me(model)?.$key && /Creature/.test(state.Type ?? '')
+    && !card.Tapped && !card.PhasedOut && !(model.playable?.cards ?? []).some(r => r.ref === card.$key)
+    && (step === 'attack' ? !card.Attacking && !isSick(model, card) : !card.Blocking);
+  const why = barred && step === 'attack' ? state.Keywords?.find(k => k.icon === 'IMG_ABILITY_DEFENDER')?.title ?? '' : '';
+  const shown = barred ? `${step}:${why}` : '';
+  if ((el.dataset.barred ?? '') === shown) return;
+  el.dataset.barred = shown;
+  el.classList.toggle('barred', barred);
+  const mark = q(el, '.barred-mark');
+  mark.title = !barred ? '' : t(step === 'attack' ? 'lblWebCardCantAttack' : 'lblWebCardCantBlock');
+  mark.innerHTML = !barred ? '' : `<svg viewBox="0 0 24 24" aria-hidden="true"><g>${step === 'attack' ? ICONS.sword : ICONS.shield}</g>`
+    + '<path class="under" d="M3 21 21 3"/><path class="strike" d="M3 21 21 3"/></svg>';
+  if (why) {
+    const tag = make('b', '');
+    tag.textContent = why;
+    mark.append(tag);
+  }
+}
+
 function createSlot(): HTMLElement {
   const el = make('div', 'slot');
   return el;
@@ -357,6 +394,7 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
     // A land among the creatures gets a tag that explains why, because its art still looks like a land
     const type = stateOf(model, card).Type ?? '';
     q(c, '.kind-tag').textContent = /\bLand\b/.test(type) && /Creature/.test(type) ? t('lblWebBoardLandCreature') : '';
+    showBarred(c, model, card);
   });
   [...el.children].forEach((c, i) => (c as HTMLElement).style.setProperty('--under', String(i)));
   el.style.setProperty('--behind', String(behind(slot)));

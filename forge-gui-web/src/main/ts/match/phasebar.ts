@@ -3,7 +3,7 @@
 import { reconcile } from './reconcile';
 import { deref, game, isLocal, me, opponents, players, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
-import { byId, q, replay, make, onPressOutside, reducedMotion, easeOut, escapeHtml } from '../dom';
+import { byId, q, playOnce, make, onPressOutside, reducedMotion, easeOut, escapeHtml } from '../dom';
 import { changeUi, ui } from '../ui';
 import { t, tNodes, type TextKey } from '../text';
 import type { Actions } from '../actions';
@@ -362,7 +362,7 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
     // Your wait pulses once every PULSE_EVERY_S. `replay` restarts the animation by removing and re-adding the class
     if (yours && seconds >= PULSE_EVERY_S && seconds % PULSE_EVERY_S === 0 && lastPulse !== seconds) {
       lastPulse = seconds;
-      replay(chip, 'pulse');
+      playOnce(chip, 'pulse');
     }
   };
   show();

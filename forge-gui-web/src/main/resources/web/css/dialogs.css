@@ -24,12 +24,14 @@
 .backdrop.on-board.closing, .backdrop.on-board.closing > * { animation-duration: .2s; }
 /* A screen rises in when it opens, as a box does (index.html holds a root for each screen) */
 :is(#menu, #lobby, #editor, #limited, #drafting, #campaign) > * { animation: box-in .18s ease-out; }
-/* A page that starts a match zooms in as it darkens. The board then zooms in when its seats are drawn (match/entry.ts). */
-.to-match { transform-origin: 50% 50%; animation: to-match .8s cubic-bezier(.45, 0, .8, .6) forwards; }
+/* A page that starts a match zooms in as it darkens. The board then zooms in over it when its seats are drawn (match/entry.ts).
+   The page is fixed where it was scrolled to, so the board can be drawn while it zooms. The board comes later in the page, so it is drawn on top */
+.to-match { position: fixed; inset: var(--scrolled, 0) 0 auto; transform-origin: 50% 50%; animation: to-match .8s cubic-bezier(.45, 0, .55, 1) forwards; }
 @keyframes to-match { to { scale: 1.25; filter: brightness(.2); } }
 html:has(.to-match) { overflow: hidden; }
 #match.held { opacity: 0; }
-#match.arriving { animation: match-arrive .75s cubic-bezier(.15, .6, .35, 1) both; }
+/* The delay lets the board's first full draw pass before it starts to move */
+#match.arriving { animation: match-arrive .75s cubic-bezier(.15, .6, .35, 1) .12s both; }
 @keyframes match-arrive { from { opacity: 0; scale: .9; } }
 /* Going back to an earlier screen shows it at once (screens.tsx) */
 html[data-back] :is(#menu, #lobby, #editor, #limited, #drafting, #campaign) > *, html[data-back] .modes .mode.plaque { animation: none; }

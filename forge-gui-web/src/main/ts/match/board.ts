@@ -16,14 +16,14 @@ import { forgetPictures, type CardClick } from './cards';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from '../looks';
 import { animateCardMoves, noteBoard, resetMotion, showCount } from './motion';
 import { boardBehind } from './pace';
-import { byId, q, replay, make, onPressOutside, relayout } from '../dom';
+import { byId, q, playOnce, replay, make, onPressOutside, relayout } from '../dom';
 import { setting } from '../settings';
 import { logTints } from './log';
 import type { Actions } from '../actions';
 import type { CardView, GameEvent, PlayerView, ZoneType } from '../protocol';
 import { commandKind, renderEmblems } from './command';
 import { notePick, resetOverlay } from './overlay';
-import { resetStarter, showStarter, wentFirst } from './starter';
+import { resetStarter, showStarter, starterShowing, wentFirst } from './starter';
 import { announceTurn, resetTurnBanner } from './turnbanner';
 import { noticeLosses, renderGameOver, resetGameOver } from './gameover';
 import { hovers, isTouch, longPress } from '../press';
@@ -46,6 +46,8 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   // Called before anything is redrawn, so each card's move is measured from its old position on screen
   noteBoard();
   showStarter(model, actions, events);
+  // The opening hand, the mulligan prompt and the phase pill wait until who goes first has been shown (board.css, motion.ts)
+  byId('match').classList.toggle('starting', !g.Turn && starterShowing());
   noticeLosses(model, actions);
   // A prompt that offers cards or players to pick, or a spell to pick on the stack, dims everything else (board.css). Paying a cost does not count
   const p = model.prompt;
@@ -64,7 +66,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
         return;
       }
       // Shown at once, because the server's answer can take a moment. Not shown while newer boards are queued, because the click is not sent then
-      if (!boardBehind()) replay(el, 'pressed');
+      if (!boardBehind()) playOnce(el, 'pressed');
     }
     notePick(key);
     foldStack();
@@ -243,7 +245,12 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
       const later = order.indexOf(open as number) > order.indexOf(shownSeat);
       replay(seat, later ? 'from-right' : 'from-left', 'from-right', 'from-left');
       // The classes also stop the cards from resizing, so they are removed when the slide ends
-      seat.addEventListener('animationend', () => seat.classList.remove('from-right', 'from-left'), { once: true });
+      // Other animations in the seat, such as a damaged card's shake, also end here. Only the slide's own end counts
+      seat.addEventListener('animationend', function slid(e) {
+        if (!e.animationName.startsWith('seat-from-')) return;
+        seat.removeEventListener('animationend', slid);
+        seat.classList.remove('from-right', 'from-left');
+      });
     }
     shownSeat = open;
     // A seat that was hidden had no size to fit its cards to
@@ -601,6 +608,8 @@ export function resetTable(): void {
   resetHand();
   resetOverlay();
   resetGameOver();
+  // The seats' markup outlives the game, so the next game's starting life would show as a change
+  for (const life of document.querySelectorAll<HTMLElement>('#match .avatar .life')) delete life.dataset.life;
 }
 
 // A life change is easy to miss as a number. So the amount floats up from the avatar and the life total animates
@@ -609,11 +618,12 @@ function showLife(el: HTMLElement, avatar: HTMLElement, life: number, local: boo
   el.dataset.life = String(life);
   el.textContent = String(life);
   const change = life - before;
-  if (!change) {
+  // A seat in a closed tab is not drawn. Its animations would not run, so their pieces would wait and all play when the tab opens
+  if (!change || avatar.closest('[hidden]')) {
     return;
   }
   const hurt = change < 0;
-  replay(el, hurt ? 'hurt' : 'healed', 'hurt', 'healed');
+  playOnce(el, hurt ? 'hurt' : 'healed', 'hurt', 'healed');
   const float = make('span', `life-change ${hurt ? 'hurt' : 'healed'}`);
   float.textContent = `${hurt ? '' : '+'}${change}`;
   avatar.append(float);

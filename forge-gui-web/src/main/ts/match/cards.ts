@@ -6,7 +6,7 @@ import { longPress } from '../press';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from '../images';
 import { playerSleeveUrl, cssUrl } from '../looks';
 import { reconcile } from './reconcile';
-import { q, replay, make, reducedMotion } from '../dom';
+import { q, playOnce, replay, make, reducedMotion } from '../dom';
 import type { CardView, KeywordText, PlayerView, Ref } from '../protocol';
 import { t } from '../text';
 import { drawStickers } from './stickers';
@@ -23,7 +23,7 @@ const EYE = iconSvg(ICONS.eye);
 
 export function createCard(onClick: CardClick): HTMLDivElement {
   const el = make('div', 'card');
-  el.innerHTML = '<img alt="" draggable="false"><span class="stickers" aria-hidden="true"></span><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><i class="chains" aria-hidden="true"></i><i class="seal" aria-hidden="true"></i><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="seen">' + EYE + '</span><span class="owned-by"></span><span class="kind-tag"></span><span class="phase-tag"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><span class="block-tab"></span><span class="combat-tag"></span><i class="halo" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span><i class="pile-edge" aria-hidden="true"></i>';
+  el.innerHTML = '<img alt="" draggable="false"><span class="stickers" aria-hidden="true"></span><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><i class="chains" aria-hidden="true"></i><i class="seal" aria-hidden="true"></i><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="seen">' + EYE + '</span><span class="owned-by"></span><span class="kind-tag"></span><span class="phase-tag"></span><span class="barred-mark"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><span class="block-tab"></span><span class="combat-tag"></span><i class="halo" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span><i class="pile-edge" aria-hidden="true"></i>';
   q(el, '.sick').title = t('lblWebCardSummoningSick');
   q(el, '.seen').title = t('lblWebCardRevealed');
   q(el, '.block-tab').textContent = t('lblWebCardBlocking');
@@ -142,7 +142,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
     : /Battle/.test(type) ? `${state.Defense ?? ''}` : '';
   // A changed number (a pump, a counter, a loyalty change) is animated so the player notices it
   if (pt.textContent && power + toughness && pt.textContent !== power + toughness) {
-    replay(pt, 'changed');
+    playOnce(pt, 'changed');
   }
   const p = q(el, '.pt-p');
   p.textContent = power;
@@ -281,10 +281,11 @@ function showBlocking(el: HTMLElement, card: CardView): void {
 function showDamage(el: HTMLElement, damage: number): void {
   const before = el.dataset.damage === undefined ? damage : Number(el.dataset.damage);
   el.dataset.damage = String(damage);
-  if (damage <= before) {
+  // A card in a closed seat tab is not drawn, so its flash and number would wait and play when the tab opens
+  if (damage <= before || el.closest('[hidden]')) {
     return;
   }
-  replay(el, 'struck');
+  playOnce(el, 'struck');
   // The flash is removed on animationend, so it is added only when the animation will run
   if (!reducedMotion()) {
     const flash = make('span', 'hit-white');

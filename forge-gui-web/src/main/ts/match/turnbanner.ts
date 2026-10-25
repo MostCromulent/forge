@@ -11,6 +11,9 @@ let announced: string | null = null;
 
 export function resetTurnBanner(): void {
   announced = null;
+  // A banner from a match left mid-way never ends, because a hidden page does not run its animation
+  document.querySelectorAll('#phase-strip .turn-banner').forEach(banner => banner.remove());
+  document.getElementById('phase-strip')?.classList.remove('announcing');
 }
 
 /** Announces the turn that a state message starts, before the message is shown. If a banner is shown, runs `then` as it leaves. */

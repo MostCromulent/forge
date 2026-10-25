@@ -20,13 +20,7 @@ export function playSound(msg: Sound, echo = false): void {
     return;
   }
   started.set(msg.name, now);
-  // The URL includes the sound set, so a changed set is fetched again and not served from this page or the browser cache
-  const url = `sound?name=${encodeURIComponent(msg.name)}&set=${encodeURIComponent(String(setting('soundSet')))}`;
-  let clip = clips.get(url);
-  if (!clip) {
-    clip = new Audio(url);
-    clips.set(url, clip);
-  }
+  const clip = clipFor(msg.name);
   const playing = !clip.paused && clip.currentTime > 0;
   // A synchronised effect never overlaps itself, as on desktop
   if (msg.sync && playing) {
@@ -37,6 +31,37 @@ export function playSound(msg: Sound, echo = false): void {
   voice.volume = volume('soundVolume');
   voice.currentTime = 0;
   voice.play().catch(() => {});
+}
+
+/** Plays a sound effect from one point to another, so a sound made of parts can follow an animation. It plays to its end if `to` is left out. */
+export function playSoundPart(name: string, from: number, to?: number): void {
+  if (volume('soundVolume') <= 0) {
+    return;
+  }
+  const clip = clipFor(name);
+  const voice = clip.paused ? clip : clip.cloneNode() as HTMLAudioElement;
+  voice.volume = volume('soundVolume');
+  voice.currentTime = from;
+  voice.play().catch(() => {});
+  if (to !== undefined) {
+    window.setTimeout(() => voice.pause(), (to - from) * 1000);
+  }
+}
+
+/** Fetches a sound effect ahead of its first use, so it does not start late. */
+export function readySound(name: string): void {
+  clipFor(name);
+}
+
+function clipFor(name: string): HTMLAudioElement {
+  // The URL includes the sound set, so a changed set is fetched again and not served from this page or the browser cache
+  const url = `sound?name=${encodeURIComponent(name)}&set=${encodeURIComponent(String(setting('soundSet')))}`;
+  let clip = clips.get(url);
+  if (!clip) {
+    clip = new Audio(url);
+    clips.set(url, clip);
+  }
+  return clip;
 }
 
 /** Repeats a sound only if the host sent it in the last 1.5 seconds, so sounds turned off on the host stay off. */
