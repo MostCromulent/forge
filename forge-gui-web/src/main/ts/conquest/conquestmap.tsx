@@ -26,6 +26,7 @@ const same = (a: ConquestPlace, b: ConquestPlace): boolean => a.region === b.reg
 
 const VARIANT_NAMES: Record<string, TextKey> = { Commander: 'lblCommander', Vanguard: 'lblVanguard', Planeswalker: 'lblPlaneswalker', Planechase: 'lblPlanechase' };
 const VARIANT_DESC: Record<string, TextKey> = { Commander: 'lblCommanderDesc', Vanguard: 'lblVanguardDesc', Planeswalker: 'lblPlaneswalkerDesc', Planechase: 'lblPlanechaseDesc' };
+const VARIANT_ICONS: Record<string, string> = { Commander: 'IMG_COMMANDER', Vanguard: 'IMG_ZONE_AVATAR', Planeswalker: 'IMG_PLANESWALKER', Planechase: 'IMG_ZONE_PLANAR' };
 const variantName = (v: string): string => (VARIANT_NAMES[v] ? t(VARIANT_NAMES[v]) : v);
 
 const fight = (actions: Actions) => zoomIntoMatch(byId('campaign'), () => actions.conquestBattle());
@@ -244,10 +245,43 @@ function Reward({ cell }: { cell: ConquestCell }) {
   );
 }
 
-function Chips({ cell }: { cell: ConquestCell }) {
+/** The event panel's Format and Reward sections. Each format and each prize is a row with an icon, a name and a line of text. */
+function Sections({ cell }: { cell: ConquestCell }) {
+  const variants = cell.variants ?? [];
+  return (
+    <>
+      {variants.length > 0 && (
+        <div class="cq-sec">
+          <span class="cq-kicker">{t('lblWebConquestFormat')}</span>
+          {variants.map(v => <SectionRow key={v} icon={VARIANT_ICONS[v]} name={variantName(v)} line={VARIANT_DESC[v] && t(VARIANT_DESC[v])} />)}
+        </div>
+      )}
+      <div class="cq-sec">
+        <span class="cq-kicker">{t('lblWebConquestReward')}</span>
+        {cell.state !== 'won' && <SectionRow icon="IMG_PW_BADGE_COMMON" brass name={t('lblWebConquestEmblemReward')} tag={t('lblWebConquestFirstWin')} line={t('lblWebConquestEmblemLine')} />}
+        <SectionRow icon="IMG_CHAOS" name={t('lblWebConquestWheelSpin')} line={t('lblWebConquestWheelLine')} />
+      </div>
+    </>
+  );
+}
+
+function SectionRow({ icon, name, line, tag, brass }: { icon?: string; name: string; line?: string; tag?: string; brass?: boolean }) {
+  return (
+    <div class="cq-sec-row">
+      <span class={brass ? 'cq-sec-icon brass' : 'cq-sec-icon'}>{icon && <img alt="" src={skinIconUrl(icon)} />}</span>
+      <div>
+        <b>{name}{tag && <span class="cq-sec-tag">{tag}</span>}</b>
+        {line && <p>{line}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** formats is false in the event panel, which lists the formats in their own section. */
+function Chips({ cell, formats = true }: { cell: ConquestCell; formats?: boolean }) {
   return (
     <div class="cq-chips">
-      {(cell.variants ?? []).map(v => <span key={v} class="cq-chip">{variantName(v)}</span>)}
+      {formats && (cell.variants ?? []).map(v => <span key={v} class="cq-chip">{variantName(v)}</span>)}
       {cell.state === 'won' && <span class="cq-chip brass"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestConquered')}</span>}
       <Record cell={cell} />
       {cell.opens && <span class="cq-chip brass">{t('lblWebConquestPortal')}: {cell.opens}</span>}
@@ -282,16 +316,15 @@ function EventPanel({ state, cell, busy, battle }: { state: ConquestState; cell:
           zoom={setZoom} change={() => changeUi(u => { u.conquestTab = 'party'; })} />
         {(cell.variants ?? []).includes('Planeswalker') && (
           <div class="cq-mine">
-            <button class="cq-face2 round" aria-label={state.walker} style={{ backgroundImage: `url("${artUrl(state.walkerImage)}")` }} onClick={() => setZoom(state.walkerImage)} />
+            <button class="cq-face2 round" aria-label={state.walker} data-image={state.walkerImage} style={{ backgroundImage: `url("${artUrl(state.walkerImage)}")` }} onClick={() => setZoom(state.walkerImage)} />
             <div class="t"><b>{state.walker}</b><span>{t('lblPlaneswalker')}</span></div>
           </div>
         )}
         {lead.problem && <p class="cq-warn">{lead.problem}</p>}
         <button class="primary cq-big" disabled={!!lead.problem || busy} onClick={battle}>{t('lblBattle')}</button>
       </>}>
-      <Chips cell={cell} />
-      {(cell.variants ?? []).filter(v => VARIANT_DESC[v]).map(v => <p key={v} class="cq-desc">{t(VARIANT_DESC[v])}</p>)}
-      <Reward cell={cell} />
+      <Chips cell={cell} formats={false} />
+      <Sections cell={cell} />
       {state.steps > 0 && <p class="cq-steps">{state.steps === 1 ? t('lblWebConquestOneStep') : t('lblWebConquestSteps', state.steps)}</p>}
     </SidePanel>
   );

@@ -128,7 +128,7 @@ export function DeckRow({ image, name, line, problem, zoom, change }: {
 }) {
   return (
     <div class="cq-mine">
-      {image && <button class="cq-face2" aria-label={name} style={{ backgroundImage: `url("${artUrl(image)}")` }} onClick={() => zoom(image)} />}
+      {image && <button class="cq-face2" aria-label={name} data-image={image} style={{ backgroundImage: `url("${artUrl(image)}")` }} onClick={() => zoom(image)} />}
       <div class="t">
         <b>{name}</b>
         {problem ? <span class="cq-warn">{t('lblInvalidDeck')}</span> : <span>{line}</span>}
