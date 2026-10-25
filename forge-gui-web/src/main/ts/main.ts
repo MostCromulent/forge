@@ -78,6 +78,11 @@ const actions = {
   ...wire,
   // Cancel during a pass stops the pass. The host accepts that at any time, even while the page catches up
   cancel: () => (pacer.holding() && passingFor(model.controls) ? wire.stopYield() : wire.cancel()),
+  // The player has left the game, so the plays they would have watched are skipped
+  concede: () => {
+    pacer.hurry();
+    wire.concede();
+  },
   // The zones the game shows close at once, as an answered dialog does. Not while the page catches up, because then OK is not sent
   ok: () => {
     if (!pacer.holding()) {

@@ -14,16 +14,21 @@ const HOLD_LIMIT_MS = 4000;
 const TURN_SOUND = 'end_of_turn';
 
 /** Receives the server's messages in order. Game messages are held while a banner or another player's play is on screen. `apply` applies one message to the model. */
-export function createPacer(model: Model, apply: (msg: ServerMessage) => void): { receive: (msg: ServerMessage) => void; holding: () => boolean } {
+export function createPacer(model: Model, apply: (msg: ServerMessage) => void): { receive: (msg: ServerMessage) => void; holding: () => boolean; hurry: () => void } {
   /** Messages that arrived while a new turn's banner shows, or while an earlier board is still being shown. */
   let held: ServerMessage[] | null = null;
   /** The time until which the board on screen stays shown, because it shows another player's play. */
   let showUntil = 0;
   /** Whether the held messages wait for a turn's banner, not for a board that is still being shown. */
   let announcing = false;
+  /** The player conceded. Nothing is held until the game ends, so the end of the game shows at once. */
+  let hurrying = false;
 
   function receive(msg: ServerMessage): void {
-    if (!held) {
+    if (hurrying) {
+      apply(msg);
+      if (msg.t === 'gameOver' || msg.t === 'hello') hurrying = false;
+    } else if (!held) {
       // Each release applies only to this hold. So an earlier banner that ends late cannot release a later turn early
       const releaseThis = () => { if (held?.[0] === msg) release(); };
       // A sound or a log line arrives after its own board. It is held with that board when the board is held, but never starts a hold
@@ -73,5 +78,16 @@ export function createPacer(model: Model, apply: (msg: ServerMessage) => void): 
     announcing = false;
     waiting.forEach(receive);
   }
-  return { receive, holding: () => held !== null };
+
+  function hurry(): void {
+    const waiting = held ?? [];
+    held = null;
+    setBoardBehind(false);
+    announcing = false;
+    showUntil = 0;
+    hurrying = true;
+    // The held sounds are for moments the player skipped
+    waiting.filter(m => m.t !== 'sound').forEach(receive);
+  }
+  return { receive, holding: () => held !== null, hurry };
 }
