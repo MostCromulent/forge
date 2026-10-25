@@ -606,31 +606,22 @@ public class WebGuiGame extends NetworkGuiGame {
                 }
             }
         }
+        if (!selection.actionable().equals(before.actionable())) {
+            sendPlayable(selection.actionable());
+        }
         prompt.selection(selection);
     }
 
     // Cards the engine says the player can act on now. Cards at strength two are also the ones the Auto button would tap
-    @Override
-    public void setWeaklySelectable(final Iterable<CardView> cards) {
-        super.setWeaklySelectable(cards);
+    private void sendPlayable(final List<CardView> cards) {
         final List<Ref> playable = new ArrayList<>();
         final List<Ref> autoTap = new ArrayList<>();
         for (final CardView c : Sets.newHashSet(cards)) {
             playable.add(PromptState.cardRef(c));
-            if (getWeakSelectableStrength(c) >= 2) {
+            if (getActionableStrength(c) >= 2) {
                 autoTap.add(PromptState.cardRef(c));
             }
         }
-        sendPlayable(playable, autoTap);
-    }
-
-    @Override
-    public void clearWeaklySelectable() {
-        super.clearWeaklySelectable();
-        sendPlayable(List.of(), List.of());
-    }
-
-    private void sendPlayable(final List<Ref> playable, final List<Ref> autoTap) {
         send(new Playable(playable, autoTap));
     }
 
