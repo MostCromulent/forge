@@ -339,14 +339,16 @@ public final class ConquestGame implements Campaign {
                 art = art(plane);
             }
         }
-        // A booster pays shards for its duplicates
+        // A booster pays shards for its duplicates, and so does a region's commander when the player owns them all
         final String icon = switch (s.kind()) {
-            case SHARDS, BOOSTER -> "IMG_AETHER_SHARD";
+            case SHARDS, BOOSTER, REGION_COMMANDER -> "IMG_AETHER_SHARD";
             case EMBLEMS, CONQUER_EMBLEMS -> "IMG_PW_BADGE_COMMON";
             default -> null;
         };
+        final String title = s.kind() == ConquestRewardStep.Kind.REGION_COMMANDER
+                ? Localizer.getInstance().getMessage("lblConqueredNReceivedCommander", battle.getLocation().getRegion().getName()).replace("\n", " \u00b7 ") : null;
         return new RewardStep(s.kind().name(), s.amount(), s.outcome() == null ? null : s.outcome().name(), cards,
-                s.number(), s.total(), s.chaos(), pack, art, icon, null, null, null);
+                s.number(), s.total(), s.chaos(), pack, art, icon, title, null, null);
     }
 
     @Override

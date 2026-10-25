@@ -77,7 +77,7 @@ export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed
       {step.kind === 'ALL_PLANES_UNLOCKED' && <Gift icon="IMG_PW_BADGE_COMMON" title={t('lblAllPlanesUnlocked')} text={t('lblAllPlanesUnlockedNotify')} button={t('lblOK')} next={next} />}
       {step.kind === 'CHAOS_BATTLE' && <Gift icon="IMG_MULTIVERSE" title={t('lblChaosApproaching')} text={t('lblWebConquestNoRefusal')} button={t('lblOK')} next={next} />}
       {step.kind === 'MESSAGE' && <Gift icon={step.icon} title={step.title ?? ''} text={step.text} lines={step.lines} button={t('lblOK')} next={next} />}
-      {step.kind === 'CARDS' && <CardsStop key={at} step={step} zoom={setZoom} next={next} />}
+      {(step.kind === 'CARDS' || step.kind === 'REGION_COMMANDER') && <CardsStop key={at} step={step} zoom={setZoom} next={next} />}
       {zoom && <div class="backdrop cq-zoom-layer" onClick={e => { e.stopPropagation(); setZoom(null); }}><img class="cq-zoom" alt="" src={imageUrl(zoom)} /></div>}
     </Backdrop>
   );
@@ -128,15 +128,22 @@ function Gift({ icon, amount, title, text, lines, button, next }: {
 
 function CardsStop({ step, zoom, next }: { step: RewardStep; zoom: (image: string) => void; next: () => void }) {
   const lost = step.outcome === 'lost';
+  const cards = step.cards ?? [];
+  const duplicates = cards.reduce((sum, c) => sum + c.shards, 0);
   return (
     <div class="cq-pack-stop">
       <h3>{step.title}</h3>
       <div class={lost ? 'cq-cards lost' : 'cq-cards'}>
-        {(step.cards ?? []).map((c, i) => (
+        {cards.map((c, i) => (
           <button key={i} class="cq-cards-card" aria-label={c.name} onClick={() => zoom(c.image)}><img alt={c.name} src={imageUrl(c.image)} /></button>
         ))}
       </div>
-      <div class="cq-reveal-foot"><button class="primary cq-big" onClick={next}>{t('lblOK')} <kbd>{useOkKey(next)}</kbd></button></div>
+      <div class="cq-reveal-foot">
+        {duplicates > 0 && (
+          <span class="cq-dup-line">{t('lblReceivedAetherShardsForDuplicateCards')}<img alt="" src={skinIconUrl('IMG_AETHER_SHARD')} /><b>{formatNumber(duplicates)}</b></span>
+        )}
+        <button class="primary cq-big" onClick={next}>{t('lblOK')} <kbd>{useOkKey(next)}</kbd></button>
+      </div>
     </div>
   );
 }

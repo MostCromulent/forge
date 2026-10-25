@@ -152,6 +152,56 @@ public class ConquestRulesTest {
         assertEquals(data.getAEtherShards(), shards + 3 * wheelShards);
     }
 
+    // Fails if a commander comes before the region's last event, is missing on it, comes after the wheel, is not a new commander from the region, or comes again on a later win
+    @Test
+    public void conqueringARegionGivesOneOfItsCommanders() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final List<ConquestLocation> region = regionEvents(data.getCurrentPlane());
+        for (final ConquestLocation loc : region.subList(0, region.size() - 1)) {
+            assertFalse(kinds(winAt(data, loc, ChaosWheelOutcome.SHARDS)).contains(Kind.REGION_COMMANDER), "a commander before the region was conquered");
+        }
+        final ConquestLocation last = region.get(region.size() - 1);
+        final List<ConquestRewardStep> steps = winAt(data, last, ChaosWheelOutcome.SHARDS);
+        assertEquals(kinds(steps), List.of(Kind.CONQUER_EMBLEMS, Kind.REGION_COMMANDER, Kind.WHEEL, Kind.SHARDS));
+        final ConquestReward commander = steps.get(1).cards().get(0);
+        assertFalse(commander.isDuplicate());
+        assertTrue(last.getRegion().getCommanders().contains(commander.getCard()));
+        assertTrue(data.hasUnlockedCard(commander.getCard()));
+
+        assertFalse(kinds(winAt(data, last, ChaosWheelOutcome.SHARDS)).contains(Kind.REGION_COMMANDER), "a second commander for the same region");
+    }
+
+    // Fails if owning another printing of each commander does not count, a duplicate unlocks a card, or it does not pay the duplicate value
+    @Test
+    public void aRegionWithEveryCommanderOwnedPaysShards() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final List<ConquestLocation> region = regionEvents(data.getCurrentPlane());
+        int reprints = 0;
+        for (final PaperCard commander : region.get(0).getRegion().getCommanders()) {
+            if (data.hasUnlockedCard(commander)) {
+                continue;
+            }
+            final PaperCard other = FModel.getMagicDb().getCommonCards().getAllCards(commander.getName()).stream()
+                    .filter(pc -> !pc.equals(commander)).findFirst().orElse(null);
+            if (other != null) {
+                reprints++;
+            }
+            data.unlockCard(other != null ? other : commander);
+        }
+        assertTrue(reprints > 0, "no commander in the region has another printing");
+        for (final ConquestLocation loc : region.subList(0, region.size() - 1)) {
+            winAt(data, loc, ChaosWheelOutcome.CHAOS);
+        }
+        final int cards = data.getUnlockedCardCount();
+        final int shards = data.getAEtherShards();
+        final List<ConquestRewardStep> steps = winAt(data, region.get(region.size() - 1), ChaosWheelOutcome.CHAOS);
+        assertEquals(kinds(steps), List.of(Kind.CONQUER_EMBLEMS, Kind.REGION_COMMANDER, Kind.WHEEL, Kind.CHAOS_BATTLE));
+        final ConquestReward commander = steps.get(1).cards().get(0);
+        assertEquals(commander.getReplacementShards(), ConquestUtil.getShardValue(commander.getCard(), CQPref.AETHER_BASE_DUPLICATE_VALUE));
+        assertEquals(data.getAEtherShards(), shards + commander.getReplacementShards());
+        assertEquals(data.getUnlockedCardCount(), cards);
+    }
+
     // Fails if a booster's cards are not unlocked, its duplicates are not paid for, or two boosters are not two separate steps
     @Test
     public void boostersUnlockTheirCardsAndPayForDuplicates() {
@@ -363,6 +413,23 @@ public class ConquestRulesTest {
         final ConquestBattle battle = loc.getEvent().createBattle(loc, 0);
         data.addWin(battle);
         return battle;
+    }
+
+    /** The events of the plane's first region. */
+    private static List<ConquestLocation> regionEvents(final ConquestPlane plane) {
+        final List<ConquestLocation> events = new ArrayList<>();
+        for (int row = 0; row < plane.getRowsPerRegion(); row++) {
+            for (int col = 0; col < plane.getCols(); col++) {
+                events.add(new ConquestLocation(plane, 0, row, col));
+            }
+        }
+        return events;
+    }
+
+    private static List<ConquestRewardStep> winAt(final ConquestData data, final ConquestLocation loc, final ChaosWheelOutcome outcome) {
+        final ConquestBattle battle = loc.getEvent().createBattle(loc, 0);
+        data.addWin(battle);
+        return FModel.getConquest().claimRewards(battle, outcome);
     }
 
     private static List<Kind> kinds(final List<ConquestRewardStep> steps) {

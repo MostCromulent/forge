@@ -117,6 +117,9 @@ public class ConquestMultiverseScreen extends FScreen {
             //show animation of new badge being positioned on location, then go on
             planeGrid.animateBadgeIntoPosition(battle.getLocation(), battle.getTier(), next);
             break;
+        case REGION_COMMANDER:
+            ConquestRewardDialog.show(Forge.getLocalizer().getMessage("lblConqueredNReceivedCommander", battle.getLocation().getRegion().getName()), step.cards(), next);
+            break;
         case WHEEL:
             ConquestChaosWheel.spin(step.outcome(), next);
             break;
