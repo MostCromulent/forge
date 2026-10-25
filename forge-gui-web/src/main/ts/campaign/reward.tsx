@@ -50,6 +50,8 @@ export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed
   };
   // A reward with nothing to show ends as soon as it arrives
   useEffect(() => { if (at >= steps.length) finish(); }, []);
+  // Every card the reward shows is loaded now, so each card has its picture by the time a pack lets it out
+  useEffect(() => { for (const s of steps) for (const c of s.cards ?? []) new Image().src = imageUrl(c.image); }, []);
   // The dock is outside the campaign page, so the reveal makes the dock inert itself while the reveal is open
   useEffect(() => {
     const dock = byId('dock');
