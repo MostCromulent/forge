@@ -5,6 +5,8 @@ import { artUrl } from '../sleeves';
 import { imageUrl, hideBroken } from '../images';
 import { Pip, Pips } from '../symbols';
 import { StepForm, type Step, type Ticket } from '../stepform';
+import { Prefs } from '../campaign/campaign';
+import { ICONS, Icon } from '../icons';
 import { reducedMotion } from '../dom';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -21,6 +23,7 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
   const [busy, setBusy] = useState(false);
   // An error from before the form opened belongs to the saves list, so this form does not show it
   const [sent, setSent] = useState(false);
+  const [prefs, setPrefs] = useState(false);
   useEffect(() => { actions.conquestOptions(value.plane, value.commander); }, [value.plane, value.commander]);
   useEffect(() => setBusy(false), [model.error]);
   const options = model.conquestOptions;
@@ -68,11 +71,14 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
     rows: v => [[t('lblPlane'), v.plane ?? null], [t('lblCommander'), v.commander ?? null], [t('lblPlaneswalker'), v.planeswalker ?? null],
       [t('lblStartingShards'), formatNumber(options.startShards)]],
     note: '',
+    extra: <button class="ticket-prefs" onClick={() => setPrefs(true)}><Icon d={ICONS.sliders} />{t('Preferences')}</button>,
   };
   return (
     <div class="setup cq-new">
       <StepForm steps={steps} value={value} onChange={setValue} ticket={ticket} action={t('lblStart')} busy={busy} ready={ready}
         problem={sent && model.error ? <span class="sentence taken">{model.error}</span> : null} submit={start} />
+      {/* The starting shards are a preference, so the ticket asks for them again when the dialog closes */}
+      {prefs && <Prefs model={model} actions={actions} close={() => { setPrefs(false); actions.conquestOptions(value.plane, value.commander); }} />}
     </div>
   );
 }

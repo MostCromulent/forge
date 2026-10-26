@@ -146,6 +146,15 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         });
     }
 
+    /** Runs on the campaign's thread while a mode is open, with or without a save. A mode's preferences belong to the process, not to a save. */
+    private static <T extends Record> Handler<CampaignSession, T> inMode(final OpenHandler<T> handler) {
+        return (s, ch, command) -> s.run(() -> {
+            if (s.session.stage() instanceof InCampaign c) {
+                handler.run(s, ch, s.campaign(c.mode()), command);
+            }
+        });
+    }
+
     /** The commands every mode's pages share. Each mode's own are in its table. */
     public static final Commands<CampaignSession> COMMANDS = new Commands<CampaignSession>()
             // A campaign is Forge's own, with one per process, so only the host may open it
@@ -177,9 +186,9 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
             })))
             .on(CampaignPlain.rewardClaim, inOpen((s, ch, campaign, c) -> campaign.claim(s.host)))
             .on(CampaignStatsQuery.class, inOpen((s, ch, campaign, q) -> ch.send(campaign.stats(q.scope()))))
-            .on(CampaignPlain.campaignPrefs, inOpen((s, ch, campaign, c) -> ch.send(campaign.prefs(null))))
-            .on(CampaignPref.class, inOpen((s, ch, campaign, p) -> ch.send(campaign.prefs(campaign.setPref(p.key(), p.value())))))
-            .on(CampaignPlain.campaignPrefsReset, inOpen((s, ch, campaign, c) -> {
+            .on(CampaignPlain.campaignPrefs, inMode((s, ch, campaign, c) -> ch.send(campaign.prefs(null))))
+            .on(CampaignPref.class, inMode((s, ch, campaign, p) -> ch.send(campaign.prefs(campaign.setPref(p.key(), p.value())))))
+            .on(CampaignPlain.campaignPrefsReset, inMode((s, ch, campaign, c) -> {
                 campaign.resetPrefs();
                 ch.send(campaign.prefs(null));
             }))

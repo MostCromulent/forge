@@ -178,7 +178,7 @@ export function Stats({ model, actions, first }: { model: Model; actions: Action
 }
 
 /** A mode's preferences. Each value is saved when it changes, because the server checks it against the current values of the others. */
-function Prefs({ model, actions, close }: { model: Model; actions: Actions; close: () => void }) {
+export function Prefs({ model, actions, close }: { model: Model; actions: Actions; close: () => void }) {
   const p = model.campaignPrefs;
   /** Text typed but not yet accepted, by key. A refused value stays in its field so the player can correct it. */
   const [typed, setTyped] = useState<Record<string, string>>({});

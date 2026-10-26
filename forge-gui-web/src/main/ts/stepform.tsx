@@ -65,6 +65,8 @@ export interface Ticket<V> {
   rows: (v: V) => [string, string | null][];
   /** A note under the button that says what it does. */
   note: string;
+  /** Controls under the note, such as a button that opens the mode's preferences. */
+  extra?: JSX.Element;
 }
 
 /** ready, when given, lets the form be sent while its last step is still open, such as a name typed but not yet entered. */
@@ -128,6 +130,7 @@ export function StepForm<V>({ title, steps, value, onChange, sentence, action, s
             {problem}
             {button}
             {ticket.note && <small>{ticket.note}</small>}
+            {ticket.extra}
           </div>
         </aside>
       </div>
