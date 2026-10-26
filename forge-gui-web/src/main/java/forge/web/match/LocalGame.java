@@ -123,6 +123,11 @@ public final class LocalGame implements IHasForgeLog {
             final BiConsumer<String, String> onChat) {
         hosted = new ServerGameLobby();
         server.setLobby(hosted);
+        // The host's seat opens each game of the match, so every game is watched
+        gui.whenOpened(() -> {
+            final HostedMatch match = hostedMatch();
+            LibraryTops.watch(match == null ? null : match.getGame());
+        });
         // Slot 0 starts as the host's local seat. The browser plays through a client, so the slot is set to open
         hosted.getSlot(0).setType(LobbySlotType.OPEN);
         hosted.setListener(new IUpdateable() {
