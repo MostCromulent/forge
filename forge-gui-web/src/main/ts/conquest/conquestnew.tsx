@@ -95,7 +95,7 @@ function Picture({ value, options }: { value: NewValue; options: ConquestOptions
 /** A chosen card on the ticket. Its name is shown in its place until its picture loads, or if it has no picture. */
 function TicketCard({ card }: { card: ConquestCardOption }) {
   return (
-    <span class="cq-pic" key={card.name}>
+    <span class="cq-pic" key={card.name} data-image={card.image}>
       <span class="nm">{card.name}</span>
       <img alt="" src={imageUrl(card.image)} onError={hideBroken} />
     </span>
