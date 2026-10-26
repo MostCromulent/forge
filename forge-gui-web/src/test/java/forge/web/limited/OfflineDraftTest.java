@@ -2,6 +2,8 @@ package forge.web.limited;
 
 import forge.deck.DeckGroup;
 import forge.gamemodes.limited.BoosterDraft;
+import forge.gamemodes.limited.LimitedPoolType;
+import forge.model.FModel;
 import forge.web.WebTestSupport;
 import forge.web.protocol.ToBrowser.DraftCard;
 import forge.web.protocol.ToBrowser.DraftState;
@@ -24,12 +26,12 @@ public class OfflineDraftTest {
         WebTestSupport.initModel();
     }
 
-    /** A draft of three full packs against one computer seat, so a pack comes back after every pick. */
+    /** A draft of three full packs against one computer seat, so a pack comes back after every pick. It uses one set with no draft-matters cards, because those ask questions that no browser answers here. */
     private OfflineDraft twoSeats() {
         shown.clear();
         failed = null;
         return new OfflineDraft(() -> {
-            final BoosterDraft draft = BoosterDraft.createFullDraft();
+            final BoosterDraft draft = BoosterDraft.createBlockDraft(LimitedPoolType.Block, FModel.getBlocks().get("Core Set 2021"), null);
             draft.setPodSize(2);
             return draft;
         }, false, "Drafter", shown::add, problem -> failed = problem);
