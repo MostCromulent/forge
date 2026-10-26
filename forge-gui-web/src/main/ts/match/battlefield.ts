@@ -342,10 +342,13 @@ function isSick(model: Model, card: CardView): boolean {
   return !!card.Sickness && /Creature/.test(state.Type ?? '') && !state.Keywords?.some(k => k.icon === 'IMG_ABILITY_HASTE');
 }
 
-/** The part of combat this player is declaring. While they declare, the host sends the creatures that can still attack or block as the playable cards. */
+/**
+ * The part of combat this player is declaring. While they declare, the host sends the creatures that can still attack or block as the playable cards.
+ * A finished declaration empties that list, but its prompt stays up until the next one replaces it. With no playable card, nothing is shown as left out.
+ */
 function declaring(model: Model): 'attack' | 'block' | null {
   const p = model.prompt;
-  if (!p || p.priority || model.spectating) return null;
+  if (!p || p.priority || model.spectating || !model.playable?.cards.length) return null;
   if (p.cancel.kind === 'alphaStrike' || p.cancel.kind === 'callBack') return 'attack';
   return declaringBlocks(model) ? 'block' : null;
 }
