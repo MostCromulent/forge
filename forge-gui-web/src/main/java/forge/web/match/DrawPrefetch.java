@@ -29,22 +29,22 @@ import java.util.concurrent.Executor;
  * Readies the picture of the top card of each library before it is drawn, so the browser gets it at once. The host downloads it if it is
  * missing and makes the sizes the browser asks for. The browser is never told which card it is, because the library is hidden.
  */
-final class LibraryTops {
-    private static final Executor WORK = WebGuiBase.worker("LibraryTops");
+final class DrawPrefetch {
+    private static final Executor WORK = WebGuiBase.worker("DrawPrefetch");
     private static final Set<Game> WATCHED = Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
 
     private final Game game;
     /** The top card last readied for each player. Only the game thread reads or changes it. */
     private final Map<Player, Card> readied = new HashMap<>();
 
-    private LibraryTops(final Game game) {
+    private DrawPrefetch(final Game game) {
         this.game = game;
     }
 
     /** Starts watching a game's libraries. A game already watched is left as it is. */
     static void watch(final Game game) {
         if (game != null && WATCHED.add(game)) {
-            game.subscribeToEvents(new LibraryTops(game));
+            game.subscribeToEvents(new DrawPrefetch(game));
         }
     }
 

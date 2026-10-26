@@ -126,7 +126,7 @@ public final class LocalGame implements IHasForgeLog {
         // The host's seat opens each game of the match, so every game is watched
         gui.whenOpened(() -> {
             final HostedMatch match = hostedMatch();
-            LibraryTops.watch(match == null ? null : match.getGame());
+            DrawPrefetch.watch(match == null ? null : match.getGame());
         });
         // Slot 0 starts as the host's local seat. The browser plays through a client, so the slot is set to open
         hosted.getSlot(0).setType(LobbySlotType.OPEN);
