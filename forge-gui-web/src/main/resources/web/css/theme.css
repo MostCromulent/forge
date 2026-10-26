@@ -93,6 +93,10 @@ html, body { margin: 0; height: 100%; color: var(--text); font: 14px/1.4 system-
 [hidden] { display: none !important; }
 button { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
 button:disabled { opacity: .4; cursor: default; }
+/* A pressed button darkens at once and fades back on release, so a quick click still shows */
+button { transition: filter .25s; }
+button:active:not(:disabled) { filter: brightness(.75); transition: none; }
+html[data-motion="reduced"] button { transition: none; }
 input { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 input:focus { outline: 2px solid var(--accent-2); outline-offset: -1px; }
 /* The primary button's brass is built from --accent-2, like the turn banner. A change to that gold changes both. */

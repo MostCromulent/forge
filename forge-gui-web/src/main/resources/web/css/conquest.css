@@ -73,6 +73,7 @@ html[data-way] .cq-main > * { animation-duration: 0s; }
 button.cq-banner:disabled, button.cq-tile:disabled, button.cq-art:disabled { opacity: 1; cursor: default; }
 /* Clicking the banner of any region except yours folds it back to its spine (conquestmap.tsx) */
 button.cq-banner:not(:disabled):hover { filter: brightness(1.15); }
+button.cq-banner:not(:disabled):active { filter: brightness(.75); }
 
 /* A place that can be fought next is in full colour with a gold glow. Conquered places are dimmed. Places not yet found are empty. */
 .cq-tile { position: absolute; padding: 8px; border: 0; border-radius: 9px; background: #141a26 center 20% / cover; overflow: hidden; display: flex; align-items: flex-end; text-align: left; color: var(--text); opacity: 1; transition: transform .12s, box-shadow .12s, filter .12s; }
