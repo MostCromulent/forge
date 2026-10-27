@@ -215,5 +215,28 @@ public final class TrackableSerializer implements IHasForgeLog {
         return events;
     }
 
+    /**
+     * Serializes protocol method args with IdRef replacement, for the receiver to resolve when it
+     * handles the message instead of when it reads it, by which time the deltas sent before the
+     * message have been applied. Returns null when the args hold no CardView reference: only
+     * CardViews are replaced by those deltas, so other args resolve the same either way.
+     */
+    static byte[] encodeArgs(Object[] args, Tracker tracker, int consumerId) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(256);
+        try (CObjectOutputStream out = new CObjectOutputStream(baos, true, tracker, consumerId, false)) {
+            out.writeObject(args);
+            if (!out.wroteCardRef()) {
+                return null;
+            }
+        }
+        return baos.toByteArray();
+    }
+
+    public static Object[] decodeArgs(byte[] data, Tracker tracker) throws IOException, ClassNotFoundException {
+        try (CObjectInputStream in = new CObjectInputStream(new ByteArrayInputStream(data), INNER_CLASS_RESOLVER, tracker)) {
+            return (Object[]) in.readObject();
+        }
+    }
+
     private TrackableSerializer() {}
 }

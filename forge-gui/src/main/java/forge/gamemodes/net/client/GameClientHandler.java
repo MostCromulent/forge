@@ -6,11 +6,13 @@ import forge.game.player.PlayerView;
 import forge.gamemodes.net.CompatibleObjectDecoder;
 import forge.gamemodes.net.CompatibleObjectEncoder;
 import forge.gamemodes.net.GameProtocolHandler;
+import forge.gui.FThreads;
 import forge.gui.GuiBase;
 import forge.util.IHasForgeLog;
 import forge.gamemodes.net.IRemote;
 import forge.gamemodes.net.ProtocolMethod;
 import forge.gamemodes.net.ReplyPool;
+import forge.gamemodes.net.TrackableSerializer;
 import forge.gamemodes.net.event.LoginEvent;
 import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gui.interfaces.IGuiGame;
@@ -23,6 +25,7 @@ import forge.trackable.TrackableTypes;
 import forge.trackable.Tracker;
 import io.netty.channel.ChannelHandlerContext;
 
+import java.io.IOException;
 import java.util.EnumMap;
 import java.util.Iterator;
 
@@ -52,6 +55,24 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements I
     @Override
     protected IGuiGame getToInvoke(final ChannelHandlerContext ctx) {
         return gui;
+    }
+
+    @Override
+    protected Object[] decodeArgs(final ProtocolMethod protocolMethod, final byte[] encodedArgs) {
+        // The GUI thread applies deltas in arrival order; a prompt handled on another thread decodes there too
+        final Object[][] args = {null};
+        FThreads.invokeInEdtAndWait(() -> {
+            try {
+                args[0] = TrackableSerializer.decodeArgs(encodedArgs, tracker);
+            } catch (final IOException | ClassNotFoundException e) {
+                netLog.error(e, "Failed to decode args for {}", protocolMethod);
+            }
+        });
+        if (args[0] != null) {
+            protocolMethod.checkArgs(args[0]);
+            updateTrackers(args[0]);
+        }
+        return args[0];
     }
 
     @Override
