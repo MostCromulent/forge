@@ -49,6 +49,11 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await expect(page.locator('.cq-tile.open')).toHaveCount(2);
   await page.locator('.cq-tile.open').first().click();
   await expect(page.locator('.cq-steps')).toHaveText('1 step away');
+  // The opponent's picture previews on hover
+  await page.locator('.cq-side .cq-art').hover();
+  await expect(page.locator('#zoom')).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(page.locator('#zoom')).toBeHidden();
   // The marker moves to the event before the battle starts. Part way through its one step it is between the two tiles
   const centre = async () => { const b = (await page.locator('.cq-you').boundingBox())!; return b.x + b.y; };
   const from = await centre();

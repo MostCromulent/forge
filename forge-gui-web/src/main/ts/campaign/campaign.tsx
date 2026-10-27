@@ -98,7 +98,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
 }
 
 /**
- * The panel beside a page's list. It shows the chosen item's title, picture and text, and the player's own items in the foot. A pressed picture is shown large.
+ * The panel beside a page's list. It shows the chosen item's title, picture and text, and the player's own items in the foot. A pressed picture in the foot is shown large.
  * fold makes the title a button that opens and closes the rest of the panel, for a panel drawn as a small card over the page.
  */
 export function SidePanel({ kicker, where, title, art, label, zoom, setZoom, children, foot, fold }: {
@@ -111,10 +111,9 @@ export function SidePanel({ kicker, where, title, art, label, zoom, setZoom, chi
       <div class="cq-panel">
         <div class="cq-where"><span class="cq-kicker">{kicker}</span>{where}</div>
         {fold ? <h3><button class="cq-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3> : <h3>{title}</h3>}
-        <button class="cq-art" disabled={!art} data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }}
-          onClick={() => setZoom(art ?? null)}>
+        <div class="cq-art" data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }}>
           <b>{label}</b>
-        </button>
+        </div>
         {children}
       </div>
       <div class="cq-foot">{foot}</div>

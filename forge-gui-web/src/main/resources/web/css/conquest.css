@@ -70,7 +70,7 @@ html[data-way] .cq-main > * { animation-duration: 0s; }
 .cq-banner span img { width: 16px; height: 16px; }
 .cq-banner.done span { color: var(--accent-2); font-weight: 700; }
 /* A banner or an empty place can be a disabled button. It is not dimmed. */
-button.cq-banner:disabled, button.cq-tile:disabled, button.cq-art:disabled { opacity: 1; cursor: default; }
+button.cq-banner:disabled, button.cq-tile:disabled { opacity: 1; cursor: default; }
 /* Clicking the banner of any region except yours folds it back to its spine (conquestmap.tsx) */
 button.cq-banner:not(:disabled):hover { filter: brightness(1.15); }
 button.cq-banner:not(:disabled):active { filter: brightness(.75); }
