@@ -370,14 +370,19 @@ html[data-form="portrait"] .finder-foot .use { flex: 1; }
 /* The start page's choices are shorter, and each choice in a chooser is one row, so more than one fits on a screen */
 html[data-form="portrait"] .modes { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 /* Each tile is a row with its icon beside the text, because a tile this short has no room for the icon above the text */
-html[data-form="portrait"] .modes .mode.plaque:not(.wide) { height: auto; min-height: 112px; flex-direction: row; align-items: center; justify-content: flex-start; padding-left: 78px; }
-html[data-form="portrait"] .modes .mode.plaque:not(.wide) .mode-art { top: 50%; transform: translateY(-50%); }
-html[data-form="portrait"] .modes .mode.plaque:not(.wide) .mode-text { flex: 1; min-width: 0; }
+html[data-form="portrait"] .modes .mode.plaque { height: auto; min-height: 112px; flex-direction: row; align-items: center; justify-content: flex-start; padding-left: 78px; }
+html[data-form="portrait"] .modes .mode.plaque .mode-art { top: 50%; transform: translateY(-50%); }
+html[data-form="portrait"] .modes .mode.plaque .mode-text { flex: 1; min-width: 0; }
 html[data-form="portrait"] .chooser-kinds { grid-template-columns: minmax(0, 1fr); gap: 10px; }
 html[data-form="portrait"] .kind-main { flex-direction: row; align-items: stretch; }
 html[data-form="portrait"] .kind-main .mode-art { flex: none; width: 84px; height: auto; min-height: 84px; border-bottom: 0; border-right: 1px solid var(--line-bright); }
 html[data-form="portrait"] .kind-main .mode-art svg { width: 34px; height: 34px; }
 html[data-form="portrait"] .kind-main .mode-text { flex: 1; min-width: 0; }
+/* A kind's card art stays in the picture beside its text */
+html[data-form="portrait"] .kind-card.has-art .kind-main { min-height: 0; }
+html[data-form="portrait"] .kind-card.has-art .mode-art { position: static; z-index: auto; }
+html[data-form="portrait"] .kind-card.has-art .mode-art::after { display: none; }
+html[data-form="portrait"] .kind-card.has-art .mode-text { text-shadow: none; }
 /* Space under the last choice for the chat bar in the corner */
 html[data-form="portrait"] #menu { padding-bottom: 64px; }
 /* A phone is too short to fix the links over the bottom of the page, so they come after the page content */
@@ -683,12 +688,6 @@ html[data-form="portrait"] .ph .cq-tab:last-child { margin-right: 28px; }
 html[data-form="portrait"] .limited-page > .setup-head { margin-top: 12px; }
 html[data-form="portrait"] .menu-shell:has(> .ph) .menu-page { align-content: start; padding-top: 12px; }
 html[data-form="portrait"] #lobby:has(> .ph) .lobby-main { padding-top: 12px; }
-/* The Decks tile's card fan is smaller, so its words keep their room */
-html[data-form="portrait"] .modes .mode.plaque.wide { height: auto; min-height: 112px; padding-left: 78px; }
-html[data-form="portrait"] .modes .mode.plaque.wide .mode-text { flex: 1; min-width: 0; }
-html[data-form="portrait"] .modes .mode.plaque.wide .plaque-fan { flex: none; padding: 0 4px 0 10px; }
-html[data-form="portrait"] .modes .mode.plaque.wide .plaque-fan i { width: 30px; height: 42px; margin-left: -16px; }
-html[data-form="portrait"] .modes .mode.plaque.wide .plaque-fan i:first-child { margin-left: 0; }
 
 html[data-form="portrait"] .cq-shell { height: 100dvh; }
 /* A page holds its own scroll, so the bar stays at the top */

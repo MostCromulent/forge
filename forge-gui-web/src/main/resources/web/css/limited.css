@@ -14,6 +14,13 @@
 .kind-resume:hover { background: color-mix(in srgb, var(--accent-2) 16%, transparent); color: var(--text); }
 /* A label under the name of an unfinished mode. It shows dark text on a striped grey background. */
 .mode-note { justify-self: start; padding: 2px 8px; border-radius: 3px; background: repeating-linear-gradient(135deg, #a7adb8 0 8px, #949aa5 8px 16px); color: #14171c; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+/* A kind's card art fills its card once the art has loaded, and its text sits on a dark fade at the bottom */
+.kind-card.has-art .kind-main { position: relative; isolation: isolate; min-height: 236px; justify-content: flex-end; }
+.kind-card.has-art .mode-art { position: absolute; inset: 0; z-index: -1; height: auto; border: 0; background: var(--art) center 30% / cover no-repeat; }
+.kind-card.has-art .mode-art svg { display: none; }
+.kind-card.has-art .mode-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, #0b0e14cc 62%, #0b0e14f5 100%); }
+.kind-card.has-art .mode-text { text-shadow: 0 1px 3px #000; }
+.kind-card.has-art .mode-blurb { color: #c9d0da; }
 .kind-main:focus-visible, .kind-resume:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -2px; }
 @media (max-width: 700px) { .chooser-kinds { grid-template-columns: 1fr; } }
 

@@ -191,8 +191,11 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         group.shutdownGracefully();
     }
 
-    /** Never waits for the download. Otherwise the thread that serves every other request would wait too. */
-    private void serveSleeveArt(final ChannelHandlerContext ctx, final String asked) throws IOException {
+    /**
+     * Never waits for the download. Otherwise the thread that serves every other request would wait too.
+     * auto means the page asked on its own, not the player, so art that is not cached yet is downloaded only when online image fetching is on.
+     */
+    private void serveSleeveArt(final ChannelHandlerContext ctx, final String asked, final boolean auto) throws IOException {
         final String key = ImageFiles.artKey(asked);
         final File cached = ImageFiles.sleeveArt(key);
         if (cached != null) {
@@ -200,7 +203,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             return;
         }
         // Only a card has art to crop. The fetcher never answers for a token or an effect such as the Ring
-        if (!key.startsWith(ImageKeys.CARD_PREFIX)) {
+        if (!key.startsWith(ImageKeys.CARD_PREFIX) || auto && !FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
             notFound(ctx);
             return;
         }
@@ -722,7 +725,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 if (key == null) {
                     notFound(ctx);
                 } else {
-                    serveSleeveArt(ctx, key);
+                    serveSleeveArt(ctx, key, "1".equals(param(q, "auto")));
                 }
                 return;
             }

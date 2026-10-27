@@ -58,7 +58,7 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
               onClick={() => setChoosing('play')} />
             <Mode id="multiplayer" name={t('lblWebMenuWithFriends')} blurb={t('lblWebMenuWithFriendsBlurb')}
               status={t('lblWebMenuGivesLink')} onClick={() => setChoosing('friends')} />
-            <Mode id="editor" fan={DECK_FAN} name={t('lblDecks')} blurb={t('lblWebMenuDecksBlurb')} status={t('lblWebMenuDecksCount', decks)}
+            <Mode id="editor" name={t('lblDecks')} blurb={t('lblWebMenuDecksBlurb')} status={t('lblWebMenuDecksCount', decks)}
               onClick={() => {
                 changeUi(u => { u.browse = { format: 'Constructed' }; });
                 actions.browseFormat('Constructed');
@@ -79,12 +79,12 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
       <SetupHead trail={[{ label: t('lblStart'), go: back }, { label: WAY_NAMES[who] }]} title={t('lblWebMenuWhatMode')} />
       <div class="chooser-kinds">
         <Kind id="constructed" name={t('lblConstructed')} onClick={() => actions.openLobby(!computer)}
-          blurb={t(computer ? 'lblWebMenuConstructedVsAi' : 'lblWebMenuConstructedFriends')} />
+          blurb={t('lblWebMenuConstructedBlurb')} />
         <Kind id="draft" name={t('lblDraft')} onClick={() => (computer ? actions.limitedOpen('draft', false) : actions.openLimitedTable('draft'))}
-          blurb={t(computer ? 'lblWebMenuDraftVsAi' : 'lblWebMenuDraftFriends')}
+          blurb={t('lblWebMenuDraftBlurb')}
           resume={computer && model.draftPools > 0 ? () => actions.limitedOpen('draft', true) : undefined} />
         <Kind id="sealed" name={t('lblSealed')} onClick={() => (computer ? actions.limitedOpen('sealed', false) : actions.openLimitedTable('sealed'))}
-          blurb={t(computer ? 'lblWebMenuSealedVsAi' : 'lblWebMenuSealedFriends')}
+          blurb={t('lblWebMenuSealedBlurb')}
           resume={computer && model.sealedPools > 0 ? () => actions.limitedOpen('sealed', true) : undefined} />
       </div>
       {computer && <CampaignMenu model={model} actions={actions} />}
@@ -100,12 +100,41 @@ const KIND_ICONS: Record<string, ComponentChildren> = {
     <rect x="16" y="6" width="10" height="15" rx="1.5" transform="rotate(-12 21 13.5)" /><rect x="23" y="5" width="10" height="15" rx="1.5" transform="rotate(10 28 12.5)" /></>,
 };
 
+// The card art behind each tile, pinned to one printing so the picture does not change
+const MENU_ART: Record<string, string> = {
+  play: 'c:Mirror Match|C15|1',
+  multiplayer: 'c:Kynaios and Tiro of Meletis|C16|1',
+  editor: 'c:Archivist of Oghma|CLB|1',
+  constructed: 'c:Battle of Wits|M13|1',
+  draft: 'c:Cogwork Librarian|CNS|1',
+  sealed: 'c:Booster Tutor|UND|1',
+  conquest: 'c:Planar Bridge|2X2|1',
+  quest: "c:Explorer's Scope|CMM|1",
+};
+
+/** A tile's art once it has loaded, as a CSS url. The tile keeps its drawn look until then, and for good when the server has no art. */
+function useArt(id: string): string | null {
+  const key = MENU_ART[id];
+  const [loaded, setLoaded] = useState<string | null>(null);
+  useEffect(() => {
+    if (!key) return;
+    // auto marks the download as the page's own idea, so the server skips it when online image fetching is off
+    const src = `/sleeveart?key=${encodeURIComponent(key)}&auto=1`;
+    const img = new Image();
+    img.onload = () => setLoaded(`url("${src}")`);
+    img.src = src;
+    return () => { img.onload = null; };
+  }, [key]);
+  return loaded;
+}
+
 /** A kind of game, drawn as two buttons in one frame because a button cannot contain another. It is greyed when onClick is missing. icon replaces the kind's own icon. */
 export function Kind({ id, icon, name, note, blurb, resume, resumeLabel, onClick }: {
   id: string; icon?: ComponentChildren; name: string; note?: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
 }) {
+  const art = useArt(id);
   return (
-    <div class="mode kind-card">
+    <div class={art ? 'mode kind-card has-art' : 'mode kind-card'} style={art ? { '--art': art } : undefined}>
       <button class="kind-main" data-kind={id} disabled={!onClick} onClick={onClick}>
         <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{icon ?? KIND_ICONS[id]}</svg></span>
         <span class="mode-text">
@@ -124,22 +153,20 @@ export function Kind({ id, icon, name, note, blurb, resume, resumeLabel, onClick
   );
 }
 
-// A robot for the computer, two people for friends, a fanned deck for the editor
+// A robot for the computer, two people for friends, a deck for the editor
 const MODE_ICONS: Record<string, ComponentChildren> = {
   play: <><rect x="11" y="15" width="26" height="22" rx="4" /><path d="M24 15V9M19 25h2M27 25h2M19 31h10" /><circle cx="24" cy="7" r="2.4" /><path d="M6 22v8M42 22v8" /></>,
   multiplayer: <><circle cx="18" cy="17" r="6" /><path d="M8 38c0-5.5 4.5-10 10-10s10 4.5 10 10" /><circle cx="34" cy="20" r="4.6" /><path d="M28.5 34c1-4 4-6.6 8-6.6 3.2 0 5.5 1.6 5.5 1.6" /></>,
   editor: <><rect x="16" y="11" width="21" height="29" rx="3" /><path d="M12 15v21M8 19v13" /></>,
 };
 
-/** The frame colours of the blank cards fanned on the Decks plaque, one card for each of the five colours. */
-const DECK_FAN = ['W', 'U', 'B', 'R', 'G'];
-
-/** An entry on the start page, drawn as a plaque with an icon because Forge may not use card art. */
-function Mode({ id, fan, name, blurb, status, onClick }: {
-  id: string; fan?: string[]; name: string; blurb: string; status: string; onClick?: () => void;
+/** An entry on the start page, drawn as a plaque. Its card art covers the drawn pattern once the art has loaded. */
+function Mode({ id, name, blurb, status, onClick }: {
+  id: string; name: string; blurb: string; status: string; onClick?: () => void;
 }) {
+  const art = useArt(id);
   return (
-    <button class={fan ? 'mode plaque wide' : 'mode plaque'} data-mode={id} disabled={!onClick} onClick={onClick}>
+    <button class={art ? 'mode plaque has-art' : 'mode plaque'} data-mode={id} disabled={!onClick} onClick={onClick} style={art ? { '--art': art } : undefined}>
       <span class="plaque-rim" aria-hidden="true" />
       <span class="plaque-mark" aria-hidden="true"><svg viewBox="0 0 48 48">{MODE_ICONS[id]}</svg></span>
       <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{MODE_ICONS[id]}</svg></span>
@@ -148,11 +175,6 @@ function Mode({ id, fan, name, blurb, status, onClick }: {
         <span class="mode-blurb">{blurb}</span>
         <span class="mode-status">{status}</span>
       </span>
-      {fan && (
-        <span class="plaque-fan" aria-hidden="true">
-          {fan.map((colour, i) => <i key={colour} data-frame={colour} style={{ '--turn': `${(i - (fan.length - 1) / 2) * 7}deg` }} />)}
-        </span>
-      )}
     </button>
   );
 }
