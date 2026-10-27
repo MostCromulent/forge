@@ -1,22 +1,24 @@
 /* The menu and match setup. They use the same dark background as the board, so starting a game looks like one continuous screen. */
 
-.wordmark { position: relative; display: inline-flex; align-items: baseline; gap: .1em; font-weight: 700; font-size: 20px; font-family: Georgia, "Times New Roman", serif; }
-/* Each letter of the wordmark is its own box, with room below it for its coloured dash */
-.wordmark i { position: relative; display: inline-block; padding-bottom: .34em; font-style: normal; }
-/* A dash of the same width is centred under each letter, low enough to clear the g. This is the only place where Magic's five colours are purely decorative. */
-.wordmark i::after { content: ''; position: absolute; left: 50%; bottom: 0; width: .5em; height: .15em; margin-left: -.25em; border-radius: .075em; background: var(--dash); }
-.wordmark i:nth-child(1) { --dash: var(--mtg-w); }
-.wordmark i:nth-child(2) { --dash: var(--mtg-u); }
-.wordmark i:nth-child(3) { --dash: var(--mtg-b); }
-.wordmark i:nth-child(4) { --dash: var(--mtg-r); }
-.wordmark i:nth-child(5) { --dash: var(--mtg-g); }
-/* The beta tag is placed after the end of the word, outside its box. So on centred pages the word itself stays centred. */
-.wordmark .beta { position: absolute; left: 100%; bottom: .34em; margin-left: .7em; font: 700 .45em/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--muted); }
+/* In a header the anvil, the name and the beta tag sit in a row. The start page stacks them, below. */
+.wordmark { display: inline-flex; align-items: center; gap: .55em; font: 700 17px/1 Georgia, "Times New Roman", serif; }
+.wordmark .anvil { flex: none; width: 1.65em; height: 1.42em; fill: var(--accent-2); }
+/* The letters are spaced out. The space after the last letter is taken back, so the name stays centred and the bar ends under the last letter. */
+.wordmark .word { display: inline-flex; flex-direction: column; gap: .22em; margin-right: -.22em; letter-spacing: .22em; text-transform: uppercase; color: var(--text); }
+.wordmark .bar { display: flex; gap: .08em; height: .12em; margin-right: .22em; }
+.wordmark .bar i { flex: 1; border-radius: .06em; background: var(--dash); }
+.wordmark .bar i:nth-child(1) { --dash: var(--mtg-w); }
+.wordmark .bar i:nth-child(2) { --dash: var(--mtg-u); }
+.wordmark .bar i:nth-child(3) { --dash: var(--mtg-b); }
+.wordmark .bar i:nth-child(4) { --dash: var(--mtg-r); }
+.wordmark .bar i:nth-child(5) { --dash: var(--mtg-g); }
+.wordmark .beta { padding: .4em .6em; border: 1px solid var(--line-bright); border-radius: .4em; font: 700 .5em/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--muted); }
 
 .menu-page { min-height: 100%; display: grid; align-content: center; justify-items: center; gap: 24px; padding: 40px 20px; }
 .wordmark-block { display: grid; justify-items: center; }
-.menu-page .wordmark { font-size: 44px; line-height: 1; }
-.menu-page .wordmark .beta { font-size: .3em; }
+.menu-page .wordmark { flex-direction: column; gap: 16px; font-size: 44px; }
+.menu-page .wordmark .anvil { width: 96px; height: 83px; }
+.menu-page .wordmark .beta { font-size: 11px; }
 
 .start-card {
   display: grid;
@@ -762,7 +764,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .event-setup .wiz { border: none; background: transparent; }
 
 .page-head .wordmark-block { justify-items: start; }
-.page-head .wordmark .beta { position: static; margin-left: .28em; }
 .icon-button { width: 32px; height: 30px; padding: 0; display: grid; place-items: center; }
 .icon-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .icon-button[aria-expanded="true"] { background: var(--surface-2); }
