@@ -111,7 +111,7 @@ export function SidePanel({ kicker, where, title, art, label, zoom, setZoom, chi
       <div class="cq-panel">
         <div class="cq-where"><span class="cq-kicker">{kicker}</span>{where}</div>
         {fold ? <h3><button class="cq-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3> : <h3>{title}</h3>}
-        <button class="cq-art" disabled={!art} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }}
+        <button class="cq-art" disabled={!art} data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }}
           onClick={() => setZoom(art ?? null)}>
           <b>{label}</b>
         </button>
