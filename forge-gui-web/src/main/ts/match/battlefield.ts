@@ -2,11 +2,11 @@
 
 import { reconcile } from './reconcile';
 import { createCard, updateCard, setPileCount, type CardClick, TAPPED_SCALE } from './cards';
-import { combatShown, me, stateOf, type Model } from '../model';
+import { combatShown, derefAll, game, me, stateOf, type Model } from '../model';
 import { declaringBlocks } from './combatdrag';
 import { ICONS } from '../icons';
 import { mergeInto, spreadFrom } from './motion';
-import { chargingAtPlayer } from './overlay';
+import { chargingAtPlayer, stackTargets } from './overlay';
 import { q, make } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { CardView } from '../protocol';
@@ -290,6 +290,8 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
     new Set(model.prompt?.highlighted ?? []),
     new Set((model.playable?.cards ?? []).map(r => r.ref)),
     new Set((model.playable?.autoTap ?? []).map(r => r.ref)),
+    // A card already targeted from the stack leaves its pile, so the pile's next copy can be picked for another trigger
+    new Set(derefAll(model, game(model)?.Stack).flatMap(item => stackTargets(model, item).map(o => o.$key))),
   ];
   const piles = new Map<string, Slot>();
   const slots: Slot[] = [];
