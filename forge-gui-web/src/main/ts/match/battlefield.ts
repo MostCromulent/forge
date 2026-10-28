@@ -17,6 +17,7 @@ interface Slot {
   top: CardView;
   members: CardView[];
   attached: CardView[];
+  /** The key the player opens or closes a pile by. It is null for a card that never piles. */
   sig: string | null;
 }
 
@@ -35,8 +36,8 @@ function groupOf(model: Model, slot: Slot): Group {
   return 'support';
 }
 
-export function renderBattlefield(root: HTMLElement, model: Model, cards: CardView[], onField: CardView[], select: CardClick): void {
-  const slots = slotsFor(model, cards, onField);
+export function renderBattlefield(root: HTMLElement, model: Model, player: number, cards: CardView[], onField: CardView[], select: CardClick): void {
+  const slots = slotsFor(model, player, cards, onField);
   const of = (group: Group) => slots.filter(s => groupOf(model, s) === group);
   const groups: Record<Group, Slot[]> = {
     // Token creatures are placed after the card creatures, so the row's order is easier to read
@@ -253,7 +254,7 @@ const SETTLE_MS = 700;
 const settling = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
 // An attachment is drawn under the card at the end of its attachment chain, on whichever battlefield that card is
-function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] {
+function slotsFor(model: Model, player: number, cards: CardView[], onField: CardView[]): Slot[] {
   const byKey = new Map(onField.map(c => [c.$key, c]));
   const hostOf = (c: CardView) => (c.EntityAttachedTo ? byKey.get(c.EntityAttachedTo.ref) : undefined);
   const rootOf = (c: CardView) => {
@@ -290,23 +291,37 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
     new Set(model.prompt?.highlighted ?? []),
     new Set((model.playable?.cards ?? []).map(r => r.ref)),
     new Set((model.playable?.autoTap ?? []).map(r => r.ref)),
-    // A card already targeted from the stack leaves its pile, so the pile's next copy can be picked for another trigger
-    new Set(derefAll(model, game(model)?.Stack).flatMap(item => stackTargets(model, item).map(o => o.$key))),
   ];
+  const roles = combatRoles(model);
+  // A card targeted from the stack leaves its pile, so the pile's next copy can be picked for another trigger.
+  // Each card keeps the items that target it, so two cards targeted by different spells do not pile together
+  const targeted = new Map<number, number[]>();
+  for (const item of derefAll(model, game(model)?.Stack)) {
+    for (const o of stackTargets(model, item)) targeted.set(o.$key, [...(targeted.get(o.$key) ?? []), item.$key]);
+  }
+  // A pile the player opened stays open while its cards gain and lose marks, so it is keyed by the cards' lasting look
+  const opened = (look: string) => `${player}\u0001${look}`;
   const piles = new Map<string, Slot>();
   const slots: Slot[] = [];
   for (const c of hosts) {
     const attached = under.get(c.$key) ?? [];
-    const sig = attached.length ? null : signature(model, c, marks);
+    const look = attached.length ? null : signature(model, c);
+    const open = look && opened(look);
+    const sig = look && [look, ...marks.map(m => m.has(c.$key)), roles.get(c.$key) ?? '', targeted.get(c.$key)?.join('+') ?? ''].join('\u0000');
     // A pile the player has opened shows its cards separately until the player closes it
-    const pile = sig && !ui.openPiles.has(sig) && piles.get(sig);
+    const pile = sig && open && !ui.openPiles.has(open) && piles.get(sig);
     if (pile) {
       pile.members.push(c);
       continue;
     }
-    const slot: Slot = { top: c, members: [c], attached, sig };
+    const slot: Slot = { top: c, members: [c], attached, sig: open };
     if (sig) piles.set(sig, slot);
     slots.push(slot);
+  }
+  // An opened pile whose cards have all gone is forgotten, so a later card of the same kind arrives in a pile
+  const here = new Set(slots.map(s => s.sig));
+  for (const key of ui.openPiles) {
+    if (key.startsWith(opened('')) && !here.has(key)) ui.openPiles.delete(key);
   }
   // Cards with the same name stay together, in the order the name first appears. So a pile that splits stays in place
   const firstOf = new Map<string, number>();
@@ -321,15 +336,31 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
   return slots.sort((a, b) => rank(a) - rank(b) || tapped(a) - tapped(b) || order.get(a)! - order.get(b)!);
 }
 
-// Cards with the same signature pile together. So it includes everything a player can see or act on. A property never set gives the same value as one reset to its default
-export function signature(model: Model, card: CardView, marks: Set<number>[]): string | null {
+// Cards with the same signature pile together. So it includes everything a player can see on the card. A property never set gives the same value as one reset to its default.
+// What a player can act on (the prompt's marks, combat roles, targets from the stack) is added by slotsFor
+export function signature(model: Model, card: CardView): string | null {
   // Face-down cards look the same but can be different cards, so each one keeps its own slot
   if (!model.visible.has(card.$key) || card.Facedown) return null;
   const s = stateOf(model, card);
   // A land played this turn is the same as the lands played before it, so it goes in their pile
   return [s.Name, s.Power ?? null, s.Toughness ?? null, s.Loyalty && s.Loyalty !== '0' ? s.Loyalty : null, !!card.Tapped,
     counters(card.Counters), card.Damage ?? 0, !!card.Attacking, !!card.Blocking, isSick(model, card), !!card.PhasedOut,
-    !!card.Detained, !!card.Token, !!card.Cloned, card.EntityAttachedTo?.ref ?? null, !!card.IsRingBearer, card.Stickers ?? null, ...marks.map(m => m.has(card.$key))].join('\u0000');
+    !!card.Detained, !!card.Token, !!card.Cloned, card.EntityAttachedTo?.ref ?? null, !!card.IsRingBearer, card.Stickers ?? null,
+    (s.Keywords ?? []).map(k => k.title).sort().join(','), (card.MustBlockCards ?? []).map(r => r?.ref).join(','), card.BlockAdditional ?? 0, !!card.BlockAny,
+    card.ClassLevel ?? null, card.CurrentRoom ?? null, card.Sprocket ?? null, (card.AttractionLights ?? []).join(','), card.Intensity ?? null].join('\u0000');
+}
+
+/** What each card does in the combat: the attacker it blocks, or for an attacker, what it attacks and who blocks it. Cards with different roles do not pile together. */
+function combatRoles(model: Model): Map<number, string> {
+  const roles = new Map<number, string>();
+  for (const band of game(model)?.CombatView ?? []) {
+    const attackers = (band.attackers ?? []).flatMap(r => (r ? [r.ref] : []));
+    // Blocks being declared are planned blockers until the declaration is done
+    const blockers = [...band.blockers ?? [], ...band.plannedBlockers ?? []].flatMap(r => (r ? [r.ref] : []));
+    for (const a of attackers) roles.set(a, `attacks ${band.defender?.ref ?? ''} blocked by ${blockers.join('+')}`);
+    for (const b of blockers) roles.set(b, `${roles.get(b) ?? 'blocks'} ${attackers.join('+')}`);
+  }
+  return roles;
 }
 
 /** Counters as they are shown, in a fixed order. No counters, an empty list and zero counts all give the same result. */

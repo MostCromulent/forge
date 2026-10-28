@@ -385,7 +385,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   renderEmblems(q(root, '.emblems'), model, player, zone(model, player, 'Command'), select);
   q(root, '.role-tag').hidden = !isArchenemy(model, player);
   renderOngoing(q(root, '.schemes-ongoing'), model, player);
-  renderBattlefield(root, model, zone(model, player, 'Battlefield'), onField, select);
+  renderBattlefield(root, model, player.$key, zone(model, player, 'Battlefield'), onField, select);
 }
 
 /** The arc and chip on the portrait show the most damage any one commander has dealt this player, not the total. */
