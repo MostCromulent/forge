@@ -51,12 +51,12 @@
 .ev-foot::before { left: -9px; }
 .ev-foot::after { right: -9px; clip-path: inset(0 50% 0 0); }
 .ev-foot .sp { flex: 1; }
-.ev-foot .danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
+:is(.ev-foot, .qu-ask, .cq-two) .danger { color: var(--concede); border-color: color-mix(in srgb, var(--concede) 45%, var(--line)); }
 .ev-ask { font-size: 12.5px; color: var(--muted); }
 .ev-more { position: relative; }
 .ev-more .more { width: 32px; padding: 6px 0; text-align: center; }
 .ev-menu { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 5; min-width: 150px; padding: 5px; display: grid; background: var(--surface-3); border: 1px solid var(--line-bright); border-radius: 8px; box-shadow: 0 10px 28px #000a; }
-.ev-menu button { text-align: left; background: none; border: 0; color: var(--danger); }
+.ev-menu button { text-align: left; background: none; border: 0; color: var(--concede); }
 .ev-menu button:hover { background: var(--surface-2); }
 .ev.new { border: 1.5px dashed color-mix(in srgb, var(--accent-2) 55%, #000); background: color-mix(in srgb, var(--accent-2) 4%, transparent);
   display: grid; grid-template-rows: none; place-content: center; justify-items: center; text-align: center; gap: 8px; padding: 24px 18px; font: inherit; color: var(--text); min-height: 190px; }

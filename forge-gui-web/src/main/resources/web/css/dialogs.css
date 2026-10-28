@@ -375,6 +375,6 @@ html:not([data-form="portrait"]) .game-menu.dev { overflow: visible; }
 .card-menu-sep { height: 1px; margin: 5px 4px; background: var(--line); }
 .menu-icon { flex: none; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; color: var(--muted); }
 .menu-icon.end { margin-left: auto; color: var(--faint); }
-.game-menu .concede { color: color-mix(in srgb, var(--red, #d4573f) 70%, #fff); }
+.game-menu .concede { color: var(--concede); }
 .game-menu .concede .menu-icon { color: currentColor; }
 .game-menu .dev-entry { color: var(--muted); }

@@ -44,6 +44,8 @@
   --danger: #f59e0b;
   /* The colour for removing something permanently. It is a separate red because the amber above looks like the gold of a choice. */
   --remove: #e5383b;
+  /* The text of an action that gives something up for good, such as conceding a match or deleting a save. It is light enough to read as text. */
+  --concede: color-mix(in srgb, #d4573f 70%, #fff);
   --error: #ef4a3c;
   /* Damage still to deal, such as an attacker's damage to assign. A warm orange that is darker than the gold of a choice */
   --damage: #ff7a59;
