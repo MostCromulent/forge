@@ -133,8 +133,10 @@ public final class ConquestGame implements Campaign {
     static DeckEditor.Collection collection(final ConquestCommander commander) {
         final ConquestData data = model();
         // The commander caches its deck, and the editor saves a copy
-        return new DeckEditor.Collection(data.getName(), ConquestUtil::getAvailablePool, data::isNewCard,
-                ConquestUtil::getBasicLandSets, commander::reloadDeck, true);
+        return new DeckEditor.Collection(data.getName(), ConquestUtil::getAvailablePool, data::isNewCard, () -> {
+            data.resetNewCards();
+            data.saveData();
+        }, ConquestUtil::getBasicLandSets, commander::reloadDeck, true);
     }
 
     /** A plane has no picture of its own, so it uses its first region's picture. */

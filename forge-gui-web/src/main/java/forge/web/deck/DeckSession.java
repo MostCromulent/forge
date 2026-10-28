@@ -341,6 +341,9 @@ public final class DeckSession implements IHasForgeLog {
         final DeckEditor done = editor;
         final Integer seat = editorSeat;
         editor = null;
+        if (done.collection() != null) {
+            done.collection().seen().run();
+        }
         channel.send(new EditorMessage(null));
         lobby.sendDecks(channel);
         // A deck that was never saved has nothing to put on the seat. Examples are an untouched new deck, or a precon that was only viewed

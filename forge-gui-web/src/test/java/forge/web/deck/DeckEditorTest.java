@@ -139,7 +139,7 @@ public class DeckEditorTest {
             owned.add(StaticData.instance().getCommonCards().getCard((String) nameSetCount[i], (String) nameSetCount[i + 1]), (Integer) nameSetCount[i + 2]);
         }
         return new DeckEditor(new Deck("Owned deck"), false, false, new DeckEditor.Stored(storages.of(format)), Check.of(format, null), storages,
-                false, (id, text, f) -> { }, new DeckEditor.Collection("Test", () -> owned, c -> false, d -> List.of(), () -> { }, mainOnly));
+                false, (id, text, f) -> { }, new DeckEditor.Collection("Test", () -> owned, c -> false, () -> { }, d -> List.of(), () -> { }, mainOnly));
     }
 
     // Fails if a deck built from a collection can hold more copies of a printing than are owned

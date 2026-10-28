@@ -909,8 +909,11 @@ public final class DeckEditor {
     record Group(IStorage<DeckGroup> storage) implements Target {
     }
 
-    /** A game mode's own cards, which a deck of that mode is built from. cards is read at each use, and saved runs after each save. mainOnly keeps every section except the main deck unchanged. */
-    public record Collection(String owner, Supplier<CardPool> cards, Predicate<PaperCard> isNew,
+    /**
+     * A game mode's own cards, which a deck of that mode is built from. cards is read at each use, and saved runs after each save.
+     * seen runs when the editor closes, because the player has now seen the new cards. mainOnly keeps every section except the main deck unchanged.
+     */
+    public record Collection(String owner, Supplier<CardPool> cards, Predicate<PaperCard> isNew, Runnable seen,
             Function<Deck, List<CardEdition>> landSets, Runnable saved, boolean mainOnly) {
     }
 

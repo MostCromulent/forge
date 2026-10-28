@@ -289,7 +289,10 @@ public final class QuestGame implements Campaign, IHasForgeLog {
             final CardPool owned = new CardPool();
             owned.addAll(quest().getCards().getCardpool());
             return owned;
-        }, card -> quest().getCards().isNew(card), deck -> quest().getAvailableLandSets(), () -> quest().save(), false);
+        }, card -> quest().getCards().isNew(card), () -> {
+            quest().getCards().resetNewList();
+            quest().save();
+        }, deck -> quest().getAvailableLandSets(), () -> quest().save(), false);
     }
 
     /** A Commander quest's decks are checked as Commander decks. Every other quest's decks are checked as Quest decks. */
