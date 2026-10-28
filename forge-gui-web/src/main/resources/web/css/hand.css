@@ -59,7 +59,7 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
    The light is grey while the card cannot be cast, and the castable colour once it can. The zone is named in the card's preview */
 .card .haze, .card .halo { display: none; }
 #hand .card.elsewhere .halo { display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter;
-  --rise: #c8ced8; opacity: .7; transition: opacity .3s; }
+  --rise: #dde2ea; opacity: .88; transition: opacity .3s; }
 #hand .card.elsewhere:is(.playable, .auto-tap) .halo { --rise: var(--playable, #66ccff); opacity: 1; }
 /* The light's edge sits where the castable outline would, so it takes the outline's place */
 #hand .card.elsewhere:is(.playable, .auto-tap):not(.selectable) { outline-color: transparent; }
