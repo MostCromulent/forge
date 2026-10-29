@@ -94,10 +94,6 @@ public enum TrackableProperty {
     ExiledWith(TrackableTypes.CardViewType),
     PreparedSpell(TrackableTypes.CardViewType),
 
-    WasDestroyed(TrackableTypes.BooleanType),
-    NeedsTransformAnimation(TrackableTypes.BooleanType, FreezeMode.IgnoresFreeze),
-    NeedsUntapAnimation(TrackableTypes.BooleanType, FreezeMode.IgnoresFreeze),
-    NeedsTapAnimation(TrackableTypes.BooleanType, FreezeMode.IgnoresFreeze),
     MarkedColors(TrackableTypes.ColorSetType),
 
     ImprintedCards(TrackableTypes.CardViewCollectionType),
@@ -209,8 +205,6 @@ public enum TrackableProperty {
     HasLost(TrackableTypes.BooleanType),
     HasAvailableActions(TrackableTypes.BooleanType),
 
-    AvatarLifeDifference(TrackableTypes.IntegerType, FreezeMode.IgnoresFreeze),
-
     NumManaShards(TrackableTypes.IntegerType),
 
     //SpellAbility
@@ -260,7 +254,6 @@ public enum TrackableProperty {
     StormCount(TrackableTypes.IntegerType),
     PoisonCountersToLose(TrackableTypes.IntegerType),
     Object(TrackableTypes.ObjectType, FreezeMode.IgnoresFreeze),
-    RevealedCardsCollection(TrackableTypes.CardViewCollectionType, FreezeMode.IgnoresFreeze),
     Dependencies(TrackableTypes.StringType);
 
     public enum FreezeMode {

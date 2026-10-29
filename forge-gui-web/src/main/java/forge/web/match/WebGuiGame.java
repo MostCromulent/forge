@@ -627,10 +627,10 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public void showRevealedCards(final Iterable<CardView> cards) {
-        // The host sends these only for a hand reveal. So any other zone the cards came from stays closed
+        // The host sends every reveal here. Only an opponent's hand is opened. Other reveals also come as a reveal dialog
         final List<PlayerZoneUpdate> hands = new ArrayList<>();
         for (final PlayerZoneUpdate update : getZonesHolding(cards)) {
-            if (update.getZones().contains(ZoneType.Hand)) {
+            if (update.getZones().contains(ZoneType.Hand) && !isLocalPlayer(update.getPlayer())) {
                 hands.add(new PlayerZoneUpdate(update.getPlayer(), ZoneType.Hand));
             }
         }
