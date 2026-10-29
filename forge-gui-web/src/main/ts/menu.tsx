@@ -105,7 +105,7 @@ const MENU_ART: Record<string, string> = {
   play: 'c:Mirror Match|C15|1',
   multiplayer: 'c:Kynaios and Tiro of Meletis|C16|1',
   editor: 'c:Archivist of Oghma|CLB|1',
-  constructed: 'c:Battle of Wits|M13|1',
+  constructed: 'c:Dueling Grounds|INV|1',
   draft: 'c:Cogwork Librarian|CNS|1',
   sealed: 'c:Booster Tutor|UND|1',
   conquest: 'c:Planar Bridge|2X2|1',
