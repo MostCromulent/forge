@@ -72,7 +72,7 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 /* Three copies of the filter start at different points in the loop, so neighbouring cards never move in step */
 #hand .card.elsewhere:nth-child(3n+2) .halo { filter: url(#rise-b); }
 #hand .card.elsewhere:nth-child(3n) .halo { filter: url(#rise-c); }
-/* A card that cannot be cast yet keeps only the moving light, with no edge. A crisp edge means the card can be cast */
+/* A card that cannot be cast yet gets the moving light and a soft band on its edge, but no crisp edge. A crisp edge means the card can be cast */
 #hand .card.elsewhere:not(.playable, .auto-tap) .halo { filter: url(#haze-a); }
 #hand .card.elsewhere:not(.playable, .auto-tap):nth-child(3n+2) .halo { filter: url(#haze-b); }
 #hand .card.elsewhere:not(.playable, .auto-tap):nth-child(3n) .halo { filter: url(#haze-c); }
