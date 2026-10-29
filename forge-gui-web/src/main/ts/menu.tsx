@@ -129,8 +129,8 @@ function useArt(id: string): string | null {
 }
 
 /** A kind of game, drawn as two buttons in one frame because a button cannot contain another. It is greyed when onClick is missing. icon replaces the kind's own icon. */
-export function Kind({ id, icon, name, note, blurb, resume, resumeLabel, onClick }: {
-  id: string; icon?: ComponentChildren; name: string; note?: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
+export function Kind({ id, icon, name, blurb, resume, resumeLabel, onClick }: {
+  id: string; icon?: ComponentChildren; name: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
 }) {
   const art = useArt(id);
   return (
@@ -139,7 +139,6 @@ export function Kind({ id, icon, name, note, blurb, resume, resumeLabel, onClick
         <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{icon ?? KIND_ICONS[id]}</svg></span>
         <span class="mode-text">
           <span class="mode-name">{name}</span>
-          {note && <span class="mode-note">{note}</span>}
           <span class="mode-blurb">{blurb}</span>
         </span>
       </button>

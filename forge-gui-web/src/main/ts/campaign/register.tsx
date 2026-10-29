@@ -282,7 +282,7 @@ registerCampaigns({
           <Kind id="conquest" icon={CONQUEST_ICON} name={t('lblPlanarConquest')} blurb={t('lblWebConquestBlurb')} onClick={() => actions.campaignOpen('conquest', false)}
             resume={resume('conquest') ? () => actions.campaignOpen('conquest', true) : undefined}
             resumeLabel={resume('conquest') ? t('lblWebConquestResume', resume('conquest')) : undefined} />
-          <Kind id="quest" icon={QUEST_ICON} name={t('lblQuestMode')} note={t('lblWebMenuUnderConstruction')} blurb={t('lblWebQuestBlurb')}
+          <Kind id="quest" icon={QUEST_ICON} name={t('lblQuestMode')} blurb={t('lblWebQuestBlurb')}
             onClick={() => actions.campaignOpen('quest', false)}
             resume={resume('quest') ? () => actions.campaignOpen('quest', true) : undefined}
             resumeLabel={resume('quest') ? t('lblWebConquestResume', resume('quest')) : undefined} />
