@@ -8,7 +8,8 @@
 /* A rail down the left edge says whose move it is. It is brass while the game waits on you, also for a question on the board, and grey while another player acts.
    The brass is a layer over the grey, because a gradient cannot fade. The phone's dock has no rail. */
 html:not([data-form="portrait"]) #prompt { padding-left: 18px; }
-html:not([data-form="portrait"]) #prompt::before, html:not([data-form="portrait"]) #prompt::after { content: ""; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 7px; border-radius: 12px 0 0 12px; pointer-events: none; }
+/* The rail is drawn wider than it shows, because a 7px box would shrink its 12px corners. Its corners then match the border's, which the glints follow */
+html:not([data-form="portrait"]) #prompt::before, html:not([data-form="portrait"]) #prompt::after { content: ""; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 14px; clip-path: inset(0 7px 0 0); border-radius: 12px 0 0 12px; pointer-events: none; }
 html:not([data-form="portrait"]) #prompt::before { background: var(--line-bright); }
 html:not([data-form="portrait"]) #prompt::after { background: var(--brass); opacity: 0; }
 html:not([data-form="portrait"]) #prompt:is(.waiting, .answering)::after { opacity: 1; }
