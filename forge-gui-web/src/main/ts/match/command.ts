@@ -8,7 +8,7 @@ import { togglePile } from './zones';
 import { hoverable } from '../preview';
 import { artUrl } from '../sleeves';
 import { q, make } from '../dom';
-import type { CardClick } from './cards';
+import { ringNumeral, type CardClick } from './cards';
 import { t, type TextKey, signed } from '../text';
 
 export type CommandKind = 'plane' | 'scheme' | 'avatar' | 'commander' | 'signature' | 'dice' | 'effect';
@@ -138,7 +138,10 @@ export function renderEmblems(root: HTMLElement, model: Model, player: PlayerVie
       q(el, '.band b').textContent = kind.label;
       // An effect that tracks a number, such as a player's speed, shows it as the overlay text desktop draws on the card
       q(el, '.tax').textContent = tax > 0 ? t('lblWebBoardTax', tax) : card.OverlayText ?? '';
-      q(el, '.n').textContent = members.length > 1 ? `×${members.length}` : '';
+      // The Ring's level goes in the corner badge. A plaque of several effects keeps the badge for its count
+      const level = members.length > 1 ? 0 : card.RingLevel ?? 0;
+      el.classList.toggle('level', level > 0);
+      q(el, '.n').textContent = members.length > 1 ? `×${members.length}` : level ? ringNumeral(level) : '';
     });
 }
 

@@ -232,6 +232,9 @@ function setCost(el: HTMLElement, text: string, pips = false): void {
   }
 }
 
+/** The Ring's level as a Roman numeral, I to IV. */
+export const ringNumeral = (level: number): string => 'I'.repeat(level).replace('IIII', 'IV');
+
 /** A permanent's progress on its set's track, such as class level or sprocket. A card has at most one such track, so one chip shows them all. */
 function mechanic(card: CardView, type: string): Node[] {
   const track = (now: number, of: number, text: string) => {
@@ -243,7 +246,7 @@ function mechanic(card: CardView, type: string): Node[] {
     return [pips, label(text)];
   };
   if (card.ClassLevel && /\bClass\b/.test(type)) return track(card.ClassLevel, 3, t('lblWebCardClassLevel', card.ClassLevel));
-  if (card.RingLevel) return track(card.RingLevel, 4, t('lblWebCardRingLevel', 'I'.repeat(card.RingLevel).replace('IIII', 'IV')));
+  if (card.RingLevel) return track(card.RingLevel, 4, t('lblWebCardRingLevel', ringNumeral(card.RingLevel)));
   if (card.CurrentRoom) return [label(card.CurrentRoom)];
   if (card.Sprocket) return track(card.Sprocket, 3, t('lblWebCardSprocket', card.Sprocket));
   if (card.AttractionLights?.length) {
