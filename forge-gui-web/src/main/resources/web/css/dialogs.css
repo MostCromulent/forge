@@ -146,6 +146,9 @@ html:not([data-form="portrait"]) .dialog .dist-row .po-avatar { width: 78px; hei
 .dialog .dist-step button:hover { background: var(--surface-3); }
 .dialog .dist-step b { text-align: center; font-size: 21px; font-variant-numeric: tabular-nums; }
 .dialog .actions button.primary { min-width: 110px; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+/* An answer that loses something, such as conceding or leaving a draft, is red in place of brass */
+.dialog .actions button.danger { min-width: 110px; font-size: 15px; font-weight: 650; color: #fff; background: linear-gradient(180deg, color-mix(in srgb, #d4573f 80%, #fff), #b8432e); border-color: color-mix(in srgb, #d4573f 60%, #fff); box-shadow: 0 1px 0 #5a1e14; }
+.dialog .actions button.danger:hover:not(:disabled) { background: linear-gradient(180deg, color-mix(in srgb, #d4573f 65%, #fff), #c94d37); }
 .dialog input { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }
 .dialog .number-step { display: flex; align-items: center; justify-content: center; gap: 14px; }
 .dialog .number-step button { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 22px; line-height: 1; }
