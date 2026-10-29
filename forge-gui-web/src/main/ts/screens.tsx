@@ -47,12 +47,13 @@ export function renderScreens(model: Model, actions: Actions): void {
   editing = page === 'editor';
   render(under === 'name' ? <NamePrompt model={model} actions={actions} initial={rememberedName() ?? ''} />
     : under === 'menu' ? <Menu key={edits} model={model} actions={actions} /> : null, byId('menu'));
-  render(under === 'lobby' ? <Lobby key={edits} model={model} actions={actions} /> : null, byId('lobby'));
+  // The page a match starts from keeps what it last showed until the board covers it (match/entry.ts)
+  if (!byId('lobby').classList.contains('to-match')) render(under === 'lobby' ? <Lobby key={edits} model={model} actions={actions} /> : null, byId('lobby'));
   render(page === 'editor' ? <Editor model={model} actions={actions} /> : null, byId('editor'));
   render(under === 'limited' ? <Limited key={edits} model={model} actions={actions} /> : null, byId('limited'));
   render(under === 'drafting' ? <Drafting key={edits} model={model} actions={actions} /> : null, byId('drafting'));
   const Campaign = campaigns()?.Page;
-  render(under === 'campaign' && Campaign ? <Campaign key={edits} model={model} actions={actions} /> : null, byId('campaign'));
+  if (!byId('campaign').classList.contains('to-match')) render(under === 'campaign' && Campaign ? <Campaign key={edits} model={model} actions={actions} /> : null, byId('campaign'));
   // The dock is at the bottom edge before a match and in the side column under the log during one
   render(page === 'match' && model.networked ? <Dock model={model} actions={actions} /> : null, byId('match-chat'));
   render(page !== 'match' ? <Dock model={model} actions={actions}

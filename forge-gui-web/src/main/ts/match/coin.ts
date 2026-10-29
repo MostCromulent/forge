@@ -1,15 +1,14 @@
-// The coin toss for a match's first game, drawn alone over the board. It uses mobile's art and motion (Coin3D.pose)
+// The coin toss for a match's first game. It starts over the page the match was started from and lands on the board. It uses mobile's art and motion (Coin3D.pose)
 
 import { byId, make, q, reducedMotion, easeOut } from '../dom';
 import { leave } from '../closing';
 import { playSoundPart, readySound } from '../audio';
-import { whenArrived } from './entry';
 
 /** How long the coin is in the air, and how long it then rests before it is removed. */
 const FLIGHT_S = 1.5;
 const REST_S = 1.2;
-/** How long the board shows before the coin appears, so the toss does not start the moment the match opens. */
-const DELAY_S = 0.5;
+/** How far the coin comes towards the viewer at the top of its arc, in pixels. */
+const LIFT = 360;
 /** The toss's sound has a flick, then the landing at LAND_AT seconds and a rattle as the coin settles. The flick plays as the coin leaves and the rest as it lands. */
 const SOUND = 'flip_coin';
 const FLICK_END = 0.2;
@@ -95,26 +94,25 @@ export function tossCoin(heads: boolean, caption: string, then: () => void): voi
     const leaned = lean * lean * (3 - 2 * lean);
     const rock = rested > 0 ? Math.exp(-5 * rested) : 0;
     // The coin is closest to the viewer at the top of its arc
-    const lift = 4 * t * (1 - t) * 236;
+    const lift = 4 * t * (1 - t) * LIFT;
     coin.style.transform = `translateZ(${lift}px) rotateX(${Math.sin(rested * 20) * 13 * rock}deg) rotateY(${Math.sin(rested * 17 + 1) * 6 * rock}deg)`
       + ` rotateX(${-20 * leaned}deg) rotateY(${14 * leaned}deg)`
       + ` rotateZ(${Math.sin(t * Math.PI * 3) * 9 * fade}deg) rotateY(${Math.cos(t * Math.PI * 3) * 7 * fade}deg)`
       + ` rotateX(${spun * turns * 360}deg)`;
-    shadow.style.scale = String(1 - lift / 520);
-    shadow.style.opacity = String(.5 - lift / 700);
+    shadow.style.scale = String(1 - lift / LIFT * .45);
+    shadow.style.opacity = String(.5 - lift / LIFT * .34);
     root.classList.toggle('landed', t === 1);
   };
-  // The coin is not thrown while the board is still coming on screen (entry.ts), or once the match has closed
-  setTimeout(() => whenArrived(() => {
-    if (toss !== tosses) return;
-    if (byId('match').hidden) {
-      inAir = false;
-      return;
-    }
-    byId('match').append(root);
-    playSoundPart(SOUND, 0, FLICK_END);
-    requestAnimationFrame(frame);
-  }), DELAY_S * 1000);
+  if (byId('match').hidden) {
+    inAir = false;
+    return;
+  }
+  // The coin is thrown at once, while the board may still be hidden as it comes on screen (entry.ts). So it is drawn outside the board.
+  // It takes the board's side column width, so it is centred over the table
+  root.style.setProperty('--side-w', getComputedStyle(byId('match')).getPropertyValue('--side-w'));
+  document.body.append(root);
+  playSoundPart(SOUND, 0, FLICK_END);
+  requestAnimationFrame(frame);
 }
 
 /** Removes a winner's coin that no question of who goes first opened under. */

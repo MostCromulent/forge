@@ -22,7 +22,7 @@ import type { CommanderChoice, DeckSummary, LobbyTable, Seat, SeatExtra } from '
 import { Backdrop, Dropdown } from '../dialog';
 import { ICONS, Icon } from '../icons';
 import { byId } from '../dom';
-import { zoomIntoMatch } from '../match/entry';
+import { dimIntoMatch } from '../match/entry';
 
 export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const picker = ui.picker;
@@ -58,7 +58,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
         <SetupHead trail={trail} title={title} />
         {/* A new kind of event needs a fresh setup. The key remounts the event head so its dialog opens again */}
         {lim
-          ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => zoomIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate))} />
+          ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => dimIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate))} />
           : <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview} />}
         <div class="seats" id="seats">
           {/* The key includes who sits there, so an added or newly taken seat mounts again and plays its entry animation (lobby.css) */}
@@ -73,7 +73,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           )}
         </div>
         {/* An event's Play button is on its rail, which also says what the match waits on. Only the illegal decks warning is shown here */}
-        {lim ? lim.activeEventId && <IllegalDecks lobby={lobby} /> : <Verdict lobby={lobby} start={() => zoomIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate))} />}
+        {lim ? lim.activeEventId && <IllegalDecks lobby={lobby} /> : <Verdict lobby={lobby} start={() => dimIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate))} />}
       </div>
       {seat && picker?.kind === 'deck' && <DeckFinder model={model} actions={actions} seat={{ index: picker.seat, seat }} close={close} />}
       {seat && picker && (picker.kind === 'planes' || picker.kind === 'schemes' || picker.kind === 'vanguard') && (

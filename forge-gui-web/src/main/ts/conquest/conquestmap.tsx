@@ -11,7 +11,7 @@ import type { Actions } from '../actions';
 import type { ConquestCell, ConquestPlace, ConquestState } from '../protocol';
 import { t, type TextKey } from '../text';
 import { byId, reducedMotion } from '../dom';
-import { zoomIntoMatch } from '../match/entry';
+import { dimIntoMatch } from '../match/entry';
 import { isPortrait } from '../form';
 
 /** The time the marker takes for one step, the same as mobile's token. */
@@ -29,7 +29,7 @@ const VARIANT_DESC: Record<string, TextKey> = { Commander: 'lblCommanderDesc', V
 const VARIANT_ICONS: Record<string, string> = { Commander: 'IMG_COMMANDER', Vanguard: 'IMG_ZONE_AVATAR', Planeswalker: 'IMG_PLANESWALKER', Planechase: 'IMG_ZONE_PLANAR' };
 const variantName = (v: string): string => (VARIANT_NAMES[v] ? t(VARIANT_NAMES[v]) : v);
 
-const fight = (actions: Actions) => zoomIntoMatch(byId('campaign'), () => actions.conquestBattle());
+const fight = (actions: Actions) => dimIntoMatch(byId('campaign'), () => actions.conquestBattle());
 
 /** Each tile's state the last time this plane's map was shown. The map compares against it after a battle to find what the win changed. */
 let lastSeen: { plane: string; states: Map<string, string> } | null = null;

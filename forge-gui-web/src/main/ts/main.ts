@@ -15,7 +15,7 @@ import { rememberName, rememberedAvatar, rememberedName, rememberedSleeve } from
 import { renderScreens, pageUnder, screenOf } from './screens';
 import { confirmShown } from './match/dialogparts';
 import { renderMatch, renderSky, resetTable } from './match/board';
-import { arriveAtMatch, zoomIntoMatch } from './match/entry';
+import { arriveAtMatch, dimIntoMatch } from './match/entry';
 import { renderPrompt, flash, pressPromptButton } from './match/prompt';
 import { appendLog, initLog, logTints } from './match/log';
 import { initSide, renderSide, showLog } from './match/side';
@@ -221,7 +221,7 @@ function runKey(command: KeyCommand): void {
     case 'undo': pressPromptButton('undo'); actions.undo(); break;
     case 'nextFace': nextFace(model); break;
     case 'cardText': changeUi(u => { u.cardText = !u.cardText; }); break;
-    case 'startMatch': zoomIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate)); break;
+    case 'startMatch': dimIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate)); break;
     case 'closeCardMenu': {
       const menu = cardMenu(model);
       if (menu) actions.answer(menu.id, []);
