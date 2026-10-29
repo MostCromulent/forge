@@ -108,7 +108,7 @@ const MENU_ART: Record<string, string> = {
   constructed: 'c:Dueling Grounds|INV|1',
   draft: 'c:Cogwork Librarian|CNS|1',
   sealed: 'c:Booster Tutor|UND|1',
-  conquest: 'c:Planar Bridge|2X2|1',
+  conquest: 'c:Portal of Sanctuary|M20|1',
   quest: "c:Explorer's Scope|CMM|1",
 };
 
