@@ -103,7 +103,7 @@ const KIND_ICONS: Record<string, ComponentChildren> = {
 // The card art behind each tile, pinned to one printing so the picture does not change
 const MENU_ART: Record<string, string> = {
   play: 'c:Mirror Match|C15|1',
-  multiplayer: 'c:Kynaios and Tiro of Meletis|C16|1',
+  multiplayer: 'c:Secret Rendezvous|SOC|1',
   editor: 'c:Archivist of Oghma|CLB|1',
   constructed: 'c:Dueling Grounds|INV|1',
   draft: 'c:Cogwork Librarian|CNS|1',

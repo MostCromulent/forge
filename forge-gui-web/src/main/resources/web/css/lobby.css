@@ -131,9 +131,8 @@ button.ghost:hover { color: var(--text); background: var(--surface-2); }
 .modes .mode.plaque[data-mode="editor"] { --ground: radial-gradient(70% 140% at 88% 50%, #4a3a1e 0%, transparent 65%),
   repeating-linear-gradient(45deg, #ffffff06 0 1px, transparent 1px 12px), repeating-linear-gradient(-45deg, #ffffff06 0 1px, transparent 1px 12px),
   linear-gradient(160deg, #241d12, #110e09); }
-/* A plaque's card art replaces its pattern once the art has loaded. The friends art is shifted up, so its two faces stay above the text. */
+/* A plaque's card art replaces its pattern once the art has loaded. */
 .modes .mode.plaque.has-art::before { background: var(--art) center 30% / cover no-repeat; }
-.modes .mode.plaque.has-art[data-mode="multiplayer"]::before { background-position: center 60%; }
 .modes .mode.plaque.has-art .plaque-mark { display: none; }
 .modes .mode.plaque .plaque-mark { position: absolute; z-index: -1; right: -14px; top: -18px; width: 170px; height: 170px; opacity: .1; pointer-events: none;
   transition: opacity .3s ease; }
