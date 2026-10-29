@@ -6,7 +6,7 @@ import { playSoundPart, readySound } from '../audio';
 
 /** How long the coin is in the air, and how long it then rests before it is removed. */
 const FLIGHT_S = 1.5;
-const REST_S = 1.2;
+const REST_S = 0.6;
 /** How far the coin comes towards the viewer at the top of its arc, in pixels. */
 const LIFT = 360;
 /** The toss's sound has a flick, then the landing at LAND_AT seconds and a rattle as the coin settles. The flick plays as the coin leaves and the rest as it lands. */

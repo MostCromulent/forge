@@ -650,7 +650,7 @@ function riffle(player: number): void {
   const tile = document.querySelector<HTMLElement>(`.seat[data-player="${player}"] .zone-tile[data-zone="Library"]`);
   const rect = tile?.getBoundingClientRect();
   // The opening shuffle comes while the board fades in and the coin is tossed. Its copies sit above the board, so they would show first
-  if (!tile || !rect?.width || reducedMotion() || coinInAir() || document.querySelector('#match:is(.held, .arriving)')) return;
+  if (!tile || !rect?.width || reducedMotion() || coinInAir() || boardHidden()) return;
   const sleeve = getComputedStyle(tile).getPropertyValue('--sleeve');
   const cards = 12, open = 150, firstDrop = 190, step = 24, settle = 80;
   const at = (ms: number) => ms / RIFFLE_MS;
@@ -673,6 +673,11 @@ function riffle(player: number): void {
     ], { duration: RIFFLE_MS }).finished.then(() => copy.remove(), () => copy.remove());
   }
   tile.animate([{ scale: '1' }, { scale: '1', offset: 0.82 }, { scale: '0.97 1', offset: 0.9 }, { scale: '1' }], { duration: RIFFLE_MS });
+}
+
+/** Whether the board is hidden or still fading in as the match comes on screen (entry.ts). */
+function boardHidden(): boolean {
+  return !!document.querySelector('#match:is(.held, .arriving)');
 }
 
 // A face-down top card is not drawn on its tile, and its hidden picture has zero size
@@ -915,7 +920,8 @@ function fly(el: HTMLElement, from: DOMRect, duration: number, delay: number): v
 
 // A copy of the card makes the trip, so the card's own element, if it still has one, does not move
 function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0, onto?: HTMLElement, duration = FLIGHT_MS): void {
-  if (!was.ghost) {
+  // A draw or a mulligan can come before the board is on screen. Its copies sit above the board, so they would show first
+  if (!was.ghost || boardHidden()) {
     return;
   }
   const ghost = place(was.ghost, was.rect, was.size);
