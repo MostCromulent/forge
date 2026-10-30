@@ -42,6 +42,12 @@ function riftPath(c: CanvasRenderingContext2D, x: number, y: number, r: number, 
 }
 
 let running: HTMLElement | null = null;
+let stop: (() => void) | null = null;
+
+/** Ends the opening early, as a click does. Nothing happens when none is playing. */
+export function endPlaneswalk(): void {
+  stop?.();
+}
 
 /** Plays the opening for a plane. art is the plane's art key, and left is how many of its events are still to conquer. */
 export function planeswalk(plane: string, art: string, left: number): void {
@@ -154,7 +160,10 @@ export function planeswalk(plane: string, art: string, left: number): void {
   let start = 0;
   const finish = () => {
     removeEventListener('resize', size);
-    if (running === root) running = null;
+    if (running === root) {
+      running = null;
+      stop = null;
+    }
   };
   const frame = (now: number) => {
     if (running !== root) return;
@@ -169,8 +178,9 @@ export function planeswalk(plane: string, art: string, left: number): void {
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
-  root.onclick = () => {
+  stop = () => {
     finish();
     leave(root);
   };
+  root.onclick = stop;
 }

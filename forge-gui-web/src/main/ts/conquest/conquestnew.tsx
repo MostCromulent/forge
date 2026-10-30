@@ -8,7 +8,7 @@ import { StepForm, type Step, type Ticket } from '../stepform';
 import { Prefs } from '../campaign/campaign';
 import { ICONS, Icon } from '../icons';
 import { reducedMotion } from '../dom';
-import { planeswalk } from './planeswalk';
+import { endPlaneswalk, planeswalk } from './planeswalk';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ConquestCardOption, ConquestOptions, ConquestPlaneOption } from '../protocol';
@@ -26,7 +26,11 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
   const [sent, setSent] = useState(false);
   const [prefs, setPrefs] = useState(false);
   useEffect(() => { actions.conquestOptions(value.plane, value.commander); }, [value.plane, value.commander]);
-  useEffect(() => setBusy(false), [model.error]);
+  // A refused conquest has no map to open on, so its opening ends and the form shows why
+  useEffect(() => {
+    setBusy(false);
+    if (model.error) endPlaneswalk();
+  }, [model.error]);
   const options = model.conquestOptions;
   if (!options) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   // Each list belongs to the plane or commander it was requested for. A list for an older choice is not shown for a newer one
