@@ -9,6 +9,7 @@ import type { Model } from '../model';
 import type { ConquestPlaneRow } from '../protocol';
 import { t } from '../text';
 import { Backdrop } from '../dialog';
+import { planeswalk } from './planeswalk';
 
 const emblem = (size: number) => <img class="cq-shard" alt={t('lblPlaneswalkEmblems')} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl('IMG_PW_BADGE_COMMON')} />;
 const share = (n: number, of: number): string => `${n} / ${of} (${of ? Math.round(100 * n / of) : 0}%)`;
@@ -23,6 +24,7 @@ export function Planes({ model, actions }: { model: Model; actions: Actions }) {
   // After travel the map page is shown, as on mobile
   const go = (unlock: boolean) => {
     setAsking(false);
+    planeswalk(plane.name, plane.art, plane.events - plane.conquered);
     actions.conquestPlaneswalk(plane.name, unlock);
     changeUi(u => { u.conquestTab = 'map'; });
   };

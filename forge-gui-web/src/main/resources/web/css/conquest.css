@@ -589,3 +589,21 @@ html[data-motion="reduced"] .cq-ae-card * { animation: none; }
 .cq-pref-table input { width: 72px; padding: 5px 8px; text-align: right; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
 .cq-pref-table td.bad input { border-color: var(--select); }
 
+/* Planeswalking (planeswalk.ts): the page blurs and darkens, the rift is drawn on the canvas, and the plane's name and the events left are set over it.
+   The delays and lengths are the canvas's story times divided by its pace (0.75) */
+#cq-planeswalk { position: fixed; inset: 0; z-index: 62; cursor: pointer; background: radial-gradient(ellipse at 50% 44%, #07060fe0, #020306f7 72%);
+  backdrop-filter: blur(8px); animation: cq-pw-dim 5.73s .2s linear both; }
+@keyframes cq-pw-dim { from { opacity: 0; } 10%, 74% { opacity: 1; } to { opacity: 0; } }
+#cq-planeswalk.closing { animation: cq-pw-out .3s ease-in forwards; }
+@keyframes cq-pw-out { to { opacity: 0; } }
+#cq-planeswalk canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cq-pw-title { position: absolute; left: 16px; right: 16px; top: 10.2vh; display: grid; justify-items: center; gap: 12px; text-align: center;
+  animation: cq-pw-title 3.07s 1.67s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes cq-pw-title { from { opacity: 0; transform: translateY(8px); } 28% { opacity: 1; transform: none; } 82% { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-14px); } }
+.cq-pw-kicker { font: 600 12px/1 system-ui, sans-serif; letter-spacing: .32em; text-transform: uppercase; color: #b9b3cf; }
+.cq-pw-name { font: 400 clamp(34px, 6.7vh, 60px)/1 Georgia, "Times New Roman", serif; letter-spacing: .22em; text-transform: uppercase; color: #f1eee6;
+  text-shadow: 0 0 30px #9a8cff55, 0 2px 10px #000; animation: cq-pw-space 3.07s 1.67s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes cq-pw-space { from { letter-spacing: .5em; } 30%, to { letter-spacing: .22em; } }
+.cq-pw-sub { position: absolute; left: 16px; right: 16px; top: 73.8vh; margin: 0; text-align: center; font: 400 16px/1.4 Georgia, "Times New Roman", serif;
+  letter-spacing: .12em; color: #d8d4e6; text-shadow: 0 2px 8px #000; animation: cq-pw-sub 2.53s 2.13s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes cq-pw-sub { from { opacity: 0; transform: translateY(8px); } 30% { opacity: 1; transform: none; } 80% { opacity: 1; } to { opacity: 0; } }

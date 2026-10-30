@@ -8,6 +8,7 @@ import { StepForm, type Step, type Ticket } from '../stepform';
 import { Prefs } from '../campaign/campaign';
 import { ICONS, Icon } from '../icons';
 import { reducedMotion } from '../dom';
+import { planeswalk } from './planeswalk';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { ConquestCardOption, ConquestOptions, ConquestPlaneOption } from '../protocol';
@@ -36,6 +37,8 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
     if (!ready || busy) return;
     setBusy(true);
     setSent(true);
+    const chosen = options.planes.find(p => p.name === value.plane);
+    if (chosen) planeswalk(chosen.name, chosen.art, chosen.events);
     actions.conquestCreate({ name: name.trim(), plane: value.plane!, commander: value.commander!, planeswalker: value.planeswalker! });
   };
   const steps: Step<NewValue>[] = [
