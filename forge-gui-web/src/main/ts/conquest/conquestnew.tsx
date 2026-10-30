@@ -110,15 +110,26 @@ function TicketCard({ card }: { card: ConquestCardOption }) {
 
 const anyOf = <T,>(shown: T[]) => shown[Math.floor(Math.random() * shown.length)];
 
+/** Resolves once the picture has loaded or failed. A slow download stops holding the roll after ART_WAIT_MS. */
+const loaded = (src: string) => new Promise<void>(done => {
+  const img = new Image();
+  img.onload = img.onerror = () => done();
+  img.src = src;
+  setTimeout(done, ART_WAIT_MS);
+});
+const ART_WAIT_MS = 1500;
+
 /**
  * Random rolls through the shown choices in its own box, slowing down, then picks one. A second click stops on the pick at once.
  * face is the choice the box shows, and under is the one before it, which the new face fades in over.
+ * Each face waits for its art, so a name never shows before its picture.
  */
-function useRoll<T extends { name: string }>(shown: T[], pick: (name: string) => void) {
+function useRoll<T extends { name: string }>(shown: T[], pick: (name: string) => void, art: (face: T) => string) {
   const [faces, setFaces] = useState<{ face: T | null; under: T | null }>({ face: null, under: null });
-  const timers = useRef<number[]>([]);
+  // A roll stops when this number moves on: on a second click, at its end, or when the box closes
+  const run = useRef(0);
   const stop = useRef<(() => void) | null>(null);
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  useEffect(() => () => { run.current++; }, []);
   const show = (face: T) => setFaces(f => ({ face, under: f.face }));
   const roll = () => {
     if (stop.current) {
@@ -130,20 +141,26 @@ function useRoll<T extends { name: string }>(shown: T[], pick: (name: string) =>
       pick(choice.name);
       return;
     }
+    const id = ++run.current;
     stop.current = () => {
-      timers.current.forEach(clearTimeout);
+      run.current++;
       stop.current = null;
       show(choice);
       pick(choice.name);
     };
     const from = shown.indexOf(choice) + 1;
-    let at = 0;
-    for (let i = 0; i < ROLLS; i++) {
-      const face = i === ROLLS - 1 ? choice : shown[(from + i) % shown.length];
-      timers.current.push(window.setTimeout(() => show(face), at));
-      at += 40 * 1.15 ** i;
-    }
-    timers.current.push(window.setTimeout(() => stop.current?.(), at));
+    const sequence = Array.from({ length: ROLLS }, (_, i) => (i === ROLLS - 1 ? choice : shown[(from + i) % shown.length]));
+    const ready = sequence.map(face => loaded(art(face)));
+    void (async () => {
+      for (let i = 0; i < ROLLS; i++) {
+        await ready[i];
+        if (run.current !== id) return;
+        show(sequence[i]);
+        await new Promise(next => setTimeout(next, 40 * 1.15 ** i));
+        if (run.current !== id) return;
+      }
+      stop.current?.();
+    })();
   };
   return { ...faces, roll };
 }
@@ -154,7 +171,7 @@ function PlaneTiles({ planes, pick }: { planes: ConquestPlaneOption[]; pick: (pl
   const [typed, setTyped] = useState('');
   const words = typed.trim().toLowerCase();
   const shown = planes.filter(p => p.name.toLowerCase().includes(words));
-  const { face, under, roll } = useRoll(shown, pick);
+  const { face, under, roll } = useRoll(shown, pick, p => artUrl(p.art));
   return (
     <div class="cq-pick">
       <input type="search" placeholder={t('lblSearch')} autocomplete="off" value={typed} onInput={e => setTyped(e.currentTarget.value)} />
@@ -187,7 +204,7 @@ function CardPick({ rows, pick }: { rows: ConquestCardOption[] | null; pick: (na
   const [typed, setTyped] = useState('');
   const words = typed.trim().toLowerCase();
   const shown = (rows ?? []).filter(r => r.name.toLowerCase().includes(words));
-  const { face, under, roll } = useRoll(shown, pick);
+  const { face, under, roll } = useRoll(shown, pick, r => artUrl(r.image));
   if (!rows) return <p class="hint">{t('lblWebConquestReading')}</p>;
   return (
     <div class="cq-pick">

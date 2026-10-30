@@ -453,7 +453,10 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-plane:hover, .cq-plane:focus-visible { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
 .cq-plane:hover b, .cq-plane:focus-visible b { color: var(--accent-2); }
 .cq-new { position: relative; }
-.cq-plane.random .a, .cq-pick-row.random > i { display: grid; place-items: center; font: normal 700 26px/1 Georgia, "Times New Roman", serif; color: var(--muted); }
+/* Random is a question mark on a faint crosshatch until it rolls. A rolled face's art covers the hatch */
+.cq-plane.random .a, .cq-pick-row.random > i { display: grid; place-items: center; font: normal 700 26px/1 Georgia, "Times New Roman", serif; color: var(--text);
+  text-shadow: 0 1px 6px #000; background-color: #111620;
+  background-image: repeating-linear-gradient(45deg, #ffffff10 0 1px, transparent 1px 7px), repeating-linear-gradient(-45deg, #ffffff10 0 1px, transparent 1px 7px); }
 /* Random rolls through the choices in its own box. Each face fades in over the one before */
 .cq-plane.random .a, .cq-pick-row.random > i { position: relative; overflow: hidden; }
 .cq-roll { position: absolute; inset: 0; background-position: inherit; background-size: cover; animation: cq-roll .12s ease-out both; }
