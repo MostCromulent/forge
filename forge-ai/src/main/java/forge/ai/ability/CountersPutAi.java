@@ -454,8 +454,6 @@ public class CountersPutAi extends CountersAi {
                 // don't put the counter on the dead creature
                 if (sacSelf && c.equals(source)) {
                     return false;
-                } else if (hasSacCost && !ComputerUtil.shouldSacrificeThreatenedCard(ai, c, sa)) {
-                    return false;
                 }
                 if ("NoCounterOfType".equals(sa.getParam("AILogic"))) {
                     for (String ctrType : types) {
@@ -637,7 +635,9 @@ public class CountersPutAi extends CountersAi {
 
         boolean immediately = ComputerUtil.playImmediately(ai, sa);
 
-        if (!ComputerUtilCost.checkSacrificeCost(ai, abCost, source, sa, immediately)) {
+        // a sac self cost on a noncreature, nonland source is what the card is for (e.g. Implement of Ferocity)
+        final boolean sacrificeIsPurpose = sacSelf && !source.isCreature() && !source.isLand();
+        if (!ComputerUtilCost.checkSacrificeCost(ai, abCost, source, sa, immediately || sacrificeIsPurpose)) {
             return new AiAbilityDecision(0, AiPlayDecision.CantAfford);
         }
 
