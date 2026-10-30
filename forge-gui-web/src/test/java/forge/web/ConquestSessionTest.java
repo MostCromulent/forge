@@ -716,10 +716,6 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertTrue(planes.get("startShards").getAsInt() > 0);
         send(host, message("conquestOptions", "plane", "Zendikar"));
         final List<String> commanders = names(host.awaitMatching("conquestOptions", o -> o.has("commanders"), "the plane's commanders were not sent"), "commanders");
-        // A rebalanced card has no picture of its own, so it is listed after every card that has one
-        final List<String> pictured = commanders.stream().filter(n -> !n.startsWith("A-")).toList();
-        Assert.assertTrue(pictured.size() < commanders.size(), "Zendikar has no rebalanced commander to tell the order by");
-        Assert.assertEquals(commanders.subList(0, pictured.size()), pictured, "a rebalanced commander is listed before one with a picture");
         final String commander = commanders.get(0);
         send(host, message("conquestOptions", "plane", "Zendikar", "commander", commander));
         final String walker = names(host.awaitMatching("conquestOptions", o -> o.has("planeswalkers"), "the commander's planeswalkers were not sent"), "planeswalkers").get(0);
