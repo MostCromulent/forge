@@ -162,7 +162,9 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 .modes .mode.plaque { animation: box-in .22s ease-out both; }
 .modes .mode.plaque:nth-child(2) { animation-delay: 45ms; }
 .modes .mode.plaque:nth-child(3) { animation-delay: 90ms; }
-html[data-way] .modes .mode.plaque, html[data-motion="reduced"] .modes .mode.plaque { animation: none; }
+html[data-motion="reduced"] .modes .mode.plaque { animation: none; }
+/* A zero duration, not none, so the plaques do not rise when the slide ends and data-way is removed */
+html[data-way] .modes .mode.plaque { animation-duration: 0s; animation-delay: 0s; }
 
 .mode {
   display: flex;

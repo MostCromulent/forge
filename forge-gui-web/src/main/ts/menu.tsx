@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { LookPicker } from './lookpicker';
 import { changeUi, eased, ui } from './ui';
 import { avatarUrl } from './looks';
-import { HeadControls, PageHeader, PhoneHead, SetupHead, WAY_NAMES, Wordmark } from './header';
+import { BackButton, HeadControls, PageHeader, PhoneHead, SetupHead, WAY_NAMES, Wordmark } from './header';
 import { isPortrait } from './form';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -19,11 +19,9 @@ const MAX_NAME_LENGTH = 24;
 
 export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   const choosing = ui.menuChoice;
-  // A step forward slides in. A step back through the trail shows the earlier step at once (dialogs.css)
+  // A step forward slides in from the right, and a step back from the left (dialogs.css)
   const setChoosing = (way: 'play' | 'friends' | null) => {
-    document.documentElement.toggleAttribute('data-back', !way);
-    if (way) eased(u => { u.menuChoice = way; }, () => ({ way: 'on' }));
-    else changeUi(u => { u.menuChoice = null; });
+    eased(u => { u.menuChoice = way; }, () => ({ way: way ? 'on' : 'back' }));
   };
   // A new name from the server means the rename succeeded, so the rename prompt closes
   useEffect(() => changeUi(u => { u.renaming = false; }), [model.playerName]);
@@ -43,6 +41,7 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
           <PageHeader brand>
             <div class="head-right">
               <HeadControls />
+              {choosing && <BackButton trail={[{ label: t('lblStart'), go: () => setChoosing(null) }]} />}
             </div>
           </PageHeader>
         )}

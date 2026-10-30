@@ -164,7 +164,8 @@ export function easedLocal(change: () => void, mark: () => Record<string, string
   }, change, mark);
 }
 
-function transition(update: () => void | Promise<void>, still: () => void, mark: () => Record<string, string>): void {
+/** Runs update inside a view transition with mark's attributes on the root, or runs still when motion is off or unsupported. */
+export function transition(update: () => void | Promise<void>, still: () => void, mark: () => Record<string, string>): void {
   if (!document.startViewTransition || reducedMotion()) {
     still();
     return;

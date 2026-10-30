@@ -6,13 +6,13 @@ import { createModel, applyState, cardMenu, concedingEndsGame, isLocal, oldestRe
 import './campaign/register';
 import { campaigns } from './campaigns';
 import { asked, createActions, type Actions } from './actions';
-import { changeUi, initUi, resetMatchUi, ui } from './ui';
+import { changeUi, initUi, resetMatchUi, transition, ui } from './ui';
 import { initForm, isPortrait } from './form';
 import { initPress } from './press';
 import { initSheets, matchHistory } from './sheet';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName, rememberedSleeve } from './identity';
-import { renderScreens, pageUnder, screenOf } from './screens';
+import { renderScreens, pageUnder, screenOf, slideWay } from './screens';
 import { confirmShown } from './match/dialogparts';
 import { renderMatch, renderSky, resetTable } from './match/board';
 import { arriveAtMatch, dimIntoMatch } from './match/entry';
@@ -127,7 +127,8 @@ const actions = {
 // The page's own actions and model, for the browser console and for e2e probes
 Object.assign(window, { forge: { actions, model } });
 
-initUi(schedule, render);
+// A change made inside a view transition must draw at once, so it does not start a slide of its own
+initUi(schedule, draw);
 initForm(() => {
   // Panels that only one layout draws are closed when the layout changes
   ui.menuSheet = null;
@@ -453,8 +454,25 @@ function schedule(): void {
 
 /** The page last drawn under the editor. */
 let shownUnder = '';
+/** A slide to another page has started but not yet drawn. Its own draw shows every change made meanwhile. */
+let sliding = false;
 
 function render(): void {
+  if (sliding) return;
+  const way = slideWay(shownUnder, pageUnder(model));
+  if (!way) {
+    draw();
+    return;
+  }
+  sliding = true;
+  const slid = () => {
+    sliding = false;
+    draw();
+  };
+  transition(slid, slid, () => ({ screen: way }));
+}
+
+function draw(): void {
   // This frame shows the events since the last frame, each once
   const events = model.events;
   model.events = [];

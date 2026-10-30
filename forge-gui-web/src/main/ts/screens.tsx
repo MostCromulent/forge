@@ -33,6 +33,15 @@ let edits = 0;
 const DEPTH = { name: 0, menu: 1, lobby: 2, limited: 2, drafting: 2, campaign: 2, editor: 3, match: 4 };
 let shown: keyof typeof DEPTH | null = null;
 
+/** The pages outside a match that slide into each other (dialogs.css). */
+const SLIDING = ['menu', 'lobby', 'limited', 'drafting', 'campaign'];
+
+/** The way a move between two pages slides, or null for a move that does not slide, such as into a match. */
+export function slideWay(from: string, to: string): 'on' | 'back' | null {
+  if (from === to || !SLIDING.includes(from) || !SLIDING.includes(to)) return null;
+  return DEPTH[to as keyof typeof DEPTH] < DEPTH[from as keyof typeof DEPTH] ? 'back' : 'on';
+}
+
 export function renderScreens(model: Model, actions: Actions): void {
   // A page that is not shown is not rendered, so its local state (a picker, a half-typed search) is lost
   const page = screenOf(model);
