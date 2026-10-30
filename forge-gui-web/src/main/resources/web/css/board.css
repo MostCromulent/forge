@@ -418,14 +418,21 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 .cmd-tile .band { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 1px 2px; text-align: center; font-size: 8.5px; font-weight: 800; color: var(--text); background: linear-gradient(180deg, transparent, #000000e0 38%); white-space: nowrap; }
 .cmd-tile .band:empty { display: none; }
 
-/* Day and night are shown by both a word and an icon, and the table gets cooler at night. So a change is noticed without watching the corner. */
-#sky { grid-area: opp; justify-self: end; align-self: start; z-index: 24; pointer-events: none; display: flex; align-items: center; gap: 8px; padding: 4px 11px 4px 6px; border-radius: 18px; background: color-mix(in srgb, var(--bg-deep) 80%, transparent); border: 1px solid var(--line); }
-#sky .orb { width: 19px; height: 19px; border-radius: 50%; display: block; flex: none; }
-#sky[data-time="Day"] .orb { background: radial-gradient(circle at 50% 50%, #ffeec0, #e8b54a 62%, #c8922e); box-shadow: 0 0 10px #e8b54a70; }
-#sky[data-time="Night"] .orb { background: #141c2e; box-shadow: inset -6px -3px 0 -1px #cfd9ed, 0 0 10px #8fa3cd55; }
-#sky .when { font-size: 11.5px; font-weight: 700; }
-#sky[data-time="Day"] .when { color: #f0c86a; }
-#sky[data-time="Night"] .when { color: #b8c6e2; }
+/* Day and night sit at the left end of the centre line, which both players share. The medallion is a sun on one face and a moon on the other, so a change of time turns it over. */
+#sky { grid-area: phase; justify-self: start; align-self: center; z-index: 24; pointer-events: none; display: flex; align-items: center; gap: 11px; margin-left: 25px; }
+#sky .medal { width: 46px; height: 46px; flex: none; perspective: 300px; }
+#sky .flip { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.5, 0, .2, 1); }
+#sky[data-time="Night"] .flip { transform: rotateY(180deg); }
+#sky .face { position: absolute; inset: 0; border-radius: 50%; backface-visibility: hidden; }
+#sky .sun { box-shadow: 0 0 0 1.5px var(--accent-2), 0 0 0 2.5px #5a430d, 0 4px 12px #000a, 0 0 16px #f2c34440;
+  background: radial-gradient(circle, #fff6d4 0 18%, #f7d36c 19% 30%, transparent 31%), repeating-conic-gradient(from 4deg, #f2c344aa 0 9deg, transparent 9deg 30deg), radial-gradient(circle, #4a3510, #1a1205 75%); }
+#sky .moon { transform: rotateY(180deg); box-shadow: 0 0 0 1.5px #c9d6ee, 0 0 0 2.5px #39445c, 0 4px 12px #000a, 0 0 16px #9fb3dd40;
+  background: radial-gradient(circle at 60% 40%, #111a2c 0 25%, transparent 26%), radial-gradient(circle at 47% 50%, #eef2fb 0 31%, transparent 32%),
+    radial-gradient(circle at 24% 26%, #fff 0 2%, transparent 3%), radial-gradient(circle at 76% 72%, #fff 0 1.6%, transparent 2.6%), radial-gradient(circle at 30% 78%, #ffffffaa 0 1.3%, transparent 2.3%),
+    radial-gradient(circle, #1a2540, #0b1120 75%); }
+#sky .when { font-size: 10.5px; font-weight: 800; line-height: 1; letter-spacing: .16em; text-transform: uppercase; color: #f0c86a; text-shadow: 0 1px 3px #000; transition: color .8s ease; }
+#sky[data-time="Night"] .when { color: #c9d6ee; }
+html[data-motion="reduced"] #sky :is(.flip, .when) { transition: none; }
 /* The table background cools slowly, so it looks like the sky changing and not the page redrawing */
 #match::after { transition: filter .8s ease; }
 #match.night::after { filter: brightness(.78) saturate(.8) hue-rotate(-10deg); }

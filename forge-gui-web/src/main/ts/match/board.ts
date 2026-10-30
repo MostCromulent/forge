@@ -669,7 +669,7 @@ function takeHit(amount: number): void {
   flash.addEventListener('animationend', () => flash.remove());
 }
 
-/** Daybound and nightbound cards transform without a prompt. So at night the whole table changes, as well as the corner that shows day or night. */
+/** Daybound and nightbound cards transform without a prompt. So at night the whole table changes, as well as the medallion that shows day or night. */
 export function renderSky(model: Model): void {
   const sky = byId('sky');
   const time = model.controls?.dayTime;
@@ -679,7 +679,7 @@ export function renderSky(model: Model): void {
     return;
   }
   if (!sky.firstChild) {
-    sky.innerHTML = '<i class="orb" aria-hidden="true"></i><span class="when"></span>';
+    sky.innerHTML = '<span class="medal" aria-hidden="true"><span class="flip"><i class="face sun"></i><i class="face moon"></i></span></span><span class="when"></span>';
   }
   sky.dataset.time = time;
   q(sky, '.when').textContent = time === 'Night' ? t('lblNight') : t('lblDay');
