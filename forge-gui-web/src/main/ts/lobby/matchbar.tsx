@@ -2,7 +2,7 @@
 
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
-import { HeadControls, PageHeader } from '../header';
+import { BackButton, HeadControls, PageHeader, type SetupStep } from '../header';
 import { isPortrait } from '../form';
 import { ICONS, Icon } from '../icons';
 import { t, type TextKey } from '../text';
@@ -312,14 +312,14 @@ export function Invite({ model }: { model: Model }) {
 }
 
 /** How others join, the sound and the options. The dock shows who is here. */
-export function TableHeader({ model, lobby }: { model: Model; lobby: LobbyTable }) {
+export function TableHeader({ model, lobby, trail }: { model: Model; lobby: LobbyTable; trail: SetupStep[] }) {
   const invite = lobby.shareable ? <Invite model={model} /> : undefined;
   return (
     <PageHeader brand action={invite}>
       <div class="head-right">
         {invite}
-        {/* The way out is the trail above the table (lobby.tsx), which also shows where it leads */}
         <HeadControls />
+        <BackButton trail={trail} />
       </div>
     </PageHeader>
   );

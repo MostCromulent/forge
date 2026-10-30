@@ -71,6 +71,12 @@ export function PhoneHead({ back, title, line, action, more, dev, tabs, inert }:
 /** The step a phone header's back button returns to: the last earlier step of the trail, if any. */
 export const backStep = (trail: SetupStep[]): SetupStep | undefined => trail.findLast(step => step.go);
 
+/** The page's way back at the end of its header: the trail's last earlier step. A trail with no earlier step draws nothing. */
+export function BackButton({ trail }: { trail: SetupStep[] }) {
+  const step = backStep(trail);
+  return step ? <button title={step.label} onClick={step.go}>{t('lblBack')}</button> : null;
+}
+
 /** A step of game setup in the trail. go returns to that step, and is left out for the current step. */
 export interface SetupStep {
   label: string;

@@ -53,7 +53,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
     <>
       {phoneBack
         ? <PhoneHead back={phoneBack} title={title} action={lobby.shareable ? <Invite model={model} /> : undefined} />
-        : <TableHeader model={model} lobby={lobby} />}
+        : <TableHeader model={model} lobby={lobby} trail={trail} />}
       <div class="lobby-main">
         <SetupHead trail={trail} title={title} />
         {/* A new kind of event needs a fresh setup. The key remounts the event head so its dialog opens again */}
