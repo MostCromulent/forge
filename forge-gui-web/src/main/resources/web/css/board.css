@@ -732,6 +732,8 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #zoom > .hint:empty::before { content: '\00a0'; }
 /* Ability-word conditions and delve under the picture. Met is the brass of the main buttons with a tick, so it differs from unmet in brightness, not only in colour */
 #zoom > .conds { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+/* The picture is positioned, so its shadow would fall over the pills under it unless they are positioned too */
+#zoom > :is(.conds, .hint) { position: relative; }
 #zoom > .conds:empty, #zoom:not(.image-only) > .conds { display: none; }
 #zoom .cond { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface);
   color: var(--text); font: 600 13px/1.25 system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 14px #000a; }
