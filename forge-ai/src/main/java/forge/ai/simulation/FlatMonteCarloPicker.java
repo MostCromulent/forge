@@ -1243,7 +1243,7 @@ public final class FlatMonteCarloPicker {
             // MyRandom is global state; this is safe because the game thread is waiting for this AI decision.
             MyRandom.setRandom(new Random(seed));
 
-            final GameSimulator sim = new GameSimulator(player.getGame(), player, mode == Mode.RESPOND);
+            final GameSimulator sim = GameSimulator.forRollout(player.getGame(), player, mode == Mode.RESPOND);
             final Game simGame = sim.getSimulatedGameState();
             final Player simAi = sim.getSimulatedAiPlayer();
             simGame.AI_TIMEOUT = Math.min(simGame.AI_TIMEOUT, ROLLOUT_AI_TIMEOUT_SECONDS);
