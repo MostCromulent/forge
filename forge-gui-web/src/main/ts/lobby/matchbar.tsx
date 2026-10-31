@@ -11,13 +11,13 @@ import type { Model } from '../model';
 import { Dropdown } from '../dialog';
 import type { Address, CardPoolGroup, Format, LobbyTable } from '../protocol';
 
-/** name is the button's accessible name, for a label with no words. */
-function Popup({ label, name, disabled, children, wide, onOpen }: {
-  label: ComponentChildren; name?: string; disabled?: boolean; children: (close: () => void) => ComponentChildren; wide?: boolean; onOpen?: () => void;
+/** name is the button's accessible name, for a label with no words. cls replaces the button's classes. */
+function Popup({ label, name, cls, disabled, children, wide, onOpen }: {
+  label: ComponentChildren; name?: string; cls?: string; disabled?: boolean; children: (close: () => void) => ComponentChildren; wide?: boolean; onOpen?: () => void;
 }) {
   return (
     <Dropdown cls="popup-anchor" button={(open, toggle) => (
-      <button class="field-value menu-button" title={name} aria-label={name} aria-expanded={open} disabled={disabled} onClick={() => {
+      <button class={cls ?? 'field-value menu-button'} title={name} aria-label={name} aria-expanded={open} disabled={disabled} onClick={() => {
         if (!open) onOpen?.();
         toggle();
       }}>{label}</button>
@@ -300,7 +300,8 @@ export function MatchBar({ model, lobby, actions, preview }: {
 export function Invite({ model }: { model: Model }) {
   const phone = isPortrait();
   return (
-    <Popup label={phone ? <Icon d={ICONS.link} /> : t('lblWebMatchBarInvite')} name={phone ? t('lblWebMatchBarInvite') : undefined}>
+    <Popup label={phone ? <Icon d={ICONS.link} /> : <><Icon d={ICONS.link} />{t('lblWebMatchBarInvite')}</>} name={phone ? t('lblWebMatchBarInvite') : undefined}
+      cls={phone ? 'field-value menu-button invite-button' : 'outline invite-button'}>
       {() => (
         <div class="invite">
           <b>{t('lblWebMatchBarOthersJoinAt')}</b>

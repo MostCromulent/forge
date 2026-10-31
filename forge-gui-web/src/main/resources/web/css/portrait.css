@@ -652,6 +652,8 @@ html[data-form="portrait"] .ph-line .cq-coin { gap: 3px; padding: 0; border: 0; 
 html[data-form="portrait"] .ph-line .cq-coin img { width: 13px; height: 13px; }
 html[data-form="portrait"] .ph-line .cq-coin b { font-size: 12.5px; color: var(--text); }
 html[data-form="portrait"] .ph .popup-anchor > .menu-button { width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border: 0; background: none; color: var(--muted); }
+html[data-form="portrait"] .ph .popup-anchor > .invite-button { color: var(--accent-2); }
+html[data-form="portrait"] .ph .popup-anchor > .invite-button::after { content: none; }
 html[data-form="portrait"] .ph .popup-anchor > .menu-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 /* The invite popup spans the screen under the header, so its addresses are not cut off at the left */
 html[data-form="portrait"] .ph .popup:has(.invite) { position: fixed; top: 54px; left: 8px; right: 8px; }

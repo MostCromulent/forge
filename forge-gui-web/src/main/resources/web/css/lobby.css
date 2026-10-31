@@ -834,6 +834,8 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .menu-button::after { content: ' \25BE'; font-size: 10px; color: var(--muted); font-weight: 400; }
 .menu-button:disabled { opacity: 1; cursor: default; }
 .menu-button:disabled::after { content: none; }
+.invite-button.outline { display: inline-flex; align-items: center; gap: 7px; }
+.invite-button.outline svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .count[role="group"] { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; width: max-content; }
 .count button { font: inherit; font-size: 12.5px; padding: 1px 9px; border: 0; border-radius: 0; background: none; color: var(--muted); font-variant-numeric: tabular-nums; }
 .count button + button { border-left: 1px solid var(--line); }
