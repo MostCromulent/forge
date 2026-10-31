@@ -563,9 +563,10 @@ public final class DeckCatalog {
         return format.getDeckFormat().getDeckConformanceProblem(deck);
     }
 
-    /** The pool's verdict on a deck as one sentence. It names the cards that fail GameFormat's two checks, in GameFormat's order. */
+    /** The pool's verdict on a deck as one sentence. It names the cards that fail GameFormat's card checks, in GameFormat's order. */
     static String poolProblem(final GameFormat pool, final Deck deck) {
-        if (pool.getDeckConformanceProblem(deck) == null) {
+        final String problem = pool.getDeckConformanceProblem(deck);
+        if (problem == null) {
             return null;
         }
         final CardPool cards = deck.getAllCardsInASinglePool();
@@ -577,7 +578,11 @@ public final class DeckCatalog {
         final boolean legendsRestricted = Boolean.TRUE.equals(pool.isRestrictedLegendary());
         final List<String> restricted = namesIn(cards, (card, count) -> count > 1 && (pool.getRestrictedCards().contains(card.getName())
                 || legendsRestricted && card.getRules().getType().isLegendary() && !card.getRules().getType().isPlaneswalker()));
-        return Localizer.getInstance().getMessage("lblWebDeckCatalogAllowsOneOf", pool.getName(), listOf(restricted));
+        if (!restricted.isEmpty()) {
+            return Localizer.getInstance().getMessage("lblWebDeckCatalogAllowsOneOf", pool.getName(), listOf(restricted));
+        }
+        // Deck size, singleton or points: core's message, which lists its cards on separate lines
+        return Localizer.getInstance().getMessage("lblNotLegalInFormat", pool.getName(), problem.replaceFirst("\n+", " ").replace("\n", ", "));
     }
 
     /** The names of the matching cards. Each name appears once, even when the pool holds several printings. */

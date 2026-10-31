@@ -70,4 +70,14 @@ public class LegalityTest {
         d.getMain().remove(card("Black Lotus"), 1);
         Assert.assertNull(DeckCatalog.poolProblem(FModel.getFormats().get("Vintage"), d));
     }
+
+    // Fails if a format's deck rules, such as singleton, no longer reach the message, or come out as an empty restricted list
+    @Test
+    public void cardPoolReportsDeckRules() {
+        final Deck d = new Deck("t");
+        d.getMain().add(card("Sol Ring"), 2);
+        d.getMain().add(card("Forest"), 98);
+        Assert.assertEquals(DeckCatalog.poolProblem(FModel.getFormats().get("Canadian Highlander"), d),
+                "Not legal in Canadian Highlander. The deck contains more copies than allowed of the following cards: Sol Ring");
+    }
 }
