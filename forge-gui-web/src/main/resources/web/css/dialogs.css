@@ -43,6 +43,8 @@ html[data-way="back"]::view-transition-new(page) { animation-name: page-in-back;
 /* A move to another page slides the same way, deeper pages to the left (main.ts render). The header has its own name, so it stays in place while the page under it slides */
 :is(#menu, #lobby, #limited, #drafting, #campaign) { view-transition-name: screen; }
 :is(#menu, #lobby, #limited, #drafting, #campaign) :is(.page-head, .ph) { view-transition-name: head; }
+/* The name makes the header a stacking context, so it is raised for its popups to stay above the page */
+:where(.page-head, .ph) { position: relative; z-index: 30; }
 html[data-screen]::view-transition-old(screen), html[data-screen]::view-transition-old(page) { animation: .3s cubic-bezier(.2,.7,.3,1) both page-out; }
 html[data-screen]::view-transition-new(screen), html[data-screen]::view-transition-new(page) { animation: .32s cubic-bezier(.2,.7,.3,1) both page-in; }
 html[data-screen="back"]::view-transition-old(screen), html[data-screen="back"]::view-transition-old(page) { animation-name: page-out-back; }
