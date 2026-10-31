@@ -1,6 +1,7 @@
 // Lays out the whole match screen and redraws it from the model. Each piece is drawn by its own module
 
 import { reconcile } from './reconcile';
+import { cardTypes } from './thresholds';
 import { cardImageSrc, hideOnError, setImage, symbolUrl } from '../images';
 import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLocal, type Model, offersPicks } from '../model';
 import { renderHand, resetHand } from './hand';
@@ -456,21 +457,6 @@ const EXTRA_ZONES: [ZoneType, TextKey][] = [['PlanarDeck', 'lblPlanes'], ['Schem
   ['AttractionDeck', 'lblAttractions'], ['ContraptionDeck', 'lblContraptions'], ['Junkyard', 'lblWebZoneJunkyard'],
   ['Sideboard', 'lblSideboard'], ['Ante', 'lblWebZoneAnte'], ['StickerSheets', 'lblStickerSheets']];
 const FACE_DOWN_DECKS: ReadonlySet<ZoneType> = new Set(['PlanarDeck', 'SchemeDeck', 'AttractionDeck', 'ContraptionDeck']);
-
-/** The card types that rule 205.2a lists, in its order. Delirium and similar cards count how many a graveyard has. */
-const CORE_TYPES = ['Artifact', 'Battle', 'Creature', 'Enchantment', 'Instant', 'Kindred', 'Land', 'Planeswalker', 'Sorcery'];
-
-/** The card types in these type lines, in the rules' order. The desktop graveyard label counts them the same way. */
-function cardTypes(typeLines: readonly string[]): string[] {
-  const found = new Set<string>();
-  for (const line of typeLines) {
-    // Only the words before the dash are types. Subtypes such as "Forest" come after it
-    for (const word of line.split(/\s[-—]\s/)[0].split(/\s+/)) {
-      if (CORE_TYPES.includes(word)) found.add(word);
-    }
-  }
-  return CORE_TYPES.filter(t => found.has(t));
-}
 
 function graveyardTitle(count: number, types: string[]): string {
   const cards = t(count === 1 ? 'lblWebOneCard' : 'lblWebNCards', count);

@@ -18,6 +18,7 @@ import { hovers, longPress } from './press';
 import { openedOver, sheet, swipeAcross, swipeDown } from './sheet';
 import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from './protocol';
 import { t, type TextKey } from './text';
+import { conditionsOf, type Progress } from './match/thresholds';
 import { COMMANDER_LETHAL, COMMANDER_WARNING, frameColour, ptShift } from './match/rules';
 
 // The host builds a hovered card's text with CardDetailUtil, as desktop does. The text reaches the model shortly after the hover starts
@@ -386,6 +387,7 @@ function drawDetail(model: Model): void {
   setSource(q(zoom, '.from'), hover.from, source);
   setSource(q(zoom, '.from-tab'), hover.from, source);
   q(zoom, '.hint').textContent = '';
+  q(zoom, '.conds').replaceChildren();
   if (!face) return;
   q(zoom, '.name').textContent = face.name ?? '';
   // The log names a card with its id, as in "Floodpits Drowner (51)". Showing the id here tells two copies apart
@@ -411,7 +413,9 @@ function drawDetail(model: Model): void {
   const changes = card && state && !card.Token && !card.Facedown
     ? changesOf(state.OracleText ?? '', state.AbilityText ?? '', { ...card.ChangedTypes, ...card.ChangedColorWords }, state.Keywords ?? [])
     : undefined;
-  const sorted = setRulesText(q(zoom, '.text'), q(zoom, '.foot'), face.text ?? '', state?.Keywords ?? [], changes);
+  const progress = card ? conditionsOf(model, card) : [];
+  if (!text) q(zoom, '.conds').replaceChildren(...progress.map(condPill));
+  const sorted = setRulesText(q(zoom, '.text'), q(zoom, '.foot'), face.text ?? '', state?.Keywords ?? [], changes, progress);
   q(zoom, '.kind-chip').textContent = sorted.tag ?? '';
   drawPt(q(zoom, '.pt'), model, hover.card, face, face === d?.faces[0]);
   // The hint shows the player's own keys, because both can be rebound in the options
@@ -485,13 +489,13 @@ function rulesLines(html: string): Line[] {
 let lastSorted: SortedText = { blocks: [], chips: [], notes: [] };
 
 /** Lays out a card's rules like its printed text box. Changes the game has made to the card go under it as chips and notes. */
-function setRulesText(box: HTMLElement, foot: HTMLElement, html: string, keywords: readonly KeywordText[], changes?: Changes): SortedText {
+function setRulesText(box: HTMLElement, foot: HTMLElement, html: string, keywords: readonly KeywordText[], changes?: Changes, progress: Progress[] = []): SortedText {
   // The preview is redrawn every frame while a card is hovered, so the text is sorted again only when it changes
-  const drawn = html + JSON.stringify(keywords) + JSON.stringify(changes, (_, v) => (v instanceof Set ? [...v] : v));
+  const drawn = html + JSON.stringify(keywords) + JSON.stringify(changes, (_, v) => (v instanceof Set ? [...v] : v)) + JSON.stringify(progress);
   if (box.dataset.html === drawn) return lastSorted;
   box.dataset.html = drawn;
   const sorted = lastSorted = sortRulesText(rulesLines(html), keywords);
-  box.replaceChildren(...sorted.blocks.map(b => drawBlock(b, changes)));
+  box.replaceChildren(...sorted.blocks.map(b => drawBlock(b, changes, progress)));
   // Lost rules are shown struck through. Lost keywords go with the keywords, and other lost text goes after the rules
   if (changes?.lostKeywords.length) {
     const kws = box.querySelector('.kws') ?? box.insertBefore(make('div', 'kws'), box.firstChild);
@@ -523,13 +527,15 @@ function changed(el: HTMLElement, how: 'gained' | 'lost'): HTMLElement {
 /** The longest ability cost, in characters, that fits in a column beside the ability's effect. */
 const LONG_COST = 22;
 
-function drawBlock(block: Block, changes?: Changes): HTMLElement {
+function drawBlock(block: Block, changes: Changes | undefined, progress: Progress[]): HTMLElement {
   switch (block.kind) {
     case 'keywords': {
       const el = make('div', 'kws');
       for (const item of block.items) {
         const kw = richLine(make('span', 'kw'), item);
         el.append(changes?.gained.has(plain(item).toLowerCase()) ? changed(kw, 'gained') : kw);
+        const pool = progress.find(p => p.pool !== undefined && p.word.toLowerCase() === plain(item).toLowerCase())?.pool;
+        if (pool !== undefined) el.append(chip(t('lblWebCondInGraveyard', pool), false));
       }
       for (const reminder of block.reminders) el.append(richLine(make('span', 'kwrem'), reminder));
       return el;
@@ -539,30 +545,78 @@ function drawBlock(block: Block, changes?: Changes): HTMLElement {
       const el = make('div', plain(block.cost).length > LONG_COST ? 'ab long' : 'ab');
       el.append(richLine(make('span', block.loyalty ? `ac ${block.loyalty}` : 'ac'), block.cost));
       const effect = make('span', 'ef');
-      if (block.label) effect.append(richLine(make('b', ''), block.label), ' ');
-      el.append(richLine(effect, block.effect));
+      const word = block.label && progress.find(p => p.word === plain(block.label as Line).trim());
+      if (block.label) effect.append(word ? wordChip(word) : richLine(make('b', ''), block.label), ' ');
+      el.append(richLine(effect, block.effect, progress));
       return el;
     }
     case 'mode':
-      return richLine(make('div', 'mode-option'), block.text);
+      return richLine(make('div', 'mode-option'), block.text, progress);
     case 'text': {
       const el = make('div', '');
       if (block.label) el.append(richLine(make('b', ''), block.label), ' — ');
-      return richLine(el, block.text);
+      return richLine(el, block.text, progress);
     }
   }
 }
 
-/** Appends a line's text with its symbols drawn. Text that does not apply is greyed and reminder text is styled apart. */
-function richLine<E extends HTMLElement>(el: E, line: Line): E {
+/** Appends a line's text with its symbols drawn. Text that does not apply is greyed and reminder text is styled apart. An ability word the page counts becomes a chip with its count. */
+function richLine<E extends HTMLElement>(el: E, line: Line, progress: Progress[] = []): E {
+  const words = progress.filter(p => p.cost === undefined);
+  const wordAt = words.length ? new RegExp(`(${words.map(p => p.word).join('|')}) — `) : null;
   for (const run of line) {
     run.text.split(/(\((?:[^()]|\([^()]*\))*\))/).forEach((part, i) => {
       if (!part) return;
       const span = make('span', [run.muted ? 'muted' : '', run.struck ? 'struck' : '', i % 2 ? 'rem' : ''].filter(Boolean).join(' '));
-      appendSymbolText(span, part);
+      (wordAt && !(i % 2) ? part.split(wordAt) : [part]).forEach((piece, j) => {
+        if (j % 2) {
+          span.append(wordChip(words.find(p => p.word === piece) as Progress), ' ');
+        } else if (piece) {
+          appendSymbolText(span, piece);
+        }
+      });
       el.append(span);
     });
   }
+  return el;
+}
+
+const TICK = '<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>';
+
+function chip(text: string, met: boolean): HTMLElement {
+  const el = make('span', met ? 'aw met' : 'aw');
+  el.innerHTML = met ? TICK : '';
+  el.append(text);
+  return el;
+}
+
+/** How far a condition has got, such as "3/4" or "2 in hand". */
+function countText(p: Progress): string {
+  if (p.upTo === 'hand') return t('lblWebCondInHand', p.have);
+  if (p.upTo === 'life') return t('lblWebCondLife', p.have);
+  return `${p.have}/${p.need}`;
+}
+
+const wordChip = (p: Progress): HTMLElement => chip(`${p.word} ${countText(p)}`, p.met);
+
+/** The pill under the card's picture. A count also gets one segment per card needed. */
+function condPill(p: Progress): HTMLElement {
+  const el = make('span', ['cond', p.met ? 'met' : '', p.cost !== undefined ? 'delve' : ''].filter(Boolean).join(' '));
+  el.innerHTML = p.met ? TICK : '';
+  el.append(p.word);
+  if (!p.upTo && p.need > 0 && p.need <= 10 && !p.met) {
+    const segs = make('span', 'segs');
+    for (let i = 0; i < p.need; i++) segs.append(make('i', i < p.have ? 'on' : ''));
+    el.append(segs);
+  }
+  const num = make('span', 'num');
+  if (p.cost !== undefined) {
+    num.append(t('lblWebCondAsLowAs'), ' ');
+    appendSymbolText(num, p.cost);
+  } else {
+    num.textContent = countText(p);
+  }
+  el.append(num);
   return el;
 }
 
@@ -588,7 +642,7 @@ function drawPt(el: HTMLElement, model: Model, key: number | null, face: CardFac
 
 function ensureZoom(zoom: HTMLElement): void {
   if (zoom.firstChild) return;
-  zoom.innerHTML = '<span class="shot"><img alt=""><span class="stickers" aria-hidden="true"></span><span class="now-pt" hidden></span><canvas class="foil" hidden></canvas><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cid"></span><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
+  zoom.innerHTML = '<span class="shot"><img alt=""><span class="stickers" aria-hidden="true"></span><span class="now-pt" hidden></span><canvas class="foil" hidden></canvas><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cid"></span><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="conds"></div><div class="hint"></div>';
   const img = q<HTMLImageElement>(zoom, 'img');
   img.addEventListener('error', () => {
     brokenSrc = img.dataset.card ?? '';
