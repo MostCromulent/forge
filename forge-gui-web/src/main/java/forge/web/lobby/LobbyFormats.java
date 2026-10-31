@@ -7,9 +7,7 @@ import forge.deck.DeckFormat;
 import forge.deck.FormatChoices;
 import forge.game.GameFormat;
 import forge.game.GameType;
-import forge.model.FModel;
 import forge.util.Localizer;
-import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.CardPoolGroup;
 import forge.web.protocol.ToBrowser.CardPoolKind;
 import forge.web.protocol.ToBrowser.CardPools;
@@ -18,7 +16,9 @@ import forge.web.protocol.ToBrowser.FormatGroup;
 import org.apache.commons.lang3.Range;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 /** What the lobby tells a browser about each format, casual variant and card pool. None of it depends on the table. */
@@ -84,36 +84,67 @@ public final class LobbyFormats {
                 text.getMessage("lblWebPlay" + type.name()), null, false);
     }
 
-    /** The pools on offer, grouped the same way as in Forge's format files. */
+    /** Every entry of the lobby's Format menu, in FormatChoices' order: the game types and the legality formats together. */
+    static List<Format> choices() {
+        final List<Format> out = new ArrayList<>();
+        for (final Object choice : FormatChoices.get(true)) {
+            if (choice instanceof GameType type) {
+                out.add(explained(type));
+            } else if (choice instanceof GameFormat format) {
+                out.add(explained(format));
+            }
+        }
+        return out;
+    }
+
+    /** A legality format in the same shape as a game type. It is played as Constructed, so its life and match text are Constructed's. */
+    static Format explained(final GameFormat format) {
+        final Localizer text = Localizer.getInstance();
+        final GameFormat.DeckRules rules = format.getDeckRules();
+        final int cards = rules.minMainDeckSize() > 0 ? rules.minMainDeckSize() : deckCards(GameType.Constructed);
+        final List<String> facts = new ArrayList<>();
+        facts.add(text.getMessage("lblWebFactDeckAtLeast", cards));
+        if (rules.singleton()) {
+            facts.add(text.getMessage("lblWebFactSingleton"));
+        }
+        if (format.getMaxPoints() > 0) {
+            facts.add(text.getMessage("lblWebFactPoints", format.getMaxPoints()));
+        }
+        if (!format.getBannedCardNames().isEmpty()) {
+            facts.add(text.getMessage("lblWebFactBanned", format.getBannedCardNames().size()));
+        }
+        if (!format.getRestrictedCards().isEmpty()) {
+            facts.add(text.getMessage("lblWebFactRestricted", format.getRestrictedCards().size()));
+        }
+        facts.add(lifeFact(GameType.Constructed));
+        return new Format(format.getName(), format.getName(), FormatGroup.valueOf(kind(format).name()), lineOf(format), facts,
+                text.getMessage("lblWebPlayConstructed"), cards, true);
+    }
+
+    /** The legality formats for the deck editor, under the same headings as the lobby's Format menu. */
     public static CardPools cardPools() {
-        final var formats = FModel.getFormats();
+        final Map<CardPoolKind, List<String>> groups = new EnumMap<>(CardPoolKind.class);
+        for (final Object choice : FormatChoices.get(false)) {
+            if (choice instanceof GameFormat format) {
+                groups.computeIfAbsent(kind(format), k -> new ArrayList<>()).add(format.getName());
+            }
+        }
         final List<CardPoolGroup> out = new ArrayList<>();
-        out.add(new CardPoolGroup(CardPoolKind.Sanctioned, pools(formats.getSanctionedList())));
-        out.add(new CardPoolGroup(CardPoolKind.Casual, pools(formats.getCasualList())));
-        out.add(new CardPoolGroup(CardPoolKind.Archived, pools(formats.getArchivedList())));
-        out.add(new CardPoolGroup(CardPoolKind.Block, pools(formats.getBlockList())));
-        // Which formats load depends on the install, so a heading can be empty
-        out.removeIf(g -> g.formats().isEmpty());
+        groups.forEach((kind, names) -> out.add(new CardPoolGroup(kind, names)));
         return new CardPools(out);
     }
 
-    /** Where each format's cards come from, for the card pool picker. */
-    public static ToBrowser.CardPoolDetails cardPoolDetails() {
-        final var formats = FModel.getFormats();
-        final List<ToBrowser.CardPoolLine> lines = new ArrayList<>();
-        for (final Iterable<GameFormat> list : List.of(formats.getSanctionedList(), formats.getCasualList(), formats.getBlockList())) {
-            for (final GameFormat f : list) {
-                lines.add(new ToBrowser.CardPoolLine(f.getName(), lineOf(f)));
-            }
-        }
-        return new ToBrowser.CardPoolDetails(lines);
+    /** FormatChoices lists no archived or digital formats, so every format it offers is one of these. */
+    private static CardPoolKind kind(final GameFormat format) {
+        return switch (format.getFormatType()) {
+            case SANCTIONED -> CardPoolKind.Sanctioned;
+            case CASUAL -> CardPoolKind.Casual;
+            default -> CardPoolKind.Custom;
+        };
     }
 
     /** Where a format's cards come from, in a few words. */
     private static String lineOf(final GameFormat f) {
-        if (f.getFormatSubType() == GameFormat.FormatSubType.BLOCK) {
-            return Localizer.getInstance().getMessage("lblWebLobbySets", f.getAllowedSetCodes().size());
-        }
         // Standard rotates, so its first set is not worth naming
         if (f.getFormatSubType() == GameFormat.FormatSubType.STANDARD) {
             return Localizer.getInstance().getMessage("lblWebLobbyRecentSets");
@@ -135,17 +166,6 @@ public final class LobbyFormats {
             return Localizer.getInstance().getMessage(f.getRestrictedCards().isEmpty() ? "lblWebLobbyEverySet" : "lblWebLobbyEverySetRestricted");
         }
         return Localizer.getInstance().getMessage("lblWebLobbySetForward", first.getName());
-    }
-
-    /** The formats that a 60-card Constructed game can take its cards from. A commander format's file is only that format's ban list, so it is left out. */
-    private static List<String> pools(final Iterable<GameFormat> formats) {
-        final List<String> out = new ArrayList<>();
-        for (final GameFormat f : formats) {
-            if (f.getFormatSubType() != GameFormat.FormatSubType.COMMANDER) {
-                out.add(f.getName());
-            }
-        }
-        return out;
     }
 
     private LobbyFormats() {

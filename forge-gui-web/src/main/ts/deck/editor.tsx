@@ -204,7 +204,7 @@ function CheckControl({ model, state, actions }: { model: Model; state: EditorSt
   );
 }
 
-/** "Check legality against" a format, a Constructed card pool or nothing. value is "format|pool" or "none". */
+/** "Check legality against" the Format menu's entries, or nothing. value is "format|pool" or "none". */
 export function CheckSelect({ model, value, change }: {
   model: Model; value: string; change: (format: string, cardPool: string | null, unrestricted: boolean) => void;
 }) {
@@ -217,13 +217,15 @@ export function CheckSelect({ model, value, change }: {
         if (format === 'none') change('Constructed', null, true);
         else change(format, pool || null, false);
       }}>
-        <option value="Constructed|">{t('lblWebEditorConstructedAnyCards')}</option>
+        <option value="Constructed|">{t('lblConstructed')}</option>
         {pools.map(group => (
-          <optgroup key={group.kind} label={t('lblWebEditorConstructedPool', t(CARD_POOL_NAMES[group.kind]))}>
+          <optgroup key={group.kind} label={t(CARD_POOL_NAMES[group.kind])}>
             {group.formats.map(f => <option key={f} value={`Constructed|${f}`}>{f}</option>)}
           </optgroup>
         ))}
-        {DECK_FORMATS.filter(([id]) => id !== 'Constructed').map(([id, name]) => <option key={id} value={`${id}|`}>{t(name)}</option>)}
+        <optgroup label={t('lblCommander')}>
+          {DECK_FORMATS.filter(([id]) => id !== 'Constructed').map(([id, name]) => <option key={id} value={`${id}|`}>{t(name)}</option>)}
+        </optgroup>
         <option value="none">{t('lblWebEditorNoRestriction')}</option>
       </select></span>
     </label>

@@ -17,7 +17,7 @@ public final class FromBrowser {
     }
 
     /** Messages that are only a name. */
-    public enum Plain { decks, join, lobby, leaveLobby, addresses, cardPoolDetails, cardSets, netDecks, leave, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
+    public enum Plain { decks, join, lobby, leaveLobby, addresses, cardSets, netDecks, leave, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede, macroRecord, macroRepeat,
         editorClose, editorUndo }
 

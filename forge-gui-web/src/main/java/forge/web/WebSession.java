@@ -163,7 +163,6 @@ public final class WebSession implements IHasForgeLog {
             .on(Plain.netDecks, host((s, ch, c) -> s.ui.runBackgroundTask("Net decks", () -> s.lobby.loadNetDecks(ch))))
             // Finding the external address is a web request, so it cannot run on the socket thread
             .on(Plain.addresses, host((s, ch, c) -> s.ui.runBackgroundTask("Addresses", () -> ch.send(new Addresses(s.sessions.inviteUrls())))))
-            .on(Plain.cardPoolDetails, (s, ch, c) -> ch.send(LobbyFormats.cardPoolDetails()))
             .on(Plain.cardSets, (s, ch, c) -> ch.send(CardCatalog.sets()))
             .on(SetDeckGen.class, host((s, ch, gen) -> {
                 final var prefs = FModel.getPreferences();

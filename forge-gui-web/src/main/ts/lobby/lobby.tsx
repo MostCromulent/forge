@@ -59,7 +59,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
         {/* A new kind of event needs a fresh setup. The key remounts the event head so its dialog opens again */}
         {lim
           ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => dimIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate))} />
-          : <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview} />}
+          : <MatchBar lobby={lobby} actions={actions} preview={setPreview} />}
         <div class="seats" id="seats">
           {/* The key includes who sits there, so an added or newly taken seat mounts again and plays its entry animation (lobby.css) */}
           {lobby.seats.map((s, i) => <Plate key={`${i} ${s.type} ${s.name ?? ''}`} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)} joinable={model.networked}

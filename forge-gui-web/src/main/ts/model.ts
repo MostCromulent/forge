@@ -1,6 +1,6 @@
 // The browser's copy of the game. Server messages update it here, and everything on the page is drawn from it
 
-import type { EventKind, Screen, CardPoolDetails, CardPoolGroup, DeckGenOptions, LimitedEdition, DeckMatches, DevState, MatchScore, Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
+import type { EventKind, Screen, CardPoolGroup, DeckGenOptions, LimitedEdition, DeckMatches, DevState, MatchScore, Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 import { campaigns } from './campaigns';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -100,10 +100,8 @@ export interface Model {
   /** The state of a limited gauntlet after its last game. It is null outside a gauntlet. */
   limitedResult: LimitedResult | null;
   limitedOptions: LimitedOptions | null;
-  /** The card pools on offer, under Forge's headings. They do not change while the server runs, so they are sent once per connection. */
+  /** The legality formats, under the Format menu's headings. They do not change while the server runs, so they are sent once per connection. */
   cardPools: CardPoolGroup[];
-  /** The card pool picker's lines and old snapshots. They are requested the first time the picker opens. */
-  cardPoolDetails: CardPoolDetails | null;
   /** Every edition, newest first. They are requested the first time the catalogue's set filter opens. */
   cardSets: LimitedEdition[] | null;
   limitedPools: LimitedPools | null;
@@ -173,7 +171,6 @@ export function createModel(): Model {
     limitedResult: null,
     limitedOptions: null,
     cardPools: [],
-    cardPoolDetails: null,
     cardSets: null,
     limitedPools: null,
     campaign: null,

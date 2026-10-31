@@ -12,7 +12,7 @@ const VIEW_KEY = 'forge.deckView';
 
 /** The formats a deck can be built for, as the lobby names them. */
 export const DECK_FORMATS: [string, TextKey][] = [
-  ['Constructed', 'lblConstructed'], ['Commander', 'lblCommander'], ['Brawl', 'lblBrawl'], ['Oathbreaker', 'lblOathbreaker'],
+  ['Constructed', 'lblConstructed'], ['Commander', 'lblCommander'], ['Oathbreaker', 'lblOathbreaker'], ['Brawl', 'lblBrawl'],
   ['TinyLeaders', 'lblTinyLeaders'],
 ];
 

@@ -98,8 +98,6 @@ export interface PageActions {
   leaveLobby(): void;
   setFormat(format: string): void;
   setCardPool(cardPool: string | null): void;
-  /** Requests each format's card sources and the old snapshots for the card pool picker. They arrive later in the model. */
-  askCardPoolDetails(): void;
   /** Requests every edition for the catalogue's set filter. The list arrives later in the model. */
   askCardSets(): void;
   /** Sets the host's deck generator options: one copy of each card, and no artifacts. */
@@ -235,7 +233,6 @@ export function createActions(send: Send): PageActions {
     setSeatExtra: (index, section, choice) => send({ t: 'setSeatExtra', index, section, choice }),
     askExtraChoices: (index, section) => send({ t: 'extraChoices', index, section }),
     setCardPool: cardPool => send(cardPool ? { t: 'setCardPool', cardPool } : { t: 'setCardPool' }),
-    askCardPoolDetails: () => send({ t: 'cardPoolDetails' }),
     askCardSets: () => send({ t: 'cardSets' }),
     setDeckGen: (singletons, noArtifacts) => send({ t: 'setDeckGen', singletons, noArtifacts }),
     setPlayerCount: count => send({ t: 'setPlayerCount', count }),

@@ -9,7 +9,7 @@ import { t, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import { Dropdown } from '../dialog';
-import type { Address, CardPoolGroup, Format, LobbyTable } from '../protocol';
+import type { Address, Format, LobbyTable } from '../protocol';
 
 /** name is the button's accessible name, for a label with no words. cls replaces the button's classes. */
 function Popup({ label, name, cls, disabled, children, wide, onOpen }: {
@@ -49,8 +49,10 @@ function deckMark(format: Format): string {
   return format.deckCards == null ? t('lblNoDeck') : t('lblWebNCards', `${format.deckCards}${format.deckAtLeast ? '+' : ''}`);
 }
 
+const CONSTRUCTED_ICON = <svg viewBox="0 0 16 16"><rect x="3" y="2" width="9" height="12" rx="1.5" /><path d="M5 4.5v10.5h8V5" opacity=".6" /></svg>;
+
 const GROUP_ICONS: Record<string, ComponentChildren> = {
-  Constructed: <svg viewBox="0 0 16 16"><rect x="3" y="2" width="9" height="12" rx="1.5" /><path d="M5 4.5v10.5h8V5" opacity=".6" /></svg>,
+  Constructed: CONSTRUCTED_ICON, Sanctioned: CONSTRUCTED_ICON, Casual: CONSTRUCTED_ICON, Custom: CONSTRUCTED_ICON,
   Commander: <svg viewBox="0 0 16 16"><path d="M2 12 L3 5 L6 8 L8 3 L10 8 L13 5 L14 12 Z" /></svg>,
   Other: <svg viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5" /><circle cx="5.7" cy="5.7" r="1.3" fill="currentColor" stroke="none" />
     <circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none" /><circle cx="10.3" cy="10.3" r="1.3" fill="currentColor" stroke="none" /></svg>,
@@ -59,14 +61,22 @@ const GROUP_ICONS: Record<string, ComponentChildren> = {
 
 /** The name of each family of games. The server names a format's family with these keys. */
 const GROUP_NAMES: Record<string, TextKey> = {
-  Constructed: 'lblConstructed', Commander: 'lblCommander', Other: 'lblOther', Limited: 'lblLimited',
+  Constructed: 'lblConstructed', Sanctioned: 'lblSanctioned', Casual: 'lblCasual', Custom: 'lblCustom',
+  Commander: 'lblCommander', Other: 'lblOther', Limited: 'lblLimited',
 };
 
-/** A list of every game, beside a card that explains the chosen game or the one last under the pointer. */
+/** A legality format, which the server plays as Constructed with that format as its card pool. */
+function isCardPool(f: Format): boolean {
+  return f.group === 'Sanctioned' || f.group === 'Casual' || f.group === 'Custom';
+}
+
+/** A list of every game and legality format, beside a card that explains the chosen one or the one last under the pointer. */
 export function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   const lim = lobby.limited;
   const LIMITED = limitedFormats();
-  const chosen: Format | undefined = lim ? LIMITED.find(l => l.kind === lim.kind) : lobby.formats.find(f => f.id === lobby.format);
+  const pool = lobby.format === 'Constructed' ? lobby.cardPool : null;
+  const chosen: Format | undefined = lim ? LIMITED.find(l => l.kind === lim.kind)
+    : lobby.formats.find(f => (pool ? isCardPool(f) && f.id === pool : !isCardPool(f) && f.id === lobby.format));
   const [pointed, setPointed] = useState<Format | null>(null);
   // A new kind of event must wait until the started one is over. Other formats must wait until the draft ends
   const drafting = lim?.phase === 'DRAFTING' && !lim.activeEventId;
@@ -78,7 +88,13 @@ export function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actio
       actions.setLimited(kind);
     } else {
       if (lim) actions.setLimited(null);
-      actions.setFormat(f.id);
+      if (isCardPool(f)) {
+        if (lobby.format !== 'Constructed') actions.setFormat('Constructed');
+        actions.setCardPool(f.id);
+      } else {
+        actions.setFormat(f.id);
+        if (f.id === 'Constructed' && pool) actions.setCardPool(null);
+      }
     }
     setPointed(null);
     close();
@@ -230,62 +246,14 @@ function MatchLength({ lobby, actions }: { lobby: LobbyTable; actions: Actions }
   );
 }
 
-/** Which cards a Constructed game allows. The line saying where each format's cards come from is requested when the picker first opens. */
-function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
-  const details = model.cardPoolDetails;
-  const lines = new Map((details?.lines ?? []).map(l => [l.name, l.line]));
-  const group = (kind: CardPoolGroup['kind']) => model.cardPools.find(g => g.kind === kind)?.formats ?? [];
-  return (
-    <Popup label={lobby.cardPool ?? t('lblWebMatchBarAnyCards')} disabled={!lobby.host} wide
-      onOpen={() => { if (!details) actions.askCardPoolDetails(); }}>
-      {close => {
-        const choose = (name: string | null) => { actions.setCardPool(name); close(); };
-        return (
-          <div class="pool-picker">
-            <span class="field-name">{t('lblWebMatchBarAnyOrFormat')}</span>
-            <div class="pool-tiles">
-              <button class="pool-tile" aria-pressed={!lobby.cardPool} onClick={() => choose(null)}><b>{t('lblWebMatchBarAnyCards')}</b><span>{t('lblWebMatchBarNoLimit')}</span></button>
-              {group('Sanctioned').map(name => (
-                <button key={name} class="pool-tile" aria-pressed={lobby.cardPool === name} onClick={() => choose(name)}>
-                  <b>{name}</b><span>{lines.get(name) ?? ''}</span>
-                </button>
-              ))}
-            </div>
-            {group('Casual').length > 0 && <>
-              <span class="field-name">{t('lblWebMatchBarCasual')}</span>
-              <div class="pool-chips">
-                {group('Casual').map(name => (
-                  <button key={name} class="pool-chip" aria-pressed={lobby.cardPool === name} title={lines.get(name)} onClick={() => choose(name)}>{name}</button>
-                ))}
-              </div>
-            </>}
-            {group('Block').length > 0 && (
-            <div class="pool-more">
-                <label>{t('lblWebMatchBarBlock')}
-                  <span class="pill-select"><select value={group('Block').includes(lobby.cardPool ?? '') ? lobby.cardPool : ''}
-                    onChange={e => choose(e.currentTarget.value)}>
-                    <option value="" disabled>{t('lblWebMatchBarChooseBlock')}</option>
-                    {group('Block').map(name => <option key={name} value={name}>{name}</option>)}
-                  </select></span>
-                </label>
-            </div>
-            )}
-          </div>
-        );
-      }}
-    </Popup>
-  );
-}
-
 /** The field names follow the tournament rules. A format says which cards are allowed. A match is the games played between decks. */
-export function MatchBar({ model, lobby, actions, preview }: {
-  model: Model; lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void;
+export function MatchBar({ lobby, actions, preview }: {
+  lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void;
 }) {
   return (
     <div class="match-bar">
       <div class="fields">
-        <Field name={t('lblWebMatchBarMode')}><GameMenu lobby={lobby} actions={actions} /></Field>
-        {lobby.format === 'Constructed' && <Field name={t('lblFormat')}><CardPoolPicker model={model} lobby={lobby} actions={actions} /></Field>}
+        <Field name={t('lblFormat')}><GameMenu lobby={lobby} actions={actions} /></Field>
         <Field name={t('lblPlayers')}><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
         {lobby.format === 'Commander' && <Field name={t('lblBracket')}><MaxBracket lobby={lobby} actions={actions} /></Field>}
         <Field name={t('lblMatch')}><MatchLength lobby={lobby} actions={actions} /></Field>

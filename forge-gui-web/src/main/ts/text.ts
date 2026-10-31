@@ -6,9 +6,9 @@ import type { CardPoolGroup } from './protocol';
 
 export type { TextKey };
 
-/** The headings of Forge's format files, as the card pool pickers show them. */
+/** The format types, as the Format menu and the deck editor head them. */
 export const CARD_POOL_NAMES: Record<CardPoolGroup['kind'], TextKey> = {
-  Sanctioned: 'lblSanctioned', Casual: 'lblWebMatchBarCasual', Archived: 'lblArchived', Block: 'lblBlock',
+  Sanctioned: 'lblSanctioned', Casual: 'lblCasual', Custom: 'lblCustom',
 };
 
 type Arg = string | number;

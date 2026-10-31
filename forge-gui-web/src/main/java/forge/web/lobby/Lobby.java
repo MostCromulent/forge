@@ -592,7 +592,7 @@ public final class Lobby {
             if (lobby == null) {
                 return new LobbyMessage(null);
             }
-            final List<Format> formats = LobbyFormats.FORMATS.stream().map(LobbyFormats::explained).toList();
+            final List<Format> formats = LobbyFormats.choices();
             final List<Seat> seats = new ArrayList<>();
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 seats.add(seat(lobby, i));

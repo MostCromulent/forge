@@ -178,7 +178,7 @@ public final class ToBrowser {
     public record PastEvent(String id, EventKind kind, String product, String date) {
     }
 
-    /** The card pools the card pool control offers, grouped under Forge's headings. Sent once per browser. */
+    /** The legality formats the deck editor checks against, grouped as FormatChoices groups them. Sent once per browser. */
     @Message("cardPools")
     public record CardPools(List<CardPoolGroup> groups) {
     }
@@ -188,23 +188,17 @@ public final class ToBrowser {
     public record CardSets(List<LimitedEdition> sets) {
     }
 
-    /** What the card pool picker shows beyond the names: where each format's cards come from. */
-    @Message("cardPoolDetails")
-    public record CardPoolDetails(List<CardPoolLine> lines) {
-    }
-
-    /** A format and where its cards come from: "Every set", "Commons only", or the set it starts at. */
-    public record CardPoolLine(String name, String line) {
-    }
-
-    /** The headings of Forge's format files. */
-    public enum CardPoolKind { Sanctioned, Casual, Archived, Block }
+    /** The format types FormatChoices lists. */
+    public enum CardPoolKind { Sanctioned, Casual, Custom }
 
     public record CardPoolGroup(CardPoolKind kind, List<String> formats) {
     }
 
-    /** Constructed formats, the Commander family, the rest, and the casual variants. Limited is the page's own group for Draft and Sealed. */
-    public enum FormatGroup { Constructed, Commander, Other, Variant, Limited }
+    /**
+     * Constructed, its legality formats by type, the Commander family, the rest, and the casual variants.
+     * Limited is the page's own group for Draft and Sealed.
+     */
+    public enum FormatGroup { Constructed, Sanctioned, Casual, Custom, Commander, Other, Variant, Limited }
 
     /**
      * A format as the lobby offers it: its group, a description, short facts about its deck and life, and what changes in a match.
