@@ -44,10 +44,13 @@ public final class ToBrowser {
     /** The page the browser shows: the start page, a seat being taken, match setup, the Limited pages, a campaign page, or a match. */
     public enum Screen { menu, opening, setup, event, campaign, playing }
 
-    /** eventKind is set on the event screen, and campaign on the campaign screen. campaignResume is the save each campaign mode resumes, for the host. */
+    /**
+     * eventKind is set on the event screen, and campaign on the campaign screen. campaignResume is the save each campaign mode resumes, for the host.
+     * hostPassword says the host's seat needs the password from this browser.
+     */
     @Message("hello")
     public record Hello(Screen screen, boolean spectating, boolean host,
-            boolean canClaimHost, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
+            boolean canClaimHost, boolean hostPassword, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
             int sleeveCount, List<SavedSleeveArt> sleeveArt, @Nullable String eventPool, int sealedPools,
             @Nullable EventKind eventKind, boolean drafting, int draftPools, @Nullable String campaign, @Nullable String campaignSave,
             Map<String, String> campaignResume, @Nullable String version, ServerSettings settings, int session) {

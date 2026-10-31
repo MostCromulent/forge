@@ -56,7 +56,7 @@ export interface PageActions {
   setName(name: string, avatar: number, sleeve: number | undefined): void;
   /** Opens a table against the computer, or a table others can join by link. */
   openLobby(invite: boolean): void;
-  claimHost(): void;
+  claimHost(password?: string): void;
   /** Tries again to take a seat after a join found no free seat. */
   join(): void;
 
@@ -198,7 +198,7 @@ export function createActions(send: Send): PageActions {
     setSetting: (key, value) => send({ t: 'setSetting', key, value }),
     setName: (name, avatar, sleeve) => send({ t: 'setName', name, avatar, sleeve }),
     openLobby: invite => send({ t: invite ? 'invite' : 'lobby' }),
-    claimHost: () => send({ t: 'claimHost' }),
+    claimHost: (password?: string) => send({ t: 'claimHost', password }),
     join: () => send({ t: 'join' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
     openLimitedTable: kind => send({ t: 'invite', limited: kind }),

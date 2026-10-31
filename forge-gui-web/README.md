@@ -39,7 +39,7 @@ The game's questions block. When the engine asks a seat something, the netplay c
 
 ### Who can reach it
 
-The server listens on every network interface, over plain HTTP, on Forge's netplay port 36743 by default. Hosting from desktop Forge at the same time needs another `forge.web.port`. Each launch makes two random link tokens, one for the host and one for guests. A request without one is refused, the tokens are compared in constant time, the cookie that holds one is `HttpOnly` and `SameSite=Strict`, and a WebSocket must come from the page's own origin. Desktop and mobile Forge join with the guests' token, through the same port, so the netplay tunnel is open to no one a guest link does not already admit.
+The server listens on every network interface, over plain HTTP, on Forge's netplay port 36743 by default. Hosting from desktop Forge at the same time needs another `forge.web.port`. Each launch makes one random link token, shared by every player. A request without it is refused, the token is compared in constant time, the cookie that holds it is `HttpOnly` and `SameSite=Strict`, and a WebSocket must come from the page's own origin. Desktop and mobile Forge join with the same token, through the same port, so the netplay tunnel is open to no one the link does not already admit. Any browser with the link may take a free host seat, unless a host password is set in the console. A browser on the server's own machine never needs it. A request through a proxy, such as a Cloudflare tunnel, counts as another machine.
 
 A small Swing window shows the links, who is connected and the server's traffic. From it the host can forward the port by UPnP or open a Cloudflare tunnel, for players outside the network. Both are off until the host turns them on.
 

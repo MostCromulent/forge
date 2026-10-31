@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 
-/** The program's entry point. It loads Forge, opens the server window, starts the web service with this launch's two link tokens and opens the host's link. The tokens are new on each launch, so a link from an earlier launch no longer works. */
+/** The program's entry point. It loads Forge, opens the server window, starts the web service with this launch's link token and opens the link. The token is new on each launch, so a link from an earlier launch no longer works. */
 public final class WebMain implements IHasForgeLog {
     /** How long the process waits after the last browser leaves before it quits, unless the console is set to keep it open. */
     private static final long IDLE_MILLIS = 15_000;
@@ -47,9 +47,7 @@ public final class WebMain implements IHasForgeLog {
             deckGen.setDaemon(true);
             deckGen.start();
         }
-        // Two tokens: one for the host's own link, and one for every link given to another player
-        final WebService service = new WebService(ui, IDLE_MILLIS, quit::countDown, console != null,
-                newToken(), newToken());
+        final WebService service = new WebService(ui, IDLE_MILLIS, quit::countDown, console != null, newToken());
         // Ctrl+C or a machine shutdown skips the finally below. Without this hook a forwarded port would stay open on the router
         Runtime.getRuntime().addShutdownHook(new Thread(service::stop, "ForgeWebShutdown"));
         try {

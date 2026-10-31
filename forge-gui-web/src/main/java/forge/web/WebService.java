@@ -8,6 +8,8 @@ import forge.util.IHasForgeLog;
 import forge.web.console.CloudflareTunnel;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.function.Consumer;
 
 /** The web server, in a form the console can stop and start again. The tokens are kept across a restart, so old links still work. */
@@ -19,8 +21,7 @@ public final class WebService implements IHasForgeLog {
     private final Runnable onQuit;
     /** True when a console is on screen. The console itself shows that Forge is running and waiting. */
     private final boolean consoleShown;
-    private final String hostToken;
-    private final String guestToken;
+    private final String token;
     private WebServer server;
     private volatile WebSessions sessions;
     private boolean quitWhenEmpty = !KEEP_OPEN;
@@ -35,13 +36,12 @@ public final class WebService implements IHasForgeLog {
     public enum Forwarding { OFF, ASKING, FORWARDED, REFUSED }
 
     WebService(final WebGuiBase ui, final long idleMillis, final Runnable onQuit, final boolean consoleShown,
-            final String hostToken, final String guestToken) {
+            final String token) {
         this.ui = ui;
         this.idleMillis = idleMillis;
         this.onQuit = onQuit;
         this.consoleShown = consoleShown;
-        this.hostToken = hostToken;
-        this.guestToken = guestToken;
+        this.token = token;
     }
 
     public synchronized boolean running() {
@@ -58,7 +58,7 @@ public final class WebService implements IHasForgeLog {
         final WebSessions fresh = new WebSessions(ui, idleMillis, onQuit);
         final WebServer bound;
         try {
-            bound = new WebServer(fresh, hostToken, guestToken);
+            bound = new WebServer(fresh, token);
         } catch (final Exception e) {
             // Otherwise the sessions' idle timer would quit Forge a few seconds after the port failed to bind
             fresh.shutdown();
@@ -157,6 +157,26 @@ public final class WebService implements IHasForgeLog {
             forward = null;
         }
         setForwarding(Forwarding.OFF);
+    }
+
+    /** Whether a browser on another machine must give a password to take the host's seat. */
+    public static boolean hostPasswordSet() {
+        return !hostPassword().isEmpty();
+    }
+
+    /** The comparison takes constant time, so the time a guess takes reveals nothing about the password. */
+    static boolean hostPasswordMatches(final String given) {
+        return given != null && MessageDigest.isEqual(given.getBytes(StandardCharsets.UTF_8), hostPassword().getBytes(StandardCharsets.UTF_8));
+    }
+
+    public static String hostPassword() {
+        return FModel.getNetPreferences().getPref(FNetPref.WEB_HOST_PASSWORD);
+    }
+
+    /** Kept between runs. An empty password lets anyone with the link take the host's seat. */
+    public static void hostPassword(final String value) {
+        FModel.getNetPreferences().setPref(FNetPref.WEB_HOST_PASSWORD, value);
+        FModel.getNetPreferences().save();
     }
 
     /** Whether players on the internet connect through Cloudflare, with no change to the router. Kept between runs. */

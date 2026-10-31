@@ -38,7 +38,7 @@ public class WebServerTest {
     private final HttpClient http = HttpClient.newHttpClient();
     private final List<JsonObject> received = new CopyOnWriteArrayList<>();
     private volatile BrowserChannel connected;
-    private volatile boolean connectedMayHost;
+    private volatile boolean connectedLocal;
     private WebServer server;
 
     private String origin() {
@@ -49,13 +49,13 @@ public class WebServerTest {
     public void setUp() throws Exception {
         WebTestSupport.initModel();
         server = new WebServer(new WebServer.Endpoint() {
-            @Override public void connected(final BrowserChannel channel, final String clientId, final boolean mayHost) {
+            @Override public void connected(final BrowserChannel channel, final String clientId, final boolean local) {
                 connected = channel;
-                connectedMayHost = mayHost;
+                connectedLocal = local;
             }
             @Override public void disconnected(final BrowserChannel channel) { }
             @Override public void onMessage(final BrowserChannel channel, final JsonObject message) { received.add(message); }
-        }, "secret", "guest-secret", 0);
+        }, "secret", 0);
     }
 
     @AfterClass
@@ -84,18 +84,18 @@ public class WebServerTest {
         Assert.assertTrue(r.headers().firstValue("set-cookie").orElse("").contains("forge_token=secret"));
     }
 
-    /** Fails if the endpoint cannot tell a browser on the host's link from a browser on a guest's link. */
+    /** Fails if a proxied socket, such as one through a Cloudflare tunnel, counts as a browser on this machine, or a direct one does not. */
     @Test
-    public void theSocketSaysWhichLinkOpenedIt() throws Exception {
-        final WebSocket guest = openSocket(origin(), "guest-secret", new CopyOnWriteArrayList<>());
+    public void theSocketSaysWhetherItIsOnThisMachine() throws Exception {
+        final WebSocket proxied = openSocket(origin(), "secret", new CopyOnWriteArrayList<>(), "Cf-Connecting-Ip");
         awaitConnected();
-        Assert.assertFalse(connectedMayHost, "a guest's link was let host");
-        guest.sendClose(WebSocket.NORMAL_CLOSURE, "").get(5, TimeUnit.SECONDS);
+        Assert.assertFalse(connectedLocal, "a socket through a tunnel counted as this machine");
+        proxied.sendClose(WebSocket.NORMAL_CLOSURE, "").get(5, TimeUnit.SECONDS);
 
-        final WebSocket host = openSocket(origin(), "secret", new CopyOnWriteArrayList<>());
+        final WebSocket direct = openSocket(origin(), "secret", new CopyOnWriteArrayList<>());
         awaitConnected();
-        Assert.assertTrue(connectedMayHost, "the host's link was not let host");
-        host.sendClose(WebSocket.NORMAL_CLOSURE, "").get(5, TimeUnit.SECONDS);
+        Assert.assertTrue(connectedLocal, "a socket from this machine did not count as this machine");
+        direct.sendClose(WebSocket.NORMAL_CLOSURE, "").get(5, TimeUnit.SECONDS);
     }
 
     private void awaitConnected() {
@@ -204,9 +204,17 @@ public class WebServerTest {
     }
 
     private WebSocket openSocket(final String origin, final String token, final List<String> texts) throws Exception {
+        return openSocket(origin, token, texts, null);
+    }
+
+    /** forwarded names a header that a proxy adds, sent with a made-up address. */
+    private WebSocket openSocket(final String origin, final String token, final List<String> texts, final String forwarded) throws Exception {
         connected = null;
-        return http.newWebSocketBuilder()
-                .header("Origin", origin)
+        final WebSocket.Builder b = http.newWebSocketBuilder().header("Origin", origin);
+        if (forwarded != null) {
+            b.header(forwarded, "203.0.113.7");
+        }
+        return b
                 .buildAsync(URI.create("ws://127.0.0.1:" + server.port() + "/ws?token=" + token), new WebSocket.Listener() {
                     @Override
                     public CompletionStage<?> onText(final WebSocket ws, final CharSequence data, final boolean last) {

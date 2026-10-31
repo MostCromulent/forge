@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.gson.JsonObject;
 import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -55,21 +56,48 @@ public class WebSessionTest {
         Assert.assertNotNull(second.awaitMatching("error", m -> true), "the second browser was not told why");
     }
 
-    /** Fails if a browser on a guest's link can take the host's seat. The host's seat can stop the server or set up the table. */
-    @Test
-    public void aGuestLinkCannotTakeTheHostSeat() throws Exception {
-        final WebSessions sessions = opened();
-        final TestBrowser guest = new TestBrowser();
-        sessions.connected(guest, "guest", false);
-        Assert.assertFalse(guest.awaitNewest("hello").get("canClaimHost").getAsBoolean(), "a guest was offered the host's seat");
-        sessions.onMessage(guest, JsonCodec.message("claimHost"));
-        Assert.assertNotNull(guest.awaitMatching("error", m -> true), "a guest asking for the host's seat was not told no");
-        Assert.assertFalse(guest.awaitNewest("hello").get("host").getAsBoolean(), "a guest took the host's seat");
+    private static JsonObject claim(final String password) {
+        final JsonObject m = JsonCodec.message("claimHost");
+        m.addProperty("password", password);
+        return m;
+    }
 
-        // The same browser id on the host's link counts as a different browser, and can still take the seat
-        final TestBrowser host = new TestBrowser();
-        connectAsHost(sessions, host, "guest");
-        Assert.assertTrue(host.awaitNewest("hello").get("host").getAsBoolean());
+    /** Fails if a browser on another machine can take the host's seat without the host password once one is set. The host's seat can stop the server or set up the table. */
+    @Test
+    public void anotherMachineNeedsTheHostPasswordWhenOneIsSet() throws Exception {
+        WebService.hostPassword("open sesame");
+        try {
+            final WebSessions sessions = opened();
+            final TestBrowser remote = new TestBrowser();
+            sessions.connected(remote, "remote", false);
+            Assert.assertTrue(remote.awaitNewest("hello").get("hostPassword").getAsBoolean(), "the page was not told to ask for the password");
+            sessions.onMessage(remote, claim("wrong"));
+            Assert.assertNotNull(remote.awaitMatching("error", m -> true), "a wrong password was not refused");
+            Assert.assertFalse(remote.awaitNewest("hello").get("host").getAsBoolean(), "a wrong password took the host's seat");
+            sessions.onMessage(remote, claim("open sesame"));
+            Assert.assertNotNull(remote.awaitNewest("hello", m -> m.get("host").getAsBoolean()), "the right password did not take the host's seat");
+        } finally {
+            WebService.hostPassword("");
+        }
+    }
+
+    /** Fails if this machine's own browser has to give the host password, or a browser on another machine has to when none is set. */
+    @Test
+    public void thisMachineAndAnUnguardedSeatNeedNoPassword() throws Exception {
+        WebService.hostPassword("open sesame");
+        try {
+            final TestBrowser local = new TestBrowser();
+            connectAsHost(opened(), local, "local");
+            Assert.assertFalse(local.awaitNewest("hello").get("hostPassword").getAsBoolean());
+            Assert.assertTrue(local.awaitNewest("hello").get("host").getAsBoolean(), "this machine's browser needed the password");
+        } finally {
+            WebService.hostPassword("");
+        }
+        final WebSessions sessions = opened();
+        final TestBrowser remote = new TestBrowser();
+        sessions.connected(remote, "remote", false);
+        sessions.onMessage(remote, JsonCodec.message("claimHost"));
+        Assert.assertNotNull(remote.awaitNewest("hello", m -> m.get("host").getAsBoolean()), "another machine could not take the seat with no password set");
     }
 
     /** Fails if anyone with a link can make the server track an unlimited number of browsers. */

@@ -89,6 +89,7 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .wait-body { margin: 0; color: var(--muted); line-height: 1.55; }
 .wait-buttons { margin-top: auto; display: flex; gap: 8px; }
 .wait-buttons:empty { display: none; }
+.host-password { min-width: 0; flex: 1; font-size: 15px; padding: 8px 12px; }
 
 .menu-shell { min-height: 100%; display: flex; flex-direction: column; }
 .menu-shell .menu-page { flex: 1; min-height: 0; }

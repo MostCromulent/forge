@@ -37,6 +37,8 @@ export interface Model {
   addresses: Address[] | null;
   host: boolean;
   canClaimHost: boolean;
+  /** Whether the host's seat needs the host password from this browser. */
+  hostPassword: boolean;
   /** Game events since the board was last drawn, oldest first. The render empties it so each event is shown once. */
   events: GameEvent[];
   /** Rules text the server built for hovered cards and players. It is kept for the rest of the match. */
@@ -135,6 +137,7 @@ export function createModel(): Model {
     addresses: null,
     host: true,
     canClaimHost: false,
+    hostPassword: false,
     events: [],
     cardDetails: new Map(),
     playerDetails: new Map(),

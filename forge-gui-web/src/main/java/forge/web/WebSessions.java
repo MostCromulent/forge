@@ -83,8 +83,8 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     }
 
     @Override
-    public void connected(final BrowserChannel channel, final String clientId, final boolean mayHost) {
-        final WebSession session = sessionFor(channel, clientId, mayHost);
+    public void connected(final BrowserChannel channel, final String clientId, final boolean local) {
+        final WebSession session = sessionFor(channel, clientId, local);
         if (session == null) {
             netLog.warn("Turned a browser away: {} are already here.", MOST_SESSIONS);
             channel.close();
@@ -94,7 +94,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         holdOpen();
         final long away = session.secondsAway();
         if (away < 0) {
-            netLog.info("{} arrived by the {} link.", session.label(), mayHost ? "host's" : "guests'");
+            netLog.info("{} arrived from {}.", session.label(), local ? "this machine" : "another machine");
         } else {
             netLog.info("{} came back after {} s.", session.label(), away);
         }
@@ -110,16 +110,13 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         holdOpen();
     }
 
-    /** Whether this session could take the host's seat now. The browser offers the seat when this is true. */
-    synchronized boolean hostSeatFree(final WebSession asking) {
-        return host == null && asking != null && asking.mayHost();
+    /** Whether the host's seat is free. The browser offers the seat when this is true. */
+    synchronized boolean hostSeatFree() {
+        return host == null;
     }
 
     /** Takes the host's seat for this session if it is still free. If two claims arrive at once, only one wins. */
     synchronized boolean claimHost(final WebSession session) {
-        if (!session.mayHost()) {
-            return false;
-        }
         if (host != null) {
             return host == session;
         }
@@ -165,10 +162,10 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         }
     }
 
-    /** The session a browser returns to, or a new one, or null when full. The key includes the link kind, so a guest's link never reaches a host session. */
-    private synchronized WebSession sessionFor(final BrowserChannel channel, final String clientId, final boolean mayHost) {
+    /** The session a browser returns to, or a new one, or null when full. The key includes where the browser is, so another machine never reaches this machine's session. */
+    private synchronized WebSession sessionFor(final BrowserChannel channel, final String clientId, final boolean local) {
         final String id = clientId.isEmpty() ? String.valueOf(System.identityHashCode(channel)) : clientId;
-        final String key = (mayHost ? "host:" : "guest:") + id;
+        final String key = (local ? "local:" : "remote:") + id;
         final WebSession known = byId.get(key);
         if (known != null) {
             return known;
@@ -180,7 +177,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             }
         }
         // Nobody becomes host by arriving. A browser asks for the seat, and the first to ask while it is free gets it
-        final WebSession session = new WebSession(ui, this, mayHost);
+        final WebSession session = new WebSession(ui, this, local);
         byId.put(key, session);
         return session;
     }

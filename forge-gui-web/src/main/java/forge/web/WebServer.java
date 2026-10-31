@@ -85,10 +85,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
 
-/** The HTTP and WebSocket server on the web port. It serves the page, card images, sounds, the browsers' sockets and the app tunnel. It listens on every interface so that a player on another machine can open a link. The tokens in the links are new on each launch and keep everyone else out. */
+/** The HTTP and WebSocket server on the web port. It serves the page, card images, sounds, the browsers' sockets and the app tunnel. It listens on every interface so that a player on another machine can open a link. The token in the link is new on each launch and keeps everyone else out. */
 public final class WebServer implements AutoCloseable, IHasForgeLog {
     private static final String COOKIE = "forge_token";
-    private static final AttributeKey<Access> ACCESS = AttributeKey.valueOf("forge.access");
+    /** Whether a request came from a browser on this machine, not from another machine or through a tunnel. */
+    private static final AttributeKey<Boolean> LOCAL = AttributeKey.valueOf("forge.local");
     private static final AttributeKey<Boolean> KEEP_ALIVE = AttributeKey.valueOf("forge.keepAlive");
     /** For content that never changes at its address, such as a card picture of one printing or a hashed script chunk. The browser keeps it permanently. */
     private static final String KEEP_FOREVER = "public, max-age=31536000, immutable";
@@ -116,8 +117,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
     private final ServerTraffic traffic = new ServerTraffic();
     private final Endpoint endpoint;
-    private final String hostToken;
-    private final String guestToken;
+    private final String token;
     // The shared fetcher tries a path only once per run and does not call back again, so a key that failed is not retried
     private final Set<String> unavailableImages = ConcurrentHashMap.newKeySet();
     private final Channel channel;
@@ -126,16 +126,13 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private volatile byte[] styles;
 
     public interface Endpoint {
-        /** The id tells browsers apart across a reload. mayHost says the browser connected through the host's link. */
-        void connected(BrowserChannel channel, String clientId, boolean mayHost);
+        /** The id tells browsers apart across a reload. local says the browser is on this machine. */
+        void connected(BrowserChannel channel, String clientId, boolean local);
         void disconnected(BrowserChannel channel);
         void onMessage(BrowserChannel channel, JsonObject message);
     }
-    /** Which link a request came in on. It is stored on a socket's channel by the request that opened it. */
-    private enum Access { NONE, GUEST, HOST }
-
-    public WebServer(final Endpoint endpoint, final String hostToken, final String guestToken) throws InterruptedException {
-        this(endpoint, hostToken, guestToken, configuredPort());
+    public WebServer(final Endpoint endpoint, final String token) throws InterruptedException {
+        this(endpoint, token, configuredPort());
     }
 
     static int configuredPort() {
@@ -143,11 +140,9 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     }
 
     /** A port of 0 uses any free port, which is what a test needs. */
-    WebServer(final Endpoint endpoint, final String hostToken, final String guestToken, final int port)
-            throws InterruptedException {
+    WebServer(final Endpoint endpoint, final String token, final int port) throws InterruptedException {
         this.endpoint = endpoint;
-        this.hostToken = hostToken;
-        this.guestToken = guestToken;
+        this.token = token;
         final ServerBootstrap b = new ServerBootstrap()
                 .group(group)
                 .channel(NioServerSocketChannel.class)
@@ -170,19 +165,19 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return ((InetSocketAddress) channel.localAddress()).getPort();
     }
 
-    /** The host's link, for this machine's own browser. */
+    /** The link for this machine's own browser. */
     public String url() {
-        return "http://127.0.0.1:" + port() + "/?token=" + hostToken;
+        return inviteUrl("127.0.0.1");
     }
 
-    /** A guest's link, at whichever address the guest can reach this machine by. */
+    /** The link at whichever address a player can reach this machine by. */
     public String inviteUrl(final String address) {
-        return "http://" + address + ":" + port() + "/?token=" + guestToken;
+        return "http://" + address + ":" + port() + "/?token=" + token;
     }
 
-    /** A link for another player through an address that leads to this machine, such as the one Cloudflare gives. */
+    /** The link through an address that leads to this machine, such as the one Cloudflare gives. */
     String inviteUrlThrough(final String origin) {
-        return origin + "/?token=" + guestToken;
+        return origin + "/?token=" + token;
     }
 
     @Override
@@ -304,19 +299,15 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return slashes >= 0 && host.equals(origin.substring(slashes + 2));
     }
 
-    /** The link a token belongs to. The comparison takes constant time, so the time a guess takes reveals nothing about the token. */
-    private Access accessOf(final String presented) {
-        if (presented == null) {
-            return Access.NONE;
-        }
-        final byte[] bytes = presented.getBytes(StandardCharsets.UTF_8);
-        if (MessageDigest.isEqual(bytes, hostToken.getBytes(StandardCharsets.UTF_8))) {
-            return Access.HOST;
-        }
-        if (MessageDigest.isEqual(bytes, guestToken.getBytes(StandardCharsets.UTF_8))) {
-            return Access.GUEST;
-        }
-        return Access.NONE;
+    /** Whether a token is the link's. The comparison takes constant time, so the time a guess takes reveals nothing about the token. */
+    private boolean admits(final String presented) {
+        return presented != null && MessageDigest.isEqual(presented.getBytes(StandardCharsets.UTF_8), token.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** A loopback request that no proxy forwarded. A Cloudflare tunnel also connects from this machine, but adds these headers. */
+    private static boolean fromThisMachine(final ChannelHandlerContext ctx, final FullHttpRequest req) {
+        return ctx.channel().remoteAddress() instanceof InetSocketAddress a && a.getAddress() != null && a.getAddress().isLoopbackAddress()
+                && !req.headers().contains("Cf-Connecting-Ip") && !req.headers().contains("X-Forwarded-For");
     }
 
     /** A value from the link's query, or null when the link does not carry it. */
@@ -325,25 +316,21 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return values == null ? null : values.get(0);
     }
 
-    /** Which link a request came in on: the token in its query, or the token that the page load stored as a cookie. */
-    private Access access(final FullHttpRequest req, final QueryStringDecoder q) {
-        final Access fromQuery = accessOf(param(q, "token"));
-        if (fromQuery != Access.NONE) {
-            return fromQuery;
+    /** Whether a request carries the link's token: in its query, or as the cookie that the page load stored. */
+    private boolean admitted(final FullHttpRequest req, final QueryStringDecoder q) {
+        if (admits(param(q, "token"))) {
+            return true;
         }
         final String header = req.headers().get(HttpHeaderNames.COOKIE);
         if (header == null) {
-            return Access.NONE;
+            return false;
         }
         for (final Cookie c : ServerCookieDecoder.STRICT.decode(header)) {
-            if (COOKIE.equals(c.name())) {
-                final Access fromCookie = accessOf(c.value());
-                if (fromCookie != Access.NONE) {
-                    return fromCookie;
-                }
+            if (COOKIE.equals(c.name()) && admits(c.value())) {
+                return true;
             }
         }
-        return Access.NONE;
+        return false;
     }
 
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type) {
@@ -636,14 +623,14 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 final boolean socket = "/ws".equals(q.path());
                 final boolean netplay = WebSocketTunnel.PATH.equals(q.path());
                 // A netplay client is not a page and sends no origin to check. So a cookie must not let it in, and only its link's token does
-                final Access access = netplay ? accessOf(param(q, "token")) : access(req, q);
+                final boolean admitted = netplay ? admits(param(q, "token")) : admitted(req, q);
                 // The token keeps other pages out. The origin check stops them from opening a socket with a stolen cookie
-                if (access == Access.NONE || (socket && !sameOrigin(req)) || (netplay && !HostingServer.isHosting())) {
+                if (!admitted || (socket && !sameOrigin(req)) || (netplay && !HostingServer.isHosting())) {
                     req.release();
                     respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain");
                     return;
                 }
-                ctx.channel().attr(ACCESS).set(access);
+                ctx.channel().attr(LOCAL).set(fromThisMachine(ctx, req));
                 ctx.channel().attr(KEEP_ALIVE).set(HttpUtil.isKeepAlive(req));
                 if (!routed) {
                     routed = true;
@@ -762,8 +749,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 return;
             }
             if ("/logs".equals(path)) {
-                // The logs are the host machine's files, and they name the players who connected
-                if (ctx.channel().attr(ACCESS).get() != Access.HOST) {
+                // The logs are this machine's files, and they name the players who connected, so only a browser on this machine gets them
+                if (!Boolean.TRUE.equals(ctx.channel().attr(LOCAL).get())) {
                     respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain");
                 } else {
                     final byte[] zip = logsZip();
@@ -792,7 +779,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             // A chunk's name, and the version the page adds to its other files, are hashes of the file. A changed file is a new address,
             // so an old one never goes stale. The page itself and files asked for without a version are checked each time.
             final boolean hashed = resource.startsWith("js/chunks/") || q.parameters().containsKey("v");
-            respondUnlessUnchanged(ctx, body, type, accessOf(token) == Access.NONE ? null : token, hashed ? KEEP_FOREVER : "no-cache", ifNoneMatch);
+            respondUnlessUnchanged(ctx, body, type, admits(token) ? token : null, hashed ? KEEP_FOREVER : "no-cache", ifNoneMatch);
         }
     }
 
@@ -822,7 +809,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                     }
                 };
                 final String id = param(new QueryStringDecoder(done.requestUri()), "client");
-                endpoint.connected(browser, id == null ? "" : id, ch.attr(ACCESS).get() == Access.HOST);
+                endpoint.connected(browser, id == null ? "" : id, Boolean.TRUE.equals(ch.attr(LOCAL).get()));
                 // A proxy between the server and the browser drops a socket that stays silent too long, as it does while a player thinks
                 pings = ctx.executor().scheduleAtFixedRate(() -> ch.writeAndFlush(new PingWebSocketFrame()),
                         PING_SECONDS, PING_SECONDS, TimeUnit.SECONDS);

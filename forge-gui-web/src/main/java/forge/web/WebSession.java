@@ -60,7 +60,7 @@ public final class WebSession implements IHasForgeLog {
             .on(SetName.class, (s, ch, n) -> s.rename(ch, n.name(), n.avatar(), n.sleeve()))
             // A join that found no seat leaves the browser on the waiting page, which offers to try again
             .on(Plain.join, (s, ch, c) -> s.joinHostGame())
-            .on(Plain.claimHost, (s, ch, c) -> s.claimHost(ch))
+            .on(ClaimHost.class, (s, ch, c) -> s.claimHost(ch, c.password()))
             // Opening a game connects a client to a server, which the host UI thread owns
             .on(Plain.lobby, (s, ch, c) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, false, null)))
             .on(Invite.class, (s, ch, i) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, true, i.limited())))
@@ -222,8 +222,8 @@ public final class WebSession implements IHasForgeLog {
     private final WebSessions sessions;
     /** True for the browser that claimed the host's seat. Only that browser may set up the table. */
     private volatile boolean isHost;
-    /** Whether this browser connected through the host's link. Only such a browser may claim the host's seat. */
-    private final boolean mayHost;
+    /** Whether this browser is on the machine running the server. It takes the host's seat without the host password. */
+    private final boolean onThisMachine;
     private final LocalGame local = new LocalGame();
     private volatile BrowserChannel browser;
     private volatile Stage stage = new Menu();
@@ -289,8 +289,8 @@ public final class WebSession implements IHasForgeLog {
         return left == 0 ? -1 : (System.currentTimeMillis() - left) / 1000;
     }
 
-    WebSession(final WebGuiBase ui, final WebSessions sessions, final boolean mayHost) {
-        this.mayHost = mayHost;
+    WebSession(final WebGuiBase ui, final WebSessions sessions, final boolean onThisMachine) {
+        this.onThisMachine = onThisMachine;
         this.ui = ui;
         this.sessions = sessions;
         final Map<String, DeckCatalog.OnDevice> device = new ConcurrentHashMap<>();
@@ -314,8 +314,9 @@ public final class WebSession implements IHasForgeLog {
         });
     }
 
-    boolean mayHost() {
-        return mayHost;
+    /** Whether this browser must give the host password to take the host's seat. */
+    private boolean needsHostPassword() {
+        return !onThisMachine && WebService.hostPasswordSet();
     }
 
     /** Where the browser is. Only {@link #move} changes it, apart from the session closing. */
@@ -552,8 +553,10 @@ public boolean hosting() {
         });
     }
 
-    private void claimHost(final BrowserChannel channel) {
-        if (!sessions.claimHost(this)) {
+    private void claimHost(final BrowserChannel channel, final String password) {
+        if (needsHostPassword() && !WebService.hostPasswordMatches(password)) {
+            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionWrongHostPassword")));
+        } else if (!sessions.claimHost(this)) {
             channel.send(error(Localizer.getInstance().getMessage("lblWebSessionAlreadyHosting")));
         }
         channel.send(hello());
@@ -849,7 +852,7 @@ public boolean hosting() {
         final Stage now = stage;
         return new Hello(screen(now), now instanceof Playing p && p.spectating(), isHost,
                 // Nobody becomes host by arriving, so a browser is offered the host's seat whenever it is free
-                !isHost && sessions.hostSeatFree(this),
+                !isHost && sessions.hostSeatFree(), needsHostPassword(),
                 // A game with no invited players has nobody to talk to, so the browser hides the chat completely
                 invited(now) || !isHost,
                 playerName(),

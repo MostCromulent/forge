@@ -23,6 +23,8 @@ import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -49,6 +51,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JPopupMenu;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
@@ -661,6 +664,8 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 field(homeAddress, Box.createHorizontalGlue(), copyHome, moreHome),
                 row(heading(TEXT.getMessage("lblWebConsoleOnInternet")), Box.createHorizontalStrut(12), byRouter, byCloudflare),
                 netField, forwardStateRow, forwardHelp, tunnelStateRow, tunnelMissing, tunnelFailed);
+        section(main, stack(heading(TEXT.getMessage("lblWebConsoleHostPassword")), wrapped(TEXT.getMessage("lblWebConsoleHostPasswordAbout"), quiet, TEXT_WIDTH)),
+                field(hostPasswordField()));
         section(main, field(picturesLight, Box.createHorizontalStrut(10),
                 stack(picturesState, stack(picturesBar, row(picturesUpdated, imagesButton))),
                 Box.createHorizontalGlue(), picturesButton));
@@ -774,6 +779,23 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
 
     private void openGuide() {
         open(GUIDE);
+    }
+
+    /** Kept when the player presses Enter or leaves the field, so a half-typed password is never saved. */
+    private static JPasswordField hostPasswordField() {
+        final JPasswordField field = new JPasswordField(WebService.hostPassword());
+        field.setBorder(null);
+        field.setOpaque(false);
+        field.getAccessibleContext().setAccessibleName(TEXT.getMessage("lblWebConsoleHostPassword"));
+        final Runnable keep = () -> WebService.hostPassword(new String(field.getPassword()));
+        field.addActionListener(e -> keep.run());
+        field.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(final FocusEvent e) {
+                keep.run();
+            }
+        });
+        return field;
     }
 
     private void open(final String address) {

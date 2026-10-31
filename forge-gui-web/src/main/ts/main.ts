@@ -248,6 +248,7 @@ function apply(msg: ServerMessage): void {
         restoreStops(actions.setStops);
       }
       model.canClaimHost = msg.canClaimHost;
+      model.hostPassword = msg.hostPassword;
       onServerSettings(msg.settings);
       applyAudioSettings();
       model.screen = msg.screen;

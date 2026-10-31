@@ -52,17 +52,17 @@ import javax.net.ssl.TrustManagerFactory;
 
 /** Tests desktop or mobile Forge joining a web host. The netplay client connects through the web port by the invite link. */
 public class NetplayTunnelTest extends SessionsTest {
-    private static final String GUEST_TOKEN = "guest-token";
+    private static final String GUEST_TOKEN = "link-token";
     private WebServer server;
     private final List<App> apps = new ArrayList<>();
 
     @BeforeClass
     public void openWebPort() throws Exception {
         server = new WebServer(new WebServer.Endpoint() {
-            @Override public void connected(final BrowserChannel channel, final String clientId, final boolean mayHost) { }
+            @Override public void connected(final BrowserChannel channel, final String clientId, final boolean local) { }
             @Override public void disconnected(final BrowserChannel channel) { }
             @Override public void onMessage(final BrowserChannel channel, final JsonObject message) { }
-        }, "host-token", GUEST_TOKEN, 0);
+        }, GUEST_TOKEN, 0);
     }
 
     // A connected app delays the next test's table until the host stops waiting for the app's seat to become free

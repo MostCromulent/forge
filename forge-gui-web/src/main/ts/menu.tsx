@@ -185,6 +185,7 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
   const [avatar, setAvatar] = useState(rememberedAvatar);
   const [picking, setPicking] = useState(false);
   const [takeHost, setTakeHost] = useState(true);
+  const [password, setPassword] = useState('');
   const input = useRef<HTMLInputElement>(null);
   // A name this browser used before is already sent, so the prompt would only flash on screen.
   // Before the server's first hello the browser cannot tell if the host seat is free. A name sent then would join as a guest
@@ -210,7 +211,7 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
         rememberAvatar(avatar);
         // Claim the host seat before sending the name. Otherwise the session does not know it is the host and joins as a guest
         if (offerHost && takeHost) {
-          actions.claimHost();
+          actions.claimHost(password);
         }
         actions.setName(name, avatar, rememberedSleeve());
       }}>
@@ -236,6 +237,7 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
             </span>
           </label>
         )}
+        {offerHost && takeHost && model.hostPassword && <HostPassword value={password} set={setPassword} />}
         <div class="start-buttons">
           {cancel && <button type="button" onClick={cancel}>{t('lblCancel')}</button>}
           <button type="submit" class="primary" disabled={!value.trim()}>{t(cancel ? 'lblWebMenuChange' : 'lblContinue')}</button>
@@ -255,8 +257,15 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
   );
 }
 
+/** The host password, asked for when the server has one and this browser is on another machine. */
+function HostPassword({ value, set }: { value: string; set: (value: string) => void }) {
+  return <input type="password" class="host-password" placeholder={t('lblWebMenuHostPassword')} aria-label={t('lblWebMenuHostPassword')}
+    autocomplete="current-password" value={value} onInput={e => set(e.currentTarget.value)} />;
+}
+
 /** The page for a browser with no seat. A seat is being taken, the last attempt failed, or nobody has opened a table yet. */
 function Waiting({ model, actions }: { model: Model; actions: Actions }) {
+  const [password, setPassword] = useState('');
   const failed = model.screen !== 'opening' && !!model.error;
   const state = model.screen === 'opening' ? 'joining' : failed ? 'failed' : 'idle';
   // A match in progress takes no new players, so the guest waits for the host to give up a seat or open the next table
@@ -281,7 +290,8 @@ function Waiting({ model, actions }: { model: Model; actions: Actions }) {
         </p>
         <div class="wait-buttons">
           {failed && <button onClick={() => actions.join()}>{t('lblTryAgain')}</button>}
-          {model.canClaimHost && <button class="primary" onClick={() => actions.claimHost()}>{t('lblWebMenuHostTable')}</button>}
+          {model.canClaimHost && model.hostPassword && <HostPassword value={password} set={setPassword} />}
+          {model.canClaimHost && <button class="primary" onClick={() => actions.claimHost(password)}>{t('lblWebMenuHostTable')}</button>}
         </div>
       </section>
     </div>

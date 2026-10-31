@@ -17,7 +17,7 @@ public final class FromBrowser {
     }
 
     /** Messages that are only a name. */
-    public enum Plain { decks, claimHost, join, lobby, leaveLobby, addresses, cardPoolDetails, cardSets, netDecks, leave, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
+    public enum Plain { decks, join, lobby, leaveLobby, addresses, cardPoolDetails, cardSets, netDecks, leave, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede, macroRecord, macroRepeat,
         editorClose, editorUndo }
 
@@ -30,6 +30,11 @@ public final class FromBrowser {
     /** Opens a table others can join. When limited is not null, the table is set up from the start for a draft or sealed event. */
     @Command("invite")
     public record Invite(@Nullable EventKind limited) {
+    }
+
+    /** Takes the host's seat. A browser on another machine gives the host password when one is set. */
+    @Command("claimHost")
+    public record ClaimHost(@Nullable String password) {
     }
 
     /** The name and avatar this browser plays under. Both are chosen before anything else. A guest's browser also sends the sleeve it last chose. */
