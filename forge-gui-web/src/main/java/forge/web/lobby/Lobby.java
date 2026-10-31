@@ -117,12 +117,7 @@ public final class Lobby {
         if (limited(lobby)) {
             return GameType.Draft;
         }
-        for (final GameType variant : LobbyFormats.FORMATS) {
-            if (variant != GameType.Constructed && lobby.hasVariant(variant)) {
-                return variant;
-            }
-        }
-        return GameType.Constructed;
+        return lobby.getFormatChoice() instanceof GameType type ? type : GameType.Constructed;
     }
 
     public void setBrowseFormat(final GameType format) {
@@ -884,10 +879,6 @@ public final class Lobby {
             if (!wanted.name().equals(id) || wanted == format()) {
                 continue;
             }
-            // Clear it first, so that no update ever announces another format that still has a Constructed card pool
-            if (wanted != GameType.Constructed && cardPool() != null) {
-                lobby.setFormatChoice(GameType.Constructed);
-            }
             // Decks are cleared before the variants change. That change is announced at once, and the seats are then dealt their new decks
             deckKeys.clear();
             composed.clear();
@@ -895,15 +886,7 @@ public final class Lobby {
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 lobby.getSlot(i).setDeck(null);
             }
-            // Constructed means no format variant. It is not a variant of its own
-            for (final GameType other : LobbyFormats.FORMATS) {
-                if (other != GameType.Constructed) {
-                    lobby.removeVariant(other);
-                }
-            }
-            if (wanted != GameType.Constructed) {
-                lobby.applyVariant(wanted);
-            }
+            lobby.setFormatChoice(wanted);
             local.pushLobby();
             return;
         }

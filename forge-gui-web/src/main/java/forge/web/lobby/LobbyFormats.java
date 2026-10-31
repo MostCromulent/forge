@@ -4,6 +4,7 @@ import forge.StaticData;
 import forge.card.CardEdition;
 import forge.card.CardRarity;
 import forge.deck.DeckFormat;
+import forge.deck.FormatChoices;
 import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.model.FModel;
@@ -18,12 +19,12 @@ import org.apache.commons.lang3.Range;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 /** What the lobby tells a browser about each format, casual variant and card pool. None of it depends on the table. */
 public final class LobbyFormats {
     /** The formats on offer, in desktop's order. Every format except Constructed is a variant. Constructed means no variant. */
-    static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander,
-            GameType.Brawl, GameType.Oathbreaker, GameType.TinyLeaders, GameType.MomirBasic, GameType.MoJhoSto);
+    static final List<GameType> FORMATS = Stream.concat(Stream.of(GameType.Constructed), FormatChoices.FORMAT_GAME_TYPES.stream()).toList();
 
     /** The casual variants. Each one can be added to any format that the engine allows it with. */
     static final List<GameType> VARIANTS = List.of(GameType.Vanguard, GameType.Planechase,
