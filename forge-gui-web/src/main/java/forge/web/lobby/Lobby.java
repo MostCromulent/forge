@@ -149,8 +149,7 @@ public final class Lobby {
     /** The card pool every deck must come from, or null. Only Constructed has one. */
     public GameFormat cardPool() {
         final GameLobby lobby = view();
-        final String name = lobby == null ? null : lobby.getData().getCardPool();
-        return name == null ? null : FModel.getFormats().getFormat(name);
+        return lobby == null ? null : lobby.getFormat();
     }
 
     /** The card pool belongs to the game, so only the host sets it, and only for Constructed. */
@@ -159,8 +158,8 @@ public final class Lobby {
         if (lobby == null || format() != GameType.Constructed) {
             return;
         }
-        final boolean known = name != null && FModel.getFormats().getFormat(name) != null;
-        lobby.setCardPool(known ? name : null);
+        final GameFormat pool = name == null ? null : FModel.getFormats().getFormat(name);
+        lobby.setFormatChoice(pool == null ? GameType.Constructed : pool);
     }
 
     private static List<String> names(final Iterable<GameFormat> formats) {
@@ -886,8 +885,8 @@ public final class Lobby {
                 continue;
             }
             // Clear it first, so that no update ever announces another format that still has a Constructed card pool
-            if (wanted != GameType.Constructed) {
-                lobby.setCardPool(null);
+            if (wanted != GameType.Constructed && cardPool() != null) {
+                lobby.setFormatChoice(GameType.Constructed);
             }
             // Decks are cleared before the variants change. That change is announced at once, and the seats are then dealt their new decks
             deckKeys.clear();
