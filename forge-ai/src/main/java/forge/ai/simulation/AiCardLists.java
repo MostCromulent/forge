@@ -54,7 +54,29 @@ public final class AiCardLists {
         /** Permanents of which a second copy does nothing (ComboGuard). */
         COMBO_ENGINE,
         /** Spells that put cards from hand onto the battlefield when they resolve (ComboGuard). */
-        HAND_CHEAT
+        HAND_CHEAT,
+        /** Permanents that let creatures (or every spell) be cast for free: Aluren, Omniscience. */
+        FREE_CAST_ENGINE,
+        /** Cheap creatures that loop or win once a free_cast_engine is in play (Acererak, Cavern Harpy...). */
+        FREE_CAST_TARGET,
+        /** Artifacts that chain artifacts: cast them from the library, untap them, tutor them (Mystic Forge...). */
+        ARTIFACT_ENGINE,
+        /** What an artifact engine deck wins or swings the game with (Karn, The One Ring, Kozilek's Command...). */
+        ARTIFACT_PAYOFF,
+        /** Spells that fetch an overrun finisher from the library (Green Sun's Zenith, Natural Order...). */
+        FINISHER_TUTOR,
+        /** Cards that win when the library is (nearly) empty: Thassa's Oracle, Laboratory Maniac. */
+        LIBRARY_OUT_PAYOFF,
+        /** Cards that empty the AI's own library on purpose: Balustrade Spy, Cephalid Illusionist and what targets it. */
+        SELF_MILL_OUTLET,
+        /** Cards that bring the winner back from the graveyard once the library is gone (Dread Return). */
+        LIBRARY_OUT_RECURSION,
+        /** The engine half of a two card kill (Grindstone). */
+        PAIR_ENGINE,
+        /** The other half of a two card kill (Painter's Servant). */
+        PAIR_PARTNER,
+        /** Draw spells that throw the rest of the hand away, whose draws a dredger replaces (Breakthrough). */
+        DREDGE_REFILL
     }
 
     /** A two card combo, with the names as they are written in the file. */

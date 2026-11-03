@@ -5,6 +5,8 @@ import forge.LobbyPlayer;
 import forge.StaticData;
 import forge.ai.ability.ProtectAi;
 import forge.ai.ability.PutStickerAi;
+import forge.ai.simulation.ComboPlan;
+import forge.ai.simulation.OpeningHand;
 import forge.card.CardStateName;
 import forge.card.ColorSet;
 import forge.card.ICardFace;
@@ -216,8 +218,9 @@ public class PlayerControllerAi extends PlayerController {
         }
 
         GameOutcome lastOutcome = brains.getGame().getMatch().getLastOutcome();
-        if (lastOutcome.getWinningPlayer().getPlayer().equals(player.getLobbyPlayer())
-            && MyRandom.getRandom().nextInt(100) > sbChanceOnWin) {
+        final boolean weWon = lastOutcome != null && lastOutcome.getWinningPlayer() != null
+            && lastOutcome.getWinningPlayer().getPlayer().equals(player.getLobbyPlayer());
+        if (weWon && MyRandom.getRandom().nextInt(100) > sbChanceOnWin) {
             return null;
         }
 
@@ -864,7 +867,7 @@ public class PlayerControllerAi extends PlayerController {
     public boolean mulliganKeepHand(Player firstPlayer, int cardsToReturn)  {
         if (brains.useSmartMulligan()) {
             try {
-                return forge.ai.simulation.OpeningHand.keep(player, player.getCardsIn(ZoneType.Hand), cardsToReturn,
+                return OpeningHand.keep(player, player.getCardsIn(ZoneType.Hand), cardsToReturn,
                         firstPlayer == player, brains.deckPlan(player), brains.getIntProperty(AiProps.MULLIGAN_THRESHOLD));
             } catch (final RuntimeException e) {
                 // fall back to the standard rule below
@@ -877,7 +880,7 @@ public class PlayerControllerAi extends PlayerController {
     public CardCollectionView tuckCardsViaMulligan(CardCollectionView hand, int cardsToReturn) {
         if (brains.useSmartMulligan()) {
             try {
-                return CardCollection.getView(forge.ai.simulation.OpeningHand.toBottom(player, hand, cardsToReturn,
+                return CardCollection.getView(OpeningHand.toBottom(player, hand, cardsToReturn,
                         player.getGame().getStartingPlayer() == player,
                         brains.deckPlan(player)));
             } catch (final RuntimeException e) {
@@ -1545,6 +1548,13 @@ public class PlayerControllerAi extends PlayerController {
                     && ComputerUtilCost.canPayCost(tgtSA, player, false)) {
                 return ComputerUtil.playStack(tgtSA, player, getGame()); // otherwise the card is just lost
             }
+            // Beseech the Mirror -> Gaea's Will / Yawgmoth's Will: the generic check declines the engine, but
+            // PlayAi.chooseSingleCard already picked it on purpose, and a free cast beats it going to the hand
+            final CardState realState = tgtSA.getHostCard().getState(CardStateName.Original);
+            if (noManaCost && ("YawgmothsWill".equals(tgtSA.getParamOrDefault("AILogic", ""))
+                || realState != null && realState.hasKeyword(Keyword.BARGAIN))) {
+                return ComputerUtil.playStack(tgtSA, player, getGame());
+            }
             // TODO if mandatory AI is only forced to use mana when it's already in the pool
             if (brains.canPlayFromEffectAI(spell, !optional, noManaCost) == AiPlayDecision.WillPlay || !optional) {
                 return ComputerUtil.playStack(tgtSA, player, getGame());
@@ -1623,7 +1633,7 @@ public class PlayerControllerAi extends PlayerController {
                     }
                 }
             }
-            pieces = forge.ai.simulation.ComboPlan.scan(cards).pieceNames();
+            pieces = ComboPlan.scan(cards).pieceNames();
         } catch (final RuntimeException e) {
             return complaints;
         }
@@ -1768,6 +1778,8 @@ public class PlayerControllerAi extends PlayerController {
                 name = SpecialCardAi.CursedScroll.chooseCard(player, sa);
             } else if (logic.equals("PithingNeedle") || logic.equals("PhyrexianRevoker") || logic.equals("SorcerousSpyglass")) {
                 name = SpecialCardAi.PithingNeedle.chooseCard(player, sa);
+            } else if (logic.equals(NamedDiscard.LOGIC)) {
+                name = NamedDiscard.chooseName(player, sa, valid);
             }
 
             if (!StringUtils.isBlank(name)) {
