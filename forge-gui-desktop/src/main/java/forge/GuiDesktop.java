@@ -84,11 +84,6 @@ public class GuiDesktop implements IGuiBase {
     }
 
     @Override
-    public String getAppName() {
-        return "forge";
-    }
-
-    @Override
     public String getUserAgent() {
         return "Forge/" + getCurrentVersion() + " (gui-desktop)";
     }
