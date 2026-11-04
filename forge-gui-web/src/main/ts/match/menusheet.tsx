@@ -7,13 +7,12 @@ import { sheet, swipeDown } from '../sheet';
 import { inspectPlayer } from '../preview';
 import { players, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
-import type { Actions } from '../actions';
 import { t } from '../text';
 
 const TABS = ['log', 'chat', 'players'] as const;
 type Tab = typeof TABS[number];
 
-export function MenuSheet({ model, actions }: { model: Model; actions: Actions }) {
+export function MenuSheet({ model }: { model: Model }) {
   const root = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLDivElement>(null);
   const shown = TABS.filter(x => x !== 'chat' || model.networked);

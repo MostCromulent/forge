@@ -107,8 +107,7 @@ export function tossCoin(heads: boolean, caption: string, then: () => void): voi
     inAir = false;
     return;
   }
-  // The coin is thrown at once, while the board may still be hidden as it comes on screen (entry.ts). So it is drawn outside the board.
-  // It takes the board's side column width, so it is centred over the table
+  // Drawn outside the board, which may still be hidden (entry.ts), with the side column's width so it is centred over the table
   root.style.setProperty('--side-w', getComputedStyle(byId('match')).getPropertyValue('--side-w'));
   document.body.append(root);
   playSoundPart(SOUND, 0, FLICK_END);

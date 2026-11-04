@@ -107,9 +107,7 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
   const head = drawerHead(root);
   const portrait = isPortrait();
   const asked = model.prompt;
-  // A prompt answered with cards from the hand, such as a discard, needs them large enough to read and tap
-  // Before the first turn, the player keeps or mulligans the new hand and puts cards back from it. So the hand is shown while they answer,
-  // once who goes first has been shown
+  // A prompt answered from the hand, such as a discard or the mulligan before the first turn, needs the hand shown, after who goes first
   const dealt = !game(model)?.Turn && held.length > 0 && !!asked && (asked.ok.enabled || asked.cancel.enabled) && !starterShowing();
   const fromHand = portrait && !!asked && (dealt || (!asked.priority && !asked.paying && asked.selectableMin > 0
     && asked.selectable.some(r => held.some(c => c.$key === r.ref))));

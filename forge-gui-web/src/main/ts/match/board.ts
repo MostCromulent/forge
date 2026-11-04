@@ -245,8 +245,7 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
     if (seat && shownSeat !== null) {
       const later = order.indexOf(open as number) > order.indexOf(shownSeat);
       replay(seat, later ? 'from-right' : 'from-left', 'from-right', 'from-left');
-      // The classes also stop the cards from resizing, so they are removed when the slide ends
-      // Other animations in the seat, such as a damaged card's shake, also end here. Only the slide's own end counts
+      // The classes stop the cards resizing, so they go when the slide itself ends, not another animation in the seat
       seat.addEventListener('animationend', function slid(e) {
         if (!e.animationName.startsWith('seat-from-')) return;
         seat.removeEventListener('animationend', slid);
@@ -529,8 +528,7 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, se
         return;
       }
       const cards = zone(model, player, zoneName);
-      // New cards go to the end of the graveyard and exile lists, so the last card is on top
-      // A library's top card is first. It shows in place of the sleeve while this player may see it
+      // A graveyard or exile list's newest card is last; a library's top card is first and replaces the sleeve while it may be seen
       const top = zoneName === 'Graveyard' || zoneName === 'Exile' ? cards[cards.length - 1] : zoneName === 'Library' ? cards[0] : undefined;
       const src = cardImageSrc(model, top);
       const img = q<HTMLImageElement>(el, 'img');

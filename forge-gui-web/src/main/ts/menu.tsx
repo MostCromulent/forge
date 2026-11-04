@@ -187,8 +187,7 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
   const [takeHost, setTakeHost] = useState(true);
   const [password, setPassword] = useState('');
   const input = useRef<HTMLInputElement>(null);
-  // A name this browser used before is already sent, so the prompt would only flash on screen.
-  // Before the server's first hello the browser cannot tell if the host seat is free. A name sent then would join as a guest
+  // A remembered name is already sent, and before the first hello a name sent would join as a guest, so the prompt waits
   const asking = !model.nameSent && !!model.looks;
   useEffect(() => {
     input.current?.focus();

@@ -293,8 +293,7 @@ function slotsFor(model: Model, player: number, cards: CardView[], onField: Card
     new Set((model.playable?.autoTap ?? []).map(r => r.ref)),
   ];
   const roles = combatRoles(model);
-  // A card targeted from the stack leaves its pile, so the pile's next copy can be picked for another trigger.
-  // Each card keeps the items that target it, so two cards targeted by different spells do not pile together
+  // A targeted card leaves its pile and keeps its targeting items, so the next copy can be picked and differently targeted cards stay apart
   const targeted = new Map<number, number[]>();
   for (const item of derefAll(model, game(model)?.Stack)) {
     for (const o of stackTargets(model, item)) targeted.set(o.$key, [...(targeted.get(o.$key) ?? []), item.$key]);

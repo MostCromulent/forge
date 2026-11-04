@@ -485,8 +485,7 @@ function draw(): void {
   byId('editor').hidden = page !== 'editor';
   for (const id of ['menu', 'lobby', 'limited', 'drafting', 'campaign', 'match']) {
     const el = byId(id);
-    // A phone has no room for a panel. There the editor fills the screen and the page under it is hidden
-    // The page that started a match stays drawn under the board until the board has come on screen (match/entry.ts)
+    // A phone's editor hides the page under it, and the page that started a match stays drawn until the board is on screen (match/entry.ts)
     el.hidden = (id !== (under === 'name' ? 'menu' : under) || (page === 'editor' && isPortrait())) && !el.classList.contains('to-match');
     // On a desktop the page under the editor stays visible but cannot be used
     el.inert = page === 'editor';

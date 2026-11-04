@@ -307,7 +307,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     /** A loopback request that no proxy forwarded. A Cloudflare tunnel also connects from this machine, but adds these headers. */
     private static boolean fromThisMachine(final ChannelHandlerContext ctx, final FullHttpRequest req) {
         return ctx.channel().remoteAddress() instanceof InetSocketAddress a && a.getAddress() != null && a.getAddress().isLoopbackAddress()
-                && !req.headers().contains("Cf-Connecting-Ip") && !req.headers().contains("X-Forwarded-For");
+                && !req.headers().contains("Cf-Connecting-Ip") && !req.headers().contains("X-Forwarded-For") && !req.headers().contains("Forwarded");
     }
 
     /** A value from the link's query, or null when the link does not carry it. */
@@ -776,8 +776,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             }
             // The page stores the link's token as a cookie, so its later requests come in on the same link
             final String token = param(q, "token");
-            // A chunk's name, and the version the page adds to its other files, are hashes of the file. A changed file is a new address,
-            // so an old one never goes stale. The page itself and files asked for without a version are checked each time.
+            // A chunk's name and the page's version parameter are file hashes, so a changed file gets a new address and the old one never goes stale
             final boolean hashed = resource.startsWith("js/chunks/") || q.parameters().containsKey("v");
             respondUnlessUnchanged(ctx, body, type, admits(token) ? token : null, hashed ? KEEP_FOREVER : "no-cache", ifNoneMatch);
         }
