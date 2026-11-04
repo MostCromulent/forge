@@ -73,8 +73,6 @@ jobs:
           export DISPLAY=":1"
           mvn -B -P windows-linux install -DskipTests -T 1C
           bundle=$(dirname "$(ls forge-installer/target/*/forge.sh | head -n 1)")
-          cp forge-gui-web/target/forge-gui-web.jar "$bundle/"
-          cp -r forge-gui-web/target/lib "$bundle/lib"
           mv "$bundle" dist/forge-web-and-desktop
           (cd dist && zip -q -r forge-web-and-desktop.zip forge-web-and-desktop)
 
@@ -103,7 +101,7 @@ jobs:
           EOF
           desktop=""
           if [ -f dist/forge-web-and-desktop.zip ]; then
-            desktop='\n## Which download\n\n`forge-web.zip` is the web GUI alone. `forge-web-and-desktop.zip` adds desktop Forge and its Adventure mode, built from the same code, with `forge-gui-web.jar` in the same folder.\n'
+            desktop='\n## Which download\n\n`forge-web.zip` is the web GUI alone. `forge-web-and-desktop.zip` adds desktop Forge and its Adventure mode, built from the same code. Start the web GUI there with `forge-web`.\n'
           fi
           sed -i -e "s|@REPO@|$GITHUB_REPOSITORY|" -e "s|@SHA@|$GITHUB_SHA|" \
             -e "s|@SHORT@|${GITHUB_SHA:0:11}|" -e "s|@DATE@|$(date -u '+%F %H:%M')|" -e "s|^ *@DESKTOP@$|$desktop|" notes.md

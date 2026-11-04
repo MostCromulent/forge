@@ -396,7 +396,8 @@
           downloading a Node toolchain and running `npm ci` at generate-resources, so a default build would need
           the network and would stop working offline.
 
-          Nothing else depends on it, so gating it here is invisible to every other build. To build it:
+          A default build never needs it. The windows-linux profile below also builds it, for the desktop download.
+          To build it alone:
               mvn -Pweb ...
         -->
         <profile>
