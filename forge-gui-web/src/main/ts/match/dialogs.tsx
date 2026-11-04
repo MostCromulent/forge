@@ -423,7 +423,7 @@ function WordChoices({ req, model, answer }: { req: ChoicesRequest; model: Model
     }
   };
   const count = !single ? (req.max > 1 ? t('lblWebDialogChosenOfMax', chosen.size, req.max) : t('lblWebDialogSelected', chosen.size))
-    : typed ? t('lblWebDialogMatchesOf', matches.length, labels.length) : '';
+    : typed ? t('lblWebNOfM', matches.length, labels.length) : '';
   return (
     <div class="word-choices" onKeyDown={onKey}>
       <div class="word-search">

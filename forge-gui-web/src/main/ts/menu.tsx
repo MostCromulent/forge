@@ -258,7 +258,7 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
 
 /** The host password, asked for when the server has one and this browser is on another machine. */
 function HostPassword({ value, set }: { value: string; set: (value: string) => void }) {
-  return <input type="password" class="host-password" placeholder={t('lblWebMenuHostPassword')} aria-label={t('lblWebMenuHostPassword')}
+  return <input type="password" class="host-password" placeholder={t('lblWebConsoleHostPassword')} aria-label={t('lblWebConsoleHostPassword')}
     autocomplete="current-password" value={value} onInput={e => set(e.currentTarget.value)} />;
 }
 

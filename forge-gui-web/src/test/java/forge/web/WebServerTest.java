@@ -87,12 +87,12 @@ public class WebServerTest {
     /** Fails if a proxied socket, such as one through a Cloudflare tunnel, counts as a browser on this machine, or a direct one does not. */
     @Test
     public void theSocketSaysWhetherItIsOnThisMachine() throws Exception {
-        final WebSocket proxied = openSocket(origin(), "secret", new CopyOnWriteArrayList<>(), "Cf-Connecting-Ip");
+        final WebSocket proxied = openSocket(origin(), new CopyOnWriteArrayList<>(), "Cf-Connecting-Ip");
         awaitConnected();
         Assert.assertFalse(connectedLocal, "a socket through a tunnel counted as this machine");
         proxied.sendClose(WebSocket.NORMAL_CLOSURE, "").get(5, TimeUnit.SECONDS);
 
-        final WebSocket direct = openSocket(origin(), "secret", new CopyOnWriteArrayList<>());
+        final WebSocket direct = openSocket(origin(), new CopyOnWriteArrayList<>(), null);
         awaitConnected();
         Assert.assertTrue(connectedLocal, "a socket from this machine did not count as this machine");
         direct.sendClose(WebSocket.NORMAL_CLOSURE, "").get(5, TimeUnit.SECONDS);
@@ -199,23 +199,15 @@ public class WebServerTest {
         Assert.assertTrue(styles.body().contains(get("/css/portrait.css?token=secret", null).body()));
     }
 
-    private WebSocket openSocket(final String origin, final List<String> texts) throws Exception {
-        return openSocket(origin, "secret", texts);
-    }
-
-    private WebSocket openSocket(final String origin, final String token, final List<String> texts) throws Exception {
-        return openSocket(origin, token, texts, null);
-    }
-
-    /** forwarded names a header that a proxy adds, sent with a made-up address. */
-    private WebSocket openSocket(final String origin, final String token, final List<String> texts, final String forwarded) throws Exception {
+    /** forwarded names a header that a proxy adds, sent with a made-up address, or is null for a direct socket. */
+    private WebSocket openSocket(final String origin, final List<String> texts, final String forwarded) throws Exception {
         connected = null;
         final WebSocket.Builder b = http.newWebSocketBuilder().header("Origin", origin);
         if (forwarded != null) {
             b.header(forwarded, "203.0.113.7");
         }
         return b
-                .buildAsync(URI.create("ws://127.0.0.1:" + server.port() + "/ws?token=" + token), new WebSocket.Listener() {
+                .buildAsync(URI.create("ws://127.0.0.1:" + server.port() + "/ws?token=secret"), new WebSocket.Listener() {
                     @Override
                     public CompletionStage<?> onText(final WebSocket ws, final CharSequence data, final boolean last) {
                         texts.add(data.toString());
@@ -228,7 +220,7 @@ public class WebServerTest {
     @Test
     public void socketCarriesMessagesBothWays() throws Exception {
         final List<String> texts = new CopyOnWriteArrayList<>();
-        final WebSocket ws = openSocket(origin(), texts);
+        final WebSocket ws = openSocket(origin(), texts, null);
         ws.sendText("{\"t\":\"ping\"}", true).get(5, TimeUnit.SECONDS);
         SessionsTest.awaitTrue(() -> !received.isEmpty(), "the endpoint never got the browser's message");
         Assert.assertEquals(received.get(0).get("t").getAsString(), "ping");
@@ -240,6 +232,6 @@ public class WebServerTest {
 
     @Test(expectedExceptions = ExecutionException.class)
     public void socketFromAnotherOriginIsRefused() throws Exception {
-        openSocket("http://evil.example", new CopyOnWriteArrayList<>());
+        openSocket("http://evil.example", new CopyOnWriteArrayList<>(), null);
     }
 }

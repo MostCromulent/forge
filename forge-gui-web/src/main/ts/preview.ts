@@ -516,7 +516,6 @@ function setRulesText(box: HTMLElement, foot: HTMLElement, html: string, keyword
   return sorted;
 }
 
-/** Labels a keyword or a line as gained or lost. */
 function changed(el: HTMLElement, how: 'gained' | 'lost'): HTMLElement {
   const tag = make('i', 'change');
   tag.textContent = how === 'gained' ? t('lblWebDetailGained') : t('lblWebDetailLost');
@@ -593,7 +592,7 @@ function chip(text: string, met: boolean): HTMLElement {
 /** How far a condition has got, such as "3/4" or "2 in hand". */
 function countText(p: Progress): string {
   if (p.upTo === 'hand') return t('lblWebCondInHand', p.have);
-  if (p.upTo === 'life') return t('lblWebCondLife', p.have);
+  if (p.upTo === 'life') return t('lblNLife', p.have);
   return `${p.have}/${p.need}`;
 }
 

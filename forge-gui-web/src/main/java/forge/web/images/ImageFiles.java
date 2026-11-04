@@ -68,7 +68,6 @@ public final class ImageFiles {
         return f.isFile() ? f : null;
     }
 
-    /** The content type of a saved picture. */
     public static String type(final File file) {
         return file.getName().endsWith(".png") ? "image/png" : "image/jpeg";
     }

@@ -1,5 +1,7 @@
 package forge.web.images;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -28,11 +30,8 @@ public final class CardThumbnails {
     private static final int MOST_KEPT = 600;
     private static final float JPEG_QUALITY = 0.88f;
 
-    private static final ExecutorService WORKERS = Executors.newFixedThreadPool(2, r -> {
-        final Thread t = new Thread(r, "CardThumbnails");
-        t.setDaemon(true);
-        return t;
-    });
+    private static final ExecutorService WORKERS = Executors.newFixedThreadPool(2,
+            new ThreadFactoryBuilder().setNameFormat("CardThumbnails").setDaemon(true).build());
     /** Each card's thumbnail, while it is being made or after. Browsers that ask at the same time share one render. */
     private static final Map<String, CompletableFuture<byte[]>> KEPT = Collections.synchronizedMap(new LinkedHashMap<>(64, 0.75f, true) {
         @Override

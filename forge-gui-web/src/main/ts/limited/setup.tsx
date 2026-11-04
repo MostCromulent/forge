@@ -294,7 +294,7 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
       render: (_, set) => <TextStep placeholder={t('lblWebSetupCubeCobraField')} initial={options.lastCube ?? ''} done={id => set({ cubeId: id })} />,
     },
     {
-      id: 'rules', label: t('lblWebSetupTableRules'), hint: t('lblWebSetupHintRules'), fields: ['podSize', 'pickRule', 'timer', 'grace'],
+      id: 'rules', label: t('lblWebOptionsSectionTable'), hint: t('lblWebSetupHintRules'), fields: ['podSize', 'pickRule', 'timer', 'grace'],
       applies: () => !!table,
       answer: v => v.timer === undefined ? null : rulesLine(v),
       render: (v, set) => <TableRules seated={table?.seated ?? 2} recommended={productPod(options, v)} done={set} />,

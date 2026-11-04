@@ -138,6 +138,16 @@ abstract class SessionsTest {
         sessions.onMessage(host, message("dev", "action", "winGame"));
     }
 
+    /** The named person in a presence message, or null if they are not listed. */
+    static JsonObject person(final JsonObject presence, final String name) {
+        for (final var p : presence.getAsJsonArray("people")) {
+            if (name.equals(str(p.getAsJsonObject(), "name"))) {
+                return p.getAsJsonObject();
+            }
+        }
+        return null;
+    }
+
     /** Gives each question its default answer until the web seat has priority. Only then has the game dealt its zones and is safe to end. */
     void awaitPriority(final TestBrowser host) {
         final String[] seen = { "no game" };

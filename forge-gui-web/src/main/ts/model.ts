@@ -271,7 +271,6 @@ export function cardPrompt(req: Request): boolean {
   return req.kind === 'choices' && !req.atX && !req.atY && !req.stackKeys && req.options.some(o => o.card || o.imageKey || o.name || o.player);
 }
 
-/** The card of the spell or ability on top of the stack. */
 export function stackTopSource(model: Model): Ref | undefined {
   const top = derefAll(model, game(model)?.Stack)[0] as { SourceCard?: Ref } | undefined;
   return top?.SourceCard ?? undefined;

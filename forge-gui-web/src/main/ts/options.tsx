@@ -5,7 +5,7 @@ import { exportBackup, importBackup, type ImportResult } from './backup';
 import { buildVersion, ForgeLinks } from './links';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { saveText } from './dom';
-import { keyName, rebind, shortcutCodes, shortcutName, type KeyBindings } from './keys';
+import { keyName, rebind, shortcutCodes, shortcutName } from './keys';
 import { PLAYMATS, SETTINGS, boundKeys, isGuest, resetKeys, set, setKeys, setShortcut, setting, shortcutKeys, shortcutSettings, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
 import { t, textLanguage } from './text';
@@ -286,9 +286,11 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
       // Row draws the CSS editor's button and the editor itself, because the editor is too big for the control column
       return null;
     case 'key':
-      return <KeyControl action={def.action} value={String(value)} />;
+      return <KeyControl value={String(value)} name={keyName} ignores={e => e.ctrlKey || e.altKey || e.metaKey}
+        take={e => setKeys(rebind(boundKeys(), def.action, e.key))} />;
     case 'shortcut':
-      return <ShortcutControl value={String(value)} change={codes => setShortcut(def.key, codes)} />;
+      // Click, then press the new key, with Ctrl or Shift if wanted. Escape keeps the old key and Backspace removes it, as on desktop
+      return <KeyControl value={String(value)} name={shortcutName} take={e => setShortcut(def.key, e.key === 'Backspace' ? '' : shortcutCodes(e))} />;
     case 'slider':
       return (
         <div class="slider">
@@ -360,41 +362,24 @@ function CssEditor({ def, value }: { def: SettingDef; value: string }) {
   );
 }
 
-// Click, then press the new key, with Ctrl or Shift if wanted. Escape keeps the old key and Backspace removes it, as on desktop
-function ShortcutControl({ value, change }: { value: string; change: (value: string) => void }) {
-  const [listening, setListening] = useState(false);
-  return (
-    <button class={listening ? 'key-bind listening' : 'key-bind'} onClick={() => setListening(true)} onBlur={() => setListening(false)}
-      onKeyDown={e => {
-        if (!listening || ['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.key === 'Backspace') change('');
-        else if (e.key !== 'Escape') change(shortcutCodes(e));
-        setListening(false);
-        e.currentTarget.blur();
-      }}>
-      {listening ? t('lblWebOptionsPressKey') : value ? shortcutName(value) : t('lblNone')}
-    </button>
-  );
-}
-
 // Click, then press the new key. Escape leaves the key as it was
-function KeyControl({ action, value }: { action: keyof KeyBindings; value: string }) {
+function KeyControl({ value, name, ignores, take }: {
+  value: string; name: (value: string) => string; ignores?: (e: KeyboardEvent) => boolean; take: (e: KeyboardEvent) => void;
+}) {
   const [listening, setListening] = useState(false);
   return (
     <button class={listening ? 'key-bind listening' : 'key-bind'} onClick={() => setListening(true)} onBlur={() => setListening(false)}
       onKeyDown={e => {
-        if (!listening || e.ctrlKey || e.altKey || e.metaKey || ['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+        if (!listening || ignores?.(e) || ['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
         // The page's own key handling must not also act on the key being chosen
         e.preventDefault();
         e.stopPropagation();
-        if (e.key !== 'Escape') setKeys(rebind(boundKeys(), action, e.key));
+        if (e.key !== 'Escape') take(e);
         setListening(false);
         // Blurring stops the release of a Space from also clicking the button, which would start listening again
         e.currentTarget.blur();
       }}>
-      {listening ? t('lblWebOptionsPressKey') : value ? keyName(value) : t('lblNone')}
+      {listening ? t('lblWebOptionsPressKey') : value ? name(value) : t('lblNone')}
     </button>
   );
 }

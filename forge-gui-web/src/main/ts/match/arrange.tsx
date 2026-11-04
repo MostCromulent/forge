@@ -81,7 +81,6 @@ interface Carry {
   row: HTMLElement;
   copyClass: string;
   ghost: { current: HTMLElement | null };
-  /** The places where the card can be dropped. */
   slots: () => Element[];
   /** The card's current element, which the copy settles onto when released. Without it, the copy settles onto the lifted element. */
   home?: () => Element | null;
@@ -160,7 +159,6 @@ export function Order({ req, model, answer }: { req: OrderRequest; model: Model;
   const [remember, setRemember] = useState(false);
   /** The card tapped to be moved, by its index in the options. */
   const [held, setHeld] = useState<number | null>(null);
-  /** The card being dragged, by its index in the options. */
   const [carried, setCarried] = useState<number | null>(null);
   const row = useRef<HTMLDivElement>(null);
   const order = useRef(chosen);

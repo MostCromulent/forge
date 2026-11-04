@@ -25,7 +25,6 @@ import { shownZones } from './zones';
 let built = false;
 /** The row of tools. On a phone it is moved out of the prompt and onto the player's bar. */
 let tools: HTMLElement;
-/** The prompt last drawn. */
 let shown: Model['prompt'] = null;
 
 /** The glints are dashes along an outline of the box, not a rotating gradient. So they move at one speed on long and short edges. */

@@ -1,5 +1,6 @@
 package forge.web.limited;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckGroup;
@@ -24,11 +25,8 @@ import java.util.stream.IntStream;
 
 /** One player's booster draft against the computer. BoosterDraft has no locks, so all code that uses it runs on this draft's own thread. */
 public final class OfflineDraft implements Draft {
-    private final ExecutorService thread = Executors.newSingleThreadExecutor(r -> {
-        final Thread t = new Thread(r, "Draft");
-        t.setDaemon(true);
-        return t;
-    });
+    private final ExecutorService thread = Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder().setNameFormat("Draft").setDaemon(true).build());
     private final String playerName;
     private final Consumer<DraftState> publish;
     private final Consumer<String> fail;

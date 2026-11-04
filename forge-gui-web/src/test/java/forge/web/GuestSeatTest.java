@@ -10,8 +10,6 @@ import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadInfo;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -92,24 +90,7 @@ public class GuestSeatTest extends SessionsTest {
         final TestBrowser host = connect("host");
         sessions.onMessage(host, JsonCodec.message("claimHost"));
         send(host, JsonCodec.message("invite"));
-        final JsonObject hosted = host.awaitLobbyWithSeat();
-        Assert.assertNotNull(hosted, "the host never got a seat in its own game");
-
-        final TestBrowser guest = connect("player");
-        sessions.onMessage(guest, message("setName", "name", "Player"));
-        final JsonObject seated = guest.awaitLobbyWithSeat();
-        Assert.assertNotNull(seated, "the guest never took a seat" + diagnosis(host, guest));
-
-        sessions.onMessage(host, JsonCodec.message("decks"));
-        final String deck = TestDecks.firstLegal(host.awaitDecks());
-        for (final TestBrowser browser : List.of(host, guest)) {
-            final JsonObject choose = message("setSeat", "index", (browser == host ? hosted : seated).get("mySeat").getAsInt());
-            choose.addProperty("deck", deck);
-            sessions.onMessage(browser, choose);
-            sessions.onMessage(browser, message("ready", "ready", true));
-        }
-        host.awaitLobby(l -> l.get("canStart").getAsBoolean(),
-                "the host could not start once both seats had a deck and were ready");
+        final TestBrowser guest = seatGuestAndReady(host);
 
         // Stops set in match setup belong to the player. The match must open with them, not apply them later
         final JsonObject stops = JsonCodec.message("setStops");
@@ -122,7 +103,7 @@ public class GuestSeatTest extends SessionsTest {
         guest.forget();
         sessions.onMessage(host, message("start", "spectate", false));
         Assert.assertNotNull(guest.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString())),
-                "the guest was left in match setup when the host started the match" + diagnosis(host, guest));
+                "the guest was left in match setup when the host started the match");
         guest.awaitMatching("state", m -> m.get("full").getAsBoolean(),
                 "the guest was taken into the match but never shown the table");
         final JsonObject controls = guest.awaitNewest("controls", "the guest was never sent its controls");
@@ -130,7 +111,7 @@ public class GuestSeatTest extends SessionsTest {
                 "the match did not open with the stops the guest set in match setup");
     }
 
-    // Fails if the host cannot give a disconnected guest's seat to another browser, the browser that left gets it back, a reload loses it, or removing the player keeps the seat or the name taken
+    // Fails if a guest can give away or remove a disconnected guest's seat, the host cannot give that seat to another browser, the browser that left gets it back, a reload loses it, or removing the player keeps the seat or the name taken
     @Test(timeOut = 120_000)
     public void theHostSettlesADisconnectedSeatAtTheTable() throws Exception {
         final TestBrowser host = hostAt("invite");
@@ -143,10 +124,15 @@ public class GuestSeatTest extends SessionsTest {
         final TestBrowser second = connect("second");
         sessions.onMessage(second, message("setName", "name", "Bob"));
         second.awaitMatching("hello", h -> "Bob".equals(str(h, "playerName")), "the second guest was not named");
+        // Each command is handled before onMessage returns, so a seat given away would already be Bob's
+        sessions.onMessage(second, message("giveSeat", "from", "Ann", "to", "Bob"));
+        sessions.onMessage(second, message("dropPlayer", "name", "Ann"));
+        Assert.assertNotEquals(second.hello.get("screen").getAsString(), "setup", "a guest gave itself another player's seat");
+        // The host still gives the seat next, so the guest's commands neither moved nor removed it
         send(host, message("giveSeat", "from", "Ann", "to", "Bob"));
         final JsonObject given = second.awaitLobby(l -> l.get("mySeat").getAsInt() == seat, "the second guest was not given the seat");
         Assert.assertEquals(given.getAsJsonArray("seats").get(seat).getAsJsonObject().get("name").getAsString(), "Ann");
-        host.awaitNewest("presence", p -> named(p, "Ann") && !disconnected(p, "Ann") && !named(p, "Bob"),
+        host.awaitNewest("presence", p -> person(p, "Ann") != null && !disconnected(p, "Ann") && person(p, "Bob") == null,
                 "the seat's player still reads as disconnected, or the browser that took it is listed twice");
 
         final TestBrowser back = connect("first");
@@ -203,20 +189,7 @@ public class GuestSeatTest extends SessionsTest {
     @Test(timeOut = 120_000)
     public void theHostSettlesADisconnectedSeatInAMatch() throws Exception {
         final TestBrowser host = hostAt("invite");
-        final JsonObject hosted = host.awaitLobbyWithSeat();
-        final TestBrowser guest = connect("player");
-        sessions.onMessage(guest, message("setName", "name", "Player"));
-        final JsonObject seated = guest.awaitLobbyWithSeat();
-        Assert.assertNotNull(seated, "the guest never took a seat");
-        sessions.onMessage(host, JsonCodec.message("decks"));
-        final String deck = TestDecks.firstLegal(host.awaitDecks());
-        for (final TestBrowser browser : List.of(host, guest)) {
-            final JsonObject choose = message("setSeat", "index", (browser == host ? hosted : seated).get("mySeat").getAsInt());
-            choose.addProperty("deck", deck);
-            sessions.onMessage(browser, choose);
-            sessions.onMessage(browser, message("ready", "ready", true));
-        }
-        host.awaitLobby(l -> l.get("canStart").getAsBoolean(), "the host could not start");
+        final TestBrowser guest = seatGuestAndReady(host);
         sessions.onMessage(host, message("start", "spectate", false));
         guest.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the guest was not taken into the match");
 
@@ -236,27 +209,14 @@ public class GuestSeatTest extends SessionsTest {
         final Game game = sessions.hostLobby().getHostedMatch().getGame();
         awaitTrue(() -> game.getPlayers().stream().anyMatch(p -> "Player".equals(p.getName()) && p.getController() instanceof PlayerControllerAi),
                 "the removed player's seat was not handed to the AI");
-        Assert.assertNotNull(host.awaitAfter(dropped, "presence", p -> !named(p, "Player")), "the removed player is still listed");
+        Assert.assertNotNull(host.awaitAfter(dropped, "presence", p -> person(p, "Player") == null), "the removed player is still listed");
     }
 
     // Fails if a match waits for a next-game choice from a seat the AI took over, or the next game returns that seat to a human
     @Test(timeOut = 120_000)
     public void theMatchGoesOnAfterASeatIsHandedToTheAi() throws Exception {
         final TestBrowser host = hostAt("invite");
-        final JsonObject hosted = host.awaitLobbyWithSeat();
-        final TestBrowser guest = connect("player");
-        sessions.onMessage(guest, message("setName", "name", "Player"));
-        final JsonObject seated = guest.awaitLobbyWithSeat();
-        Assert.assertNotNull(seated, "the guest never took a seat");
-        sessions.onMessage(host, JsonCodec.message("decks"));
-        final String deck = TestDecks.firstLegal(host.awaitDecks());
-        for (final TestBrowser browser : List.of(host, guest)) {
-            final JsonObject choose = message("setSeat", "index", (browser == host ? hosted : seated).get("mySeat").getAsInt());
-            choose.addProperty("deck", deck);
-            sessions.onMessage(browser, choose);
-            sessions.onMessage(browser, message("ready", "ready", true));
-        }
-        host.awaitLobby(l -> l.get("canStart").getAsBoolean(), "the host could not start");
+        final TestBrowser guest = seatGuestAndReady(host);
         sessions.onMessage(host, message("start", "spectate", false));
         guest.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the guest was not taken into the match");
         final HostedMatch match = sessions.hostLobby().getHostedMatch();
@@ -311,49 +271,32 @@ public class GuestSeatTest extends SessionsTest {
         guest.forget();
         sessions.onMessage(host, message("start", "spectate", false));
         guest.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()),
-                "the guest was left in match setup when the match started" + diagnosis(host, guest));
+                "the guest was left in match setup when the match started");
     }
 
-    private static boolean named(final JsonObject presence, final String name) {
-        for (final var p : presence.getAsJsonArray("people")) {
-            if (name.equals(p.getAsJsonObject().get("name").getAsString())) {
-                return true;
-            }
+    /** Seats a guest named Player beside the host, gives both seats the same deck and readies them. */
+    private TestBrowser seatGuestAndReady(final TestBrowser host) throws InterruptedException {
+        final JsonObject hosted = host.awaitLobbyWithSeat();
+        Assert.assertNotNull(hosted, "the host never got a seat in its own game");
+        final TestBrowser guest = connect("player");
+        sessions.onMessage(guest, message("setName", "name", "Player"));
+        final JsonObject seated = guest.awaitLobbyWithSeat();
+        Assert.assertNotNull(seated, "the guest never took a seat");
+        sessions.onMessage(host, JsonCodec.message("decks"));
+        final String deck = TestDecks.firstLegal(host.awaitDecks());
+        for (final TestBrowser browser : List.of(host, guest)) {
+            final JsonObject choose = message("setSeat", "index", (browser == host ? hosted : seated).get("mySeat").getAsInt());
+            choose.addProperty("deck", deck);
+            sessions.onMessage(browser, choose);
+            sessions.onMessage(browser, message("ready", "ready", true));
         }
-        return false;
+        host.awaitLobby(l -> l.get("canStart").getAsBoolean(), "the host could not start once both seats had a deck and were ready");
+        return guest;
     }
 
     private static boolean disconnected(final JsonObject presence, final String name) {
-        for (final var p : presence.getAsJsonArray("people")) {
-            final JsonObject person = p.getAsJsonObject();
-            if (name.equals(person.get("name").getAsString())) {
-                return person.has("disconnected") && person.get("disconnected").getAsBoolean();
-            }
-        }
-        return false;
-    }
-
-    /** The last messages each browser got and the stack of each relevant thread, for a wait that timed out. */
-    private static String diagnosis(final TestBrowser... browsers) {
-        final StringBuilder out = new StringBuilder();
-        for (final TestBrowser b : browsers) {
-            out.append("\n--- last messages:\n");
-            final List<JsonObject> got = b.got;
-            for (final JsonObject m : got.subList(Math.max(0, got.size() - 4), got.size())) {
-                final String text = m.toString();
-                out.append(text, 0, Math.min(300, text.length())).append('\n');
-            }
-        }
-        for (final ThreadInfo t : ManagementFactory.getThreadMXBean().dumpAllThreads(true, true)) {
-            final String name = t.getThreadName();
-            if (name.startsWith("Web") || name.startsWith("Game") || name.startsWith("main")) {
-                out.append("\n--- ").append(name).append(' ').append(t.getThreadState());
-                for (final StackTraceElement e : t.getStackTrace()) {
-                    out.append("\n    ").append(e);
-                }
-            }
-        }
-        return out.toString();
+        final JsonObject person = person(presence, name);
+        return person != null && person.has("disconnected") && person.get("disconnected").getAsBoolean();
     }
 
     // Fails if lowering the count removes a person's seat, keeps an open seat instead of a computer's, or goes below two players
@@ -452,7 +395,10 @@ public class GuestSeatTest extends SessionsTest {
         }
         final int chosen = free;
         sessions.onMessage(host, message("setSeat", "index", mine, "avatar", chosen));
-        host.awaitNewest("presence", p -> avatarOf(p, name) == chosen, "the list of who is here kept the old portrait");
+        host.awaitNewest("presence", p -> {
+            final JsonObject me = person(p, name);
+            return me != null && (me.has("avatar") ? me.get("avatar").getAsInt() : 0) == chosen;
+        }, "the list of who is here kept the old portrait");
     }
 
     // Fails if a card-art sleeve the host removed is still offered
@@ -468,16 +414,6 @@ public class GuestSeatTest extends SessionsTest {
         Assert.assertNotNull(host.awaitAfter(from, "hello", h -> !h.has("sleeveArt") || !h.get("sleeveArt").toString().contains(key)),
                 "the removed sleeve is still offered");
         Assert.assertTrue(DeckCatalog.savedSleeveArt().stream().noneMatch(art -> art.key().equals(key)), "the sleeve is still saved");
-    }
-
-    private static int avatarOf(final JsonObject presence, final String name) {
-        for (final var p : presence.getAsJsonArray("people")) {
-            final JsonObject person = p.getAsJsonObject();
-            if (name.equals(person.get("name").getAsString())) {
-                return person.has("avatar") ? person.get("avatar").getAsInt() : 0;
-            }
-        }
-        return -1;
     }
 
     private static List<String> seatTypes(final JsonObject table) {

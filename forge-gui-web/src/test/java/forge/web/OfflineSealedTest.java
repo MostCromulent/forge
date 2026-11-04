@@ -35,12 +35,13 @@ public class OfflineSealedTest extends SessionsTest {
         made.clear();
     }
 
-    private TestBrowser host() throws InterruptedException {
+    /** Connects the host and opens the Limited page of the given kind ("sealed" or "draft"). */
+    private TestBrowser host(final String kind) throws InterruptedException {
         final TestBrowser host = connect("host");
         sessions.onMessage(host, JsonCodec.message("claimHost"));
         Assert.assertNotNull(host.awaitMatching("hello", h -> h.get("host").getAsBoolean()));
         sessions.onMessage(host, message("setName", "name", "Host"));
-        sessions.onMessage(host, message("limitedOpen", "kind", "sealed"));
+        sessions.onMessage(host, message("limitedOpen", "kind", kind));
         host.awaitMatching("hello", h -> "event".equals(h.get("screen").getAsString()), "the Limited page never opened");
         return host;
     }
@@ -63,7 +64,7 @@ public class OfflineSealedTest extends SessionsTest {
     // Fails if a pool is overwritten without the player confirming. Desktop asks before replacing a pool
     @Test(timeOut = 120_000)
     public void aTakenNameNeedsConfirming() throws Exception {
-        final TestBrowser host = host();
+        final TestBrowser host = host("sealed");
         final String name = name();
         sessions.onMessage(host, full(name, false));
         Assert.assertNotNull(editorOn(host, name));
@@ -88,11 +89,7 @@ public class OfflineSealedTest extends SessionsTest {
         final IStorage<DeckGroup> drafts = FModel.getDecks().getDraft();
         drafts.add(group);
         try {
-            final TestBrowser host = connect("host");
-            sessions.onMessage(host, JsonCodec.message("claimHost"));
-            sessions.onMessage(host, message("setName", "name", "Host"));
-            sessions.onMessage(host, message("limitedOpen", "kind", "draft"));
-            host.awaitMatching("hello", h -> "event".equals(h.get("screen").getAsString()), "the Limited page never opened");
+            final TestBrowser host = host("draft");
             sessions.onMessage(host, message("poolOpen", "name", name));
             // A game count of 0 is ignored, so the saved games-per-match stays as other tests expect it
             sessions.onMessage(host, message("poolPlay", "name", name, "mode", "several", "opponent", 0, "count", 7, "games", 0));

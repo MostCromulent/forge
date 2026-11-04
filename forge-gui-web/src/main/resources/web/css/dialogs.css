@@ -35,20 +35,15 @@ html:has(.to-match) { overflow: hidden; }
 @keyframes match-arrive { from { opacity: 0; } }
 /* Going back to an earlier screen shows it at once (screens.tsx) */
 html[data-back] :is(#menu, #lobby, #editor, #limited, #drafting, #campaign) > *, html[data-back] .modes .mode.plaque { animation: none; }
-/* A move through an ordered set, such as a Conquest tab or a step of the start menu, slides in the direction of the order (ui.ts eased) */
-html[data-way]::view-transition-old(page) { animation: .3s cubic-bezier(.2,.7,.3,1) both page-out; }
-html[data-way]::view-transition-new(page) { animation: .32s cubic-bezier(.2,.7,.3,1) both page-in; }
-html[data-way="back"]::view-transition-old(page) { animation-name: page-out-back; }
-html[data-way="back"]::view-transition-new(page) { animation-name: page-in-back; }
-/* A move to another page slides the same way, deeper pages to the left (main.ts render). The header has its own name, so it stays in place while the page under it slides */
+/* A move to another page (main.ts render), or through an ordered set such as a Conquest tab or a step of the start menu (ui.ts eased), slides in the direction of the order, deeper pages to the left. The header has its own name, so it stays in place while the page under it slides */
 :is(#menu, #lobby, #limited, #drafting, #campaign) { view-transition-name: screen; }
 :is(#menu, #lobby, #limited, #drafting, #campaign) :is(.page-head, .ph) { view-transition-name: head; }
 /* The name makes the header a stacking context, so it is raised for its popups to stay above the page */
 :where(.page-head, .ph) { position: relative; z-index: 30; }
-html[data-screen]::view-transition-old(screen), html[data-screen]::view-transition-old(page) { animation: .3s cubic-bezier(.2,.7,.3,1) both page-out; }
-html[data-screen]::view-transition-new(screen), html[data-screen]::view-transition-new(page) { animation: .32s cubic-bezier(.2,.7,.3,1) both page-in; }
-html[data-screen="back"]::view-transition-old(screen), html[data-screen="back"]::view-transition-old(page) { animation-name: page-out-back; }
-html[data-screen="back"]::view-transition-new(screen), html[data-screen="back"]::view-transition-new(page) { animation-name: page-in-back; }
+html[data-way]::view-transition-old(page), html[data-screen]::view-transition-old(screen), html[data-screen]::view-transition-old(page) { animation: .3s cubic-bezier(.2,.7,.3,1) both page-out; }
+html[data-way]::view-transition-new(page), html[data-screen]::view-transition-new(screen), html[data-screen]::view-transition-new(page) { animation: .32s cubic-bezier(.2,.7,.3,1) both page-in; }
+html[data-way="back"]::view-transition-old(page), html[data-screen="back"]::view-transition-old(screen), html[data-screen="back"]::view-transition-old(page) { animation-name: page-out-back; }
+html[data-way="back"]::view-transition-new(page), html[data-screen="back"]::view-transition-new(screen), html[data-screen="back"]::view-transition-new(page) { animation-name: page-in-back; }
 html[data-screen]::view-transition-group(head) { animation-duration: .3s; }
 /* The slide replaces the rise. A zero duration, not none, so the rise does not play when the attribute is removed */
 html[data-screen] :is(#menu, #lobby, #limited, #drafting, #campaign) > *, html[data-screen] .modes .mode.plaque { animation-duration: 0s; animation-delay: 0s; }
@@ -187,7 +182,6 @@ html:not([data-form="portrait"]) .dialog .dist-row .po-avatar { width: 78px; hei
 .dialog :is(.ordered-item, .lib-card).carried > :not(.order-number, .order-end) { visibility: hidden; }
 .dialog .order-ghost { position: fixed; z-index: 90; display: block; margin: 0; padding: 0; pointer-events: none; scale: 1.07; }
 .dialog .order-ghost.sb-list { overflow: visible; }
-/* Stops a drag from selecting text */
 .dialog :is(.ordered-item, .lib-card, .sb-row) { user-select: none; -webkit-user-select: none; }
 .dialog .order-ghost :is(.ordered-item, .lib-card, .sb-row) { cursor: grabbing; box-shadow: 0 20px 34px #000b, 0 4px 10px #0008; }
 .dialog .order-ghost :is(.order-number, .order-end, .order-nudge) { display: none; }

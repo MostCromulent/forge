@@ -7,10 +7,10 @@ import { ICONS, Icon } from './icons';
 export const AI_ICON = <Icon d={ICONS.bot} />;
 
 /** Text with symbols such as {2}{B} and {T} drawn from the skin's icon sheet, as setSymbolText does on the board. */
-export function SymbolText({ text, muted }: { text: string | null | undefined; muted?: boolean }) {
+export function SymbolText({ text }: { text: string | null | undefined }) {
   return <>{symbolParts(text ?? '').map((part, i) => part.symbol
     ? <img key={i} class="sym" alt={part.text} src={symbolUrl(part.symbol)} />
-    : <span key={i} class={muted ? 'muted' : undefined}>{part.text}</span>)}</>;
+    : <span key={i}>{part.text}</span>)}</>;
 }
 
 /** A deck's colours as pips, as shown in the lobby and the deck finder. */
@@ -25,7 +25,6 @@ export const Pip = ({ letter }: { letter: string }) => <img class="pip" alt={let
 export const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen'],
   ['C', 'lblColorless']];
 export const FIVE_COLOURS = COLOURS.slice(0, 5);
-/** The text key of each colour's name, by its letter. */
 export const COLOUR_NAMES: Record<string, TextKey> = Object.fromEntries(COLOURS);
 
 /** A copy of the set with the item added, or removed if it was already there. */

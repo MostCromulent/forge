@@ -9,7 +9,6 @@ export function stored(key: string): string | null {
   }
 }
 
-/** Stores a value, or removes it when given null. */
 export function store(key: string, value: string | null): void {
   try {
     if (value === null) localStorage.removeItem(key);

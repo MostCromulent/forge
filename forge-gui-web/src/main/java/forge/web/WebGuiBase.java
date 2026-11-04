@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonObject;
 import forge.ImageKeys;
 import forge.card.CardEdition;
@@ -131,11 +132,8 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
 
     /** One thread that runs its jobs in order and ends when idle, so a finished session keeps no thread. A job that throws is logged. */
     public static Executor worker(final String name) {
-        final ExecutorService pool = new ThreadPoolExecutor(0, 1, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
-            final Thread t = new Thread(r, name);
-            t.setDaemon(true);
-            return t;
-        });
+        final ExecutorService pool = new ThreadPoolExecutor(0, 1, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat(name).setDaemon(true).build());
         return job -> pool.execute(() -> {
             try {
                 job.run();

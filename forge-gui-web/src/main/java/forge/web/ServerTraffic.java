@@ -9,6 +9,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.AttributeKey;
 
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Stream;
 
 /** Counts every byte through the web port. Bytes sent are split by the kind that their connection was last marked as carrying. */
 @ChannelHandler.Sharable
@@ -19,13 +20,7 @@ public final class ServerTraffic extends ChannelDuplexHandler {
 
     private final long started = System.currentTimeMillis();
     private final LongAdder received = new LongAdder();
-    private final LongAdder[] sent = new LongAdder[Kind.values().length];
-
-    public ServerTraffic() {
-        for (int i = 0; i < sent.length; i++) {
-            sent[i] = new LongAdder();
-        }
-    }
+    private final LongAdder[] sent = Stream.generate(LongAdder::new).limit(Kind.values().length).toArray(LongAdder[]::new);
 
     /** Marks what the connection sends from now on, until the next call changes it. */
     public static void carrying(final Channel channel, final Kind kind) {

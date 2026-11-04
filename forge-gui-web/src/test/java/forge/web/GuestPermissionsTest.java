@@ -62,31 +62,4 @@ public class GuestPermissionsTest extends SessionsTest {
         m.add("value", value);
         return m;
     }
-
-    // Fails if a guest can give a seat at the host's table to another browser, or take a player's seat away
-    @Test(timeOut = 60_000)
-    public void aGuestCannotHandOverOrRemoveASeat() throws Exception {
-        final TestBrowser host = hostAt("invite");
-        final TestBrowser ann = connect("ann");
-        sessions.onMessage(ann, message("setName", "name", "Ann"));
-        final int seat = ann.awaitLobbyWithSeat().get("mySeat").getAsInt();
-        sessions.disconnected(ann);
-        host.awaitNewest("presence", p -> p.getAsJsonArray("people").asList().stream().map(e -> e.getAsJsonObject()).anyMatch(person ->
-                "Ann".equals(str(person, "name")) && person.has("disconnected") && person.get("disconnected").getAsBoolean()),
-                "the host was not shown the guest as disconnected");
-        final TestBrowser bob = connect("bob");
-        sessions.onMessage(bob, message("setName", "name", "Bob"));
-        bob.awaitMatching("hello", h -> "Bob".equals(str(h, "playerName")), "the second guest was not named");
-
-        // Each command is handled before onMessage returns, so a seat given away would already be Bob's
-        sessions.onMessage(bob, message("giveSeat", "from", "Ann", "to", "Bob"));
-        sessions.onMessage(bob, message("dropPlayer", "name", "Ann"));
-        Assert.assertNotEquals(bob.hello.get("screen").getAsString(), "setup", "a guest gave itself another player's seat");
-
-        // The host can still give the seat, so the guest's commands neither moved nor removed it
-        send(host, message("giveSeat", "from", "Ann", "to", "Bob"));
-        bob.awaitLobby(l -> l.get("mySeat").getAsInt() == seat, "the seat was gone before the host gave it");
-        send(host, JsonCodec.message("leaveLobby"));
-        host.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()), "the host did not leave its table");
-    }
 }

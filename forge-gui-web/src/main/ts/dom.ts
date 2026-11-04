@@ -95,7 +95,6 @@ export const easeOut = (t: number): number => 1 - (1 - t) ** 3;
 
 const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
-/** Text made safe to put in markup built as a string. */
 export function escapeHtml(s: string): string {
   return String(s).replace(/[&<>"']/g, c => ESCAPES[c]);
 }

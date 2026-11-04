@@ -1,6 +1,5 @@
 package forge.web;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import forge.gamemodes.match.GameLobby.GameLobbyData;
@@ -148,14 +147,7 @@ public class NetplayTunnelTest extends SessionsTest {
         Assert.assertTrue(app.seated.await(60, TimeUnit.SECONDS), "the app never took a seat through the web port");
         Assert.assertNotEquals(app.seat, hostSeat, "the app was given the host's seat");
         Assert.assertNotNull(host.awaitLobby(l -> seatIs(l, app.seat, "REMOTE", "Desk")), "the host's table never showed the app arriving");
-        host.awaitMatching("presence", p -> {
-            for (final JsonElement person : p.getAsJsonArray("people")) {
-                if ("Desk".equals(person.getAsJsonObject().get("name").getAsString())) {
-                    return true;
-                }
-            }
-            return false;
-        }, "the app was never listed among who is here");
+        host.awaitMatching("presence", p -> person(p, "Desk") != null, "the app was never listed among who is here");
 
         // A browser cannot use the name of a player on an app, just as it cannot use another browser's name
         final TestBrowser guest = connect("guest");

@@ -31,12 +31,6 @@ public class WebSessionTest {
         return sessions;
     }
 
-    /** Connects a browser and has it claim the host's seat. No browser gets the seat just by connecting. */
-    private static void connectAsHost(final WebSessions sessions, final TestBrowser r, final String id) {
-        sessions.connected(r, id, true);
-        sessions.onMessage(r, JsonCodec.message("claimHost"));
-    }
-
     /** Fails if a browser gets the host's seat just by connecting, or if two browsers can both hold it. */
     @Test
     public void theFirstBrowserToAskGetsTheHostSeat() throws Exception {
@@ -86,8 +80,10 @@ public class WebSessionTest {
     public void thisMachineAndAnUnguardedSeatNeedNoPassword() throws Exception {
         WebService.hostPassword("open sesame");
         try {
+            final WebSessions guarded = opened();
             final TestBrowser local = new TestBrowser();
-            connectAsHost(opened(), local, "local");
+            guarded.connected(local, "local", true);
+            guarded.onMessage(local, JsonCodec.message("claimHost"));
             Assert.assertFalse(local.awaitNewest("hello").get("hostPassword").getAsBoolean());
             Assert.assertTrue(local.awaitNewest("hello").get("host").getAsBoolean(), "this machine's browser needed the password");
         } finally {

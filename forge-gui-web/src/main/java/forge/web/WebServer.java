@@ -76,6 +76,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
@@ -112,6 +113,14 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     /** How long a download is waited on before the browser is told there is no image. */
     private static final int FETCH_TIMEOUT_SECONDS = 15;
     private static final int PING_SECONDS = 30;
+    private static final Map<String, String> CONTENT_TYPES = Map.of(
+            ".html", "text/html; charset=utf-8",
+            ".js", "text/javascript; charset=utf-8",
+            ".css", "text/css; charset=utf-8",
+            ".svg", "image/svg+xml",
+            ".png", "image/png",
+            ".jpg", "image/jpeg",
+            ".webmanifest", "application/manifest+json");
     // -Dforge.web.pageDir=<the web resource folder> serves the page from disk, so an edit needs only a reload
     private static final String PAGE_DIR = System.getProperty("forge.web.pageDir");
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
@@ -423,28 +432,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     }
 
     private static String contentType(final String resource) {
-        if (resource.endsWith(".html")) {
-            return "text/html; charset=utf-8";
-        }
-        if (resource.endsWith(".js")) {
-            return "text/javascript; charset=utf-8";
-        }
-        if (resource.endsWith(".css")) {
-            return "text/css; charset=utf-8";
-        }
-        if (resource.endsWith(".svg")) {
-            return "image/svg+xml";
-        }
-        if (resource.endsWith(".png")) {
-            return "image/png";
-        }
-        if (resource.endsWith(".jpg")) {
-            return "image/jpeg";
-        }
-        if (resource.endsWith(".webmanifest")) {
-            return "application/manifest+json";
-        }
-        return "application/octet-stream";
+        final int dot = resource.lastIndexOf('.');
+        return dot < 0 ? "application/octet-stream" : CONTENT_TYPES.getOrDefault(resource.substring(dot), "application/octet-stream");
     }
 
     /** A playlist request gets a redirect to one of its tracks by name. The shuffle then stays on the server, and each track is downloaded once. */

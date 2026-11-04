@@ -180,7 +180,6 @@ export function transition(update: () => void | Promise<void>, still: () => void
   running.finished.finally(() => { for (const key of Object.keys(marks)) delete root.dataset[key]; });
 }
 
-/** Changes the UI state and schedules a redraw. */
 export function changeUi(change: (state: UiState) => void): void {
   change(ui);
   redraw();

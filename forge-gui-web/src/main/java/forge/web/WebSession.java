@@ -235,7 +235,6 @@ public final class WebSession implements IHasForgeLog {
     /** A guest's last chosen sleeve, from its browser. Null until it chooses one, and the seat then keeps the sleeve it was given. */
     private volatile Integer sleeve;
     private final OfflineLimited limited;
-    /** This seat's part in the table's draft or sealed event. */
     private final EventSeat eventSeat;
     /** The campaign modes. A build without them uses Campaigns.NONE instead. */
     private final Campaigns campaigns;
@@ -803,7 +802,7 @@ public final class WebSession implements IHasForgeLog {
             return Localizer.getInstance().getMessage("lblWebSessionNameEmpty");
         }
         if (trimmed.length() > MAX_NAME_LENGTH) {
-            return Localizer.getInstance().getMessage("lblWebSessionNameTooLong", MAX_NAME_LENGTH);
+            return Localizer.getInstance().getMessage("lblWebDeckStoreNameTooLong", MAX_NAME_LENGTH);
         }
         if (sessions.nameTaken(trimmed, this)) {
             return Localizer.getInstance().getMessage("lblWebSessionNameTaken", trimmed);

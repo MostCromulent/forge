@@ -1,5 +1,6 @@
 package forge.web.console;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gui.download.CdnUuidCache;
 import forge.gui.interfaces.IProgressBar;
@@ -150,11 +151,8 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
     private final JButton imagesButton = new JButton(TEXT.getMessage("lblWebImagesButton"));
     private final CardImageDownloads images = new CardImageDownloads(label -> SwingUtilities.invokeLater(() -> imagesButton.setText(label)));
     /** One thread, so two quick clicks on the port option reach the router in the order they were made. */
-    private final ExecutorService router = Executors.newSingleThreadExecutor(work -> {
-        final Thread t = new Thread(work, "ForgePortForward");
-        t.setDaemon(true);
-        return t;
-    });
+    private final ExecutorService router = Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder().setNameFormat("ForgePortForward").setDaemon(true).build());
     private volatile ServerTraffic traffic;
     private JFrame frame;
     private JTextPane text;
@@ -663,7 +661,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                         Box.createHorizontalGlue(), browse, Box.createHorizontalStrut(8), startStop),
                 progress, startHelp);
         netField = field(netAddress, Box.createHorizontalGlue(), retryNet, Box.createHorizontalStrut(8), copyNet);
-        section(main, stack(heading(TEXT.getMessage("lblWebConsoleInvitePlayers")), wrapped(TEXT.getMessage("lblWebConsoleInviteAbout"), quiet, TEXT_WIDTH)),
+        section(main, stack(heading(TEXT.getMessage("lblWebMatchBarInvite")), wrapped(TEXT.getMessage("lblWebConsoleInviteAbout"), quiet, TEXT_WIDTH)),
                 heading(TEXT.getMessage("lblWebConsoleOnNetwork")),
                 field(homeAddress, Box.createHorizontalGlue(), copyHome, moreHome),
                 row(heading(TEXT.getMessage("lblWebConsoleOnInternet")), Box.createHorizontalStrut(12), byRouter, byCloudflare),

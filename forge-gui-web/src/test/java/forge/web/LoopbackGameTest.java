@@ -26,10 +26,6 @@ public class LoopbackGameTest {
         WebTestSupport.initModel();
     }
 
-    private static void onUi(final Runnable r) {
-        GuiBase.getInterface().invokeInEdtAndWait(r);
-    }
-
     private static void awaitGameStarted(final LocalGame local, final TestBrowser browser) {
         SessionsTest.awaitTrue(() -> {
             final HostedMatch match = local.hostedMatch();
@@ -93,7 +89,7 @@ public class LoopbackGameTest {
             final WebGuiGame second = new WebGuiGame();
             final TestBrowser secondBrowser = new TestBrowser(second, true);
             second.attach(secondBrowser);
-            onUi(() -> local.startMatch("Web Player", islands, "AI", bears, second));
+            SessionsTest.onUi(() -> local.startMatch("Web Player", islands, "AI", bears, second));
             awaitGameStarted(local, secondBrowser);
         });
     }
