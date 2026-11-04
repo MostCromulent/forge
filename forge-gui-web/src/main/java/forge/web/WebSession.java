@@ -396,7 +396,7 @@ public final class WebSession implements IHasForgeLog {
         return !isHost && (now instanceof Setup || now instanceof Playing p && p.invited());
     }
 
-public boolean hosting() {
+    public boolean hosting() {
         return isHost;
     }
 
@@ -433,7 +433,7 @@ public boolean hosting() {
         }
     }
 
-/** A browser connected, for the first time or again. It is shown the place that its stage records. */
+    /** A browser connected, for the first time or again. It is shown the place that its stage records. */
     synchronized void connected(final BrowserChannel channel) {
         final BrowserChannel previous = browser;
         browser = channel;

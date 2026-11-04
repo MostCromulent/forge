@@ -309,7 +309,7 @@ public final class OfflineLimited implements IHasForgeLog {
                 ? GameType.CommanderDraft : type;
     }
 
-/** Plays a pool's deck against one opponent, several at once, or each in turn as a gauntlet. Afterwards it returns to the pool. */
+    /** Plays a pool's deck against one opponent, several at once, or each in turn as a gauntlet. Afterwards it returns to the pool. */
     private void playPool(final BrowserChannel channel, final PoolPlay play) {
         final Event event = session.stage() instanceof Event e ? e : null;
         final DeckGroup group = event == null ? null : event.storage().get(play.name());
