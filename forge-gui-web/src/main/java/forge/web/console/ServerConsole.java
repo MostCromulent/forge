@@ -478,10 +478,14 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         });
     }
 
+    /** What this window shows, without the link tokens that let a browser in, since a log may be sent to other people. */
+    private String shownLog() {
+        return text.getText().replaceAll("token=\\w+", "token=...");
+    }
+
     /** Zips the network logs and what this window shows into the Downloads folder, as desktop's Help menu does. */
     private void exportLogs() {
-        // The links contain the tokens that let a browser in, and a log may be sent to other people
-        final String shown = text.getText().replaceAll("token=\\w+", "token=...");
+        final String shown = shownLog();
         inBackground("WebExportLogs", () -> {
             String outcome;
             try {
@@ -550,7 +554,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         progress.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         startStop = button(TEXT.getMessage("lblWebConsoleStopServer"), this::toggle);
         startStop.setVisible(false);
-        startHelp = warning(startFailure, row(copyButton(TEXT.getMessage("lblWebConsoleCopyLog"), () -> text.getText())));
+        startHelp = warning(startFailure, row(copyButton(TEXT.getMessage("lblWebConsoleCopyLog"), this::shownLog)));
         startHelp.setVisible(false);
 
         browse = button(TEXT.getMessage("lblWebConsoleOpenBrowser"), () -> WebMain.openBrowser(service.url(), ui));
@@ -691,7 +695,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         numbers.setLayout(new BoxLayout(numbers, BoxLayout.PAGE_AXIS));
         final JPanel title = row(heading(TEXT.getMessage("lblWebConsoleDiagnostics")), Box.createHorizontalGlue(),
                 button(TEXT.getMessage("lblExportLogs"), this::exportLogs), Box.createHorizontalStrut(8),
-                copyButton(TEXT.getMessage("lblWebConsoleCopyLog"), () -> text.getText()));
+                copyButton(TEXT.getMessage("lblWebConsoleCopyLog"), this::shownLog));
         title.setAlignmentX(0f);
         numbers.add(title);
         numbers.add(Box.createVerticalStrut(10));
