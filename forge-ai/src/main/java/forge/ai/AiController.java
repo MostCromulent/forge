@@ -1878,6 +1878,14 @@ public class AiController {
         }
 
         if (topOwnedByAI && flatMonteCarloActive()) {
+            // Thassa's Oracle trigger on the stack: Demonic Consultation exiles the library in response, the Oracle wins
+            final SpellAbility consultation = ConsultationWin.response(player);
+            if (consultation != null) {
+                return consultation;
+            }
+        }
+
+        if (topOwnedByAI && flatMonteCarloActive()) {
             // Breakthrough on the stack: Lion's Eye Diamond puts the dredgers into the graveyard before the four draws
             final SpellAbility diamond = DredgeLine.response(player, deckPlan(player).combos);
             if (diamond != null) {
@@ -1931,6 +1939,34 @@ public class AiController {
         skipped = saList.stream().filter(SpellAbility::isSkip).collect(Collectors.toList());
         if (!skipped.isEmpty())
             saList.removeAll(skipped);
+        if (flatMonteCarloActive()) {
+            final SpellAbility vault = VaultLoop.sureCast(player, saList);
+            if (vault != null) {
+                return vault; // Time Vault and what untaps it: an extra turn every turn, no rollouts needed
+            }
+        }
+        if (flatMonteCarloActive()) {
+            final SpellAbility oracle = ConsultationWin.sureCast(player, saList);
+            if (oracle != null) {
+                return oracle; // Thassa's Oracle with Demonic Consultation in hand: cast it, the Consultation answers its trigger
+            }
+            final SpellAbility pileDraw = DoomsdayPile.sureDraw(player, saList);
+            if (pileDraw != null && !hasFailedToCast(pileDraw)) {
+                return pileDraw; // Doomsday has cut the library: draw through the pile to the Oracle
+            }
+            final SpellAbility will = WillReplay.sureCast(player, saList);
+            if (will != null) {
+                return will; // Yawgmoth's Will with Time Walk, a Mox or Black Lotus in the graveyard
+            }
+            final SpellAbility orchard = OathTiming.sureCast(player);
+            if (orchard != null) {
+                return orchard; // Oath of Druids: the opponent is given a creature at its end step so that the upkeep trigger works
+            }
+            final SpellAbility dreadReturn = DreadReturnWin.sureCast(player, saList);
+            if (dreadReturn != null) {
+                return dreadReturn; // Oops! All Spells: the flashback of Dread Return brings the Oracle back to an empty library
+            }
+        }
         // Stiflenought: the Dreadnought is cast as soon as its Stifle can be paid for as well, without rollouts
         final SpellAbility sureStifle = StifleCombo.sureCast(player, saList);
         if (sureStifle != null) {
@@ -1940,6 +1976,12 @@ public class AiController {
             final SpellAbility sure = deckPlan(player).combos.sureMadnessPlay(player, saList);
             if (sure != null) {
                 return sure; // safe and sure: no rollouts needed
+            }
+        }
+        if (flatMonteCarloActive() && game.getStack().isEmpty()) {
+            final SpellAbility cut = deckPlan(player).combos.sureCutPlay(player, saList);
+            if (cut != null) {
+                return cut; // the library cut with a finisher in place: no rollouts needed
             }
         }
 
@@ -2020,7 +2062,7 @@ public class AiController {
             return onlySpells && top != null && top.getActivatingPlayer() != null && top.getActivatingPlayer().isOpponentOf(player)
                     ? FlatMonteCarloPicker.Mode.RESPOND : null;
         }
-        if (ph.getPlayerTurn() == player) {
+        if (ph.isPlayerTurn(player)) {
             return null;
         }
         if (ph.is(PhaseType.END_OF_TURN) && game.getPlayers().size() == 2) {
@@ -2139,7 +2181,7 @@ public class AiController {
         final PhaseHandler ph = game.getPhaseHandler();
         // Only sorcery-timing decisions on the AI's own turn: that is where the lines to compare are, and the
         // rollout ends at the second main phase. Everything reactive stays with the heuristics (and is cheap).
-        return ph.getPlayerTurn() == player && game.getStack().isEmpty()
+        return ph.isPlayerTurn(player) && game.getStack().isEmpty()
                 && (ph.is(PhaseType.MAIN1) || ph.is(PhaseType.MAIN2));
     }
 
@@ -2444,6 +2486,16 @@ public class AiController {
                 && !deckPlan(player).combos.isKeyCard(h) && !TutorPlan.hasPlanTarget(player, sa);
     }
 
+    /**
+     * A mana rock or mana creature marked AI:RemoveDeck:All (Springleaf Drum): the heuristics never cast it, and
+     * without broad discovery nothing else would either, so it is always offered to the rollouts, which decide.
+     */
+    private boolean isRemoveDeckManaPermanent(final SpellAbility sa) {
+        final Card h = sa.getHostCard();
+        return h != null && sa.isSpell() && h.isPermanent() && !h.isLand() && ComputerUtilCard.isCardRemAIDeck(h)
+                && !h.getManaAbilities().isEmpty();
+    }
+
     private boolean isLegalDiscovery(final SpellAbility sa, final AiPlayDecision opinion) {
         if (sa == null) {
             return false;
@@ -2464,9 +2516,15 @@ public class AiController {
             default:
                 break;
         }
+        if (TimedAbilityGuard.isTimed(sa) && !opinion.willingToPlay()) {
+            // a manland, crew, saddle or station is only worth its cost at one moment of the turn, and the heuristics
+            // know which: their "not now" is final, and the rollouts cannot see the waste (nothing in the score)
+            return false;
+        }
         final Card host = sa.getHostCard();
         final ComboPlan combos = deckPlan(player).combos;
         if (!FlatMonteCarloPicker.isDiscoverable(sa, getBoolProperty(AiProps.FLAT_MC_BROAD_DISCOVERY) || isFlatMonteCarloMax())
+                && !isRemoveDeckManaPermanent(sa)
                 && !combos.isFuelPlay(sa)
                 && !(host != null && ComputerUtilCard.isCardRemAIDeck(host) && combos.isKeyCard(host))
                 && !TutorPlan.hasUse(player, sa)) {
@@ -3209,17 +3267,14 @@ public class AiController {
 
         if (decider == player && sa.getApi() != ApiType.Learn) {
             // the win card of a cheating spell, the creature to put into the graveyard: what the deck is built for
+            final Card tinkered = flatMonteCarloActive() && destination == ZoneType.Battlefield && origin.contains(ZoneType.Library)
+                    ? VaultLoop.tinkerPick(player, fetchList) : null; // Tinker: the vault or its key, whatever the deck's plan
+            if (tinkered != null) {
+                return tinkered;
+            }
             final Card forCombo = deckPlan(player).combos.choose(player, destination, origin, fetchList);
             if (forCombo != null) {
                 return forCombo;
-            }
-            if (destination == ZoneType.Battlefield && origin.contains(ZoneType.Hand)
-                    && !sa.hasParam("AILogic") && !fetchList.isEmpty()) {
-                // whatever the deck, a cheating spell is not for a land when anything else can be put onto the battlefield
-                final CardCollection nonLands = CardLists.filter(fetchList, c -> !c.isLand());
-                if (!nonLands.isEmpty() && nonLands.size() < fetchList.size()) {
-                    return ComputerUtilCard.getBestAI(nonLands);
-                }
             }
         }
 
@@ -3278,7 +3333,18 @@ public class AiController {
 
         result.addAll(mandatoryDiscard);
 
+        // damage and life loss for opponents resolves first, so they might lose before other triggers hurt us
+        result.addAll(filterList(result, this::onlyHurtsOpponents));
+
         return result;
+    }
+
+    private boolean onlyHurtsOpponents(SpellAbility sa) {
+        if ((sa.getApi() != ApiType.DealDamage && sa.getApi() != ApiType.LoseLife) || !sa.hasParam("Defined")) {
+            return false;
+        }
+        List<Player> hurt = AbilityUtils.getDefinedPlayers(sa.getHostCard(), sa.getParam("Defined"), sa);
+        return !hurt.isEmpty() && hurt.stream().allMatch(p -> p.isOpponentOf(player));
     }
 
     // TODO move to more common place
