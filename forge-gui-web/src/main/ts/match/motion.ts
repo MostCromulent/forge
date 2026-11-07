@@ -270,7 +270,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   } else {
     for (const { key, start } of heldDeal.splice(0)) {
       const el = cardElement(key);
-      if (el?.closest('#hand')) dealt.push({ el, start });
+      if (el?.closest('#hand, .mate-hand')) dealt.push({ el, start });
     }
   }
   // In a mulligan the old hand leaves before the first new card starts. Both hands move faster

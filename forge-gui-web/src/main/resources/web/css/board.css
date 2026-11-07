@@ -1169,7 +1169,7 @@ html[data-motion="reduced"] .battlefield .card.barred .barred-mark { animation: 
 /* Who goes first and how the game ended are shown in the middle of the board, so the pill is hidden for them too */
 html:has(#first-reveal, #coin-toss) #phase-strip .pill, #match:is(.starting, .ending) #phase-strip .pill { opacity: 0; pointer-events: none; }
 /* The opening hand is dealt and the mulligan is asked only after who goes first has been shown (match/board.ts) */
-#match.starting :is(#prompt, #hand .card) { visibility: hidden; }
+#match.starting :is(#prompt, #hand .card, .mate-hand .card) { visibility: hidden; }
 .turn-banner {
   /* Centred by layout, not by a half-width shift. turnbanner.ts rounds the margins to whole pixels, so its text stays sharp */
   position: absolute;
