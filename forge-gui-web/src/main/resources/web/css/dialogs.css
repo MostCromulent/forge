@@ -40,6 +40,10 @@ html[data-back] :is(#menu, #lobby, #editor, #limited, #drafting, #campaign) > *,
 :is(#menu, #lobby, #limited, #drafting, #campaign) :is(.page-head, .ph) { view-transition-name: head; }
 /* The name makes the header a stacking context, so it is raised for its popups to stay above the page */
 :where(.page-head, .ph) { position: relative; z-index: 30; }
+/* A dialog's close button is a quiet square with a drawn X, like the page's other icon buttons */
+.dk-close { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 9px; background: var(--surface-2); color: var(--muted); }
+.dk-close:hover { background: var(--line); color: var(--text); }
+.dk-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
 html[data-way]::view-transition-old(page), html[data-screen]::view-transition-old(screen), html[data-screen]::view-transition-old(page) { animation: .3s cubic-bezier(.2,.7,.3,1) both page-out; }
 html[data-way]::view-transition-new(page), html[data-screen]::view-transition-new(screen), html[data-screen]::view-transition-new(page) { animation: .32s cubic-bezier(.2,.7,.3,1) both page-in; }
 html[data-way="back"]::view-transition-old(page), html[data-screen="back"]::view-transition-old(screen), html[data-screen="back"]::view-transition-old(page) { animation-name: page-out-back; }

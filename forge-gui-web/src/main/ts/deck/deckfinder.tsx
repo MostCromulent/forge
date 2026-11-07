@@ -17,6 +17,7 @@ import { NameTaken } from './nametaken';
 import { CloseButton } from '../dialog';
 import { useDebounced } from '../hooks';
 import { imageUrl } from '../images';
+import { isPortrait } from '../form';
 
 /** Each net-deck category is a separate source. They share one source button, which lists the categories under it. */
 const NET = 'net';
@@ -238,6 +239,15 @@ export function DeckFinder({ model, actions, seat, close }: {
     setChosen(pool[Math.floor(Math.random() * pool.length)].key);
     requestAnimationFrame(() => document.querySelector('.dk-hit[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest' }));
   };
+  const listButtons = (
+    <>
+      <button class="random" disabled={!list.length} title={t('lblWebFinderRandomTip')} aria-label={t('lblRandomDeck')} onClick={random}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
+        <span class="label">{t('lblRandomDeck')}</span>
+      </button>
+      <button class="new-deck" onClick={() => setAdding(true)}>{t('lblWebFinderNewDeck')}</button>
+    </>
+  );
   return (
     <div class="finder-back">
       <div class="finder">
@@ -251,6 +261,10 @@ export function DeckFinder({ model, actions, seat, close }: {
                 onChange={e => actions.eventDecksOnly(e.currentTarget.checked)} /> {t('lblWebFinderEventDecksOnly')}
             </label>
           )}
+          {/* A phone has no room for the source tabs, so it picks the source from a menu */}
+          <select class="source-pick" aria-label={t('lblSource')} value={inNet ? NET : filter.source} onChange={e => change({ source: e.currentTarget.value })}>
+            {[...sources].map(([id, count]) => <option key={id} value={id}>{count > 0 ? `${sourceName(id)} ${count}` : sourceName(id)}</option>)}
+          </select>
           <span class="head-tools">
             <input ref={picker} type="file" accept=".dck" hidden onChange={e => {
               const picked = e.currentTarget.files?.[0];
@@ -318,7 +332,8 @@ export function DeckFinder({ model, actions, seat, close }: {
                   </select>}
             </div>
             <FilterBar kinds={kinds} filter={filter} set={setFilter} clearAll={clearAll} narrowed={narrowed} />
-            <p class="shown">{list.length === decks.length ? t('lblWebMenuDecksCount', decks.length) : t('lblWebFinderDeckCountOf', list.length, decks.length)}</p>
+            {/* On a phone the count ends the chip line, so it gives only the decks shown */}
+            <p class="shown">{list.length === decks.length || isPortrait() ? t('lblWebMenuDecksCount', list.length) : t('lblWebFinderDeckCountOf', list.length, decks.length)}</p>
             <div class="dk-hits">
               {list.length
                 ? list.map(d => <Hit key={d.key} deck={d} chosen={d.key === chosen} choose={() => setChosen(d.key)}
@@ -335,14 +350,8 @@ export function DeckFinder({ model, actions, seat, close }: {
                 ) : <p class="none">{t('lblWebFinderNoMatch')}</p>}
             </div>
           </div>
-          {/* The list's own buttons sit under it, as desktop puts its deck buttons under its list */}
-          <div class="finder-actions">
-            <button class="random" disabled={!list.length} title={t('lblWebFinderRandomTip')} onClick={random}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
-              {t('lblRandomDeck')}
-            </button>
-            <button onClick={() => setAdding(true)}>{t('lblWebFinderNewDeck')}</button>
-          </div>
+          {/* The list's own buttons sit under it, as desktop puts its deck buttons under its list. A phone has one footer for every button */}
+          {!isPortrait() && <div class="finder-actions">{listButtons}</div>}
           <aside class="dk-chosen">
             {!chosen ? <p class="none">{t('lblWebFinderPickHint')}</p>
               : !details ? <p class="none">{t('lblWebFinderReading')}</p>
@@ -356,6 +365,7 @@ export function DeckFinder({ model, actions, seat, close }: {
               <button class="small" onClick={() => importer({ url: summary.sourceUrl, sync: true })}>{t('lblWebFinderSyncNow')}</button>
             </span>
           )}
+          {isPortrait() && listButtons}
           {deleting && summary ? (
             <span class="delete-line">
               <b>{t('lblWebEditorDeleteDeck', summary.name)}</b> {t('lblWebEditorCannotUndo')}
@@ -445,6 +455,17 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
         : <FormatMenu groups={finderFormats} chosen={f.cardFormat === 'any' ? model.formats.find(x => !isCardPool(x) && x.id === format)
           : model.formats.find(x => isCardPool(x) && x.id === f.cardFormat)} pick={x => { set(pickFormat(f, x)); done(); }} />),
     },
+    // A phone has no room for the colour buttons beside the search, so the colours are a filter like any other
+    ...(isPortrait() ? [{
+      id: 'colours', group: colourSize, label: t('lblColors'),
+      chip: (f: DeckFilter) => (f.colours.size ? [...f.colours].join('') : t('lblAny')),
+      fixed: (f: DeckFilter) => !f.colours.size,
+      clear: (f: DeckFilter) => ({ ...f, colours: new Set<string>() }),
+      panel: (f: DeckFilter, set: (next: DeckFilter) => void) => (
+        <ColourToggles label={t('lblColors')} colourless pressed={c => f.colours.has(c)} toggle={c => set({ ...f, colours: toggled(f.colours, c) })}
+          title={(c, name) => t('lblWebFinderColourDecks', name, decks.filter(d => (d.colors ?? '').includes(c)).length)} />
+      ),
+    }] : []),
     {
       id: 'illegal', group: legality, label: t('lblWebFilterIllegalDecks'),
       chip: f => (f.legalOnly ? null : t('lblWebFilterShown')),

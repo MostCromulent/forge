@@ -357,9 +357,7 @@ html[data-form="portrait"] :is(.finder-back, .sleeves-back) { place-items: stret
 html[data-form="portrait"] :is(.finder, .sleeves) { width: 100vw; height: 100dvh; max-width: none; border: 0; border-radius: 0; min-width: 0; }
 html[data-form="portrait"] :is(.finder-head, .sleeves-head, .imp-head) { flex-wrap: wrap; gap: 6px; padding: 8px 12px; }
 html[data-form="portrait"] :is(.finder-head, .sleeves-head, .imp-head) button { min-height: 44px; min-width: 44px; }
-html[data-form="portrait"] .finder-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
-html[data-form="portrait"] .finder-actions { padding: 8px 12px; border-right: 0; }
-html[data-form="portrait"] .finder-actions button { flex: 1; min-height: 44px; justify-content: center; }
+html[data-form="portrait"] .finder-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
 html[data-form="portrait"] .finder .rail { flex-direction: row; align-items: center; gap: 8px; padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 html[data-form="portrait"] .finder .rail section { flex-direction: row; gap: 6px; flex: none; }
 html[data-form="portrait"] .finder .rail h4 { display: none; }
@@ -368,18 +366,38 @@ html[data-form="portrait"] .finder .rail .source[aria-pressed="true"] { box-shad
 html[data-form="portrait"] .finder .net-cats { flex-direction: row; margin: 0; padding: 0; border: 0; }
 html[data-form="portrait"] .finder .rail .get-net { flex: none; align-self: center; min-height: 44px; border-radius: 22px; }
 html[data-form="portrait"] .finder .results { min-width: 0; padding: 10px 12px; border-right: 0; }
-html[data-form="portrait"] .finder .dk-hit { min-height: 52px; }
-/* The search takes the first line, and the colours and the sort share the second. The filter chips scroll sideways in their own line */
-html[data-form="portrait"] .finder-find { display: grid; grid-template-columns: auto minmax(0, 1fr); }
-html[data-form="portrait"] .finder-find .find { grid-column: 1 / -1; height: 40px; font-size: 15px; }
-html[data-form="portrait"] .finder-find .sort-by { height: 38px; min-width: 0; }
-html[data-form="portrait"] .finder .fbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+/* A compact list: the source is a menu in the head, the search shares its line with a sort button, the colours are a filter chip,
+   the count ends the chip line, and rows are one short line with "Legal" left out */
+html[data-form="portrait"] .finder .dk-hit { min-height: 44px; padding-top: 0; padding-bottom: 0; }
+html[data-form="portrait"] .finder .dk-hit .legal.yes { display: none; }
+html[data-form="portrait"] .finder-head { flex-wrap: nowrap; }
+html[data-form="portrait"] .finder .source-pick { display: block; min-width: 0; max-width: 56vw; height: 36px; padding: 0 30px 0 12px; appearance: none;
+  border: 1px solid var(--accent-2); border-radius: 18px; background: var(--accent-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f2c344' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center / 14px;
+  color: var(--accent-2); font: 600 13.5px system-ui, sans-serif; }
+html[data-form="portrait"] .finder .source-pick option { color: var(--text); background: var(--surface); }
+html[data-form="portrait"] .finder .rail section > .source { display: none; }
+html[data-form="portrait"] .finder .rail:not(:has(.net-cats, .gen-options)) { display: none; }
+html[data-form="portrait"] .finder .rail { grid-row: 1; }
+html[data-form="portrait"] .finder .results { grid-row: 2; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto minmax(0, 1fr); column-gap: 8px; }
+html[data-form="portrait"] .finder-find { grid-column: 1 / -1; }
+html[data-form="portrait"] .finder-find .find { height: 40px; font-size: 15px; }
+html[data-form="portrait"] .finder-find .colours { display: none; }
+html[data-form="portrait"] .finder-find .sort-by { flex: none; width: 44px; height: 40px; padding: 0; appearance: none; color: transparent;
+  background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e6edf3' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4v16M4 17l3 3 3-3M17 20V4M14 7l3-3 3 3'/%3E%3C/svg%3E") no-repeat center / 18px; }
+html[data-form="portrait"] .finder-find .sort-by option { color: var(--text); background: var(--surface); }
+html[data-form="portrait"] .finder .results > .shown { grid-column: 2; align-self: center; }
+html[data-form="portrait"] .finder .dk-hits { grid-column: 1 / -1; }
+html[data-form="portrait"] .finder .fbar { grid-column: 1; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
 html[data-form="portrait"] .finder .fbar > * { flex: none; }
 /* The colours shrink to fit, so a name gets the room */
 html[data-form="portrait"] .finder .dk-hit-title .pips { width: auto; }
 /* There is no room for the deck's card list beside the decks. The player sees the cards in the editor instead. */
 html[data-form="portrait"] .finder .dk-chosen { display: none; }
 html[data-form="portrait"] .finder-foot { gap: 8px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
+html[data-form="portrait"] .finder-foot .random { min-width: 48px; padding: 0; justify-content: center; }
+html[data-form="portrait"] .finder-foot .random .label { display: none; }
+html[data-form="portrait"] .finder-foot .primary { flex: 1; }
+html[data-form="portrait"] .dk-close { width: 44px; height: 44px; }
 html[data-form="portrait"] .finder-foot button { min-height: 48px; }
 html[data-form="portrait"] .finder-foot .use { flex: 1; }
 

@@ -4,6 +4,7 @@ import type { ComponentChildren, JSX } from 'preact';
 import { useRef, useState } from 'preact/hooks';
 import { useDismiss } from './hooks';
 import { t } from './text';
+import { ICONS, Icon } from './icons';
 
 /** The layer under a dialog, of class layer and cls. A press that starts on the layer dismisses the dialog. A press that starts in the dialog does not, even if it ends outside, as a text selection can. */
 export function Backdrop({ layer = 'backdrop', cls, dismiss, children, ...rest }: {
@@ -51,5 +52,5 @@ export function Dropdown({ cls, block, button, children }: {
 }
 
 export function CloseButton({ onClick }: { onClick: () => void }) {
-  return <button class="dk-close" title={t('lblClose')} onClick={onClick}>&times;</button>;
+  return <button class="dk-close" title={t('lblClose')} aria-label={t('lblClose')} onClick={onClick}><Icon d={ICONS.x} /></button>;
 }

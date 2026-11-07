@@ -739,6 +739,7 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 
 .finder-head .head-tools { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 .finder-head .legality { margin-left: 16px; }
+.source-pick { display: none; }
 .finder-actions { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); border-right: 1px solid var(--line); }
 .finder-foot .delete-deck { margin-right: auto; color: var(--danger); }
 /* Delete asks for confirmation once, in the footer, because the finder is already a dialog */
