@@ -3,6 +3,7 @@
 import { render } from 'preact';
 import { Menu, NamePrompt } from './menu';
 import { rememberedName } from './identity';
+import { DeckFinder } from './deck/deckfinder';
 import { Requests, StackMenu } from './match/dialogs';
 import { HostChoice } from './hostchoice';
 import { Options } from './options';
@@ -58,6 +59,7 @@ export function renderScreens(model: Model, actions: Actions): void {
     {ui.gameMenu === 'stops' && <AutoPassStops close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && ui.gameMenu === 'devSetup' && <DevSetupDialog actions={actions} close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && <DrawOfferQuestion model={model} actions={actions} />}
+    {page === 'menu' && ui.browse && <DeckFinder model={model} actions={actions} close={() => changeUi(u => { u.browse = null; })} />}
     {model.hostChoice && <HostChoice key={model.hostChoice.id} question={model.hostChoice} actions={actions} />}
   </>, byId('dialog-layer'));
   render(<Notices model={model} />, byId('notices'));

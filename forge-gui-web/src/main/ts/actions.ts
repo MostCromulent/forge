@@ -48,8 +48,21 @@ export interface PageActions {
   /** Sets the name and avatar this browser plays under. The server refuses a name another player already has. */
   setName(name: string, avatar: number, sleeve: number | undefined): void;
   claimHost(password?: string): void;
+  /** Sets the host's deck generator options: one copy of each card, and no artifacts. */
+  setDeckGen(singletons: boolean, noArtifacts: boolean): void;
+  /** Requests a deck's card list and statistics. They arrive later in the model. */
+  askDeckDetails(key: string): void;
+  /** Asks which listed decks contain a card, in the sideboard or anywhere, or contain cards from a set. */
+  deckQuery(kind: DeckQuery['kind'], value: string): void;
+  fetchNetDecks(): void;
   /** Answers a question the host asked outside a match. An empty choice cancels. */
   answerHostChoice(id: number, value: number[]): void;
+
+  /** Sets the format the start page's deck finder lists. */
+  browseFormat(format: string): void;
+  /** Deletes one of your own decks by its finder key. */
+  deleteDeck(key: string): void;
+  favouriteDeck(key: string, on: boolean): void;
 }
 
 export interface Actions extends PageActions {}
@@ -87,6 +100,13 @@ export function createActions(send: Send): PageActions {
     setSetting: (key, value) => send({ t: 'setSetting', key, value }),
     setName: (name, avatar, sleeve) => send({ t: 'setName', name, avatar, sleeve }),
     claimHost: (password?: string) => send({ t: 'claimHost', password }),
+    setDeckGen: (singletons, noArtifacts) => send({ t: 'setDeckGen', singletons, noArtifacts }),
+    askDeckDetails: key => send({ t: 'deckDetails', key }),
+    deckQuery: (kind, value) => send({ t: 'deckQuery', kind, value }),
+    fetchNetDecks: () => send({ t: 'netDecks' }),
+    browseFormat: format => send({ t: 'browseFormat', format }),
+    deleteDeck: key => send({ t: 'deckDelete', key }),
+    favouriteDeck: (key, on) => send({ t: 'deckFavourite', key, on }),
     answerHostChoice: (id, value) => send({ t: 'hostChoice', id, value }),
   };
 }

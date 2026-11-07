@@ -39,12 +39,36 @@ public final class FromBrowser {
     public record PageError(String text) {
     }
 
+    @Command("deckDetails")
+    public record AskDeckDetails(String key) {
+    }
+    public enum DeckQueryKind { card, sideboard, set }
+    /** Which listed decks hold a card in the main deck or the sideboard, or cards from a set. */
+    @Command("deckQuery")
+    public record DeckQuery(DeckQueryKind kind, String value) {
+    }
+
     @Command("hostChoice")
     public record HostChoiceAnswer(int id, List<Integer> value) {
     }
 
     @Command("start")
     public record Start(boolean spectate) {
+    }
+
+    /** The format the start page's deck finder lists, while no table is open. */
+    @Command("browseFormat")
+    public record BrowseFormat(String format) {
+    }
+
+    /** Deletes one of the player's own decks from the finder, without opening it. */
+    @Command("deckDelete")
+    public record DeckDelete(String key) {
+    }
+
+    /** Stars one of the decks the finder lists, or removes its star. */
+    @Command("deckFavourite")
+    public record DeckFavourite(String key, boolean on) {
     }
 
     @Command("reply")
@@ -89,6 +113,11 @@ public final class FromBrowser {
     /** Pays with one colour from the mana pool. color is its bit, as in the player's Mana property. */
     @Command("useMana")
     public record UseMana(byte color) {
+    }
+
+    /** How the host's generators build decks. singletons means one copy of each card. noArtifacts means no artifacts. */
+    @Command("setDeckGen")
+    public record SetDeckGen(boolean singletons, boolean noArtifacts) {
     }
 
     @Command("setSetting")

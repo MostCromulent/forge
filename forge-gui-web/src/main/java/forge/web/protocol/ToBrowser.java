@@ -52,6 +52,9 @@ public final class ToBrowser {
             @Nullable String version, ServerSettings settings, int session) {
     }
 
+    public record SavedSleeveArt(String key, int offset) {
+    }
+
     @Message("error")
     public record ErrorMessage(String message) {
     }
@@ -74,6 +77,94 @@ public final class ToBrowser {
     /** A draw offer: who made it, whether it is still open, and whether this player still has to answer. The browser clears its offer when it closes. */
     @Message("drawOffer")
     public record DrawOffer(@Nullable Ref offerer, boolean open, boolean mine, boolean waitingOnMe) {
+    }
+
+    @Message("decks")
+    public record Decks(List<DeckSummary> decks, @Nullable String cardPool, @Nullable DeckGenOptions deckGen) {
+    }
+    /** How the host's generators build their decks, as desktop's lobby sets it. Sent only to the host, because these are the host's preferences. */
+    public record DeckGenOptions(boolean singletons, boolean noArtifacts) {
+    }
+
+    /**
+     * A deck in the finder. A generator's entry is only a name until it is picked, so it has no counts.
+     * aiSkips counts the main deck's cards the AI will not play. It is left out when there are none.
+     */
+    public record DeckSummary(String key, String name, String source, String colors, @Nullable Boolean generated,
+            @Nullable String note, @Nullable Integer main, @Nullable Integer sideboard, @Nullable String problem,
+            @Nullable List<String> legalIn, @Nullable String formats, @Nullable String sleeveArt,
+            @Nullable Integer sleeveOffset, @Nullable Boolean readOnly, @Nullable String linked, @Nullable String sourceUrl,
+            @Nullable Long synced, @Nullable Integer bracket, @Nullable Integer averageMana, @Nullable Boolean favourite,
+            @Nullable Integer aiSkips) {
+    }
+
+    /** The keys of the listed decks that a card or set filter matches, for the query it answers. */
+    @Message("deckMatches")
+    public record DeckMatches(DeckQueryKind kind, String value, List<String> keys) {
+    }
+    @Message("deckDetails")
+    public record DeckDetailsMessage(DeckDetails deck) {
+    }
+
+    /** aiSkips names the main deck's cards the AI will not play. It is left out when the AI plays them all. cover is the image key of the card whose art heads the deck. */
+    public record DeckDetails(String key, String name, @Nullable String problem, String colors, DeckStats stats,
+            List<EditorGroup> main, List<EditorCard> sideboard, @Nullable String sleeveArt, int sleeveOffset,
+            @Nullable Bracket bracket, @Nullable List<String> aiSkips, @Nullable String cover) {
+    }
+
+    /** A Commander deck's suggested minimum bracket. clear names the kinds of card the deck has none of. */
+    public record Bracket(int level, List<BracketReason> reasons, List<String> clear) {
+    }
+
+    public enum BracketReasonKind { gameChangers, massLandDenial, extraTurns, chainedExtraTurns, lateCombos, earlyCombos }
+
+    /** One kind of card that affects the bracket. raises is the bracket it puts the deck in, or 0 when it does not raise the bracket by itself. */
+    public record BracketReason(BracketReasonKind kind, String title, String brief, List<String> cards, int raises, @Nullable String why) {
+    }
+
+    /**
+     * Forge's DeckStatistics for the main deck and commanders, as mobile shows them. total counts the commanders with the main deck.
+     * curve counts the nonland cards by mana value, and its last entry holds that value and above. spells is the part of each entry
+     * that is instants and sorceries. symbols counts the mana symbols in their costs as W, U, B, R, G and C.
+     */
+    public record DeckStats(int total, int main, int sideboard, int lands, float averageMana, List<Integer> curve, List<Integer> spells,
+            List<TypeCount> types, List<Integer> symbols) {
+    }
+
+    public record TypeCount(String name, int count) {
+    }
+
+    /** Every entry of the lobby's Format menu, in FormatChoices' order. The deck finder and editor offer the same entries. Sent once per browser. */
+    @Message("formats")
+    public record Formats(List<Format> formats) {
+    }
+
+    }
+
+    /**
+     * Constructed, its legality formats by type, the Commander family, the rest, and the casual variants.
+     * Limited is the page's own group for Draft and Sealed.
+     */
+    public enum FormatGroup { Constructed, Sanctioned, Casual, Custom, Commander, Other, Variant, Limited }
+
+    /**
+     * A format as the lobby offers it: its group, a description, short facts about its deck and life, and what changes in a match.
+     * deckCards is the deck size a player builds to, or null when every deck is dealt. deckAtLeast means the deck may be larger.
+     */
+    public record Format(String id, String name, FormatGroup group, String desc, List<String> facts, String play, @Nullable Integer deckCards,
+            boolean deckAtLeast) {
+    }
+
+    public record EditorGroup(String heading, List<EditorCard> cards) {
+    }
+
+    /** One card name in a section, however many printings it is split over. mv and colors let the browser group it in other ways. */
+    public record EditorCard(String name, int count, String image, String cost, int mv, String colors, int printings,
+            List<EditorPrinting> split, @Nullable String problem, boolean foil) {
+    }
+
+    /** How many copies of a card in one section are of one printing, named by its image key. */
+    public record EditorPrinting(String key, int count) {
     }
 
     /** A few buttons, or a list. */

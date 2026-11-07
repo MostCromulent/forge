@@ -274,6 +274,14 @@ function apply(msg: ServerMessage): void {
         void listDeviceDecks().then(decks => actions.deviceDecks(decks));
       }
       break;
+    case 'formats': model.formats = msg.formats; break;
+    case 'decks':
+      model.decks = msg.decks;
+      model.deckCardPool = msg.cardPool ?? null;
+      model.deckGen = msg.deckGen ?? null;
+      break;
+    case 'deckDetails': model.deckDetails = msg.deck; break;
+    case 'deckMatches': model.deckMatches = { ...model.deckMatches, [msg.kind]: msg }; break;
     case 'hostChoice': model.hostChoice = msg; break;
     case 'error':
       // A stored name can belong to someone else on this server. It is forgotten so the player is asked for another
