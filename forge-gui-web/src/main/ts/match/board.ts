@@ -3,7 +3,7 @@
 import { reconcile } from './reconcile';
 import { cardTypes } from './thresholds';
 import { cardImageSrc, hideOnError, setImage, symbolUrl } from '../images';
-import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLocal, type Model, offersPicks } from '../model';
+import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLocal, type Model, offersPicks, takesTurn } from '../model';
 import { renderHand, resetHand } from './hand';
 import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
@@ -219,7 +219,7 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
       if (shown) ui.seenOnField.set(o.$key, new Set(field));
       const changed = !shown && fieldChanged(ui.seenOnField.get(o.$key), field);
       changedOutOfSight ||= changed;
-      const turn = g?.PlayerTurn?.ref === o.$key;
+      const turn = takesTurn(o, g?.PlayerTurn);
       el.dataset.turn = String(g?.Turn ?? 0);
       el.title = o.Name ?? '';
       el.classList.toggle('on', shown);
@@ -366,10 +366,10 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   q(root, '.name').title = player.Name ?? '';
   // A player out of the game keeps their seat. The seat is greyed and a skull is drawn over the portrait
   root.classList.toggle('out', !!player.HasLost);
-  root.classList.toggle('turn', game(model)?.PlayerTurn?.ref === player.$key);
+  root.classList.toggle('turn', takesTurn(player, game(model)?.PlayerTurn));
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
   avatar.classList.toggle('selectable', (model.prompt?.selectablePlayers ?? []).some(r => r.ref === player.$key));
-  avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
+  avatar.classList.toggle('active', takesTurn(player, game(model)?.PlayerTurn));
   // The player who went first stays marked until turn 1 is over, for anyone who missed the reveal
   avatar.classList.toggle('first', wentFirst(player.$key) && (game(model)?.Turn ?? 0) <= 1);
   // A player who has lost shows an empty portrait frame. The portrait has broken out of it, or breaks out now

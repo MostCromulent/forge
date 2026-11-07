@@ -246,7 +246,7 @@ function Plate({ seat, index, lobby, format, actions, leaving, joinable, avatarC
   const commander = seat.commander;
   return (
     <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${!mine && !waiting && seat.type !== 'AI' ? ' guest' : ''}${seat.sittingOut ? ' sitting-out' : ''}${leaving ? ' leaving' : ''}${seat.team != null ? ' teamed' : ''}`}>
-      {seat.team != null && <TeamTab team={seat.team} teams={lobby.teams} change={lobby.host || mine ? team => actions.setTeam(index, team) : null} />}
+      {seat.team != null && <TeamTab team={seat.team} teams={lobby.teams} change={(lobby.host || mine) && !lobby.teamsFixed ? team => actions.setTeam(index, team) : null} />}
       <div class={hasDeck && seat.mayEdit && !dealt && seat.commanderChoices.length > 1 ? 'sleeve-slot three' : 'sleeve-slot'}
         hidden={beforePools} data-image={commander ?? undefined}>
         <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt && !commander ? ' card-art' : ''}`} title={dealt ? '' : t('lblWebLobbyChooseDeck')}

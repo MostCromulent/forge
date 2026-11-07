@@ -1,7 +1,7 @@
 // The phase bar is a pill on the divider. It shows whose turn it is and the five phases. Clicking it opens the grid of phase stops
 
 import { reconcile } from './reconcile';
-import { deref, game, isLocal, me, opponents, players, type Model } from '../model';
+import { deref, game, isLocal, me, opponents, players, takesTurn, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
 import { byId, q, playOnce, make, onPressOutside, reducedMotion, easeOut, escapeHtml } from '../dom';
 import { changeUi, ui } from '../ui';
@@ -98,7 +98,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
     wired = true;
   }
   const active = deref(model, g.PlayerTurn);
-  const myTurn = !!active && isLocal(model, active);
+  const myTurn = takesTurn(me(model), g.PlayerTurn);
   const theirs = whoseTurns(model);
   const step = stepIndex(g.Phase);
   // Untap (index -1) belongs to the beginning phase

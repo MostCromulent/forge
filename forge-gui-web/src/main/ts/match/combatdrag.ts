@@ -1,7 +1,7 @@
 // A dragged block or attack sends the same clicks the engine already accepts. Each click waits until the one before it shows on the board
 
 import { byId, q, make, placeBeside } from '../dom';
-import { attackTargets, game, me, opponents, stateOf, type Model } from '../model';
+import { attackTargets, game, me, opponents, stateOf, takesTurn, type Model } from '../model';
 import { setDragArrow } from './overlay';
 import type { Actions } from '../actions';
 import type { CardView, Ref } from '../protocol';
@@ -45,7 +45,7 @@ function currentDefender(model: Model): number | undefined {
 
 /** The attack prompt highlights the defender. The priority prompt later in the same step does not. */
 function declaringAttacks(model: Model): boolean {
-  return game(model)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && game(model)?.PlayerTurn?.ref === me(model)?.$key
+  return game(model)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && takesTurn(me(model), game(model)?.PlayerTurn)
     && defenders(model).length > 1 && currentDefender(model) !== undefined;
 }
 

@@ -22,8 +22,7 @@ public final class LobbyFormats {
     static final List<GameType> FORMATS = Stream.concat(Stream.of(GameType.Constructed), FormatChoices.FORMAT_GAME_TYPES.stream()).toList();
 
     /** The casual variants. Each one can be added to any format that the engine allows it with. */
-    static final List<GameType> VARIANTS = List.of(GameType.Vanguard, GameType.Planechase,
-            GameType.Archenemy, GameType.ArchenemyRumble);
+    static final List<GameType> VARIANTS = FormatChoices.STACKED_GAME_TYPES;
 
     /** The description uses the web's own wording, because the engine's older text still calls a commander a "General". */
     static Format explained(final GameType type) {
@@ -73,10 +72,14 @@ public final class LobbyFormats {
             case Planechase -> List.of(text.getMessage("lblWebFactPlanes"));
             case Vanguard -> List.of(text.getMessage("lblWebFactOneAvatar"), text.getMessage("lblWebFactAvatarChanges"));
             case Archenemy -> List.of(text.getMessage("lblWebFactSchemesArchenemy"), text.getMessage("lblWebFactArchenemyLife"));
-            default -> List.of(text.getMessage("lblWebFactSchemesEveryone"), text.getMessage("lblWebFactEveryoneLife"));
+            case ArchenemyRumble -> List.of(text.getMessage("lblWebFactSchemesEveryone"), text.getMessage("lblWebFactEveryoneLife"));
+            case TwoHeadedGiant -> List.of(text.getMessage("lblWebFactTwoTeamsOfTwo"), text.getMessage("lblWebFactTeamLife", 30));
+            default -> List.of();
         };
-        return new Format(type.name(), type.toString(), FormatGroup.Variant, text.getMessage("lblWebDesc" + type.name()), facts,
-                text.getMessage("lblWebPlay" + type.name()), null, false);
+        // A variant the web has no wording for yet uses the engine's description
+        return new Format(type.name(), type.toString(), FormatGroup.Variant,
+                text.getMessageorUseDefault("lblWebDesc" + type.name(), type.getDescription()), facts,
+                text.getMessageorUseDefault("lblWebPlay" + type.name(), ""), null, false);
     }
 
     /** Every entry of the lobby's Format menu, in FormatChoices' order: the game types and the legality formats together. */

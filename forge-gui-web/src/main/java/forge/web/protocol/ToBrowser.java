@@ -165,7 +165,7 @@ public final class ToBrowser {
             @Nullable String cardPool, List<Format> casualVariants, List<String> variantsOn,
             int maxSeats, int gamesPerMatch, List<Seat> seats, List<String> problems, boolean canStart,
             List<String> illegalDecks, boolean legalityEnforced, @Nullable LimitedTable limited, int maxBracket,
-            List<String> overBracket, int teams, List<Integer> teamChoices, List<String> aiProfiles) {
+            List<String> overBracket, int teams, boolean teamsFixed, List<Integer> teamChoices, List<String> aiProfiles) {
     }
 
     /** A Limited table's event. phase is an EventPhase name. */

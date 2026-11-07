@@ -70,7 +70,7 @@ export function FormatMenu({ groups, chosen, pick, blocked, explain }: {
           <h5>{shown.name}</h5>
           <p class="desc">{shown.desc}</p>
           <div class="facts">{shown.facts.map(x => <span key={x} class="fact">{x}</span>)}</div>
-          <p class="format-play"><b>{t('lblWebMatchBarInMatch')}</b> {shown.play}</p>
+          {shown.play && <p class="format-play"><b>{t('lblWebMatchBarInMatch')}</b> {shown.play}</p>}
         </div>
       )}
     </div>

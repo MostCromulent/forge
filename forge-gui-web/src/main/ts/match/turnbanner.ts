@@ -1,6 +1,6 @@
 // The banner that shows whose turn it is when a turn starts
 
-import { deref, game, isLocal, players, type Model } from '../model';
+import { deref, game, me, players, takesTurn, type Model } from '../model';
 import { byId, make } from '../dom';
 import { playerAvatarUrl } from '../looks';
 import { t } from '../text';
@@ -24,18 +24,19 @@ export function announceComing(model: Model, msg: StateMessage, then: () => void
   if (msg.full || !g || !delta || delta.Turn === undefined) {
     return false;
   }
-  return announce(model, delta.Turn, deref(model, delta.PlayerTurn ?? g.PlayerTurn), then);
+  const turn = delta.PlayerTurn ?? g.PlayerTurn;
+  return announce(model, delta.Turn, deref(model, turn), takesTurn(me(model), turn), then);
 }
 
 // Handles only the turn in which the table was first drawn. Every later turn is announced when its message arrives
 export function announceTurn(model: Model, g: GameView): void {
-  if (announced === null) announce(model, g.Turn, deref(model, g.PlayerTurn), () => {});
+  if (announced === null) announce(model, g.Turn, deref(model, g.PlayerTurn), takesTurn(me(model), g.PlayerTurn), () => {});
 }
 
 /** How long before the turn banner is removed that the turn's own actions start. */
 const TURN_OVERLAP_MS = 300;
 
-function announce(model: Model, turnNumber: number | undefined, active: PlayerView | undefined, then: () => void): boolean {
+function announce(model: Model, turnNumber: number | undefined, active: PlayerView | undefined, mine: boolean, then: () => void): boolean {
   const turn = `${turnNumber ?? 0}/${active?.$key ?? ''}`;
   if (!active || announced === turn) {
     return false;
@@ -45,7 +46,6 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   if (!seenBefore && turnNumber !== 1) {
     return false;
   }
-  const mine = isLocal(model, active);
   // With several opponents most turns belong to someone else. The phase pill already shows whose turn it is
   if (!mine && players(model).length > 2) {
     return false;

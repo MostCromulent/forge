@@ -460,8 +460,8 @@ public final class Lobby {
                 } else {
                     lobby.removeVariant(v);
                 }
-                // The archenemy's role set the teams. Without it, every seat goes back to a team of its own
-                if (v == GameType.Archenemy && !on) {
+                // The archenemy's role or the giant's pairs set the teams. Without them, every seat goes back to a team of its own
+                if ((v == GameType.Archenemy || v == GameType.TwoHeadedGiant) && !on) {
                     for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                         lobby.getSlot(i).setTeam(i);
                     }
@@ -475,6 +475,11 @@ public final class Lobby {
     /** Whether seats can be put on teams. They cannot when a draft's pairings or the archenemy's role already decide the sides. */
     private static boolean teamsAllowed(final GameLobby lobby) {
         return !limited(lobby) && !lobby.hasVariant(GameType.Archenemy) && !lobby.hasVariant(GameType.ArchenemyRumble);
+    }
+
+    /** Two-Headed Giant pairs the seats in order, so the teams are shown but nobody moves a seat between them. */
+    private static boolean teamsFixed(final GameLobby lobby) {
+        return lobby.hasVariant(GameType.TwoHeadedGiant);
     }
 
     /** How many teams the table is split into, or 0 for a free-for-all, where every seat is a team of its own. */
@@ -496,7 +501,7 @@ public final class Lobby {
     /** The team counts the host may split the seats into. There are fewer teams than seats, because one team per seat is a free-for-all. */
     private static List<Integer> teamChoices(final GameLobby lobby) {
         final List<Integer> out = new ArrayList<>();
-        for (int n = 2; teamsAllowed(lobby) && n < lobby.getNumberOfSlots() && n <= MOST_TEAMS; n++) {
+        for (int n = 2; teamsAllowed(lobby) && !teamsFixed(lobby) && n < lobby.getNumberOfSlots() && n <= MOST_TEAMS; n++) {
             out.add(n);
         }
         return out;
@@ -505,7 +510,7 @@ public final class Lobby {
     /** Deals the seats into that many teams in turn. With 0, every seat goes back to a team of its own. */
     public void setTeams(final int count) {
         final ServerGameLobby lobby = host();
-        if (lobby == null || (count != 0 && !teamChoices(lobby).contains(count))) {
+        if (lobby == null || teamsFixed(lobby) || (count != 0 && !teamChoices(lobby).contains(count))) {
             return;
         }
         for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
@@ -517,7 +522,7 @@ public final class Lobby {
     /** Moves a seat to another of the table's teams. A player may move their own seat, and the host may move any seat. */
     public void setTeam(final int index, final int team) {
         final GameLobby table = view();
-        if (table == null || index < 0 || index >= table.getNumberOfSlots() || team < 0 || team >= teams(table)) {
+        if (table == null || teamsFixed(table) || index < 0 || index >= table.getNumberOfSlots() || team < 0 || team >= teams(table)) {
             return;
         }
         if (index == local.webSeat()) {
@@ -597,7 +602,7 @@ public final class Lobby {
                     LobbyFormats.VARIANTS.stream().map(LobbyFormats::explainedVariant).toList(), variantsOn(lobby),
                     maxSeats(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,
                     local.isHost() && problems.isEmpty(), illegal, FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY),
-                    events.limitedTable(lobby), maxBracket(), overBracket(lobby), teams(lobby),
+                    events.limitedTable(lobby), maxBracket(), overBracket(lobby), teams(lobby), teamsFixed(lobby),
                     local.isHost() ? teamChoices(lobby) : List.of(),
                     local.isHost() ? AiProfileUtil.getAvailableProfiles() : List.of()));
         }
