@@ -108,6 +108,7 @@ button.ghost { background: none; border-color: transparent; color: var(--muted);
 .dk-star { flex: none; width: 22px; text-align: center; font-size: 15px; line-height: 1; color: var(--faint); cursor: pointer; }
 .dk-star:hover { color: var(--text); }
 .dk-star.on { color: var(--accent-2); }
+.dk-star.blank { cursor: auto; }
 button.ghost:hover { color: var(--text); background: var(--surface-2); }
 /* On the start page, the trail and question are placed above the plaques, at the same width as the chooser after it */
 .start-step { display: grid; gap: 14px; width: min(100%, 920px); }
@@ -592,8 +593,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 
 .deck-formats { margin: 2px 0 0; color: var(--faint); font-size: 12px; }
 
-.dk-hit .note { flex: 1; color: var(--muted); font-size: 12px; }
-.dk-hit.generated .dk-hit-title { flex: none; max-width: 50%; }
+.dk-hit .note { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--muted); font-size: 12px; }
 
 
 /* A question that blocks the host until it is answered, so it is drawn above every other dialog */

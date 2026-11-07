@@ -531,6 +531,8 @@ function Hit({ deck: d, chosen, choose, use, source, forComputer, star }: {
   if (d.generated) {
     return (
       <button class="dk-hit generated" aria-pressed={chosen} onClick={choose} onDblClick={use}>
+        {/* A generated deck cannot be starred. The space keeps its name in line with the decks around it */}
+        <span class="dk-star blank" aria-hidden="true" />
         <Title deck={d} />
         <span class="note">{d.note ?? ''}</span>
         {source && <span class="tag">{d.source}</span>}
