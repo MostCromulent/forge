@@ -264,6 +264,18 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 /* At 15 or more, the arc and the chip turn bright. The warning uses brightness and glow, not only hue. */
 .avatar .cmdr-arc.near circle { stroke: #fff4ee; opacity: 1; filter: drop-shadow(0 0 2px #ff3b2a) drop-shadow(0 0 6px #ff2a14aa); }
 .avatar .cmdr-chip.near { border-color: #ff5a3c; color: #fff; box-shadow: 0 0 7px #ff3b2a99; }
+#zoom .cmdr-taken { display: grid; gap: 6px; padding: 6px 0 8px; border-bottom: 1px solid var(--line); }
+#zoom .cmdr-taken h6 { margin: 0; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+#zoom .cmdr-row { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+#zoom .cmdr-row .art { width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2) no-repeat 50% 26% / 240% auto; box-shadow: 0 0 0 1px #000c; }
+#zoom .cmdr-row .who { display: grid; gap: 3px; min-width: 0; }
+#zoom .cmdr-row .nm { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#zoom .cmdr-row .bar { height: 4px; border-radius: 2px; background: #ffffff1a; overflow: hidden; }
+#zoom .cmdr-row .bar i { display: block; height: 100%; border-radius: 2px; background: #c9ced6; }
+#zoom .cmdr-row .v b { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+#zoom .cmdr-row .v small { color: var(--muted); font-size: 11px; font-weight: 600; }
+#zoom .cmdr-row.near .bar i { background: #fff4ee; box-shadow: 0 0 5px #ff3b2a; }
+#zoom .cmdr-row.near .v b { color: #fff; text-shadow: 0 0 6px #ff3b2a; }
 .ai-badge svg { width: 100%; height: 100%; fill: var(--text); }
 .ai-badge svg .eye { fill: var(--bg); }
 .avatar.active { border-color: var(--accent-2); }
@@ -433,6 +445,138 @@ html[data-motion="reduced"] #sky :is(.flip, .when) { transition: none; }
 .log-entry.log-turn::before, .log-entry.log-turn::after { content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--accent-2) 35%, transparent); }
 .log-entry.log-turn:first-child { margin-top: 2px; }
 .log-entry.log-game_outcome, .log-entry.log-match_results { color: var(--text); }
+/* The preview is drawn above dialogs. Hovering a card in a dialog is how you read it, so the preview must not be covered. */
+/* An image or rules-text preview uses the preview size that every page shares (theme.css) */
+#zoom { --zoom-w: var(--preview-w); position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
+/* A placed preview is beside the card it shows. The default position, used for a player, is at the board's right. */
+#zoom.placed { right: auto; transform: none; }
+#zoom.settling { visibility: hidden; }
+/* Both the image and the rules text are the card's own size, with the keys in a pill below */
+#zoom.image-only, #zoom.text-card { flex-direction: column; align-items: center; gap: 6px; }
+#zoom.image-only .detail { display: none; }
+/* A tab at the bottom of the image shows where a card in hand is actually played from. It stays clear of the cost and of the overlays at the top. */
+#zoom .shot { position: relative; display: block; line-height: 0; }
+/* When the preview turns to the card's other side, the new side rotates in from edge-on. This applies to the image and the text. */
+#zoom.flipping.image-only > .shot, #zoom.flipping.text-card > .detail { animation: zoom-flip .26s cubic-bezier(.2, .7, .3, 1); }
+@keyframes zoom-flip { from { transform: perspective(900px) rotateY(-90deg); } to { transform: perspective(900px) rotateY(0deg); } }
+html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
+/* The zone a card is played from is named above its preview, as desktop names it above the card. It is drawn like the hint, outlined in the zone's colour */
+#zoom .from-tab { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -8px); padding: 4px 13px;
+  border: 1px solid var(--zone-glow); border-radius: 999px; background: var(--surface); color: var(--text); font: 600 13px/1.25 system-ui, sans-serif;
+  white-space: nowrap; box-shadow: 0 4px 14px #000a; }
+#zoom .from-tab:empty, #zoom.text-card .shot { display: none; }
+/* The hint is a pill like the playable-from tab, so it stays readable over whatever is behind it */
+#zoom > .hint { padding: 4px 12px; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface); color: var(--text);
+  font-size: 11px; font-weight: 600; text-shadow: 0 1px 3px #000; box-shadow: 0 4px 14px #000a; }
+#zoom:not(.image-only):not(.text-card) > .hint { display: none; }
+/* The empty hint keeps its space while the card's details load. So the preview does not grow and shift when the hint arrives. */
+#zoom > .hint:empty { visibility: hidden; }
+#zoom > .hint:empty::before { content: '\00a0'; }
+/* Ability-word conditions and delve under the picture. Met is the brass of the main buttons with a tick, so it differs from unmet in brightness, not only in colour */
+#zoom > .conds { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+/* The picture is positioned, so its shadow would fall over the pills under it unless they are positioned too */
+#zoom > :is(.conds, .hint) { position: relative; }
+#zoom > .conds:empty, #zoom:not(.image-only) > .conds { display: none; }
+#zoom .cond { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface);
+  color: var(--text); font: 600 13px/1.25 system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 14px #000a; }
+#zoom .cond .num { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); font-variant-numeric: tabular-nums; }
+#zoom .cond .segs { display: grid; grid-auto-flow: column; grid-auto-columns: 9px; gap: 3px; }
+#zoom .cond .segs i { height: 5px; border-radius: 2px; background: var(--surface-3); }
+#zoom .cond .segs i.on { background: var(--text); }
+#zoom .cond.delve { border-color: color-mix(in srgb, var(--cost-changed) 55%, transparent); }
+#zoom .cond.delve .num { color: var(--cost-changed); }
+#zoom .cond.delve .segs i.on { background: var(--cost-changed); }
+#zoom .cond.met { background: var(--brass); border-color: color-mix(in srgb, var(--accent-2) 45%, #000); color: var(--on-brass); }
+#zoom .cond.met .num { color: var(--on-brass); }
+#zoom :is(.cond, .aw) .tick { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+#zoom .cond img.sym { width: 15px; height: 15px; }
+/* The same condition as a chip on its ability word in the rules text */
+#zoom .text .aw { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; font-style: normal; line-height: 1.5; padding: 0 7px; border-radius: 5px;
+  border: 1px solid var(--line-bright); color: var(--muted); vertical-align: 1px; font-variant-numeric: tabular-nums; }
+#zoom .text .aw.met { background: var(--brass); border-color: color-mix(in srgb, var(--accent-2) 45%, #000); color: var(--on-brass); }
+/* The rules text has the card's own shape and size, so switching between it and the image with T moves nothing */
+#zoom.text-card .detail { position: relative; width: var(--zoom-w); aspect-ratio: 63 / 88; box-sizing: border-box; display: flex; flex-direction: column; gap: 5px;
+  padding: 6px; overflow: hidden; border: 7px solid #0b0d11; border-radius: 14px; font-size: 13px; line-height: 1.38;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--frame) 40%, #1b2029), color-mix(in srgb, var(--frame) 16%, #0d1016));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 55%, transparent), 0 10px 40px #000a; }
+#zoom.text-card .detail > header, #zoom.text-card .detail > .type { flex: none; display: flex; align-items: center; gap: 8px; padding: 5px 9px; border-radius: 6px;
+  background: color-mix(in srgb, var(--frame) 28%, #0d1016); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 45%, transparent); }
+#zoom.text-card .detail > header { justify-content: space-between; }
+#zoom.text-card .detail .name { font-size: 15.5px; line-height: 1.2; }
+#zoom.text-card .detail .cost { white-space: nowrap; }
+#zoom.text-card .detail > .type { color: #dfe4ea; font-size: 12.5px; font-weight: 600; line-height: 1.25; }
+#zoom.text-card .detail .type-line { flex: 1; }
+#zoom .detail .kind-chip, #zoom .detail .set { flex: none; font-size: 10px; font-weight: 700; line-height: 1; padding: 3px 5px; border-radius: 4px; }
+#zoom .detail .kind-chip { color: var(--accent-2); border: 1px solid var(--accent-2); }
+#zoom .detail .set { letter-spacing: .06em; color: #0d1016; background: #d8dbe0; }
+#zoom .detail .set[data-rarity="Uncommon"] { background: linear-gradient(135deg, #e4ecf2, #8fa3b3); }
+#zoom .detail .set[data-rarity="Rare"] { background: linear-gradient(135deg, #f5dc8a, #b8902e); }
+#zoom .detail .set[data-rarity="MythicRare"] { background: linear-gradient(135deg, #ffb070, #d0461e); }
+#zoom .detail .set[data-rarity="Special"] { background: linear-gradient(135deg, #d9c2ff, #8a5cd6); }
+#zoom .detail .kind-chip:empty, #zoom .detail .set:empty, #zoom:not(.text-card) .detail .foot { display: none; }
+#zoom.text-card .detail .from { flex: none; padding: 3px 10px; border-radius: 5px; background: var(--zone-glow); color: #15121c; font-size: 11.5px; font-weight: 700; }
+#zoom.text-card .detail .text { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; display: flex; flex-direction: column; white-space: normal;
+  border-radius: 6px; background: #12161e; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 22%, transparent); }
+#zoom.text-card .text > * { padding: 7px 10px; }
+#zoom.text-card .text > * + * { border-top: 1px solid #262e3b; }
+#zoom.text-card .text .rem { font-style: italic; color: var(--muted); }
+#zoom.text-card .text > .mode-option { position: relative; padding-left: 22px; }
+#zoom.text-card .text > * + .mode-option { border-top: 0; padding-top: 0; }
+#zoom.text-card .text > .mode-option::before { content: '•'; position: absolute; left: 11px; }
+#zoom.text-card .text .kws { display: flex; flex-wrap: wrap; gap: 4px 5px; align-items: center; }
+#zoom.text-card .text .kw { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px;
+  background: color-mix(in srgb, var(--frame) 18%, #1b212b); border: 1px solid color-mix(in srgb, var(--frame) 45%, transparent); }
+/* Changes the game made to the card's printed rules. Gained text is gold. Lost text is struck through and dimmed. */
+#zoom.text-card .text .change { font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-left: 5px; color: var(--muted); }
+#zoom.text-card .text .kw:has(.change) { box-shadow: 0 0 0 1px var(--cost-changed); }
+#zoom.text-card .text .kw:has(.change) .change { color: var(--cost-changed); }
+#zoom.text-card .text .kw.lost { box-shadow: none; opacity: .6; }
+#zoom.text-card .text .kw.lost .change { color: var(--muted); }
+#zoom.text-card .text .lost > span:not(.change), #zoom .detail .text .struck { text-decoration: line-through; opacity: .6; }
+#zoom.text-card .text div.lost { color: var(--muted); }
+#zoom.text-card .text .kwrem { flex-basis: 100%; font-size: 11.5px; line-height: 1.35; color: var(--muted); font-style: italic; }
+#zoom.text-card .text .ab { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 9px; align-items: baseline; }
+#zoom.text-card .text .ac { font-size: 12px; font-weight: 700; padding: 1px 6px; border-radius: 5px; background: #1e2530; border: 1px solid var(--line-bright); white-space: nowrap; }
+#zoom.text-card .text .ab.long { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+#zoom.text-card .text .ab.long .ac { white-space: normal; justify-self: start; }
+/* Loyalty up is blue and loyalty down is orange-red, the same pair the P/T uses */
+#zoom.text-card .text .ac.plus { color: #7cc8ff; border-color: #7cc8ff73; }
+#zoom.text-card .text .ac.minus { color: var(--damage); border-color: #ff7a5973; }
+#zoom.text-card .text .notes { margin-top: auto; display: grid; gap: 2px; font-size: 11.5px; color: #c5cdd8; background: #0d1016; }
+#zoom.text-card .detail .foot { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 30px; padding-right: 64px; }
+#zoom .detail .foot .chip { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #0d1016cc; border: 1px solid var(--line-bright); white-space: nowrap; }
+#zoom .detail .foot .counter { color: #7cc8ff; border-color: #7cc8ff66; }
+#zoom .detail .foot .damage { color: var(--damage); border-color: #ff7a5966; }
+#zoom.text-card .detail .pt { position: absolute; right: 5px; bottom: 4px; font-size: 17px; font-weight: 800; line-height: 1; padding: 5px 10px; border-radius: 7px;
+  font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--frame) 30%, #0d1016);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 65%, transparent), 0 2px 6px #000a; }
+#zoom.text-card .detail .pt i { font-style: normal; }
+#zoom.text-card .detail .pt [data-shift="up"] { color: #7cc8ff; }
+#zoom.text-card .detail .pt [data-shift="down"] { color: var(--damage); }
+/* A planeswalker's loyalty is drawn in a shield, as it is printed */
+#zoom.text-card .detail .pt.shield { width: 40px; padding: 7px 0 10px; border-radius: 0; text-align: center; background: #1c1f26; color: #fff;
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%); box-shadow: inset 0 0 0 2px #cfd3da; }
+
+/* A card image's corner radius is about 4.5% of its width. So the rounding scales with the preview and hides the white corners behind it. */
+#zoom img { width: var(--zoom-w); aspect-ratio: 63 / 88; border-radius: 4.5% / 3.2%; box-shadow: 0 10px 40px #000a; }
+/* A creature in hand whose power or toughness is not its printed value shows the current value on a plate over the printed box (preview.ts) */
+#zoom .shot > .now-pt { position: absolute; left: 77.4%; top: 89.2%; width: 16.2%; height: 4.8%; z-index: 2; display: grid; place-items: center; box-sizing: border-box;
+  background: #0d1118; border: 1.5px solid var(--accent-2); border-radius: 6px; box-shadow: 0 2px 8px #000a; color: var(--accent-2); font-size: calc(var(--zoom-w) * .052); font-weight: 800; line-height: 1; }
+#zoom canvas.foil { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 4.5% / 3.2%; }
+/* A card printed sideways, such as a Room or a plane, gets a wide box. Its picture is turned inside it */
+#zoom .shot.turned { width: calc(var(--zoom-w) * 88 / 63); height: var(--zoom-w); }
+#zoom .shot.turned > :is(img, canvas.foil, .stickers) { position: absolute; inset: auto; left: 50%; top: 50%; width: var(--zoom-w); height: calc(var(--zoom-w) * 88 / 63); translate: -50% -50%; rotate: var(--turn); }
+#zoom .detail { width: 260px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 10px 40px #000a; font-size: 13px; }
+#zoom .detail header { display: flex; justify-content: space-between; gap: 8px; }
+#zoom .detail header .cid { margin-right: auto; align-self: center; color: var(--muted); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#zoom .detail header .cid:empty { display: none; }
+#zoom .detail .type { color: var(--muted); }
+#zoom .detail .text { white-space: pre-line; }
+#zoom .detail .text .muted { color: var(--muted); }
+#zoom .detail .pt { font-weight: 700; text-align: right; }
+/* This uses the same colour as the glow around the card, so the panel explains what the glow only hints at */
+#zoom .detail .from { color: var(--zone-glow); font-size: 12px; font-weight: 600; }
+#zoom .detail .pt:empty, #zoom .detail .from:empty { display: none; }
 /* Corners scale with the card, so the square corners of a large card's scan do not show */
 .card { --radius: max(6px, calc(var(--card-w) * var(--fit, 1) * .05)); width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .3s ease, opacity .3s ease; flex: none; }
 /* A tapped card's shadow rotates with it, so its offset is turned the other way to keep the shadow below the card. Glow states keep the shadow through --lift. */
@@ -529,6 +673,7 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 .group.cramped .card .corner { display: none; }
 .card.tapped { transform: rotate(90deg) scale(.9); }
 .sym { height: 1em; width: 1em; vertical-align: -0.12em; margin: 0 1px; }
+#zoom .sym { height: 1.05em; width: 1.05em; }
 /* A land that can pay the current cost. Paying is not a choice among options, so the board does not dim for it. */
 /* The ring has a small gap from the card, so it still shows round a white-bordered card */
 .card.selectable { outline: 2px solid var(--selectable); outline-offset: 2px; }
@@ -704,3 +849,13 @@ html[data-motion="reduced"] .avatar.hit, html[data-motion="reduced"] .avatar.hit
 .scheme-reveal .scheme.big .scheme-name { font-size: 15px; padding: 14px 10px 6px; }
 .scheme-reveal p { margin: 0; color: var(--text); font-size: 15px; }
 
+/* Stickers are drawn on the card image as pieces cut from their sheet's image. They have a white edge like paper stickers. */
+.card > .stickers, #zoom .shot > .stickers { position: absolute; inset: 0; z-index: 2; pointer-events: none; container-type: size; }
+.stickers .stk { position: absolute; display: block; background-repeat: no-repeat; border-radius: 6% / 10%; filter: drop-shadow(0 .4cqw .5cqw #000a); }
+.stickers .stk.art { border-radius: 18%; }
+/* An ability sticker is drawn on lavender paper, as the sheets print it */
+.stickers .stk.words { left: 7%; right: 7%; padding: .6cqw 2cqw; border: .5cqw solid #fff; border-radius: 1.5cqw; background: #dcd3f0; color: #1b1a17;
+  font: 600 6cqw/1.15 Georgia, "Times New Roman", serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#zoom .shot > .stickers .stk.words { white-space: normal; }
+/* The place of a sticker peeled off its sheet is hatched with a dashed edge. So it reads as gone without relying on colour. */
+.stickers .stk.peeled { filter: none; border: .5cqw dashed #9c8f73; border-radius: 1.5cqw; background: repeating-linear-gradient(135deg, #e9dfc6 0 1.2cqw, #c9bc9c 1.2cqw 2.4cqw); }

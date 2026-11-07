@@ -25,6 +25,9 @@ export interface Model {
   hostPassword: boolean;
   /** Game events since the board was last drawn, oldest first. The render empties it so each event is shown once. */
   events: GameEvent[];
+  /** Rules text the server built for hovered cards and players. It is kept for the rest of the match. */
+  cardDetails: Map<number, Detail>;
+  playerDetails: Map<number, PlayerDetail>;
   /** A question outside a match that the host is waiting for an answer to. */
   hostChoice: HostChoice | null;
   /** This browser has sent its saved name to the server, and the answer has not arrived yet. */
@@ -47,6 +50,8 @@ export function createModel(): Model {
     canClaimHost: false,
     hostPassword: false,
     events: [],
+    cardDetails: new Map(),
+    playerDetails: new Map(),
     hostChoice: null,
     nameSent: false,
     notices: [],

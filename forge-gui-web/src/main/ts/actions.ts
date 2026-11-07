@@ -8,6 +8,9 @@ import type {
 export interface PageActions {
   /** Sets all the stops of one row at once. Phases not listed are turned off. With no phases, the row gets Forge's default stops. */
   setStops(mine: boolean, phases?: PhaseType[]): void;
+  /** Requests a card's rules text or a player's details. The answer arrives later in the model. */
+  inspectCard(key: number): void;
+  inspectPlayer(key: number): void;
   setSetting(key: string, value: string): void;
 
   /** Sets the name and avatar this browser plays under. The server refuses a name another player already has. */
@@ -22,6 +25,8 @@ export interface Actions extends PageActions {}
 export function createActions(send: Send): PageActions {
   return {
     setStops: (mine, phases) => send({ t: 'setStops', mine, phases }),
+    inspectCard: key => send({ t: 'detail', key }),
+    inspectPlayer: key => send({ t: 'playerDetail', key }),
     setSetting: (key, value) => send({ t: 'setSetting', key, value }),
     setName: (name, avatar, sleeve) => send({ t: 'setName', name, avatar, sleeve }),
     claimHost: (password?: string) => send({ t: 'claimHost', password }),

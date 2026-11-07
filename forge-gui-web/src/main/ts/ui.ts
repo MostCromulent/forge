@@ -4,6 +4,9 @@
 import { storeJson, storedJson } from './storage';
 import { reducedMotion } from './dom';
 
+/** The card or player under the pointer. src is empty when the viewer may not see the card. at is the hovered element. */
+type Hover = { card: number | null; src: string; from?: string; at?: HTMLElement } | { player: number };
+
 /** resetMatchUi clears the fields that belong to one match. main.ts clears the fields used by only one layout when the layout changes. */
 export interface UiState {
   /** Battlefield piles the player has expanded to show each card, keyed by the pile's signature. */
@@ -13,8 +16,15 @@ export interface UiState {
   volumeOpen: boolean;
   /** The play choice whose game kinds the start page shows. It is kept so that going back from a table returns there. */
   menuChoice: 'play' | 'friends' | null;
+  hover: Hover | null;
+  /** Which face of the hovered card the zoom panel shows. */
+  faceIndex: number;
+  /** The zoom panel shows the hovered card's rules text instead of its image. Its key, T by default, toggles this. */
+  cardText: boolean;
   /** Which side column panels are open. Stored in the browser across sessions. */
   sidePanels: { log: boolean; chat: boolean };
+  /** The hovered card or player is pinned open as a sheet, after a long press on a phone. */
+  inspect: boolean;
   /** For layouts that show one opponent at a time. These hold the shown seat, the turn the player last chose one, and whether the phone's seat list is open. */
   openSeat: number | null;
   seatChosenTurn: number;
@@ -32,7 +42,11 @@ export const ui: UiState = {
   optionsOpen: false,
   volumeOpen: false,
   menuChoice: null,
+  hover: null,
+  faceIndex: 0,
+  cardText: false,
   sidePanels: { log: true, chat: true, ...storedSidePanels() },
+  inspect: false,
   openSeat: null,
   seatChosenTurn: 0,
   seatsOpen: false,

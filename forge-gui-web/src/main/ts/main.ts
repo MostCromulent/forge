@@ -76,6 +76,8 @@ initForm(() => {
 });
 initNotices(model, schedule);
 initPress();
+initSheets();
+initDetail(actions);
 initLog();
 initSide();
 initSettings(actions.setSetting, () => {
@@ -176,6 +178,8 @@ function apply(msg: ServerMessage): void {
     case 'log':
       appendLog(msg, logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) }))));
       return;
+    case 'detail': model.cardDetails.set(msg.key, msg); break;
+    case 'playerDetail': model.playerDetails.set(msg.key, msg); break;
     case 'notice': showNotice(msg); break;
   }
   schedule();
