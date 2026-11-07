@@ -24,6 +24,7 @@ import { Backdrop, Confirm, Dropdown } from '../dialog';
 import { campaigns } from '../campaigns';
 
 type GroupBy = 'colour' | 'type' | 'mv' | 'pick';
+type PackSort = 'rarity' | 'colour' | 'mv' | 'rank';
 type Drag = { from: 'pack' | 'pick'; index: number };
 /** A pick and its index in pick order. The server refers to a pick by this index. */
 type Held = { card: DraftCard; index: number };
@@ -195,13 +196,19 @@ function useClock(state: DraftState): number {
 
 function Pack({ state, faces, actions, log }: { state: DraftState; faces: string[]; actions: Actions; log: boolean }) {
   const [selected, setSelected] = useState<number | null>(null);
+  const [sort, setSort] = useState<PackSort>('rarity');
   // A new state clears the selection, because its cards are not the ones that were selected
   useEffect(() => setSelected(null), [state.step]);
+  const ranked = setting('draftRanking') && state.cards.some(c => c.rank !== undefined);
+  const sorts = PACK_SORTS.filter(([id]) => id !== 'rank' || ranked);
+  const by = sort === 'rank' && !ranked ? 'rarity' : sort;
+  // The cards are drawn in this order, but the server still names each card by its place in the pack
+  const order = packOrder(state.cards, by);
   const pick = (index: number) => {
     // The card under the pointer is about to leave with the pack, so its preview is closed now
     hoverCard(null);
-    launch(index);
-    passPack(index, passSide(state.direction));
+    launch(order.indexOf(index));
+    passPack(order.indexOf(index), passSide(state.direction));
     actions.draftPick(state.step, index, false);
   };
   // A new pack slides in from the player it came from. That is the side opposite the one packs pass to
@@ -215,11 +222,11 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
   }, [cards]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && selected !== null && !(e.target instanceof HTMLInputElement)) pick(selected);
+      if (e.key === 'Enter' && selected !== null && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) pick(selected);
     };
     addEventListener('keydown', onKey);
     return () => removeEventListener('keydown', onKey);
-  }, [selected, state.step]);
+  }, [selected, state.step, by]);
   const left = useClock(state);
   const n = state.seats.length;
   const direction = (state.direction < 0 ? -1 : 1) as 1 | -1;
@@ -240,12 +247,15 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
         {next !== null && <span class="chip more">{tNodes('lblWebDraftNextFrom', seat(next))}</span>}
         {depths[busiest] > 2 && <span class="chip more">{busiest === 0 ? t('lblWebDraftYouHoldingPacks', depths[busiest]) : t('lblWebDraftSeatHoldingPacks', state.seats[busiest].name, depths[busiest])}</span>}
         <span class="head-end">
+          <select class="sort-by" aria-label={t('lblSort')} value={by} onChange={e => setSort(e.currentTarget.value as PackSort)}>
+            {sorts.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
+          </select>
           {log && <HeadMenu label={t('lblWebDraftLog')}>{() => <DraftLog lines={state.log} />}</HeadMenu>}
           <TableMenu state={state} faces={faces} />
         </span>
       </div>
       <div class="cat-grid" data-list ref={grid}>
-        {state.cards.map((card, i) => (
+        {order.map(i => { const card = state.cards[i]; return (
           <div key={`${card.image}-${i}`} class={i === selected ? 'slot draft-slot chosen' : 'slot draft-slot'} data-image={card.image} {...textData(card)}
             data-act={t('lblWebDraftPick')} onClick={e => {
               // A card a third of a phone's screen wide is too small to read. So on a phone a tap opens its preview, and the preview's Pick button picks it
@@ -261,11 +271,33 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
             </button>
             {i === selected && <span class="confirm">{t('lblWebDraftPickConfirm')}</span>}
           </div>
-        ))}
+        ); })}
         {state.cards.length === 0 && !state.done && <p class="muted">{t('lblWebDraftWaitingForPack')}</p>}
       </div>
     </section>
   );
+}
+
+const PACK_SORTS: [PackSort, TextKey][] = [['rarity', 'lblWebDraftSortRarity'], ['colour', 'lblWebDraftSortColor'], ['mv', 'lblWebDraftSortManaValue'],
+  ['rank', 'lblWebDraftSortRanking']];
+const RARITY: Record<string, number> = { M: 4, S: 3, R: 3, U: 2, C: 1 };
+
+/** Mono-coloured cards in WUBRG order, then multicoloured, then colourless. */
+function colourRank(colors: string): number {
+  return colors === 'C' ? 6 : colors.length > 1 ? 5 : 'WUBRG'.indexOf(colors);
+}
+
+/** The pack's indexes in the order shown. Rarity is desktop's default: rarest first, then colour, then name. */
+function packOrder(cards: DraftCard[], by: PackSort): number[] {
+  const name = (a: DraftCard, b: DraftCard) => a.name.localeCompare(b.name);
+  const colour = (a: DraftCard, b: DraftCard) => colourRank(a.colors) - colourRank(b.colors);
+  const compare: Record<PackSort, (a: DraftCard, b: DraftCard) => number> = {
+    rarity: (a, b) => (RARITY[b.rarity] ?? 0) - (RARITY[a.rarity] ?? 0) || colour(a, b) || name(a, b),
+    colour: (a, b) => colour(a, b) || a.mv - b.mv || name(a, b),
+    mv: (a, b) => a.mv - b.mv || colour(a, b) || name(a, b),
+    rank: (a, b) => (b.rank ?? 0) - (a.rank ?? 0) || name(a, b),
+  };
+  return cards.map((_, i) => i).sort((a, b) => compare[by](cards[a], cards[b]));
 }
 
 /** A card's text on its pack slot or pick. The preview shows this text when the card has no picture. */
