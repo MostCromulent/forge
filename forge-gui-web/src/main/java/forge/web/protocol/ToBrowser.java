@@ -4,12 +4,15 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import forge.card.CardRarity;
+import forge.deck.CommanderOptions;
 import forge.game.GameLogEntryType;
 import forge.game.GameLogVerbosity;
 import forge.game.phase.PhaseType;
 import forge.game.zone.ZoneType;
+import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.DeltaPacket;
 import forge.player.AutoYieldStore.TriggerDecision;
+import forge.web.protocol.FromBrowser.DeckQueryKind;
 import forge.web.protocol.FromBrowser.EventKind;
 import forge.web.protocol.Wire.Event;
 import forge.web.protocol.Wire.Message;
@@ -82,6 +85,7 @@ public final class ToBrowser {
     @Message("decks")
     public record Decks(List<DeckSummary> decks, @Nullable String cardPool, @Nullable DeckGenOptions deckGen) {
     }
+
     /** How the host's generators build their decks, as desktop's lobby sets it. Sent only to the host, because these are the host's preferences. */
     public record DeckGenOptions(boolean singletons, boolean noArtifacts) {
     }
@@ -102,6 +106,7 @@ public final class ToBrowser {
     @Message("deckMatches")
     public record DeckMatches(DeckQueryKind kind, String value, List<String> keys) {
     }
+
     @Message("deckDetails")
     public record DeckDetailsMessage(DeckDetails deck) {
     }
@@ -134,6 +139,18 @@ public final class ToBrowser {
     public record TypeCount(String name, int count) {
     }
 
+    /** Match setup. No table means no lobby is open. */
+    @Message("lobby")
+    public record LobbyMessage(@Nullable LobbyTable table) {
+    }
+
+    public record LobbyTable(boolean host, int mySeat, boolean shareable, String format,
+            @Nullable String cardPool, List<Format> casualVariants, List<String> variantsOn,
+            int maxSeats, int gamesPerMatch, List<Seat> seats, List<String> problems, boolean canStart,
+            List<String> illegalDecks, boolean legalityEnforced, @Nullable LimitedTable limited, int maxBracket,
+            List<String> overBracket, int teams, List<Integer> teamChoices, List<String> aiProfiles) {
+    }
+
     /** Every entry of the lobby's Format menu, in FormatChoices' order. The deck finder and editor offer the same entries. Sent once per browser. */
     @Message("formats")
     public record Formats(List<Format> formats) {
@@ -155,6 +172,33 @@ public final class ToBrowser {
             boolean deckAtLeast) {
     }
 
+    /** sittingOut means the seat sits out the next match. aiProfile is how an AI seat plays. */
+    public record Seat(@Nullable String name, LobbySlotType type, boolean mine, boolean mayEdit, boolean ready, int avatar,
+            int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
+            @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
+            @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard, boolean sittingOut,
+            @Nullable String commander, @Nullable Integer bracket, @Nullable Integer team, List<CommanderChoice> commanderChoices,
+            @Nullable String aiProfile) {
+    }
+
+    /** A commander that can lead a seat's deck, as desktop's lobby offers it. name is the leader's name, two joined by +. image is the first one's picture.
+     *  kind says whether it is the deck's own, one its file suggests, or another card in the deck. chosen says whether it leads now. */
+    public record CommanderChoice(String name, String image, CommanderOptions.Kind kind, boolean chosen) {
+    }
+
+    /** A planar deck, scheme deck or avatar a seat brings: its name, its size, a detail such as modifiers, and a problem. */
+    public record SeatExtra(String label, int count, @Nullable String detail, @Nullable String problem) {
+    }
+
+    /** What a seat may choose for one extra section. An avatar choice includes its image and its two modifiers. */
+    @Message("extraChoices")
+    public record ExtraChoices(String section, int index, List<ExtraChoice> choices) {
+    }
+
+    public record ExtraChoice(String key, String label, @Nullable Integer count, @Nullable String problem,
+            @Nullable String image, @Nullable Integer hand, @Nullable Integer life) {
+    }
+
     public record EditorGroup(String heading, List<EditorCard> cards) {
     }
 
@@ -165,6 +209,18 @@ public final class ToBrowser {
 
     /** How many copies of a card in one section are of one printing, named by its image key. */
     public record EditorPrinting(String key, int count) {
+    }
+
+    @Message("cardSearch")
+    public record CardSearch(List<String> names) {
+    }
+
+    @Message("printings")
+    public record Printings(String name, List<Printing> printings) {
+    }
+
+    /** One printing of a card: its set's code and name, its year, the part of the set it is in (cards, borderless, showcase and so on), and why it can't be used, if it can't. */
+    public record Printing(String name, String edition, String key, String setName, int year, @Nullable String style, @Nullable String problem) {
     }
 
     /** A few buttons, or a list. */

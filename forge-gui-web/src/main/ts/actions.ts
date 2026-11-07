@@ -5,6 +5,9 @@ import type {
   EventKind, PoolPlayMode, YieldAction,
 } from './protocol';
 
+/** The seat fields its owner can change. */
+type SeatChange = Omit<SetSeat, 't' | 'index'>;
+
 export interface PageActions {
   /** A click on a card. menu means a right-click, which asks for all the card's options. x and y position that menu. */
   selectCard(key: number, menu: boolean, x: number, y: number): void;
@@ -47,14 +50,41 @@ export interface PageActions {
 
   /** Sets the name and avatar this browser plays under. The server refuses a name another player already has. */
   setName(name: string, avatar: number, sleeve: number | undefined): void;
+  /** Opens a table against the computer, or a table others can join by link. */
+  openLobby(invite: boolean): void;
   claimHost(password?: string): void;
+
+  leaveLobby(): void;
+  setFormat(format: string): void;
+  setCardPool(cardPool: string | null): void;
   /** Sets the host's deck generator options: one copy of each card, and no artifacts. */
   setDeckGen(singletons: boolean, noArtifacts: boolean): void;
+  setVariant(variant: string, on: boolean): void;
+  setArchenemy(index: number): void;
+  setTeams(count: number): void;
+  setTeam(index: number, team: number): void;
+  setSeatExtra(index: number, section: string, choice: string): void;
+  askExtraChoices(index: number, section: string): void;
+  /** Sets how many seats the table has. Seats are added or removed at the end, and a seat a person holds is never removed. */
+  setPlayerCount(count: number): void;
+  setMatchLength(games: number): void;
+  /** The table's highest Commander bracket, 1 to 4, or 5 for any. */
+  setMaxBracket(bracket: number): void;
+  removeSeat(index: number): void;
+  setSeat(index: number, change: SeatChange): void;
+  /** Uses a card's art, cropped at offset, as a seat's sleeve. An empty key returns to the numbered sleeve. */
+  setSleeveArt(index: number, key: string, offset: number): void;
+  forgetSleeveArt(key: string): void;
+  startMatch(spectate: boolean): void;
   /** Requests a deck's card list and statistics. They arrive later in the model. */
   askDeckDetails(key: string): void;
   /** Asks which listed decks contain a card, in the sideboard or anywhere, or contain cards from a set. */
   deckQuery(kind: DeckQuery['kind'], value: string): void;
   fetchNetDecks(): void;
+  /** Searches card names for picking a card's art. The names arrive later in the model. */
+  searchCards(query: string): void;
+  /** Requests a card's printings. cardPool marks the printings outside it. They arrive later in the model. */
+  askPrintings(name: string, cardPool?: string | null): void;
   /** Answers a question the host asked outside a match. An empty choice cancels. */
   answerHostChoice(id: number, value: number[]): void;
 
@@ -99,11 +129,31 @@ export function createActions(send: Send): PageActions {
     autoYieldTop: yes => send({ t: 'autoYieldTop', yes }),
     setSetting: (key, value) => send({ t: 'setSetting', key, value }),
     setName: (name, avatar, sleeve) => send({ t: 'setName', name, avatar, sleeve }),
+    openLobby: invite => send({ t: invite ? 'invite' : 'lobby' }),
     claimHost: (password?: string) => send({ t: 'claimHost', password }),
+    leaveLobby: () => send({ t: 'leaveLobby' }),
+    setFormat: format => send({ t: 'setFormat', format }),
+    setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),
+    setArchenemy: index => send({ t: 'setArchenemy', index }),
+    setTeams: count => send({ t: 'setTeams', count }),
+    setTeam: (index, team) => send({ t: 'setTeam', index, team }),
+    setSeatExtra: (index, section, choice) => send({ t: 'setSeatExtra', index, section, choice }),
+    askExtraChoices: (index, section) => send({ t: 'extraChoices', index, section }),
+    setCardPool: cardPool => send(cardPool ? { t: 'setCardPool', cardPool } : { t: 'setCardPool' }),
     setDeckGen: (singletons, noArtifacts) => send({ t: 'setDeckGen', singletons, noArtifacts }),
+    setPlayerCount: count => send({ t: 'setPlayerCount', count }),
+    setMatchLength: games => send({ t: 'setMatchLength', games }),
+    setMaxBracket: bracket => send({ t: 'setMaxBracket', bracket }),
+    removeSeat: index => send({ t: 'removeSeat', index }),
+    setSeat: (index, change) => send({ t: 'setSeat', index, ...change }),
+    setSleeveArt: (index, key, offset) => send({ t: 'sleeveArt', index, key, offset }),
+    forgetSleeveArt: key => send({ t: 'forgetSleeveArt', key }),
+    startMatch: spectate => send({ t: 'start', spectate }),
     askDeckDetails: key => send({ t: 'deckDetails', key }),
     deckQuery: (kind, value) => send({ t: 'deckQuery', kind, value }),
     fetchNetDecks: () => send({ t: 'netDecks' }),
+    searchCards: query => send({ t: 'cardSearch', query }),
+    askPrintings: (name, cardPool) => send(cardPool ? { t: 'printings', name, cardPool } : { t: 'printings', name }),
     browseFormat: format => send({ t: 'browseFormat', format }),
     deleteDeck: key => send({ t: 'deckDelete', key }),
     favouriteDeck: (key, on) => send({ t: 'deckFavourite', key, on }),

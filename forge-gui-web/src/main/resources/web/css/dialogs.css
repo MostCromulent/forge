@@ -23,6 +23,15 @@
 .backdrop.on-board.closing, .backdrop.on-board.closing > * { animation-duration: .2s; }
 /* A screen rises in when it opens, as a box does (index.html holds a root for each screen) */
 :is(#menu, #lobby, #editor, #limited, #drafting) > * { animation: box-in .18s ease-out; }
+/* A page that starts a match dims and blurs under the rising coin. The board then fades in over it when its seats are drawn (match/entry.ts).
+   The page is fixed where it was scrolled to, so the board can be drawn while it dims. The board comes later in the page, so it is drawn on top */
+.to-match { position: fixed; inset: var(--scrolled, 0) 0 auto; pointer-events: none; animation: to-match .5s ease-out forwards; }
+@keyframes to-match { to { filter: blur(6px) brightness(.3); } }
+html:has(.to-match) { overflow: hidden; }
+#match.held { opacity: 0; }
+/* The delay lets the board's first full draw pass before it starts to fade in */
+#match.arriving { animation: match-arrive .7s ease-out .12s both; }
+@keyframes match-arrive { from { opacity: 0; } }
 /* Going back to an earlier screen shows it at once (screens.tsx) */
 html[data-back] :is(#menu, #lobby, #editor, #limited, #drafting) > *, html[data-back] .modes .mode.plaque { animation: none; }
 /* A move to another page (main.ts render), or through an ordered set such as a step of the start menu (ui.ts eased), slides in the direction of the order, deeper pages to the left. The header has its own name, so it stays in place while the page under it slides */

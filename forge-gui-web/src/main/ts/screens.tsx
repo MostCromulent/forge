@@ -3,6 +3,7 @@
 import { render } from 'preact';
 import { Menu, NamePrompt } from './menu';
 import { rememberedName } from './identity';
+import { Lobby } from './lobby/lobby';
 import { DeckFinder } from './deck/deckfinder';
 import { Requests, StackMenu } from './match/dialogs';
 import { HostChoice } from './hostchoice';
@@ -41,6 +42,8 @@ export function renderScreens(model: Model, actions: Actions): void {
   }
   render(under === 'name' ? <NamePrompt model={model} actions={actions} initial={rememberedName() ?? ''} />
     : under === 'menu' ? <Menu key={edits} model={model} actions={actions} /> : null, byId('menu'));
+  // The page a match starts from keeps what it last showed until the board covers it (match/entry.ts)
+  if (!byId('lobby').classList.contains('to-match')) render(under === 'lobby' ? <Lobby key={edits} model={model} actions={actions} /> : null, byId('lobby'));
   render(<>
     {page === 'match' && <Requests model={model} actions={actions} />}
     {page === 'match' && <StackMenu model={model} actions={actions} />}

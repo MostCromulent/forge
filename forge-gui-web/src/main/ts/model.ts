@@ -23,11 +23,13 @@ export interface Model {
   controls: Controls | null;
   playable: Playable | null;
   looks: Looks | null;
+  spectating: boolean;
   /** The page the server shows the browser. 'opening' means a seat is being taken, between the menu and the table. */
   screen: Screen;
   playerName: string;
   decks: DeckSummary[];
   error: string | null;
+  lobby: LobbyTable | null;
   host: boolean;
   canClaimHost: boolean;
   /** Whether the host's seat needs the host password from this browser. */
@@ -43,10 +45,17 @@ export interface Model {
   deckGen: DeckGenOptions | null;
   /** The card pool the lobby limits decks to. The deck finder pins it as a filter. */
   deckCardPool: string | null;
+  /** What the seat being edited may choose for a planar deck, scheme deck or avatar. */
+  extraChoices: ExtraChoices | null;
   /** The deck last requested, with its card list and statistics. */
   deckDetails: DeckDetails | null;
   /** The server's last deck search result for each kind of card or set filter, with the search words. */
   deckMatches: Partial<Record<string, DeckMatches>>;
+  /** For picking sleeve art: card names that match the last search, and the printings of the last name requested. */
+  cardNames: string[];
+  printings: { name: string; list: Printing[] } | null;
+  /** Card art this installation has already used as a deck sleeve. */
+  savedSleeveArt: SavedSleeveArt[];
   /** A question outside a match that the host is waiting for an answer to. */
   hostChoice: HostChoice | null;
   /** This browser has sent its saved name to the server, and the answer has not arrived yet. */
@@ -76,10 +85,12 @@ export function createModel(): Model {
     controls: null,
     playable: null,
     looks: null,
+    spectating: false,
     screen: 'menu',
     playerName: '',
     decks: [],
     error: null,
+    lobby: null,
     host: true,
     canClaimHost: false,
     hostPassword: false,
@@ -89,8 +100,12 @@ export function createModel(): Model {
     stackMenu: null,
     deckGen: null,
     deckCardPool: null,
+    extraChoices: null,
     deckDetails: null,
     deckMatches: {},
+    cardNames: [],
+    printings: null,
+    savedSleeveArt: [],
     hostChoice: null,
     nameSent: false,
     notices: [],

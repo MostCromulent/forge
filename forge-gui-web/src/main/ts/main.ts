@@ -275,13 +275,32 @@ function apply(msg: ServerMessage): void {
       }
       break;
     case 'formats': model.formats = msg.formats; break;
+    case 'extraChoices':
+      model.extraChoices = msg;
+      break;
     case 'decks':
       model.decks = msg.decks;
       model.deckCardPool = msg.cardPool ?? null;
       model.deckGen = msg.deckGen ?? null;
       break;
+    case 'lobby': {
+      model.lobby = msg.table ?? null;
+      // Renaming your seat renames you, so the name is stored for the next server you join
+      const mine = model.lobby?.seats[model.lobby.mySeat]?.name;
+      if (mine) rememberName(mine);
+      // The host makes a web request to find its external address, so it is requested once per lobby
+      if (!model.lobby?.shareable) {
+        askedAddresses = false;
+      } else if (!model.addresses && !askedAddresses) {
+        askedAddresses = true;
+        send({ t: 'addresses' });
+      }
+      break;
+    }
     case 'deckDetails': model.deckDetails = msg.deck; break;
     case 'deckMatches': model.deckMatches = { ...model.deckMatches, [msg.kind]: msg }; break;
+    case 'cardSearch': model.cardNames = msg.names ?? []; break;
+    case 'printings': model.printings = { name: msg.name, list: msg.printings ?? [] }; break;
     case 'hostChoice': model.hostChoice = msg; break;
     case 'error':
       // A stored name can belong to someone else on this server. It is forgotten so the player is asked for another

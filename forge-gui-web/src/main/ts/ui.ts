@@ -7,6 +7,12 @@ import { reducedMotion } from './dom';
 /** The card or player under the pointer. src is empty when the viewer may not see the card. at is the hovered element. */
 type Hover = { card: number | null; src: string; from?: string; at?: HTMLElement } | { player: number };
 
+/** A picker open over match setup, for one seat. */
+export interface Picker {
+  kind: 'deck' | 'sleeve' | 'avatar' | 'planes' | 'schemes' | 'vanguard' | 'commander';
+  seat: number;
+}
+
 /** How an open zone is sorted: in zone order, by name, by card type, or by mana value. */
 export type ZoneSort = 'order' | 'name' | 'type' | 'mana';
 
@@ -42,8 +48,11 @@ export interface UiState {
   volumeOpen: boolean;
   /** The play choice whose game kinds the start page shows. It is kept so that going back from a table returns there. */
   menuChoice: 'play' | 'friends' | null;
+  picker: Picker | null;
   /** The deck finder opened from the start page with no seat, and the format it lists. A hello does not close it. */
   browse: { format: string } | null;
+  /** The host has chosen to watch the computer play its seat. */
+  spectate: boolean;
   hover: Hover | null;
   /** Which face of the hovered card the zoom panel shows. */
   faceIndex: number;
@@ -87,7 +96,9 @@ export const ui: UiState = {
   macro: 'none',
   volumeOpen: false,
   menuChoice: null,
+  picker: null,
   browse: null,
+  spectate: false,
   hover: null,
   faceIndex: 0,
   cardText: false,

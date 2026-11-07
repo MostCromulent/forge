@@ -69,6 +69,34 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   );
 }
 
+/** The choice of game kind, shown the same way for AI and friend opponents. Greyed kinds are not available yet. */
+function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model: Model; actions: Actions; back: () => void }) {
+  const computer = who === 'play';
+  return (
+    <div class="chooser">
+      <SetupHead trail={[{ label: t('lblStart'), go: back }, { label: WAY_NAMES[who] }]} title={t('lblWebMenuWhatMode')} />
+      <div class="chooser-kinds">
+        <Kind id="constructed" name={t('lblConstructed')} onClick={() => actions.openLobby(!computer)}
+          blurb={t('lblWebMenuConstructedBlurb')} />
+        <Kind id="draft" name={t('lblDraft')} onClick={() => (computer ? actions.limitedOpen('draft', false) : actions.openLimitedTable('draft'))}
+          blurb={t('lblWebMenuDraftBlurb')}
+          resume={computer && model.draftPools > 0 ? () => actions.limitedOpen('draft', true) : undefined} />
+        <Kind id="sealed" name={t('lblSealed')} onClick={() => (computer ? actions.limitedOpen('sealed', false) : actions.openLimitedTable('sealed'))}
+          blurb={t('lblWebMenuSealedBlurb')}
+          resume={computer && model.sealedPools > 0 ? () => actions.limitedOpen('sealed', true) : undefined} />
+      </div>
+    </div>
+  );
+}
+
+// A fanned deck for Constructed. Two packs passing between players for Draft. An opened pack with cards rising out for Sealed
+const KIND_ICONS: Record<string, ComponentChildren> = {
+  constructed: <><rect x="16" y="11" width="21" height="29" rx="3" /><path d="M12 15v21M8 19v13" /></>,
+  draft: <><rect x="7" y="16" width="14" height="22" rx="2" /><rect x="27" y="16" width="14" height="22" rx="2" /><path d="M17 9h13l-3-3M31 45H18l3 3" /></>,
+  sealed: <><path d="M13 22v19h22V22" /><path d="M13 22l2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5" />
+    <rect x="16" y="6" width="10" height="15" rx="1.5" transform="rotate(-12 21 13.5)" /><rect x="23" y="5" width="10" height="15" rx="1.5" transform="rotate(10 28 12.5)" /></>,
+};
+
 // The card art behind each tile, pinned to one printing so the picture does not change
 const MENU_ART: Record<string, string> = {
   play: 'c:Mirror Match|C15|1',
@@ -93,6 +121,30 @@ function useArt(id: string): string | null {
     return () => { img.onload = null; };
   }, [key]);
   return loaded;
+}
+
+/** A kind of game, drawn as two buttons in one frame because a button cannot contain another. It is greyed when onClick is missing. icon replaces the kind's own icon. */
+export function Kind({ id, icon, name, blurb, resume, resumeLabel, onClick }: {
+  id: string; icon?: ComponentChildren; name: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
+}) {
+  const art = useArt(id);
+  return (
+    <div class={art ? 'mode kind-card has-art' : 'mode kind-card'} style={art ? { '--art': art } : undefined}>
+      <button class="kind-main" data-kind={id} disabled={!onClick} onClick={onClick}>
+        <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{icon ?? KIND_ICONS[id]}</svg></span>
+        <span class="mode-text">
+          <span class="mode-name">{name}</span>
+          <span class="mode-blurb">{blurb}</span>
+        </span>
+      </button>
+      {resume && (
+        <button class="kind-resume" onClick={resume}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /><path d="M10 9l5 3-5 3z" /></svg>
+          {resumeLabel ?? t('lblWebMenuResumeLastEvent')}
+        </button>
+      )}
+    </div>
+  );
 }
 
 // A robot for the computer, two people for friends, a deck for the editor
