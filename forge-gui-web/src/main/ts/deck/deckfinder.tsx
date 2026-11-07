@@ -251,6 +251,10 @@ export function DeckFinder({ model, actions, seat, close }: {
             </label>
           )}
           <span class="head-tools">
+            <button class="random" disabled={!list.length} title={t('lblWebFinderRandomTip')} onClick={random}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
+              {t('lblRandomDeck')}
+            </button>
             <button onClick={() => setAdding(true)}>{t('lblWebFinderNewDeck')}</button>
             <input ref={picker} type="file" accept=".dck" hidden onChange={e => {
               const picked = e.currentTarget.files?.[0];
@@ -359,12 +363,7 @@ export function DeckFinder({ model, actions, seat, close }: {
               }}>{t('lblDelete')}</button>
             </span>
           ) : deletable && <button class="delete-deck" onClick={() => setDeleting(true)}>{t('lblDelete')}</button>}
-            {/* Desktop puts Random Deck beside its other deck buttons, under the list */}
-          <button class="random" disabled={!list.length} title={t('lblWebFinderRandomTip')} onClick={random}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
-              {t('lblRandomDeck')}
-            </button>
-          <button class="cancel" onClick={close}>{t('lblCancel')}</button>
+            <button class="cancel" onClick={close}>{t('lblCancel')}</button>
           {seat
             ? <>
                 <button disabled={!chosen} onClick={edit}>{summary?.readOnly ? t('lblWebFinderEditCopy') : t('lblEdit')}</button>
