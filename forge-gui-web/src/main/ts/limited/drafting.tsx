@@ -254,7 +254,7 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
               else if (i === selected) pick(i);
               else setSelected(i);
             }}>
-            <button class="tile" title={card.name} draggable onDragStart={e => startDrag(e, { from: 'pack', index: i })}>
+            <button class="tile" draggable onDragStart={e => startDrag(e, { from: 'pack', index: i })}>
               <span class="tile-name">{card.name}</span>
               <CardFace card={card} />
               {card.rank !== undefined && setting('draftRanking') && <RankShield rank={card.rank} />}
@@ -414,7 +414,7 @@ function PickSection({ title, held, by, cards, onDrop, move }: {
             <h4>{heading}<span>{group.length}</span></h4>
             {cards
               ? <div class="pick-stack">{group.map(h => (
-                  <img key={h.index} alt={h.card.name} title={t('ttWebDraftDoubleClickToMoveCard', h.card.name)} src={imageUrl(h.card.image)}
+                  <img key={h.index} alt={h.card.name} title={t('ttWebDraftDoubleClickToMove')} src={imageUrl(h.card.image)}
                     data-image={h.card.image} {...pickData(h)} data-pick={h.index} draggable onDragStart={e => startDrag(e, { from: 'pick', index: h.index })}
                     onClick={tap(h)} onDblClick={() => move(h)} />
                 ))}</div>
