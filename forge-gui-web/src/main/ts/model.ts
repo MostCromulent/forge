@@ -84,10 +84,24 @@ export interface Model {
   importResult: ImportResult | null;
   /** An import or pool name that is already in use. The page asks the player what to do. */
   nameTaken: string | null;
+  /** On the Limited pages, the pool whose opponents screen is shown. */
+  eventPool: string | null;
+  /** How many sealed pools are saved, for the menu. */
+  sealedPools: number;
+  draftPools: number;
+  /** Which Limited pages are open: 'sealed' or 'draft'. */
+  eventKind: EventKind | null;
+  /** Whether a draft is running. draft holds its latest state. */
+  drafting: boolean;
+  draft: DraftState | null;
+  /** The state of a limited gauntlet after its last game. It is null outside a gauntlet. */
+  limitedResult: LimitedResult | null;
+  limitedOptions: LimitedOptions | null;
   /** Every entry of the Format menu, in its order. They do not change while the server runs, so they are sent once per connection. */
   formats: Format[];
   /** Every edition, newest first. They are requested the first time the catalogue's set filter opens. */
   cardSets: LimitedEdition[] | null;
+  limitedPools: LimitedPools | null;
 }
 
 export function createModel(): Model {
@@ -139,8 +153,17 @@ export function createModel(): Model {
     catalogue: null,
     importResult: null,
     nameTaken: null,
+    eventPool: null,
+    sealedPools: 0,
+    draftPools: 0,
+    eventKind: null,
+    drafting: false,
+    draft: null,
+    limitedResult: null,
+    limitedOptions: null,
     formats: [],
     cardSets: null,
+    limitedPools: null,
   } as Model;
 }
 

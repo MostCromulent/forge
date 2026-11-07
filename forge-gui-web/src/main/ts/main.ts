@@ -113,6 +113,11 @@ const actions = {
     model.nameTaken = null;
     wire.addDeckFile(text, format, clash);
   },
+  sealedCreate: c => {
+    model.nameTaken = null;
+    model.error = null;
+    wire.sealedCreate(c);
+  },
 } as Actions;
 
 // A change made inside a view transition must draw at once, so it does not start a slide of its own
@@ -301,8 +306,15 @@ function apply(msg: ServerMessage): void {
       model.importResult = msg;
       break;
     case 'nameTaken': model.nameTaken = msg.name; break;
+    case 'limitedOptions': model.limitedOptions = msg; break;
     case 'formats': model.formats = msg.formats; break;
     case 'cardSets': model.cardSets = msg.sets; break;
+    case 'limitedPools': model.limitedPools = msg; break;
+    case 'limitedResult': model.limitedResult = msg; break;
+    case 'draft':
+      model.draft = msg;
+      model.error = null;
+      break;
     case 'deviceDeck':
       void (msg.text ? putDeviceDeck({ id: msg.id, text: msg.text, format: msg.format }) : deleteDeviceDeck(msg.id));
       return;

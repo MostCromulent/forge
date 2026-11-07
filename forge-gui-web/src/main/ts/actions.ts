@@ -58,6 +58,25 @@ export interface PageActions {
   claimHost(password?: string): void;
   /** Tries again to take a seat after a join found no free seat. */
   join(): void;
+
+  limitedOpen(kind: EventKind, resume: boolean): void;
+  draftStart(d: Omit<DraftStart, 't'>): void;
+  /** Picks the card at index from the pack shown in draft state step. */
+  draftPick(step: number, index: number, sideboard: boolean): void;
+  draftMove(index: number, sideboard: boolean): void;
+  draftSave(name: string, replace: boolean): void;
+  draftDiscard(): void;
+  limitedLeave(): void;
+  sealedCreate(c: Omit<SealedCreate, 't'>): void;
+  /** Opens and closes a pool's opponents screen. */
+  poolOpen(name: string): void;
+  poolClose(): void;
+  poolEdit(name: string): void;
+  poolDelete(name: string): void;
+  /** Plays a pool. mode is one, several or gauntlet. opponent counts from 0. count is the number of opponents for several. */
+  poolPlay(name: string, mode: PoolPlayMode, opponent: number, count: number, games: number): void;
+  gauntletNext(): void;
+  gauntletRestart(): void;
   ready(on: boolean): void;
 
   leaveLobby(): void;
@@ -165,6 +184,21 @@ export function createActions(send: Send): PageActions {
     join: () => send({ t: 'join' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
     ready: on => send({ t: 'ready', ready: on }),
+    limitedOpen: (kind, resume) => send({ t: 'limitedOpen', kind, resume }),
+    draftStart: d => send({ t: 'draftStart', ...d }),
+    draftPick: (step, index, sideboard) => send({ t: 'draftPick', step, index, sideboard }),
+    draftMove: (index, sideboard) => send({ t: 'draftMove', index, sideboard }),
+    draftSave: (name, replace) => send({ t: 'draftSave', name, replace }),
+    draftDiscard: () => send({ t: 'draftDiscard' }),
+    limitedLeave: () => send({ t: 'limitedLeave' }),
+    sealedCreate: c => send({ t: 'sealedCreate', ...c }),
+    poolOpen: name => send({ t: 'poolOpen', name }),
+    poolClose: () => send({ t: 'poolClose' }),
+    poolEdit: name => send({ t: 'poolEdit', name }),
+    poolDelete: name => send({ t: 'poolDelete', name }),
+    poolPlay: (name, mode, opponent, count, games) => send({ t: 'poolPlay', name, mode, opponent, count, games }),
+    gauntletNext: () => send({ t: 'gauntletNext' }),
+    gauntletRestart: () => send({ t: 'gauntletRestart' }),
     setFormat: format => send({ t: 'setFormat', format }),
     setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),
     setArchenemy: index => send({ t: 'setArchenemy', index }),

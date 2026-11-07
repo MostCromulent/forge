@@ -4,6 +4,7 @@ import com.google.common.primitives.Ints;
 import forge.deck.Deck;
 import forge.game.Game;
 import forge.game.GameEndReason;
+import forge.game.GameType;
 import forge.game.player.Player;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
@@ -27,6 +28,7 @@ import forge.player.PlayerControllerHuman;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.web.lobby.Lobby;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -218,6 +220,35 @@ public final class LocalGame implements IHasForgeLog {
         seatAndStart(List.of(
                 new Seat(playerName, false, 0, 0, playerDeck),
                 new Seat(aiName, true, storedIndex(FPref.UI_AVATARS, 1), storedIndex(FPref.UI_SLEEVES, 1), aiDeck)));
+    }
+
+    /** Starts a sealed or draft match of type limitedType against AI seats. Desktop's offline limited screens start one the same way. */
+    public void startLimitedMatch(final List<Seat> seats, final GameType limitedType, final WebGuiGame gui) {
+        final Seat mine = seats.stream().filter(s -> !s.ai()).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No seat for the browser"));
+        nameProfile(mine.name());
+        openHost(mine.name(), gui, () -> { }, (from, text) -> { });
+        hosted.setLimitedType(limitedType);
+        // Desktop starts a Commander Draft match with the Commander variant. That gives each deck its commander and 40 life
+        if (limitedType == GameType.CommanderDraft) {
+            hosted.applyVariant(GameType.Commander);
+        }
+        seatAndStart(seats);
+    }
+
+    /** Opens a table with only this browser, at seat webSeat. A game mode then starts a match it built itself on this table. */
+    public ServerGameLobby openAlone(final String playerName, final WebGuiGame gui) {
+        nameProfile(playerName);
+        openHost(playerName, gui, () -> { }, (from, text) -> { });
+        return hosted;
+    }
+
+    /** Saves the player's name if the profile has none. Otherwise HostedMatch would ask for a name on the host's screen. */
+    private static void nameProfile(final String name) {
+        if (StringUtils.isBlank(FModel.getPreferences().getPref(FPref.PLAYER_NAME))) {
+            FModel.getPreferences().setPref(FPref.PLAYER_NAME, name);
+            FModel.getPreferences().save();
+        }
     }
 
     private void seatAndStart(final List<Seat> seats) {

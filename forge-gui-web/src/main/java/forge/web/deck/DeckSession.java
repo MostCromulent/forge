@@ -3,6 +3,7 @@ package forge.web.deck;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
+import forge.deck.DeckGroup;
 import forge.deck.DeckRecognizer;
 import forge.deck.DeckSection;
 import forge.deck.DeckUrlLoader;
@@ -223,12 +224,34 @@ public final class DeckSession implements IHasForgeLog {
         lobby.sendDecks(channel);
     }
 
+    /** Opens a pool's deck, which saves back into its pool. channel is null when no browser is attached to show it yet. */
+    public synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final BrowserChannel channel) {
+        openPool(human, storage, type, null, channel);
+    }
+
+    /** freeCommander is the commander that a Commander Draft's set gives every player. It is known only just after the draft. */
+    public synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final String freeCommander,
+            final BrowserChannel channel) {
+        editor = new DeckEditor(human, false, true, new DeckEditor.Group(storage), Check.of(type, null), storages,
+                !host.getAsBoolean(), this::sendDeviceDeck);
+        editor.setFreeCommander(freeCommander);
+        editorSeat = null;
+        editorPath = "";
+        if (channel != null) {
+            channel.send(new EditorMessage(editor.state()));
+        }
+    }
+
     /**
      * Runs a deck list, search or catalogue request on this browser's deck thread, in the order requested. The socket threads
      * also serve every picture, so a list that takes a second to build would block them.
      */
     public void inTurn(final Runnable job) {
         work.execute(job);
+    }
+
+    public synchronized String openPoolName() {
+        return editor != null && editor.target() instanceof DeckEditor.Group ? editor.deck().getName() : null;
     }
 
     private String change(final EditorEdit e) {
