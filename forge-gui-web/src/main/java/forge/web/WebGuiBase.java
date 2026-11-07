@@ -21,6 +21,8 @@ import forge.web.images.WebImageFetcher;
 import forge.web.protocol.ToBrowser.HostChoiceKind;
 import forge.web.protocol.ToBrowser.Notice;
 import forge.web.protocol.Wire;
+import org.jupnp.DefaultUpnpServiceConfiguration;
+import org.jupnp.UpnpServiceConfiguration;
 
 import java.awt.Desktop;
 import java.io.File;
@@ -293,6 +295,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     @Override public void startAltSoundSystem(final String filename, final boolean isSynchronized) { }
     @Override public void showSpellShop() { }
     @Override public void showBazaar() { }
+    @Override public UpnpServiceConfiguration getUpnpPlatformService() { return new DefaultUpnpServiceConfiguration(); }
 
     /** A picture that the browser draws itself: a skin icon by its FSkinProp, or a file by its path. It only identifies which picture is meant. */
     public record WebSkinImage(FSkinProp prop, String path) implements ISkinImage {

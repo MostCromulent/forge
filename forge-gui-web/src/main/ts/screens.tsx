@@ -12,6 +12,7 @@ import { AutoDecisionsDialog, AutoPassStops, ConcedeQuestion, DrawOfferQuestion,
 import { DevSetupDialog } from './match/devmenu';
 import { Volume } from './volume';
 import { Notices } from './notices';
+import { Dock } from './dock';
 import { isPortrait } from './form';
 import { byId } from './dom';
 import { changeUi, ui } from './ui';
@@ -44,6 +45,10 @@ export function renderScreens(model: Model, actions: Actions): void {
     : under === 'menu' ? <Menu key={edits} model={model} actions={actions} /> : null, byId('menu'));
   // The page a match starts from keeps what it last showed until the board covers it (match/entry.ts)
   if (!byId('lobby').classList.contains('to-match')) render(under === 'lobby' ? <Lobby key={edits} model={model} actions={actions} /> : null, byId('lobby'));
+  // The dock is at the bottom edge before a match and in the side column under the log during one
+  render(page === 'match' && model.networked ? <Dock model={model} actions={actions} /> : null, byId('match-chat'));
+  render(page !== 'match' ? <Dock model={model} actions={actions}
+    rename={page === 'menu' ? () => changeUi(u => { u.renaming = true; }) : undefined} /> : null, byId('dock'));
   render(<>
     {page === 'match' && <Requests model={model} actions={actions} />}
     {page === 'match' && <StackMenu model={model} actions={actions} />}

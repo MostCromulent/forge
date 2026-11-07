@@ -103,6 +103,30 @@ const kindName = (type: string): string => (KIND[type] ? t(KIND[type]) : type);
 
 const PLAYER_ICON = <Icon d={ICONS.user} />;
 
+/** Who plays a seat the host may change. A chip opens the two choices, each with a line that explains it. */
+function SeatKind({ type, toAi, toOpen }: { type: string; toAi: () => void; toOpen: () => void }) {
+  const ai = type === 'AI';
+  // Choosing the seat's current type only closes the menu, because asking again would give the AI a new name
+  const choose = (close: () => void, change: boolean, act: () => void) => () => {
+    close();
+    if (change) act();
+  };
+  return (
+    <Dropdown cls="popup-anchor" button={(open, toggle) => (
+      <button class="kind chip" title={t('lblWebLobbyWhoPlaysSeat')} aria-expanded={open} onClick={toggle}>
+        {ai ? AI_ICON : PLAYER_ICON}{kindName(type)}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+    )}>
+      {close => (
+        <div class="popup kind-menu" role="menu">
+          <button role="menuitemradio" aria-checked={ai} onClick={choose(close, !ai, toAi)}>{AI_ICON}<span>{t('lblAI')}</span><small>{t('lblWebLobbyAiPlaysSeat')}</small></button>
+          <button role="menuitemradio" aria-checked={!ai} onClick={choose(close, ai, toOpen)}>{PLAYER_ICON}<span>{t('lblWebLobbyOpenForPlayer')}</span><small>{t('lblWebLobbyOpenForPlayerHint')}</small></button>
+        </div>
+      )}
+    </Dropdown>
+  );
+}
+
 /** What each of Forge's own AI profiles does. A profile someone adds to res/ai has no hint. */
 const STYLE_HINTS: Record<string, TextKey> = {
   Default: 'lblWebLobbyStyleDefaultHint', Cautious: 'lblWebLobbyStyleCautiousHint',
@@ -299,6 +323,15 @@ function Plate({ seat, index, lobby, format, actions, leaving, joinable, avatarC
       </div>
     </div>
   );
+}
+
+/** Your own seat's Ready button, which you press again to undo. Other seats only show whether they are ready. */
+function Ready({ seat, actions, disabled }: { seat: Seat; actions: Actions; disabled: boolean }) {
+  return seat.mine
+    ? <button class={`deck-row ready-toggle${seat.ready ? '' : ' unset'}`} disabled={disabled}
+        aria-pressed={seat.ready} title={seat.ready ? t('lblWebLobbyNotReadyAfterAll') : ''}
+        onClick={() => actions.ready(!seat.ready)}>{t(seat.ready ? 'lblWebLobbyReadyTick' : 'lblWebLobbyPressWhenReady')}</button>
+    : <p class="deck-row fixed">{t(seat.ready ? 'lblReady' : 'lblWebLobbyNotReadyYet')}</p>;
 }
 
 function Dice() {

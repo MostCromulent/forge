@@ -38,9 +38,13 @@ import { closeShownZones } from './match/zones';
 const model = createModel();
 const pacer = createPacer(model, apply);
 let scheduled = false;
+// Requested once, so a slow answer is not requested again by every message that arrives meanwhile
+let askedAddresses = false;
 // A guest's settings are kept in its server session, so the browser sends the settings it stored to each session it is given.
 // A seat handed over moves the browser to another session on the same connection
 let restoredFor: number | null = null;
+// A guest's decks are stored in its browser, so each connection sends the server the list
+let sentDeviceDecks = false;
 // A sound or log line arrives before its board update. It is applied after that board, or alone after 300 ms if no board follows (pace.ts)
 const send = connect(behindItsBoard(msg => pacer.receive(msg), 300), online => {
   byId('banner').hidden = online;
@@ -275,6 +279,9 @@ function apply(msg: ServerMessage): void {
       }
       break;
     case 'formats': model.formats = msg.formats; break;
+    case 'deviceDeck':
+      void (msg.text ? putDeviceDeck({ id: msg.id, text: msg.text, format: msg.format }) : deleteDeviceDeck(msg.id));
+      return;
     case 'extraChoices':
       model.extraChoices = msg;
       break;
@@ -297,6 +304,10 @@ function apply(msg: ServerMessage): void {
       }
       break;
     }
+    case 'addresses': model.addresses = msg.list; break;
+    case 'chat': model.chat = [...model.chat, { from: msg.from ?? '', text: msg.text, earlier: msg.earlier }]; break;
+    // The server sends the whole list on every change, so it replaces the old one
+    case 'presence': model.presence = msg.people; break;
     case 'deckDetails': model.deckDetails = msg.deck; break;
     case 'deckMatches': model.deckMatches = { ...model.deckMatches, [msg.kind]: msg }; break;
     case 'cardSearch': model.cardNames = msg.names ?? []; break;

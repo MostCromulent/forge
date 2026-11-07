@@ -232,6 +232,8 @@ html[data-way] .modes .mode.plaque { animation-duration: 0s; animation-delay: 0s
 }
 
 .plate { animation: box-in .2s ease-out; }
+.plate.guest { animation: box-in .2s ease-out, seat-taken .9s ease-in-out .2s; }
+@keyframes seat-taken { 50% { box-shadow: 0 0 0 2px var(--accent-2), 0 0 18px color-mix(in srgb, var(--accent-2) 35%, transparent); } }
 html[data-motion="reduced"] .plate { animation: none; }
 
 .plate.mine { border-color: var(--accent-2); background: linear-gradient(100deg, var(--accent-soft) 0%, var(--surface) 46%); }
@@ -616,9 +618,105 @@ html:not([data-form="portrait"]) .finder:has(.rail) :is(.dk-chosen, .finder-foot
 .menu-note { color: var(--muted); min-height: 1.2em; max-width: 520px; text-align: center; }
 /* A failure note is marked by bold text and a side bar, not by colour alone */
 .menu-note.bad { color: var(--text); font-weight: 600; border-left: 3px solid var(--danger); padding-left: 8px; text-align: left; }
+
+/* A seat nobody has taken yet has a dashed border. So it reads as an empty seat, not as a broken plate. */
+.plate.waiting { border-style: dashed; }
 .kind { background: none; border: none; padding: 0; color: var(--muted); }
 .kind:disabled { opacity: 1; }
 .kind:not(:disabled):hover { color: var(--accent-2); text-decoration: underline; }
+
+.share-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 7px;
+}
+
+.share-label { color: var(--muted); font-size: 12px; }
+/* An invite link is long, so it takes the full width. The Copy button is placed next to the label. */
+.share-url { grid-column: 1 / -1; font-family: ui-monospace, monospace; font-size: 11px; overflow-wrap: anywhere; }
+.share-copy { color: var(--accent-2); font-size: 12px; }
+
+/* Outside a match, the dock is fixed to the bottom edge. So it looks attached to the edge, not floating over the page. */
+#dock .dock { position: fixed; right: 24px; bottom: 0; z-index: 30; width: 318px; }
+.dock {
+  background: var(--surface); border: 1px solid var(--line-bright); border-bottom: none;
+  border-radius: 13px 13px 0 0; box-shadow: 0 -10px 40px #0000007a; overflow: hidden;
+}
+.dock.folded { display: flex; align-items: center; gap: 10px; padding: 9px 14px 11px 9px; cursor: pointer; }
+.dock.open { display: flex; flex-direction: column; max-height: min(60vh, 420px); }
+.dock.open:not(.in-match) { animation: dock-rise .24s cubic-bezier(.2,.8,.3,1); }
+.dock.open.closing { animation: dock-sink .18s ease-in forwards; }
+@keyframes dock-rise { from { transform: translateY(calc(100% - 44px)); } }
+@keyframes dock-sink { to { transform: translateY(calc(100% - 44px)); } }
+html[data-motion="reduced"] .dock.open { animation: none; }
+/* In a match, the dock is one of the panels in the side column. So it uses the log panel's frame and lines instead of its own. */
+.dock.in-match { position: static; width: auto; max-height: none; flex: 1; min-height: 0; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: inset 0 1px 0 #ffffff12; }
+.dock.in-match .dock-head { padding: 6px 8px; }
+.dock.in-match .dock-log { padding: 6px 8px; gap: 0; }
+.dock.in-match .said { padding: 2px 0; border-bottom: 1px solid var(--surface-2); color: var(--muted); align-items: center; gap: 6px; }
+.dock.in-match .said b { color: var(--text); }
+.dock.in-match .said .face-small { width: 18px; height: 18px; }
+.dock.in-match .dock-say { padding: 0 8px 8px; }
+
+.faces { display: flex; }
+.faces img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 2px solid var(--surface); }
+.faces img + img { margin-left: -8px; }
+.dock-count { flex: 1; text-align: left; font-size: 12.5px; font-weight: 600; color: var(--text); }
+/* Messages sent while the dock is folded are counted in a brass pill on the bar. The pill pulses once for each new message. */
+.dock.folded.unread { border-color: color-mix(in srgb, var(--accent-2) 60%, #000); }
+.dock-new {
+  flex: none; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap;
+  background: var(--brass); color: var(--on-brass); text-shadow: 0 1px 0 color-mix(in srgb, var(--accent-2) 50%, #fff);
+  box-shadow: inset 0 1px 0 #ffffff88, inset 0 -1px 0 color-mix(in srgb, var(--accent-2) 42%, #000),
+    0 0 0 1px color-mix(in srgb, var(--accent-2) 48%, #000), 0 2px 6px #000a;
+  animation: dock-new .5s ease-in-out;
+}
+@keyframes dock-new { 40% { transform: scale(1.25); } }
+html[data-motion="reduced"] .dock-new { animation: none; }
+.dock-sum { flex: 1; text-align: left; font-size: 11.5px; color: var(--muted); }
+
+.dock-head {
+  display: flex; align-items: center; gap: 9px; padding: 10px 14px; cursor: pointer;
+  background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; text-align: left;
+}
+.dock-head b { flex: 1; font-size: 12.5px; font-weight: 650; }
+.dock-head .dock-count { flex: none; color: var(--muted); font-weight: 400; font-size: 11.5px; }
+.live { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--mtg-g); }
+.chev { width: 15px; height: 15px; flex: none; fill: none; stroke: var(--muted); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+.roster { margin: 0; padding: 6px 8px; list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; border-bottom: 1px solid var(--line); }
+.roster li { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; }
+.roster li.watching .who { color: var(--muted); }
+.roster li.arrived { background: var(--accent-soft); box-shadow: inset 2px 0 var(--accent-2); }
+.face-small { width: 21px; height: 21px; flex: none; border-radius: 50%; object-fit: cover; }
+/* A long name is cut off with an ellipsis, so the player's current activity stays visible */
+.roster .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.roster li > :not(.who, .spacer) { flex: none; }
+.roster .spacer { flex: 1; }
+.roster .rename { width: 22px; height: 22px; padding: 0; display: grid; place-items: center; background: none; border-color: transparent; }
+.roster .rename:hover { background: var(--surface-2); }
+.roster .rename svg { width: 13px; height: 13px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
+.roster .face-change { padding: 0; border: none; border-radius: 50%; background: none; display: grid; }
+.roster .face-change:hover { box-shadow: 0 0 0 2px var(--accent-2); }
+.roster .doing { font-size: 11px; color: var(--muted); }
+.roster .seat-gone { display: flex; align-items: center; gap: 3px; padding: 1px 4px 1px 8px; border-radius: 999px; background: var(--accent-soft); border-color: var(--accent-2); color: var(--text); font-size: 11px; }
+.roster .seat-gone .chev { width: 12px; height: 12px; stroke: var(--accent-2); }
+.roster .deck-menu { width: 190px; }
+/* The crown marks the player who holds the host's seat. Its label tells screen readers the same thing. */
+.crown { width: 13px; height: 13px; flex: none; fill: none; stroke: var(--accent-2); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+.dock-log { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; padding: 11px 14px; display: flex; flex-direction: column; gap: 8px; }
+.said { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.45; color: var(--text); }
+.said span { flex: 1; }
+/* A netplay notice that somebody joined or left. No player sent it, so it has no avatar. */
+.said.note { color: var(--muted); font-style: italic; }
+.dock-say { padding: 0 14px 14px; }
+.dock-say input { width: 100%; font-size: 12px; padding: 8px 11px; }
 
 /* The picker for a planar deck, scheme deck or avatar. It uses the finder's frame with one list, or a grid of avatar cards. */
 .extra-picker { width: min(900px, calc(100vw - 32px)); }
@@ -647,11 +745,16 @@ html:not([data-form="portrait"]) .finder:has(.rail) :is(.dk-chosen, .finder-foot
 .finder-foot :is(.delete-line, .linked-line) { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; }
 .finder-foot .delete-line b { color: var(--text); }
 .finder-foot .danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
+/* When not ready, the button has a dashed outline so it looks like something to press. When ready, it looks done. Pressing it again undoes it. */
+.ready-toggle { justify-content: center; font-weight: 600; }
+.ready-toggle.unset { border: 1px dashed var(--accent-2); color: var(--accent-2); background: transparent; }
+.ready-toggle[aria-pressed="true"] { border: 1px solid var(--accent-2); background: var(--accent-soft); color: var(--text); }
 
 .page-head .wordmark-block { justify-items: start; }
 .icon-button { width: 32px; height: 30px; padding: 0; display: grid; place-items: center; }
 .icon-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .icon-button[aria-expanded="true"] { background: var(--surface-2); }
+.invite { display: grid; gap: 8px; width: min(460px, calc(100vw - 32px)); }
 
 .match-bar { margin-bottom: 14px; width: min(100%, 960px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
 .match-bar .fields { display: flex; flex-wrap: wrap; }
@@ -663,6 +766,8 @@ html:not([data-form="portrait"]) .finder:has(.rail) :is(.dk-chosen, .finder-foot
 .menu-button::after { content: ' \25BE'; font-size: 10px; color: var(--muted); font-weight: 400; }
 .menu-button:disabled { opacity: 1; cursor: default; }
 .menu-button:disabled::after { content: none; }
+.invite-button.outline { display: inline-flex; align-items: center; gap: 7px; }
+.invite-button.outline svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .count[role="group"] { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; width: max-content; }
 .count button { font: inherit; font-size: 12.5px; padding: 1px 9px; border: 0; border-radius: 0; background: none; color: var(--muted); font-variant-numeric: tabular-nums; }
 .count button + button { border-left: 1px solid var(--line); }

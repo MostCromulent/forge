@@ -8,6 +8,9 @@ interface Looks {
   sleeveCount: number;
 }
 
+/** A line of chat. from is empty for a netplay announcement. earlier marks a line sent before this browser joined. */
+export interface ChatEntry { from: string; text: string; earlier: boolean }
+
 // All the state the browser holds. objects is its copy of the game's objects. forge.web.match.BrowserModel applies and prunes them by the same rules
 export interface Model {
   objects: Map<number, TrackedObject>;
@@ -30,6 +33,7 @@ export interface Model {
   decks: DeckSummary[];
   error: string | null;
   lobby: LobbyTable | null;
+  addresses: Address[] | null;
   host: boolean;
   canClaimHost: boolean;
   /** Whether the host's seat needs the host password from this browser. */
@@ -41,6 +45,11 @@ export interface Model {
   playerDetails: Map<number, PlayerDetail>;
   /** The options for a right-click on a stack item, from the server's last answer. */
   stackMenu: StackMenu | null;
+  chat: ChatEntry[];
+  /** Everyone on this server who has set a name. */
+  presence: Person[];
+  /** Another person is at the table, so chat is useful. */
+  networked: boolean;
   /** The host's deck generator settings. It is null for a guest, who cannot change them. */
   deckGen: DeckGenOptions | null;
   /** The card pool the lobby limits decks to. The deck finder pins it as a filter. */
@@ -91,6 +100,7 @@ export function createModel(): Model {
     decks: [],
     error: null,
     lobby: null,
+    addresses: null,
     host: true,
     canClaimHost: false,
     hostPassword: false,
@@ -98,6 +108,9 @@ export function createModel(): Model {
     cardDetails: new Map(),
     playerDetails: new Map(),
     stackMenu: null,
+    chat: [],
+    presence: [],
+    networked: false,
     deckGen: null,
     deckCardPool: null,
     extraChoices: null,

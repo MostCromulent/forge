@@ -1,12 +1,14 @@
 package forge.web;
 
 import forge.gamemodes.net.NetworkLogConfig;
+import forge.gamemodes.net.server.PortForward;
 import forge.localinstance.properties.ForgeNetPreferences.FNetPref;
 import forge.model.FModel;
 import forge.util.IHasForgeLog;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.function.Consumer;
 
 /** The web server, in a form the console can stop and start again. The tokens are kept across a restart, so old links still work. */
 public final class WebService implements IHasForgeLog {
@@ -21,6 +23,12 @@ public final class WebService implements IHasForgeLog {
     private WebServer server;
     private volatile WebSessions sessions;
     private boolean quitWhenEmpty = !KEEP_OPEN;
+    private volatile PortForward forward;
+    private volatile Forwarding forwarding = Forwarding.OFF;
+    private volatile Consumer<Forwarding> onForwarding = f -> { };
+
+    /** The state of the request to the router to forward the port. */
+    public enum Forwarding { OFF, ASKING, FORWARDED, REFUSED }
 
     WebService(final WebGuiBase ui, final long idleMillis, final Runnable onQuit, final boolean consoleShown,
             final String token) {
@@ -87,6 +95,62 @@ public final class WebService implements IHasForgeLog {
         }
     }
 
+    /** Whether the router is asked to forward the port whenever the server starts. Shares desktop's UPnP choice, and the console has no way to ask, so only ALWAYS forwards. */
+    public boolean forwardPort() {
+        return "ALWAYS".equalsIgnoreCase(FModel.getNetPreferences().getPref(FNetPref.UPnP));
+    }
+
+    public synchronized void forwardPort(final boolean value) {
+        FModel.getNetPreferences().setPref(FNetPref.UPnP, value ? "ALWAYS" : "NEVER");
+        FModel.getNetPreferences().save();
+        if (!value) {
+            closeForward();
+        } else if (server != null) {
+            openForward();
+        } else {
+            onForwarding.accept(forwarding);
+        }
+    }
+
+    /** The listener is called on every change in the forwarding state, on whichever thread the router's answer arrives. */
+    public synchronized void onForwarding(final Consumer<Forwarding> listener) {
+        onForwarding = listener;
+        listener.accept(forwarding);
+    }
+
+    public Forwarding forwarding() {
+        return forwarding;
+    }
+
+    private void openForward() {
+        if (forward != null) {
+            forward.close();
+        }
+        final int port = server.port();
+        final PortForward asking = new PortForward(port);
+        forward = asking;
+        setForwarding(Forwarding.ASKING);
+        // The answer takes no lock. It arrives on a UPnP thread, and stop() may wait for that thread while holding this object's lock
+        asking.open(accepted -> {
+            if (forward == asking) {
+                if (accepted) {
+                    netLog.info("The router is forwarding port {}.", port);
+                } else {
+                    netLog.warn("The router did not forward port {}. Players on the internet cannot join until it is forwarded.", port);
+                }
+                setForwarding(accepted ? Forwarding.FORWARDED : Forwarding.REFUSED);
+            }
+        });
+    }
+
+    private void closeForward() {
+        if (forward != null) {
+            forward.close();
+            forward = null;
+        }
+        setForwarding(Forwarding.OFF);
+    }
+
     /** Whether a browser on another machine must give a password to take the host's seat. */
     public static boolean hostPasswordSet() {
         return !hostPassword().isEmpty();
@@ -105,6 +169,14 @@ public final class WebService implements IHasForgeLog {
     public static void hostPassword(final String value) {
         FModel.getNetPreferences().setPref(FNetPref.WEB_HOST_PASSWORD, value);
         FModel.getNetPreferences().save();
+    }
+
+    private void setForwarding(final Forwarding value) {
+        forwarding = value;
+        if (sessions != null) {
+            sessions.portForwarded(value == Forwarding.FORWARDED);
+        }
+        onForwarding.accept(value);
     }
 
     /** The host's own link, or null while stopped. */

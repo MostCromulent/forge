@@ -1,0 +1,65 @@
+package forge.web;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import forge.localinstance.properties.ForgePreferences.FPref;
+import forge.model.FModel;
+import forge.web.protocol.JsonCodec;
+import forge.web.protocol.ToBrowser.HostChoiceKind;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+/** Tests that a browser on a guest's link is refused what only the host may do. */
+public class GuestPermissionsTest extends SessionsTest {
+    private WebGuiBase ui;
+
+    @Override
+    WebGuiBase gui() {
+        ui = new WebGuiBase();
+        return ui;
+    }
+
+    // Fails if a guest can change the host's deck generation, open the host's Limited pages, or change the host's preferences through a setting
+    @Test(timeOut = 60_000)
+    public void aGuestCannotUseTheHostsProfile() throws Exception {
+        final String singletons = FModel.getPreferences().getPref(FPref.DECKGEN_SINGLETONS);
+        final String artifacts = FModel.getPreferences().getPref(FPref.DECKGEN_ARTIFACTS);
+        final String volume = FModel.getPreferences().getPref(FPref.UI_VOL_SOUNDS);
+        final TestBrowser guest = connect("guest");
+        guest.awaitNewest("hello", "the guest was never greeted");
+        sessions.onMessage(guest, message("setDeckGen", "singletons", !Boolean.parseBoolean(singletons), "noArtifacts", !Boolean.parseBoolean(artifacts)));
+        sessions.onMessage(guest, message("limitedOpen", "kind", "sealed"));
+        sessions.onMessage(guest, message("setSetting", "key", "soundVolume", "value", "37".equals(volume) ? "38" : "37"));
+        Assert.assertEquals(FModel.getPreferences().getPref(FPref.DECKGEN_SINGLETONS), singletons);
+        Assert.assertEquals(FModel.getPreferences().getPref(FPref.DECKGEN_ARTIFACTS), artifacts);
+        Assert.assertEquals(FModel.getPreferences().getPref(FPref.UI_VOL_SOUNDS), volume, "a guest's setting changed the host's preferences");
+        Assert.assertNotEquals(guest.hello.get("screen").getAsString(), "event", "a guest opened the host's Limited pages");
+    }
+
+    // Fails if a guest's answer to a question for the host counts, or the host's own answer does not
+    @Test(timeOut = 60_000)
+    public void onlyTheHostAnswersTheHostsQuestion() throws Exception {
+        final TestBrowser host = connect("host");
+        sessions.onMessage(host, JsonCodec.message("claimHost"));
+        host.awaitMatching("hello", h -> h.get("host").getAsBoolean(), "the host's seat was not taken");
+        final TestBrowser guest = connect("guest");
+        final CompletableFuture<List<Integer>> waiting = CompletableFuture.supplyAsync(() ->
+                ui.hostRequests().ask(HostChoiceKind.confirm, "Title", "Keep going?", List.of("Yes", "No"), 1, 1, null, null));
+        final int id = host.awaitMatching("hostChoice", m -> true, "the question never reached the host").get("id").getAsInt();
+        sessions.onMessage(guest, answer(id, 1));
+        sessions.onMessage(host, answer(id, 0));
+        Assert.assertEquals(waiting.get(10, TimeUnit.SECONDS), List.of(0), "the guest's answer was taken");
+    }
+
+    private static JsonObject answer(final int id, final int choice) {
+        final JsonObject m = message("hostChoice", "id", id);
+        final JsonArray value = new JsonArray();
+        value.add(choice);
+        m.add("value", value);
+        return m;
+    }
+}

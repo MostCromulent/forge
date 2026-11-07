@@ -3,6 +3,8 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { BackButton, HeadControls, PageHeader, type SetupStep } from '../header';
+import { isPortrait } from '../form';
+import { ICONS, Icon } from '../icons';
 import { t } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -190,6 +192,22 @@ export function MatchBar({ lobby, formats, actions, preview }: {
   );
 }
 
+/** The button that shows the addresses others join the table at. On a phone it is an icon in the header. */
+export function Invite({ model }: { model: Model }) {
+  const phone = isPortrait();
+  return (
+    <Popup label={phone ? <Icon d={ICONS.link} /> : <><Icon d={ICONS.link} />{t('lblWebMatchBarInvite')}</>} name={phone ? t('lblWebMatchBarInvite') : undefined}
+      cls={phone ? 'field-value menu-button invite-button' : 'outline invite-button'}>
+      {() => (
+        <div class="invite">
+          <b>{t('lblWebMatchBarOthersJoinAt')}</b>
+          <Addresses list={model.addresses ?? []} />
+        </div>
+      )}
+    </Popup>
+  );
+}
+
 /** How others join, the sound and the options. The dock shows who is here. */
 export function TableHeader({ model, lobby, trail }: { model: Model; lobby: LobbyTable; trail: SetupStep[] }) {
   const invite = lobby.shareable ? <Invite model={model} /> : undefined;
@@ -202,4 +220,17 @@ export function TableHeader({ model, lobby, trail }: { model: Model; lobby: Lobb
       </div>
     </PageHeader>
   );
+}
+
+function Addresses({ list }: { list: Address[] }) {
+  const [copied, setCopied] = useState<string | null>(null);
+  if (!list.length) {
+    return <p class="muted">{t('lblWebMatchBarWorkingOutAddress')}</p>;
+  }
+  return <>{list.map(a => (
+    <button key={a.url} class="share-row" onClick={() => navigator.clipboard?.writeText(a.url).then(() => setCopied(a.url), () => {})}>
+      <span class="share-label">{a.label}</span><code class="share-url">{a.url}</code>
+      <span class="share-copy">{t(copied === a.url ? 'lblWebMatchBarCopied' : 'lblCopy')}</span>
+    </button>
+  ))}</>;
 }

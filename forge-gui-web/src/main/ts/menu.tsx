@@ -257,3 +257,43 @@ function HostPassword({ value, set }: { value: string; set: (value: string) => v
   return <input type="password" class="host-password" placeholder={t('lblWebConsoleHostPassword')} aria-label={t('lblWebConsoleHostPassword')}
     autocomplete="current-password" value={value} onInput={e => set(e.currentTarget.value)} />;
 }
+
+/** The page for a browser with no seat. A seat is being taken, the last attempt failed, or nobody has opened a table yet. */
+function Waiting({ model, actions }: { model: Model; actions: Actions }) {
+  const [password, setPassword] = useState('');
+  const failed = model.screen !== 'opening' && !!model.error;
+  const state = model.screen === 'opening' ? 'joining' : failed ? 'failed' : 'idle';
+  // A match in progress takes no new players, so the guest waits for the host to give up a seat or open the next table
+  const midMatch = state === 'idle' && model.presence.some(p => p.host && (p.doing === 'playing' || p.doing === 'watching'));
+  return (
+    <div class="menu-page">
+      <Wordmark />
+      <section class={`wait-card ${state}`}>
+        <ol class="trail">
+          <Step name={t('lblWebMenuStepConnected')} done />
+          <Step name={t('lblWebMenuStepNamed')} done={!!model.playerName} />
+          <Step name={t('lblWebMenuStepSeated')} state={state} />
+        </ol>
+        <div class="wait-head">
+          <span class="wait-mark" aria-hidden="true" />
+          <b>{t(model.screen === 'opening' ? 'lblWebMenuTakingSeat' : failed ? 'lblWebMenuCouldNotTakeSeat' : midMatch ? 'lblWebMenuMatchInProgress' : 'lblWebMenuNoTableYet')}</b>
+        </div>
+        <p class="wait-body">
+          {model.screen === 'opening' ? t('lblWebMenuMakingRoom')
+            : failed ? model.error
+              : t(midMatch ? 'lblWebMenuSeatedAfterMatch' : model.canClaimHost ? 'lblWebMenuNobodyHosting' : 'lblWebMenuSeatedWhenOpens')}
+        </p>
+        <div class="wait-buttons">
+          {failed && <button onClick={() => actions.join()}>{t('lblTryAgain')}</button>}
+          {model.canClaimHost && model.hostPassword && <HostPassword value={password} set={setPassword} />}
+          {model.canClaimHost && <button class="primary" onClick={() => actions.claimHost(password)}>{t('lblWebMenuHostTable')}</button>}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Step({ name, done = false, state }: { name: string; done?: boolean; state?: string }) {
+  const mark = state === undefined ? (done ? 'done' : 'todo') : state === 'joining' ? 'now' : state === 'failed' ? 'failed' : 'todo';
+  return <li class={`step ${mark}`}><span class="dot" aria-hidden="true" />{name}</li>;
+}

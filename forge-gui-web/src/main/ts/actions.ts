@@ -46,6 +46,9 @@ export interface PageActions {
   askStackMenu(itemKey: number): void;
   stackYield(itemKey: number, action: YieldAction): void;
   autoYieldTop(yes: boolean): void;
+  say(text: string): void;
+  giveSeat(from: string, to: string): void;
+  dropPlayer(name: string): void;
   setSetting(key: string, value: string): void;
 
   /** Sets the name and avatar this browser plays under. The server refuses a name another player already has. */
@@ -53,6 +56,9 @@ export interface PageActions {
   /** Opens a table against the computer, or a table others can join by link. */
   openLobby(invite: boolean): void;
   claimHost(password?: string): void;
+  /** Tries again to take a seat after a join found no free seat. */
+  join(): void;
+  ready(on: boolean): void;
 
   leaveLobby(): void;
   setFormat(format: string): void;
@@ -71,6 +77,9 @@ export interface PageActions {
   /** The table's highest Commander bracket, 1 to 4, or 5 for any. */
   setMaxBracket(bracket: number): void;
   removeSeat(index: number): void;
+  /** Switches a seat between a computer player and an open seat someone can join. */
+  openSeat(index: number): void;
+  aiSeat(index: number): void;
   setSeat(index: number, change: SeatChange): void;
   /** Uses a card's art, cropped at offset, as a seat's sleeve. An empty key returns to the numbered sleeve. */
   setSleeveArt(index: number, key: string, offset: number): void;
@@ -93,6 +102,7 @@ export interface PageActions {
   /** Deletes one of your own decks by its finder key. */
   deleteDeck(key: string): void;
   favouriteDeck(key: string, on: boolean): void;
+  deviceDecks(decks: DeviceDeckText[]): void;
 }
 
 export interface Actions extends PageActions {}
@@ -127,11 +137,16 @@ export function createActions(send: Send): PageActions {
     askStackMenu: key => send({ t: 'stackMenu', key }),
     stackYield: (key, action) => send({ t: 'stackYield', key, action }),
     autoYieldTop: yes => send({ t: 'autoYieldTop', yes }),
+    say: text => send({ t: 'chat', text }),
+    giveSeat: (from, to) => send({ t: 'giveSeat', from, to }),
+    dropPlayer: name => send({ t: 'dropPlayer', name }),
     setSetting: (key, value) => send({ t: 'setSetting', key, value }),
     setName: (name, avatar, sleeve) => send({ t: 'setName', name, avatar, sleeve }),
     openLobby: invite => send({ t: invite ? 'invite' : 'lobby' }),
     claimHost: (password?: string) => send({ t: 'claimHost', password }),
+    join: () => send({ t: 'join' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
+    ready: on => send({ t: 'ready', ready: on }),
     setFormat: format => send({ t: 'setFormat', format }),
     setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),
     setArchenemy: index => send({ t: 'setArchenemy', index }),
@@ -145,6 +160,8 @@ export function createActions(send: Send): PageActions {
     setMatchLength: games => send({ t: 'setMatchLength', games }),
     setMaxBracket: bracket => send({ t: 'setMaxBracket', bracket }),
     removeSeat: index => send({ t: 'removeSeat', index }),
+    openSeat: index => send({ t: 'openSeat', index }),
+    aiSeat: index => send({ t: 'aiSeat', index }),
     setSeat: (index, change) => send({ t: 'setSeat', index, ...change }),
     setSleeveArt: (index, key, offset) => send({ t: 'sleeveArt', index, key, offset }),
     forgetSleeveArt: key => send({ t: 'forgetSleeveArt', key }),
@@ -157,6 +174,7 @@ export function createActions(send: Send): PageActions {
     browseFormat: format => send({ t: 'browseFormat', format }),
     deleteDeck: key => send({ t: 'deckDelete', key }),
     favouriteDeck: (key, on) => send({ t: 'deckFavourite', key, on }),
+    deviceDecks: decks => send({ t: 'deviceDecks', decks }),
     answerHostChoice: (id, value) => send({ t: 'hostChoice', id, value }),
   };
 }

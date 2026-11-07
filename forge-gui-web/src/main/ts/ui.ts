@@ -46,6 +46,8 @@ export interface UiState {
   macro: 'none' | 'recording' | 'recorded';
   /** The volume control beside the options button is open. */
   volumeOpen: boolean;
+  /** The menu shows the name and avatar form, opened by the dock's edit button. */
+  renaming: boolean;
   /** The play choice whose game kinds the start page shows. It is kept so that going back from a table returns there. */
   menuChoice: 'play' | 'friends' | null;
   picker: Picker | null;
@@ -95,6 +97,7 @@ export const ui: UiState = {
   gameMenu: null,
   macro: 'none',
   volumeOpen: false,
+  renaming: false,
   menuChoice: null,
   picker: null,
   browse: null,

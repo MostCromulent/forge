@@ -58,6 +58,17 @@ public final class ToBrowser {
     public record SavedSleeveArt(String key, int offset) {
     }
 
+    /** Everyone on this server who has set a name, for the panel that shows who is here. */
+    @Message("presence")
+    public record Presence(List<Person> people) {
+    }
+
+    public enum Doing { waiting, joining, table, playing, watching }
+
+    /** disconnected is true for a guest whose browser has disconnected while the guest holds a seat. */
+    public record Person(String name, int avatar, Doing doing, boolean host, boolean disconnected) {
+    }
+
     @Message("error")
     public record ErrorMessage(String message) {
     }
@@ -199,6 +210,18 @@ public final class ToBrowser {
             @Nullable String image, @Nullable Integer hand, @Nullable Integer life) {
     }
 
+    @Message("addresses")
+    public record Addresses(List<Address> list) {
+    }
+
+    public record Address(String label, String url) {
+    }
+
+    /** A line with no sender is an announcement from netplay itself. earlier marks a line replayed from before this browser connected. */
+    @Message("chat")
+    public record ChatLine(@Nullable String from, String text, boolean earlier) {
+    }
+
     public record EditorGroup(String heading, List<EditorCard> cards) {
     }
 
@@ -221,6 +244,11 @@ public final class ToBrowser {
 
     /** One printing of a card: its set's code and name, its year, the part of the set it is in (cards, borderless, showcase and so on), and why it can't be used, if it can't. */
     public record Printing(String name, String edition, String key, String setName, int year, @Nullable String style, @Nullable String problem) {
+    }
+
+    /** A guest's deck changed. text is the deck as .dck text to store in its browser, or null when the deck was deleted. */
+    @Message("deviceDeck")
+    public record DeviceDeck(String id, @Nullable String text, String format) {
     }
 
     /** A few buttons, or a list. */
