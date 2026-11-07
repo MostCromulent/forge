@@ -220,6 +220,8 @@ html[data-way] .modes .mode.plaque { animation-duration: 0s; animation-delay: 0s
 .format-play b { color: var(--text); font-weight: 600; }
 
 .seats { display: grid; justify-content: center; gap: 18px; grid-template-columns: repeat(2, auto); }
+/* Two-Headed Giant's teams are seats 1 and 2 against 3 and 4, so each team fills a column. A phone lists the seats in one column, already in team order */
+html:not([data-form="portrait"]) .seats.by-team { grid-template-rows: repeat(2, auto); grid-auto-flow: column; }
 
 .plate {
   display: flex;

@@ -76,7 +76,7 @@ public final class WebSession implements IHasForgeLog {
                 s.relistDecks(ch);
             }))
             .on(SetVariant.class, atSetup((s, ch, v) -> {
-                s.lobby.setVariant(v.variant(), v.on());
+                s.lobby.setVariant(v.variant(), v.on(), invited(s.stage));
                 s.relistDecks(ch);
             }))
             .on(SetArchenemy.class, atSetup((s, ch, a) -> s.lobby.setArchenemy(a.index())))

@@ -61,13 +61,13 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
         {lim
           ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => dimIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate))} />
           : <MatchBar lobby={lobby} formats={model.formats} actions={actions} preview={setPreview} />}
-        <div class="seats" id="seats">
+        <div class={`seats${lobby.fixedPairs ? ' by-team' : ''}`} id="seats">
           {/* The key includes who sits there, so an added or newly taken seat mounts again and plays its entry animation (lobby.css) */}
           {lobby.seats.map((s, i) => <Plate key={`${i} ${s.type} ${s.name ?? ''}`} seat={s} index={i} lobby={lobby} format={format} actions={actions} leaving={leaving.has(i)} joinable={model.networked}
             avatarCount={model.looks?.avatarCount ?? 0} sleeveCount={model.looks?.sleeveCount ?? 0}
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
           {/* This button adds a seat where it will appear. The player count above can also add seats */}
-          {lobby.host && !lim && lobby.seats.length < lobby.maxSeats && (
+          {lobby.host && !lim && !lobby.fixedPairs && lobby.seats.length < lobby.maxSeats && (
             <button class="add-seat" onClick={() => actions.setPlayerCount(lobby.seats.length + 1)}>
               <Icon d={ICONS.plus} />{t('lblWebLobbyAddSeat')}
             </button>
@@ -246,7 +246,7 @@ function Plate({ seat, index, lobby, format, actions, leaving, joinable, avatarC
   const commander = seat.commander;
   return (
     <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${!mine && !waiting && seat.type !== 'AI' ? ' guest' : ''}${seat.sittingOut ? ' sitting-out' : ''}${leaving ? ' leaving' : ''}${seat.team != null ? ' teamed' : ''}`}>
-      {seat.team != null && <TeamTab team={seat.team} teams={lobby.teams} change={(lobby.host || mine) && !lobby.teamsFixed ? team => actions.setTeam(index, team) : null} />}
+      {seat.team != null && <TeamTab team={seat.team} teams={lobby.teams} change={(lobby.host || mine) && !lobby.fixedPairs ? team => actions.setTeam(index, team) : null} />}
       <div class={hasDeck && seat.mayEdit && !dealt && seat.commanderChoices.length > 1 ? 'sleeve-slot three' : 'sleeve-slot'}
         hidden={beforePools} data-image={commander ?? undefined}>
         <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt && !commander ? ' card-art' : ''}`} title={dealt ? '' : t('lblWebLobbyChooseDeck')}
@@ -267,7 +267,7 @@ function Plate({ seat, index, lobby, format, actions, leaving, joinable, avatarC
         <button class="sleeve-style" title={t('lblWebSleevesChooseSleeve')} hidden={!hasDeck || !seat.mayEdit}
           onClick={() => choose('sleeve')}>{t('lblWebLobbyChangeSleeve')}</button>
       </div>
-      <button class="drop" aria-label={t('lblWebLobbyRemoveSeat')} hidden={mine || !lobby.host || lobby.seats.length <= 2}
+      <button class="drop" aria-label={t('lblWebLobbyRemoveSeat')} hidden={mine || !lobby.host || lobby.fixedPairs || lobby.seats.length <= 2}
         onClick={() => actions.removeSeat(index)}><Icon d={ICONS.x} /></button>
       <div class="plate-body">
         <div class="who">

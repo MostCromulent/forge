@@ -133,7 +133,7 @@ export function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; ac
   return (
     <span class="count" role="group" aria-label={t('lblPlayers')} onPointerLeave={() => preview(null)}>
       {counts.map(n => (
-        <button key={n} aria-pressed={n === lobby.seats.length} disabled={!lobby.host || drafting || n < fewest}
+        <button key={n} aria-pressed={n === lobby.seats.length} disabled={!lobby.host || drafting || n < fewest || (lobby.fixedPairs && n !== lobby.seats.length)}
           title={n < fewest ? t('lblWebMatchBarFewerSeats') : ''}
           onPointerEnter={() => preview(n < lobby.seats.length ? n : null)}
           onClick={() => { preview(null); actions.setPlayerCount(n); }}>{n}</button>
