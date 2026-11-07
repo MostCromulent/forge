@@ -508,7 +508,7 @@ public final class ToBrowser {
             String autoYieldMode, GameLogVerbosity logDetail, boolean devMode,
             String highlightColor, int soundVolume, int musicVolume, String soundSet, List<String> soundSets,
             boolean filteredHands, String mulliganRule, List<String> mulliganRules,
-            String aiProfile, List<String> aiProfiles, boolean ante, String undoMode, List<ShortcutPref> shortcuts) {
+            String aiProfile, List<String> aiProfiles, boolean ante, String undoMode, boolean draftRanking, List<ShortcutPref> shortcuts) {
     }
 
     /** One of Forge's keyboard shortcut preferences: its name, its label, and its keys and default keys as Java key codes separated by spaces. */

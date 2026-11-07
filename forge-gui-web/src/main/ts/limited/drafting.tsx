@@ -19,6 +19,7 @@ import type { Model } from '../model';
 import type { DraftCard, DraftLogLine, DraftSeat, DraftState } from '../protocol';
 import { make, reducedMotion } from '../dom';
 import { isPortrait } from '../form';
+import { setting } from '../settings';
 import { Backdrop, Confirm, Dropdown } from '../dialog';
 import { campaigns } from '../campaigns';
 
@@ -256,7 +257,7 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
             <button class="tile" title={card.name} draggable onDragStart={e => startDrag(e, { from: 'pack', index: i })}>
               <span class="tile-name">{card.name}</span>
               <CardFace card={card} />
-              {card.rank !== undefined && <RankShield rank={card.rank} />}
+              {card.rank !== undefined && setting('draftRanking') && <RankShield rank={card.rank} />}
             </button>
             {i === selected && <span class="confirm">{t('lblWebDraftPickConfirm')}</span>}
           </div>

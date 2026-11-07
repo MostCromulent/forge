@@ -119,6 +119,10 @@ export const SETTINGS: SettingDef[] = [
     options: [['mana', t('lblCMC')], ['color', t('lblColor')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
   },
   {
+    section: t('lblCards'), key: 'draftRanking', label: t('lblShowDraftRankingOverlay'), hint: t('nlShowDraftRankingOverlay'),
+    type: 'toggle', server: true, def: true,
+  },
+  {
     // Forge ships only the default set. As on desktop, the choice is shown only after someone adds another set
     section: t('lblWebOptionsSectionSound'), key: 'soundSet', label: t('cbpSoundSets'), type: 'choice', server: true, hostOnly: true,
     when: () => (server.soundSets?.length ?? 0) > 1,

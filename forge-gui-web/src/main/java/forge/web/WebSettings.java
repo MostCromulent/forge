@@ -81,6 +81,7 @@ public final class WebSettings implements IHasForgeLog {
                 AiProfileUtil.getProfilesDisplayList(),
                 player.getBoolean(FPref.UI_ANTE),
                 player.get(FPref.UI_UNDO_MODE),
+                player.getBoolean(FPref.UI_OVERLAY_DRAFT_RANKING),
                 SHORTCUTS.stream().map(p -> new ShortcutPref(p.name(), Localizer.getInstance().getMessage("lbl" + p.name()), player.get(p), p.getDefault())).toList());
     }
 
@@ -114,6 +115,8 @@ public final class WebSettings implements IHasForgeLog {
                 return;
             }
             player.set(FPref.valueOf(key), value);
+        } else if ("draftRanking".equals(key)) {
+            player.set(FPref.UI_OVERLAY_DRAFT_RANKING, Boolean.parseBoolean(value));
         } else if ("logDetail".equals(key)) {
             player.set(FPref.DEV_LOG_ENTRY_TYPE, GameLogVerbosity.fromString(value).toString());
         } else if ("soundSet".equals(key)) {
