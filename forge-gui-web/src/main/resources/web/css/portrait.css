@@ -922,3 +922,9 @@ html[data-form="portrait"] .cq-pick-row { grid-template-columns: 40px minmax(0, 
   html[data-form="portrait"] .dialog.cq-prefs { width: min(92vw, 640px); height: auto; max-height: calc(100dvh - 32px); border-radius: 12px; border: 1px solid var(--line); }
   html[data-form="portrait"] .backdrop:has(> .cq-prefs) { padding: 16px; }
 }
+/* A phone has no room for the filter list beside a filter's panel. The menu is a sheet along the bottom, showing the list or the chosen panel */
+html[data-form="portrait"] .filter-menu { position: fixed; left: 0; right: 0; top: auto; bottom: 0; z-index: 60; flex-direction: column; align-items: stretch; gap: 0; }
+html[data-form="portrait"] .filter-menu :is(.mlist, .fpanel) { width: auto; max-height: 75dvh; overflow-y: auto; box-sizing: border-box; border-radius: 14px 14px 0 0; padding: 10px 12px calc(14px + env(safe-area-inset-bottom)); }
+html[data-form="portrait"] .filter-menu.picked .mlist { display: none; }
+html[data-form="portrait"] .filter-menu :is(.fopt, .game-choice) { min-height: 44px; font-size: 15px; }
+html[data-form="portrait"] .filter-menu :is(.fopts, .game-choices) { max-height: none; }

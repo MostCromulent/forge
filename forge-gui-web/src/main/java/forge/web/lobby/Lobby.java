@@ -157,14 +157,6 @@ public final class Lobby {
         lobby.setFormatChoice(pool == null ? GameType.Constructed : pool);
     }
 
-    private static List<String> names(final Iterable<GameFormat> formats) {
-        final List<String> out = new ArrayList<>();
-        for (final GameFormat f : formats) {
-            out.add(f.getName());
-        }
-        return out;
-    }
-
     /** Skips the send when this browser already has this exact list. The list is always rebuilt, because building it records what the lobby shows. */
     public void sendDecks(final BrowserChannel to) {
         settle();
@@ -196,7 +188,7 @@ public final class Lobby {
     private Decks decks() {
         synchronized (DeckCatalog.DECKS) {
             final GameFormat cardPool = cardPool();
-            return new Decks(catalog.refresh(format(), cardPool, guest.getAsBoolean(), device, eventFilter()), names(FModel.getFormats().getSanctionedList()),
+            return new Decks(catalog.refresh(format(), cardPool, guest.getAsBoolean(), device, eventFilter()),
                     cardPool == null ? null : cardPool.getName(), guest.getAsBoolean() ? null
                             : new ToBrowser.DeckGenOptions(FModel.getPreferences().getPrefBoolean(FPref.DECKGEN_SINGLETONS),
                                     FModel.getPreferences().getPrefBoolean(FPref.DECKGEN_ARTIFACTS)));
@@ -592,7 +584,6 @@ public final class Lobby {
             if (lobby == null) {
                 return new LobbyMessage(null);
             }
-            final List<Format> formats = LobbyFormats.choices();
             final List<Seat> seats = new ArrayList<>();
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 seats.add(seat(lobby, i));
@@ -601,7 +592,7 @@ public final class Lobby {
             final List<String> problems = problems(illegal);
             final GameFormat cardPool = cardPool();
             // Only the machine running the game can start it. Everyone else waits for the host
-            return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
+            return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(),
                     cardPool == null ? null : cardPool.getName(),
                     LobbyFormats.VARIANTS.stream().map(LobbyFormats::explainedVariant).toList(), variantsOn(lobby),
                     maxSeats(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,

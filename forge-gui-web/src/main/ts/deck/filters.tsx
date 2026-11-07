@@ -56,7 +56,7 @@ export function FilterBar<F>({ kinds, filter, set, clearAll, narrowed, children 
           {t('lblWebFilterAdd')}
         </button>
         {open && (
-          <div class="filter-menu">
+          <div class={kind ? 'filter-menu picked' : 'filter-menu'}>
             <div class="mlist" role="menu">
               <input class="mfind" type="search" placeholder={t('lblWebFilterFind')} value={find} autoFocus
                 onInput={e => setFind(e.currentTarget.value)} />

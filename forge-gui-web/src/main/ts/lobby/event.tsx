@@ -78,7 +78,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
         back={() => setLeaving(false)} backLabel={t('lblWebEventKeepThisEvent')}
         go={() => { setLeaving(false); actions.eventNew(); setView('choose'); setSetting(true); }} goLabel={t('lblWebEventNewEvent')} />}
       <div class="eh-main">
-        <div class="eh-mode"><GameMenu lobby={lobby} actions={actions} /></div>
+        <div class="eh-mode"><GameMenu lobby={lobby} formats={model.formats} actions={actions} /></div>
         <div class="eh-title">
           <span class="event-product">{lim.product ?? t('lblWebEventNotSetUp')}</span>
           {lobby.host && !lim.started && <button class="link" onClick={openSetup}>{lim.product ? t('lblEdit') : t('lblWebEventSetUp')}</button>}

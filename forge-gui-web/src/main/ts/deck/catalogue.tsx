@@ -13,7 +13,8 @@ import type { CataloguePage, CatalogueQuery, CatalogueRow, DeckSection, EditorSt
 import { store, stored } from '../storage';
 import { addCard, choosesPrintings, preferredPrinting } from './preferred';
 import { CARD_TYPES } from './decklist';
-import { CARD_POOL_NAMES, t, type TextKey } from '../text';
+import { t, type TextKey } from '../text';
+import { GROUP_NAMES, groupsOf, isCardPool } from '../formatmenu';
 
 export const TYPES: [string, TextKey][] = [['any', 'lblWebCatalogueAnyType'], ...CARD_TYPES.map(([type, , heading]): [string, TextKey] => [type.toLowerCase(), heading])];
 const SORTS: [string, TextKey][] = [['name', 'lblWebEditorSortName'], ['mv', 'lblWebCatalogueSortManaValue'], ['colour', 'lblWebEditorSortColour'],
@@ -270,9 +271,9 @@ function catalogueKinds(state: EditorState, model: Model, actions: Actions): Fil
       clear: f => ({ ...f, format: null }),
       panel: (f, set, done) => (
         <div class="fopts" role="radiogroup">
-          {model.cardPools.flatMap(group => [
-            <span key={group.kind} class="mhead">{t(CARD_POOL_NAMES[group.kind])}</span>,
-            ...group.formats.map(name => (
+          {groupsOf(model.formats.filter(isCardPool)).flatMap(([group, formats]) => [
+            <span key={group} class="mhead">{t(GROUP_NAMES[group])}</span>,
+            ...formats.map(({ id: name }) => (
               <button key={name} role="radio" aria-checked={f.format === name} class={f.format === name ? 'fopt on' : 'fopt'}
                 onClick={() => { set({ ...f, format: name }); done(); }}><i class="dot" />{name}</button>
             )),

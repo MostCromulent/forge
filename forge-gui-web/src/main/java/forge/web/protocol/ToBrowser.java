@@ -95,7 +95,7 @@ public final class ToBrowser {
     }
 
     @Message("decks")
-    public record Decks(List<DeckSummary> decks, List<String> cardFormats, @Nullable String cardPool, @Nullable DeckGenOptions deckGen) {
+    public record Decks(List<DeckSummary> decks, @Nullable String cardPool, @Nullable DeckGenOptions deckGen) {
     }
 
     /** How the host's generators build their decks, as desktop's lobby sets it. Sent only to the host, because these are the host's preferences. */
@@ -161,7 +161,7 @@ public final class ToBrowser {
     public record LobbyMessage(@Nullable LobbyTable table) {
     }
 
-    public record LobbyTable(boolean host, int mySeat, boolean shareable, String format, List<Format> formats,
+    public record LobbyTable(boolean host, int mySeat, boolean shareable, String format,
             @Nullable String cardPool, List<Format> casualVariants, List<String> variantsOn,
             int maxSeats, int gamesPerMatch, List<Seat> seats, List<String> problems, boolean canStart,
             List<String> illegalDecks, boolean legalityEnforced, @Nullable LimitedTable limited, int maxBracket,
@@ -178,20 +178,14 @@ public final class ToBrowser {
     public record PastEvent(String id, EventKind kind, String product, String date) {
     }
 
-    /** The legality formats the deck editor checks against, grouped as FormatChoices groups them. Sent once per browser. */
-    @Message("cardPools")
-    public record CardPools(List<CardPoolGroup> groups) {
+    /** Every entry of the lobby's Format menu, in FormatChoices' order. The deck finder and editor offer the same entries. Sent once per browser. */
+    @Message("formats")
+    public record Formats(List<Format> formats) {
     }
 
     /** Every edition, newest first, for the catalogue's set filter. The browser asks for it the first time that filter opens. */
     @Message("cardSets")
     public record CardSets(List<LimitedEdition> sets) {
-    }
-
-    /** The format types FormatChoices lists. */
-    public enum CardPoolKind { Sanctioned, Casual, Custom }
-
-    public record CardPoolGroup(CardPoolKind kind, List<String> formats) {
     }
 
     /**

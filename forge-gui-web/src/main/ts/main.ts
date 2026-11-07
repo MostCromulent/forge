@@ -318,7 +318,7 @@ function apply(msg: ServerMessage): void {
       break;
     case 'nameTaken': model.nameTaken = msg.name; break;
     case 'limitedOptions': model.limitedOptions = msg; break;
-    case 'cardPools': model.cardPools = msg.groups; break;
+    case 'formats': model.formats = msg.formats; break;
     case 'cardSets': model.cardSets = msg.sets; break;
     case 'limitedPools': model.limitedPools = msg; break;
     case 'limitedResult': model.limitedResult = msg; break;
@@ -334,7 +334,6 @@ function apply(msg: ServerMessage): void {
       break;
     case 'decks':
       model.decks = msg.decks;
-      model.cardFormats = msg.cardFormats ?? [];
       model.deckCardPool = msg.cardPool ?? null;
       model.deckGen = msg.deckGen ?? null;
       break;

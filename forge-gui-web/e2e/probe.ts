@@ -217,13 +217,13 @@ export async function board(p: Probe, state: string, table: Table = {}): Promise
   // Set the game, the seats and each seat's deck through the lobby's actions, as the menus do
   await page.evaluate(({ game, players }) => {
     const { actions, model } = window.forge;
-    const format = game && model.lobby?.formats.find(f => f.name === game);
+    const format = game && model.formats.find(f => f.name === game);
     if (format) actions.setFormat(format.id);
     if (players !== model.lobby?.seats.length) actions.setPlayerCount(players);
   }, want);
   await p.until(`${want.players} seats${want.game ? ` at ${want.game}` : ''}`, ({ game, players }) => {
     const lobby = window.forge.model.lobby;
-    return lobby?.seats.length === players && (!game || lobby.formats.find(f => f.id === lobby.format)?.name === game);
+    return lobby?.seats.length === players && (!game || window.forge.model.formats.find(f => f.id === lobby.format)?.name === game);
   }, want);
   p.mark('table');
   // The deck list for a new game arrives after the game change. So legal decks are set again until the table can start

@@ -450,7 +450,7 @@ public final class WebSession implements IHasForgeLog {
         }
         channel.send(hello());
         // These are the same for the whole run, so a browser gets them once instead of with every table change
-        channel.send(LobbyFormats.cardPools());
+        channel.send(new Formats(LobbyFormats.choices()));
         if (isHost) {
             ui.hostRequests().replay(channel::send);
         }

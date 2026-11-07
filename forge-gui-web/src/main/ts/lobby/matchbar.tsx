@@ -5,10 +5,11 @@ import { useState } from 'preact/hooks';
 import { BackButton, HeadControls, PageHeader, type SetupStep } from '../header';
 import { isPortrait } from '../form';
 import { ICONS, Icon } from '../icons';
-import { t, type TextKey } from '../text';
+import { t } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import { Dropdown } from '../dialog';
+import { FormatMenu, groupsOf, isCardPool } from '../formatmenu';
 import type { Address, Format, LobbyTable } from '../protocol';
 
 /** name is the button's accessible name, for a label with no words. cls replaces the button's classes. */
@@ -44,45 +45,17 @@ function limitedFormats(): (Format & { kind: 'draft' | 'sealed' })[] {
   ];
 }
 
-/** A game's deck size in a few words: "60+ cards", "100 cards", or "no deck" when the deck is dealt. */
-function deckMark(format: Format): string {
-  return format.deckCards == null ? t('lblNoDeck') : t('lblWebNCards', `${format.deckCards}${format.deckAtLeast ? '+' : ''}`);
-}
-
-const CONSTRUCTED_ICON = <svg viewBox="0 0 16 16"><rect x="3" y="2" width="9" height="12" rx="1.5" /><path d="M5 4.5v10.5h8V5" opacity=".6" /></svg>;
-
-const GROUP_ICONS: Record<string, ComponentChildren> = {
-  Constructed: CONSTRUCTED_ICON, Sanctioned: CONSTRUCTED_ICON, Casual: CONSTRUCTED_ICON, Custom: CONSTRUCTED_ICON,
-  Commander: <svg viewBox="0 0 16 16"><path d="M2 12 L3 5 L6 8 L8 3 L10 8 L13 5 L14 12 Z" /></svg>,
-  Other: <svg viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5" /><circle cx="5.7" cy="5.7" r="1.3" fill="currentColor" stroke="none" />
-    <circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none" /><circle cx="10.3" cy="10.3" r="1.3" fill="currentColor" stroke="none" /></svg>,
-  Limited: <svg viewBox="0 0 16 16"><path d="M4 2h8l1 3v9H3V5z" /><path d="M3 5h10" /></svg>,
-};
-
-/** The name of each family of games. The server names a format's family with these keys. */
-const GROUP_NAMES: Record<string, TextKey> = {
-  Constructed: 'lblConstructed', Sanctioned: 'lblSanctioned', Casual: 'lblCasual', Custom: 'lblCustom',
-  Commander: 'lblCommander', Other: 'lblOther', Limited: 'lblLimited',
-};
-
-/** A legality format, which the server plays as Constructed with that format as its card pool. */
-function isCardPool(f: Format): boolean {
-  return f.group === 'Sanctioned' || f.group === 'Casual' || f.group === 'Custom';
-}
-
-/** A list of every game and legality format, beside a card that explains the chosen one or the one last under the pointer. */
-export function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
+/** The table's Format menu. Only a table offers Draft and Sealed, and only the host may change it. */
+export function GameMenu({ lobby, formats, actions }: { lobby: LobbyTable; formats: Format[]; actions: Actions }) {
   const lim = lobby.limited;
   const LIMITED = limitedFormats();
   const pool = lobby.format === 'Constructed' ? lobby.cardPool : null;
   const chosen: Format | undefined = lim ? LIMITED.find(l => l.kind === lim.kind)
-    : lobby.formats.find(f => (pool ? isCardPool(f) && f.id === pool : !isCardPool(f) && f.id === lobby.format));
-  const [pointed, setPointed] = useState<Format | null>(null);
+    : formats.find(f => (pool ? isCardPool(f) && f.id === pool : !isCardPool(f) && f.id === lobby.format));
   // A new kind of event must wait until the started one is over. Other formats must wait until the draft ends
   const drafting = lim?.phase === 'DRAFTING' && !lim.activeEventId;
   const limitedOffered = lobby.shareable || !!lim;
-  const shown = pointed ?? chosen ?? null;
-  const pick = (f: Format, close: () => void) => {
+  const pick = (f: Format) => {
     const kind = LIMITED.find(l => l.id === f.id)?.kind;
     if (kind) {
       actions.setLimited(kind);
@@ -96,65 +69,30 @@ export function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actio
         if (f.id === 'Constructed' && pool) actions.setCardPool(null);
       }
     }
-    setPointed(null);
-    close();
   };
   const blocked = (f: Format) => (LIMITED.some(l => l.id === f.id) ? !!lim?.started : drafting);
-  const groups: [string, Format[]][] = [...groupsOf(lobby.formats), ...(limitedOffered ? [['Limited', LIMITED] as [string, Format[]]] : [])];
+  const groups: [string, Format[]][] = [...groupsOf(formats), ...(limitedOffered ? [['Limited', LIMITED] as [string, Format[]]] : [])];
   return (
     <Popup label={chosen?.name ?? lobby.format} disabled={!lobby.host} wide>
-      {close => (
-        <div class="game-menu-list">
-          <div class="game-choices">
-            {groups.map(([group, formats]) => (
-              <div key={group} class="game-group">
-                <span class="game-group-name">{GROUP_NAMES[group] ? t(GROUP_NAMES[group]) : group}</span>
-                {formats.map(f => (
-                  <button key={f.id} class="game-choice" aria-pressed={f === chosen} disabled={blocked(f)}
-                    onPointerEnter={e => { if (e.pointerType === 'mouse') setPointed(f); }} onFocus={() => setPointed(f)}
-                    onClick={() => pick(f, close)}>
-                    <i class="game-icon" aria-hidden="true">{GROUP_ICONS[f.group]}</i>
-                    <span class="game-name">{f.name}</span><span class="game-size">{deckMark(f)}</span>
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-          {shown && (
-            <div class="game-card">
-              <h5>{shown.name}</h5>
-              <p class="desc">{shown.desc}</p>
-              <div class="facts">{shown.facts.map(x => <span key={x} class="fact">{x}</span>)}</div>
-              <p class="format-play"><b>{t('lblWebMatchBarInMatch')}</b> {shown.play}</p>
-            </div>
-          )}
-        </div>
-      )}
+      {close => <FormatMenu groups={groups} chosen={chosen} blocked={blocked} explain pick={f => { pick(f); close(); }} />}
     </Popup>
   );
 }
 
-/** Formats under their group, in the order the server lists them. */
-function groupsOf(formats: Format[]): [string, Format[]][] {
-  const groups = new Map<string, Format[]>();
-  for (const f of formats) groups.set(f.group, [...(groups.get(f.group) ?? []), f]);
-  return [...groups];
-}
-
 /** Why a casual variant cannot be switched on, or null. Momir Basic and MoJhoSto bring their own avatars. */
-function variantBlocked(lobby: LobbyTable, id: string): string | null {
-  const group = lobby.formats.find(f => f.id === lobby.format)?.group;
+function variantBlocked(lobby: LobbyTable, formats: Format[], id: string): string | null {
+  const group = formats.find(f => f.id === lobby.format)?.group;
   return id === 'Vanguard' && group === 'Other' ? t('lblWebMatchBarVanguardOff') : null;
 }
 
-function VariantsMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
+function VariantsMenu({ lobby, formats, actions }: { lobby: LobbyTable; formats: Format[]; actions: Actions }) {
   const on = lobby.casualVariants.filter(v => lobby.variantsOn.includes(v.id));
   return (
     <Popup label={on.length ? on.map(v => v.name).join(', ') : <span class="muted">{t('lblNone')}</span>} disabled={!lobby.host}>
       {() => (
         <div class="variant-list">
           {lobby.casualVariants.map(v => {
-            const blocked = variantBlocked(lobby, v.id);
+            const blocked = variantBlocked(lobby, formats, v.id);
             return (
               <label key={v.id} class={blocked ? 'variant blocked' : 'variant'}>
                 <input type="checkbox" checked={lobby.variantsOn.includes(v.id)} disabled={!!blocked}
@@ -247,18 +185,18 @@ function MatchLength({ lobby, actions }: { lobby: LobbyTable; actions: Actions }
 }
 
 /** The field names follow the tournament rules. A format says which cards are allowed. A match is the games played between decks. */
-export function MatchBar({ lobby, actions, preview }: {
-  lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void;
+export function MatchBar({ lobby, formats, actions, preview }: {
+  lobby: LobbyTable; formats: Format[]; actions: Actions; preview: (count: number | null) => void;
 }) {
   return (
     <div class="match-bar">
       <div class="fields">
-        <Field name={t('lblFormat')}><GameMenu lobby={lobby} actions={actions} /></Field>
+        <Field name={t('lblFormat')}><GameMenu lobby={lobby} formats={formats} actions={actions} /></Field>
         <Field name={t('lblPlayers')}><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
         {lobby.format === 'Commander' && <Field name={t('lblBracket')}><MaxBracket lobby={lobby} actions={actions} /></Field>}
         <Field name={t('lblMatch')}><MatchLength lobby={lobby} actions={actions} /></Field>
         {(lobby.teamChoices.length > 0 || lobby.teams > 0) && <Field name={t('lblWebMatchBarTeams')}><Teams lobby={lobby} actions={actions} /></Field>}
-        <Field name={t('lblVariants')} grow><VariantsMenu lobby={lobby} actions={actions} /></Field>
+        <Field name={t('lblVariants')} grow><VariantsMenu lobby={lobby} formats={formats} actions={actions} /></Field>
       </div>
     </div>
   );

@@ -18,7 +18,7 @@ import { isPortrait } from '../form';
 import { t, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { CommanderChoice, DeckSummary, LobbyTable, Seat, SeatExtra } from '../protocol';
+import type { CommanderChoice, DeckSummary, Format, LobbyTable, Seat, SeatExtra } from '../protocol';
 import { Backdrop, Dropdown } from '../dialog';
 import { ICONS, Icon } from '../icons';
 import { byId } from '../dom';
@@ -36,6 +36,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const seat = picker ? lobby.seats[picker.seat] : undefined;
   const close = () => changeUi(u => { u.picker = null; });
   const lim = lobby.limited;
+  const format = model.formats.find(f => f.id === lobby.format);
   const leaving = preview === null ? new Set<number>() : seatsLeaving(lobby, preview);
   // A guest only reaches a table through a link, so a guest's table is always a friends table
   const way = lobby.shareable || !lobby.host ? 'friends' : 'play';
@@ -59,10 +60,10 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
         {/* A new kind of event needs a fresh setup. The key remounts the event head so its dialog opens again */}
         {lim
           ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => dimIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate))} />
-          : <MatchBar lobby={lobby} actions={actions} preview={setPreview} />}
+          : <MatchBar lobby={lobby} formats={model.formats} actions={actions} preview={setPreview} />}
         <div class="seats" id="seats">
           {/* The key includes who sits there, so an added or newly taken seat mounts again and plays its entry animation (lobby.css) */}
-          {lobby.seats.map((s, i) => <Plate key={`${i} ${s.type} ${s.name ?? ''}`} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)} joinable={model.networked}
+          {lobby.seats.map((s, i) => <Plate key={`${i} ${s.type} ${s.name ?? ''}`} seat={s} index={i} lobby={lobby} format={format} actions={actions} leaving={leaving.has(i)} joinable={model.networked}
             avatarCount={model.looks?.avatarCount ?? 0} sleeveCount={model.looks?.sleeveCount ?? 0}
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
           {/* This button adds a seat where it will appear. The player count above can also add seats */}
@@ -202,8 +203,8 @@ function randomDeck(model: Model, actions: Actions, index: number): void {
   if (pool.length) actions.setSeat(index, { deck: pool[Math.floor(Math.random() * pool.length)].key });
 }
 
-function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sleeveCount, choose, random }: {
-  seat: Seat; index: number; lobby: LobbyTable; actions: Actions; leaving: boolean; joinable: boolean; avatarCount: number; sleeveCount: number;
+function Plate({ seat, index, lobby, format, actions, leaving, joinable, avatarCount, sleeveCount, choose, random }: {
+  seat: Seat; index: number; lobby: LobbyTable; format: Format | undefined; actions: Actions; leaving: boolean; joinable: boolean; avatarCount: number; sleeveCount: number;
   choose: (kind: Picker['kind']) => void; random: () => void;
 }) {
   // Your own seat is the one the server gave you, whatever type the host has for it
@@ -212,7 +213,6 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
   // Another player's deck comes from their own catalog, so it has a name here but no key
   const hasDeck = seat.deck != null || seat.deckName != null;
   // Momir Basic and MoJhoSto give every seat its deck at the start, so there is none to choose
-  const format = lobby.formats.find(f => f.id === lobby.format);
   const dealt = !!format && format.deckCards == null;
   // A Limited seat has no deck to choose until its pool is out. Until then it shows whether it is ready
   const lim = lobby.limited;

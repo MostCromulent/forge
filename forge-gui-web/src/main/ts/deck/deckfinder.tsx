@@ -7,10 +7,11 @@ import { changeUi, ui } from '../ui';
 import { normalize, rankByName } from '../search';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { Bracket, DeckDetails, DeckMatches, DeckQuery, DeckSummary, Seat } from '../protocol';
+import type { Bracket, DeckDetails, DeckMatches, DeckQuery, DeckSummary, Format, Seat } from '../protocol';
 import { Between, FilterBar, type FilterKind, OneOf, rangeWords, Words, type Range } from './filters';
 import { t, type TextKey } from '../text';
-import { CardGroup, Curve, DECK_FORMATS, useDeckView } from './deckview';
+import { CardGroup, Curve, useDeckView } from './deckview';
+import { FormatMenu, groupsOf, isCardPool } from '../formatmenu';
 import { NewDeck } from './newdeck';
 import { NameTaken } from './nametaken';
 import { CloseButton } from '../dialog';
@@ -214,7 +215,7 @@ export function DeckFinder({ model, actions, seat, close }: {
     const m = model.deckMatches[kind];
     return m?.value === value ? keySet(m) : undefined;
   });
-  const kinds = finderKinds(model, decks, actions, format === 'Commander');
+  const kinds = finderKinds(model, decks, actions, format, !!seat);
   const sources = sourceCounts(decks);
   const categories = new Map<string, number>();
   for (const d of decks) {
@@ -240,18 +241,6 @@ export function DeckFinder({ model, actions, seat, close }: {
         <header class="finder-head">
           <h2>{seat ? t('lblWebLobbyChooseDeck') : t('lblDecks')}</h2>
           {forComputer && <span class="for-ai">{AI_ICON}{t('lblWebFinderForComputer', seat.seat.name ?? '')}</span>}
-          {!seat && (
-            <label class="legality set">
-              {t('lblFormat')}
-              <span class="pill-select"><select value={format} onChange={e => {
-                const next = e.currentTarget.value;
-                changeUi(u => { u.browse = { format: next }; });
-                actions.browseFormat(next);
-              }}>
-                {DECK_FORMATS.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
-              </select></span>
-            </label>
-          )}
           {/* A Limited table plays event pools. The host chooses whether pools from other events may also be played. */}
           {model.lobby?.limited?.activeEventId && (
             <label class="legality set">
@@ -382,12 +371,28 @@ export function DeckFinder({ model, actions, seat, close }: {
 const KEY_SETS = new WeakMap<DeckMatches, ReadonlySet<string>>();
 const keySet = (m: DeckMatches) => KEY_SETS.get(m) ?? KEY_SETS.set(m, new Set(m.keys)).get(m)!;
 
-function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actions, commander: boolean): FilterKind<DeckFilter>[] {
+/** format is the game whose decks are listed. atSeat means a lobby seat opened the finder, so its table decides the format. */
+function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actions, format: string, atSeat: boolean): FilterKind<DeckFilter>[] {
+  const commander = format === 'Commander';
   const legality = t('lblWebFilterGroupLegality');
   const contents = t('lblWebFilterGroupContents');
   const colourSize = t('lblWebFilterGroupColourSize');
   const yours = t('lblWebFilterGroupYours');
   const fromTable = t('lblWebFilterTable');
+  const tableFormat = atSeat || !!model.deckCardPool;
+  // Momir Basic and MoJhoSto deal their own decks, so they have none to list
+  const finderFormats = groupsOf(model.formats.filter(x => x.group !== 'Other'));
+  const familyOf = (id: string) => model.formats.find(x => x.id === id)?.name ?? id;
+  const browse = (next: string) => {
+    if (next === format) return;
+    changeUi(u => { u.browse = { format: next }; });
+    actions.browseFormat(next);
+  };
+  // A legality format lists Constructed decks legal in it. Any other entry lists that game's own decks
+  const pickFormat = (f: DeckFilter, x: Format): DeckFilter => {
+    browse(isCardPool(x) ? 'Constructed' : x.id);
+    return { ...f, cardFormat: isCardPool(x) ? x.id : 'any' };
+  };
   const range = (id: string, group: string, label: string, get: (f: DeckFilter) => Range,
     put: (f: DeckFilter, r: Range) => DeckFilter): FilterKind<DeckFilter> => ({
     id, group, label,
@@ -412,15 +417,16 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
   }
   const kinds: FilterKind<DeckFilter>[] = [
     {
-      id: 'legal', group: legality, label: t('lblWebFinderLegalIn'),
-      chip: f => model.deckCardPool ?? (f.cardFormat === 'any' ? null : f.cardFormat),
-      // The lobby's card pool is a rule of the match. It is shown here but can only be changed in the lobby
-      from: () => (model.deckCardPool ? fromTable : null),
-      fixed: () => !!model.deckCardPool,
+      // Some format always applies, so the chip is always shown. A seat's table decides it, and it can only be changed in the lobby
+      id: 'format', group: legality, label: t('lblFormat'),
+      chip: f => model.deckCardPool ?? (f.cardFormat === 'any' ? familyOf(format) : f.cardFormat),
+      from: () => (tableFormat ? fromTable : null),
+      fixed: f => tableFormat || f.cardFormat === 'any',
       clear: f => ({ ...f, cardFormat: 'any' }),
-      panel: (f, set, done) => (model.deckCardPool
+      panel: (f, set, done) => (tableFormat
         ? <p class="fnote">{t('lblWebFilterSetAtTable')}</p>
-        : <OneOf options={model.cardFormats.map(n => [n, n] as const)} value={f.cardFormat} pick={v => { set({ ...f, cardFormat: v }); done(); }} />),
+        : <FormatMenu groups={finderFormats} chosen={f.cardFormat === 'any' ? model.formats.find(x => !isCardPool(x) && x.id === format)
+          : model.formats.find(x => isCardPool(x) && x.id === f.cardFormat)} pick={x => { set(pickFormat(f, x)); done(); }} />),
     },
     {
       id: 'illegal', group: legality, label: t('lblWebFilterIllegalDecks'),

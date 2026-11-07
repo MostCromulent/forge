@@ -1,6 +1,6 @@
 // The browser's copy of the game. Server messages update it here, and everything on the page is drawn from it
 
-import type { EventKind, Screen, CardPoolGroup, DeckGenOptions, LimitedEdition, DeckMatches, DevState, MatchScore, Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
+import type { EventKind, Screen, Format, DeckGenOptions, LimitedEdition, DeckMatches, DevState, MatchScore, Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 import { campaigns } from './campaigns';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -51,8 +51,6 @@ export interface Model {
   presence: Person[];
   /** Another person is at the table, so chat is useful. */
   networked: boolean;
-  /** The formats a deck can be checked against. The deck list uses them as filters. */
-  cardFormats: string[];
   /** The host's deck generator settings. It is null for a guest, who cannot change them. */
   deckGen: DeckGenOptions | null;
   /** The card pool the lobby limits decks to. The deck finder pins it as a filter. */
@@ -100,8 +98,8 @@ export interface Model {
   /** The state of a limited gauntlet after its last game. It is null outside a gauntlet. */
   limitedResult: LimitedResult | null;
   limitedOptions: LimitedOptions | null;
-  /** The legality formats, under the Format menu's headings. They do not change while the server runs, so they are sent once per connection. */
-  cardPools: CardPoolGroup[];
+  /** Every entry of the Format menu, in its order. They do not change while the server runs, so they are sent once per connection. */
+  formats: Format[];
   /** Every edition, newest first. They are requested the first time the catalogue's set filter opens. */
   cardSets: LimitedEdition[] | null;
   limitedPools: LimitedPools | null;
@@ -143,7 +141,6 @@ export function createModel(): Model {
     chat: [],
     presence: [],
     networked: false,
-    cardFormats: [],
     deckGen: null,
     deckCardPool: null,
     extraChoices: null,
@@ -170,7 +167,7 @@ export function createModel(): Model {
     draft: null,
     limitedResult: null,
     limitedOptions: null,
-    cardPools: [],
+    formats: [],
     cardSets: null,
     limitedPools: null,
     campaign: null,

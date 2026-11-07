@@ -8,17 +8,12 @@ import forge.deck.FormatChoices;
 import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.util.Localizer;
-import forge.web.protocol.ToBrowser.CardPoolGroup;
-import forge.web.protocol.ToBrowser.CardPoolKind;
-import forge.web.protocol.ToBrowser.CardPools;
 import forge.web.protocol.ToBrowser.Format;
 import forge.web.protocol.ToBrowser.FormatGroup;
 import org.apache.commons.lang3.Range;
 
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 /** What the lobby tells a browser about each format, casual variant and card pool. None of it depends on the table. */
@@ -85,7 +80,7 @@ public final class LobbyFormats {
     }
 
     /** Every entry of the lobby's Format menu, in FormatChoices' order: the game types and the legality formats together. */
-    static List<Format> choices() {
+    public static List<Format> choices() {
         final List<Format> out = new ArrayList<>();
         for (final Object choice : FormatChoices.get(true)) {
             if (choice instanceof GameType type) {
@@ -117,29 +112,16 @@ public final class LobbyFormats {
             facts.add(text.getMessage("lblWebFactRestricted", format.getRestrictedCards().size()));
         }
         facts.add(lifeFact(GameType.Constructed));
-        return new Format(format.getName(), format.getName(), FormatGroup.valueOf(kind(format).name()), lineOf(format), facts,
+        return new Format(format.getName(), format.getName(), kind(format), lineOf(format), facts,
                 text.getMessage("lblWebPlayConstructed"), cards, true);
     }
 
-    /** The legality formats for the deck editor, under the same headings as the lobby's Format menu. */
-    public static CardPools cardPools() {
-        final Map<CardPoolKind, List<String>> groups = new EnumMap<>(CardPoolKind.class);
-        for (final Object choice : FormatChoices.get(false)) {
-            if (choice instanceof GameFormat format) {
-                groups.computeIfAbsent(kind(format), k -> new ArrayList<>()).add(format.getName());
-            }
-        }
-        final List<CardPoolGroup> out = new ArrayList<>();
-        groups.forEach((kind, names) -> out.add(new CardPoolGroup(kind, names)));
-        return new CardPools(out);
-    }
-
     /** FormatChoices lists no archived or digital formats, so every format it offers is one of these. */
-    private static CardPoolKind kind(final GameFormat format) {
+    private static FormatGroup kind(final GameFormat format) {
         return switch (format.getFormatType()) {
-            case SANCTIONED -> CardPoolKind.Sanctioned;
-            case CASUAL -> CardPoolKind.Casual;
-            default -> CardPoolKind.Custom;
+            case SANCTIONED -> FormatGroup.Sanctioned;
+            case CASUAL -> FormatGroup.Casual;
+            default -> FormatGroup.Custom;
         };
     }
 
