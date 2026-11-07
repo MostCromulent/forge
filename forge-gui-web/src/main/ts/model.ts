@@ -80,6 +80,10 @@ export interface Model {
   editor: EditorState | null;
   /** The catalogue rows loaded so far. These are the pages requested since the query last changed. */
   catalogue: CataloguePage | null;
+  /** The result of the last parse of the importer's list. */
+  importResult: ImportResult | null;
+  /** An import or pool name that is already in use. The page asks the player what to do. */
+  nameTaken: string | null;
   /** Every entry of the Format menu, in its order. They do not change while the server runs, so they are sent once per connection. */
   formats: Format[];
   /** Every edition, newest first. They are requested the first time the catalogue's set filter opens. */
@@ -134,6 +138,7 @@ export function createModel(): Model {
     editor: null,
     catalogue: null,
     importResult: null,
+    nameTaken: null,
     formats: [],
     cardSets: null,
   } as Model;

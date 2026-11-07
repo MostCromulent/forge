@@ -114,6 +114,9 @@ export interface PageActions {
   queryCatalogue(q: Omit<CatalogueQuery, 't' | 'request'>): void;
   readImport(text: string, format: string, cardPool: string | null, unrestricted: boolean): void;
   fetchImport(url: string): void;
+  commitImport(c: Omit<ImportCommit, 't'>): void;
+  /** Saves the deck in a .dck file under the format, without the importer. clash says what to do if the name is taken. */
+  addDeckFile(text: string, format: string, clash?: 'replace' | 'keep'): void;
   deviceDecks(decks: DeviceDeckText[]): void;
 }
 
@@ -198,6 +201,13 @@ export function createActions(send: Send): PageActions {
     deleteDeck: key => send({ t: 'deckDelete', key }),
     favouriteDeck: (key, on) => send({ t: 'deckFavourite', key, on }),
     queryCatalogue: q => send({ t: 'catalogue', request: ++asked.catalogue, ...q }),
+    readImport: (text, format, cardPool, unrestricted) => {
+      const request = ++asked.import;
+      send(cardPool ? { t: 'importRead', request, text, format, cardPool, unrestricted } : { t: 'importRead', request, text, format, unrestricted });
+    },
+    fetchImport: url => send({ t: 'importFetch', request: ++asked.import, url }),
+    commitImport: c => send({ t: 'importCommit', ...c }),
+    addDeckFile: (text, format, clash) => send({ t: 'deckFile', text, format, clash }),
     deviceDecks: decks => send({ t: 'deviceDecks', decks }),
     answerHostChoice: (id, value) => send({ t: 'hostChoice', id, value }),
   };

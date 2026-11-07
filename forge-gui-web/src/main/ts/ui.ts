@@ -53,6 +53,8 @@ export interface UiState {
   picker: Picker | null;
   /** The deck finder opened from the start page with no seat, and the format it lists. A hello does not close it. */
   browse: { format: string } | null;
+  /** The open importer, and where it was opened from: a seat's deck finder, the start page, or the editor. */
+  importer: { from: 'seat' | 'start' | 'editor'; seat?: number; text?: string; url?: string; sync?: boolean } | null;
   /** The host has chosen to watch the computer play its seat. */
   spectate: boolean;
   hover: Hover | null;
@@ -101,6 +103,7 @@ export const ui: UiState = {
   menuChoice: null,
   picker: null,
   browse: null,
+  importer: null,
   spectate: false,
   hover: null,
   faceIndex: 0,

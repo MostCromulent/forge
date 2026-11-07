@@ -219,8 +219,29 @@ public final class FromBrowser {
             @Nullable List<String> sets, @Nullable String format, @Nullable DeckSection section) {
     }
 
+    @Command("importRead")
+    public record ImportRead(int request, String text, String format, @Nullable String cardPool, boolean unrestricted) {
+    }
+
+    @Command("importFetch")
+    public record ImportFetch(int request, String url) {
+    }
+
+    /** use puts the deck on a seat, edit opens it, and save keeps it. add and replace change the deck open in the editor. */
+    public enum ImportAction { use, edit, save, add, replace }
+
     /** What to do when the name is taken: replace that deck, or keep both. */
     public enum Clash { replace, keep }
+
+    @Command("importCommit")
+    public record ImportCommit(String text, String name, String format, @Nullable String cardPool, boolean unrestricted,
+            ImportAction action, @Nullable Integer seat, @Nullable String url, @Nullable Clash clash) {
+    }
+
+    /** A .dck file's text, saved as a deck of the format without using the importer. */
+    @Command("deckFile")
+    public record DeckFile(String text, String format, @Nullable Clash clash) {
+    }
 
     /** A deck a guest keeps in its browser: the id it is stored under, the deck as .dck text, and its format. */
     public record DeviceDeckText(String id, String text, String format) {

@@ -5,6 +5,7 @@ import { Menu, NamePrompt } from './menu';
 import { rememberedName } from './identity';
 import { Lobby } from './lobby/lobby';
 import { Editor } from './deck/editor';
+import { Importer } from './deck/importer';
 import { DeckFinder } from './deck/deckfinder';
 import { Requests, StackMenu } from './match/dialogs';
 import { HostChoice } from './hostchoice';
@@ -76,6 +77,11 @@ export function renderScreens(model: Model, actions: Actions): void {
     {ui.gameMenu === 'stops' && <AutoPassStops close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && ui.gameMenu === 'devSetup' && <DevSetupDialog actions={actions} close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && <DrawOfferQuestion model={model} actions={actions} />}
+    {page !== 'match' && ui.importer && (
+      <Importer model={model} actions={actions} from={ui.importer.from} seat={ui.importer.seat} initialText={ui.importer.text}
+        initialUrl={ui.importer.url} sync={ui.importer.sync}
+        close={() => changeUi(u => { u.importer = null; })} />
+    )}
     {page === 'menu' && ui.browse && <DeckFinder model={model} actions={actions} close={() => changeUi(u => { u.browse = null; })} />}
     {model.hostChoice && <HostChoice key={model.hostChoice.id} question={model.hostChoice} actions={actions} />}
   </>, byId('dialog-layer'));

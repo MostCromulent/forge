@@ -105,6 +105,14 @@ const actions = {
     wire.answerHostChoice(id, value);
     schedule();
   },
+  commitImport: c => {
+    model.nameTaken = null;
+    wire.commitImport(c);
+  },
+  addDeckFile: (text, format, clash) => {
+    model.nameTaken = null;
+    wire.addDeckFile(text, format, clash);
+  },
 } as Actions;
 
 // A change made inside a view transition must draw at once, so it does not start a slide of its own
@@ -292,6 +300,7 @@ function apply(msg: ServerMessage): void {
       if (msg.request !== asked.import) return;
       model.importResult = msg;
       break;
+    case 'nameTaken': model.nameTaken = msg.name; break;
     case 'formats': model.formats = msg.formats; break;
     case 'cardSets': model.cardSets = msg.sets; break;
     case 'deviceDeck':

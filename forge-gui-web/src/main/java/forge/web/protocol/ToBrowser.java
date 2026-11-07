@@ -273,6 +273,41 @@ public final class ToBrowser {
     public record EditorLand(String name, String letter, int count, boolean allowed) {
     }
 
+    /** What reading a pasted, fetched or dropped list found: a mark for each line, the problems with their fixes, and the resulting deck. */
+    @Message("importResult")
+    public record ImportResult(int request, List<ImportLine> lines, List<ImportProblem> problems, ImportSummary summary,
+            @Nullable String name, @Nullable Fetched fetched) {
+    }
+
+    /** A heading is a section heading or the deck's name. */
+    public enum ImportLineKind { read, problem, ignored, heading }
+
+    public record ImportLine(ImportLineKind kind) {
+    }
+
+    /** line counts from 0. It is -1 for a problem that belongs to no single line, such as a missing commander. */
+    public record ImportProblem(int line, String title, String detail, List<ImportFix> fixes) {
+    }
+
+    public enum ImportFixKind { use, leaveOut, commander, other }
+
+    /** text is the name to use, or the commander's. */
+    public record ImportFix(ImportFixKind kind, String label, @Nullable String text) {
+    }
+
+    public record ImportSummary(int cards, int sideboard, int notImported, @Nullable String commander, boolean commanderChosen,
+            String colors, @Nullable String verdict, List<EditorGroup> main, List<EditorCard> sideboardCards) {
+    }
+
+    /** A list fetched from a site: which site, the link, the text the list was read from, and the format the site gave it. */
+    public record Fetched(String site, String url, String text, String format) {
+    }
+
+    /** An import's name is already used by a deck. The browser asks whether to replace that deck or keep both. */
+    @Message("nameTaken")
+    public record NameTaken(String name) {
+    }
+
     /**
      * ownLimit is the most copies the card's own rules allow in any deck, in place of the format's limit, or null when its rules set none.
      * It is Integer.MAX_VALUE for a card a deck may hold any number of.

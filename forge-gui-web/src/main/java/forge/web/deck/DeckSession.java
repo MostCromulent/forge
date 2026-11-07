@@ -57,6 +57,11 @@ public final class DeckSession implements IHasForgeLog {
                 }
             })
             .on(CatalogueQuery.class, (d, ch, q) -> d.inTurn(() -> ch.send(d.catalogue(q))))
+            .on(ImportRead.class, DeckSession::read)
+            // Fetching waits for a web site
+            .on(ImportFetch.class, (d, ch, f) -> d.ui.runBackgroundTask("Import", () -> ch.send(d.fetched(f))))
+            .on(ImportCommit.class, DeckSession::commit)
+            .on(DeckFile.class, DeckSession::addFile)
             .on(DeckDelete.class, (d, ch, del) -> d.deleteDeck(ch, del.key()))
             // The stars belong to the host and are stored where desktop stores them
             .on(DeckFavourite.class, (d, ch, star) -> {
@@ -147,6 +152,15 @@ public final class DeckSession implements IHasForgeLog {
         if (editor != null) {
             channel.send(new EditorMessage(editor.state()));
         }
+    }
+
+    // Reading a list looks up misspelt names among all cards, which is too slow for the socket thread
+    private void read(final BrowserChannel channel, final ImportRead read) {
+        final Check check = check(read.format(), read.cardPool(), read.unrestricted());
+        inTurn(() -> {
+            final DeckImport.Read parsed = DeckImport.read(read.text(), check);
+            channel.send(DeckImport.result(read.request(), parsed, parsed.name(), check, null));
+        });
     }
 
     /** Opens the editor. checkedAgainst is the check to open with. Null means the table's check, or the finder's when there is no table. */
@@ -322,6 +336,59 @@ public final class DeckSession implements IHasForgeLog {
                 named == null ? null : named.getFilterRules());
     }
 
+    private ImportResult fetched(final ImportFetch fetch) {
+        try {
+            final DeckUrlProvider.RemoteDeck f = DeckUrlLoader.fetch(fetch.url());
+            final String text = String.join("\n", DeckUrlLoader.getRecognizableImportLines(new DeckRecognizer(), f.importText()));
+            final Check check = Check.of(DeckStore.family(f.format()), null);
+            return DeckImport.result(fetch.request(), DeckImport.read(text, check), f.name(), check,
+                    new Fetched(f.providerName(), f.sourceUrl(), text, check.format().name()));
+        } catch (final IOException | RuntimeException e) {
+            netLog.warn(e, "Could not fetch a deck from " + fetch.url());
+            return new ImportResult(fetch.request(), List.of(),
+                    List.of(new ImportProblem(-1, Localizer.getInstance().getMessage("lblWebEditorFetchFailed"),
+                            e.getMessage() == null ? Localizer.getInstance().getMessage("lblWebEditorSiteSilent") : e.getMessage(), List.of())),
+                    new ImportSummary(0, 0, 0, null, false, "", null, List.of(), List.of()), null, null);
+        }
+    }
+
+    /** Saves an imported deck, then does what the player asked: puts it on a seat, opens it, or adds it to the open deck. */
+    private synchronized void commit(final BrowserChannel channel, final ImportCommit c) {
+        final Check check = check(c.format(), c.cardPool(), c.unrestricted());
+        final Deck deck = DeckImport.read(c.text(), check).deck();
+        if (c.action() == FromBrowser.ImportAction.add || c.action() == FromBrowser.ImportAction.replace) {
+            if (editor != null) {
+                final String refused = c.action() == FromBrowser.ImportAction.add ? editor.addAll(deck) : editor.replaceAll(deck);
+                if (refused != null) {
+                    channel.send(new Notice(refused, null, false));
+                }
+                channel.send(new EditorMessage(editor.state()));
+            }
+            return;
+        }
+        save(channel, deck, check, c);
+    }
+
+    /** Saves a deck file as it is, without the importer, because it is already a deck. */
+    private synchronized void addFile(final BrowserChannel channel, final DeckFile f) {
+        final FileDeck read;
+        try {
+            read = readFile(f.text());
+        } catch (final RuntimeException e) {
+            netLog.warn(e, "A deck file could not be read");
+            channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDeckFileUnreadable"), null, true));
+            return;
+        }
+        if (read == null || read.deck().isEmpty()) {
+            channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDeckFileUnreadable"), null, true));
+            return;
+        }
+        final ImportCommit c = new ImportCommit(f.text(), read.deck().getName(), f.format(), null, false, FromBrowser.ImportAction.save, null, null, f.clash());
+        if (save(channel, read.deck(), check(f.format(), null, false), c) && read.leftOut() > 0) {
+            channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDeckFileLeftOut", read.leftOut()), null, false));
+        }
+    }
+
     /** Null when the text is not a deck file. */
     static FileDeck readFile(final String text) {
         final Deck deck = parse(text);
@@ -341,12 +408,75 @@ public final class DeckSession implements IHasForgeLog {
         return new FileDeck(deck, leftOut);
     }
 
+    /** Returns false when nothing was saved: the name is not valid, or it is taken and the browser must be asked. */
+    private boolean save(final BrowserChannel channel, final Deck deck, final Check check, final ImportCommit c) {
+        final String nameProblem = DeckStore.nameProblem(c.name());
+        if (nameProblem != null) {
+            channel.send(new Notice(nameProblem, null, false));
+            return false;
+        }
+        deck.setName(c.name().trim());
+        if (c.url() != null) {
+            deck.setSourceUrl(c.url());
+        }
+        final String key = host.getAsBoolean() ? saveOnHost(channel, deck, check, c) : saveOnDevice(channel, deck, check, c);
+        if (key == null) {
+            return false;
+        }
+        switch (c.action()) {
+            case use -> {
+                lobby.sendDecks(channel);
+                if (c.seat() == null || !atTable.getAsBoolean()) {
+                    return true;
+                }
+                if (DeckStore.family(check.format()) != DeckStore.family(lobby.format())) {
+                    channel.send(new Notice(Localizer.getInstance().getMessage("lblWebEditorNotSeated"), Localizer.getInstance().getMessage("lblWebEditorFormatMismatch", check.format(), lobby.format()), false));
+                    return true;
+                }
+                final String listed = relisted(key, deck);
+                ui.invokeInEdtLater(() -> {
+                    lobby.setDeck(c.seat(), listed);
+                    lobby.sendState(channel);
+                });
+            }
+            case edit -> {
+                lobby.sendDecks(channel);
+                open(new EditorOpen(relisted(key, deck), null, c.seat(), false), check, channel);
+                if (editor != null) {
+                    channel.send(new EditorMessage(editor.state()));
+                }
+            }
+            default -> lobby.sendDecks(channel);
+        }
+        return true;
+    }
+
     /** Registers a saved deck's key again after the list was rebuilt, in case the rebuild left it out. Brawl drops illegal decks, for example. */
     private String relisted(final String key, final Deck deck) {
         if (key.startsWith(DeckCatalog.DEVICE + ":")) {
             return lobby.catalog().adopt(DeckCatalog.DEVICE, key.substring(DeckCatalog.DEVICE.length() + 1), deck);
         }
         return lobby.catalog().adopt(key.substring(0, key.indexOf(':')), "", deck);
+    }
+
+    /** Saves to the host's decks, or to the decks loaded from links. Returns null when the name is taken and the browser must be asked. */
+    private String saveOnHost(final BrowserChannel channel, final Deck deck, final Check check, final ImportCommit c) {
+        final boolean linked = c.url() != null;
+        final IStorage<Deck> storage = linked ? DeckUrlLoader.getStorage() : storages.of(check.format());
+        synchronized (DeckCatalog.DECKS) {
+            final String taken = DeckStore.taken(storage, deck.getName());
+            if (taken != null && c.clash() == null) {
+                channel.send(new NameTaken(deck.getName()));
+                return null;
+            }
+            if (taken != null && c.clash() == FromBrowser.Clash.keep) {
+                deck.setName(DeckStore.freeName(storage, deck.getName(), null));
+            } else if (taken != null) {
+                storage.delete(taken);
+            }
+            storage.add(deck);
+        }
+        return lobby.catalog().adopt(linked ? DeckCatalog.LINKED : DeckCatalog.MINE, "", deck);
     }
 
     private String saveOnDevice(final BrowserChannel channel, final Deck deck, final Check check, final ImportCommit c) {
