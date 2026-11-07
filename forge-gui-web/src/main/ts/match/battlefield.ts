@@ -141,7 +141,10 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     return mine ? Math.max(glow + 6, chevron - 2) + glow : glow + Math.max(glow + 20, chevron + 14);
   };
   const seatHeight = root.clientHeight;
-  const height = (fit: number) => seatHeight - header - seatPad - fieldPad(fit);
+  // A teammate's hand lies below their cards (board.css)
+  const hand = root.querySelector<HTMLElement>(':scope > .mate-hand')?.offsetHeight ?? 0;
+  const footer = hand ? hand + 8 : 0;
+  const height = (fit: number) => seatHeight - header - footer - seatPad - fieldPad(fit);
 
   // A zone's size for the width it is given, on one line or two. It uses two lines only as TWO_LINE_GAIN allows
   const sizeFor = (z: Zone, room: number, cap: number, two: boolean, gap: number): Sized => {

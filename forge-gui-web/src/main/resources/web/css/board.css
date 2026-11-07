@@ -122,6 +122,13 @@ html[data-motion="reduced"] #opponent.tabbed > .seat > * { animation: none; }
 #match.quads #opponent > .seat:nth-child(3) { grid-area: q3; }
 /* The third seat is on your side of the table, so its lands are nearest the bottom edge, as yours are */
 #match.quads #opponent > .seat:nth-child(3) .battlefield { flex-direction: column-reverse; align-self: end; }
+/* A teammate's hand is face up below their cards. Only a quarter has room for it */
+.seat > .mate-hand { display: none; }
+#match.quads .seat:has(> .mate-hand:not([hidden])) { grid-template-rows: auto minmax(0, 1fr) auto; }
+#match.quads .seat > .mate-hand:not([hidden]) { display: flex; justify-content: center; padding-top: 4px; }
+#match.quads .seat > .mate-hand .card { flex: none; width: calc(var(--hand-w) * .62); height: calc(var(--hand-h) * .62); box-shadow: 0 3px 10px #0009; transition: transform .15s ease; }
+#match.quads .seat > .mate-hand .card + .card { margin-left: calc(var(--hand-w) * -.1); }
+#match.quads .seat > .mate-hand .card:hover { transform: translateY(-10%) scale(1.2); z-index: 5; }
 /* A compact seat shows the player's details in a row across the top, in their colour. Their cards are below, in a border with no fill, like your seat. */
 .seat.compact { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); align-items: stretch; gap: 8px; padding: 8px 10px; border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--tint) 22%, var(--line)); --tile-w: 54px; }
@@ -1304,6 +1311,7 @@ html[data-motion="reduced"] .avatar.hit, html[data-motion="reduced"] .avatar.hit
 
 /* Archenemy: a brass tag next to the name and the ongoing schemes in a row under the seat. A scheme set in motion is shown large. */
 .role-tag { margin-left: 6px; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: var(--brass); color: var(--on-brass); vertical-align: middle; }
+.role-tag.foe { background: var(--surface-2); color: var(--muted); }
 .schemes-ongoing:empty { display: none; }
 .schemes-ongoing { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .scheme { width: 72px; aspect-ratio: 88 / 63; border-radius: 5px; overflow: hidden; position: relative; cursor: zoom-in; background: var(--surface-2); box-shadow: 0 3px 8px #0009, inset 0 0 0 1px #ffffff2a; }

@@ -3,7 +3,7 @@
 import { reconcile } from './reconcile';
 import { cardTypes } from './thresholds';
 import { cardImageSrc, hideOnError, setImage, symbolUrl } from '../images';
-import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLocal, type Model, offersPicks, takesTurn } from '../model';
+import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLocal, type Model, offersPicks, takesTurn, sharesTurns, isTeammate } from '../model';
 import { renderHand, resetHand } from './hand';
 import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
@@ -13,7 +13,7 @@ import { foldStack, renderStack, resetStack } from './stack';
 import { renderPlanes } from './planes';
 import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';
 import { renderPhaseBar, stopWaiting } from './phasebar';
-import { forgetPictures, type CardClick } from './cards';
+import { createCard, forgetPictures, updateCard, type CardClick } from './cards';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from '../looks';
 import { animateCardMoves, noteBoard, resetMotion, showCount } from './motion';
 import { boardBehind } from './pace';
@@ -107,15 +107,21 @@ function seated(model: Model): PlayerView[] {
     if (!seating.includes(p.$key)) seating.push(p.$key);
   }
   const byKey = new Map(everyone.map(p => [p.$key, p]));
-  return seating.map(k => byKey.get(k)).filter((p): p is PlayerView => !!p && !isLocal(model, p));
+  const across = seating.map(k => byKey.get(k)).filter((p): p is PlayerView => !!p && !isLocal(model, p));
+  // A teammate sits last, which in quadrants is the quarter beside yours
+  return sharesTurns(model) ? [...across.filter(p => !isTeammate(model, p)), ...across.filter(p => isTeammate(model, p))] : across;
 }
 
-/** One opponent gets the top half as a full seat. Two or three share it in columns or quarters, unless the tabs layout is chosen. Four or more opponents, and a phone, always get tabs. */
+/**
+ * One opponent gets the top half as a full seat. Two or three share it in columns or quarters, unless the tabs layout is chosen. Four or more opponents, and a
+ * phone, always get tabs. Teams that share their turns always get quarters, so your teammate sits beside you.
+ */
 function renderOpponents(root: HTMLElement, model: Model, onField: CardView[], actions: Actions, select: CardClick): void {
   const across = seated(model);
   const many = across.length > 1;
-  const tabbed = many && (isPortrait() || across.length > 3 || setting('boardLayout') === 'tabs');
-  const quads = many && !tabbed && setting('boardLayout') === 'quadrants';
+  const pairs = sharesTurns(model);
+  const tabbed = many && (isPortrait() || across.length > 3 || (!pairs && setting('boardLayout') === 'tabs'));
+  const quads = many && !tabbed && (pairs || setting('boardLayout') === 'quadrants');
   const match = byId('match');
   match.classList.toggle('many', many);
   match.classList.toggle('quads', quads);
@@ -383,9 +389,28 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
     () => make('span', 'player-counter'),
     (el, [name, n]) => { el.textContent = `${name.toLowerCase()} ${n}`; });
   renderEmblems(q(root, '.emblems'), model, player, zone(model, player, 'Command'), select);
-  q(root, '.role-tag').hidden = !isArchenemy(model, player);
+  const mate = isTeammate(model, player);
+  const archenemy = isArchenemy(model, player);
+  const role = q(root, '.role-tag');
+  role.hidden = !archenemy && (!sharesTurns(model) || isLocal(model, player));
+  role.textContent = t(archenemy ? 'lblArchenemy' : mate ? 'lblWebBoardTeammate' : 'lblWebBoardOpponent');
+  role.classList.toggle('foe', !archenemy && !mate);
   renderOngoing(q(root, '.schemes-ongoing'), model, player);
+  // The hand is drawn first, so the cards above it are sized to the space it leaves
+  renderTeammateHand(root, model, mate ? zone(model, player, 'Hand') : []);
   renderBattlefield(root, model, player.$key, zone(model, player, 'Battlefield'), onField, select);
+}
+
+/** Your teammate's hand lies face up along the bottom of their seat. Its cards are there to look at, so a click does nothing. */
+function renderTeammateHand(seat: HTMLElement, model: Model, cards: CardView[]): void {
+  let row = seat.querySelector<HTMLElement>(':scope > .mate-hand');
+  if (!row && !cards.length) return;
+  if (!row) {
+    row = make('div', 'mate-hand');
+    seat.append(row);
+  }
+  row.hidden = !cards.length;
+  reconcile(row, cards, c => c.$key, () => createCard(() => {}), (el, c) => updateCard(el, model, c));
 }
 
 /** The arc and chip on the portrait show the most damage any one commander has dealt this player, not the total. */

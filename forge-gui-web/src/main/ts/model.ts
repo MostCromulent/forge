@@ -306,6 +306,11 @@ export const opponents = (model: Model): PlayerView[] => players(model).filter(p
 /** Whether the turn belongs to this player. In Two-Headed Giant a team shares its turns, so it belongs to both teammates. */
 export const takesTurn = (player: PlayerView | undefined, turn: Ref | null | undefined): boolean =>
   !!player && !!turn && (player.$key === turn.ref || (player.SharedTeam ?? []).some(r => r?.ref === turn.ref));
+/** Whether the players are in teams that share their turns, as in Two-Headed Giant. */
+export const sharesTurns = (model: Model): boolean => players(model).some(p => (p.SharedTeam ?? []).some(r => !!r && r.ref !== p.$key));
+/** Whether another player is on your team. */
+export const isTeammate = (model: Model, player: PlayerView): boolean =>
+  !isLocal(model, player) && (me(model)?.SharedTeam ?? []).some(r => r?.ref === player.$key);
 const PLAYER_ZONES: ReadonlySet<string> = new Set<PlayerZone>(['Hand', 'Library', 'Graveyard', 'Battlefield', 'Exile',
   'Flashback', 'Command', 'Sideboard', 'Ante', 'SchemeDeck', 'PlanarDeck', 'AttractionDeck', 'Junkyard', 'ContraptionDeck', 'StickerSheets']);
 const isPlayerZone = (name: ZoneType): name is PlayerZone => PLAYER_ZONES.has(name);
