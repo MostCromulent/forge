@@ -251,11 +251,6 @@ export function DeckFinder({ model, actions, seat, close }: {
             </label>
           )}
           <span class="head-tools">
-            <button class="random" disabled={!list.length} title={t('lblWebFinderRandomTip')} onClick={random}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
-              {t('lblRandomDeck')}
-            </button>
-            <button onClick={() => setAdding(true)}>{t('lblWebFinderNewDeck')}</button>
             <input ref={picker} type="file" accept=".dck" hidden onChange={e => {
               const picked = e.currentTarget.files?.[0];
               e.currentTarget.value = '';
@@ -339,6 +334,14 @@ export function DeckFinder({ model, actions, seat, close }: {
                 ) : <p class="none">{t('lblWebFinderNoMatch')}</p>}
             </div>
           </div>
+          {/* The list's own buttons sit under it, as desktop puts its deck buttons under its list */}
+          <div class="finder-actions">
+            <button class="random" disabled={!list.length} title={t('lblWebFinderRandomTip')} onClick={random}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
+              {t('lblRandomDeck')}
+            </button>
+            <button onClick={() => setAdding(true)}>{t('lblWebFinderNewDeck')}</button>
+          </div>
           <aside class="dk-chosen">
             {!chosen ? <p class="none">{t('lblWebFinderPickHint')}</p>
               : !details ? <p class="none">{t('lblWebFinderReading')}</p>
@@ -363,8 +366,7 @@ export function DeckFinder({ model, actions, seat, close }: {
               }}>{t('lblDelete')}</button>
             </span>
           ) : deletable && <button class="delete-deck" onClick={() => setDeleting(true)}>{t('lblDelete')}</button>}
-            <button class="cancel" onClick={close}>{t('lblCancel')}</button>
-          {seat
+            {seat
             ? <>
                 <button disabled={!chosen} onClick={edit}>{summary?.readOnly ? t('lblWebFinderEditCopy') : t('lblEdit')}</button>
                 <button class="use primary" disabled={!chosen} onClick={() => use()}>{t('lblWebFinderUseDeck')}</button>
