@@ -6,6 +6,9 @@
 @keyframes menu-out { to { opacity: 0; scale: .96; } }
 .backdrop { animation: backdrop-in .15s ease-out; }
 .dialog, .host-choice, .zone-panel, .zone-bar { animation: box-in .16s ease-out; }
+/* A zone window opened from a pile on the board grows out of that pile instead (zones.ts sets the start point) */
+.zone-panel[data-opened="pile"] { animation: zone-grow .24s cubic-bezier(.2, .8, .2, 1); }
+@keyframes zone-grow { from { opacity: 0; scale: .06; } 35% { opacity: 1; } }
 /* A closing element plays its exit animation before it is removed (closing.ts) */
 /* Each exit animation has its own keyframes name. The same name with only the direction changed would not run again. */
 @keyframes backdrop-out { to { opacity: 0; } }

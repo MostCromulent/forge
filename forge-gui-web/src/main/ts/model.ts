@@ -14,6 +14,13 @@ export interface Model {
   root: number;
   visible: Set<number>;
   localPlayers: number[];
+  prompt: Prompt | null;
+  zones: ShownZone[];
+  gameOver: boolean;
+  /** Each player's games won in the match. It is sent when a game ends and is empty until then. */
+  matchScore: MatchScore[];
+  controls: Controls | null;
+  playable: Playable | null;
   looks: Looks | null;
   /** The page the server shows the browser. 'opening' means a seat is being taken, between the menu and the table. */
   screen: Screen;
@@ -42,6 +49,12 @@ export function createModel(): Model {
     root: -1,
     visible: new Set(),
     localPlayers: [],
+    prompt: null,
+    zones: [],
+    gameOver: false,
+    matchScore: [],
+    controls: null,
+    playable: null,
     looks: null,
     screen: 'menu',
     playerName: '',
@@ -120,6 +133,22 @@ function collectRefs(value: unknown, out: number[]): void {
       if (k !== '$key') collectRefs(v, out);
     }
   }
+}
+
+/** Whether the prompt lets the player pick a card, a player or a stack item. */
+export function offersPicks(p: Prompt): boolean {
+  return p.selectable.length > 0 || p.selectablePlayers.length > 0 || p.selectableStack.length > 0;
+}
+
+export function stackTopSource(model: Model): Ref | undefined {
+  const top = derefAll(model, game(model)?.Stack)[0] as { SourceCard?: Ref } | undefined;
+  return top?.SourceCard ?? undefined;
+}
+
+/** The card a request comes from. This is the card it names. A scry names none, but is only asked while its spell resolves, so it is the top of the stack. */
+export function askingCard(model: Model, req: Request): Ref | undefined {
+  const named = 'card' in req ? req.card : undefined;
+  return named ?? (req.kind === 'manipulate' ? stackTopSource(model) : undefined);
 }
 
 export const deref = (model: Model, v: Ref | null | undefined): TrackedObject | undefined =>
