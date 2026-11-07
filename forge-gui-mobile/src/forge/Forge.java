@@ -131,6 +131,7 @@ public class Forge implements ApplicationListener {
     private static Cursor cursor0, cursor1, cursor2, cursorA0, cursorA1, cursorA2;
     public static boolean forcedEnglishonCJKMissing = false;
     public static boolean createNewAdventureMap = false;
+    public static boolean forceAdventureMode = false;
     private static Localizer localizer;
     private static boolean desktopAutoOrientation = true;
     public static final int HIGH_SPRITES_CAP = 1500; // Adventure and Classic sprites capacity
@@ -351,6 +352,24 @@ public class Forge implements ApplicationListener {
     public static Graphics getGraphics() {
         return graphics;
     }
+
+    // Draws the active global overlays. Shared by the main render loop and by scenes that must keep an
+    // overlay visible while rendering on their own (e.g. a wait spinner during an external operation).
+    public static void drawOverlays(Graphics graphics, FScreen screen, float width, float height) {
+        for (FOverlay overlay : FOverlay.getOverlays()) {
+            if (overlay.isVisibleOnScreen(screen)) {
+                overlay.screenPos.setSize(width, height);
+                overlay.setSize(width, height); //update overlay sizes as they're rendered
+                if (overlay.getRotate180()) {
+                    graphics.startRotateTransform(width / 2f, height / 2f, 180);
+                }
+                overlay.draw(graphics);
+                if (overlay.getRotate180()) {
+                    graphics.endTransform();
+                }
+            }
+        }
+    }
     public static SplashScreen getSplashScreen() {
         if (splashScreen == null)
             splashScreen = new SplashScreen();
@@ -507,7 +526,7 @@ public class Forge implements ApplicationListener {
                     if (splash != null && !splash.isBarSettled() && System.currentTimeMillis() < giveUpAt) { Timer.schedule(this, 0.03f); return; }
                     Gdx.graphics.requestRendering();
                     Gdx.app.postRunnable(() -> {
-                        if (selector.equals("Adventure")) {
+                        if (selector.equals("Adventure") || forceAdventureMode) {
                             //preload adventure resources to speedup startup if selector is adventure. Needs in edt when setting up worldstage
                             loadAdventureResources(false);
                             isMobileAdventureMode = true;
@@ -515,7 +534,7 @@ public class Forge implements ApplicationListener {
                         //selection transition
                         setTransitionScreen(new TransitionScreen(() -> {
                             boolean openedRealScreen;
-                            if (createNewAdventureMap) {
+                            if (createNewAdventureMap || forceAdventureMode) {
                                 openAdventure();
                                 clearSplashScreen();
                                 openedRealScreen = true;

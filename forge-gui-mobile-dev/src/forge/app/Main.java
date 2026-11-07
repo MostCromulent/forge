@@ -2,6 +2,8 @@ package forge.app;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
+import forge.Forge;
+import forge.adventure.DesktopAdventureMode;
 import forge.interfaces.IDeviceAdapter;
 import forge.util.*;
 import org.apache.commons.lang3.tuple.Pair;
@@ -23,6 +25,24 @@ import java.util.Optional;
 public class Main {
     private static final String versionString = BuildInfo.getVersionString();
     public static void main(String[] args) {
+        if ("true".equals(System.getProperty("FORGE_DESKTOP_ADVENTURE")) ||
+            "true".equals(System.getenv("FORGE_DESKTOP_ADVENTURE"))) {
+            DesktopAdventureMode.activate();
+            Forge.forceAdventureMode = true;
+            DesktopAdventureMode.setFocusRequest(() -> {
+                if (Gdx.graphics instanceof Lwjgl3Graphics) {
+                    // Windows blocks glfwFocusWindow() from a background process; a brief floating
+                    // toggle raises the window without leaving it pinned.
+                    long handle = ((Lwjgl3Graphics) Gdx.graphics).getWindow().getWindowHandle();
+                    GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_FLOATING, GLFW.GLFW_TRUE);
+                    GLFW.glfwFocusWindow(handle);
+                    GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_FLOATING, GLFW.GLFW_FALSE);
+                }
+            });
+            WebBattleServer.start();
+            System.out.println("Adventure Mode: battles are played in the web GUI");
+        }
+
         if (!OperatingSystem.isWindows()) {
             /* Prevents crash on non Windows OS before creating the LWJGL3 window.
                It seems it defeats the purpose of having a splash image since

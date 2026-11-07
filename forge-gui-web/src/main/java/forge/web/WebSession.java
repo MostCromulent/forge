@@ -859,7 +859,7 @@ public final class WebSession implements IHasForgeLog {
             local.endMatch();
             if (playing.back() instanceof InCampaign c) {
                 campaigns.left(playing, c);
-            } else if (move(from, playing.back()) && b != null) {
+            } else if (move(from, playing.back()) && b != null && playing.back() instanceof Event) {
                 limited.sendLimited(b);
             }
             return;

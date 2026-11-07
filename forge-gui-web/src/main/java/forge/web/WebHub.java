@@ -113,6 +113,10 @@ final class WebHub implements WebServer.Endpoint, IHasForgeLog {
         return host == null;
     }
 
+    WebSession host() {
+        return host;
+    }
+
     /** Takes the host's seat for this session if it is still free. If two claims arrive at once, only one wins. */
     synchronized boolean claimHost(final WebSession session) {
         if (host != null) {

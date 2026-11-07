@@ -71,9 +71,10 @@ public final class WebMain implements IHasForgeLog {
             if (Boolean.getBoolean("forge.web.resetOnInput")) {
                 resetOnInput(service);
             }
-            if (service.running() && !Boolean.getBoolean("forge.web.noBrowser")) {
+            if (service.running() && !Boolean.getBoolean("forge.web.noBrowser") && !AdventureBattles.asked()) {
                 openBrowser(service.url(), ui);
             }
+            AdventureBattles.startIfAsked(service, ui);
             quit.await();
         } finally {
             service.stop();

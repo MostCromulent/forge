@@ -36,6 +36,7 @@ import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.quest.QuestUtil;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
+import forge.adventure.DesktopAdventureBridge;
 import forge.gui.FThreads;
 import forge.gui.interfaces.IGuiGame;
 import forge.item.IPaperCard;
@@ -91,6 +92,7 @@ public class DuelScene extends ForgeScene {
     final int enemyAvatarKey = 90001;
     final int playerAvatarKey = 90000;
     FOptionPane bossDialogue;
+    private boolean waitingForExternalOperation = false;
     List<IPaperCard> playerExtras = new ArrayList<>();
     List<IPaperCard> AIExtras = new ArrayList<>();
     // Enemy decks generated off the GL thread; consumed (and cleared) by enter()
@@ -143,6 +145,20 @@ public class DuelScene extends ForgeScene {
 
     @Override
     public void dispose() {
+    }
+
+    @Override
+    public void render() {
+        if (!waitingForExternalOperation) {
+            return; // normal battles render through MatchController
+        }
+        // ForgeScene.render() is a no-op; draw the global overlays directly so the waiting message shows.
+        Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT);
+        float w = Forge.getScreenWidth(), h = Forge.getScreenHeight();
+        Forge.getGraphics().setProjectionMatrix(Forge.camera.combined);
+        Forge.getGraphics().begin(w, h);
+        Forge.drawOverlays(Forge.getGraphics(), getScreen(), w, h);
+        Forge.getGraphics().end();
     }
 
     public boolean hasCallbackExit() {
@@ -645,6 +661,32 @@ public class DuelScene extends ForgeScene {
         if(eventData != null && eventData.draft != null) {
             for(RegisteredPlayer p : players)
                 p.assignConspiracies();
+        }
+
+        if (DesktopAdventureBridge.isActive()) {
+            final DesktopAdventureBridge.BattleParams params = new DesktopAdventureBridge.BattleParams(
+                    players, humanPlayer, playerDeck, bossBattle, mainGameType,
+                    eventData != null ? eventData.eventRules.gamesPerMatch : enemy.getData().gamesPerMatch,
+                    enemy.getName(),
+                    eventData == null || eventData.eventRules.allowsShards,
+                    eventData != null && eventData.draft != null);
+            final String enemyName = enemy.getName();
+            DesktopAdventureBridge.runBattle(params, new DesktopAdventureBridge.BattleResultListener() {
+                @Override public void onWaitStart() {
+                    waitingForExternalOperation = true;
+                }
+                @Override public void onComplete(final boolean humanWon) {
+                    waitingForExternalOperation = false;
+                    afterGameEnd(enemyName, humanWon);
+                    exitDuelScene();
+                }
+                @Override public void onError() {
+                    waitingForExternalOperation = false;
+                    afterGameEnd(enemyName, false);
+                    exitDuelScene();
+                }
+            });
+            return;
         }
 
         final Map<RegisteredPlayer, IGuiGame> guiMap = new HashMap<>();

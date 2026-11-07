@@ -287,6 +287,10 @@ public final class ServerControl implements IHasForgeLog {
         return now == null ? 0 : now.playersHere();
     }
 
+    WebSessions sessions() {
+        return sessions;
+    }
+
     /** The port the browser connects on. While stopped, the port that the next start will use. */
     public synchronized int port() {
         return server == null ? WebServer.configuredPort() : server.port();
