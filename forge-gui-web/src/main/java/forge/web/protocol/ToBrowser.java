@@ -1,5 +1,6 @@
 package forge.web.protocol;
 
+import forge.game.GameLogVerbosity;
 import forge.gamemodes.net.DeltaPacket;
 import forge.web.protocol.FromBrowser.EventKind;
 import forge.web.protocol.Wire.Event;
@@ -58,6 +59,20 @@ public final class ToBrowser {
     }
 
     static final List<Class<? extends Record>> EVENTS = Wire.marked(Event.class);
+
+    /** The Forge preferences the options dialog shares with the desktop client. */
+    public record ServerSettings(boolean interruptAttackers, boolean interruptOpponentSpell, boolean interruptTargeting,
+            boolean interruptTriggers, boolean interruptMassRemoval, boolean interruptReveal,
+            String suggestStackYield, String suggestNoActions, boolean suppressAfterYield, boolean suppressOwnTurn,
+            String autoYieldMode, GameLogVerbosity logDetail, boolean devMode,
+            String highlightColor, int soundVolume, int musicVolume, String soundSet, List<String> soundSets,
+            boolean filteredHands, String mulliganRule, List<String> mulliganRules,
+            String aiProfile, List<String> aiProfiles, boolean ante, String undoMode, boolean draftRanking, List<ShortcutPref> shortcuts) {
+    }
+
+    /** One of Forge's keyboard shortcut preferences: its name, its label, and its keys and default keys as Java key codes separated by spaces. */
+    public record ShortcutPref(String pref, String label, String keys, String defaultKeys) {
+    }
 
     /** Every message record. The TypeScript is generated from these. */
     static final List<Class<? extends Record>> MESSAGES = Wire.marked(Message.class);

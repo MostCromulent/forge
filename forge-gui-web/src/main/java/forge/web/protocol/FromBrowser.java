@@ -1,5 +1,6 @@
 package forge.web.protocol;
 
+import forge.game.phase.PhaseType;
 import forge.web.protocol.Wire.Command;
 import forge.web.protocol.Wire.Nullable;
 
@@ -40,6 +41,15 @@ public final class FromBrowser {
 
     @Command("start")
     public record Start(boolean spectate) {
+    }
+
+    /** Sets every stop of one row instead of toggling them, so a browser can restore its remembered stops. Null phases means Forge's defaults. */
+    @Command("setStops")
+    public record SetStops(boolean mine, @Nullable List<PhaseType> phases) {
+    }
+
+    @Command("setSetting")
+    public record SetSetting(String key, String value) {
     }
 
     /** Every command record. The TypeScript is generated from these. */

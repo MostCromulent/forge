@@ -4,6 +4,7 @@ import { render } from 'preact';
 import { Menu, NamePrompt } from './menu';
 import { rememberedName } from './identity';
 import { HostChoice } from './hostchoice';
+import { Options } from './options';
 import { Volume } from './volume';
 import { Notices } from './notices';
 import { isPortrait } from './form';
@@ -40,6 +41,7 @@ export function renderScreens(model: Model, actions: Actions): void {
     {/* A phone has no speaker among the tools. Its volume is opened from the game menu, so it opens by that menu's button */}
     {page === 'match' && ui.volumeOpen && <Volume anchor={isPortrait() ? '#match .tools .more' : '#match .tools .volume'} close={() => changeUi(u => { u.volumeOpen = false; })} />}
     {page !== 'match' && ui.volumeOpen && <Volume anchor=".page-head .volume, .ph-more" close={() => changeUi(u => { u.volumeOpen = false; })} />}
+    {page !== 'name' && ui.optionsOpen && <Options close={() => changeUi(u => { u.optionsOpen = false; })} />}
     {model.hostChoice && <HostChoice key={model.hostChoice.id} question={model.hostChoice} actions={actions} />}
   </>, byId('dialog-layer'));
   render(<Notices model={model} />, byId('notices'));

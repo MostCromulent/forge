@@ -5,6 +5,7 @@ import { reducedMotion } from './dom';
 
 /** resetMatchUi clears the fields that belong to one match. main.ts clears the fields used by only one layout when the layout changes. */
 export interface UiState {
+  optionsOpen: boolean;
   /** The volume control beside the options button is open. */
   volumeOpen: boolean;
   /** The play choice whose game kinds the start page shows. It is kept so that going back from a table returns there. */
@@ -12,6 +13,7 @@ export interface UiState {
 }
 
 export const ui: UiState = {
+  optionsOpen: false,
   volumeOpen: false,
   menuChoice: null,
 } as UiState;
@@ -48,6 +50,14 @@ export function eased(change: (state: UiState) => void, mark: () => Record<strin
       drawNow();
     }
   }, () => changeUi(change), mark);
+}
+
+/** Like eased, for a change to a component's own state. Preact draws that change shortly after it is made, not at once. */
+export function easedLocal(change: () => void, mark: () => Record<string, string>): void {
+  transition(async () => {
+    change();
+    await new Promise(drawn => setTimeout(drawn));
+  }, change, mark);
 }
 
 /** Runs update inside a view transition with mark's attributes on the root, or runs still when motion is off or unsupported. */

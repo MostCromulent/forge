@@ -29,6 +29,9 @@ import type { Send, ServerMessage } from './protocol';
 
 const model = createModel();
 let scheduled = false;
+// A guest's settings are kept in its server session, so the browser sends the settings it stored to each session it is given.
+// A seat handed over moves the browser to another session on the same connection
+let restoredFor: number | null = null;
 // A sound or log line arrives before its board update. It is applied after that board, or alone after 300 ms if no board follows (pace.ts)
 const send = connect(behindItsBoard(msg => pacer.receive(msg), 300), online => {
   byId('banner').hidden = online;
@@ -72,6 +75,10 @@ initForm(() => {
 });
 initNotices(model, schedule);
 initPress();
+initSettings(actions.setSetting, () => {
+  applyAudioSettings();
+  schedule();
+});
 
 function apply(msg: ServerMessage): void {
   switch (msg.t) {

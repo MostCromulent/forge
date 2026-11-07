@@ -50,6 +50,21 @@ public final class WebSession implements IHasForgeLog {
             // LocalGame runs on the host UI thread, so host-side dialogs during setup never block a web server thread
             .on(Start.class, (s, ch, st) -> s.ui.invokeInEdtLater(() -> s.start(ch, st)))
             .on(Plain.leave, (s, ch, c) -> s.ui.invokeInEdtLater(s::leave))
+            // A setting changed before a match is used to set up the match. During a match the game is told as well
+            .on(SetSetting.class, (s, ch, set) -> {
+                if (s.stage instanceof Playing p) {
+                    p.gui().setSetting(set);
+                } else {
+                    WebSettings.set(s.settings, null, set.key(), set.value());
+                }
+            })
+            .on(SetStops.class, (s, ch, stops) -> {
+                if (s.stage instanceof Playing p) {
+                    p.gui().setStops(stops);
+                } else {
+                    WebSettings.setStops(s.settings, stops.mine(), stops.phases());
+                }
+            });
     private final WebGuiBase ui;
     private final WebSessions sessions;
     /** True for the browser that claimed the host's seat. Only that browser may set up the table. */
@@ -59,6 +74,8 @@ public final class WebSession implements IHasForgeLog {
     private final LocalGame local = new LocalGame();
     private volatile BrowserChannel browser;
     private volatile Stage stage = new Menu();
+    /** This player's settings: a guest's own, or the host's, which are Forge's preferences. */
+    private volatile PlayerSettings settings = PlayerSettings.fresh();
     /** The name this browser chose to play under. Null until it chooses one. */
     private volatile String name;
     /** The avatar chosen next to the name, held here before any seat exists. Null until it chooses one. */
@@ -184,6 +201,10 @@ public final class WebSession implements IHasForgeLog {
         if (!isHost) {
             tell(hello());
         }
+    }
+
+    public PlayerSettings settings() {
+        return settings;
     }
 
     /** The saved player name belongs to the host, so only a host that has not chosen a name plays under it. */

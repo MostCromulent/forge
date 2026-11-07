@@ -35,6 +35,17 @@ html[data-screen] :is(#menu, #lobby, #limited, #drafting) > *, html[data-screen]
 @keyframes page-in { from { opacity: 0; translate: 40px 0; } }
 @keyframes page-out-back { to { opacity: 0; translate: 40px 0; } }
 @keyframes page-in-back { from { opacity: 0; translate: -40px 0; } }
+/* The options rail runs down the side, so its pages slide up and down. The rail page has its own transition name, so the screen behind does not slide too. */
+html[data-rail]::view-transition-old(rail-page) { animation: .2s cubic-bezier(.2,.7,.3,1) both rail-out; }
+html[data-rail]::view-transition-new(rail-page) { animation: .24s cubic-bezier(.2,.7,.3,1) both rail-in; }
+html[data-rail="back"]::view-transition-old(rail-page) { animation-name: rail-out-back; }
+html[data-rail="back"]::view-transition-new(rail-page) { animation-name: rail-in-back; }
+@keyframes rail-out { to { opacity: 0; translate: 0 -16px; } }
+@keyframes rail-in { from { opacity: 0; translate: 0 16px; } }
+@keyframes rail-out-back { to { opacity: 0; translate: 0 16px; } }
+@keyframes rail-in-back { from { opacity: 0; translate: 0 -16px; } }
+html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .deck-menu, .host-choice, .zone-panel, .zone-bar,
+  #menu > *, #lobby > *, #editor > *, #limited > *, #drafting > *) { animation: none; }
 .backdrop[hidden] { display: none; }
 .backdrop { position: fixed; inset: 0; background: #0009; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 16px; z-index: 50; }
 .dialog { margin: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; max-width: min(90vw, 900px); max-height: calc(100vh - 32px); overflow: auto; display: grid; gap: 10px; }
@@ -49,3 +60,18 @@ html[data-screen] :is(#menu, #lobby, #limited, #drafting) > *, html[data-screen]
 .dialog .actions button.danger:hover:not(:disabled) { background: linear-gradient(180deg, color-mix(in srgb, #d4573f 65%, #fff), #c94d37); }
 /* A card's list of what it can do is a menu on the card, not a window in the middle of the board */
 .backdrop.anchored { background: none; }
+/* Each mat's picture gets the same dark layer the board would give it, so the brightness setting shows on the pictures too (board.css) */
+.playmat-choice { display: grid; gap: 12px; }
+.playmat-choice .mats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(120px, 28%), 1fr)); gap: 10px; }
+/* Rows keep their own height. A picture stretched by a wrapped label in the same row would widen past its tile. */
+.playmat-choice .mat { min-width: 0; display: grid; align-content: start; gap: 6px; padding: 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2);
+  color: var(--text); font-size: 12.5px; text-align: left; }
+.playmat-choice .mat:hover { border-color: var(--line-bright); }
+.playmat-choice .mat .pic { display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 6px; filter: saturate(var(--mat-saturate, 1));
+  background: radial-gradient(120% 90% at 50% 42%, rgb(10 13 19 / calc(var(--mat-wash, 0) - .12)) 0%, rgb(8 10 15 / calc(var(--mat-wash, 0) + .12)) 100%),
+    var(--thumb) center / cover no-repeat; }
+.playmat-choice .mat .pic.plain { filter: none; background: radial-gradient(120% 90% at 50% 42%, #1a202c 0%, #0f131b 100%); }
+.playmat-choice .mat.on { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); background: var(--accent-soft); }
+.playmat-choice .brightness { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted); }
+.playmat-choice .seg { border-radius: 7px; }
+.playmat-choice .seg button { padding: 5px 12px; font-size: 12.5px; }
