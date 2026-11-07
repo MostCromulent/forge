@@ -113,10 +113,12 @@ html[data-motion="reduced"] #opponent.tabbed > .seat > * { animation: none; }
 /* While the seat was hidden it had no size to fit its cards to. So the cards take their size at once and do not grow as they slide in. */
 #opponent.tabbed > .seat:is(.from-right, .from-left), #opponent.tabbed > .seat:is(.from-right, .from-left) .group { transition: none; }
 /* Quadrants: the table is split into four quarters. You are in the bottom left with your hand below you. The other players go round the table. */
-/* The two halves of the table stay the same height whatever their cards need */
-#match.quads { grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr) auto; grid-template-columns: 1fr 1fr var(--side-w); grid-template-areas: "q1 q2 side" "phase phase side" "me q3 side" "hand q3 side"; }
-#match.quads[data-opponents="2"] { grid-template-areas: "q1 q2 side" "phase phase side" "me me side" "hand hand side"; }
-#match.quads.side-folded { grid-template-columns: 1fr 1fr; grid-template-areas: "q1 q2" "phase phase" "me q3" "hand q3"; }
+/* The quarters are the same size whatever their cards need. Your hand is inside your quarter, along its bottom, so the phase pill sits in the middle */
+#match.quads { grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--side-w); grid-template-areas: "q1 q2 side" "phase phase side" "me q3 side"; }
+#match.quads[data-opponents="2"] { grid-template-areas: "q1 q2 side" "phase phase side" "me me side"; }
+#match.quads.side-folded { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "q1 q2" "phase phase" "me q3"; }
+#match.quads #hand { grid-area: me; }
+#match.many.quads #me { margin-bottom: 0; }
 #match.quads #opponent { display: contents; }
 #match.quads #opponent > .seat:nth-child(1) { grid-area: q1; }
 #match.quads #opponent > .seat:nth-child(2) { grid-area: q2; }
