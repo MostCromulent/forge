@@ -1,21 +1,43 @@
 // Page layout state that stays in this browser and is never sent to the server. The match table state is cleared by each new match (resetMatchUi).
 // The menu pages' tabs and open panels are kept across matches
 
+import { storeJson, storedJson } from './storage';
 import { reducedMotion } from './dom';
 
 /** resetMatchUi clears the fields that belong to one match. main.ts clears the fields used by only one layout when the layout changes. */
 export interface UiState {
+  /** Battlefield piles the player has expanded to show each card, keyed by the pile's signature. */
+  openPiles: Set<string>;
   optionsOpen: boolean;
   /** The volume control beside the options button is open. */
   volumeOpen: boolean;
   /** The play choice whose game kinds the start page shows. It is kept so that going back from a table returns there. */
   menuChoice: 'play' | 'friends' | null;
+  /** Which side column panels are open. Stored in the browser across sessions. */
+  sidePanels: { log: boolean; chat: boolean };
+  /** For layouts that show one opponent at a time. These hold the shown seat, the turn the player last chose one, and whether the phone's seat list is open. */
+  openSeat: number | null;
+  seatChosenTurn: number;
+  seatsOpen: boolean;
+  /** The permanents each opponent had when their seat was last shown, keyed by player. */
+  seenOnField: Map<number, Set<number>>;
+  /** The phone's menu sheet, and which of its tabs is shown. */
+  menuSheet: 'log' | 'chat' | 'players' | null;
 }
 
+const SIDE_KEY = 'forge.sidePanels';
+
 export const ui: UiState = {
+  openPiles: new Set(),
   optionsOpen: false,
   volumeOpen: false,
   menuChoice: null,
+  sidePanels: { log: true, chat: true, ...storedSidePanels() },
+  openSeat: null,
+  seatChosenTurn: 0,
+  seatsOpen: false,
+  seenOnField: new Map(),
+  menuSheet: null,
 } as UiState;
 
 let redraw: () => void = () => {};
@@ -84,4 +106,42 @@ export function changeUi(change: (state: UiState) => void): void {
 /** Schedules a redraw for a change outside ui, such as a stored preference or an image that failed to load. */
 export function redrawUi(): void {
   redraw();
+}
+
+/** Clears the match state for a new match, because its cards are gone. The side column panels and menu state are kept. */
+export function resetMatchUi(): void {
+  ui.openPiles.clear();
+  ui.openZones.clear();
+  ui.zonesMinimised = false;
+  ui.requestFolded = null;
+  ui.zoneSearch = '';
+  ui.zoneSort = 'order';
+  ui.zoneChoice = null;
+  ui.hoveredStackItem = null;
+  ui.stackMenuAt = null;
+  ui.stopsOpen = false;
+  ui.optionsOpen = false;
+  ui.concedeAsk = false;
+  ui.gameMenu = null;
+  ui.macro = 'none';
+  ui.volumeOpen = false;
+  ui.menuSheet = null;
+  ui.picker = null;
+  ui.hover = null;
+  ui.inspect = false;
+  ui.handOpen = false;
+  ui.openSeat = null;
+  ui.zonesFor = null;
+  ui.seatChosenTurn = 0;
+  ui.seatsOpen = false;
+  ui.seenOnField.clear();
+  ui.faceIndex = 0;
+}
+
+export function rememberSidePanels(): void {
+  storeJson(SIDE_KEY, ui.sidePanels);
+}
+
+function storedSidePanels(): Partial<UiState['sidePanels']> {
+  return storedJson(SIDE_KEY, {});
 }

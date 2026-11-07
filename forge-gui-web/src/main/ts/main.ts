@@ -12,6 +12,7 @@ import { renderScreens, pageUnder, screenOf, slideWay } from './screens';
 import { renderMatch, renderSky, resetTable } from './match/board';
 import { arriveAtMatch, dimIntoMatch } from './match/entry';
 import { renderPrompt, flash, pressPromptButton } from './match/prompt';
+import { appendLog, initLog, logTints } from './match/log';
 import { initSide, renderSide, showLog } from './match/side';
 import { initDetail, nextFace, renderDetail } from './preview';
 import { initOverlay, drawOverlay } from './match/overlay';
@@ -75,6 +76,8 @@ initForm(() => {
 });
 initNotices(model, schedule);
 initPress();
+initLog();
+initSide();
 initSettings(actions.setSetting, () => {
   applyAudioSettings();
   schedule();
@@ -152,6 +155,27 @@ function apply(msg: ServerMessage): void {
       }
       model.error = msg.message;
       break;
+    case 'state':
+      applyState(model, msg);
+      // The next game of a match reuses the previous game's card keys, so all state keyed on them is cleared
+      if (msg.full) {
+        model.gameOver = false;
+        model.matchScore = [];
+        model.prompt = null;
+        model.drawOffer = null;
+        model.zones = [];
+        model.playable = null;
+        model.cardDetails.clear();
+        model.playerDetails.clear();
+        model.stackMenu = null;
+        resetMatchUi();
+        resetTable();
+      }
+      break;
+    case 'sound': playSound(msg); return;
+    case 'log':
+      appendLog(msg, logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) }))));
+      return;
     case 'notice': showNotice(msg); break;
   }
   schedule();

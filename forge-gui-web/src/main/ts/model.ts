@@ -10,6 +10,10 @@ interface Looks {
 
 // All the state the browser holds. objects is its copy of the game's objects. forge.web.match.BrowserModel applies and prunes them by the same rules
 export interface Model {
+  objects: Map<number, TrackedObject>;
+  root: number;
+  visible: Set<number>;
+  localPlayers: number[];
   looks: Looks | null;
   /** The page the server shows the browser. 'opening' means a seat is being taken, between the menu and the table. */
   screen: Screen;
@@ -19,6 +23,8 @@ export interface Model {
   canClaimHost: boolean;
   /** Whether the host's seat needs the host password from this browser. */
   hostPassword: boolean;
+  /** Game events since the board was last drawn, oldest first. The render empties it so each event is shown once. */
+  events: GameEvent[];
   /** A question outside a match that the host is waiting for an answer to. */
   hostChoice: HostChoice | null;
   /** This browser has sent its saved name to the server, and the answer has not arrived yet. */
@@ -29,6 +35,10 @@ export interface Model {
 
 export function createModel(): Model {
   return {
+    objects: new Map(),
+    root: -1,
+    visible: new Set(),
+    localPlayers: [],
     looks: null,
     screen: 'menu',
     playerName: '',
@@ -36,8 +46,100 @@ export function createModel(): Model {
     host: true,
     canClaimHost: false,
     hostPassword: false,
+    events: [],
     hostChoice: null,
     nameSent: false,
     notices: [],
   } as Model;
 }
+
+export function applyState(model: Model, msg: StateMessage): void {
+  if (msg.full) {
+    model.objects.clear();
+    model.root = msg.root;
+    // A full state replaces every object, so older events have nothing left to animate from
+    model.events = [];
+  }
+  model.events.push(...msg.events);
+  for (const [k, props] of Object.entries(msg.newObjects)) {
+    model.objects.set(Number(k), { ...withoutNulls(props), $key: Number(k) });
+  }
+  for (const [k, props] of Object.entries(msg.deltas)) {
+    const target = model.objects.get(Number(k)) as Record<string, unknown> | undefined;
+    if (!target) continue;
+    for (const [name, value] of Object.entries(props)) {
+      if (value === null) delete target[name];
+      else target[name] = value;
+    }
+  }
+  // Only a new object, or a property set to null, an object or a list, can orphan an object. Other packets skip the walk
+  const mayOrphan = msg.full || Object.keys(msg.newObjects).length > 0
+    || Object.values(msg.deltas).some(props => Object.values(props).some(v => v === null || typeof v === 'object'));
+  if (mayOrphan) prune(model);
+  model.visible = new Set(msg.visible);
+  model.localPlayers = msg.localPlayers;
+}
+
+/** A property at its default is left out of an object. A null in a new object means the same, so it is dropped. */
+function withoutNulls<T extends object>(props: T): T {
+  return Object.fromEntries(Object.entries(props).filter(([, v]) => v !== null)) as T;
+}
+
+// Packets do not mark removed objects, so any object no longer reachable from the root is dropped here
+function prune(model: Model): void {
+  if (!model.objects.has(model.root)) return;
+  const reachable = new Set<number>();
+  const todo = [model.root];
+  while (todo.length) {
+    const key = todo.pop() as number;
+    if (reachable.has(key)) continue;
+    reachable.add(key);
+    const o = model.objects.get(key);
+    if (o) collectRefs(o, todo);
+  }
+  for (const key of [...model.objects.keys()]) {
+    if (!reachable.has(key)) model.objects.delete(key);
+  }
+}
+
+function collectRefs(value: unknown, out: number[]): void {
+  if (Array.isArray(value)) {
+    value.forEach(v => collectRefs(v, out));
+  } else if (value && typeof value === 'object') {
+    const keys = Object.keys(value);
+    if (keys.length === 1 && keys[0] === 'ref') {
+      out.push((value as Ref).ref);
+      return;
+    }
+    for (const [k, v] of Object.entries(value)) {
+      if (k !== '$key') collectRefs(v, out);
+    }
+  }
+}
+
+export const deref = (model: Model, v: Ref | null | undefined): TrackedObject | undefined =>
+  (v && typeof v === 'object' && 'ref' in v) ? model.objects.get(v.ref) : undefined;
+export const derefAll = (model: Model, list: Refs | null | undefined): TrackedObject[] =>
+  (list ?? []).map(v => deref(model, v)).filter((o): o is TrackedObject => !!o);
+export const game = (model: Model): GameView | undefined => model.objects.get(model.root);
+/** The extra cost to cast a commander from the command zone. It is two for each earlier cast. */
+export function commanderTax(player: PlayerView | undefined, card: CardView): number {
+  const cast = (player?.CommanderCast ?? []).find(c => c.card.ref === card.$key);
+  return (cast?.value ?? 0) * 2;
+}
+
+/** The steps in which the board shows combat. Forge keeps the combat until the end of combat step, which comes after damage. */
+const COMBAT_SHOWN = new Set(['COMBAT_DECLARE_ATTACKERS', 'COMBAT_DECLARE_BLOCKERS', 'COMBAT_FIRST_STRIKE_DAMAGE', 'COMBAT_DAMAGE']);
+export const combatShown = (model: Model): boolean => COMBAT_SHOWN.has(game(model)?.Phase ?? '');
+export const players = (model: Model): PlayerView[] => derefAll(model, game(model)?.Players);
+export const isLocal = (model: Model, player: PlayerView): boolean => model.localPlayers.includes(player.$key);
+export const me = (model: Model): PlayerView | undefined => players(model).find(p => isLocal(model, p));
+export const opponents = (model: Model): PlayerView[] => players(model).filter(p => !isLocal(model, p));
+const PLAYER_ZONES: ReadonlySet<string> = new Set<PlayerZone>(['Hand', 'Library', 'Graveyard', 'Battlefield', 'Exile',
+  'Flashback', 'Command', 'Sideboard', 'Ante', 'SchemeDeck', 'PlanarDeck', 'AttractionDeck', 'Junkyard', 'ContraptionDeck', 'StickerSheets']);
+const isPlayerZone = (name: ZoneType): name is PlayerZone => PLAYER_ZONES.has(name);
+
+/** The cards in one of a player's zones. A zone that is not a player's, such as the stack or a merged pile, returns none. */
+export const zone = (model: Model, player: PlayerView | undefined, name: ZoneType): CardView[] =>
+  isPlayerZone(name) ? derefAll(model, player?.[name]) : [];
+export const stateOf = (model: Model, card: CardView): Partial<CardStateView> => deref(model, card.CurrentState) ?? {};
