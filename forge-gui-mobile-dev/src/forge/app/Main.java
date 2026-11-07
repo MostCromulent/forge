@@ -34,10 +34,9 @@ public class Main {
                 System.out.println("Adventure Mode: battles are played in the web GUI");
             }
             DesktopAdventureMode.setFocusRequest(() -> {
-                if (Gdx.graphics instanceof Lwjgl3Graphics) {
-                    // Windows blocks glfwFocusWindow() from a background process; a brief floating
-                    // toggle raises the window without leaving it pinned.
-                    long handle = ((Lwjgl3Graphics) Gdx.graphics).getWindow().getWindowHandle();
+                if (Gdx.graphics instanceof Lwjgl3Graphics graphics) {
+                    // Windows ignores glfwFocusWindow() from a background window, so it is briefly made topmost
+                    long handle = graphics.getWindow().getWindowHandle();
                     GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_FLOATING, GLFW.GLFW_TRUE);
                     GLFW.glfwFocusWindow(handle);
                     GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_FLOATING, GLFW.GLFW_FALSE);

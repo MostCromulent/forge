@@ -847,7 +847,7 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    /** Leaves the match: to the pool or campaign it came from, to a new table of the same kind for the host, or to the menu for a guest. */
+    /** Leaves the match: to the pool, campaign or menu it came from, to a new table of the same kind for the host, or to the menu for a guest. */
     private void leave() {
         final Stage from = stage;
         if (!(from instanceof Playing playing)) {

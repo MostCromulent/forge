@@ -1,11 +1,6 @@
 package forge.adventure;
 
-/**
- * Owns the activation state of the experimental Desktop Adventure Mode. Both
- * the desktop process (which spawns Adventure) and the mobile process (which
- * runs Adventure) consult this class to decide whether the IPC battle handoff
- * should be used.
- */
+/** Whether adventure hands its battles to the web server it started, and how adventure brings its window back afterwards. */
 public final class DesktopAdventureMode {
     private static boolean active = false;
     private static Runnable focusRequest;
@@ -18,10 +13,6 @@ public final class DesktopAdventureMode {
 
     public static void activate() {
         active = true;
-    }
-
-    public static void deactivate() {
-        active = false;
     }
 
     public static void setFocusRequest(Runnable r) {

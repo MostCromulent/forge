@@ -2,6 +2,7 @@ package forge.adventure.scene;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Array;
 import com.google.common.collect.ImmutableList;
@@ -12,6 +13,7 @@ import forge.LobbyPlayer;
 import forge.card.CardRenderer;
 import forge.card.CardRenderer.CardStackPosition;
 import forge.card.CardZoom;
+import forge.adventure.DesktopAdventureBridge;
 import forge.adventure.character.EnemySprite;
 import forge.adventure.character.PlayerSprite;
 import forge.adventure.data.*;
@@ -36,7 +38,6 @@ import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.quest.QuestUtil;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
-import forge.adventure.DesktopAdventureBridge;
 import forge.gui.FThreads;
 import forge.gui.interfaces.IGuiGame;
 import forge.item.IPaperCard;
@@ -153,7 +154,7 @@ public class DuelScene extends ForgeScene {
             return; // normal battles render through MatchController
         }
         // ForgeScene.render() is a no-op; draw the global overlays directly so the waiting message shows.
-        Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         float w = Forge.getScreenWidth(), h = Forge.getScreenHeight();
         Forge.getGraphics().setProjectionMatrix(Forge.camera.combined);
         Forge.getGraphics().begin(w, h);
@@ -665,9 +666,8 @@ public class DuelScene extends ForgeScene {
 
         if (DesktopAdventureBridge.isActive()) {
             final DesktopAdventureBridge.BattleParams params = new DesktopAdventureBridge.BattleParams(
-                    players, humanPlayer, playerDeck, bossBattle, mainGameType, eventData != null ? mainGameType : GameType.Adventure,
+                    players, humanPlayer, playerDeck, mainGameType, eventData != null ? mainGameType : GameType.Adventure,
                     eventData != null ? eventData.eventRules.gamesPerMatch : enemy.getData().gamesPerMatch,
-                    enemy.getName(),
                     eventData == null || eventData.eventRules.allowsShards,
                     eventData != null && eventData.draft != null);
             final String enemyName = enemy.getName();

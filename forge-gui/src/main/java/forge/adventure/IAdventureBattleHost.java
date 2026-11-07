@@ -18,11 +18,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Interface and data classes for IPC-based Adventure battles.
- * Allows Adventure mode (running in a separate process) to trigger battles
- * that are hosted by the desktop GUI with its native Swing UI.
- */
+/** The files through which adventure hands a battle to the web server it started, and through which the server sends back the result. */
 public class IAdventureBattleHost {
 
     private static final String IPC_SUBDIR = "forge_adventure_ipc";
@@ -33,58 +29,51 @@ public class IAdventureBattleHost {
     private static final String HUMAN_DECK_FILE = "human_deck.dck";
     private static final String AI_DECK_PREFIX = "ai_deck_";
 
-    /** Env var the desktop launcher uses to hand its private per-launch IPC directory to the spawned Adventure process. */
+    /** Names the folder for the web server that adventure starts. */
     public static final String IPC_DIR_ENV = "FORGE_ADVENTURE_IPC_DIR";
 
-    // Resolved once from the launcher-supplied env var (spawned process) or the default temp path (standalone).
-    // The launcher overrides it in its own process via setIpcDir so both sides agree on a private directory.
-    private static volatile String ipcDir = resolveInitialDir();
+    // Adventure sets it with setIpcDir. The web server reads it from the environment adventure gave it
+    private static volatile String ipcDir = System.getenv(IPC_DIR_ENV);
 
-    private static String defaultBaseDir() {
-        return System.getProperty("java.io.tmpdir") + File.separator + IPC_SUBDIR;
-    }
-
-    private static String resolveInitialDir() {
-        String fromEnv = System.getenv(IPC_DIR_ENV);
-        return (fromEnv != null && !fromEnv.isEmpty()) ? fromEnv : defaultBaseDir();
-    }
-
-    /** A fresh, unique IPC directory for one launch, so stale files from a prior or concurrent session can't bleed in. */
+    /** A new folder for one launch, so files left by an earlier launch are never read. */
     public static String newLaunchDir() {
-        return defaultBaseDir() + File.separator + "launch_" + ProcessHandle.current().pid() + "_" + System.nanoTime();
+        return System.getProperty("java.io.tmpdir") + File.separator + IPC_SUBDIR + File.separator
+                + "launch_" + ProcessHandle.current().pid() + "_" + System.nanoTime();
     }
 
-    /** Points both the launcher and its spawned process at the same private per-launch directory. */
     public static void setIpcDir(String dir) {
-        if (dir != null && !dir.isEmpty()) {
-            ipcDir = dir;
-        }
+        ipcDir = dir;
     }
 
     public static String getIpcDir() {
         return ipcDir;
     }
 
-    public static Path getBattleRequestPath() {
+    private static Path getBattleRequestPath() {
         return Paths.get(ipcDir, BATTLE_REQUEST_FILE);
     }
 
-    public static Path getBattleResultPath() {
+    private static Path getBattleResultPath() {
         return Paths.get(ipcDir, BATTLE_RESULT_FILE);
     }
 
-    public static Path getBattlePendingSignalPath() {
+    private static Path getBattlePendingSignalPath() {
         return Paths.get(ipcDir, BATTLE_PENDING_SIGNAL);
     }
 
-    public static Path getBattleCompleteSignalPath() {
+    private static Path getBattleCompleteSignalPath() {
         return Paths.get(ipcDir, BATTLE_COMPLETE_SIGNAL);
     }
 
-    /**
-     * Ensures the IPC directory exists.
-     */
-    public static void ensureIpcDir() {
+    private static Path getHumanDeckPath() {
+        return Paths.get(ipcDir, HUMAN_DECK_FILE);
+    }
+
+    private static Path getAiDeckPath(int index) {
+        return Paths.get(ipcDir, AI_DECK_PREFIX + index + ".dck");
+    }
+
+    private static void ensureIpcDir() {
         try {
             Files.createDirectories(Paths.get(ipcDir));
         } catch (IOException e) {
@@ -92,14 +81,11 @@ public class IAdventureBattleHost {
         }
     }
 
-    /**
-     * Removes the entire per-launch IPC directory tree. Called on launcher shutdown.
-     */
     public static void purgeIpcDir() {
         FileUtil.deleteDirectory(Paths.get(ipcDir).toFile());
     }
 
-    // Creates the file if absent; a signal left over from a prior battle is fine, its existence is all that matters.
+    // A signal left over from a prior battle is fine, its existence is all that matters
     private static void touch(Path path) throws IOException {
         try {
             Files.createFile(path);
@@ -107,8 +93,7 @@ public class IAdventureBattleHost {
         }
     }
 
-    // Writes to a temp sibling then moves it onto the target so a reader never observes a half-written object,
-    // and a stale target from a prior battle is replaced rather than colliding.
+    // Written to a temp sibling and moved into place, so a reader never sees a half-written object
     private static void writeObjectAtomic(Path target, Serializable obj) throws IOException {
         ensureIpcDir();
         Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
@@ -122,45 +107,25 @@ public class IAdventureBattleHost {
         }
     }
 
-    public static Path getHumanDeckPath() {
-        return Paths.get(ipcDir, HUMAN_DECK_FILE);
-    }
-
-    public static Path getAiDeckPath(int index) {
-        return Paths.get(ipcDir, AI_DECK_PREFIX + index + ".dck");
-    }
-
-    /**
-     * Saves a deck to the IPC directory.
-     */
     public static void saveHumanDeck(Deck deck) {
         ensureIpcDir();
         DeckSerializer.writeDeck(deck, getHumanDeckPath().toFile());
     }
 
-    /**
-     * Saves an AI deck to the IPC directory.
-     */
     public static void saveAiDeck(Deck deck, int index) {
         ensureIpcDir();
         DeckSerializer.writeDeck(deck, getAiDeckPath(index).toFile());
     }
 
-    /**
-     * Loads the human deck from the IPC directory.
-     */
     public static Deck loadHumanDeck() {
         return DeckSerializer.fromFile(getHumanDeckPath().toFile());
     }
 
-    /**
-     * Loads an AI deck from the IPC directory.
-     */
     public static Deck loadAiDeck(int index) {
         return DeckSerializer.fromFile(getAiDeckPath(index).toFile());
     }
 
-    /** Resolve serialized card names back to paper cards/tokens — mirrors EffectData's lookup, run on the desktop side. */
+    /** Turns card names back into cards or tokens, as adventure's EffectData does. */
     public static List<IPaperCard> resolveCards(List<String> names) {
         List<IPaperCard> cards = new ArrayList<>();
         if (names == null) {
@@ -186,23 +151,18 @@ public class IAdventureBattleHost {
         return cards;
     }
 
-    /**
-     * Data class representing a battle request from Adventure mode.
-     */
     public static class BattleRequest implements Serializable {
         private static final long serialVersionUID = 2L;
 
-        public String humanPlayerName;
         public int humanStartingLife;
         public int humanManaShards;
-        public int humanAvatarIndex;
         public int humanStartingHand;
         public boolean humanEnableETBCountersEffect;
-        // Adventure effects (items, blessings, chaos extras) that start cards in play — must cross the IPC.
+        // Cards that adventure effects such as items and blessings start in play
         public List<String> humanExtraCardsOnBattlefield = new ArrayList<>();
         public List<String> humanExtraCardsInCommandZone = new ArrayList<>();
 
-        // aiPlayers.size() also tells the desktop how many AI deck files to load
+        // Its size is also the number of AI deck files
         public List<AIPlayerData> aiPlayers = new ArrayList<>();
 
         public String gameType = "Adventure";
@@ -212,22 +172,13 @@ public class IAdventureBattleHost {
         public boolean playForAnte = false;
         public boolean matchAnteRarity = false;
         public boolean anteIncludeBasicLands = false;
-        public boolean isBossBattle = false;
         public boolean assignConspiracies = false;
 
-        public String enemyName;
-
-        /**
-         * Writes this request to the IPC file.
-         */
         public void write() throws IOException {
             writeObjectAtomic(getBattleRequestPath(), this);
             touch(getBattlePendingSignalPath());
         }
 
-        /**
-         * Reads a request from the IPC file.
-         */
         public static BattleRequest read() throws IOException, ClassNotFoundException {
             try (ObjectInputStream ois = new ObjectInputStream(
                     new FileInputStream(getBattleRequestPath().toFile()))) {
@@ -236,9 +187,6 @@ public class IAdventureBattleHost {
         }
     }
 
-    /**
-     * Data class for AI player in a battle.
-     */
     public static class AIPlayerData implements Serializable {
         private static final long serialVersionUID = 2L;
 
@@ -250,35 +198,24 @@ public class IAdventureBattleHost {
         public int startingHand;
         public int manaShards;
         public boolean enableETBCountersEffect;
-        // Effect-granted cards the enemy starts the battle with (e.g. the monks' starting permanents).
+        // Cards an effect starts the enemy with, such as the monks' starting permanents
         public List<String> extraCardsOnBattlefield = new ArrayList<>();
         public List<String> extraCardsInCommandZone = new ArrayList<>();
     }
 
-    /**
-     * Data class representing the result of a battle.
-     */
     public static class BattleResult implements Serializable {
         private static final long serialVersionUID = 1L;
 
         public boolean humanWon;
+        // Negative when no game decided the battle. Adventure then keeps the shards it had
         public int shardsAfterBattle;
 
-        public List<String> cardsWon = new ArrayList<>();
-        public List<String> cardsLost = new ArrayList<>();
-
-        /**
-         * Writes this result to the IPC file.
-         */
         public void write() throws IOException {
             writeObjectAtomic(getBattleResultPath(), this);
             Files.deleteIfExists(getBattlePendingSignalPath());
             touch(getBattleCompleteSignalPath());
         }
 
-        /**
-         * Reads a result from the IPC file.
-         */
         public static BattleResult read() throws IOException, ClassNotFoundException {
             try (ObjectInputStream ois = new ObjectInputStream(
                     new FileInputStream(getBattleResultPath().toFile()))) {
@@ -287,23 +224,15 @@ public class IAdventureBattleHost {
         }
     }
 
-    /**
-     * Checks if a battle request is pending.
-     */
     public static boolean isBattlePending() {
         return Files.exists(getBattlePendingSignalPath());
     }
 
-    /**
-     * Checks if a battle is complete.
-     */
     public static boolean isBattleComplete() {
         return Files.exists(getBattleCompleteSignalPath());
     }
 
-    /**
-     * Clears the battle complete signal (called by Adventure after reading result).
-     */
+    /** Deletes the result and its signal once adventure has read them. */
     public static void clearBattleCompleteSignal() {
         try {
             Files.deleteIfExists(getBattleCompleteSignalPath());

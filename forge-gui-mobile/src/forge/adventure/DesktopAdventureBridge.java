@@ -18,20 +18,12 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
 import forge.screens.LoadingOverlay;
 
-/**
- * Mobile-side glue for the experimental Desktop Adventure Mode. Replaces the
- * normal mobile match flow with an IPC handoff to the desktop process that
- * spawned us, which renders the match in its native Swing UI.
- *
- * All knowledge of the IPC protocol, polling, and waiting overlay lives here.
- * Callers tell us to run a battle and react to the result via the listener.
- */
+/** Hands a battle to the web server that adventure started, shows a waiting overlay, and reports the result it writes back. */
 public final class DesktopAdventureBridge {
 
     private static LoadingOverlay waitingOverlay;
 
-    // Last-resort cap so a dead or orphaned desktop host can't pin the waiter thread forever. Far longer than
-    // any real match, so it never fires during normal play — the desktop signals completion long before this.
+    // Far longer than any real match, so it only frees the waiter thread when the server has died
     private static final long MAX_BATTLE_WAIT_MS = 6L * 60 * 60 * 1000;
 
     private DesktopAdventureBridge() {}
@@ -49,9 +41,9 @@ public final class DesktopAdventureBridge {
             waitingOverlay.show();
             listener.onWaitStart();
 
-            new Thread(() -> waitForResult(params, listener), "DesktopBattle-Waiter").start();
+            new Thread(() -> waitForResult(params, listener), "WebBattle-Waiter").start();
         } catch (Exception e) {
-            System.err.println("Failed to start desktop battle: " + e.getMessage());
+            System.err.println("Failed to hand the battle to the web server: " + e.getMessage());
             e.printStackTrace();
             hideOverlay();
             Gdx.app.postRunnable(listener::onError);
@@ -61,7 +53,6 @@ public final class DesktopAdventureBridge {
     private static IAdventureBattleHost.BattleRequest buildRequest(final BattleParams params) {
         final IAdventureBattleHost.BattleRequest request = new IAdventureBattleHost.BattleRequest();
 
-        request.humanPlayerName = params.humanPlayer.getPlayer().getName();
         request.humanStartingLife = params.humanPlayer.getStartingLife();
         request.humanManaShards = params.humanPlayer.getManaShards();
         request.humanStartingHand = params.humanPlayer.getStartingHand();
@@ -99,8 +90,6 @@ public final class DesktopAdventureBridge {
         request.playForAnte = FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ANTE);
         request.matchAnteRarity = FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ANTE_MATCH_RARITY);
         request.anteIncludeBasicLands = FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ANTE_INCLUDE_BASIC_LANDS);
-        request.isBossBattle = params.bossBattle;
-        request.enemyName = params.enemyName;
         request.assignConspiracies = params.assignConspiracies;
         return request;
     }
@@ -109,10 +98,9 @@ public final class DesktopAdventureBridge {
         final List<String> names = new ArrayList<>();
         if (cards != null) {
             for (final IPaperCard card : cards) {
-                // Tokens resolve by script key (e.g. "komas_coil"), not display name — serialize that so
-                // the desktop's getToken() lookup matches. Regular cards round-trip fine via getName().
-                if (card instanceof PaperToken) {
-                    names.add(((PaperToken) card).getImageFilename(1).split("\\|")[0]);
+                // The server looks tokens up by script key (e.g. "komas_coil"), not by display name
+                if (card instanceof PaperToken token) {
+                    names.add(token.getImageFilename(1).split("\\|")[0]);
                 } else {
                     names.add(card.getName());
                 }
@@ -122,12 +110,11 @@ public final class DesktopAdventureBridge {
     }
 
     private static String resolveAiProfile(final RegisteredPlayer p) {
-        if (!(p.getPlayer() instanceof LobbyPlayerAi)) {
+        if (!(p.getPlayer() instanceof LobbyPlayerAi ai)) {
             return "";
         }
-        final String profile = ((LobbyPlayerAi) p.getPlayer()).getAiProfile();
-        // The desktop hosts the whole match, so a per-game "random" sentinel can't survive the freeze —
-        // resolve it to a concrete profile here, else the host falls back to hardcoded AI defaults.
+        final String profile = ai.getAiProfile();
+        // The server would not resolve a "random" profile, so it is resolved here
         if (AiProfileUtil.AI_PROFILE_RANDOM_DUEL.equals(profile) || AiProfileUtil.AI_PROFILE_RANDOM_MATCH.equals(profile)) {
             return AiProfileUtil.getRandomProfile();
         }
@@ -139,7 +126,7 @@ public final class DesktopAdventureBridge {
             long deadline = System.currentTimeMillis() + MAX_BATTLE_WAIT_MS;
             while (!IAdventureBattleHost.isBattleComplete()) {
                 if (System.currentTimeMillis() > deadline) {
-                    throw new IOException("Timed out waiting for desktop to resolve battle");
+                    throw new IOException("Timed out waiting for the web server's battle result");
                 }
                 Thread.sleep(500);
             }
@@ -158,7 +145,7 @@ public final class DesktopAdventureBridge {
                 listener.onComplete(result.humanWon);
             });
         } catch (Throwable e) {
-            System.err.println("Error waiting for desktop battle: " + e.getClass().getName() + ": " + e.getMessage());
+            System.err.println("Error waiting for the web server's battle result: " + e.getClass().getName() + ": " + e.getMessage());
             e.printStackTrace();
             Gdx.app.postRunnable(() -> {
                 hideOverlay();
@@ -178,26 +165,21 @@ public final class DesktopAdventureBridge {
         public final List<RegisteredPlayer> players;
         public final RegisteredPlayer humanPlayer;
         public final Deck playerDeck;
-        public final boolean bossBattle;
         public final GameType gameType;
         public final GameType rulesType;
         public final int gamesPerMatch;
-        public final String enemyName;
         public final boolean allowsShards;
         public final boolean assignConspiracies;
 
         public BattleParams(final List<RegisteredPlayer> players, final RegisteredPlayer humanPlayer,
-                            final Deck playerDeck, final boolean bossBattle, final GameType gameType, final GameType rulesType,
-                            final int gamesPerMatch, final String enemyName, final boolean allowsShards,
-                            final boolean assignConspiracies) {
+                            final Deck playerDeck, final GameType gameType, final GameType rulesType,
+                            final int gamesPerMatch, final boolean allowsShards, final boolean assignConspiracies) {
             this.players = players;
             this.humanPlayer = humanPlayer;
             this.playerDeck = playerDeck;
-            this.bossBattle = bossBattle;
             this.gameType = gameType;
             this.rulesType = rulesType;
             this.gamesPerMatch = gamesPerMatch;
-            this.enemyName = enemyName;
             this.allowsShards = allowsShards;
             this.assignConspiracies = assignConspiracies;
         }

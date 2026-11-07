@@ -76,7 +76,6 @@ final class AdventureBattles implements IHasForgeLog {
         }
     }
 
-    /** A negative shard count tells adventure to keep the shards it had. */
     private static void writeLoss() {
         final BattleResult loss = new BattleResult();
         loss.shardsAfterBattle = -1;
@@ -92,19 +91,16 @@ final class AdventureBattles implements IHasForgeLog {
         result.shardsAfterBattle = request.humanManaShards;
         final PreparedMatch prepared = prepare(request);
         final WebSession session = awaitHost(service, ui);
-        final HostedMatch[] started = new HostedMatch[1];
         final Playing[] playing = new Playing[1];
-        ui.invokeInEdtAndWait(() -> {
-            playing[0] = start(session, prepared);
-            started[0] = playing[0] == null ? null : session.local().hostedMatch();
-        });
-        if (started[0] == null) {
+        ui.invokeInEdtAndWait(() -> playing[0] = start(session, prepared));
+        // Captured now, because the lobby forgets its match once the match is over
+        final HostedMatch match = playing[0] == null ? null : session.local().hostedMatch();
+        if (match == null) {
             result.shardsAfterBattle = -1;
             return result;
         }
-        final HostedMatch match = started[0];
         int pollsAway = 0;
-        // Leaving the match is the sign that the player is done with the browser, as desktop waits for its home screen
+        // Leaving the match is the sign that the player is done with the browser
         while (session.stage() == playing[0]) {
             // Quitting a match clears its human controllers, so the shards are read while the game runs
             final Game game = match.getGame();
@@ -204,13 +200,7 @@ final class AdventureBattles implements IHasForgeLog {
 
     /** Builds the match as adventure's own duel scene does, from what it wrote to the folder. */
     private static PreparedMatch prepare(final BattleRequest request) {
-        GameType type;
-        try {
-            type = GameType.valueOf(request.gameType);
-        } catch (final IllegalArgumentException e) {
-            type = GameType.Adventure;
-        }
-        final Set<GameType> variants = EnumSet.of(type);
+        final Set<GameType> variants = EnumSet.of(GameType.valueOf(request.gameType));
         final int playerCount = 1 + request.aiPlayers.size();
 
         final RegisteredPlayer human = RegisteredPlayer.forVariants(playerCount, variants, IAdventureBattleHost.loadHumanDeck(), null, false, null, null);
@@ -244,13 +234,7 @@ final class AdventureBattles implements IHasForgeLog {
         }
         players.add(human);
 
-        GameType rulesType;
-        try {
-            rulesType = GameType.valueOf(request.rulesType);
-        } catch (final IllegalArgumentException | NullPointerException e) {
-            rulesType = GameType.Adventure;
-        }
-        final GameRules rules = new GameRules(rulesType);
+        final GameRules rules = new GameRules(GameType.valueOf(request.rulesType));
         rules.setGamesPerMatch(request.gamesPerMatch);
         rules.setPlayForAnte(request.playForAnte);
         rules.setMatchAnteRarity(request.matchAnteRarity);
