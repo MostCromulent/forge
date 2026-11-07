@@ -6,6 +6,10 @@ html:not([data-form="portrait"]) #editor:not([hidden]) { position: fixed; inset:
 html:not([data-form="portrait"]) #editor .editor-page { width: min(1500px, 94vw); height: min(880px, 92vh); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 /* The wordmark, volume and options are hidden, because the page behind the editor shows them */
 html:not([data-form="portrait"]) #editor .editor-head :is(.wordmark-block, .icon-button, .volume) { display: none; }
+/* The header, the cards and the deck are separate boxes on the page's background, as in the draft */
+html:not([data-form="portrait"]) #editor .editor-head { margin: 16px 18px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+html:not([data-form="portrait"]) #editor .editor-shell { gap: 16px; padding: 0 18px 18px; }
+html:not([data-form="portrait"]) #editor :is(.catalogue, .deck-half) { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
 .editor-page { position: relative; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
 .deck-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .deck-name-field { width: 260px; padding: 5px 12px; border-radius: 8px; font-size: 16px; font-weight: 650; }
