@@ -403,7 +403,6 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .finder-find { display: flex; align-items: center; gap: 8px; }
 .finder-find .find { flex: 1; min-width: 0; }
 .finder-find .sort-by { align-self: stretch; }
-.finder-count { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 /* The Net decks tab explains net decks while none are downloaded, and offers the download there */
 .net-empty { display: grid; justify-items: center; gap: 10px; padding: 48px 24px; text-align: center; }
 .net-empty h3 { margin: 0; color: var(--text); font-size: 16px; }
