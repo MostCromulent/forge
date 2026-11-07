@@ -1,0 +1,51 @@
+/* Dialogs and menus animate in instead of appearing at once. The scrim fades in, a box rises a few pixels, and a menu grows from where it opens. */
+@keyframes backdrop-in { from { opacity: 0; } }
+@keyframes box-in { from { opacity: 0; translate: 0 6px; } }
+@keyframes box-out { to { opacity: 0; translate: 0 6px; } }
+@keyframes menu-in { from { opacity: 0; scale: .94; } }
+@keyframes menu-out { to { opacity: 0; scale: .96; } }
+.backdrop { animation: backdrop-in .15s ease-out; }
+.dialog, .host-choice, .zone-panel, .zone-bar { animation: box-in .16s ease-out; }
+/* A closing element plays its exit animation before it is removed (closing.ts) */
+/* Each exit animation has its own keyframes name. The same name with only the direction changed would not run again. */
+@keyframes backdrop-out { to { opacity: 0; } }
+.backdrop.closing { animation: backdrop-out .12s ease-in forwards; }
+.backdrop.closing > * { animation: box-out .12s ease-in forwards; }
+/* A screen rises in when it opens, as a box does (index.html holds a root for each screen) */
+:is(#menu, #lobby, #editor, #limited, #drafting) > * { animation: box-in .18s ease-out; }
+/* Going back to an earlier screen shows it at once (screens.tsx) */
+html[data-back] :is(#menu, #lobby, #editor, #limited, #drafting) > *, html[data-back] .modes .mode.plaque { animation: none; }
+/* A move to another page (main.ts render), or through an ordered set such as a step of the start menu (ui.ts eased), slides in the direction of the order, deeper pages to the left. The header has its own name, so it stays in place while the page under it slides */
+:is(#menu, #lobby, #limited, #drafting) { view-transition-name: screen; }
+:is(#menu, #lobby, #limited, #drafting) :is(.page-head, .ph) { view-transition-name: head; }
+/* The name makes the header a stacking context, so it is raised for its popups to stay above the page */
+:where(.page-head, .ph) { position: relative; z-index: 30; }
+/* A dialog's close button is a quiet square with a drawn X, like the page's other icon buttons */
+.dk-close { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 9px; background: var(--surface-2); color: var(--muted); }
+.dk-close:hover { background: var(--line); color: var(--text); }
+.dk-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+html[data-way]::view-transition-old(page), html[data-screen]::view-transition-old(screen), html[data-screen]::view-transition-old(page) { animation: .3s cubic-bezier(.2,.7,.3,1) both page-out; }
+html[data-way]::view-transition-new(page), html[data-screen]::view-transition-new(screen), html[data-screen]::view-transition-new(page) { animation: .32s cubic-bezier(.2,.7,.3,1) both page-in; }
+html[data-way="back"]::view-transition-old(page), html[data-screen="back"]::view-transition-old(screen), html[data-screen="back"]::view-transition-old(page) { animation-name: page-out-back; }
+html[data-way="back"]::view-transition-new(page), html[data-screen="back"]::view-transition-new(screen), html[data-screen="back"]::view-transition-new(page) { animation-name: page-in-back; }
+html[data-screen]::view-transition-group(head) { animation-duration: .3s; }
+/* The slide replaces the rise. A zero duration, not none, so the rise does not play when the attribute is removed */
+html[data-screen] :is(#menu, #lobby, #limited, #drafting) > *, html[data-screen] .modes .mode.plaque { animation-duration: 0s; animation-delay: 0s; }
+@keyframes page-out { to { opacity: 0; translate: -40px 0; } }
+@keyframes page-in { from { opacity: 0; translate: 40px 0; } }
+@keyframes page-out-back { to { opacity: 0; translate: 40px 0; } }
+@keyframes page-in-back { from { opacity: 0; translate: -40px 0; } }
+.backdrop[hidden] { display: none; }
+.backdrop { position: fixed; inset: 0; background: #0009; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 16px; z-index: 50; }
+.dialog { margin: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; max-width: min(90vw, 900px); max-height: calc(100vh - 32px); overflow: auto; display: grid; gap: 10px; }
+.dialog h3 { margin: 0; }
+/* A confirm's text keeps the line breaks in Forge's own messages */
+.dialog[role=alertdialog] > .hint { white-space: pre-line; }
+.dialog .hint { margin: 0; color: var(--muted); font-size: 12px; }
+.dialog .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.dialog .actions button.primary { min-width: 110px; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+/* An answer that loses something, such as conceding or leaving a draft, is red in place of brass */
+.dialog .actions button.danger { min-width: 110px; font-size: 15px; font-weight: 650; color: #fff; background: linear-gradient(180deg, color-mix(in srgb, #d4573f 80%, #fff), #b8432e); border-color: color-mix(in srgb, #d4573f 60%, #fff); box-shadow: 0 1px 0 #5a1e14; }
+.dialog .actions button.danger:hover:not(:disabled) { background: linear-gradient(180deg, color-mix(in srgb, #d4573f 65%, #fff), #c94d37); }
+/* A card's list of what it can do is a menu on the card, not a window in the middle of the board */
+.backdrop.anchored { background: none; }
