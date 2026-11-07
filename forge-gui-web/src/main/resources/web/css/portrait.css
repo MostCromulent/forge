@@ -364,9 +364,17 @@ html[data-form="portrait"] .finder .rail h4 { display: none; }
 html[data-form="portrait"] .finder .rail .source { flex: none; height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 22px; white-space: nowrap; }
 html[data-form="portrait"] .finder .rail .source[aria-pressed="true"] { box-shadow: none; border-color: var(--accent-2); }
 html[data-form="portrait"] .finder .net-cats { flex-direction: row; margin: 0; padding: 0; border: 0; }
-html[data-form="portrait"] .finder .rail .get-net { flex: none; align-self: center; margin: 0; min-height: 44px; white-space: nowrap; }
+html[data-form="portrait"] .finder .rail .get-net { flex: none; align-self: center; min-height: 44px; border-radius: 22px; }
 html[data-form="portrait"] .finder .results { min-width: 0; padding: 10px 12px; border-right: 0; }
 html[data-form="portrait"] .finder .dk-hit { min-height: 52px; }
+/* The search takes the first line, and the colours and the sort share the second. The filter chips scroll sideways in their own line */
+html[data-form="portrait"] .finder-find { display: grid; grid-template-columns: auto minmax(0, 1fr); }
+html[data-form="portrait"] .finder-find .find { grid-column: 1 / -1; height: 40px; font-size: 15px; }
+html[data-form="portrait"] .finder-find .sort-by { height: 38px; min-width: 0; }
+html[data-form="portrait"] .finder .fbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+html[data-form="portrait"] .finder .fbar > * { flex: none; }
+/* The colours shrink to fit, so a name gets the room */
+html[data-form="portrait"] .finder .dk-hit-title .pips { width: auto; }
 /* There is no room for the deck's card list beside the decks. The player sees the cards in the editor instead. */
 html[data-form="portrait"] .finder .dk-chosen { display: none; }
 html[data-form="portrait"] .finder-foot { gap: 8px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }

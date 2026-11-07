@@ -217,6 +217,8 @@ export function DeckFinder({ model, actions, seat, close }: {
   });
   const kinds = finderKinds(model, decks, actions, format, !!seat);
   const sources = sourceCounts(decks);
+  // Net decks are always offered, as desktop lists them among its deck types. A Draft table plays only event pools
+  if (format !== 'Draft' && !sources.has(NET)) sources.set(NET, 0);
   const categories = new Map<string, number>();
   for (const d of decks) {
     if (isNet(d.source)) categories.set(d.source, (categories.get(d.source) ?? 0) + 1);
@@ -266,23 +268,25 @@ export function DeckFinder({ model, actions, seat, close }: {
               {[...sources].map(([id, count]) => (
                 <button key={id} class="source" aria-pressed={id === NET ? inNet : id === filter.source}
                   onClick={() => change({ source: id })}>
-                  <span>{sourceName(id)}</span><span class="dk-count">{count}</span>
+                  <span>{sourceName(id)}</span>{count > 0 && <span class="dk-count">{count}</span>}
                 </button>
               ))}
-              {inNet && categories.size > 1 && (
+              {inNet && categories.size > 0 && (
                 <div class="net-cats">
-                  <button class="source" aria-pressed={filter.source === NET} onClick={() => change({ source: NET })}>
-                    <span>{t('lblWebFinderEveryCategory')}</span>
-                  </button>
+                  {categories.size > 1 && (
+                    <button class="source" aria-pressed={filter.source === NET} onClick={() => change({ source: NET })}>
+                      <span>{t('lblWebFinderEveryCategory')}</span>
+                    </button>
+                  )}
                   {[...categories].map(([id, count]) => (
                     <button key={id} class="source" aria-pressed={id === filter.source} onClick={() => change({ source: id })}>
                       <span>{netName(id)}</span><span class="dk-count">{count}</span>
                     </button>
                   ))}
+                  {/* Core asks for the category in a dialog on the host's screen, so only the host can answer it */}
+                  {model.host && <button class="get-net" onClick={() => actions.fetchNetDecks()}>{t('lblWebFinderNetDownloadMore')}</button>}
                 </div>
               )}
-              {/* Core asks for the category in a dialog on the host's screen, so only the host can answer it */}
-              <button class="get-net" hidden={!model.host} onClick={() => actions.fetchNetDecks()}>{t('lblWebFinderDownloadNetDecks')}</button>
             </section>
             {filter.source === 'generated' && model.deckGen && (
               <section class="gen-options">
@@ -298,7 +302,8 @@ export function DeckFinder({ model, actions, seat, close }: {
             )}
           </nav>
           <div class="results">
-            <FilterBar kinds={kinds} filter={filter} set={setFilter} clearAll={clearAll} narrowed={narrowed}>
+            {/* Finding and ordering come first, then every filter on its own line, then the count with Random, as desktop lays out its deck lists */}
+            <div class="finder-find">
               <input ref={find} class="find" type="search" placeholder={t('lblWebFinderSearch')} autocomplete="off"
                 value={typed} onInput={e => setTyped(e.currentTarget.value)} />
               <ColourToggles label={t('lblColors')} colourless pressed={c => filter.colours.has(c)}
@@ -311,18 +316,29 @@ export function DeckFinder({ model, actions, seat, close }: {
                     {SORTS.filter(([id]) => id !== 'bracket' || decks.some(d => d.bracket != null))
                       .map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
                   </select>}
+            </div>
+            <FilterBar kinds={kinds} filter={filter} set={setFilter} clearAll={clearAll} narrowed={narrowed} />
+            <div class="finder-count">
+              <p class="shown">{list.length === decks.length ? t('lblWebMenuDecksCount', decks.length) : t('lblWebFinderDeckCountOf', list.length, decks.length)}</p>
               <button class="random" disabled={!list.length} title={t('lblWebFinderRandomTip')} onClick={random}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
-                {t('lblRandom')}
+                {t('lblRandomDeck')}
               </button>
-            </FilterBar>
-            <p class="shown">{list.length === decks.length ? t('lblWebMenuDecksCount', decks.length) : t('lblWebFinderDeckCountOf', list.length, decks.length)}</p>
+            </div>
             <div class="dk-hits">
               {list.length
                 ? list.map(d => <Hit key={d.key} deck={d} chosen={d.key === chosen} choose={() => setChosen(d.key)}
                   use={() => use(d.key)} source={filter.source === 'all'} forComputer={forComputer}
                   star={on => star(d.key, on)} />)
-                : <p class="none">{t('lblWebFinderNoMatch')}</p>}
+                : inNet && !categories.size ? (
+                  <div class="none net-empty">
+                    <h3>{t('lblWebFinderNetEmptyTitle')}</h3>
+                    <p>{t('lblWebFinderNetEmptyText')}</p>
+                    {model.host
+                      ? <button class="random" onClick={() => actions.fetchNetDecks()}>{t('lblWebFinderNetDownload')}</button>
+                      : <p>{t('lblWebFinderNetHostOnly')}</p>}
+                  </div>
+                ) : <p class="none">{t('lblWebFinderNoMatch')}</p>}
             </div>
           </div>
           <aside class="dk-chosen">
