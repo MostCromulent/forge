@@ -665,7 +665,7 @@ public class DuelScene extends ForgeScene {
 
         if (DesktopAdventureBridge.isActive()) {
             final DesktopAdventureBridge.BattleParams params = new DesktopAdventureBridge.BattleParams(
-                    players, humanPlayer, playerDeck, bossBattle, mainGameType,
+                    players, humanPlayer, playerDeck, bossBattle, mainGameType, eventData != null ? mainGameType : GameType.Adventure,
                     eventData != null ? eventData.eventRules.gamesPerMatch : enemy.getData().gamesPerMatch,
                     enemy.getName(),
                     eventData == null || eventData.eventRules.allowsShards,
@@ -676,13 +676,19 @@ public class DuelScene extends ForgeScene {
                     waitingForExternalOperation = true;
                 }
                 @Override public void onComplete(final boolean humanWon) {
-                    waitingForExternalOperation = false;
-                    afterGameEnd(enemyName, humanWon);
-                    exitDuelScene();
+                    end(humanWon);
                 }
                 @Override public void onError() {
+                    end(false);
+                }
+                // What GameEnd does besides reading the match, which was played in the other process
+                private void end(final boolean humanWon) {
                     waitingForExternalOperation = false;
-                    afterGameEnd(enemyName, false);
+                    if (eventData != null) {
+                        eventData.nextOpponent = null;
+                    }
+                    Current.player().clearBlessing();
+                    afterGameEnd(enemyName, humanWon);
                     exitDuelScene();
                 }
             });

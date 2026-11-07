@@ -10,11 +10,12 @@ import java.nio.file.Paths;
 final class WebBattleServer {
     private WebBattleServer() {}
 
-    static void start() {
+    /** Whether the server process started. */
+    static boolean start() {
         final File jar = webJar();
         if (!jar.isFile()) {
             System.err.println("Adventure: no web GUI jar at " + jar + ". Build forge-gui-web, or set -Dforge.web.jar.");
-            return;
+            return false;
         }
         final String dir = IAdventureBattleHost.newLaunchDir();
         IAdventureBattleHost.setIpcDir(dir);
@@ -31,8 +32,10 @@ final class WebBattleServer {
                 server.destroy();
                 IAdventureBattleHost.purgeIpcDir();
             }, "WebBattleServerStop"));
+            return true;
         } catch (final IOException e) {
             System.err.println("Adventure: could not start the web GUI: " + e.getMessage());
+            return false;
         }
     }
 

@@ -206,9 +206,12 @@ public class IAdventureBattleHost {
         public List<AIPlayerData> aiPlayers = new ArrayList<>();
 
         public String gameType = "Adventure";
+        // Differs from gameType in Commander mode, whose battles keep Adventure's rules
+        public String rulesType = "Adventure";
         public int gamesPerMatch = 1;
         public boolean playForAnte = false;
         public boolean matchAnteRarity = false;
+        public boolean anteIncludeBasicLands = false;
         public boolean isBossBattle = false;
         public boolean assignConspiracies = false;
 

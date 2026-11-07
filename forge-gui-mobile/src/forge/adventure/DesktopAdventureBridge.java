@@ -94,9 +94,11 @@ public final class DesktopAdventureBridge {
         }
 
         request.gameType = params.gameType.name();
+        request.rulesType = params.rulesType.name();
         request.gamesPerMatch = params.gamesPerMatch;
         request.playForAnte = FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ANTE);
         request.matchAnteRarity = FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ANTE_MATCH_RARITY);
+        request.anteIncludeBasicLands = FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ANTE_INCLUDE_BASIC_LANDS);
         request.isBossBattle = params.bossBattle;
         request.enemyName = params.enemyName;
         request.assignConspiracies = params.assignConspiracies;
@@ -178,13 +180,14 @@ public final class DesktopAdventureBridge {
         public final Deck playerDeck;
         public final boolean bossBattle;
         public final GameType gameType;
+        public final GameType rulesType;
         public final int gamesPerMatch;
         public final String enemyName;
         public final boolean allowsShards;
         public final boolean assignConspiracies;
 
         public BattleParams(final List<RegisteredPlayer> players, final RegisteredPlayer humanPlayer,
-                            final Deck playerDeck, final boolean bossBattle, final GameType gameType,
+                            final Deck playerDeck, final boolean bossBattle, final GameType gameType, final GameType rulesType,
                             final int gamesPerMatch, final String enemyName, final boolean allowsShards,
                             final boolean assignConspiracies) {
             this.players = players;
@@ -192,6 +195,7 @@ public final class DesktopAdventureBridge {
             this.playerDeck = playerDeck;
             this.bossBattle = bossBattle;
             this.gameType = gameType;
+            this.rulesType = rulesType;
             this.gamesPerMatch = gamesPerMatch;
             this.enemyName = enemyName;
             this.allowsShards = allowsShards;

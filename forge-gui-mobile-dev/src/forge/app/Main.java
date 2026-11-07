@@ -27,8 +27,12 @@ public class Main {
     public static void main(String[] args) {
         if ("true".equals(System.getProperty("FORGE_DESKTOP_ADVENTURE")) ||
             "true".equals(System.getenv("FORGE_DESKTOP_ADVENTURE"))) {
-            DesktopAdventureMode.activate();
             Forge.forceAdventureMode = true;
+            // Without a server, battles are played here as usual
+            if (WebBattleServer.start()) {
+                DesktopAdventureMode.activate();
+                System.out.println("Adventure Mode: battles are played in the web GUI");
+            }
             DesktopAdventureMode.setFocusRequest(() -> {
                 if (Gdx.graphics instanceof Lwjgl3Graphics) {
                     // Windows blocks glfwFocusWindow() from a background process; a brief floating
@@ -39,8 +43,6 @@ public class Main {
                     GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_FLOATING, GLFW.GLFW_FALSE);
                 }
             });
-            WebBattleServer.start();
-            System.out.println("Adventure Mode: battles are played in the web GUI");
         }
 
         if (!OperatingSystem.isWindows()) {

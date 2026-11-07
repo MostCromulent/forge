@@ -4,14 +4,15 @@ import forge.adventure.IAdventureBattleHost;
 import forge.adventure.IAdventureBattleHost.AIPlayerData;
 import forge.adventure.IAdventureBattleHost.BattleRequest;
 import forge.adventure.IAdventureBattleHost.BattleResult;
+import forge.game.Game;
 import forge.game.GameRules;
 import forge.game.GameType;
+import forge.game.player.Player;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.PreparedMatch;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.player.GamePlayerUtil;
-import forge.player.PlayerControllerHuman;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.util.MyRandom;
@@ -34,6 +35,7 @@ import java.util.Set;
  */
 final class AdventureBattles implements IHasForgeLog {
     private static final long POLL_MILLIS = 500;
+    private static final int AWAY_POLLS = 10;
 
     private AdventureBattles() {}
 
@@ -100,8 +102,26 @@ final class AdventureBattles implements IHasForgeLog {
             result.shardsAfterBattle = -1;
             return result;
         }
+        final HostedMatch match = started[0];
+        int pollsAway = 0;
         // Leaving the match is the sign that the player is done with the browser, as desktop waits for its home screen
         while (session.stage() == playing[0]) {
+            // Quitting a match clears its human controllers, so the shards are read while the game runs
+            final Game game = match.getGame();
+            if (game != null) {
+                for (final Player p : game.getRegisteredPlayers()) {
+                    if (p.getRegisteredPlayer() == prepared.human()) {
+                        result.shardsAfterBattle = p.getNumManaShards();
+                    }
+                }
+            }
+            pollsAway = session.attached() ? 0 : pollsAway + 1;
+            // A closed window leaves the session in the match. A reload comes back within this time
+            if (pollsAway >= AWAY_POLLS && match.getMatch().isMatchOver()) {
+                ui.invokeInEdtAndWait(() -> leave(session, playing[0]));
+            } else if (pollsAway == AWAY_POLLS && service.running()) {
+                WebMain.openBrowser(service.url(), ui);
+            }
             Thread.sleep(POLL_MILLIS);
         }
         // Stopping the server ends the game and names the browser's player the winner
@@ -109,13 +129,16 @@ final class AdventureBattles implements IHasForgeLog {
             result.shardsAfterBattle = -1;
             return result;
         }
-        final HostedMatch match = started[0];
         result.humanWon = match.getMatch().isMatchOver() && match.getMatch().getWinner() == prepared.human();
-        final List<PlayerControllerHuman> humans = match.getHumanControllers();
-        if (!humans.isEmpty()) {
-            result.shardsAfterBattle = humans.get(0).getPlayer().getNumManaShards();
-        }
         return result;
+    }
+
+    /** Leaves the match for a browser that has gone, as its leave button would. */
+    private static void leave(final WebSession session, final Playing playing) {
+        if (session.stage() == playing) {
+            session.local().endMatch();
+            session.move(playing, new Menu());
+        }
     }
 
     /** The host's session once it can take a match. If no browser is open, one is opened. */
@@ -127,7 +150,8 @@ final class AdventureBattles implements IHasForgeLog {
             if (host != null && host.attached() && !(host.stage() instanceof Playing) && !(host.stage() instanceof Opening)) {
                 return host;
             }
-            if (!opened && (sessions == null || sessions.playersHere() == 0)) {
+            // A server that failed to start can be started again from its console
+            if (!opened && service.running() && sessions != null && sessions.playersHere() == 0) {
                 WebMain.openBrowser(service.url(), ui);
                 opened = true;
             }
@@ -220,10 +244,17 @@ final class AdventureBattles implements IHasForgeLog {
         }
         players.add(human);
 
-        final GameRules rules = new GameRules(type);
+        GameType rulesType;
+        try {
+            rulesType = GameType.valueOf(request.rulesType);
+        } catch (final IllegalArgumentException | NullPointerException e) {
+            rulesType = GameType.Adventure;
+        }
+        final GameRules rules = new GameRules(rulesType);
         rules.setGamesPerMatch(request.gamesPerMatch);
         rules.setPlayForAnte(request.playForAnte);
         rules.setMatchAnteRarity(request.matchAnteRarity);
+        rules.setAnteIncludeBasicLands(request.anteIncludeBasicLands);
         rules.setManaBurn(false);
         rules.setWarnAboutAICards(false);
         return new PreparedMatch(rules, variants, players, human);
