@@ -16,6 +16,7 @@ import { NewDeck } from './newdeck';
 import { NameTaken } from './nametaken';
 import { CloseButton } from '../dialog';
 import { useDebounced } from '../hooks';
+import { imageUrl } from '../images';
 
 /** Each net-deck category is a separate source. They share one source button, which lists the categories under it. */
 const NET = 'net';
@@ -345,7 +346,7 @@ export function DeckFinder({ model, actions, seat, close }: {
           <aside class="dk-chosen">
             {!chosen ? <p class="none">{t('lblWebFinderPickHint')}</p>
               : !details ? <p class="none">{t('lblWebFinderReading')}</p>
-                : <Chosen details={details} formats={summary?.formats} forComputer={forComputer} />}
+                : <Chosen details={details} listed={summary?.name} formats={summary?.formats} forComputer={forComputer} />}
           </aside>
         </div>
         <footer class="finder-foot">
@@ -571,22 +572,29 @@ function Title({ deck }: { deck: DeckSummary }) {
   );
 }
 
-function Chosen({ details, formats, forComputer }: { details: DeckDetails; formats?: string; forComputer: boolean }) {
+/** listed is the deck's name in the list. A generated deck is built without a name, so its details have none */
+function Chosen({ details, listed, formats, forComputer }: { details: DeckDetails; listed?: string; formats?: string; forComputer: boolean }) {
   const s = details.stats;
   // Game changers are marked in the card list, whether or not the bracket's reasons are open
   const changers = new Set(details.bracket?.reasons.find(r => r.kind === 'gameChangers')?.cards ?? []);
   const [cards, view] = useDeckView();
+  // A cover whose picture fails to load leaves the plain head, so the name stays readable
+  const [missing, setMissing] = useState<string | null>(null);
+  const cover = details.cover && details.cover !== missing ? details.cover : null;
   return (
     <>
       <div class="dk-chosen-head">
-        <div class="dk-chosen-title">
-          <h3>{details.name} <span class="pips"><Pips colors={details.colors} /></span></h3>
-          <span class="seg view-seg" role="group" aria-label={t('lblWebEditorShowDeckAs')}>
-            <button aria-pressed={cards} onClick={() => view(true)}>{t('lblCards')}</button>
-            <button aria-pressed={!cards} onClick={() => view(false)}>{t('lblWebDraftList')}</button>
-          </span>
+        <div class={cover ? 'dk-banner' : 'dk-banner bare'}>
+          {cover && <img class="dk-banner-art" alt="" src={imageUrl(cover)} onError={() => setMissing(cover)} />}
+          <div class="dk-chosen-title">
+            <h3>{details.name || listed} <span class="pips"><Pips colors={details.colors} /></span></h3>
+            <span class="seg view-seg" role="group" aria-label={t('lblWebEditorShowDeckAs')}>
+              <button aria-pressed={cards} onClick={() => view(true)}>{t('lblCards')}</button>
+              <button aria-pressed={!cards} onClick={() => view(false)}>{t('lblWebDraftList')}</button>
+            </span>
+          </div>
+          <p class="sizes">{s.sideboard ? t('lblWebEditorSizes', s.total, s.sideboard, s.lands) : t('lblWebFinderSizesNoSideboard', s.total, s.lands)}</p>
         </div>
-        <p class="sizes">{s.sideboard ? t('lblWebEditorSizes', s.total, s.sideboard, s.lands) : t('lblWebFinderSizesNoSideboard', s.total, s.lands)}</p>
         <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? t('lblWebFinderLegalForFormat')}</p>
         {formats && <p class="deck-formats">{formats}</p>}
         {forComputer && details.aiSkips && (

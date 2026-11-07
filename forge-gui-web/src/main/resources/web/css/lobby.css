@@ -443,6 +443,14 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 
 .dk-chosen { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
 .dk-chosen-head { padding: 14px 18px; border-bottom: 1px solid var(--line); }
+/* The deck's cover art heads the pane. It shows the top of the card picture's art box, where faces usually are, faded into the pane */
+.dk-banner:not(.bare) { position: relative; display: flex; flex-direction: column; justify-content: flex-end; min-height: 168px; box-sizing: border-box;
+  margin: -14px -18px 10px; padding: 0 18px 10px; overflow: hidden; background: var(--bg-deep); }
+.dk-banner-art { position: absolute; left: -10%; top: 0; width: 120%; transform: translateY(-12.5%); }
+.dk-banner:not(.bare)::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 25%, color-mix(in srgb, var(--surface) 70%, transparent) 62%, var(--surface)); }
+.dk-banner:not(.bare) > :not(img) { position: relative; z-index: 1; }
+.dk-banner:not(.bare) h3 { font-size: 22px; text-shadow: 0 1px 8px #000c; }
+.dk-banner:not(.bare) .sizes { color: var(--text); text-shadow: 0 1px 6px #000c; }
 .dk-chosen-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
 .dk-chosen-title h3 { margin: 0; min-width: 0; }
 .dk-chosen-title .seg { flex: none; }

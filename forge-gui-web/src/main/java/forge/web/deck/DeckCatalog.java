@@ -347,8 +347,19 @@ public final class DeckCatalog {
                     CardCatalog.groups(deck.getMain(), NO_FLAGS), CardCatalog.cards(deck.get(DeckSection.Sideboard), NO_FLAGS),
                     deck.getSleeveArtKey(),
                     deck.getSleeveArtOffset(),
-                    format == GameType.Commander ? bracket(deck) : null, aiSkipNames(deck));
+                    format == GameType.Commander ? bracket(deck) : null, aiSkipNames(deck), cover(deck));
         }
+    }
+
+    /** The card whose art heads a deck: its sleeve art, else its commander, else its most expensive card, as mobile Forge picks a deck's cover. */
+    static String cover(final Deck deck) {
+        // A deck with no sleeve art has an empty key
+        if (deck.getSleeveArtKey() != null && !deck.getSleeveArtKey().isEmpty()) {
+            return deck.getSleeveArtKey();
+        }
+        final PaperCard card = deck.getCommanders().isEmpty()
+                ? new DeckProxy(deck, null, null, null).getHighestCMCCard() : deck.getCommanders().get(0);
+        return card == null ? null : card.getImageKey(false);
     }
 
     /** The keys of listed decks that hold a matching card. A card matches by name outside or inside the sideboard, or by set code or set name. */
