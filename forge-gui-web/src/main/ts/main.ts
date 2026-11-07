@@ -119,6 +119,8 @@ initPress();
 initSheets();
 initDetail(actions);
 initStack(actions);
+initOverlay(schedule);
+initCombatDrag(actions);
 initLog();
 initSide();
 initSettings(actions.setSetting, () => {

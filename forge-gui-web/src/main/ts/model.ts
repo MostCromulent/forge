@@ -227,3 +227,9 @@ export function concedingEndsGame(model: Model): boolean {
   const left = players(model).filter(p => p !== mine && !p.HasLost);
   return left.every(p => mineFoes.has(p.$key) && left.every(q => !foes(p).has(q.$key)));
 }
+
+/** What the player can attack: their opponents still in the game, and those opponents' planeswalkers and battles. */
+export function attackTargets(model: Model, player: PlayerView | undefined): number[] {
+  return derefAll(model, player?.Opponents).filter(p => !p.HasLost).flatMap(p => [p.$key,
+    ...zone(model, p, 'Battlefield').filter(c => /Planeswalker|Battle/.test(stateOf(model, c).Type ?? '')).map(c => c.$key)]);
+}

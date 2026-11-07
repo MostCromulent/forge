@@ -699,6 +699,7 @@ html[data-motion="reduced"] :is(.reveal-back, .reveal-panel.ai-skips, .ai-skips 
 .zone-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); }
 .zone-unfold { font-size: 12.5px; padding: 6px 13px; }
 .zone-shut { width: 30px; padding: 0; color: var(--muted); background: none; }
+#overlay { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
 /* The preview is drawn above dialogs. Hovering a card in a dialog is how you read it, so the preview must not be covered. */
 /* An image or rules-text preview uses the preview size that every page shares (theme.css) */
 #zoom { --zoom-w: var(--preview-w); position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
@@ -839,6 +840,14 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #match.ending::before { content: ''; position: fixed; inset: 0; z-index: 50; pointer-events: none; animation: ending-in .9s ease both;
   background: radial-gradient(circle at var(--end-x, 50%) var(--end-y, 50%), rgba(4,6,10,.08), rgba(4,6,10,.62) 55%, rgba(2,3,6,.9)); }
 @keyframes ending-in { from { opacity: 0; } }
+.shatter-layer { position: fixed; inset: 0; z-index: 55; pointer-events: none; overflow: hidden; }
+.shatter-layer canvas { position: absolute; left: 0; top: 0; }
+/* The burst's light is added to what is behind it, not drawn over it. So it brightens the board instead of fogging it. */
+.shatter-glow { position: absolute; left: 0; top: 0; mix-blend-mode: plus-lighter; opacity: 0; will-change: transform, opacity; }
+.shatter-glow.core { width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(255,251,242,1) 0%, rgba(255,238,214,.8) 11%, rgba(255,214,176,.22) 34%, rgba(255,214,176,0) 60%); }
+.shatter-glow.bloom { width: 900px; height: 900px; border-radius: 50%; background: radial-gradient(circle, rgba(168,198,255,.32) 0%, rgba(140,172,255,.12) 30%, rgba(140,172,255,0) 64%); }
+.shatter-glow.ring { width: 200px; height: 200px; box-sizing: border-box; border-radius: 50%; border: 1px solid rgba(222,234,255,.3); box-shadow: 0 0 14px rgba(168,198,255,.2), inset 0 0 14px rgba(168,198,255,.14); filter: blur(1.5px); }
+.shatter-glow.streak { width: 700px; height: 3px; border-radius: 50%; filter: blur(1.5px); background: linear-gradient(90deg, rgba(200,220,255,0), rgba(214,228,255,.55) 45%, rgba(255,250,240,.9) 50%, rgba(214,228,255,.55) 55%, rgba(200,220,255,0)); }
 #game-over { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; pointer-events: none; }
 #game-over .panel { display: flex; flex-direction: column; align-items: center; gap: 14px; pointer-events: auto; --metal: linear-gradient(180deg, #fff4d2 0%, #f5d27a 40%, #e8b73c 62%, #a3781a 100%); --rule: rgba(242,195,68,.65); }
 #game-over .panel.lose, #game-over .panel.draw, #game-over .panel.watched { --metal: linear-gradient(180deg, #f2f5f9 0%, #c7d0db 45%, #8f9aa9 72%, #5e6979 100%); --rule: rgba(170,185,205,.55); }
@@ -990,6 +999,8 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 .card.auto-tap:not(.selectable) { outline: 3px solid var(--playable, #66ccff); box-shadow: 0 0 6px color-mix(in srgb, var(--playable, #66ccff) 40%, transparent), var(--lift, 0 0 #0000); }
 /* While Auto's choice is shown, only the cards it chose are outlined. The other sources that could pay can still be tapped. The same outline on them would hide which ones Auto chose. */
 #match:has(.card.auto-tap) .card.playable:not(.selectable):not(.auto-tap) { outline-color: transparent; }
+/* A card still flying to its place has no ring. The ring appears when the card lands (motion.ts). */
+.card.landing:is(.selectable, .playable, .auto-tap) { outline-color: transparent; }
 /* A pile holds only cards that Auto would treat the same way (battlefield.ts). So every copy fanned behind the top card gets the ring. The count, in the same colour, shows how many. */
 .card.pile.auto-tap:not(.selectable)::before, .card.pile.auto-tap:not(.selectable)::after, .card.pile.auto-tap:not(.selectable) .pile-edge {
   box-shadow: 0 0 0 3px var(--playable, #66ccff), 0 1px 4px #000a; }
@@ -999,15 +1010,37 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 /* The dim waits until no card is still flying to its place (motion.ts). So the board does not darken round a hand while it is being dealt. */
 #match.picking:not(:has(.card.landing)) :is(.card, .avatar, .emblem, .cmd-tile, .zone-tile):not(.selectable):not(.highlighted),
 #match.picking:not(:has(.card.landing)) #stack .stack-item:not(.targetable) { filter: brightness(.42) saturate(.6); }
+#match .card.bonded { box-shadow: 0 0 0 2px var(--bonded), var(--lift, 0 0 #0000); }
+/* This uses !important because the picking and selectable outlines above are more specific. They would hide the aimed arrow's mark (overlay.ts). */
+#match .aimed { outline: 2px solid var(--aimed) !important; outline-offset: 1px; box-shadow: 0 0 16px 2px var(--aimed) !important; }
 .avatar, .emblem, .cmd-tile, .zone-tile { transition: filter .3s ease; }
 /* The whole slot moves forward so attachments move with the attacker. A tapped attacker moves further so the front edges line up. */
 /* The transition is on every slot, not only an attacking one. So the move back after combat animates like the move forward. */
 .battlefield .slot { transition: transform .15s ease; }
+/* A pile that a card is flying into starts at its old depth and width. It widens as the card flies (motion.ts openPile). */
+.battlefield .slot.holding { padding-left: calc(var(--held-behind) * var(--card-w) * var(--fit, 1) * var(--fan)); }
+.battlefield .slot.opening { transition: transform .15s ease, padding-left .26s cubic-bezier(.2,.7,.3,1); }
+.card.pile.grown[data-depth="1"]::after, .card.pile.grown[data-depth="2"]::before, .card.pile.grown[data-depth="3"] .pile-edge { animation: pile-out .26s cubic-bezier(.2,.7,.3,1); }
+@keyframes pile-out { from { transform: none; } }
 .slot.attacking { --advance: 14px; transform: translateY(calc(-1 * var(--advance))); }
 .slot.attacking:has(> .card.tapped:last-child) { --advance: calc(14px + (var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
 #opponent .slot.attacking { transform: translateY(var(--advance)); }
 .card.attacking { outline: 2px solid var(--attack); }
+/* The charge marks are in their own layer over the board. The battlefield scrolls, so it would clip the glow above its top row. */
+#charges { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
+.charge { position: absolute; aspect-ratio: 64 / 54; transform: translate(-50%, -100%); }
+.charge.down { transform: translate(-50%, 0) rotate(180deg); }
+.charge::before, .charge::after { content: ''; position: absolute; }
+.charge::before { left: 50%; top: 58%; width: 140%; height: 70%; transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(closest-side, #ff3b2a40, transparent); animation: charge-breathe 3.2s ease-in-out infinite; }
+.charge::after { inset: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -14 64 54'><filter id='b' filterUnits='userSpaceOnUse' x='-12' y='-14' width='64' height='54'><feGaussianBlur stdDeviation='5'/></filter><g transform='translate(6 13) scale(.7)' opacity='.55'><path d='M2 19L20 2L38 19L20 8Z' fill='%23ff2a14' opacity='.6' filter='url(%23b)'/><path d='M2 19L20 2L38 19L20 8Z' fill='%23e8321f' stroke='%23ff5a3c' stroke-width='.6'/><path d='M6 18.3L20 3.7L34 18.3L20 6.2Z' fill='%23fff4ee'/></g><path d='M2 19L20 2L38 19L20 8Z' fill='%23ff2a14' opacity='.6' filter='url(%23b)'/><path d='M2 19L20 2L38 19L20 8Z' fill='%23e8321f' stroke='%23ff5a3c' stroke-width='.6'/><path d='M6 18.3L20 3.7L34 18.3L20 6.2Z' fill='%23fff4ee'/></svg>") center / contain no-repeat; }
+@keyframes charge-breathe { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+html[data-motion="reduced"] .charge::before { animation: none; }
 .slot.charging > .card.attacking { outline: none; }
+/* While attackers or blockers are declared, your creatures can be dragged. So a touch on one drags it instead of scrolling. */
+#match:is(.declaring-blocks, .declaring-attacks) #me .battlefield .card { touch-action: none; }
+body.dragging-block, body.dragging-block * { cursor: grabbing !important; }
+body.dragging-block #zoom { display: none; }
 /* A blocking card shows a tab at its bottom edge. An outline would look like the pale blue outline of a playable card. */
 .card .block-tab { display: none; }
 .card.blocking .block-tab { display: flex; align-items: center; gap: calc(3px * var(--fit, 1)); position: absolute; left: 50%; bottom: 0; z-index: 4;
@@ -1098,6 +1131,9 @@ html[data-motion="reduced"] .battlefield .card.barred .barred-mark { animation: 
 .card.pile .sick { right: -3px; top: 21px; }
 .card.pile[data-depth]::after { display: block; }
 .card.pile[data-depth="2"]::before, .card.pile[data-depth="3"]::before { display: block; }
+/* Hidden for the one frame where a pile is drawn at its old depth (motion.ts openPile). These come after the rules above so they win. */
+.card.pile[data-held-depth="0"]::after, .card.pile[data-held-depth="0"]::before, .card.pile[data-held-depth="0"] .pile-edge,
+.card.pile[data-held-depth="1"]::before, .card.pile[data-held-depth="1"] .pile-edge, .card.pile[data-held-depth="2"] .pile-edge { display: none; }
 /* A pile's count is white on black on the top card's corner. When the pile is spread out, the count is muted and is used to close it again. */
 .card .count { display: none; position: absolute; right: -7px; top: -7px; z-index: 3; min-width: 28px; height: 24px; padding: 0 7px; place-items: center; background: #050608; color: #fff; border: 1px solid #ffffff38; border-radius: 12px; box-shadow: 0 2px 6px #000b; font-size: 14.5px; font-weight: 800; cursor: pointer; }
 .card.pile .count, .card .count.opened { display: grid; }
@@ -1107,6 +1143,9 @@ html[data-motion="reduced"] .battlefield .card.barred .barred-mark { animation: 
 #stack-menu { z-index: 70; }
 #stack-menu .tick { color: var(--accent-2); }
 #stack-menu [aria-checked="false"] .tick { visibility: hidden; }
+/* A spell whose cost is still being paid is shown over the board */
+.card.paying { transform-origin: 0 0; outline: 2px solid var(--accent-2); outline-offset: 0; border-radius: var(--radius); box-shadow: 0 0 0 4px #0e1116, 0 12px 28px #000c, 0 0 6px color-mix(in srgb, var(--accent-2) 30%, transparent); animation: paying 1.4s ease-in-out infinite; }
+@keyframes paying { 50% { box-shadow: 0 0 0 4px #0e1116, 0 12px 28px #000c, 0 0 10px color-mix(in srgb, var(--accent-2) 45%, transparent); } }
 /* The turn banner replaces the phase pill instead of crossing the board, so it never covers the cards */
 #phase-strip .pill { transition: opacity .16s ease, background-color .15s ease, border-color var(--pill-ms) var(--pill-ease), box-shadow var(--pill-ms) var(--pill-ease); }
 #phase-strip.announcing .pill, #phase-strip.announcing .stops { opacity: 0; pointer-events: none; }
@@ -1271,6 +1310,15 @@ html[data-motion="reduced"] .avatar.hit, html[data-motion="reduced"] .avatar.hit
 .scheme-reveal .scheme.big { width: min(420px, 80vw); }
 .scheme-reveal .scheme.big .scheme-name { font-size: 15px; padding: 14px 10px 6px; }
 .scheme-reveal p { margin: 0; color: var(--text); font-size: 15px; }
+/* Why a dragged block was refused, shown where the card was dropped */
+.block-tip { position: fixed; z-index: 90; max-width: 240px; display: grid; gap: 2px; padding: 6px 10px; pointer-events: none;
+  font-size: 12px; line-height: 1.35; color: var(--muted); background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(4px);
+  border: 1px solid var(--line-bright); border-left: 2px solid var(--accent-2); border-radius: 8px; box-shadow: 0 8px 22px var(--scrim-deep);
+  animation: block-tip-in .14s ease-out; }
+.block-tip b { color: var(--text); font-weight: 700; }
+.block-tip.leaving { animation: block-tip-out .2s ease-in forwards; }
+@keyframes block-tip-in { from { opacity: 0; transform: translateY(3px); } }
+@keyframes block-tip-out { to { opacity: 0; } }
 
 /* Stickers are drawn on the card image as pieces cut from their sheet's image. They have a white edge like paper stickers. */
 .card > .stickers, #zoom .shot > .stickers { position: absolute; inset: 0; z-index: 2; pointer-events: none; container-type: size; }
