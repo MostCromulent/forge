@@ -1,6 +1,6 @@
 // The banner that shows whose turn it is when a turn starts
 
-import { deref, game, me, players, takesTurn, type Model } from '../model';
+import { deref, game, me, players, sharesTurns, takesTurn, teamOf, type Model } from '../model';
 import { byId, make } from '../dom';
 import { playerAvatarUrl } from '../looks';
 import { t } from '../text';
@@ -46,22 +46,28 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   if (!seenBefore && turnNumber !== 1) {
     return false;
   }
-  // With several opponents most turns belong to someone else. The phase pill already shows whose turn it is
-  if (!mine && players(model).length > 2) {
+  // With several opponents most turns belong to someone else. The phase pill already shows whose turn it is. Two teams that share their turns are two sides, as in a two-player game
+  if (!mine && players(model).length > 2 && !sharesTurns(model)) {
     return false;
   }
   const banner = make('div', `turn-banner${mine ? ' mine' : ''}`);
-  const url = playerAvatarUrl(active);
-  const face = make(url ? 'img' : 'span', 'mugshot');
-  if (face instanceof HTMLImageElement) {
-    face.alt = '';
-    face.src = url;
-  } else {
-    face.textContent = (active.Name ?? '?').slice(0, 1).toUpperCase();
+  const team = teamOf(model, active);
+  for (const player of team) {
+    const url = playerAvatarUrl(player);
+    const face = make(url ? 'img' : 'span', 'mugshot');
+    if (face instanceof HTMLImageElement) {
+      face.alt = '';
+      face.src = url;
+    } else {
+      face.textContent = (player.Name ?? '?').slice(0, 1).toUpperCase();
+    }
+    banner.append(face);
   }
   const whose = make('b', '');
-  whose.textContent = mine ? t('lblWebPhaseYourTurn') : t('lblWebBoardPlayersTurn', active.Name ?? '');
-  banner.append(face, whose);
+  whose.textContent = team.length > 1
+    ? (mine ? t('lblWebPhaseYourTeamsTurn') : t('lblWebBoardTeamsTurn', team[0].Name ?? '', team[1].Name ?? ''))
+    : (mine ? t('lblWebPhaseYourTurn') : t('lblWebBoardPlayersTurn', active.Name ?? ''));
+  banner.append(whose);
   // The banner replaces the pill instead of covering it, because the pill animates its own width
   const strip = byId('phase-strip');
   strip.append(banner);

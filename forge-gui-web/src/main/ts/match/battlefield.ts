@@ -133,7 +133,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   const header = root.classList.contains('compact') ? player.offsetHeight + 8 : minWidth ? player.offsetHeight : 0;
   const seatPad = px(style, 'padding-top') + px(style, 'padding-bottom');
   // The space near the phase pill for an attacker to move forward grows with the cards (board.css). So it is computed for each size tried
-  const mine = root.id === 'me';
+  const mine = root.id === 'me' || root.classList.contains('mate');
   const fieldPad = (fit: number) => {
     // A phone sets the field's padding in its own styles. It is smaller than the space computed below
     if (minWidth) return px(fieldStyle, 'padding-top') + px(fieldStyle, 'padding-bottom');

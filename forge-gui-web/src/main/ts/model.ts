@@ -308,6 +308,9 @@ export const takesTurn = (player: PlayerView | undefined, turn: Ref | null | und
   !!player && !!turn && (player.$key === turn.ref || (player.SharedTeam ?? []).some(r => r?.ref === turn.ref));
 /** Whether the players are in teams that share their turns, as in Two-Headed Giant. */
 export const sharesTurns = (model: Model): boolean => players(model).some(p => (p.SharedTeam ?? []).some(r => !!r && r.ref !== p.$key));
+/** The player and, in Two-Headed Giant, their teammate, with the player first. */
+export const teamOf = (model: Model, player: PlayerView): PlayerView[] =>
+  [player, ...players(model).filter(p => p !== player && (p.SharedTeam ?? []).some(r => r?.ref === player.$key))];
 /** Whether another player is on your team. */
 export const isTeammate = (model: Model, player: PlayerView): boolean =>
   !isLocal(model, player) && (me(model)?.SharedTeam ?? []).some(r => r?.ref === player.$key);

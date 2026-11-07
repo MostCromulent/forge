@@ -1,7 +1,7 @@
 // The phase bar is a pill on the divider. It shows whose turn it is and the five phases. Clicking it opens the grid of phase stops
 
 import { reconcile } from './reconcile';
-import { deref, game, isLocal, me, opponents, players, takesTurn, type Model } from '../model';
+import { deref, game, isLocal, me, opponents, players, takesTurn, teamOf, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
 import { byId, q, playOnce, make, onPressOutside, reducedMotion, easeOut, escapeHtml } from '../dom';
 import { changeUi, ui } from '../ui';
@@ -104,13 +104,15 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   // Untap (index -1) belongs to the beginning phase
   const phase = step < 0 ? 0 : phaseOf(step);
   const pill = q(root, '.pill');
-  const avatar = active ? playerAvatarUrl(active) : '';
-  const portrait = q<HTMLImageElement>(pill, '.owner img');
-  portrait.hidden = !avatar;
-  if (avatar) {
-    portrait.src = avatar;
-  }
-  swapOwner(q(pill, '.owner'), myTurn ? t('lblWebPhaseYourTurn') : active?.Name ?? '');
+  // A team that shares its turns is named together, with both portraits
+  const team = active ? teamOf(model, active) : [];
+  q(pill, '.owner').querySelectorAll<HTMLImageElement>('img').forEach((portrait, i) => {
+    const avatar = team[i] ? playerAvatarUrl(team[i]) : '';
+    portrait.hidden = !avatar;
+    if (avatar) portrait.src = avatar;
+  });
+  const activeName = team.length > 1 ? t('lblWebPhaseTeamNames', team[0].Name ?? '', team[1].Name ?? '') : active?.Name ?? '';
+  swapOwner(q(pill, '.owner'), myTurn ? t(team.length > 1 ? 'lblWebPhaseYourTeamsTurn' : 'lblWebPhaseYourTurn') : activeName);
   // The server sends the engine's English name for the time of day
   const dayTime = model.controls?.dayTime;
   const time = dayTime === 'Day' ? t('lblDay') : dayTime === 'Night' ? t('lblNight') : dayTime;
@@ -118,7 +120,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   drawTrack(pill, model, step, phase, myTurn, actions);
   slideTo(q(pill, '.track'), phase, step);
   drawWaiting(pill, model);
-  drawUntil(pill, model, myTurn, theirs, active?.Name ?? '');
+  drawUntil(pill, model, myTurn, theirs, activeName);
   stopYield = actions.stopYield;
   const opens = myTurn ? 'up' : 'down';
   // This runs on every render, so the markup is replaced only when it changes
@@ -151,7 +153,7 @@ function build(root: HTMLElement): void {
   const pill = q(root, '.pill');
   // Every segment has the same markup. Only the current one shows its name and pips, so nothing jumps when the phase changes
   const track = PHASES.map(p => `<span class="phase"><span class="mark">${glyph(p.glyph, 12)}<span class="code">${escapeHtml(t(p.code))}</span></span><span class="label"></span><span class="pips"></span></span>`).join('');
-  pill.innerHTML = `<span class="owner"><img alt="" hidden><b></b><span class="turn"></span></span>`
+  pill.innerHTML = `<span class="owner"><img alt="" hidden><img class="mate" alt="" hidden><b></b><span class="turn"></span></span>`
     + `<span class="track"><span class="slide" aria-hidden="true"></span>${track}</span>`
     + `<span class="waiting" hidden>${glyph('wait', 11)}<span class="who"></span><b></b></span>`
     + `<span class="until" hidden>${glyph('skip', 12)}<span class="verb"></span><span class="text"></span><span class="stop">${glyph('stop', 10)}</span></span>`

@@ -189,6 +189,12 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
   if (drawDrawer(root, model, held, cards.length)) {
     return;
   }
+  fanOut(root);
+}
+
+/** Lays a hand's cards out as a fan that fits the element's width, as your own hand is drawn. */
+export function fanOut(root: HTMLElement): void {
+  const cards = [...root.children];
   const cardWidth = (root.firstElementChild as HTMLElement | null)?.offsetWidth ?? 0;
   // The hand's padding keeps space clear for the prompt beside it, so that space is not used for cards
   const style = getComputedStyle(root);
@@ -201,7 +207,7 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
   const perCard = mid > 0 ? Math.min(3, 12 / mid) : 0;
   // Each card drops by the amount its tilt would move it if the whole hand rotated around one point below the screen
   const radius = perCard > 0 ? (cardWidth + step) / Math.sin(perCard * Math.PI / 180) : 0;
-  [...root.children].forEach((child, i) => {
+  cards.forEach((child, i) => {
     const tilt = (i - mid) * perCard;
     const el = child as HTMLElement;
     el.style.setProperty('--tilt', `${tilt}deg`);

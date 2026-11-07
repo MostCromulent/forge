@@ -4,7 +4,7 @@ import { reconcile } from './reconcile';
 import { cardTypes } from './thresholds';
 import { cardImageSrc, hideOnError, setImage, symbolUrl } from '../images';
 import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLocal, type Model, offersPicks, takesTurn, sharesTurns, isTeammate } from '../model';
-import { renderHand, resetHand } from './hand';
+import { fanOut, renderHand, resetHand } from './hand';
 import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
 import { watchBlockTap } from './combatdrag';
@@ -146,7 +146,10 @@ function renderOpponents(root: HTMLElement, model: Model, onField: CardView[], a
     },
     (el, p) => {
       // A tabbed seat on desktop has the top half to itself. So it uses the two-player layout, with cards at full size
-      el.classList.toggle('compact', !tabbed || isPortrait());
+      // In quarters your teammate's seat is drawn like yours
+      const mate = quads && isTeammate(model, p);
+      el.classList.toggle('compact', (!tabbed && !mate) || isPortrait());
+      el.classList.toggle('mate', mate);
       el.style.setProperty('--tint', tints.find(t => t.name === p.Name)?.colour ?? 'var(--muted)');
       renderSeat(el, model, p, onField, actions, select);
     });
@@ -389,19 +392,14 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
     () => make('span', 'player-counter'),
     (el, [name, n]) => { el.textContent = `${name.toLowerCase()} ${n}`; });
   renderEmblems(q(root, '.emblems'), model, player, zone(model, player, 'Command'), select);
-  const mate = isTeammate(model, player);
-  const archenemy = isArchenemy(model, player);
-  const role = q(root, '.role-tag');
-  role.hidden = !archenemy && (!sharesTurns(model) || isLocal(model, player));
-  role.textContent = t(archenemy ? 'lblArchenemy' : mate ? 'lblWebBoardTeammate' : 'lblWebBoardOpponent');
-  role.classList.toggle('foe', !archenemy && !mate);
+  q(root, '.role-tag').hidden = !isArchenemy(model, player);
   renderOngoing(q(root, '.schemes-ongoing'), model, player);
   // The hand is drawn first, so the cards above it are sized to the space it leaves
-  renderTeammateHand(root, model, mate ? zone(model, player, 'Hand') : []);
+  renderTeammateHand(root, model, root.classList.contains('mate') ? zone(model, player, 'Hand') : []);
   renderBattlefield(root, model, player.$key, zone(model, player, 'Battlefield'), onField, select);
 }
 
-/** Your teammate's hand lies face up along the bottom of their seat. Its cards are there to look at, so a click does nothing. */
+/** Your teammate's hand lies face up and fanned along the bottom of their seat, beside their portrait. Its cards are there to look at, so a click does nothing. */
 function renderTeammateHand(seat: HTMLElement, model: Model, cards: CardView[]): void {
   let row = seat.querySelector<HTMLElement>(':scope > .mate-hand');
   if (!row && !cards.length) return;
@@ -411,6 +409,8 @@ function renderTeammateHand(seat: HTMLElement, model: Model, cards: CardView[]):
   }
   row.hidden = !cards.length;
   reconcile(row, cards, c => c.$key, () => createCard(() => {}), (el, c) => updateCard(el, model, c));
+  row.style.paddingLeft = `${q(seat, '.player').offsetWidth + 32}px`;
+  fanOut(row);
 }
 
 /** The arc and chip on the portrait show the most damage any one commander has dealt this player, not the total. */
