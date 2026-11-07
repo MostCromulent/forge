@@ -163,6 +163,16 @@ public final class ToBrowser {
             List<String> overBracket, int teams, List<Integer> teamChoices, List<String> aiProfiles) {
     }
 
+    /** A Limited table's event. phase is an EventPhase name. */
+    public record LimitedTable(EventKind kind, @Nullable String product, int podSize, @Nullable String pickRule, int timer,
+            @Nullable String phase, @Nullable String activeEventId, boolean eventDecksOnly, boolean started,
+            List<PastEvent> pastEvents) {
+    }
+
+    /** An earlier event whose pools the host keeps: its kind, its product, and when it was played (yyyy-MM-dd HH:mm). */
+    public record PastEvent(String id, EventKind kind, String product, String date) {
+    }
+
     /** Every entry of the lobby's Format menu, in FormatChoices' order. The deck finder and editor offer the same entries. Sent once per browser. */
     @Message("formats")
     public record Formats(List<Format> formats) {

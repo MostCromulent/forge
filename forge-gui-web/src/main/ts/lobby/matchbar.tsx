@@ -35,6 +35,16 @@ function Field({ name, grow, children }: { name: string; grow?: boolean; childre
   );
 }
 
+/** Draft and Sealed in the same shape the server uses for a format, so the menu's card shows them the same way. */
+function limitedFormats(): (Format & { kind: 'draft' | 'sealed' })[] {
+  return [
+    { id: 'Draft', kind: 'draft', name: t('lblDraft'), group: 'Limited', desc: t('lblWebMatchBarDescDraft'),
+      facts: [t('lblWebMatchBarFactPicks'), t('lblWebFactLife', 20)], play: t('lblWebMatchBarPlayDraft'), deckCards: 40, deckAtLeast: false },
+    { id: 'Sealed', kind: 'sealed', name: t('lblSealed'), group: 'Limited', desc: t('lblWebMatchBarDescSealed'),
+      facts: [t('lblWebMatchBarFactPool'), t('lblWebFactLife', 20)], play: t('lblWebMatchBarPlaySealed'), deckCards: 40, deckAtLeast: false },
+  ];
+}
+
 /** The table's Format menu. Only a table offers Draft and Sealed, and only the host may change it. */
 export function GameMenu({ lobby, formats, actions }: { lobby: LobbyTable; formats: Format[]; actions: Actions }) {
   const lim = lobby.limited;

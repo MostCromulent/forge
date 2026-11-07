@@ -10,6 +10,7 @@ import forge.gamemodes.net.server.HostingServer;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
+import forge.web.lobby.Lobby;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.ToBrowser.Address;
 import forge.web.protocol.ToBrowser.ChatLine;
@@ -34,6 +35,8 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     static final int MOST_SESSIONS = 64;
     /** How long the host's seat stays reserved for a browser that has left, so a reload keeps the seat. */
     private static final long HOST_GRACE_MILLIS = 20_000;
+    /** How long a drafting seat's browser may be gone before the draft host is told the player left. */
+    private static final long DRAFT_HOLD_MILLIS = 15_000;
     /** Enough of the conversation for a browser that arrives late to see what was said. */
     private static final int CHAT_KEPT = 60;
     private final WebGuiBase ui;
@@ -225,6 +228,11 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         return null;
     }
 
+    private boolean drafting() {
+        final ServerGameLobby table = hostLobby();
+        return table != null && Lobby.drafting(table);
+    }
+
     /** The host gives a disconnected guest's seat to a waiting browser. That browser takes over the session that holds the seat. */
     void giveSeat(final String from, final String to) {
         final WebSession seat;
@@ -287,6 +295,11 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     /** Sends the table to every browser again, after a change that no lobby update carries. */
     void lobbyChanged() {
         byId.values().forEach(WebSession::lobbyChanged);
+    }
+
+    /** Makes every seat's dial read again which pod seats are held, after a player left or came back. */
+    void seatsChanged() {
+        byId.values().forEach(s -> s.eventSeat().seatsChanged());
     }
 
     /** Drops every seat and stops the server. Guests go first, so no guest session stays open after its game. */

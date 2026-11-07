@@ -77,6 +77,18 @@ export interface PageActions {
   poolPlay(name: string, mode: PoolPlayMode, opponent: number, count: number, games: number): void;
   gauntletNext(): void;
   gauntletRestart(): void;
+
+  /** Opens a table others can join by link, then makes it a draft or sealed table. */
+  openLimitedTable(kind: EventKind): void;
+  /** Sets the table's Limited mode to a kind of event, or null for Constructed. */
+  setLimited(kind: EventKind | null): void;
+  eventSetup(s: Omit<EventSetup, 't'>): void;
+  eventStart(): void;
+  eventHostAgain(eventId: string): void;
+  eventNew(): void;
+  eventForget(eventId: string): void;
+  eventDecksOnly(on: boolean): void;
+  sitOut(index: number, sittingOut: boolean): void;
   ready(on: boolean): void;
 
   leaveLobby(): void;
@@ -183,6 +195,15 @@ export function createActions(send: Send): PageActions {
     claimHost: (password?: string) => send({ t: 'claimHost', password }),
     join: () => send({ t: 'join' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
+    openLimitedTable: kind => send({ t: 'invite', limited: kind }),
+    setLimited: kind => send(kind ? { t: 'setLimited', kind } : { t: 'setLimited' }),
+    eventSetup: s => send({ t: 'eventSetup', ...s }),
+    eventStart: () => send({ t: 'eventStart' }),
+    eventHostAgain: eventId => send({ t: 'eventHostAgain', eventId }),
+    eventNew: () => send({ t: 'eventNew' }),
+    eventForget: eventId => send({ t: 'eventForget', eventId }),
+    eventDecksOnly: on => send({ t: 'eventDecksOnly', on }),
+    sitOut: (index, sittingOut) => send({ t: 'sitOut', index, sittingOut }),
     ready: on => send({ t: 'ready', ready: on }),
     limitedOpen: (kind, resume) => send({ t: 'limitedOpen', kind, resume }),
     draftStart: d => send({ t: 'draftStart', ...d }),

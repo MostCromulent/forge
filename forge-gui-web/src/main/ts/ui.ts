@@ -64,6 +64,7 @@ export interface UiState {
   cardText: boolean;
   /** Which side column panels are open. Stored in the browser across sessions. */
   sidePanels: { log: boolean; chat: boolean };
+  draftHidden: boolean;
   /** The hovered card or player is pinned open as a sheet, after a long press on a phone. */
   inspect: boolean;
   /** The hand is open as a drawer over the board, on a phone. */
@@ -109,6 +110,7 @@ export const ui: UiState = {
   faceIndex: 0,
   cardText: false,
   sidePanels: { log: true, chat: true, ...storedSidePanels() },
+  draftHidden: false,
   inspect: false,
   handOpen: false,
   openSeat: null,

@@ -95,6 +95,41 @@ public final class WebSession implements IHasForgeLog {
                 DeckCatalog.forgetSleeveArt(f.key());
                 ch.send(s.hello());
             })))
+            .on(EventDecksOnly.class, atEvent((s, ch, d) -> {
+                s.lobby.events().setEventDecksOnly(d.on());
+                s.relistDecks(ch);
+            }))
+            .on(EventHostAgain.class, atEvent((s, ch, e) -> {
+                reportProblem(ch, s.lobby.events().hostAgain(e.eventId()));
+                s.relistDecks(ch);
+            }))
+            .on(EventForget.class, atEvent((s, ch, e) -> {
+                reportProblem(ch, s.lobby.events().forgetEvent(e.eventId()));
+                s.relistDecks(ch);
+            }))
+            .on(Plain.eventNew, atEvent((s, ch, c) -> {
+                final String problem = s.lobby.events().newEvent();
+                if (problem != null) {
+                    ch.send(error(problem));
+                } else {
+                    s.sendEventOptions(ch);
+                }
+                s.relistDecks(ch);
+            }))
+            .on(SetLimited.class, atEvent((s, ch, l) -> s.setLimited(ch, l.kind())))
+            .on(SitOut.class, atEvent((s, ch, o) -> s.lobby.events().sitOut(o.index(), o.sittingOut())))
+            // Building a product can wait for a web site, and dealing packs opens every pool, so neither runs on this thread
+            .on(EventSetup.class, atEvent((s, ch, e) -> s.ui.runBackgroundTask("Event", () -> {
+                reportProblem(ch, s.lobby.events().setUpEvent(e));
+                s.lobby.sendState(ch);
+            })))
+            .on(Plain.eventStart, atEvent((s, ch, c) -> {
+                if (s.limited.draft() != null) {
+                    ch.send(error(Localizer.getInstance().getMessage("lblWebSessionFinishDraft")));
+                } else {
+                    reportProblem(ch, s.lobby.events().startEvent());
+                }
+            }))
             .on(GiveSeat.class, host((s, ch, g) -> s.sessions.giveSeat(g.from(), g.to())))
             .on(DropPlayer.class, host((s, ch, d) -> s.sessions.dropPlayer(d.name())))
             .on(Say.class, (s, ch, say) -> {
@@ -194,6 +229,7 @@ public final class WebSession implements IHasForgeLog {
     /** A guest's last chosen sleeve, from its browser. Null until it chooses one, and the seat then keeps the sleeve it was given. */
     private volatile Integer sleeve;
     private final OfflineLimited limited;
+    private final EventSeat eventSeat;
     /**
      * Tells sessions apart. A browser that is moved to another session, such as a seat handed over, sees the number change. The log also uses it,
      * because the player may have no name yet, or the same name as another.
@@ -335,6 +371,10 @@ public final class WebSession implements IHasForgeLog {
         return local;
     }
 
+    EventSeat eventSeat() {
+        return eventSeat;
+    }
+
     public boolean attached() {
         return browser != null;
     }
@@ -450,6 +490,11 @@ public final class WebSession implements IHasForgeLog {
         });
     }
 
+    /** A change to the table's draft or sealed event. Only the host may make it. */
+    private static <T extends Record> Handler<WebSession, T> atEvent(final Handler<WebSession, T> change) {
+        return atSetup(host(change));
+    }
+
     private static <T extends Record> Handler<WebSession, T> host(final Handler<WebSession, T> handler) {
         return (s, ch, c) -> {
             if (s.isHost) {
@@ -521,6 +566,17 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
+    /** Switches the table to a kind of event, or back to Constructed when kind is null. */
+    private void setLimited(final BrowserChannel channel, final EventKind kind) {
+        final String problem = lobby.events().setLimited(kind);
+        if (problem != null) {
+            channel.send(error(problem));
+        } else if (kind != null) {
+            sendEventOptions(channel);
+        }
+        relistDecks(channel);
+    }
+
     private void openLimited(final BrowserChannel channel, final LimitedOpen open) {
         final EventKind kind = open.kind() == EventKind.draft ? EventKind.draft : EventKind.sealed;
         final Stage now = stage;
@@ -537,6 +593,17 @@ public final class WebSession implements IHasForgeLog {
         if (now instanceof Event e) {
             move(now, next.apply(e));
         }
+    }
+
+    private static void reportProblem(final BrowserChannel channel, final String problem) {
+        if (problem != null) {
+            channel.send(error(problem));
+        }
+    }
+
+    /** The event setup form offers the same options as the offline one. Reading the lists reads files, so it does not run on the socket thread. */
+    private void sendEventOptions(final BrowserChannel channel) {
+        ui.runBackgroundTask("Limited", () -> channel.send(OfflineEvents.options()));
     }
 
     /** Opens match setup: a game of this machine's own, set up for an event when limited is not null, or a seat in the host's game. Tells the browser the result. */

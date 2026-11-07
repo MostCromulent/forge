@@ -14,12 +14,14 @@ import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.NetworkLogConfig;
 import forge.gamemodes.net.client.ClientGameLobby;
 import forge.gamemodes.net.client.FGameClient;
+import forge.gamemodes.net.event.NetEvent;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.HostingServer;
 import forge.gamemodes.net.server.RemoteClient;
 import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gamemodes.net.server.ServerGameLobby;
+import forge.gui.interfaces.IDraftEventHandler;
 import forge.interfaces.ILobbyListener;
 import forge.interfaces.IUpdateable;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -57,8 +59,22 @@ public final class LocalGame implements IHasForgeLog {
     private volatile ClientGameLobby joined;
     private volatile FGameClient client;
     private volatile int webSeat = -1;
+    /** Receives the draft and pool events the host sends this seat. Set before a table is opened or joined. */
+    private volatile IDraftEventHandler draftHandler;
 
     public record Seat(String name, boolean ai, int avatar, int sleeve, Deck deck) {
+    }
+
+    public void setDraftHandler(final IDraftEventHandler handler) {
+        draftHandler = handler;
+    }
+
+    /** Sends an event to the host through this seat's client. A draft pick reaches the draft host this way. */
+    public void sendToHost(final NetEvent event) {
+        final FGameClient c = client;
+        if (c != null) {
+            c.send(event);
+        }
     }
 
     public ServerGameLobby hostedLobby() {

@@ -293,7 +293,63 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
       answer: v => v.cubeId ?? null,
       render: (_, set) => <TextStep placeholder={t('lblWebSetupCubeCobraField')} initial={options.lastCube ?? ''} done={id => set({ cubeId: id })} />,
     },
+    {
+      id: 'rules', label: t('lblWebOptionsSectionTable'), hint: t('lblWebSetupHintRules'), fields: ['podSize', 'pickRule', 'timer', 'grace'],
+      applies: () => !!table,
+      answer: v => v.timer === undefined ? null : rulesLine(v),
+      render: (v, set) => <TableRules seated={table?.seated ?? 2} recommended={productPod(options, v)} done={set} />,
+    },
   ];
+}
+
+/** A pick rule's name as the form and the event panel show it, either on its own or for the middle of a line. */
+export function pickRuleName(rule?: string, inline = false): string {
+  const names = PICK_RULES.find(p => p[0] === rule) ?? PICK_RULES[0];
+  return t(inline ? names[2] : names[1]);
+}
+
+/** The table rules as one line, shown on the folded step. */
+function rulesLine(v: DraftValue): string {
+  const picks = pickRuleName(v.pickRule, true);
+  return t('lblWebSetupRulesLine', v.podSize ?? 0, picks, v.timer ? t('lblWebSetupSecondsToPick', v.timer) : t('lblWebEventNoPickTimer'));
+}
+
+function TableRules({ seated, recommended, done }: { seated: number; recommended: number; done: (v: Partial<DraftValue>) => void }) {
+  const pods = podChoices(seated);
+  const [pod, setPod] = useState(() => podStart(recommended, seated));
+  const [pickRule, setPickRule] = useState('NEVER');
+  const [timer, setTimer] = useState(60);
+  const [grace, setGrace] = useState(120);
+  const at = pods.indexOf(pod);
+  return (
+    <div class="table-rules">
+      <span class="tr-label">{t('lblWebSetupSeats')}</span>
+      <div class="tr-field">
+        <span class="stepper">
+          <button class="step" disabled={at <= 0} aria-label={t('lblWebSetupFewerSeats')} onClick={() => setPod(pods[at - 1])}>&minus;</button>
+          <span class="n">{pod}</span>
+          <button class="step" disabled={at >= pods.length - 1} aria-label={t('lblWebSetupMoreSeats')} onClick={() => setPod(pods[at + 1])}>+</button>
+        </span>
+        <span class="hint">{t('lblWebSetupComputersFill')}</span>
+      </div>
+      <label class="tr-label" for="tr-picks">{t('lblWebEventPicks')}</label>
+      <span class="pill-select"><select id="tr-picks" value={pickRule} onChange={e => setPickRule(e.currentTarget.value)}>
+        {PICK_RULES.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
+      </select></span>
+      <label class="tr-label" for="tr-timer">{t('lblNetworkPickTimerCaption')}</label>
+      <span class="pill-select"><select id="tr-timer" value={timer} onChange={e => setTimer(Number(e.currentTarget.value))}>
+        {TIMERS.map(n => <option key={n} value={n}>{seconds(n, t('lblNone'))}</option>)}
+      </select></span>
+      <label class="tr-label" for="tr-grace">{t('lblWebSetupTimeToRejoin')}</label>
+      <div class="tr-field">
+        <span class="pill-select"><select id="tr-grace" value={grace} onChange={e => setGrace(Number(e.currentTarget.value))}>
+          {GRACES.map(n => <option key={n} value={n}>{n === 0 ? t('lblNone') : t('lblWebSetupMinutes', n / 60)}</option>)}
+        </select></span>
+        <span class="hint">{t('lblWebSetupRejoinHint')}</span>
+      </div>
+      <button class="primary" onClick={() => done({ podSize: pod, pickRule, timer, grace })}>{t('lblContinue')}</button>
+    </div>
+  );
 }
 
 /** What the draft is. Online, the table rules say who drafts, so the computer drafters are not counted here. */

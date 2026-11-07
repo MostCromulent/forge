@@ -99,6 +99,10 @@ public final class DeckSession implements IHasForgeLog {
     private int editorTable;
     /** The subfolder of the format's decks that the open deck came from, or "" for the top folder. */
     private String editorPath = "";
+    /** Whether the open deck is an event's pool. The pool goes on its player's seat when the editor closes, built or not. */
+    private boolean eventPool;
+    /** A guest's event pool that its browser has not yet confirmed it stored. */
+    private volatile EventPool pendingPool;
     /** Where to send a guest's deck. The session updates it as the browser connects and disconnects. */
     private final AtomicReference<BrowserChannel> channelFor = new AtomicReference<>();
 
@@ -236,6 +240,27 @@ public final class DeckSession implements IHasForgeLog {
                 !host.getAsBoolean(), this::sendDeviceDeck);
         editor.setFreeCommander(freeCommander);
         editorSeat = null;
+        editorPath = "";
+        if (channel != null) {
+            channel.send(new EditorMessage(editor.state()));
+        }
+    }
+
+    /** A guest's event pool is stored in its browser. It is sent again on each reconnect until the browser confirms it stored it. */
+    public synchronized void openEventPool(final Deck pool, final GameType type, final IStorage<Deck> eventDecks, final String deviceId,
+            final BrowserChannel channel) {
+        final DeckEditor.Target target;
+        if (eventDecks == null) {
+            pendingPool = new EventPool(deviceId, pool, type);
+            sendDeviceDeck(deviceId, text(pool), type);
+            target = new DeckEditor.Device(deviceId);
+        } else {
+            target = new DeckEditor.Stored(eventDecks);
+        }
+        editor = new DeckEditor(pool, false, true, target, Check.of(type, null), storages, eventDecks == null, this::sendDeviceDeck);
+        eventPool = true;
+        editorSeat = lobby.mySeat();
+        editorTable = lobby.table();
         editorPath = "";
         if (channel != null) {
             channel.send(new EditorMessage(editor.state()));
@@ -604,6 +629,9 @@ public final class DeckSession implements IHasForgeLog {
     /** A change to the open deck. It returns why it was refused, or null. */
     private interface Change<T> {
         String run(DeckSession decks, BrowserChannel channel, T command);
+    }
+
+    private record EventPool(String id, Deck deck, GameType format) {
     }
 
     /** A deck file's deck, and how many of its cards Forge does not have. */

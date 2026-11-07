@@ -387,6 +387,38 @@ public final class FromBrowser {
     public record PoolPlay(String name, @Nullable PoolPlayMode mode, int opponent, int count, int games) {
     }
 
+    /** The table's Limited switch, which only the host sets. It is the kind of event, or null for Constructed. */
+    @Command("setLimited")
+    public record SetLimited(@Nullable EventKind kind) {
+    }
+
+    /** Sets up the table's event, or sets it up again. timer and grace are in seconds. pickRule is a DoublePick name. */
+    @Command("eventSetup")
+    public record EventSetup(String product, @Nullable String block, @Nullable String combo, @Nullable String edition,
+            @Nullable String template, @Nullable String cube, @Nullable String theme, @Nullable String cubeId, int packs,
+            int podSize, @Nullable String pickRule, int timer, int grace) {
+    }
+
+    /** Keeps a seat at the table while it sits out the next match. */
+    @Command("sitOut")
+    public record SitOut(int index, boolean sittingOut) {
+    }
+
+    /** Plays a past event's decks again at this table, as desktop's Load Past Event does. */
+    @Command("eventHostAgain")
+    public record EventHostAgain(String eventId) {
+    }
+
+    /** Deletes a past event's pools from the host's event decks. */
+    @Command("eventForget")
+    public record EventForget(String eventId) {
+    }
+
+    /** Whether the deck finder lists only the event's decks. */
+    @Command("eventDecksOnly")
+    public record EventDecksOnly(boolean on) {
+    }
+
     /** Every command record. The TypeScript is generated from these. */
     static final List<Class<? extends Record>> COMMANDS = Wire.marked(Command.class);
 }

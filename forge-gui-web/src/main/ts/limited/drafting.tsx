@@ -1,6 +1,7 @@
 // The draft screen. A click selects a card and a second click or Enter picks it, because a pick cannot be undone
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { Dial } from './packdial';
 import { nextFrom } from './dial';
 import { imageUrl } from '../images';
 import { cancelFlight, land, lift } from '../flight';
@@ -28,6 +29,7 @@ type Drag = { from: 'pack' | 'pick'; index: number };
 type Held = { card: DraftCard; index: number };
 
 const DRAG_TYPE = 'application/x-forge-draft';
+const CLOCK_LOW_MS = 15_000;
 
 const PASS_MS = 300;
 const ARRIVE_MS = 400;
@@ -151,6 +153,20 @@ function hash(text: string): number {
   return h;
 }
 
+/** The Show table button. It shows the seat passing to you, you, and the seat you pass to. Its panel shows the whole table. */
+function TableMenu({ state, faces }: { state: DraftState; faces: string[] }) {
+  const n = state.seats.length;
+  const direction = state.direction < 0 ? -1 : 1;
+  const shown = [(n - direction) % n, 0, (n + direction) % n];
+  return (
+    <HeadMenu class="table-btn" label={<>
+      <span class="faces">{shown.map(i => faces[i] ? <img key={i} alt="" src={faces[i]} /> : null)}</span>{t('lblWebDraftShowTable')}
+    </>}>
+      {() => <Dial state={state} faces={faces} />}
+    </HeadMenu>
+  );
+}
+
 function HeadMenu({ label, children, class: cls }: { label: ComponentChildren; children: (close: () => void) => ComponentChildren; class?: string }) {
   return (
     <Dropdown cls="table-menu" button={(open, toggle) => (
@@ -159,6 +175,20 @@ function HeadMenu({ label, children, class: cls }: { label: ComponentChildren; c
       </button>
     )}>{close => <div class="table-pop">{children(close)}</div>}</Dropdown>
   );
+}
+
+/** The time left on the pick clock, counted down from the value in the state when it arrived. */
+function useClock(state: DraftState): number {
+  const stamp = useRef(Date.now());
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    stamp.current = Date.now();
+    setNow(stamp.current);
+    if (!state.clockSeconds || !state.clockLeftMillis) return;
+    const tick = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(tick);
+  }, [state]);
+  return state.clockSeconds ? Math.max(0, state.clockLeftMillis - (now - stamp.current)) : 0;
 }
 
 function Pack({ state, faces, actions, log }: { state: DraftState; faces: string[]; actions: Actions; log: boolean }) {
@@ -287,6 +317,11 @@ function CardFace({ card }: { card: DraftCard }) {
       {card.pt && <span class="tf-pt">{card.pt}</span>}
     </span>
   );
+}
+
+function clockText(ms: number): string {
+  const s = Math.ceil(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 /** Picks use the browser's own drag and drop, because nothing is checked during the drag. The deck editor's pointer drag (deck/drag.ts) is for drags that need checks. */
@@ -425,6 +460,21 @@ function PickSection({ title, held, by, cards, onDrop, move }: {
         ))}
       </div>
     </div>
+  );
+}
+
+/** Other seats' picks make up most of the log, so they are shown only on request. The newest line comes first. */
+function DraftLog({ lines }: { lines: DraftLogLine[] }) {
+  const [everyone, setEveryone] = useState(false);
+  const shown = lines.filter(l => everyone || l.kind !== 'seat').reverse();
+  return (
+    <aside class="draft-log" aria-label={t('lblWebDraftLog')}>
+      <header>
+        <b>{t('lblWebDraftLog')}</b>
+        <label><input type="checkbox" checked={everyone} onChange={e => setEveryone(e.currentTarget.checked)} /> {t('lblWebDraftEverySeatsPicks')}</label>
+      </header>
+      {shown.map((line, i) => <p key={shown.length - i} class={line.kind === 'pack' ? 'head' : ''}>{line.text}</p>)}
+    </aside>
   );
 }
 
