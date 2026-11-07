@@ -76,8 +76,14 @@ export interface Model {
   autoDecisions: AutoDecisions | null;
   /** The dev mode switch settings for the host's seat, once requested. */
   devState: DevState | null;
+  /** The deck open in the editor. The editor page is shown while this is set. */
+  editor: EditorState | null;
+  /** The catalogue rows loaded so far. These are the pages requested since the query last changed. */
+  catalogue: CataloguePage | null;
   /** Every entry of the Format menu, in its order. They do not change while the server runs, so they are sent once per connection. */
   formats: Format[];
+  /** Every edition, newest first. They are requested the first time the catalogue's set filter opens. */
+  cardSets: LimitedEdition[] | null;
 }
 
 export function createModel(): Model {
@@ -125,7 +131,11 @@ export function createModel(): Model {
     drawOffer: null,
     autoDecisions: null,
     devState: null,
+    editor: null,
+    catalogue: null,
+    importResult: null,
     formats: [],
+    cardSets: null,
   } as Model;
 }
 

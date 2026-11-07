@@ -5,6 +5,7 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import forge.card.CardRarity;
 import forge.deck.CommanderOptions;
+import forge.deck.DeckSection;
 import forge.game.GameLogEntryType;
 import forge.game.GameLogVerbosity;
 import forge.game.phase.PhaseType;
@@ -167,6 +168,9 @@ public final class ToBrowser {
     public record Formats(List<Format> formats) {
     }
 
+    /** Every edition, newest first, for the catalogue's set filter. The browser asks for it the first time that filter opens. */
+    @Message("cardSets")
+    public record CardSets(List<LimitedEdition> sets) {
     }
 
     /**
@@ -222,6 +226,37 @@ public final class ToBrowser {
     public record ChatLine(@Nullable String from, String text, boolean earlier) {
     }
 
+    /** hiddenBySwitch counts the matching cards the deck can't use. It is sent only when nothing else matched. */
+    @Message("catalogue")
+    public record CataloguePage(int request, List<CatalogueRow> rows, int total, int offset, int hiddenBySwitch, boolean ranked) {
+    }
+
+    /** The deck open in the editor, or none when the editor is closed. */
+    @Message("editor")
+    public record EditorMessage(@Nullable EditorState state) {
+    }
+
+    /**
+     * inBrowser says the deck is saved in a guest's browser, not in the host's decks. copyOf names a read-only deck that the first change will copy.
+     * commanderZone says the format has a commander. copyLimit is the most copies allowed of a card other than a basic land, or null for no limit.
+     */
+    public record EditorState(String name, String check, String format, @Nullable String cardPool, boolean unrestricted,
+            boolean inBrowser, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderZone, boolean commanderWanted,
+            @Nullable Integer copyLimit, String identity,
+            List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
+            @Nullable String verdict, boolean canUndo, @Nullable String landed,
+            boolean limited, @Nullable String landSet, List<LandSet> landSets,
+            List<EditorSection> sections) {
+    }
+
+    /** A section a deck may have beyond the main deck, sideboard and commander, such as planes or schemes. */
+    public record EditorSection(DeckSection section, String name, List<EditorCard> cards) {
+    }
+
+    /** An edition basic lands can come from, for a limited deck's land row. */
+    public record LandSet(String code, String name) {
+    }
+
     public record EditorGroup(String heading, List<EditorCard> cards) {
     }
 
@@ -232,6 +267,18 @@ public final class ToBrowser {
 
     /** How many copies of a card in one section are of one printing, named by its image key. */
     public record EditorPrinting(String key, int count) {
+    }
+
+    /** A basic land in the row under the main deck. allowed is false outside the commander's colours. */
+    public record EditorLand(String name, String letter, int count, boolean allowed) {
+    }
+
+    /**
+     * ownLimit is the most copies the card's own rules allow in any deck, in place of the format's limit, or null when its rules set none.
+     * It is Integer.MAX_VALUE for a card a deck may hold any number of.
+     */
+    public record CatalogueRow(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
+            String heading, int inDeck, @Nullable String problem, @Nullable Integer ownLimit) {
     }
 
     @Message("cardSearch")
@@ -249,6 +296,11 @@ public final class ToBrowser {
     /** A guest's deck changed. text is the deck as .dck text to store in its browser, or null when the deck was deleted. */
     @Message("deviceDeck")
     public record DeviceDeck(String id, @Nullable String text, String format) {
+    }
+
+    /** The deck open in the editor as .dck text, for the browser to save as a file. */
+    @Message("deckFileText")
+    public record DeckFileText(String name, String text) {
     }
 
     /** A few buttons, or a list. */
@@ -515,6 +567,9 @@ public final class ToBrowser {
     @Request("sideboard")
     public record SideboardRequest(@Nullable String message, List<SideboardEntry> entries, List<Integer> main,
             @Name("default") List<Integer> defaultAnswer) {
+    }
+
+    public record LimitedEdition(String code, String name) {
     }
 
     /** Every message record. The TypeScript is generated from these. */

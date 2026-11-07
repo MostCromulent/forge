@@ -4,6 +4,7 @@ import { render } from 'preact';
 import { Menu, NamePrompt } from './menu';
 import { rememberedName } from './identity';
 import { Lobby } from './lobby/lobby';
+import { Editor } from './deck/editor';
 import { DeckFinder } from './deck/deckfinder';
 import { Requests, StackMenu } from './match/dialogs';
 import { HostChoice } from './hostchoice';
@@ -18,6 +19,10 @@ import { byId } from './dom';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
+
+/** Whether the deck editor was open at the last render, and how many times it has closed. */
+let editing = false;
+let edits = 0;
 
 /** The depth of each page from the first one. A move to a lower number is a move back. */
 const DEPTH = { name: 0, menu: 1, lobby: 2, limited: 2, drafting: 2, editor: 3, match: 4 };
@@ -41,10 +46,14 @@ export function renderScreens(model: Model, actions: Actions): void {
     document.documentElement.toggleAttribute('data-back', shown !== null && DEPTH[page] < DEPTH[shown]);
     shown = page;
   }
+  // The page under the editor is rebuilt when the editor closes, because it may show what was edited
+  if (editing && page !== 'editor') edits++;
+  editing = page === 'editor';
   render(under === 'name' ? <NamePrompt model={model} actions={actions} initial={rememberedName() ?? ''} />
     : under === 'menu' ? <Menu key={edits} model={model} actions={actions} /> : null, byId('menu'));
   // The page a match starts from keeps what it last showed until the board covers it (match/entry.ts)
   if (!byId('lobby').classList.contains('to-match')) render(under === 'lobby' ? <Lobby key={edits} model={model} actions={actions} /> : null, byId('lobby'));
+  render(page === 'editor' ? <Editor model={model} actions={actions} /> : null, byId('editor'));
   // The dock is at the bottom edge before a match and in the side column under the log during one
   render(page === 'match' && model.networked ? <Dock model={model} actions={actions} /> : null, byId('match-chat'));
   render(page !== 'match' ? <Dock model={model} actions={actions}

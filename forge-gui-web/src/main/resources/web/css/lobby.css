@@ -549,6 +549,8 @@ html:not([data-form="portrait"]) .finder:has(.rail) :is(.dk-chosen, .finder-foot
   .preview { grid-column: 1 / -1; }
 }
 
+.count-row { display: flex; gap: 10px; align-items: center; }
+.count-row .shown { flex: 1; }
 .count-row select, :is(.fbar, .finder-find, .tool-line) .sort-by { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 13px; }
 
 /* One strip of colour pips. With none selected, every deck is shown. Selecting some dims the unselected pips. */
@@ -745,6 +747,18 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .finder-foot :is(.delete-line, .linked-line) { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; }
 .finder-foot .delete-line b { color: var(--text); }
 .finder-foot .danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
+.dialog.new-deck { width: min(92vw, 440px); gap: 16px; }
+.new-deck section { display: grid; gap: 8px; }
+.new-deck h4 { margin: 0; font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--accent-2); }
+.new-deck p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.new-deck .linkfield { margin: 0; }
+.new-deck .way { display: flex; align-items: center; gap: 12px; padding: 10px 12px; text-align: left; border-radius: 8px; }
+.new-deck .way:hover, .new-deck .way:focus-visible { border-color: var(--accent-2); background: var(--accent-soft); }
+.new-deck .way svg { flex: none; width: 22px; height: 22px; stroke: var(--accent-2); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.new-deck .way span { display: grid; flex: 1; min-width: 0; }
+.new-deck .way small { color: var(--muted); font-size: 12.5px; }
+.new-deck .way::after { content: "\203A"; color: var(--faint); }
+
 /* When not ready, the button has a dashed outline so it looks like something to press. When ready, it looks done. Pressing it again undoes it. */
 .ready-toggle { justify-content: center; font-weight: 600; }
 .ready-toggle.unset { border: 1px dashed var(--accent-2); color: var(--accent-2); background: transparent; }

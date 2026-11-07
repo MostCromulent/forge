@@ -278,7 +278,22 @@ function apply(msg: ServerMessage): void {
         void listDeviceDecks().then(decks => actions.deviceDecks(decks));
       }
       break;
+    case 'editor':
+      // When the editor closes on a pool's deck, the pools are requested again, because the new deck changes them
+      if (!msg.state && model.editor && model.screen === 'event') wire.limitedOpen(model.eventKind ?? 'sealed', false);
+      model.editor = msg.state ?? null;
+      break;
+    // Scrolling requests the next page of the same query. That page is appended to the rows already shown
+    case 'catalogue':
+      if (msg.request !== asked.catalogue) return;
+      model.catalogue = msg.offset > 0 && model.catalogue ? { ...msg, rows: [...model.catalogue.rows, ...msg.rows] } : msg;
+      break;
+    case 'importResult':
+      if (msg.request !== asked.import) return;
+      model.importResult = msg;
+      break;
     case 'formats': model.formats = msg.formats; break;
+    case 'cardSets': model.cardSets = msg.sets; break;
     case 'deviceDeck':
       void (msg.text ? putDeviceDeck({ id: msg.id, text: msg.text, format: msg.format }) : deleteDeviceDeck(msg.id));
       return;
@@ -372,6 +387,7 @@ function apply(msg: ServerMessage): void {
     case 'notice': showNotice(msg); break;
     case 'devState': model.devState = msg; break;
     case 'devDump': saveText(msg.text, 'game-state.txt', 'text/plain'); return;
+    case 'deckFileText': saveText(msg.text, `${msg.name}.dck`, 'text/plain'); return;
     case 'flash': flash(); return;
   }
   schedule();

@@ -63,6 +63,8 @@ export interface PageActions {
   leaveLobby(): void;
   setFormat(format: string): void;
   setCardPool(cardPool: string | null): void;
+  /** Requests every edition for the catalogue's set filter. The list arrives later in the model. */
+  askCardSets(): void;
   /** Sets the host's deck generator options: one copy of each card, and no artifacts. */
   setDeckGen(singletons: boolean, noArtifacts: boolean): void;
   setVariant(variant: string, on: boolean): void;
@@ -99,11 +101,24 @@ export interface PageActions {
 
   /** Sets the format the start page's deck finder lists. */
   browseFormat(format: string): void;
+  openEditor(o: { key?: string; newFormat?: string; seat?: number; copy?: boolean }): void;
+  closeEditor(): void;
+  editorUndo(): void;
+  edit(e: Omit<EditorEdit, 't'>): void;
+  renameDeck(name: string): void;
+  setCheck(format: string, cardPool: string | null, unrestricted: boolean): void;
+  deckOp(op: DeckOp): void;
   /** Deletes one of your own decks by its finder key. */
   deleteDeck(key: string): void;
   favouriteDeck(key: string, on: boolean): void;
+  queryCatalogue(q: Omit<CatalogueQuery, 't' | 'request'>): void;
+  readImport(text: string, format: string, cardPool: string | null, unrestricted: boolean): void;
+  fetchImport(url: string): void;
   deviceDecks(decks: DeviceDeckText[]): void;
 }
+
+/** The numbers of the newest catalogue and import queries. An answer to an older query has a lower number and is dropped. */
+export const asked = { catalogue: 0, import: 0 };
 
 export interface Actions extends PageActions {}
 
@@ -155,6 +170,7 @@ export function createActions(send: Send): PageActions {
     setSeatExtra: (index, section, choice) => send({ t: 'setSeatExtra', index, section, choice }),
     askExtraChoices: (index, section) => send({ t: 'extraChoices', index, section }),
     setCardPool: cardPool => send(cardPool ? { t: 'setCardPool', cardPool } : { t: 'setCardPool' }),
+    askCardSets: () => send({ t: 'cardSets' }),
     setDeckGen: (singletons, noArtifacts) => send({ t: 'setDeckGen', singletons, noArtifacts }),
     setPlayerCount: count => send({ t: 'setPlayerCount', count }),
     setMatchLength: games => send({ t: 'setMatchLength', games }),
@@ -172,8 +188,16 @@ export function createActions(send: Send): PageActions {
     searchCards: query => send({ t: 'cardSearch', query }),
     askPrintings: (name, cardPool) => send(cardPool ? { t: 'printings', name, cardPool } : { t: 'printings', name }),
     browseFormat: format => send({ t: 'browseFormat', format }),
+    openEditor: o => send({ t: 'editorOpen', ...o, copy: !!o.copy }),
+    closeEditor: () => send({ t: 'editorClose' }),
+    editorUndo: () => send({ t: 'editorUndo' }),
+    edit: e => send({ t: 'editorEdit', ...e }),
+    renameDeck: name => send({ t: 'editorRename', name }),
+    setCheck: (format, cardPool, unrestricted) => send(cardPool ? { t: 'editorCheck', format, cardPool, unrestricted } : { t: 'editorCheck', format, unrestricted }),
+    deckOp: op => send({ t: 'editorDeck', op }),
     deleteDeck: key => send({ t: 'deckDelete', key }),
     favouriteDeck: (key, on) => send({ t: 'deckFavourite', key, on }),
+    queryCatalogue: q => send({ t: 'catalogue', request: ++asked.catalogue, ...q }),
     deviceDecks: decks => send({ t: 'deviceDecks', decks }),
     answerHostChoice: (id, value) => send({ t: 'hostChoice', id, value }),
   };

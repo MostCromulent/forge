@@ -120,6 +120,7 @@ public final class WebSession implements IHasForgeLog {
             .on(Plain.netDecks, host((s, ch, c) -> s.ui.runBackgroundTask("Net decks", () -> s.lobby.loadNetDecks(ch))))
             // Finding the external address is a web request, so it cannot run on the socket thread
             .on(Plain.addresses, host((s, ch, c) -> s.ui.runBackgroundTask("Addresses", () -> ch.send(new Addresses(s.sessions.inviteUrls())))))
+            .on(Plain.cardSets, (s, ch, c) -> ch.send(CardCatalog.sets()))
             .on(SetDeckGen.class, host((s, ch, gen) -> {
                 final var prefs = FModel.getPreferences();
                 prefs.setPref(FPref.DECKGEN_SINGLETONS, gen.singletons());
@@ -453,6 +454,22 @@ public final class WebSession implements IHasForgeLog {
                 p.gui().onCommand(channel, command);
             }
         }
+    }
+
+    /** A deck editor or importer command. A match fills the whole page, so deck commands are ignored during one. */
+    private void deckCommand(final BrowserChannel channel, final Record command) {
+        if (stage instanceof Playing) {
+            return;
+        }
+        final boolean closing = command instanceof Bare b && b.t() == Plain.editorClose && stage instanceof Event;
+        // The deck thread keeps editor saves and imports off the socket threads, in order with deck searches
+        decks.inTurn(() -> {
+            // Send the pools first, because closing the editor lists every deck again before the page changes
+            if (closing) {
+                channel.send(OfflineEvents.pools());
+            }
+            decks.onCommand(channel, command);
+        });
     }
 
     private void claimHost(final BrowserChannel channel, final String password) {

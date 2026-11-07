@@ -1,26 +1,45 @@
 package forge.web.deck;
 
+import forge.deck.CardPool;
 import forge.deck.Deck;
+import forge.deck.DeckFormat;
+import forge.deck.DeckRecognizer;
+import forge.deck.DeckSection;
+import forge.deck.DeckUrlLoader;
+import forge.deck.DeckUrlProvider;
 import forge.deck.io.DeckSerializer;
+import forge.game.GameFormat;
 import forge.game.GameType;
+import forge.item.PaperCard;
+import forge.itemmanager.SFilterUtil;
+import forge.model.FModel;
 import forge.util.FileSection;
 import forge.util.IHasForgeLog;
+import forge.util.Localizer;
+import forge.util.storage.IStorage;
 import forge.web.WebGuiBase;
 import forge.web.deck.DeckCatalog.OnDevice;
 import forge.web.lobby.Lobby;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.Commands;
+import forge.web.protocol.Commands.Handler;
+import forge.web.protocol.FromBrowser;
 import forge.web.protocol.FromBrowser.*;
+import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.*;
 import org.apache.commons.lang3.EnumUtils;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /** One browser's deck editor and importer. It also holds the decks that a guest's browser stores. */
 public final class DeckSession implements IHasForgeLog {
@@ -37,6 +56,8 @@ public final class DeckSession implements IHasForgeLog {
                     d.lobby.queueDecks(ch, d::inTurn);
                 }
             })
+            .on(CatalogueQuery.class, (d, ch, q) -> d.inTurn(() -> ch.send(d.catalogue(q))))
+            .on(DeckDelete.class, (d, ch, del) -> d.deleteDeck(ch, del.key()))
             // The stars belong to the host and are stored where desktop stores them
             .on(DeckFavourite.class, (d, ch, star) -> {
                 if (d.host.getAsBoolean()) {
@@ -44,14 +65,34 @@ public final class DeckSession implements IHasForgeLog {
                     d.lobby.queueDecks(ch, d::inTurn);
                 }
             })
+            .on(EditorOpen.class, DeckSession::openFromBrowser)
+            .on(EditorEdit.class, edit((d, ch, e) -> d.change(e)))
+            .on(EditorRename.class, edit((d, ch, r) -> d.editor.rename(r.name())))
+            .on(EditorCheck.class, edit((d, ch, c) -> d.editor.setCheck(check(c.format(), c.cardPool(), c.unrestricted()))))
+            .on(Plain.editorUndo, edit((d, ch, c) -> d.editor.undo()))
+            .on(EditorDeck.class, edit((d, ch, e) -> {
+                if (e.op() == DeckOp.file) {
+                    ch.send(new DeckFileText(d.editor.deck().getName(), text(d.editor.deck())));
+                    return null;
+                }
+                return e.op() == DeckOp.delete ? d.delete(ch) : d.editor.duplicate();
+            }))
+            .on(Plain.editorClose, edit((d, ch, c) -> d.close(ch)));
     private final Lobby lobby;
     private final WebGuiBase ui;
     private final BooleanSupplier host;
     private final BooleanSupplier atTable;
     private final Executor work = WebGuiBase.worker("WebDecks");
+    private final DeckStore.Storages storages = DeckStore.real();
     /** A guest's decks, keyed by the id its browser stores each one under. The lobby lists them too. */
     private final Map<String, OnDevice> device;
 
+    private DeckEditor editor;
+    /** The seat whose finder opened the editor, and the table it was at. Done puts the deck back only where it came from. */
+    private Integer editorSeat;
+    private int editorTable;
+    /** The subfolder of the format's decks that the open deck came from, or "" for the top folder. */
+    private String editorPath = "";
     /** Where to send a guest's deck. The session updates it as the browser connects and disconnects. */
     private final AtomicReference<BrowserChannel> channelFor = new AtomicReference<>();
 
@@ -64,8 +105,108 @@ public final class DeckSession implements IHasForgeLog {
         this.device = device;
     }
 
+    /** A browser reconnected. It is shown the editor it left, and a guest is sent any deck it may have missed. */
+    public synchronized void reconnected(final BrowserChannel channel) {
+        final EventPool p = pendingPool;
+        if (p != null) {
+            channel.send(deviceDeck(p.id(), p.deck(), p.format()));
+        }
+        if (editor == null) {
+            return;
+        }
+        channel.send(new EditorMessage(editor.state()));
+        if (editor.target() instanceof DeckEditor.Device d) {
+            channel.send(deviceDeck(d.id(), editor.deck(), editor.check().format()));
+        }
+    }
+
     public void onCommand(final BrowserChannel channel, final Record command) {
         COMMANDS.run(this, channel, command);
+    }
+
+    /** Makes a change to the open deck, if there is one, then shows the updated editor. */
+    private static <T extends Record> Handler<DeckSession, T> edit(final Change<T> change) {
+        return (d, ch, command) -> {
+            synchronized (d) {
+                if (d.editor == null) {
+                    return;
+                }
+                final String refused = change.run(d, ch, command);
+                if (refused != null) {
+                    ch.send(new Notice(refused, null, false));
+                }
+                if (d.editor != null) {
+                    ch.send(new EditorMessage(d.editor.state()));
+                }
+            }
+        };
+    }
+
+    private synchronized void openFromBrowser(final BrowserChannel channel, final EditorOpen o) {
+        open(o, null, channel);
+        if (editor != null) {
+            channel.send(new EditorMessage(editor.state()));
+        }
+    }
+
+    /** Opens the editor. checkedAgainst is the check to open with. Null means the table's check, or the finder's when there is no table. */
+    private void open(final EditorOpen o, final Check checkedAgainst, final BrowserChannel channel) {
+        final boolean guest = !host.getAsBoolean();
+        final Deck deck;
+        final boolean readOnly;
+        final DeckEditor.Target target;
+        Check check = checkedAgainst != null ? checkedAgainst
+                : check(lobby.format().name(), atTable.getAsBoolean() && lobby.cardPool() != null ? lobby.cardPool().getName() : null, false);
+        editorPath = "";
+        if (o.newFormat() != null) {
+            check = Check.of(gameType(o.newFormat()), null);
+            deck = new Deck(DeckEditor.newDeckName());
+            readOnly = false;
+            target = guest ? new DeckEditor.Device(UUID.randomUUID().toString()) : new DeckEditor.Stored(storages.of(check.format()));
+        } else {
+            deck = o.key() == null ? null : lobby.catalog().deck(o.key());
+            if (deck == null) {
+                channel.send(new Notice(Localizer.getInstance().getMessage("lblWebEditorCannotOpen"), null, true));
+                return;
+            }
+            readOnly = o.copy() || DeckCatalog.readOnly(o.key(), guest);
+            if (!readOnly) {
+                editorPath = DeckCatalog.pathOf(o.key());
+            }
+            target = targetOf(o.key(), editorPath, check);
+        }
+        editor = new DeckEditor(deck, readOnly, o.key() != null, target, check, storages, guest, this::sendDeviceDeck);
+        eventPool = false;
+        editorSeat = o.seat();
+        editorTable = lobby.table();
+    }
+
+    /** Where a deck is saved: the browser's own list, or a folder in its format's decks ("" for the top). */
+    private DeckEditor.Target targetOf(final String key, final String path, final Check check) {
+        if (key.startsWith(DeckCatalog.DEVICE + ":")) {
+            return new DeckEditor.Device(key.substring(DeckCatalog.DEVICE.length() + 1));
+        }
+        final IStorage<Deck> root = storages.of(check.format());
+        final IStorage<Deck> folder = path.isEmpty() ? null : root.tryGetFolder(path.substring(1));
+        return new DeckEditor.Stored(folder == null ? root : folder);
+    }
+
+    /** Deletes a deck the way the editor's Delete does, but without the editor, which may be open on another deck. */
+    private synchronized void deleteDeck(final BrowserChannel channel, final String key) {
+        final boolean guest = !host.getAsBoolean();
+        final Deck deck = lobby.catalog().deck(key);
+        final String problem;
+        if (deck == null || DeckCatalog.readOnly(key, guest)) {
+            problem = Localizer.getInstance().getMessage("lblWebEditorOnlyOwnDelete");
+        } else {
+            final Check check = check(lobby.format().name(), null, false);
+            problem = new DeckEditor(deck, false, true, targetOf(key, DeckCatalog.pathOf(key), check), check, storages, guest,
+                    this::sendDeviceDeck).delete();
+        }
+        if (problem != null) {
+            channel.send(new Notice(problem, null, false));
+        }
+        lobby.sendDecks(channel);
     }
 
     /**
@@ -74,6 +215,138 @@ public final class DeckSession implements IHasForgeLog {
      */
     public void inTurn(final Runnable job) {
         work.execute(job);
+    }
+
+    private String change(final EditorEdit e) {
+        final DeckSection from = e.from() == null ? DeckSection.Main : e.from();
+        final DeckSection to = e.to() == null ? DeckSection.Main : e.to();
+        return switch (e.op()) {
+            // An add that names a printing adds one copy of that printing
+            case add -> e.printings() == null || e.printings().isEmpty() ? editor.add(e.name(), to, Math.max(1, e.count()))
+                    : editor.addPrinting(e.name(), to, e.printings().get(0).name());
+            case remove -> editor.remove(e.name(), from, Math.max(1, e.count()));
+            case move -> editor.move(e.name(), from, to, Math.max(1, e.count()));
+            case commander -> editor.makeCommander(e.name(), e.from());
+            case printings -> editor.setPrintings(e.name(), from, counts(e.printings()));
+            case lands -> editor.setLands(counts(e.lands()));
+            case foil -> editor.toggleFoil(e.name(), from);
+            case landSet -> editor.setLandSet(e.name());
+            case suggestLands -> editor.suggestLands();
+        };
+    }
+
+    /** Done. The deck goes on the seat whose finder opened the editor, if that seat is still at the same table and plays this format. */
+    private String close(final BrowserChannel channel) {
+        final DeckEditor done = editor;
+        final Integer seat = editorSeat;
+        editor = null;
+        channel.send(new EditorMessage(null));
+        lobby.sendDecks(channel);
+        // A deck that was never saved has nothing to put on the seat. Examples are an untouched new deck, or a precon that was only viewed
+        if (seat == null || seat < 0 || !atTable.getAsBoolean() || (!done.saved() && !eventPool)) {
+            return null;
+        }
+        if (lobby.table() != editorTable) {
+            return Localizer.getInstance().getMessage("lblWebEditorTableChanged");
+        }
+        if (DeckStore.family(done.check().format()) != DeckStore.family(lobby.format())) {
+            return Localizer.getInstance().getMessage("lblWebEditorWrongFormat", done.check().format());
+        }
+        final String key = adopt(done);
+        // The table's seats are changed only on the host UI thread
+        ui.invokeInEdtLater(() -> {
+            lobby.setDeck(seat, key);
+            lobby.sendState(channel);
+        });
+        return null;
+    }
+
+    private String delete(final BrowserChannel channel) {
+        final String problem = editor.delete();
+        if (problem != null) {
+            return problem;
+        }
+        editor = null;
+        channel.send(new EditorMessage(null));
+        lobby.sendDecks(channel);
+        return null;
+    }
+
+    /** Registers the editor's deck under the finder's current key for it. A rename or a move can change that key. */
+    private String adopt(final DeckEditor done) {
+        if (done.target() instanceof DeckEditor.Device d) {
+            return lobby.catalog().adopt(DeckCatalog.DEVICE, d.id(), done.deck());
+        }
+        // The host's pool is stored with the event decks, which the finder lists under their own heading
+        if (eventPool) {
+            return lobby.catalog().adopt(DeckCatalog.EVENT, "", done.deck());
+        }
+        final boolean atRoot = done.target() instanceof DeckEditor.Stored s && s.storage() == storages.of(done.check().format());
+        return lobby.catalog().adopt(DeckCatalog.MINE, atRoot ? "" : editorPath, done.deck());
+    }
+
+    private ToBrowser.CataloguePage catalogue(final CatalogueQuery q) {
+        final DeckEditor e;
+        final Check check;
+        final Deck deck;
+        // Take a copy, because the search runs off the socket thread while an edit on that thread changes the open deck
+        synchronized (this) {
+            e = editor;
+            check = e == null ? Check.none() : e.check();
+            deck = e == null ? new Deck("") : new Deck(e.deck());
+        }
+        final DeckSection section = q.section();
+        if (section != null && section != DeckSection.Main && section != DeckSection.Sideboard && section != DeckSection.Commander) {
+            // A section's own cards follow no format, so none is hidden as unusable
+            final CardPool held = deck.get(section);
+            return CardCatalog.of(section).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
+                    q.offset(), q.showAll()), c -> null, printedIn(q.sets(), q.format()), name -> held == null ? 0 : held.countByName(name));
+        }
+        final List<PaperCard> commanders = Legality.commanders(deck, check);
+        final DeckFormat df = check.deckFormat();
+        // A commander deck without a commander shows only cards that can be its commander. A Background is shown only once the deck has a commander
+        final Predicate<PaperCard> commanderOnly = df.hasCommander() && commanders.isEmpty()
+                ? c -> df.isLegalCommander(c.getRules()) && !c.getRules().getType().hasSubtype("Background")
+                : null;
+        final Predicate<PaperCard> only = SFilterUtil.optimizedAnd(printedIn(q.sets(), q.format()), commanderOnly);
+        final CardPool inDeck = deck.getAllCardsInASinglePool(true, false);
+        final Function<PaperCard, String> problems = Legality.cardProblems(check, commanders);
+        return (e == null ? CardCatalog.get() : e.catalogue()).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
+                q.offset(), q.showAll()), problems, only, inDeck::countByName);
+    }
+
+    /** Cards printed in any of these sets and legal in this format, read as desktop's card filters read them. Any printing counts. */
+    private static Predicate<PaperCard> printedIn(final List<String> sets, final String format) {
+        final GameFormat named = format == null ? null : FModel.getFormats().getFormat(format);
+        return SFilterUtil.optimizedAnd(sets == null || sets.isEmpty() ? null : new GameFormat(null, sets, null).getFilterRules(),
+                named == null ? null : named.getFilterRules());
+    }
+
+    /** Null when the text is not a deck file. */
+    static FileDeck readFile(final String text) {
+        final Deck deck = parse(text);
+        if (deck == null) {
+            return null;
+        }
+        int leftOut = 0;
+        for (final Map.Entry<DeckSection, CardPool> part : deck) {
+            // Forge reads a card it does not have as a placeholder that no game can play
+            for (final PaperCard card : part.getValue().toFlatList()) {
+                if (card.getRules() != null && card.getRules().isUnsupported()) {
+                    part.getValue().remove(card);
+                    leftOut++;
+                }
+            }
+        }
+        return new FileDeck(deck, leftOut);
+    }
+
+    /** Registers a saved deck's key again after the list was rebuilt, in case the rebuild left it out. Brawl drops illegal decks, for example. */
+    private String relisted(final String key, final Deck deck) {
+        if (key.startsWith(DeckCatalog.DEVICE + ":")) {
+            return lobby.catalog().adopt(DeckCatalog.DEVICE, key.substring(DeckCatalog.DEVICE.length() + 1), deck);
+        }
+        return lobby.catalog().adopt(key.substring(0, key.indexOf(':')), "", deck);
     }
 
     private String saveOnDevice(final BrowserChannel channel, final Deck deck, final Check check, final ImportCommit c) {
@@ -154,8 +427,33 @@ public final class DeckSession implements IHasForgeLog {
         return DeckSerializer.fromSections(FileSection.parseSections(Arrays.asList(text.split("\r?\n"))));
     }
 
+    private static Map<String, Integer> counts(final List<CountedName> names) {
+        final Map<String, Integer> out = new LinkedHashMap<>();
+        if (names != null) {
+            names.forEach(n -> out.merge(n.name(), n.count(), Integer::sum));
+        }
+        return out;
+    }
+
+    private static Check check(final String format, final String cardPool, final boolean unrestricted) {
+        if (unrestricted) {
+            return Check.none();
+        }
+        final GameType type = gameType(format);
+        final GameFormat pool = type == GameType.Constructed && cardPool != null ? FModel.getFormats().getFormat(cardPool) : null;
+        return Check.of(type, pool);
+    }
+
     private static GameType gameType(final String name) {
         return EnumUtils.getEnum(GameType.class, name, GameType.Constructed);
     }
 
+    /** A change to the open deck. It returns why it was refused, or null. */
+    private interface Change<T> {
+        String run(DeckSession decks, BrowserChannel channel, T command);
+    }
+
+    /** A deck file's deck, and how many of its cards Forge does not have. */
+    record FileDeck(Deck deck, int leftOut) {
+    }
 }
