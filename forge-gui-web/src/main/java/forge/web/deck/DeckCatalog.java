@@ -206,7 +206,7 @@ public final class DeckCatalog {
             final Map<String, Entry> built = new HashMap<>();
             if (pool == this.pool) {
                 byKey.forEach((key, e) -> {
-                    if (e.built() != null) {
+                    if (e.generated() && e.built() != null) {
                         built.put(key, e);
                     }
                 });

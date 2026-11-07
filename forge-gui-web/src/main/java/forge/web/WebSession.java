@@ -312,6 +312,13 @@ public final class WebSession implements IHasForgeLog {
         });
     }
 
+    /** Gives up the host's seat, which another browser may then take. */
+    void loseHost() {
+        isHost = false;
+        settings = PlayerSettings.fresh();
+        local.disownServer();
+    }
+
     /** Whether this browser must give the host password to take the host's seat. */
     private boolean needsHostPassword() {
         return !onThisMachine && WebService.hostPasswordSet();
@@ -1017,6 +1024,7 @@ public final class WebSession implements IHasForgeLog {
                 lobby.sendState(b);
             }
         } else if (move(from, new Menu())) {
+            local.endMatch();
             joinHostGame();
         }
     }

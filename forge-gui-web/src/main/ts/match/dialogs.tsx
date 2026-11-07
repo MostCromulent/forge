@@ -483,10 +483,13 @@ function Text({ req, answer }: { req: TextRequest; answer: Answer }) {
   useEffect(() => {
     input.current?.focus();
   }, []);
+  // The server refuses anything but a whole number, and a refused answer would leave the game waiting
+  const valid = !req.numeric || /^-?\d+$/.test(value);
   return (
     <>
-      <input ref={input} type={req.numeric ? 'number' : 'text'} value={value} onInput={e => setValue(e.currentTarget.value)} />
-      <ButtonRow><Button primary onClick={() => answer(value)}>{t('lblOK')}</Button></ButtonRow>
+      <input ref={input} type={req.numeric ? 'number' : 'text'} value={value} onInput={e => setValue(e.currentTarget.value)}
+        onKeyDown={e => { if (e.key === 'Enter' && valid) answer(value); }} />
+      <ButtonRow><Button primary disabled={!valid} onClick={() => answer(value)}>{t('lblOK')}</Button></ButtonRow>
     </>
   );
 }

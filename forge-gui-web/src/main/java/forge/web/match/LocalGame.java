@@ -54,7 +54,7 @@ public final class LocalGame implements IHasForgeLog {
     // Set on the UI thread or a joining task. Read from the web server's threads and the netplay client's threads
     /** The lobby this session owns, or null when another browser is hosting the game. */
     private volatile ServerGameLobby hosted;
-    /** Whether this session started the server. The server runs longer than any one game, so the open lobby cannot tell. */
+    /** Whether this session owns the server as host. The server runs longer than any one game, so the open lobby cannot tell. */
     private volatile boolean startedServer;
     private volatile ClientGameLobby joined;
     private volatile FGameClient client;
@@ -103,8 +103,8 @@ public final class LocalGame implements IHasForgeLog {
         if (!HostingServer.isHosting()) {
             NetworkLogConfig.activateNetworkLogging();
             server.startLoopbackServer();
-            startedServer = true;
         }
+        startedServer = true;
         openHosted(playerName, gui, onUpdate, onChat);
         // The browser took the first open seat. The host fills the other seats
         for (int i = 0; i < hosted.getNumberOfSlots(); i++) {
@@ -395,7 +395,12 @@ public final class LocalGame implements IHasForgeLog {
         });
     }
 
-    /** Leaves the seat permanently. Only the host stops the server, because only the host started it. */
+    /** Leaves the host's seat. The server keeps running for whoever takes the seat next. */
+    public void disownServer() {
+        startedServer = false;
+    }
+
+    /** Leaves the seat permanently. Only the host stops the server. */
     public void shutdown() {
         endMatch();
         if (startedServer) {

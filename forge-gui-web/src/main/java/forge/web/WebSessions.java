@@ -111,7 +111,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     }
 
     /** Whether the host's seat is free. The browser offers the seat when this is true. */
-    synchronized boolean hostSeatFree() {
+    boolean hostSeatFree() {
         return host == null;
     }
 
@@ -134,6 +134,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             return;
         }
         netLog.info("The host's browser has not come back. The seat is free again.");
+        host.loseHost();
         host = null;
         announceSeat();
     }
@@ -158,8 +159,23 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     private synchronized void letGo() {
         if (quitWhenEmpty && idle == null && byChannel.isEmpty()) {
             netLog.info("No browser is attached. Forge will close in {} seconds.", idleMillis / 1000);
-            idle = timer.schedule(onQuit, idleMillis, TimeUnit.MILLISECONDS);
+            idle = timer.schedule(this::quitUnlessAppsSeated, idleMillis, TimeUnit.MILLISECONDS);
         }
+    }
+
+    /** A desktop or mobile player at the host's table has no browser, so the wait starts again while one is seated. */
+    private void quitUnlessAppsSeated() {
+        synchronized (this) {
+            idle = null;
+            if (!quitWhenEmpty || !byChannel.isEmpty()) {
+                return;
+            }
+            if (!appSeats().isEmpty()) {
+                letGo();
+                return;
+            }
+        }
+        onQuit.run();
     }
 
     /** The session a browser returns to, or a new one, or null when full. The key includes where the browser is, so another machine never reaches this machine's session. */

@@ -168,6 +168,9 @@ public class WebGuiGame extends NetworkGuiGame {
     private volatile boolean gameOver;
     /** Each player's games won in the match. It is read from the engine's outcome of the game that just ended. */
     private volatile List<MatchScore> score = List.of();
+    // The last of each that the browser was sent. A reloading browser gets them again, because they are sent only when they change
+    private volatile Playable playable;
+    private volatile ToBrowser.DrawOffer drawOffer;
     /** Run once, when this seat's game ends. */
     private volatile Runnable onGameOver;
     /** What the game did since the last state message, in order. Only the dispatch thread fills and empties it. */
@@ -192,6 +195,8 @@ public class WebGuiGame extends NetworkGuiGame {
     /** Stops the thread that sends to the browser and stops the waiting timer. Called when the match is over. */
     public void close() {
         cancelAwaitNextInput();
+        // A question the browser can no longer answer would keep the dispatch thread waiting for ever
+        requests.cancelAll();
         dispatch.shutdown();
     }
 
@@ -216,6 +221,14 @@ public class WebGuiGame extends NetworkGuiGame {
     private void sendFullState(final BrowserChannel channel) {
         browser = channel;
         channel.send(model.fullState());
+        final Playable p = playable;
+        if (p != null) {
+            channel.send(p);
+        }
+        final ToBrowser.DrawOffer d = drawOffer;
+        if (d != null) {
+            channel.send(d);
+        }
         prompt.sendTo(channel::send);
         synchronized (zonesLock) {
             zonesClosedUnsent = false;
@@ -310,6 +323,8 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         gameOver = false;
         score = List.of();
+        playable = null;
+        drawOffer = null;
         // A full new state has no earlier state to animate from, so the queued events are dropped
         events.clear();
         model.reset(rootKey(gv));
@@ -622,7 +637,8 @@ public class WebGuiGame extends NetworkGuiGame {
                 autoTap.add(PromptState.cardRef(c));
             }
         }
-        send(new Playable(playable, autoTap));
+        this.playable = new Playable(playable, autoTap);
+        send(this.playable);
     }
 
     @Override
@@ -1047,7 +1063,8 @@ public class WebGuiGame extends NetworkGuiGame {
         final boolean mine = offerer != null && isLocalPlayer(offerer);
         final boolean waitingOnMe = open && update.entries().stream()
                 .anyMatch(e -> isLocalPlayer(e.player()) && e.vote() == DrawOffer.Vote.PENDING);
-        send(new ToBrowser.DrawOffer(offerer == null ? null : Ref.player(offerer.getId()), open, mine, waitingOnMe));
+        drawOffer = new ToBrowser.DrawOffer(offerer == null ? null : Ref.player(offerer.getId()), open, mine, waitingOnMe);
+        send(drawOffer);
         if (open) {
             return;
         }
