@@ -7,14 +7,15 @@ html:not([data-form="portrait"]) #editor .editor-page { width: min(1500px, 94vw)
 /* The wordmark, volume and options are hidden, because the page behind the editor shows them */
 html:not([data-form="portrait"]) #editor .editor-head :is(.wordmark-block, .icon-button, .volume) { display: none; }
 .editor-page { position: relative; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
-/* The deck's name is the button that opens the deck's actions, so it has a frame and a chevron */
-.editor-head .deck-name { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 5px 9px 5px 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; font-size: 16px; font-weight: 650; }
-.editor-head .deck-name > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.editor-head .deck-name:hover, .editor-head .deck-name[aria-expanded="true"] { border-color: var(--accent-2); }
-.editor-head .deck-name .chevron { flex: none; width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.name-menu { min-width: 0; }
+.deck-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.deck-name-field { width: 260px; padding: 5px 12px; border-radius: 8px; font-size: 16px; font-weight: 650; }
+.deck-name-field:hover, .deck-name-field:focus { border-color: var(--accent-2); outline: none; }
+.deck-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 650; }
+.editor-head .deck-menu-button { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border-radius: 8px; }
+.editor-head .deck-menu-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.editor-head .deck-menu-button:hover, .editor-head .deck-menu-button[aria-expanded="true"] { border-color: var(--accent-2); }
 .name-menu .deck-menu { left: 0; right: auto; transform-origin: 0 0; }
-.deck-name-field { font-size: 16px; font-weight: 650; min-width: 260px; }
+.menu-scrim { display: none; }
 .save-state { color: var(--muted); font-size: 12px; }
 .editor-head .legality, .imp-sub .legality, .finder-head .legality { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
 /* A brass pill select: a rounded select with its own caret and an accent-coloured fill */

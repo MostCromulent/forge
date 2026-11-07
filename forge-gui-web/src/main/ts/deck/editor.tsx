@@ -18,13 +18,13 @@ import type { DeckSection, EditorState } from '../protocol';
 import { CARD_POOL_NAMES, t } from '../text';
 import { Backdrop } from '../dialog';
 import { ICONS, Icon } from '../icons';
+import { showNotice } from '../notices';
 
 export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   const state = model.editor;
   const [menu, setMenu] = useState<'menu' | 'new' | null>(null);
   const [dialog, setDialog] = useState<'text' | 'delete' | null>(null);
-  const [renaming, setRenaming] = useState(false);
-  const nameMenu = useRef<HTMLDivElement>(null);
+   const nameMenu = useRef<HTMLDivElement>(null);
   useDismiss(menu !== null, nameMenu, () => setMenu(null));
   const [cardMenu, setCardMenu] = useState<MenuAt | null>(null);
   const [picking, setPicking] = useState<{ name: string; zone: DeckSection | null } | null>(null);
@@ -81,6 +81,12 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
       else u.browse = { format: state.format };
     });
   };
+  // The clipboard needs a secure page, which a guest on a plain http address does not have. The text dialog lets them copy by hand
+  const copyDeck = () => {
+    const copied = () => showNotice({ t: 'notice', title: t('lblWebEditorDeckCopied'), error: false });
+    if (navigator.clipboard) navigator.clipboard.writeText(deckText(state)).then(copied, () => setDialog('text'));
+    else setDialog('text');
+  };
   // A draft or sealed pool, or a deck built from a campaign's cards, cannot be created, opened, renamed or deleted here
   const ownDeck = !state.limited && !state.collection;
   /** A row of the deck's menu. Choosing it closes the menu unless it opens another menu. */
@@ -99,42 +105,37 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
     <div class="editor-page">
       <PageHeader class="editor-head">
         {state.collection && <span class="deck-owner">{state.collection} &rsaquo;</span>}
-        {renaming
-          ? <RenameField name={state.name} done={name => {
-              setRenaming(false);
-              if (name && name !== state.name) actions.renameDeck(name);
-            }} />
-          : (
-            <div ref={nameMenu} class="menu-anchor name-menu">
-              <button class="deck-name" aria-expanded={menu !== null} onClick={() => setMenu(menu ? null : 'menu')}>
-                <span>{state.name}</span><svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-              </button>
-              {menu === 'menu' && (
-                <div class="deck-menu" role="menu">
-                  {ownDeck && item(ICONS.plus, t('lblWebEditorNewDeck'), () => setMenu('new'), true)}
-                  {ownDeck && item(ICONS.folder, t('lblWebEditorOpenAnother'), openAnother)}
-                  {ownDeck && <hr />}
-                  {ownDeck && item(ICONS.copy, t('lblDuplicate'), () => actions.deckOp('duplicate'))}
-                  {ownDeck && item(ICONS.pen, t('lblRename'), () => setRenaming(true))}
-                  {ownDeck && <hr />}
-                  {!state.limited && item(ICONS.download, t('lblWebEditorImportList'), () => changeUi(u => { u.importer = { from: 'editor' }; }))}
-                  {item(ICONS.upload, t('lblWebEditorCopyAsText'), () => setDialog('text'))}
-                  {item(ICONS.upload, t('lblWebEditorDownloadDeckFile'), () => actions.deckOp('file'))}
-                  {/* A deck opened as a copy, such as a precon or someone else's deck, has nothing of the player's to delete */}
-                  {ownDeck && !state.copyOf && <hr />}
-                  {ownDeck && !state.copyOf && item(ICONS.bin, t('lblWebEditorDeleteThisDeck'), () => setDialog('delete'), false, 'danger')}
-                </div>
-              )}
-              {menu === 'new' && (
-                <div class="deck-menu" role="menu">
-                  <span class="menu-cap">{t('lblWebEditorNewDeckFor')}</span>
-                  {DECK_FORMATS.map(([id, name]) => (
-                    <button key={id} role="menuitem" onClick={() => { setMenu(null); actions.openEditor({ newFormat: id }); }}>{t(name)}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        <div class="deck-title">
+          {ownDeck ? <NameField name={state.name} rename={actions.renameDeck} /> : <span class="deck-name-text">{state.name}</span>}
+          <div ref={nameMenu} class="menu-anchor name-menu">
+            <button class="deck-menu-button" aria-label={t('lblWebEditorDeckOptions')} title={t('lblWebEditorDeckOptions')}
+              aria-expanded={menu !== null} onClick={() => setMenu(menu ? null : 'menu')}><Icon d={ICONS.cog} /></button>
+            {/* On a phone the menu is a sheet over the page. A tap beside it closes it without reaching what is underneath */}
+            {menu !== null && <div class="menu-scrim" onClick={() => setMenu(null)} />}
+            {menu === 'menu' && (
+              <div class="deck-menu" role="menu">
+                {ownDeck && item(ICONS.plus, t('lblWebEditorNewDeck'), () => setMenu('new'), true)}
+                {ownDeck && item(ICONS.folder, t('lblWebEditorOpenAnother'), openAnother)}
+                {ownDeck && item(ICONS.copy, t('lblDuplicate'), () => actions.deckOp('duplicate'))}
+                {ownDeck && <hr />}
+                {!state.limited && item(ICONS.download, t('lblWebEditorImportList'), () => changeUi(u => { u.importer = { from: 'editor' }; }))}
+                {item(ICONS.copy, t('lblWebEditorCopyToClipboard'), copyDeck)}
+                {item(ICONS.upload, t('lblWebEditorExportDeckFile'), () => actions.deckOp('file'))}
+                {/* A deck opened as a copy, such as a precon or someone else's deck, has nothing of the player's to delete */}
+                {ownDeck && !state.copyOf && <hr />}
+                {ownDeck && !state.copyOf && item(ICONS.bin, t('lblWebEditorDeleteThisDeck'), () => setDialog('delete'), false, 'danger')}
+              </div>
+            )}
+            {menu === 'new' && (
+              <div class="deck-menu" role="menu">
+                <span class="menu-cap">{t('lblWebEditorNewDeckFor')}</span>
+                {DECK_FORMATS.map(([id, name]) => (
+                  <button key={id} role="menuitem" onClick={() => { setMenu(null); actions.openEditor({ newFormat: id }); }}>{t(name)}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         {check}
         <div class="head-right">
           <span class="save-state">{saveState(state)}</span>
@@ -182,18 +183,21 @@ function saveState(state: EditorState): string {
   return state.inBrowser ? t('lblWebEditorSavedInBrowser') : t('lblWebEditorSaved');
 }
 
-function RenameField({ name, done }: { name: string; done: (name: string | null) => void }) {
-  const field = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    field.current?.select();
-  }, []);
+/** The deck's name, renamed by typing. Until the server confirms a new name, the field shows the old one */
+function NameField({ name, rename }: { name: string; rename: (name: string) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
   return (
-    <input ref={field} class="deck-name-field" defaultValue={name} maxLength={60} aria-label={t('lblDeckName')}
+    <input class="deck-name-field" value={draft ?? name} maxLength={60} aria-label={t('lblDeckName')}
+      onInput={e => setDraft(e.currentTarget.value)}
       onKeyDown={e => {
-        if (e.key === 'Enter') done(e.currentTarget.value.trim());
-        if (e.key === 'Escape') done(null);
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') setDraft(null);
       }}
-      onBlur={e => done(e.currentTarget.value.trim())} />
+      onBlur={() => {
+        const typed = draft?.trim();
+        setDraft(null);
+        if (typed && typed !== name) rename(typed);
+      }} />
   );
 }
 

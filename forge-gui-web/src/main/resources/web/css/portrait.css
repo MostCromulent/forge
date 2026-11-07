@@ -519,7 +519,14 @@ html[data-form="portrait"] #first-reveal p { font-size: 22px; }
 html[data-form="portrait"] #editor .editor-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 6px; padding: 6px 10px; }
 html[data-form="portrait"] #editor .editor-head .wordmark-block, html[data-form="portrait"] #editor .editor-head .icon-button, html[data-form="portrait"] #editor .editor-head > .legality, html[data-form="portrait"] #editor .editor-head > .check-fixed, html[data-form="portrait"] #editor .editor-head .deck-owner, html[data-form="portrait"] #editor .editor-head .word { display: none; }
 html[data-form="portrait"] #editor .editor-head .head-right { display: contents; }
-html[data-form="portrait"] #editor .editor-head .deck-name { min-width: 0; min-height: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; font-size: 16px; }
+html[data-form="portrait"] #editor .editor-head .deck-name-field { width: 100%; min-width: 0; min-height: 40px; box-sizing: border-box; padding: 5px 10px; }
+html[data-form="portrait"] #editor .editor-head .deck-menu-button { width: 40px; height: 40px; }
+/* The deck's menu is a sheet along the bottom, with rows a thumb can hit. Its head is raised over the dock while it is open */
+html[data-form="portrait"] #editor .editor-head:has(.menu-scrim) { z-index: 40; }
+html[data-form="portrait"] #editor .name-menu .menu-scrim { display: block; position: fixed; inset: 0; z-index: 29; background: var(--scrim-deep); }
+html[data-form="portrait"] #editor .name-menu .deck-menu { position: fixed; left: 0; right: 0; top: auto; bottom: 0; width: auto; padding: 8px 10px calc(14px + env(safe-area-inset-bottom)); border-radius: 14px 14px 0 0; transform-origin: 50% 100%; }
+html[data-form="portrait"] #editor .name-menu .deck-menu button { min-height: 44px; gap: 12px; font-size: 15px; }
+html[data-form="portrait"] #editor .name-menu .deck-menu button svg { width: 18px; height: 18px; }
 html[data-form="portrait"] #editor .editor-head .save-state { font-size: 11.5px; }
 html[data-form="portrait"] #editor .editor-head button { min-height: 40px; }
 html[data-form="portrait"] #editor .editor-head .head-right > button:not(.primary) { min-width: 40px; padding: 0; font-size: 18px; }
