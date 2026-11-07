@@ -16,6 +16,7 @@ export interface Model {
   localPlayers: number[];
   prompt: Prompt | null;
   zones: ShownZone[];
+  requests: Map<number, Request>;
   gameOver: boolean;
   /** Each player's games won in the match. It is sent when a game ends and is empty until then. */
   matchScore: MatchScore[];
@@ -35,12 +36,19 @@ export interface Model {
   /** Rules text the server built for hovered cards and players. It is kept for the rest of the match. */
   cardDetails: Map<number, Detail>;
   playerDetails: Map<number, PlayerDetail>;
+  /** The options for a right-click on a stack item, from the server's last answer. */
+  stackMenu: StackMenu | null;
   /** A question outside a match that the host is waiting for an answer to. */
   hostChoice: HostChoice | null;
   /** This browser has sent its saved name to the server, and the answer has not arrived yet. */
   nameSent: boolean;
   /** Messages from the server. Each stays until it is dismissed or times out. */
   notices: { id: number; notice: Notice; view?: () => void; label?: string; leaving?: boolean }[];
+  drawOffer: DrawOffer | null;
+  /** The player's auto-yields and trigger answers, from the last request. */
+  autoDecisions: AutoDecisions | null;
+  /** The dev mode switch settings for the host's seat, once requested. */
+  devState: DevState | null;
 }
 
 export function createModel(): Model {
@@ -51,6 +59,7 @@ export function createModel(): Model {
     localPlayers: [],
     prompt: null,
     zones: [],
+    requests: new Map(),
     gameOver: false,
     matchScore: [],
     controls: null,
@@ -65,9 +74,13 @@ export function createModel(): Model {
     events: [],
     cardDetails: new Map(),
     playerDetails: new Map(),
+    stackMenu: null,
     hostChoice: null,
     nameSent: false,
     notices: [],
+    drawOffer: null,
+    autoDecisions: null,
+    devState: null,
   } as Model;
 }
 
@@ -135,9 +148,31 @@ function collectRefs(value: unknown, out: number[]): void {
   }
 }
 
+/** The game's oldest open request. This is the one shown. */
+export function oldestRequest(model: Model): Request | undefined {
+  let oldest: Request | undefined;
+  for (const r of model.requests.values()) {
+    if (!oldest || r.id < oldest.id) oldest = r;
+  }
+  return oldest;
+}
+
+/** The open request when it asks which ability of a clicked card to use. It is answered from a menu at the pointer. */
+export function cardMenu(model: Model): ChoicesRequest | null {
+  const oldest = oldestRequest(model);
+  return oldest?.kind === 'choices' && oldest.max === 1 && (oldest.atX != null || oldest.atY != null)
+    && oldest.options.every(o => !o.card && !o.imageKey && !o.player) ? oldest : null;
+}
+
 /** Whether the prompt lets the player pick a card, a player or a stack item. */
 export function offersPicks(p: Prompt): boolean {
   return p.selectable.length > 0 || p.selectablePlayers.length > 0 || p.selectableStack.length > 0;
+}
+
+/** Whether a request is about cards. It is laid out on the dimmed board, not in a dialog. Words, numbers and colours still use a dialog. */
+export function cardPrompt(req: Request): boolean {
+  if (req.kind === 'order' || req.kind === 'manipulate' || req.kind === 'distribute') return true;
+  return req.kind === 'choices' && !req.atX && !req.atY && !req.stackKeys && req.options.some(o => o.card || o.imageKey || o.name || o.player);
 }
 
 export function stackTopSource(model: Model): Ref | undefined {
@@ -149,6 +184,12 @@ export function stackTopSource(model: Model): Ref | undefined {
 export function askingCard(model: Model, req: Request): Ref | undefined {
   const named = 'card' in req ? req.card : undefined;
   return named ?? (req.kind === 'manipulate' ? stackTopSource(model) : undefined);
+}
+
+/** The open request when it asks which spell on the stack to choose. It is answered by clicking the spell on the stack. */
+export function stackPick(model: Model): ChoicesRequest | null {
+  const oldest = oldestRequest(model);
+  return oldest?.kind === 'choices' && oldest.stackKeys ? oldest : null;
 }
 
 export const deref = (model: Model, v: Ref | null | undefined): TrackedObject | undefined =>
@@ -177,3 +218,12 @@ const isPlayerZone = (name: ZoneType): name is PlayerZone => PLAYER_ZONES.has(na
 export const zone = (model: Model, player: PlayerView | undefined, name: ZoneType): CardView[] =>
   isPlayerZone(name) ? derefAll(model, player?.[name]) : [];
 export const stateOf = (model: Model, card: CardView): Partial<CardStateView> => deref(model, card.CurrentState) ?? {};
+
+/** Whether the local player conceding ends the game. That is when every other player still in it is an opponent, and none of them are opponents of each other. */
+export function concedingEndsGame(model: Model): boolean {
+  const foes = (p: PlayerView | undefined) => new Set(derefAll(model, p?.Opponents).map(o => o.$key));
+  const mine = me(model);
+  const mineFoes = foes(mine);
+  const left = players(model).filter(p => p !== mine && !p.HasLost);
+  return left.every(p => mineFoes.has(p.$key) && left.every(q => !foes(p).has(q.$key)));
+}

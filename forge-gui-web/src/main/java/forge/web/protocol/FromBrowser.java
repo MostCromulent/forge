@@ -95,6 +95,18 @@ public final class FromBrowser {
     public record SetSetting(String key, String value) {
     }
 
+    /** Forge's developer cheats, by their names in IDevModeCheats. state only asks for the current values of the two switches. */
+    public enum DevAction { state, unlimitedLands, viewAll, generateMana, tutorForCard, addCardToHand, addCardToBattlefield,
+        addTokenToBattlefield, addCardToLibrary, addCardToGraveyard, addCardToExile, repeatLastAddition, castASpell,
+        exileCardsFromHand, exileCardsFromBattlefield, removeCardsFromGame, addCountersToPermanent,
+        removeCountersFromPermanent, tapPermanents, untapPermanents, setPlayerLife, winGame,
+        riggedPlanarRoll, planeswalkTo, setupGameState, dumpGameState }
+
+    /** A cheat for the host's own seat. text is the game state to set up, for setupGameState. */
+    @Command("dev")
+    public record Dev(DevAction action, @Nullable String text) {
+    }
+
     @Command("nextGame")
     public record NextGame(NextGameDecision decision) {
     }

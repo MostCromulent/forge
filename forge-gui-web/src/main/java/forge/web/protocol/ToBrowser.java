@@ -198,6 +198,16 @@ public final class ToBrowser {
     public record ShownZone(Ref player, ZoneType zone) {
     }
 
+    /** The values of dev mode's two switches for the host's seat. */
+    @Message("devState")
+    public record DevState(boolean unlimitedLands, boolean viewAll) {
+    }
+
+    /** The game written out as a game state, for the browser to save as a file. */
+    @Message("devDump")
+    public record DevDump(String text) {
+    }
+
     @Message("controls")
     public record Controls(List<PhaseType> myStops, List<PhaseType> otherStops, boolean autoPass, @Nullable String dayTime,
             @Nullable TurnMarker marker, boolean untilEndOfTurn, boolean untilStackEmpty, ServerSettings settings) {

@@ -18,6 +18,8 @@ export interface UiState {
   openZones: Set<string>;
   /** The open zones are collapsed to a bar so the board is visible. They are still open. */
   zonesMinimised: boolean;
+  /** The id of the request collapsed to a bar so the board is visible. It is still open. */
+  requestFolded: number | null;
   /** Filters the open zone to cards whose name contains this text, in lower case. */
   zoneSearch: string;
   zoneSort: ZoneSort;
@@ -26,8 +28,16 @@ export interface UiState {
   stackCollapsed: boolean;
   /** The stack item under the pointer. Arrows are drawn to its targets. */
   hoveredStackItem: number | null;
+  /** The position of a right-click on a stack item. It is kept until the server answers and the menu opens there. */
+  stackMenuAt: { key: number; x: number; y: number } | null;
   stopsOpen: boolean;
   optionsOpen: boolean;
+  /** The concede confirmation is open, from the game menu or its shortcut. */
+  concedeAsk: boolean;
+  /** The game menu behind the prompt's ⋯ button, or a dialog opened from it. */
+  gameMenu: 'menu' | 'stops' | 'decisions' | 'dev' | 'devSetup' | null;
+  /** The host stores the macro but does not report its state. The page tracks whether one is being recorded or is ready. */
+  macro: 'none' | 'recording' | 'recorded';
   /** The volume control beside the options button is open. */
   volumeOpen: boolean;
   /** The play choice whose game kinds the start page shows. It is kept so that going back from a table returns there. */
@@ -61,13 +71,18 @@ export const ui: UiState = {
   openPiles: new Set(),
   openZones: new Set(),
   zonesMinimised: false,
+  requestFolded: null,
   zoneSearch: '',
   zoneSort: 'order',
   zoneChoice: null,
   stackCollapsed: false,
   hoveredStackItem: null,
+  stackMenuAt: null,
   stopsOpen: false,
   optionsOpen: false,
+  concedeAsk: false,
+  gameMenu: null,
+  macro: 'none',
   volumeOpen: false,
   menuChoice: null,
   hover: null,

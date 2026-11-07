@@ -71,6 +71,11 @@ const actions = {
   ...wire,
   // Cancel during a pass stops the pass. The host accepts that at any time, even while the page catches up
   cancel: () => (pacer.holding() && passingFor(model.controls) ? wire.stopYield() : wire.cancel()),
+  // When the concession ends the game, the plays the player would have watched are skipped
+  concede: () => {
+    if (concedingEndsGame(model)) pacer.hurry();
+    wire.concede();
+  },
   // The zones the game shows close at once, as an answered dialog does. Not while the page catches up, because then OK is not sent
   ok: () => {
     if (!pacer.holding()) {
@@ -78,6 +83,17 @@ const actions = {
       schedule();
     }
     afterCombatDrags(() => wire.ok());
+  },
+  // An answered request is removed from the model at once, so its dialog closes without waiting for the server
+  answer: (id, value) => {
+    model.requests.delete(id);
+    wire.answer(id, value);
+    schedule();
+  },
+  // A previous answer belongs to a previous menu, so the new menu opens only when its own answer arrives
+  askStackMenu: key => {
+    model.stackMenu = null;
+    wire.askStackMenu(key);
   },
   // The engine thread waits for the answer, so the question is cleared as soon as it is answered
   answerHostChoice: (id, value) => {
@@ -284,6 +300,11 @@ function apply(msg: ServerMessage): void {
       break;
     case 'prompt': model.prompt = msg; break;
     case 'zones': model.zones = msg.show; break;
+    case 'request':
+      model.requests.set(msg.id, msg);
+      break;
+    case 'drawOffer': model.drawOffer = msg.open ? msg : null; break;
+    case 'autoDecisions': model.autoDecisions = msg; break;
     case 'gameOver':
       model.gameOver = true;
       model.matchScore = msg.score;
@@ -307,7 +328,10 @@ function apply(msg: ServerMessage): void {
       return;
     case 'detail': model.cardDetails.set(msg.key, msg); break;
     case 'playerDetail': model.playerDetails.set(msg.key, msg); break;
+    case 'stackMenu': model.stackMenu = msg; break;
     case 'notice': showNotice(msg); break;
+    case 'devState': model.devState = msg; break;
+    case 'devDump': saveText(msg.text, 'game-state.txt', 'text/plain'); return;
     case 'flash': flash(); return;
   }
   schedule();

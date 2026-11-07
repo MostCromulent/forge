@@ -655,7 +655,39 @@ html:not([data-form="portrait"]) #zones.asking:not(.minimised) { padding-block: 
 /* The panel has the same shape for every zone: five cards across, scrolled. It does not grow with its contents. */
 /* The cards are bigger than on the board, because reading them is why the panel is open */
 .zone-panel .cards { --fit: 1.45; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; padding: 16px 18px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; justify-items: center; align-content: start; }
+/* A reveal opens in the same window as a zone, over the same dimmed board */
+.reveal-back { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--scrim-deep); }
+.reveal-panel { max-height: 88vh; }
+/* A plain reveal has no bars. It is as wide as its cards, which grow into the space the board leaves them (dialogs.tsx useCardFit). */
+.reveal-panel.bare { gap: 14px; width: fit-content; max-width: min(860px, 88vw); padding: 16px 8px; }
+.reveal-panel.bare header { display: block; padding: 0 10px; border: 0; text-align: center; }
+/* The heading wraps to the width of the cards instead of widening the window */
+.reveal-panel.bare :is(.zone-who, .zone-count) { display: block; width: 0; min-width: 100%; }
+/* At most five cards across, so a window with more cards is as wide as its rows and no wider */
+.reveal-panel.bare .cards { --fit: 1.45; display: flex; flex-wrap: wrap; justify-content: center; min-width: 240px; padding: 2px var(--glow);
+  max-width: calc(5 * var(--card-w) * var(--fit) + 4 * 14px + 2 * var(--glow)); }
+.reveal-panel.bare .cards .section { width: 100%; }
+.reveal-panel.bare footer { justify-content: center; gap: 10px; padding: 0 10px; border: 0; }
+.reveal-panel.bare footer > * { flex: 1; justify-content: center; max-width: 180px; height: 32px; padding-block: 0; }
+/* A reveal's scrim fades in, as a dialog's does */
+.reveal-back:not(.minimised) { animation: backdrop-in .2s ease-out; }
+/* The warning that a computer player will not play some cards in its deck appears after the board has been seen. It is sized to its cards, which are dealt in. */
+.reveal-back:has(.ai-skips) { animation: backdrop-in .22s ease-out .4s backwards; }
+.reveal-panel.ai-skips { width: fit-content; max-width: min(860px, 88vw); animation: box-in .26s cubic-bezier(.2, .8, .2, 1) .46s backwards; }
+.ai-skips header { align-items: start; padding: 18px 22px 4px; border-bottom: 0; }
+.ai-skips .warn-mark { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--danger) 16%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent); color: var(--danger); font-size: 16px; font-weight: 800; }
+.ai-skips-words { flex: 1; min-width: 0; }
+.ai-skips-words p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+.zone-panel.ai-skips footer { padding-top: 4px; border-top: 0; }
+@keyframes card-dealt { from { opacity: 0; translate: 0 18px; scale: .94; } }
+html[data-motion="reduced"] :is(.reveal-back, .reveal-panel.ai-skips, .ai-skips figure) { animation: none; }
+.reveal-panel .cards .section { grid-column: 1 / -1; justify-self: stretch; padding-bottom: 4px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .zone-panel footer { display: flex; align-items: center; gap: 12px; padding: 11px 18px; border-top: 1px solid var(--line); }
+.zone-panel.ai-skips .cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; padding: 16px 22px; }
+.ai-skips .cards .section { width: 100%; }
+.ai-skips figure { margin: 0; display: grid; gap: 7px; justify-items: center; animation: card-dealt .3s cubic-bezier(.2, .8, .2, 1) calc(.62s + var(--i) * var(--deal-step, 60ms)) backwards; }
+.ai-skips figure .card { box-shadow: 0 8px 18px #000a, 0 2px 4px #0008; }
+.ai-skips figcaption { max-width: calc(var(--card-w) * var(--fit)); color: var(--muted); font-size: 12px; line-height: 1.25; text-align: center; }
 .zone-hint { flex: 1; font-size: 12px; color: var(--muted); }
 .zone-answer { display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
 .zone-answer.cancel { background: var(--surface-2); border-color: var(--line); color: var(--muted); }
@@ -1071,6 +1103,10 @@ html[data-motion="reduced"] .battlefield .card.barred .barred-mark { animation: 
 .card.pile .count, .card .count.opened { display: grid; }
 .card .count.opened { background: #0e1116e6; border: 1px dashed var(--accent-2); color: var(--muted); box-shadow: none; }
 .card:hover { z-index: 5; }
+/* A stack item's menu is drawn like the game menu, above the stack it opens over */
+#stack-menu { z-index: 70; }
+#stack-menu .tick { color: var(--accent-2); }
+#stack-menu [aria-checked="false"] .tick { visibility: hidden; }
 /* The turn banner replaces the phase pill instead of crossing the board, so it never covers the cards */
 #phase-strip .pill { transition: opacity .16s ease, background-color .15s ease, border-color var(--pill-ms) var(--pill-ease), box-shadow var(--pill-ms) var(--pill-ease); }
 #phase-strip.announcing .pill, #phase-strip.announcing .stops { opacity: 0; pointer-events: none; }
@@ -1246,3 +1282,4 @@ html[data-motion="reduced"] .avatar.hit, html[data-motion="reduced"] .avatar.hit
 #zoom .shot > .stickers .stk.words { white-space: normal; }
 /* The place of a sticker peeled off its sheet is hatched with a dashed edge. So it reads as gone without relying on colour. */
 .stickers .stk.peeled { filter: none; border: .5cqw dashed #9c8f73; border-radius: 1.5cqw; background: repeating-linear-gradient(135deg, #e9dfc6 0 1.2cqw, #c9bc9c 1.2cqw 2.4cqw); }
+.text-option .stk-cut { display: inline-block; height: 26px; margin-right: 8px; vertical-align: middle; background-repeat: no-repeat; border-radius: 4px; }

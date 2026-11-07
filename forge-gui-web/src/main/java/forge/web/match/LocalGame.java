@@ -16,6 +16,8 @@ import forge.gamemodes.net.client.FGameClient;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.HostingServer;
+import forge.gamemodes.net.server.RemoteClient;
+import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.interfaces.ILobbyListener;
 import forge.interfaces.IUpdateable;
@@ -255,6 +257,22 @@ public final class LocalGame implements IHasForgeLog {
 
     public HostedMatch hostedMatch() {
         return hosted == null ? null : hosted.getHostedMatch();
+    }
+
+    /** The host's own player in the running game. Null if this is not the host, no game runs, or the seat was given to the AI. */
+    public Player ownPlayer() {
+        final HostedMatch match = hostedMatch();
+        final RemoteClient seat = hosted == null ? null : server.getClientBySlotIndex(webSeat);
+        if (match == null || match.getGame() == null || seat == null) {
+            return null;
+        }
+        for (final Player p : match.getGame().getPlayers()) {
+            if (p.getController() instanceof PlayerControllerHuman human && human.getGui() instanceof RemoteClientGuiGame gui
+                    && gui.getClient() == seat) {
+                return p;
+            }
+        }
+        return null;
     }
 
     public void endMatch() {
