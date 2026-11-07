@@ -1,6 +1,7 @@
 package forge.web.protocol;
 
 import forge.web.protocol.Wire.Command;
+import forge.web.protocol.Wire.Nullable;
 
 import java.util.List;
 
@@ -16,6 +17,29 @@ public final class FromBrowser {
 
     @Command
     public record Bare(Plain t) {
+    }
+
+    /** Takes the host's seat. A browser on another machine gives the host password when one is set. */
+    @Command("claimHost")
+    public record ClaimHost(@Nullable String password) {
+    }
+
+    /** The name and avatar this browser plays under. Both are chosen before anything else. A guest's browser also sends the sleeve it last chose. */
+    @Command("setName")
+    public record SetName(String name, @Nullable Integer avatar, @Nullable Integer sleeve) {
+    }
+
+    /** A script error in the page. Without this message, the server's log would never record it. */
+    @Command("pageError")
+    public record PageError(String text) {
+    }
+
+    @Command("hostChoice")
+    public record HostChoiceAnswer(int id, List<Integer> value) {
+    }
+
+    @Command("start")
+    public record Start(boolean spectate) {
     }
 
     /** Every command record. The TypeScript is generated from these. */
