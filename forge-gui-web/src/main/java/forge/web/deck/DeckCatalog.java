@@ -110,11 +110,6 @@ public final class DeckCatalog {
         return BRACKETS.computeIfAbsent(deck, CommanderBracketCalculator::getBracket);
     }
 
-    /** The bracket shown in a deck's list row. Only Commander shows it, because brackets apply only to that format. */
-    private static Integer listedBracket(final Deck deck, final GameType format) {
-        return format == GameType.Commander ? bracketOf(deck) : null;
-    }
-
     /** The bracket and every kind of card that raised it, for the panel next to the list. */
     public static Bracket bracket(final Deck deck) {
         final CommanderBracketCalculator.Result r = CommanderBracketCalculator.calculate(deck);
@@ -498,7 +493,7 @@ public final class DeckCatalog {
                     facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), facts.formats(),
                     deck.getSleeveArtKey(), deck.getSleeveArtOffset(), readOnly(key, guest),
                     linked ? site(deck.getSourceUrl()) : null, linked ? deck.getSourceUrl() : null,
-                    linked ? linkedFile(deck).lastModified() : null, listedBracket(deck, format), facts.averageMana(),
+                    linked ? linkedFile(deck).lastModified() : null, format == GameType.Commander ? bracketOf(deck) : null, facts.averageMana(),
                     proxy.isFavoriteDeck() ? true : null, aiSkips(deck)));
         }
     }
@@ -509,7 +504,7 @@ public final class DeckCatalog {
         final Facts facts = factsOf(deck, null);
         out.add(new DeckSummary(key, deck.getName(), DEVICE, facts.colors(), null, null, facts.played(),
                 facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), null,
-                deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null, listedBracket(deck, format),
+                deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null, format == GameType.Commander ? bracketOf(deck) : null,
                 facts.averageMana(), null, aiSkips(deck)));
     }
 

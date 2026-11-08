@@ -120,14 +120,14 @@ public final class DeckSession implements IHasForgeLog {
     public synchronized void reconnected(final BrowserChannel channel) {
         final EventPool p = pendingPool;
         if (p != null) {
-            channel.send(deviceDeck(p.id(), p.deck(), p.format()));
+            channel.send(new DeviceDeck(p.id(), text(p.deck()), p.format().name()));
         }
         if (editor == null) {
             return;
         }
         channel.send(new EditorMessage(editor.state()));
         if (editor.target() instanceof DeckEditor.Device d) {
-            channel.send(deviceDeck(d.id(), editor.deck(), editor.check().format()));
+            channel.send(new DeviceDeck(d.id(), text(editor.deck()), editor.check().format().name()));
         }
     }
 
@@ -232,12 +232,10 @@ public final class DeckSession implements IHasForgeLog {
         lobby.sendDecks(channel);
     }
 
-    /** Opens a pool's deck, which saves back into its pool. channel is null when no browser is attached to show it yet. */
-    public synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final BrowserChannel channel) {
-        openPool(human, storage, type, null, channel);
-    }
-
-    /** freeCommander is the commander that a Commander Draft's set gives every player. It is known only just after the draft. */
+    /**
+     * Opens a pool's deck, which saves back into its pool. channel is null when no browser is attached to show it yet.
+     * freeCommander is the commander that a Commander Draft's set gives every player, or null. It is known only just after the draft.
+     */
     public synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final String freeCommander,
             final BrowserChannel channel) {
         editor = new DeckEditor(human, false, true, new DeckEditor.Group(storage), Check.of(type, null), storages,
@@ -622,10 +620,6 @@ public final class DeckSession implements IHasForgeLog {
 
     public void attach(final BrowserChannel channel) {
         channelFor.set(channel);
-    }
-
-    private static DeviceDeck deviceDeck(final String id, final Deck deck, final GameType format) {
-        return new DeviceDeck(id, text(deck), format.name());
     }
 
     private void keepDeviceDecks(final List<DeviceDeckText> decks) {

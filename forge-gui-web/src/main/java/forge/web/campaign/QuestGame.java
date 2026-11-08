@@ -955,7 +955,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
             .on(QuestTournamentDeck.class, inSave((c, ch, d) -> {
                 final DeckGroup decks = quest().getDraftDecks().get(QuestEventDraft.DECK_NAME);
                 if (decks != null) {
-                    c.host().decks().openPool(decks.getHumanDeck(), quest().getDraftDecks(), GameType.QuestDraft, ch);
+                    c.host().decks().openPool(decks.getHumanDeck(), quest().getDraftDecks(), GameType.QuestDraft, null, ch);
                 }
             }))
             .on(QuestStall.class, inSave((c, ch, stall) -> ch.send(QuestShop.bazaar(stall.name()))))

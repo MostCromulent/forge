@@ -112,7 +112,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
                     run(() -> {
                         final IStorage<DeckGroup> pools = quest.drafted(decks);
                         show();
-                        session.decks().openPool(decks.getHumanDeck(), pools, GameType.QuestDraft, session.browser());
+                        session.decks().openPool(decks.getHumanDeck(), pools, GameType.QuestDraft, null, session.browser());
                     });
                 }
 

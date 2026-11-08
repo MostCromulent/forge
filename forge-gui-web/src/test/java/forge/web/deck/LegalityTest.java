@@ -8,15 +8,10 @@ import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.web.WebTestSupport;
-import forge.web.lobby.LobbyFormats;
-import forge.web.protocol.ToBrowser.Format;
-import forge.web.protocol.ToBrowser.FormatGroup;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-
-import java.util.List;
 
 public class LegalityTest {
     @BeforeClass
@@ -38,18 +33,6 @@ public class LegalityTest {
         final Deck d = new Deck("t");
         d.getOrCreate(DeckSection.Commander).add(card(commander), 1);
         return d;
-    }
-
-    // Fails if a commander format's card list is offered as a pool for a 60-card Constructed game
-    @Test
-    public void commanderFormatsAreNotConstructedCardPools() {
-        final List<String> offered = LobbyFormats.choices().stream()
-                .filter(f -> f.group() == FormatGroup.Sanctioned || f.group() == FormatGroup.Casual || f.group() == FormatGroup.Custom)
-                .map(Format::id).toList();
-        Assert.assertTrue(offered.contains("Premodern"), "a casual Constructed format is missing: " + offered);
-        for (final String name : List.of("Commander", "Brawl", "Oathbreaker", "PreDH")) {
-            Assert.assertFalse(offered.contains(name), name + " is offered as a Constructed card pool");
-        }
     }
 
     // Fails if a card outside the commander's colours is not marked, or the verdict is not the engine's

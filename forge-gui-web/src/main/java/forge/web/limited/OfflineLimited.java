@@ -117,7 +117,7 @@ public final class OfflineLimited implements IHasForgeLog {
             channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionNoPool", name)));
             return;
         }
-        decks.openPool(group.getHumanDeck(), e.storage(), poolType(e.type(), group.getHumanDeck()), channel);
+        decks.openPool(group.getHumanDeck(), e.storage(), poolType(e.type(), group.getHumanDeck()), null, channel);
     }
 
     private void deletePool(final BrowserChannel channel, final String name) {
@@ -179,7 +179,7 @@ public final class OfflineLimited implements IHasForgeLog {
                     session.move(now, new Event(EventKind.sealed, name));
                 }
                 session.tell(OfflineEvents.pools());
-                decks.openPool(group.getHumanDeck(), OfflineEvents.sealed(), GameType.Sealed, session.browser());
+                decks.openPool(group.getHumanDeck(), OfflineEvents.sealed(), GameType.Sealed, null, session.browser());
             } finally {
                 openingPacks.set(false);
             }
