@@ -27,14 +27,6 @@ final class Answers {
         return out;
     }
 
-    static List<Integer> range(final int from, final int to) {
-        final List<Integer> a = new ArrayList<>();
-        for (int i = from; i < to; i++) {
-            a.add(i);
-        }
-        return a;
-    }
-
     static Predicate<JsonElement> indexList(final int size, final int min, final int max) {
         return v -> {
             if (!v.isJsonArray()) {

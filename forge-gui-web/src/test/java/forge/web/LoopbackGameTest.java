@@ -89,7 +89,7 @@ public class LoopbackGameTest {
             final WebGuiGame second = new WebGuiGame();
             final TestBrowser secondBrowser = new TestBrowser(second, true);
             second.attach(secondBrowser);
-            SessionsTest.onUi(() -> local.startMatch("Web Player", islands, "AI", bears, second));
+            SessionsTest.onUi(() -> MatchProbe.startMatch(local, islands, bears, second));
             awaitGameStarted(local, secondBrowser);
         });
     }

@@ -98,15 +98,12 @@ public final class LobbyEvents {
 
     /** The product of a past event, read from its pools. A pool saved without a product is still named as an earlier event. */
     private static String playedAgain(final String eventId) {
+        final Deck pool;
         synchronized (DeckCatalog.DECKS) {
-            for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
-                if (eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
-                    final String product = DeckProxy.getEventTag(d, "eventProduct");
-                    return product == null || product.isBlank() ? Localizer.getInstance().getMessage("lblWebEventAnEarlierEvent") : product;
-                }
-            }
+            pool = NetworkEvent.findEventDeck(eventId);
         }
-        return Localizer.getInstance().getMessage("lblWebEventAnEarlierEvent");
+        final String product = pool == null ? null : DeckProxy.getEventTag(pool, "eventProduct");
+        return product == null || product.isBlank() ? Localizer.getInstance().getMessage("lblWebEventAnEarlierEvent") : product;
     }
 
     /** A past event, as described by the tags on one of its pools. */
@@ -133,13 +130,9 @@ public final class LobbyEvents {
 
     /** Hosts a past event again. Its kind is read from its pools, as on desktop. */
     public String hostAgain(final String eventId) {
-        Deck pool = null;
+        final Deck pool;
         synchronized (DeckCatalog.DECKS) {
-            for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
-                if (eventId != null && eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
-                    pool = d;
-                }
-            }
+            pool = eventId == null ? null : NetworkEvent.findEventDeck(eventId);
         }
         if (pool == null) {
             return Localizer.getInstance().getMessage("lblWebLobbyNoEventDecks");

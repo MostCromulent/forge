@@ -19,7 +19,6 @@ import forge.model.FModel;
 import forge.util.ImageUtil;
 import forge.util.Localizer;
 import forge.util.MyRandom;
-import forge.util.NameGenerator;
 import forge.web.WebGuiBase;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.ExtraSections;
@@ -617,6 +616,7 @@ public final class Lobby {
         final Deck deck = deckAt(index);
         // A player may edit their own seat, and the host may also edit the computer's seats. Another player's seat belongs to that player
         final boolean mayEdit = index == local.webSeat() || (local.isHost() && slot.getType() == LobbySlotType.AI);
+        final List<DeckSection> extras = sectionsFor(lobby, index);
         return new Seat(slot.getName(), slot.getType(), index == local.webSeat(), mayEdit,
                 slot.isReady(), slot.getAvatarIndex(), slot.getSleeveIndex(), key(index),
                 deck == null ? null : deck.getName(),
@@ -628,9 +628,9 @@ public final class Lobby {
                 deck == null ? 0 : deck.getSleeveArtOffset(),
                 lobby.hasVariant(GameType.ArchenemyRumble) ? "archenemy"
                         : lobby.hasVariant(GameType.Archenemy) ? (slot.isArchenemy() ? "archenemy" : "hero") : null,
-                sectionsFor(lobby, index).contains(DeckSection.Planes) ? seatExtra(lobby, index, deck, DeckSection.Planes) : null,
-                sectionsFor(lobby, index).contains(DeckSection.Schemes) ? seatExtra(lobby, index, deck, DeckSection.Schemes) : null,
-                sectionsFor(lobby, index).contains(DeckSection.Avatar) ? seatExtra(lobby, index, deck, DeckSection.Avatar) : null,
+                extras.contains(DeckSection.Planes) ? seatExtra(lobby, index, deck, DeckSection.Planes) : null,
+                extras.contains(DeckSection.Schemes) ? seatExtra(lobby, index, deck, DeckSection.Schemes) : null,
+                extras.contains(DeckSection.Avatar) ? seatExtra(lobby, index, deck, DeckSection.Avatar) : null,
                 slot.isSittingOut(),
                 deck == null || !format().getDeckFormat().hasCommander() || deck.getCommanders().isEmpty() ? null
                         : deck.getCommanders().get(0).getImageKey(false),
@@ -993,16 +993,11 @@ public final class Lobby {
         if (lobby != null && !drafting(lobby) && index != local.webSeat() && index < lobby.getNumberOfSlots()) {
             final LobbySlot slot = lobby.getSlot(index);
             slot.setType(LobbySlotType.AI);
-            slot.setName(computerName(lobby));
+            slot.setName(lobby.randomName());
             slot.setIsReady(true);
             local.pushLobby();
             compose(index);
         }
-    }
-
-    /** A name for the computer as desktop gives one: random, and not one already at the table. */
-    public static String computerName(final GameLobby lobby) {
-        return NameGenerator.getRandomName("Any", "Any", seatNames(lobby, -1));
     }
 
     private static List<String> seatNames(final GameLobby lobby, final int except) {
@@ -1065,7 +1060,7 @@ public final class Lobby {
         } else if (host() != null && index >= 0 && index < host().getNumberOfSlots()
                 && host().getSlot(index).getType() == LobbySlotType.AI
                 && seatNames(host(), index).stream().noneMatch(name.trim()::equalsIgnoreCase)) {
-            host().getSlot(index).setName(name.isBlank() ? computerName(host()) : name.trim());
+            host().getSlot(index).setName(name.isBlank() ? host().randomName() : name.trim());
             local.pushLobby();
         }
     }

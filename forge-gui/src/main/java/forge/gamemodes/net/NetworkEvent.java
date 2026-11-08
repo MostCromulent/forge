@@ -201,7 +201,7 @@ public final class NetworkEvent {
     }
 
     /** The pool deck saved for a past event id, or null if none is on disk. */
-    private static Deck findEventDeck(String eventId) {
+    public static Deck findEventDeck(String eventId) {
         for (Deck d : FModel.getDecks().getNetworkEventDecks()) {
             if (eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
                 return d;

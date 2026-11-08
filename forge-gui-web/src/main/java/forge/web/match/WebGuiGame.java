@@ -1,5 +1,6 @@
 package forge.web.match;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
@@ -81,6 +82,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 /** One player's view of a match for the browser. Game calls run on one dispatch thread. Browser replies arrive on the socket thread. */
 public class WebGuiGame extends NetworkGuiGame {
@@ -164,7 +166,7 @@ public class WebGuiGame extends NetworkGuiGame {
     private boolean zonesClosedUnsent;
     // Written on the dispatch thread. The socket thread resends it to a reloading browser
     private final WebGameLog gameLog;
-    private final BrowserSounds sounds = new BrowserSounds(this::getCurrentPlayer, this::isLocalPlayer);
+    private final BrowserSounds sounds = new BrowserSounds(this::getCurrentPlayer);
     /** The settings of the player this GUI shows the match to. Only the host's settings are the shared preferences. */
     private final PlayerSettings settings;
     private volatile BrowserChannel browser;
@@ -787,8 +789,7 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     private boolean isInMirror(final CardView card) {
-        final GameView gv = getGameView();
-        return gv != null && gv.getTracker() != null && gv.getTracker().getObj(TrackableTypes.CardViewType, card.getId()) == card;
+        return lookup(DeltaPacket.makeDeltaKey(card), TrackableTypes.CardViewType) == card;
     }
 
     private <T> List<RequestOption> options(final List<T> items, final FSerializableFunction<T, String> display) {
@@ -845,7 +846,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         // Spells being chosen are already drawn on the stack, so the player picks them there instead of from a list
         final ChoicesRequest request = choicesRequest(ChoiceKind.choices, message, need, max, choices, selected, display,
-                stackKeysFor(choices), null, Answers.range(0, need));
+                stackKeysFor(choices), null, IntStream.range(0, need).boxed().toList());
         return Answers.pick(choices, ask(request, Answers.indexList(choices.size(), need, max)));
     }
 
@@ -952,7 +953,8 @@ public class WebGuiGame extends NetworkGuiGame {
         final int remainingMax = remainingObjectsMax < 0 ? items.size() : Math.min(remainingObjectsMax, items.size());
         final int min = Math.max(0, items.size() - remainingMax);
         final int max = Math.max(min, items.size() - Math.max(remainingObjectsMin, 0));
-        final List<Integer> preselected = destChoices == null || destChoices.isEmpty() ? Answers.range(0, min) : Answers.range(sourceChoices.size(), items.size());
+        final List<Integer> preselected = destChoices == null || destChoices.isEmpty() ? IntStream.range(0, min).boxed().toList()
+                : IntStream.range(sourceChoices.size(), items.size()).boxed().toList();
         // The engine labels a library, graveyard or planar deck order at its top, and the page labels the bottom
         final Localizer loc = Localizer.getInstance();
         final String bottom = loc.getMessage("lblClosestToTop").equals(top) ? loc.getMessage("lblClosestToBottom")
@@ -970,7 +972,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final List<CardView> list = Lists.newArrayList(cards);
         // The original order is always a valid answer. arrangeForMove throws on an empty list
         final ManipulateRequest request = new ManipulateRequest(title, options(list, null),
-                Answers.indicesOf(list, Lists.newArrayList(manipulable)), toTop, toBottom, Answers.range(0, list.size()));
+                Answers.indicesOf(list, Lists.newArrayList(manipulable)), toTop, toBottom, IntStream.range(0, list.size()).boxed().toList());
         return Answers.pick(list, ask(request, Answers.indexList(list.size(), list.size(), list.size())));
     }
 
@@ -1025,7 +1027,7 @@ public class WebGuiGame extends NetworkGuiGame {
         revealFirst(delayedReveal);
         final List<GameEntityView> list = new ArrayList<>(optionList);
         final int need = isOptional || list.isEmpty() ? 0 : 1;
-        final List<GameEntityView> picked = askChoices(title, need, 1, list, null, null, Answers.range(0, need));
+        final List<GameEntityView> picked = askChoices(title, need, 1, list, null, null, IntStream.range(0, need).boxed().toList());
         return picked.isEmpty() ? null : picked.get(0);
     }
 
@@ -1034,7 +1036,7 @@ public class WebGuiGame extends NetworkGuiGame {
         revealFirst(delayedReveal);
         final List<GameEntityView> list = new ArrayList<>(optionList);
         final int need = Math.min(Math.max(min, 0), list.size());
-        return askChoices(title, need, max, list, null, null, Answers.range(0, need));
+        return askChoices(title, need, max, list, null, null, IntStream.range(0, need).boxed().toList());
     }
 
     /** Lists, forgets or switches off remembered decisions through the controller, as desktop's dialog does. */
@@ -1069,11 +1071,10 @@ public class WebGuiGame extends NetworkGuiGame {
         if (key == null) {
             return;
         }
-        if (Lists.newArrayList(yields.getAutoYields()).contains(key)) {
+        if (Iterables.contains(yields.getAutoYields(), key)) {
             controller.setShouldAutoYield(key, false, abilityScope);
         }
-        final boolean decided = Lists.newArrayList(yields.getAutoTriggers()).stream().anyMatch(e -> key.equals(e.getKey()));
-        if (decided) {
+        if (Iterables.any(yields.getAutoTriggers(), e -> key.equals(e.getKey()))) {
             controller.setTriggerDecision(key, TriggerDecision.ASK, abilityScope);
         }
     }

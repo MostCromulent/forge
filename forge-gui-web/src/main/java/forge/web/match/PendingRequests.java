@@ -32,20 +32,6 @@ public final class PendingRequests implements IHasForgeLog {
         this.who = who;
     }
 
-    private static String described(final JsonObject request) {
-        final StringBuilder out = new StringBuilder(request.get("kind").getAsString());
-        if (request.has("message") && request.get("message").isJsonPrimitive()) {
-            out.append(" \"").append(LogSafe.forLog(request.get("message").getAsString(), 120)).append('"');
-        }
-        if (request.has("options") && request.get("options").isJsonArray()) {
-            out.append(", ").append(request.getAsJsonArray("options").size()).append(" options");
-        }
-        if (request.has("stackKeys") && request.get("stackKeys").isJsonArray()) {
-            out.append(", picked on the stack");
-        }
-        return out.toString();
-    }
-
     /** Sends one of the requests in {@link ToBrowser} and waits for its answer. If the game stops waiting, the default answer is returned. */
     public JsonElement await(final Record payload, final Predicate<JsonElement> valid) {
         final int id;
@@ -58,15 +44,10 @@ public final class PendingRequests implements IHasForgeLog {
             pending = new Pending(request, defaultAnswer, valid, new CompletableFuture<>());
             open.put(id, pending);
         }
-        netLog.info("Asked {} #{}: {}", who.get(), id, described(pending.request()));
-        final long asked = System.nanoTime();
+        netLog.info("Asked {} #{}: {}", who.get(), id, pending.request().get("kind").getAsString());
         send.accept(pending.request());
         try {
-            final JsonElement answer = pending.answer().get();
-            // When the game stops waiting, the answer is the default object itself
-            netLog.info("#{} {} after {} ms: {}", id, answer == pending.defaultAnswer() ? "took its default" : "answered",
-                    (System.nanoTime() - asked) / 1_000_000, LogSafe.forLog(String.valueOf(answer), 200));
-            return answer;
+            return pending.answer().get();
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             return pending.defaultAnswer();

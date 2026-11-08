@@ -111,7 +111,7 @@ public final class LocalGame implements IHasForgeLog {
             if (i != webSeat) {
                 final LobbySlot slot = hosted.getSlot(i);
                 slot.setType(LobbySlotType.AI);
-                slot.setName(Lobby.computerName(hosted));
+                slot.setName(hosted.randomName());
                 slot.setIsReady(true);
             }
         }
@@ -229,15 +229,6 @@ public final class LocalGame implements IHasForgeLog {
         return hosted.startGame();
     }
 
-    /** Sets up a game and starts it at once. Tests use this. */
-    public void startMatch(final String playerName, final Deck playerDeck, final String aiName, final Deck aiDeck,
-            final WebGuiGame gui) {
-        openHost(playerName, gui, () -> { }, (from, text) -> { });
-        seatAndStart(List.of(
-                new Seat(playerName, false, 0, 0, playerDeck),
-                new Seat(aiName, true, storedIndex(FPref.UI_AVATARS, 1), storedIndex(FPref.UI_SLEEVES, 1), aiDeck)));
-    }
-
     /** Starts a sealed or draft match of type limitedType against AI seats. Desktop's offline limited screens start one the same way. */
     public void startLimitedMatch(final List<Seat> seats, final GameType limitedType, final WebGuiGame gui) {
         final Seat mine = seats.stream().filter(s -> !s.ai()).findFirst()
@@ -267,7 +258,7 @@ public final class LocalGame implements IHasForgeLog {
         }
     }
 
-    private void seatAndStart(final List<Seat> seats) {
+    void seatAndStart(final List<Seat> seats) {
         while (hosted.getNumberOfSlots() < seats.size()) {
             hosted.addSlot();
         }

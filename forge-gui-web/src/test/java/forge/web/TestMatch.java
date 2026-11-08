@@ -5,6 +5,7 @@ import forge.game.Game;
 import forge.game.GameState;
 import forge.gui.GuiBase;
 import forge.web.match.LocalGame;
+import forge.web.match.MatchProbe;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
 import org.testng.Assert;
@@ -29,7 +30,7 @@ final class TestMatch {
         final B browser = browserFor.apply(gui);
         try {
             gui.attach(browser);
-            GuiBase.getInterface().invokeInEdtAndWait(() -> local.startMatch("Web Player", web, "AI", computer, gui));
+            GuiBase.getInterface().invokeInEdtAndWait(() -> MatchProbe.startMatch(local, web, computer, gui));
             body.run(local, gui, browser);
         } finally {
             GuiBase.getInterface().invokeInEdtAndWait(local::shutdown);

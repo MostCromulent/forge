@@ -297,7 +297,7 @@ public abstract class GameLobby implements IHasGameType {
         applyVariantTeams();
         updateView(true);
     }
-    private String randomName() {
+    public String randomName() {
         final List<String> names = Lists.newArrayListWithCapacity(MAX_PLAYERS);
         for (final LobbySlot slot : data.slots) {
             names.add(slot.getName());
