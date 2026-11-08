@@ -4,22 +4,21 @@
 .chooser-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .chooser-more { margin: 14px 0 0; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .kind-main:disabled { opacity: .45; cursor: default; }
-/* A chooser card holds two buttons inside the mode card's frame. The main button fills the card. A resume strip runs along its bottom edge. */
-.kind-card { height: 100%; }
-.kind-card:has(button:hover) { border-color: var(--accent-2); }
-.kind-main { flex: 1; display: flex; flex-direction: column; align-items: stretch; padding: 0; background: none; border: 0; border-radius: 0; color: inherit; font: inherit; text-align: left; }
-.kind-resume { display: flex; align-items: center; gap: 8px; padding: 10px 18px; background: color-mix(in srgb, var(--accent-2) 6%, transparent); border: 0; border-top: 1px solid var(--line-bright); border-radius: 0; color: var(--accent-2); font-family: inherit; font-size: 12.5px; font-weight: 600; line-height: 1.2; text-align: left; }
-.kind-resume svg { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* A chooser card is a plaque, as on the start page, holding two buttons because a button cannot contain another. The main button fills the card.
+   It keeps the art at its own zoom, and its fade starts lower so more of the art shows. */
+.kind-card.plaque { --plaque-h: 236px; --plaque-pad: 0; --plaque-zoom: 1;
+  --plaque-fade: linear-gradient(180deg, transparent 50%, #0b0e1499 74%, #0b0e14e0 100%);
+  --ground: radial-gradient(80% 90% at 82% 18%, #3b3420 0%, transparent 62%), linear-gradient(160deg, #182030, #0c1119); }
+.kind-main { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 18px 20px; background: none; border: 0; border-radius: 0;
+  color: inherit; font: inherit; text-align: left; }
+.kind-card.has-resume .kind-main { padding-bottom: 10px; }
+.kind-card .mode-text { text-shadow: 0 1px 3px #000; }
+.kind-resume { align-self: flex-start; margin: 0 20px 18px; display: flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-2) 55%, transparent); background: #0b0e14b3; color: var(--accent-2);
+  font-family: inherit; font-size: 12px; font-weight: 600; line-height: 1.2; text-align: left; }
+.kind-resume svg { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .kind-resume path:last-child { fill: currentColor; stroke: none; }
-.kind-resume:hover { background: color-mix(in srgb, var(--accent-2) 16%, transparent); color: var(--text); }
-/* A label under the name of an unfinished mode. It shows dark text on a striped grey background. */
-/* A kind's card art fills its card once the art has loaded, and its text sits on a dark fade at the bottom */
-.kind-card.has-art .kind-main { position: relative; isolation: isolate; min-height: 236px; justify-content: flex-end; }
-.kind-card.has-art .mode-art { position: absolute; inset: 0; z-index: -1; height: auto; border: 0; background: var(--art) center 30% / cover no-repeat; }
-.kind-card.has-art .mode-art svg { display: none; }
-.kind-card.has-art .mode-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, #0b0e14cc 62%, #0b0e14f5 100%); }
-.kind-card.has-art .mode-text { text-shadow: 0 1px 3px #000; }
-.kind-card.has-art .mode-blurb { color: #c9d0da; }
+.kind-resume:hover { background: color-mix(in srgb, var(--accent-2) 16%, #0b0e14); color: var(--text); }
 .kind-main:focus-visible, .kind-resume:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -2px; }
 @media (max-width: 700px) { .chooser-kinds { grid-template-columns: 1fr; } }
 

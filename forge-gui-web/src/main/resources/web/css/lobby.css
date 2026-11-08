@@ -118,54 +118,55 @@ button.ghost:hover { color: var(--text); background: var(--surface-2); }
 .modes { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; align-content: start; }
 @media (max-width: 860px) { .modes { grid-template-columns: minmax(0, 1fr); } }
 
-/* A plaque has a brass frame and its own background pattern. A dark gradient covers the pattern so the text stays readable. */
-.modes .mode.plaque { position: relative; isolation: isolate; height: 250px; padding: 18px 20px; border: 0; border-radius: 14px; overflow: hidden;
+/* A plaque has a brass frame and its own background pattern. A dark gradient covers the pattern so the text stays readable.
+   The start page's plaques and the choosers' cards share these rules, and a chooser card sets the variables to differ. */
+:is(.modes .mode, .kind-card).plaque { position: relative; isolation: isolate; height: var(--plaque-h, 250px); padding: var(--plaque-pad, 18px 20px); border: 0; border-radius: 14px; overflow: hidden;
   display: flex; flex-direction: column; justify-content: flex-end; text-align: left; background: #0b0e14;
   box-shadow: 0 0 0 1px #9a7318, 0 0 0 2px #0008, 0 18px 40px #000b; }
-.modes .mode.plaque::before { content: ''; position: absolute; inset: 0; z-index: -2; background: var(--ground); filter: saturate(.85);
-  transform: scale(1.04); transition: filter .3s ease; }
+:is(.modes .mode, .kind-card).plaque::before { content: ''; position: absolute; inset: 0; z-index: -2; background: var(--ground); filter: saturate(.85);
+  transform: scale(var(--plaque-zoom, 1.04)); transition: filter .3s ease; }
 /* Each background pattern hints at what the plaque opens. A grid means the computer, rings mean friends, and a brown crosshatch means decks. */
-.modes .mode.plaque[data-mode="play"] { --ground: radial-gradient(90% 90% at 85% 12%, #2d4466 0%, transparent 62%),
+:is(.modes .mode, .kind-card).plaque[data-mode="play"] { --ground: radial-gradient(90% 90% at 85% 12%, #2d4466 0%, transparent 62%),
   repeating-linear-gradient(0deg, #ffffff09 0 1px, transparent 1px 22px), repeating-linear-gradient(90deg, #ffffff09 0 1px, transparent 1px 22px),
   linear-gradient(160deg, #182333, #0c1119); }
-.modes .mode.plaque[data-mode="multiplayer"] { --ground: radial-gradient(80% 90% at 82% 18%, #1e5552 0%, transparent 60%),
+:is(.modes .mode, .kind-card).plaque[data-mode="multiplayer"] { --ground: radial-gradient(80% 90% at 82% 18%, #1e5552 0%, transparent 60%),
   repeating-radial-gradient(circle at 82% 22%, #ffffff0b 0 1px, transparent 1px 20px), linear-gradient(160deg, #132624, #0b1213); }
-.modes .mode.plaque[data-mode="editor"] { --ground: radial-gradient(70% 140% at 88% 50%, #4a3a1e 0%, transparent 65%),
+:is(.modes .mode, .kind-card).plaque[data-mode="editor"] { --ground: radial-gradient(70% 140% at 88% 50%, #4a3a1e 0%, transparent 65%),
   repeating-linear-gradient(45deg, #ffffff06 0 1px, transparent 1px 12px), repeating-linear-gradient(-45deg, #ffffff06 0 1px, transparent 1px 12px),
   linear-gradient(160deg, #241d12, #110e09); }
 /* A plaque's card art replaces its pattern once the art has loaded. */
-.modes .mode.plaque.has-art::before { background: var(--art) center 30% / cover no-repeat; }
-.modes .mode.plaque.has-art .plaque-mark { display: none; }
-.modes .mode.plaque .plaque-mark { position: absolute; z-index: -1; right: -14px; top: -18px; width: 170px; height: 170px; opacity: .1; pointer-events: none;
+:is(.modes .mode, .kind-card).plaque.has-art::before { background: var(--art) center 30% / cover no-repeat; }
+:is(.modes .mode, .kind-card).plaque.has-art .plaque-mark { display: none; }
+:is(.modes .mode, .kind-card).plaque .plaque-mark { position: absolute; z-index: -1; right: -14px; top: -18px; width: 170px; height: 170px; opacity: .1; pointer-events: none;
   transition: opacity .3s ease; }
-.modes .mode.plaque .plaque-mark svg { width: 100%; height: 100%; fill: none; stroke: #fff; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
-.modes .mode.plaque:hover:not(:disabled) .plaque-mark { opacity: .16; }
-.modes .mode.plaque::after { content: ''; position: absolute; inset: 0; z-index: -1;
-  background: linear-gradient(180deg, #0b0e1433 0%, #0b0e14cc 55%, #0b0e14f2 100%); transition: opacity .3s ease; }
-.modes .mode.plaque .plaque-rim { position: absolute; inset: 6px; border: 1px solid color-mix(in srgb, var(--accent-2) 25%, transparent); border-radius: 10px; pointer-events: none;
+:is(.modes .mode, .kind-card).plaque .plaque-mark svg { width: 100%; height: 100%; fill: none; stroke: #fff; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+:is(.modes .mode, .kind-card).plaque:hover:not(:disabled) .plaque-mark { opacity: .16; }
+:is(.modes .mode, .kind-card).plaque::after { content: ''; position: absolute; inset: 0; z-index: -1;
+  background: var(--plaque-fade, linear-gradient(180deg, #0b0e1433 0%, #0b0e14cc 55%, #0b0e14f2 100%)); transition: opacity .3s ease; }
+:is(.modes .mode, .kind-card).plaque .plaque-rim { position: absolute; inset: 6px; border: 1px solid color-mix(in srgb, var(--accent-2) 25%, transparent); border-radius: 10px; pointer-events: none;
   transition: border-color .25s ease, box-shadow .25s ease; }
-.modes .mode.plaque .mode-art { position: absolute; top: 16px; left: 18px; width: 46px; height: 46px; border: 0; border-radius: 50%; display: grid; place-items: center;
+:is(.modes .mode, .kind-card).plaque .mode-art { position: absolute; top: 16px; left: 18px; width: 46px; height: 46px; border: 0; border-radius: 50%; display: grid; place-items: center;
   background: radial-gradient(circle at 35% 30%, #f8dd8c, var(--accent-2) 55%, #9a7318); box-shadow: 0 3px 10px #000a; }
-.modes .mode.plaque .mode-art svg { width: 26px; height: 26px; stroke: #2a1d08; stroke-width: 2.6; }
-.modes .mode.plaque .mode-text { padding: 0; gap: 3px; }
-.modes .mode.plaque .mode-name { font-size: 20px; transition: color .2s ease; }
-.modes .mode.plaque .mode-blurb { color: #c9d0da; font-size: 13px; }
+:is(.modes .mode, .kind-card).plaque .mode-art svg { width: 26px; height: 26px; stroke: #2a1d08; stroke-width: 2.6; }
+:is(.modes .mode, .kind-card).plaque .mode-text { padding: 0; gap: 3px; }
+:is(.modes .mode, .kind-card).plaque .mode-name { font-size: 20px; transition: color .2s ease; }
+:is(.modes .mode, .kind-card).plaque .mode-blurb { color: #c9d0da; font-size: 13px; }
 /* A hovered plaque stays in place. Its inner rim lights up, its art brightens and its name turns gold. */
-.modes .mode.plaque:hover:not(:disabled) .plaque-rim { border-color: var(--accent-2);
+:is(.modes .mode, .kind-card).plaque:hover:not(:disabled) .plaque-rim { border-color: var(--accent-2);
   box-shadow: inset 0 0 14px color-mix(in srgb, var(--accent-2) 20%, transparent), 0 0 10px color-mix(in srgb, var(--accent-2) 25%, transparent); }
-.modes .mode.plaque:hover:not(:disabled)::before { filter: saturate(1) brightness(1.12); }
-.modes .mode.plaque:hover:not(:disabled)::after { opacity: .78; }
-.modes .mode.plaque:hover:not(:disabled) .mode-name { color: color-mix(in srgb, var(--accent-2) 55%, #fff); }
-.modes .mode.plaque:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
-html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .modes .mode.plaque::before { transition: none; }
+:is(.modes .mode, .kind-card).plaque:hover:not(:disabled)::before { filter: saturate(1) brightness(1.12); }
+:is(.modes .mode, .kind-card).plaque:hover:not(:disabled)::after { opacity: .78; }
+:is(.modes .mode, .kind-card).plaque:hover:not(:disabled) .mode-name { color: color-mix(in srgb, var(--accent-2) 55%, #fff); }
+:is(.modes .mode, .kind-card).plaque:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
+html[data-motion="reduced"] :is(.modes .mode, .kind-card).plaque, html[data-motion="reduced"] :is(.modes .mode, .kind-card).plaque::before { transition: none; }
 /* The plaques animate in one after another. A step along the trail slides the whole page instead (dialogs.css), so the plaque animation is off then. */
 .menu-page { view-transition-name: page; }
-.modes .mode.plaque { animation: box-in .22s ease-out both; }
-.modes .mode.plaque:nth-child(2) { animation-delay: 45ms; }
-.modes .mode.plaque:nth-child(3) { animation-delay: 90ms; }
-html[data-motion="reduced"] .modes .mode.plaque { animation: none; }
+:is(.modes .mode, .kind-card).plaque { animation: box-in .22s ease-out both; }
+:is(.modes .mode, .kind-card).plaque:nth-child(2) { animation-delay: 45ms; }
+:is(.modes .mode, .kind-card).plaque:nth-child(3) { animation-delay: 90ms; }
+html[data-motion="reduced"] :is(.modes .mode, .kind-card).plaque { animation: none; }
 /* A zero duration, not none, so the plaques do not rise when the slide ends and data-way is removed */
-html[data-way] .modes .mode.plaque { animation-duration: 0s; animation-delay: 0s; }
+html[data-way] :is(.modes .mode, .kind-card).plaque { animation-duration: 0s; animation-delay: 0s; }
 
 .mode {
   display: flex;

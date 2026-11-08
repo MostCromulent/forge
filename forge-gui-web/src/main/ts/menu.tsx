@@ -122,15 +122,18 @@ function useArt(id: string): string | null {
   return loaded;
 }
 
-/** A kind of game, drawn as two buttons in one frame because a button cannot contain another. It is greyed when onClick is missing. icon replaces the kind's own icon. */
+/** A kind of game, drawn as a plaque like the start page's. It holds two buttons because a button cannot contain another. It is greyed when onClick is missing. icon replaces the kind's own icon. */
 export function Kind({ id, icon, name, blurb, resume, resumeLabel, onClick }: {
   id: string; icon?: ComponentChildren; name: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
 }) {
   const art = useArt(id);
+  const drawn = <svg viewBox="0 0 48 48">{icon ?? KIND_ICONS[id]}</svg>;
   return (
-    <div class={art ? 'mode kind-card has-art' : 'mode kind-card'} style={art ? { '--art': art } : undefined}>
+    <div class={`kind-card plaque${art ? ' has-art' : ''}${resume ? ' has-resume' : ''}`} style={art ? { '--art': art } : undefined}>
+      <span class="plaque-rim" aria-hidden="true" />
+      <span class="plaque-mark" aria-hidden="true">{drawn}</span>
       <button class="kind-main" data-kind={id} disabled={!onClick} onClick={onClick}>
-        <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{icon ?? KIND_ICONS[id]}</svg></span>
+        <span class="mode-art" aria-hidden="true">{drawn}</span>
         <span class="mode-text">
           <span class="mode-name">{name}</span>
           <span class="mode-blurb">{blurb}</span>
