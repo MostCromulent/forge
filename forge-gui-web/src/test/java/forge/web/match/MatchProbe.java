@@ -16,7 +16,9 @@ public final class MatchProbe {
 
     /** The model a browser would have if it were sent the whole game now. Call it on the match's dispatch thread. */
     public static BrowserModel freshSnapshot(final WebGuiGame gui) {
-        return gui.freshSnapshot();
+        final BrowserModel fresh = new BrowserModel();
+        fresh.applyStateMessage(gui.fullState());
+        return fresh;
     }
 
     public static Map<Integer, JsonObject> objects(final BrowserModel model) {

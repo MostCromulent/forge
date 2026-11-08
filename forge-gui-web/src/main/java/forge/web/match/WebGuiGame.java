@@ -70,6 +70,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -138,7 +139,9 @@ public class WebGuiGame extends NetworkGuiGame {
     private final ReentrantLock mirrorLock = new ReentrantLock();
     private final ExecutorService dispatch = Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder().setNameFormat("WebClient").setDaemon(true).build());
-    private final BrowserModel model = new BrowserModel();
+    /** Every card key the browser was sent in this game. The visible list is chosen from these. */
+    private final Set<Integer> cardKeys = new LinkedHashSet<>();
+    private List<Integer> localPlayerKeys = List.of();
     private final PendingRequests requests = new PendingRequests(this::send,
             () -> getCurrentPlayer() == null ? "a player" : getCurrentPlayer().getName());
     private final DeltaSyncManager snapshotter = new DeltaSyncManager();
@@ -213,32 +216,36 @@ public class WebGuiGame extends NetworkGuiGame {
         });
     }
 
-    /** Sends on the caller's thread. The dispatch thread can be blocked on a request that only the new browser can answer. */
+    /** Holds the mirror lock, so no delta reaches the browser before the full state that holds it. A waiting request releases that lock. */
     public void attach(final BrowserChannel channel) {
-        sendFullState(channel);
-    }
-
-    private void sendFullState(final BrowserChannel channel) {
-        browser = channel;
-        channel.send(model.fullState());
-        final Playable p = playable;
-        if (p != null) {
-            channel.send(p);
-        }
-        final ToBrowser.DrawOffer d = drawOffer;
-        if (d != null) {
-            channel.send(d);
-        }
-        prompt.sendTo(channel::send);
-        synchronized (zonesLock) {
-            zonesClosedUnsent = false;
-            channel.send(zonesMessage());
-        }
-        channel.send(controlsMessage());
-        channel.send(gameLog.all());
-        requests.replay(channel::send);
-        if (gameOver) {
-            channel.send(new GameOver(score));
+        mirrorLock.lock();
+        try {
+            browser = channel;
+            final JsonObject state = fullState();
+            if (state != null) {
+                channel.send(state);
+            }
+            final Playable p = playable;
+            if (p != null) {
+                channel.send(p);
+            }
+            final ToBrowser.DrawOffer d = drawOffer;
+            if (d != null) {
+                channel.send(d);
+            }
+            prompt.sendTo(channel::send);
+            synchronized (zonesLock) {
+                zonesClosedUnsent = false;
+                channel.send(zonesMessage());
+            }
+            channel.send(controlsMessage());
+            channel.send(gameLog.all());
+            requests.replay(channel::send);
+            if (gameOver) {
+                channel.send(new GameOver(score));
+            }
+        } finally {
+            mirrorLock.unlock();
         }
     }
 
@@ -264,16 +271,36 @@ public class WebGuiGame extends NetworkGuiGame {
         return skippedProperties.get();
     }
 
-    /** The model a browser would hold if it were sent the whole game now. Tests compare it with the model the sent deltas built. Call on the dispatch thread. */
-    BrowserModel freshSnapshot() {
-        final GameView gv = getGameView();
-        final BrowserModel fresh = new BrowserModel();
-        final Map<Integer, Map<TrackableProperty, Object>> snapshot = snapshotter.snapshot(gv);
-        if (gv != null && snapshot != null) {
-            fresh.reset(rootKey(gv));
-            fresh.apply(encode(snapshot), Map.of());
+    /** The whole game as one state message, built from this client's game view. Null with no game or a failed snapshot. Call while holding the mirror lock. */
+    JsonObject fullState() {
+        final Map<Integer, Map<TrackableProperty, Object>> snapshot = snapshotter.snapshot(getGameView());
+        if (snapshot == null) {
+            return null;
         }
-        return fresh;
+        final Map<Integer, JsonObject> objects = encode(snapshot);
+        cardKeys.clear();
+        addCardKeys(objects);
+        return stateMessage(true, -1, objects, Map.of(), List.of());
+    }
+
+    private void addCardKeys(final Map<Integer, JsonObject> objects) {
+        for (final int key : objects.keySet()) {
+            if (DeltaPacket.getTypeFromDeltaKey(key) == DeltaPacket.TYPE_CARD_VIEW) {
+                cardKeys.add(key);
+            }
+        }
+    }
+
+    private JsonObject stateMessage(final boolean full, final long seq, final Map<Integer, JsonObject> newObjects,
+            final Map<Integer, JsonObject> deltas, final List<Record> happened) {
+        return Wire.encode(new StateMessage(full, seq, rootKey(getGameView()), byKey(newObjects), byKey(deltas),
+                visibleCardKeys(), localPlayerKeys, happened));
+    }
+
+    private static Map<String, JsonObject> byKey(final Map<Integer, JsonObject> objects) {
+        final Map<String, JsonObject> out = new LinkedHashMap<>();
+        objects.forEach((k, v) -> out.put(String.valueOf(k), v));
+        return out;
     }
 
     private Map<Integer, JsonObject> encode(final Map<Integer, Map<TrackableProperty, Object>> objects) {
@@ -311,14 +338,13 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override
     public void setGameView(final GameView gameView) {
         super.setGameView(gameView);
-        final GameView gv = getGameView();
-        if (gv == null) {
+        if (getGameView() == null) {
             return;
         }
-        final Map<Integer, Map<TrackableProperty, Object>> snapshot = snapshotter.snapshot(gv);
-        if (snapshot == null) {
-            // A failed snapshot must never clear the browser. The old model is more accurate than an empty one
-            netLog.warn("Web client: game view snapshot failed; keeping the previous browser model");
+        final JsonObject state = fullState();
+        if (state == null) {
+            // A failed snapshot must never clear the browser. The old state is more accurate than an empty one
+            netLog.warn("Web client: game view snapshot failed; keeping the previous browser state");
             return;
         }
         gameOver = false;
@@ -327,10 +353,7 @@ public class WebGuiGame extends NetworkGuiGame {
         drawOffer = null;
         // A full new state has no earlier state to animate from, so the queued events are dropped
         events.clear();
-        model.reset(rootKey(gv));
-        model.apply(encode(snapshot), Map.of());
-        model.setVisible(visibleCardKeys());
-        send(model.fullState());
+        send(state);
     }
 
     @Override
@@ -344,11 +367,10 @@ public class WebGuiGame extends NetworkGuiGame {
         final Map<Integer, JsonObject> newObjects = encode(asRootGame(packet.getNewObjects(), root));
         final Map<Integer, JsonObject> deltas = encode(asRootGame(packet.getObjectDeltas(), root));
         if (!newObjects.isEmpty() || !deltas.isEmpty() || !events.isEmpty()) {
-            model.apply(newObjects, deltas);
-            model.setVisible(visibleCardKeys());
+            addCardKeys(newObjects);
             final List<Record> happened = List.copyOf(events);
             events.clear();
-            send(model.stateMessage(false, packet.getSequenceNumber(), newObjects, deltas, happened));
+            send(stateMessage(false, packet.getSequenceNumber(), newObjects, deltas, happened));
         }
         if (gv.isGameOver() && !gameOver) {
             // Replaces finishGame from FControlGameEventHandler, which does not run here
@@ -372,7 +394,7 @@ public class WebGuiGame extends NetworkGuiGame {
         for (final PlayerView p : getLocalPlayers()) {
             p.getCards(ZoneType.Flashback).forEach(c -> playable.add(c.getId()));
         }
-        for (final int key : model.keysOfType(DeltaPacket.TYPE_CARD_VIEW)) {
+        for (final int key : cardKeys) {
             final CardView card = tracker.getObj(TrackableTypes.CardViewType, DeltaPacket.getIdFromDeltaKey(key));
             if (card != null && (mayView(card) || playable.contains(card.getId()))) {
                 visible.add(key);
@@ -391,8 +413,11 @@ public class WebGuiGame extends NetworkGuiGame {
         for (final PlayerView p : myPlayers) {
             keys.add(DeltaPacket.makeDeltaKey(p));
         }
-        model.setLocalPlayers(keys);
-        send(model.fullState());
+        localPlayerKeys = keys;
+        final JsonObject state = fullState();
+        if (state != null) {
+            send(state);
+        }
         // For a remote seat, the host skips phases only by the state the client seeds (PlayerControllerHuman.isUiSetToSkipPhase)
         seedYieldStateOnHost();
         // The seed used the shared preferences for all other settings. So this player's own settings are applied after it
