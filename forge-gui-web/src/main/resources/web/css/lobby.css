@@ -150,7 +150,6 @@ button.ghost:hover { color: var(--text); background: var(--surface-2); }
 .modes .mode.plaque .mode-text { padding: 0; gap: 3px; }
 .modes .mode.plaque .mode-name { font-size: 20px; transition: color .2s ease; }
 .modes .mode.plaque .mode-blurb { color: #c9d0da; font-size: 13px; }
-.modes .mode.plaque .mode-status { color: var(--accent-2); font-size: 12px; font-weight: 600; }
 /* A hovered plaque stays in place. Its inner rim lights up, its art brightens and its name turns gold. */
 .modes .mode.plaque:hover:not(:disabled) .plaque-rim { border-color: var(--accent-2);
   box-shadow: inset 0 0 14px color-mix(in srgb, var(--accent-2) 20%, transparent), 0 0 10px color-mix(in srgb, var(--accent-2) 25%, transparent); }
@@ -194,7 +193,6 @@ html[data-way] .modes .mode.plaque { animation-duration: 0s; animation-delay: 0s
 .mode-name { font-size: 17px; font-weight: 700; }
 .mode-blurb { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
 /* The mode's current status for the player. It is drawn in the mode tint because it is the most useful line on the card. */
-.mode-status { color: var(--mode-tint); font-size: 11.5px; margin-top: 3px; }
 
 #lobby { min-height: 100%; display: grid; grid-template-rows: auto 1fr; }
 /* The seats, the Add a seat button and the Play button are kept together as one block. They are not pushed to opposite edges. */

@@ -32,7 +32,6 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   if (!model.host) {
     return <Waiting model={model} actions={actions} />;
   }
-  const decks = model.decks?.length ?? 0;
   return (
     <div class="menu-shell">
       {choosing && isPortrait()
@@ -51,13 +50,9 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
         <div class="start-step" hidden={!!choosing}>
           <SetupHead trail={[{ label: t('lblStart') }]} title={t('lblWebMenuHowToPlay')} />
           <div class="modes">
-            <Mode id="play" name={t('lblWebMenuVersusAi')} blurb={t('lblWebMenuVersusAiBlurb')}
-              status={[decks ? t('lblWebMenuDecksReady', decks) : t('lblWebMenuNoDecksYet'),
-                model.sealedPools ? t(model.sealedPools === 1 ? 'lblWebMenuSealedPool' : 'lblWebMenuSealedPools', model.sealedPools) : ''].filter(Boolean).join(' · ')}
-              onClick={() => setChoosing('play')} />
-            <Mode id="multiplayer" name={t('lblWebMenuWithFriends')} blurb={t('lblWebMenuWithFriendsBlurb')}
-              status={t('lblWebMenuGivesLink')} onClick={() => setChoosing('friends')} />
-            <Mode id="editor" name={t('lblDecks')} blurb={t('lblWebMenuDecksBlurb')} status={t('lblWebMenuDecksCount', decks)}
+            <Mode id="play" name={t('lblWebMenuVersusAi')} blurb={t('lblWebMenuVersusAiBlurb')} onClick={() => setChoosing('play')} />
+            <Mode id="multiplayer" name={t('lblWebMenuWithFriends')} blurb={t('lblWebMenuWithFriendsBlurb')} onClick={() => setChoosing('friends')} />
+            <Mode id="editor" name={t('lblDecks')} blurb={t('lblWebMenuDecksBlurb')}
               onClick={() => {
                 changeUi(u => { u.browse = { format: 'Constructed' }; });
                 actions.browseFormat('Constructed');
@@ -159,8 +154,8 @@ const MODE_ICONS: Record<string, ComponentChildren> = {
 };
 
 /** An entry on the start page, drawn as a plaque. Its card art covers the drawn pattern once the art has loaded. */
-function Mode({ id, name, blurb, status, onClick }: {
-  id: string; name: string; blurb: string; status: string; onClick?: () => void;
+function Mode({ id, name, blurb, onClick }: {
+  id: string; name: string; blurb: string; onClick?: () => void;
 }) {
   const art = useArt(id);
   return (
@@ -171,7 +166,6 @@ function Mode({ id, name, blurb, status, onClick }: {
       <span class="mode-text">
         <span class="mode-name">{name}</span>
         <span class="mode-blurb">{blurb}</span>
-        <span class="mode-status">{status}</span>
       </span>
     </button>
   );
