@@ -8,7 +8,11 @@ import forge.item.PaperCard;
 
 import java.awt.image.BufferedImage;
 
-/** Finds which pictures are foil, from Forge's foil mark on the name in the image key. It also paints the foil on them. */
+/**
+ * Finds which pictures are foil, from Forge's foil mark on the name in the image key. It also paints the foil on them.
+ * The page shows cards as plain images, and one WebGL context per card is too costly, so the foil is painted here.
+ * The page's foil.ts runs the same shader on the hovered preview only, where the streaks follow the pointer.
+ */
 public final class Foil {
     // The look, with the names fragCardShaderHolo uses in forge-gui-mobile's Shaders. This code follows that shader line for line
     private static final double FOIL_STRENGTH = 0.85, INK_FLOOR = 0.02, VIVID = 0.35, STREAK_DENSITY = 1.15, STREAK_WIDTH = 0.27,

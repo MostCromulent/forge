@@ -1,4 +1,4 @@
-// Draws a foil card's preview here so its streaks move with the pointer. The server draws every other foil image, without motion
+// Draws a foil card's preview here so its streaks move with the pointer. The server's Foil class paints every other foil image, without motion
 
 import { imageUrl } from '../images';
 
