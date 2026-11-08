@@ -32,7 +32,7 @@ import { fieldChanged, repeatTap, seatToOpen, tapInspects } from './portrait';
 import { isPortrait } from '../form';
 import { sheet, swipeDown } from '../sheet';
 import { changeUi, ui } from '../ui';
-import { t, type TextKey } from '../text';
+import { t, tCap, type TextKey } from '../text';
 import { ICONS, iconSvg } from '../icons';
 import { COLOUR_BITS, COMMANDER_LETHAL, COMMANDER_WARNING } from './rules';
 
@@ -478,8 +478,8 @@ const AMBIENT = '<span class="ambient" aria-hidden="true">' + '<i></i>'.repeat(6
 
 /** Extra zones that some variants and cards add. Each is shown only while it has cards. */
 const EXTRA_ZONES: [ZoneType, TextKey][] = [['PlanarDeck', 'lblPlanes'], ['SchemeDeck', 'lblSchemes'],
-  ['AttractionDeck', 'lblAttractions'], ['ContraptionDeck', 'lblContraptions'], ['Junkyard', 'lblWebZoneJunkyard'],
-  ['Sideboard', 'lblSideboard'], ['Ante', 'lblWebZoneAnte'], ['StickerSheets', 'lblStickerSheets']];
+  ['AttractionDeck', 'lblAttractions'], ['ContraptionDeck', 'lblContraptions'], ['Junkyard', 'lblJunkyardZone'],
+  ['Sideboard', 'lblSideboard'], ['Ante', 'lblAnteZone'], ['StickerSheets', 'lblStickerSheets']];
 const FACE_DOWN_DECKS: ReadonlySet<ZoneType> = new Set(['PlanarDeck', 'SchemeDeck', 'AttractionDeck', 'ContraptionDeck']);
 
 function graveyardTitle(count: number, types: string[]): string {
@@ -533,7 +533,7 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, se
       el.innerHTML = '<img alt="" draggable="false">' + (zoneName === 'Library' ? '' : AMBIENT)
         + '<span class="zone-name"></span><span class="zone-count"></span>';
       const extra = EXTRA_ZONES.find(([z]) => z === zoneName)?.[1];
-      q(el, '.zone-name').textContent = extra ? t(extra) : zoneTitle(zoneName);
+      q(el, '.zone-name').textContent = extra ? tCap(extra) : zoneTitle(zoneName);
       // A planar, scheme, attraction or contraption deck is face down, so only its count is shown
       el.classList.toggle('hidden-deck', FACE_DOWN_DECKS.has(zoneName));
       const img = q<HTMLImageElement>(el, 'img');

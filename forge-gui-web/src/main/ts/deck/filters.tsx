@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
-import { t } from '../text';
+import { t, tCap } from '../text';
 import { toggled } from '../symbols';
 import { useDismiss } from '../hooks';
 
@@ -132,9 +132,9 @@ export function Between({ from, to, apply, min = 0 }: {
   return (
     <>
       <div class="frange">
-        <input type="number" min={min} placeholder={t('lblWebFilterFrom')} value={lo} onInput={e => setLo(e.currentTarget.value)} />
+        <input type="number" min={min} placeholder={tCap('lblFrom')} value={lo} onInput={e => setLo(e.currentTarget.value)} />
         <span>–</span>
-        <input type="number" min={min} placeholder={t('lblWebFilterTo')} value={hi} onInput={e => setHi(e.currentTarget.value)} />
+        <input type="number" min={min} placeholder={tCap('lblTo')} value={hi} onInput={e => setHi(e.currentTarget.value)} />
       </div>
       <div class="fapply"><button class="primary" onClick={() => apply(num(lo), num(hi))}>{t('lblWebFilterApply')}</button></div>
     </>

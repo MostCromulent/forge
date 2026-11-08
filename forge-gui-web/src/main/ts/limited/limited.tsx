@@ -188,7 +188,7 @@ function Opponents({ pool, draft, actions }: { pool: PoolRow; draft: boolean; ac
       </div>
       {several && (
         <div class="opp-foot">
-          <span class="say">{tNodes('lblWebLimitedFreeForAllSay', <b>{t('lblWebLimitedFreeForAll')}</b>)}</span>
+          <span class="say">{tNodes('lblWebLimitedFreeForAllSay', <b>{t('lblWebMatchBarFreeForAll')}</b>)}</span>
           <span class="stepper">
             <button class="step" disabled={count <= 2} aria-label={t('lblWebLimitedOneOpponentFewer')} onClick={() => setCount(count - 1)}>&minus;</button>
             <span class="n">{count}</span>

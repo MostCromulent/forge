@@ -9,7 +9,7 @@ import { DeckRow, SidePanel } from '../campaign/campaign';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
 import type { ConquestCell, ConquestPlace, ConquestState } from '../protocol';
-import { t, type TextKey } from '../text';
+import { t, tCap, type TextKey } from '../text';
 import { byId, reducedMotion } from '../dom';
 import { dimIntoMatch } from '../match/entry';
 import { isPortrait } from '../form';
@@ -219,7 +219,7 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
               <span class="cq-stamp" style={{ left: `${sealAt.x + TW / 2}px`, top: `${sealAt.y + 54}px` }}><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} /></span>
             </>}
             <div class="cq-you" style={{ left: `${markerAt.x + TW / 2}px`, top: `${markerAt.y + 54}px` }}>
-              <i style={{ backgroundImage: `url("${artUrl(state.walkerImage)}")` }} /><b>{t('lblWebLobbyKindYou')}</b>
+              <i style={{ backgroundImage: `url("${artUrl(state.walkerImage)}")` }} /><b>{tCap('lblYou')}</b>
             </div>
             {hovered && hovered.state !== 'fog' && !walk && <HoverCard cell={hovered} at={l.at(hovered.region, hovered.row, hovered.col)} width={l.width} />}
           </div>
@@ -252,7 +252,7 @@ function Sections({ cell }: { cell: ConquestCell }) {
     <>
       {variants.length > 0 && (
         <div class="cq-sec">
-          <span class="cq-kicker">{t('lblWebConquestFormat')}</span>
+          <span class="cq-kicker">{t('lblFormat')}</span>
           {variants.map(v => <SectionRow key={v} icon={VARIANT_ICONS[v]} name={variantName(v)} line={VARIANT_DESC[v] && t(VARIANT_DESC[v])} />)}
         </div>
       )}

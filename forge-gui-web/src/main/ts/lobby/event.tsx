@@ -8,7 +8,7 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { LobbyTable, PastEvent } from '../protocol';
 import { GameMenu, PlayerCount } from './matchbar';
-import { t, shortDay } from '../text';
+import { t, tCap, shortDay } from '../text';
 import { Backdrop, Confirm, CloseButton } from '../dialog';
 
 /** What the setup dialog shows. 'choose' asks for a new event or an earlier one. The other two show that choice's form. */
@@ -74,7 +74,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
           </div>
         </Backdrop>
       )}
-      {leaving && <Confirm title={t('lblWebEventStartNewEventQ')} label={t('lblWebEventStartNewEvent')} text={t('lblWebEventNewEventHint')}
+      {leaving && <Confirm title={t('lblWebEventStartNewEvent')} label={t('lblWebEventStartNewEvent')} text={t('lblWebEventNewEventHint')}
         back={() => setLeaving(false)} backLabel={t('lblWebEventKeepThisEvent')}
         go={() => { setLeaving(false); actions.eventNew(); setView('choose'); setSetting(true); }} goLabel={t('lblWebEventNewEvent')} />}
       <div class="eh-main">
@@ -127,7 +127,7 @@ function eventStatus(lobby: LobbyTable): string {
   const lim = lobby.limited!;
   if (!lim.product) return lobby.host ? t('lblWebEventSetUpThenReady') : t('lblWebEventHostSettingUp');
   if (!lim.started) {
-    const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready).map(s => (s.mine ? t('lblYou') : s.name ?? t('lblWebEventAPlayer')));
+    const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready).map(s => (s.mine ? tCap('lblYou') : s.name ?? t('lblWebEventAPlayer')));
     if (unready.length) return t('lblWebEventWaitingForReady', unready.join(', '));
     return lobby.host ? t('lblWebEventEveryoneReady') : t('lblWebEventEveryoneReadyWaitHost');
   }

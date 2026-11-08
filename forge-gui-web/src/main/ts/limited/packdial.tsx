@@ -2,7 +2,7 @@
 
 import { nextFrom, seatAngle } from './dial';
 import type { DraftState } from '../protocol';
-import { t } from '../text';
+import { t, tCap } from '../text';
 
 const WIDTH = 420;
 const HEIGHT = 400;
@@ -47,7 +47,7 @@ export function Dial({ state, faces }: { state: DraftState; faces: string[] }) {
               {faces[i] ? <img alt="" src={faces[i]} draggable={false} /> : <b>{seat.name.slice(0, 1)}</b>}
             </span>
             <span class="dial-label" style={{ left: `${label.x}px`, top: `${label.y}px` }}>
-              <span class="dial-name">{i === 0 ? t('lblWebLobbyKindYou') : seat.name}</span>
+              <span class="dial-name">{i === 0 ? tCap('lblYou') : seat.name}</span>
               <span class={seat.packs > 2 ? 'dial-held many' : 'dial-held'} title={t(seat.packs === 1 ? 'lblWebPackDialOnePack' : 'lblWebSetupNPacks', seat.packs)}>
                 {seat.held ? <span title={t('lblWebPackDialAwayTitle')}>{t('lblWebPackDialAway')}</span> : null}
                 {seat.packs > 0 && <><i aria-hidden="true" />{seat.packs}</>}
@@ -56,7 +56,7 @@ export function Dial({ state, faces }: { state: DraftState; faces: string[] }) {
           </div>
         );
       })}
-      <div class="dial-centre"><b>{t('lblPackN', state.pack)}</b><span>{direction > 0 ? t('lblWebPackDialPassingRight') : t('lblWebPackDialPassingLeft')}</span></div>
+      <div class="dial-centre"><b>{t('lblPackN', state.pack)}</b><span>{direction > 0 ? tCap('lblDraftLogPassingRight') : tCap('lblDraftLogPassingLeft')}</span></div>
     </div>
   );
 }

@@ -212,7 +212,7 @@ export function DrawOfferQuestion({ model, actions }: { model: Model; actions: A
   return (
     <Backdrop>
       <div class="dialog" role="dialog" aria-label={t('lblOfferDrawTitle')}>
-        <h3>{who != null ? t('lblWebGameMenuOffersDraw', who) : t('lblWebGameMenuOpponentOffersDraw')}</h3>
+        <h3>{who != null ? t('lblDrawOfferedBy', who) : t('lblWebGameMenuOpponentOffersDraw')}</h3>
         <p class="hint">{t('lblWebGameMenuDrawOnlyIfAll')}</p>
         <div class="actions">
           <button onClick={() => actions.drawOffer('DECLINE')}>{t('lblDecline')}</button>

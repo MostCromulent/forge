@@ -11,7 +11,7 @@ import { logTints } from './log';
 import { setting } from '../settings';
 import { byId, make, q } from '../dom';
 import type { CardView, PlayerView, StackItemView, ZoneType } from '../protocol';
-import { t } from '../text';
+import { t, tCap } from '../text';
 import { zoneTitle } from './zones';
 import { frameColour, manaValue } from './rules';
 import { starterShowing } from './starter';
@@ -143,7 +143,7 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
     root.scrollTop = 0;
     return false;
   }
-  q(head, 'b').textContent = `${t('lblWebZoneHand')} ${count}`;
+  q(head, 'b').textContent = `${tCap('lblHandZone')} ${count}`;
   // The top of the stack is named here, because the drawer covers the stack
   const top = (derefAll(model, game(model)?.Stack) as StackItemView[])[0];
   const source = top ? deref(model, top.SourceCard) as CardView | undefined : undefined;

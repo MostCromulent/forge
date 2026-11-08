@@ -7,7 +7,7 @@ export function NameTaken({ name, cancel, resolve }: { name: string; cancel: () 
   return (
     <Backdrop>
       <div class="dialog">
-        <h3>{t('lblWebImportNameTaken', name)}</h3>
+        <h3>{t('lblWebEditorNameTaken', name)}</h3>
         <div class="actions">
           <button onClick={cancel}>{t('lblCancel')}</button>
           <button onClick={() => resolve('replace')}>{t('lblWebDraftReplaceIt')}</button>

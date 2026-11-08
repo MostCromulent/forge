@@ -65,6 +65,7 @@ import forge.web.protocol.JsonCodec;
 import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.*;
 import forge.web.protocol.Wire;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -1101,7 +1102,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         final List<String> declined = update.entries().stream()
                 .filter(e -> e.vote() == DrawOffer.Vote.DECLINED && e.player() != null)
-                .map(e -> isLocalPlayer(e.player()) ? loc.getMessage("lblWebLobbyKindYou") : e.player().getName()).toList();
+                .map(e -> isLocalPlayer(e.player()) ? StringUtils.capitalize(loc.getMessage("lblYou")) : e.player().getName()).toList();
         send(new Notice(loc.getMessage("lblWebGameDrawDeclined"), declined.isEmpty() ? loc.getMessage("lblWebGameGoesOn")
                 : loc.getMessage("lblWebGameDeclined", String.join(", ", declined)), false));
     }

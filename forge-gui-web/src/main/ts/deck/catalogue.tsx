@@ -17,7 +17,7 @@ import { t, type TextKey } from '../text';
 import { GROUP_NAMES, groupsOf, isCardPool } from '../formatmenu';
 
 export const TYPES: [string, TextKey][] = [['any', 'lblWebCatalogueAnyType'], ...CARD_TYPES.map(([type, , heading]): [string, TextKey] => [type.toLowerCase(), heading])];
-const SORTS: [string, TextKey][] = [['name', 'lblWebEditorSortName'], ['mv', 'lblWebCatalogueSortManaValue'], ['colour', 'lblWebEditorSortColour'],
+const SORTS: [string, TextKey][] = [['name', 'lblWebEditorSortName'], ['mv', 'lblWebDraftSortManaValue'], ['colour', 'lblWebEditorSortColour'],
   ['type', 'lblWebCatalogueSortType']];
 const VIEW_KEY = 'forge.catalogueView';
 // Tips for Forge's card search syntax, the same syntax desktop's card search reads

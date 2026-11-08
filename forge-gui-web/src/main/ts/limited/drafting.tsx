@@ -12,7 +12,7 @@ import { CARD_TYPES, colourHeading, mvGroup } from '../deck/decklist';
 import { changeUi } from '../ui';
 import { HeadControls, PageHeader } from '../header';
 import { hoverCard, inspectCard, isPinned } from '../preview';
-import { t, tNodes, shortDay, type TextKey } from '../text';
+import { t, tCap, tNodes, shortDay, type TextKey } from '../text';
 import type { ComponentChildren } from 'preact';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -398,7 +398,7 @@ function Picks({ state, actions, open, toggle }: { state: DraftState; actions: A
         </span>
       </div>
       <div class="draft-group-by">
-        <span class="muted">{t('lblWebDraftGroupBy')}</span>
+        <span class="muted">{tCap('lblGroupby')}</span>
         <span class="seg" role="group" aria-label={t('lblWebDraftGroupPicksBy')}>
           {(['type', 'colour', 'mv', 'pick'] as GroupBy[]).map(g => (
             <button key={g} aria-pressed={by === g} onClick={() => setBy(g)}>{t(GROUP_NAMES[g])}</button>

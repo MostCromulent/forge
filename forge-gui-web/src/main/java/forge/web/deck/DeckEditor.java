@@ -281,7 +281,7 @@ public final class DeckEditor {
         }
         final DeckFormat df = check.deckFormat();
         if (!df.hasCommander()) {
-            return Localizer.getInstance().getMessage("lblWebEditorNoCommanderFormat");
+            return Localizer.getInstance().getMessage("lblWebCardMenuOnlyCommanderFormats");
         }
         final CardPool source = from != null ? deck.get(from) : commanderDraft() ? holding(name) : null;
         final PaperCard card = source != null ? source.find(c -> c.getName().equals(name))

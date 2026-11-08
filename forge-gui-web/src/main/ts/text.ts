@@ -50,6 +50,12 @@ export function t(key: TextKey, ...args: Arg[]): string {
   return pieces(key, args).join('');
 }
 
+/** Like t(), with the first letter in upper case, for a Forge key written in lower case to sit inside a sentence. */
+export function tCap(key: TextKey, ...args: Arg[]): string {
+  const text = t(key, ...args);
+  return text.charAt(0).toLocaleUpperCase(language) + text.slice(1);
+}
+
 /** Like t(), but the arguments can be markup. An element can then go inside a sentence without splitting its words. */
 export function tNodes(key: TextKey, ...args: ComponentChild[]): ComponentChild[] {
   return pieces(key, args);

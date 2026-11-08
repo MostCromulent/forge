@@ -5,7 +5,7 @@ import { imageUrl, hideBroken } from '../images';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { QuestBracket, QuestSeat, QuestTournamentRow, QuestTournaments } from '../protocol';
-import { t, type TextKey } from '../text';
+import { t, tCap, type TextKey } from '../text';
 import { Confirm } from '../dialog';
 import { CREDITS } from './credits';
 
@@ -75,7 +75,7 @@ function Seat({ seat, round, index, me }: { seat: QuestSeat; round: number; inde
       {name ? <>
         <span class="qu-av" aria-hidden="true">{name.charAt(0)}</span>
         <span class="n">{name}</span>
-        {seat.you && <span class="qu-you">{t('lblYou')}</span>}
+        {seat.you && <span class="qu-you">{tCap('lblYou')}</span>}
       </> : <i>{t('lblUndetermined')}</i>}
     </div>
   );

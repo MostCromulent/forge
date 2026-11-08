@@ -28,5 +28,5 @@ export function Collection({ model, actions }: { model: Model; actions: Actions 
     },
   };
   return <TradePage model={model} actions={actions} icon="IMG_AETHER_SHARD" iconLabel={t('lblAetherShards')} token={SHARD} words={words}
-    types={TYPES} groupLabel={t('lblAllPlanes')} blocked={t('lblWebConquestInUse')} />;
+    types={TYPES} groupLabel={t('lblAllPlanes')} blocked={t('lblWebFilterInUse')} />;
 }

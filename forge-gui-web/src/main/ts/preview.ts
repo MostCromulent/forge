@@ -428,7 +428,7 @@ function drawDetail(model: Model): void {
 // Each zone has its own text because they do not all take a possessive. It is "your graveyard" but not "your exile"
 const YOUR_ZONE: Record<string, TextKey> = {
   Graveyard: 'lblWebDetailYourGraveyard',
-  Exile: 'lblWebDetailExile',
+  Exile: 'lblExileZone',
   Command: 'lblWebDetailYourCommand',
   Library: 'lblWebDetailYourLibrary',
   Sideboard: 'lblWebDetailYourSideboard',

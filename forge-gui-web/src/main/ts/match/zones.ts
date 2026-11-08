@@ -17,7 +17,7 @@ import type { Actions } from '../actions';
 import { keyName } from '../keys';
 import { boundKeys } from '../settings';
 import type { CardView, PlayerView, PromptButton, ZoneType } from '../protocol';
-import { t, type TextKey } from '../text';
+import { t, tCap, type TextKey } from '../text';
 import { manaValue } from './rules';
 
 // One open zone. It is either a zone the game asks to show or a pile the player opened by clicking
@@ -45,17 +45,17 @@ const SORTS: [ZoneSort, TextKey][] = [['order', 'lblWebZoneSortOrder'], ['name',
   ['mana', 'lblWebZoneSortManaValue']];
 
 const ZONE_NAMES: Record<ZoneType, TextKey> = {
-  Hand: 'lblWebZoneHand', Library: 'lblLibrary', Graveyard: 'lblGraveyard', Battlefield: 'lblWebZoneBattlefield',
-  Exile: 'lblExile', Flashback: 'lblWebZoneFlashback', Command: 'lblWebZoneCommand', Stack: 'lblStack',
-  Sideboard: 'lblSideboard', Ante: 'lblWebZoneAnte', Merged: 'lblWebZoneMerged', SchemeDeck: 'lblSchemeDeck',
-  PlanarDeck: 'lblPlanarDeck', AttractionDeck: 'lblWebZoneAttractionDeck', Junkyard: 'lblWebZoneJunkyard',
-  ContraptionDeck: 'lblWebZoneContraptionDeck', Subgame: 'lblWebZoneSubgame', ExtraHand: 'lblWebZoneExtraHand',
+  Hand: 'lblHandZone', Library: 'lblLibrary', Graveyard: 'lblGraveyard', Battlefield: 'lblBattlefieldZone',
+  Exile: 'lblExile', Flashback: 'lblWebZoneFlashback', Command: 'lblCommandZone', Stack: 'lblStack',
+  Sideboard: 'lblSideboard', Ante: 'lblAnteZone', Merged: 'lblWebZoneMerged', SchemeDeck: 'lblSchemeDeck',
+  PlanarDeck: 'lblPlanarDeck', AttractionDeck: 'lblAttractionDeckZone', Junkyard: 'lblJunkyardZone',
+  ContraptionDeck: 'lblContraptionDeckZone', Subgame: 'lblSubgameZone', ExtraHand: 'lblWebZoneExtraHand',
   StickerSheets: 'lblStickerSheets', None: 'lblNone',
 };
 
 export function zoneTitle(zoneName: ZoneType): string {
   const key = ZONE_NAMES[zoneName];
-  return key ? t(key) : zoneName;
+  return key ? tCap(key) : zoneName;
 }
 
 export function togglePile(playerKey: number, zoneName: ZoneType): void {
@@ -186,7 +186,7 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   const among = p.forced && chips.length > 1;
   renderChips(q(el, '.zone-chips'), model, among ? chips : [], chosen);
   // Among several zones the chip already shows the avatar, so the line names the player in words
-  q(el, '.zone-who').textContent = `${among && player && isLocal(model, player) ? t('lblWebLobbyKindYou') : player?.Name ?? ''} \u00b7 ${zoneTitle(p.zone)}`;
+  q(el, '.zone-who').textContent = `${among && player && isLocal(model, player) ? tCap('lblYou') : player?.Name ?? ''} \u00b7 ${zoneTitle(p.zone)}`;
   q(el, '.zone-count').textContent = t(cards.length === 1 ? 'lblWebOneCard' : 'lblWebNCards', cards.length);
   const find = q<HTMLInputElement>(el, '.zone-find');
   if (find.value !== ui.zoneSearch) {
@@ -268,7 +268,7 @@ function renderChips(box: HTMLElement, model: Model, keys: string[], chosen: str
     if (player) setImage(q<HTMLImageElement>(chip, 'img'), playerAvatarUrl(player));
     q(chip, 'b').textContent = name;
     const you = q(chip, 'em');
-    you.textContent = t('lblWebLobbyKindYou');
+    you.textContent = tCap('lblYou');
     you.hidden = !player || !isLocal(model, player);
     const badge = q(chip, 'i');
     badge.textContent = String(got || can);

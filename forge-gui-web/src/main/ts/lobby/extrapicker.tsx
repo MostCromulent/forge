@@ -12,7 +12,7 @@ import { Backdrop, CloseButton } from '../dialog';
 type ExtraKind = 'planes' | 'schemes' | 'vanguard';
 
 const SECTION: Record<ExtraKind, string> = { planes: 'Planes', schemes: 'Schemes', vanguard: 'Avatar' };
-const TITLE: Record<ExtraKind, TextKey> = { planes: 'lblWebLobbyChoosePlanarDeck', schemes: 'lblWebLobbyChooseSchemeDeck', vanguard: 'lblWebLobbyChooseVanguard' };
+const TITLE: Record<ExtraKind, TextKey> = { planes: 'lblWebLobbyChoosePlanarDeck', schemes: 'lblWebLobbyChooseSchemeDeck', vanguard: 'lblWebLobbyChooseAvatar' };
 
 export function ExtraPicker({ model, actions, index, seat, kind, close }: {
   model: Model; actions: Actions; index: number; seat: Seat; kind: ExtraKind; close: () => void;

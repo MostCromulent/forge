@@ -224,7 +224,7 @@ public final class LocalGame implements IHasForgeLog {
     /** Prepares the match and returns the task that starts it, or null when it cannot start. Only the host can do this. */
     public Runnable prepare() {
         if (hosted == null) {
-            throw new IllegalStateException(Localizer.getInstance().getMessage("lblWebLocalGameOnlyHostStarts"));
+            throw new IllegalStateException(Localizer.getInstance().getMessage("lblWebSessionHostStarts"));
         }
         return hosted.startGame();
     }

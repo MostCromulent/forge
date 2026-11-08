@@ -15,7 +15,7 @@ import { EventHead } from './event';
 import { Invite, MatchBar, TableHeader, seatsLeaving } from './matchbar';
 import { backStep, PhoneHead, SetupHead, WAY_NAMES } from '../header';
 import { isPortrait } from '../form';
-import { t, type TextKey } from '../text';
+import { t, tCap, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { CommanderChoice, DeckSummary, Format, LobbyTable, Seat, SeatExtra } from '../protocol';
@@ -48,7 +48,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const kind = t(lim ? (lim.kind === 'draft' ? 'lblDraft' : 'lblSealed') : 'lblConstructed');
   const trail = [{ label: t('lblStart'), go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }];
   const title = t(lobby.host ? 'lblWebLobbySetUpGame' : lim?.activeEventId ? 'lblWebLobbyBuildThenPlay'
-    : lim?.started ? (lim.kind === 'draft' ? 'lblWebLobbyDraftOn' : 'lblWebLobbyOpeningPacks') : 'lblWebLobbyHostSettingUp');
+    : lim?.started ? (lim.kind === 'draft' ? 'lblWebEventDraftIsOn' : 'lblWebEventOpeningPacks') : 'lblWebLobbyHostSettingUp');
   const phoneBack = isPortrait() ? backStep(trail) : undefined;
   return (
     <>
@@ -97,9 +97,9 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
 }
 
 // The seat types a netplay lobby can hold. Offline shows only the first two
-const KIND: Record<string, TextKey> = { LOCAL: 'lblWebLobbyKindYou', AI: 'lblAI', OPEN: 'lblWebLobbyKindOpen', REMOTE: 'lblWebLobbyKindRemote' };
+const KIND: Record<string, TextKey> = { LOCAL: 'lblYou', AI: 'lblAI', OPEN: 'lblWebLobbyKindOpen', REMOTE: 'lblWebLobbyKindRemote' };
 
-const kindName = (type: string): string => (KIND[type] ? t(KIND[type]) : type);
+const kindName = (type: string): string => (KIND[type] ? tCap(KIND[type]) : type);
 
 const PLAYER_ICON = <Icon d={ICONS.user} />;
 

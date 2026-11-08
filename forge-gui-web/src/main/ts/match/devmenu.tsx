@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { OptionsDialog } from '../options';
 import type { Actions } from '../actions';
 import type { DevAction } from '../protocol';
-import { t, type TextKey } from '../text';
+import { t, tCap, type TextKey } from '../text';
 import { players, zone, type Model } from '../model';
 import { isPortrait } from '../form';
 import { ICONS, MenuIcon } from '../icons';
@@ -13,11 +13,11 @@ type Entry = [DevAction, TextKey];
 
 /** The cheats that come in families. Each family is one row of the menu with its cheats in a submenu. */
 const FAMILIES: Record<string, { name: TextKey; items: (Entry | 'sep')[] }> = {
-  place: { name: 'lblWebDevPlaceCard', items: [['addCardToHand', 'lblWebZoneHand'], ['addCardToBattlefield', 'lblWebZoneBattlefield'], ['addCardToLibrary', 'lblLibrary'],
+  place: { name: 'lblWebDevPlaceCard', items: [['addCardToHand', 'lblHandZone'], ['addCardToBattlefield', 'lblBattlefieldZone'], ['addCardToLibrary', 'lblLibrary'],
     ['addCardToGraveyard', 'lblGraveyard'], ['addCardToExile', 'lblExile'], 'sep', ['addTokenToBattlefield', 'lblWebDevAddToken']] },
   exile: { name: 'lblWebDevExileCards', items: [['exileCardsFromHand', 'lblWebDevExileFromHand'], ['exileCardsFromBattlefield', 'lblWebDevExileFromBattlefield'], 'sep',
     ['removeCardsFromGame', 'lblWebDevRemoveFromGame']] },
-  counters: { name: 'lblWebDevCounters', items: [['addCountersToPermanent', 'lblWebDevAddCounters'], ['removeCountersFromPermanent', 'lblWebDevRemoveCounters']] },
+  counters: { name: 'lblCounters', items: [['addCountersToPermanent', 'lblWebDevAddCounters'], ['removeCountersFromPermanent', 'lblWebDevRemoveCounters']] },
   tap: { name: 'lblWebDevTapUntap', items: [['tapPermanents', 'lblTapPermanent'], ['untapPermanents', 'lblUntapPermanent']] },
   planechase: { name: 'lblPlanechase', items: [['riggedPlanarRoll', 'lblWebDevRiggedPlanarRoll'], ['planeswalkTo', 'lblWebDevPlaneswalkTo']] },
 };
@@ -45,12 +45,12 @@ export function DevItems({ model, actions, back, close, setUp }: {
     </button>
   );
   const item = (action: DevAction, key: TextKey, icon?: string) => (
-    <button key={action} type="button" role="menuitem" class="card-menu-item" onClick={() => run(action)}>{icon && <MenuIcon d={icon} />}{t(key)}</button>
+    <button key={action} type="button" role="menuitem" class="card-menu-item" onClick={() => run(action)}>{icon && <MenuIcon d={icon} />}{tCap(key)}</button>
   );
   // A Planechase game is one where a player has a planar deck
   const planechase = players(model).some(p => zone(model, p, 'PlanarDeck').length > 0);
   const families = ['place', 'exile', 'counters', 'tap', 'state', ...(planechase ? ['planechase'] : [])];
-  const familyName = (family: string): string => t(family === 'state' ? 'lblWebDevGameState' : FAMILIES[family].name);
+  const familyName = (family: string): string => tCap(family === 'state' ? 'lblWebDevGameState' : FAMILIES[family].name);
   const subItems = (family: string) => (family === 'state'
     ? <>
         <button type="button" role="menuitem" class="card-menu-item" onClick={setUp}>{t('lblWebDevSetUpState')}</button>
@@ -117,7 +117,7 @@ export function DevSetupDialog({ actions, close }: { actions: Actions; close: ()
     <OptionsDialog title={t('lblWebDevSetUpTitle')} kind="dev-setup" close={close} footer={<>
       <span class="hint">{t('lblWebDevSetUpHint')}</span>
       <button onClick={() => file.current?.click()}>{t('lblWebDevLoadFile')}</button>
-      <button class="primary" disabled={!text.trim()} onClick={() => { actions.dev('setupGameState', text); close(); }}>{t('lblWebDevSetUp')}</button>
+      <button class="primary" disabled={!text.trim()} onClick={() => { actions.dev('setupGameState', text); close(); }}>{t('lblWebEventSetUp')}</button>
     </>}>
       <textarea class="dev-state" spellcheck={false} rows={14} value={text} placeholder={'activeplayer=human\nactivephase=MAIN1\nhumanlife=20\nailife=20\nhumanbattlefield=Grizzly Bears;Forest'}
         onInput={e => setText(e.currentTarget.value)} />

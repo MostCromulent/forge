@@ -162,7 +162,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
       {dialog === 'delete' && (
         <Backdrop dismiss={() => setDialog(null)}>
           <div class="dialog">
-            <h3>{t('lblWebEditorDeleteDeck', state.name)}</h3>
+            <h3>{t('lblWebEventDeleteNamed', state.name)}</h3>
             <p class="hint">{t('lblWebEditorCannotUndo')}</p>
             <div class="actions">
               <button onClick={() => setDialog(null)}>{t('lblCancel')}</button>

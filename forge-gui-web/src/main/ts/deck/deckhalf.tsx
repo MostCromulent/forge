@@ -11,7 +11,7 @@ import type { Actions } from '../actions';
 import type { CardHandlers } from './drag';
 import type { DeckSection, EditorCard, EditorSection, EditorState } from '../protocol';
 import { store, stored } from '../storage';
-import { t } from '../text';
+import { t, tCap } from '../text';
 import { Backdrop, Dropdown } from '../dialog';
 
 const GROUP_KEY = 'forge.groupBy';
@@ -80,7 +80,7 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
             <button aria-pressed={cards} onClick={() => view(true)}>{t('lblCards')}</button>
             <button aria-pressed={!cards} onClick={() => view(false)}>{t('lblWebDraftList')}</button>
           </span>
-          <select aria-label={t('lblWebDraftGroupBy')} value={by} onChange={e => {
+          <select aria-label={tCap('lblGroupby')} value={by} onChange={e => {
             const next = e.currentTarget.value as GroupBy;
             setBy(next);
             store(GROUP_KEY, next);
@@ -128,7 +128,7 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
         <span class="band-lab">{t('lblWebEditorBasicLands')}</span>
         {/* A land the deck may not hold, or outside the commander's colours, is listed only while the deck holds some, so it can be taken out */}
         {state.lands.filter(l => (l.allowed && (!state.commanders.length || (state.identity || 'C').includes(l.letter))) || l.count).map(l => (
-          <span key={l.name} class={l.allowed ? 'land' : 'land off'} title={l.allowed ? l.name : t('lblWebEditorLandOutside', l.name)}>
+          <span key={l.name} class={l.allowed ? 'land' : 'land off'} title={l.allowed ? l.name : t('lblWebEditorOutsideColours', l.name)}>
             <Pip letter={l.letter} />
             <button class="step" disabled={!l.count} aria-label={t('lblWebEditorOneFewer', l.name)}
               onClick={() => actions.edit({ op: 'lands', count: 0, lands: [{ name: l.name, count: l.count - 1 }] })}>&minus;</button>

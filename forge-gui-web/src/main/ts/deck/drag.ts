@@ -48,7 +48,7 @@ export function verdictFor(carried: Carried, zone: Zone, state: EditorState): Ve
   }
   if (zone === 'Commander') {
     if (!state.commanderZone) {
-      return { zone, accepts: false, refused: true, verb: refused('lblWebEditorDragOnlyCommanderFormats') };
+      return { zone, accepts: false, refused: true, verb: refused('lblWebCardMenuOnlyCommanderFormats') };
     }
     return { zone, accepts: true, verb: state.commanders.length ? t('lblWebEditorDragReplaceCommander') : t('lblWebEditorDragMakeCommander') };
   }
@@ -62,7 +62,7 @@ export function verdictFor(carried: Carried, zone: Zone, state: EditorState): Ve
   const have = countsInDeck(state).get(carried.name) ?? 0;
   const limit = carried.limit ?? copyLimit(state, carried.name);
   if (have + n > limit) {
-    return { zone, accepts: false, refused: true, verb: limit === 1 ? refused('lblWebEditorDragSingleton') : refused('lblWebEditorDragAtLimit', have, limit) };
+    return { zone, accepts: false, refused: true, verb: limit === 1 ? refused('lblWebEditorDragSingleton') : refused('lblWebEditorCopiesAlready', have, limit) };
   }
   return { zone, accepts: true, verb: t(ADD[zone], n) };
 }

@@ -368,7 +368,7 @@ export function DeckFinder({ model, actions, seat, close }: {
           {isPortrait() && listButtons}
           {deleting && summary ? (
             <span class="delete-line">
-              <b>{t('lblWebEditorDeleteDeck', summary.name)}</b> {t('lblWebEditorCannotUndo')}
+              <b>{t('lblWebEventDeleteNamed', summary.name)}</b> {t('lblWebEditorCannotUndo')}
               <button onClick={() => setDeleting(false)}>{t('lblCancel')}</button>
               <button class="danger" onClick={() => {
                 actions.deleteDeck(summary.key);
@@ -678,7 +678,7 @@ function BracketPanel({ bracket }: { bracket: Bracket }) {
               {r.why && <span class="because">{r.why}</span>}
             </div>
           ))}
-          {bracket.clear.length > 0 && <p class="clearline"><b>{t('lblWebBracketClear')}</b> {bracket.clear.join(', ')}</p>}
+          {bracket.clear.length > 0 && <p class="clearline"><b>{t('lblWebOptionsClear')}</b> {bracket.clear.join(', ')}</p>}
         </div>
       )}
     </div>

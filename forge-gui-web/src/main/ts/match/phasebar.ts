@@ -5,7 +5,7 @@ import { deref, game, isLocal, me, opponents, players, takesTurn, teamOf, type M
 import { playerAvatarUrl } from '../looks';
 import { byId, q, playOnce, make, onPressOutside, reducedMotion, easeOut, escapeHtml } from '../dom';
 import { changeUi, ui } from '../ui';
-import { t, tNodes, type TextKey } from '../text';
+import { t, tCap, tNodes, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { GameView, PhaseType, TurnMarker } from '../protocol';
 import { isPortrait } from '../form';
@@ -345,7 +345,7 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
   chip.classList.toggle('you', onMe);
   // An element, not a string, so the sentence keeps it as a separate bold node
   const you = document.createElement('strong');
-  you.textContent = t('lblYou');
+  you.textContent = tCap('lblYou');
   const words = onMe
     ? (people.length === 1 ? tNodes('lblWebPhaseWaitingOnYou', people[0].Name ?? '', you) : tNodes('lblWebPhasePlayersWaitingOnYou', people.length, you))
     : [t('lblWebPhaseWaitingOn', holder.Name ?? '')];
@@ -389,7 +389,7 @@ function stopsGrid(model: Model, step: number, myTurn: boolean, theirs: Theirs):
   const body = rows.map(r => `<tr class="${r.now ? 'active' : ''}">` + `<td class="who">${r.label}</td>` + STEPS.map((s, i) => {
     const marked = marker && marker.mine === r.mine && marker.phase === s[0];
     const on = r.stops.has(s[0]);
-    const title = t(on ? 'lblWebPhaseCellTitleClear' : 'lblWebPhaseCellTitleStop', t(s[2]), r.mine ? t('lblWebPhaseYourTurnsInSentence') : theirs.turns);
+    const title = t(on ? 'lblWebPhaseCellTitleClear' : 'lblWebPhaseCellTitleStop', t(s[2]), r.mine ? t('lblWebPhaseYourTurns') : theirs.turns);
     const cell = marked ? `<span class="skip">${glyph('skip', 13)}</span>` : `<span class="square ${on ? 'on' : ''} ${r.now && i === step ? 'current' : ''}"></span>`;
     return `${gap(i)}<td class="${i === step ? 'now' : ''}"><button class="cell" data-phase="${s[0]}" data-mine="${r.mine}" title="${escapeHtml(title)}">${cell}</button></td>`;
   }).join('') + `<td class="row-tools"><button class="row-tool" data-clear data-mine="${r.mine}">${escapeHtml(t('lblWebOptionsClear'))}</button>`
