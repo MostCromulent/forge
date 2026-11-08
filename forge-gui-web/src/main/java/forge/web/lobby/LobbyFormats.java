@@ -3,16 +3,19 @@ package forge.web.lobby;
 import forge.StaticData;
 import forge.card.CardEdition;
 import forge.card.CardRarity;
+import forge.deck.Deck;
 import forge.deck.DeckFormat;
 import forge.deck.FormatChoices;
 import forge.game.GameFormat;
 import forge.game.GameType;
+import forge.game.player.RegisteredPlayer;
 import forge.util.Localizer;
 import forge.web.protocol.ToBrowser.Format;
 import forge.web.protocol.ToBrowser.FormatGroup;
 import org.apache.commons.lang3.Range;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -53,16 +56,19 @@ public final class LobbyFormats {
         return main.getMaximum() + (type == GameType.Oathbreaker ? 2 : deck.hasCommander() ? 1 : 0);
     }
 
-    /** Starting life, as RegisteredPlayer.forVariants sets it: 20, plus each format's bonus. */
+    /** Starting life in a game of two and, if it differs, of more. Momir's avatars change it during the game. */
     private static String lifeFact(final GameType type) {
         final Localizer text = Localizer.getInstance();
-        return switch (type) {
-            case Commander -> text.getMessage("lblWebFactLife", 40);
-            case TinyLeaders -> text.getMessage("lblWebFactLife", 25);
-            case MomirBasic, MoJhoSto -> text.getMessage("lblWebFactLifeAvatar");
-            case Brawl -> text.getMessage("lblWebFactLifeByPlayers", 25, 30);
-            default -> text.getMessage("lblWebFactLife", 20);
-        };
+        if (type == GameType.MomirBasic || type == GameType.MoJhoSto) {
+            return text.getMessage("lblWebFactLifeAvatar");
+        }
+        final int duel = startingLife(type, 2);
+        final int more = startingLife(type, 3);
+        return duel == more ? text.getMessage("lblWebFactLife", duel) : text.getMessage("lblWebFactLifeByPlayers", duel, more);
+    }
+
+    private static int startingLife(final GameType type, final int players) {
+        return RegisteredPlayer.forVariants(players, EnumSet.of(type), new Deck(), null, false, null, null).getStartingLife();
     }
 
     /** A casual variant and what the lobby says about it, in the same shape as a format. */
@@ -73,7 +79,7 @@ public final class LobbyFormats {
             case Vanguard -> List.of(text.getMessage("lblWebFactOneAvatar"), text.getMessage("lblWebFactAvatarChanges"));
             case Archenemy -> List.of(text.getMessage("lblWebFactSchemesArchenemy"), text.getMessage("lblWebFactArchenemyLife"));
             case ArchenemyRumble -> List.of(text.getMessage("lblWebFactSchemesEveryone"), text.getMessage("lblWebFactEveryoneLife"));
-            case TwoHeadedGiant -> List.of(text.getMessage("lblWebFactTwoTeamsOfTwo"), text.getMessage("lblWebFactTeamLife", 30));
+            case TwoHeadedGiant -> List.of(text.getMessage("lblWebFactTwoTeamsOfTwo"), text.getMessage("lblWebFactTeamLife", startingLife(type, 4)));
             default -> List.of();
         };
         // A variant the web has no wording for yet uses the engine's description
