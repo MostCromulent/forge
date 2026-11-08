@@ -90,6 +90,8 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             channel.close();
             return;
         }
+        // A tab replaced by this one is ignored until its socket closes
+        byChannel.values().removeIf(s -> s == session);
         byChannel.put(channel, session);
         holdOpen();
         final long away = session.secondsAway();

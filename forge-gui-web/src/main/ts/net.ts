@@ -34,8 +34,10 @@ export function connect(onMessage: (msg: ServerMessage) => void, onStatus: (onli
       onStatus(true);
     };
     socket.onmessage = e => onMessage(JSON.parse(e.data as string) as ServerMessage);
-    socket.onclose = () => {
+    socket.onclose = e => {
       onStatus(false);
+      // BrowserChannel.CLOSED_BY_SERVER: another tab took the seat, or the server is full. Showing this page again reconnects
+      if (e.code === 4000) return;
       waiting = setTimeout(open, retry);
       retry = Math.min(retry * 2, 4000);
     };

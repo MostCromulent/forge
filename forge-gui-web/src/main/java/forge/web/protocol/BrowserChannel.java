@@ -6,7 +6,10 @@ import com.google.gson.JsonObject;
 public interface BrowserChannel {
     void send(JsonObject message);
 
-    /** Ends the connection, as when the server has no room for another browser. */
+    /** The WebSocket close code that tells the page not to reconnect until it is shown again. */
+    int CLOSED_BY_SERVER = 4000;
+
+    /** Ends the connection, as when the server is full or another tab of the browser took over. */
     default void close() {
     }
 

@@ -445,8 +445,12 @@ public final class WebSession implements IHasForgeLog {
         browser = channel;
         decks.attach(channel);
         final Stage now = stage;
-        if (now instanceof Playing p && previous != null) {
-            p.gui().detach(previous);
+        if (previous != null) {
+            // Another tab of this browser took over, so the old tab must not act for this seat
+            previous.close();
+            if (now instanceof Playing p) {
+                p.gui().detach(previous);
+            }
         }
         channel.send(hello());
         // These are the same for the whole run, so a browser gets them once instead of with every table change

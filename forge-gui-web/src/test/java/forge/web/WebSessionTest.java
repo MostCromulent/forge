@@ -117,4 +117,19 @@ public class WebSessionTest {
         sessions.connected(next, "extra", false);
         Assert.assertFalse(next.closed, "a browser was turned away although another had left");
     }
+
+    /** Fails if two tabs of one browser can both act for its seat, or the old tab's closing detaches the new one. */
+    @Test
+    public void aSecondTabClosesTheFirst() {
+        final WebSessions sessions = opened();
+        final TestBrowser first = new TestBrowser();
+        final TestBrowser second = new TestBrowser();
+        sessions.connected(first, "same", true);
+        sessions.connected(second, "same", true);
+        Assert.assertTrue(first.closed, "the first tab stayed open");
+        sessions.onMessage(first, JsonCodec.message("claimHost"));
+        Assert.assertTrue(sessions.hostSeatFree(), "the closed tab took the host's seat");
+        sessions.disconnected(first);
+        Assert.assertEquals(sessions.playersHere(), 1, "the old tab's closing detached the new one");
+    }
 }

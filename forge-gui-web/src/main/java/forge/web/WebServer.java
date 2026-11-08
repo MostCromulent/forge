@@ -54,6 +54,7 @@ import io.netty.handler.codec.http.cookie.CookieHeaderNames;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
@@ -793,7 +794,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
 
                     @Override
                     public void close() {
-                        ch.close();
+                        ch.writeAndFlush(new CloseWebSocketFrame(CLOSED_BY_SERVER, null)).addListener(ChannelFutureListener.CLOSE);
                     }
                 };
                 final String id = param(new QueryStringDecoder(done.requestUri()), "client");
