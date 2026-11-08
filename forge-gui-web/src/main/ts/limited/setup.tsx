@@ -19,7 +19,7 @@ export interface SealedValue {
 /** The sealed products desktop offers, each with a one-line description. The ids are LimitedPoolType's names. */
 const PRODUCTS: [string, TextKey, TextKey][] = [
   ['Full', 'lblLimitedPoolFull', 'lblWebSetupProductFullLine'],
-  ['Block', 'lblBlock', 'lblWebSetupProductBlockLine'],
+  ['Block', 'lblWebSetupBlockOrSet', 'lblWebSetupProductBlockLine'],
   ['FantasyBlock', 'lblLimitedFantasy', 'lblWebSetupProductFantasyLine'],
   ['Prerelease', 'lblLimitedPrerelease', 'lblWebSetupProductPrereleaseLine'],
   ['Custom', 'lblWebSetupProductCustom', 'lblWebSetupProductCustomLine'],
@@ -31,6 +31,8 @@ const productName = (id?: string) => {
   return key ? t(key) : '';
 };
 const isBlock = (v: SealedValue) => v.product === 'Block' || v.product === 'FantasyBlock';
+/** A block's name with its set codes, so a player can find it by either. */
+const withCodes = (b: { name: string; codes: string[] }) => b.codes.length ? `${b.name} (${b.codes.join(', ')})` : b.name;
 const blocksFor = (options: LimitedOptions, product?: string) => product === 'FantasyBlock' ? options.fantasyBlocks : options.blocks;
 const hasPackCount = (v: SealedValue) => v.product === 'Full' || v.product === 'Custom' || v.product === 'Import';
 
@@ -58,9 +60,9 @@ export function sealedSteps(options: LimitedOptions): Step<SealedValue>[] {
       ),
     },
     {
-      id: 'block', label: t('lblBlock'), hint: t('lblWebSetupHintWhichBlock'), fields: ['block'], applies: isBlock,
+      id: 'block', label: t('lblWebSetupBlockOrSet'), hint: t('lblWebSetupHintWhichBlock'), fields: ['block'], applies: isBlock,
       answer: v => v.block ?? null,
-      render: (v, set) => <Pick items={blocksFor(options, v.product).map(b => [b.name, b.name])} placeholder={t('lblWebSetupFindBlock')}
+      render: (v, set) => <Pick items={blocksFor(options, v.product).map(b => [b.name, withCodes(b)])} placeholder={t('lblWebSetupFindBlock')}
         pick={name => set(sealedBlockChoice(options, v.product!, name))} />,
     },
     {
@@ -210,7 +212,7 @@ const seconds = (n: number, none: string) => (n === 0 ? none : t('lblWebEventSec
 /** The draft products desktop offers. The ids are LimitedPoolType's names. */
 const DRAFT_PRODUCTS: [string, TextKey, TextKey][] = [
   ['Full', 'lblLimitedPoolFull', 'lblWebSetupDraftFullLine'],
-  ['Block', 'lblBlock', 'lblWebSetupProductBlockLine'],
+  ['Block', 'lblWebSetupBlockOrSet', 'lblWebSetupProductBlockLine'],
   ['FantasyBlock', 'lblLimitedFantasy', 'lblWebSetupProductFantasyLine'],
   ['Custom', 'lblWebSetupCube', 'lblWebSetupDraftCubeLine'],
   ['Chaos', 'lblChaos', 'lblWebSetupDraftChaosLine'],
@@ -252,9 +254,9 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
       ),
     },
     {
-      id: 'block', label: t('lblBlock'), hint: t('lblWebSetupHintWhichBlock'), fields: ['block'], applies: v => v.product === 'Block' || v.product === 'FantasyBlock',
+      id: 'block', label: t('lblWebSetupBlockOrSet'), hint: t('lblWebSetupHintWhichBlock'), fields: ['block'], applies: v => v.product === 'Block' || v.product === 'FantasyBlock',
       answer: v => v.block ?? null,
-      render: (v, set) => <Pick items={draftBlocksFor(options, v.product).map(b => [b.name, b.name])} placeholder={t('lblWebSetupFindBlock')}
+      render: (v, set) => <Pick items={draftBlocksFor(options, v.product).map(b => [b.name, withCodes(b)])} placeholder={t('lblWebSetupFindBlock')}
         pick={name => set(draftBlockChoice(options, v.product!, name))} />,
     },
     {
@@ -386,7 +388,7 @@ export function draftTicket(): Ticket<DraftValue> {
       [t('lblProduct'), draftProduct(v)],
       [t('lblWebSetupDrafters'), t('lblWebSetupYouAndSevenAi')],
       [t('lblWebSetupYourDeck'), t('lblWebSetupFortyOrMore')],
-      [t('lblWebSetupOpponents'), t('lblWebSetupSevenDecksBeside')],
+      [t('lblWebSetupOpponents'), t('lblWebSetupSevenAiDrafters')],
     ],
     note: t('lblWebSetupDraftNote'),
   };

@@ -231,7 +231,7 @@ public final class OfflineEvents {
     }
 
     private static List<DraftBlockOption> draftBlocks(final List<DraftProducts.DraftBlock> blocks) {
-        return blocks.stream().map(b -> new DraftBlockOption(b.name(), b.packs(), b.sets(), b.combos(), podSize(b.sets()))).toList();
+        return blocks.stream().map(b -> new DraftBlockOption(b.name(), b.packs(), b.sets(), b.codes(), b.combos(), podSize(b.sets()))).toList();
     }
 
     /** The pod size, as BoosterDraft.setupBlock sets it: a single set's recommended pod size, or a full pod for anything else. */
@@ -241,7 +241,7 @@ public final class OfflineEvents {
     }
 
     private static List<SealedBlock> blocks(final List<DraftProducts.Block> blocks) {
-        return blocks.stream().map(b -> new SealedBlock(b.name(), b.packs(), b.combos())).toList();
+        return blocks.stream().map(b -> new SealedBlock(b.name(), b.packs(), b.codes(), b.combos())).toList();
     }
 
     private static String colours(final Deck deck) {

@@ -634,11 +634,11 @@ public final class ToBrowser {
     }
 
     /** A draftable block. It has no combos when the set of each pack is chosen. podSize is the pod size a draft of it starts with. */
-    public record DraftBlockOption(String name, int packs, List<String> sets, List<String> combos, int podSize) {
+    public record DraftBlockOption(String name, int packs, List<String> sets, List<String> codes, List<String> combos, int podSize) {
     }
 
     /** A block's sealed product: how many packs, and the set combinations desktop offers for them. */
-    public record SealedBlock(String name, int packs, List<String> combos) {
+    public record SealedBlock(String name, int packs, List<String> codes, List<String> combos) {
     }
 
     public record LimitedEdition(String code, String name) {

@@ -95,7 +95,7 @@ final class DraftProducts {
         for (final CardBlock b : storage) {
             final List<String> sets = isDraftableBlock(b) ? BoosterDraft.blockSets(b) : List.of();
             if (!sets.isEmpty()) {
-                out.add(new DraftBlock(b.getName(), b.getCntBoostersDraft(), sets, draftCombos(b)));
+                out.add(new DraftBlock(b.getName(), b.getCntBoostersDraft(), sets, codes(b), draftCombos(b)));
             }
         }
         return out;
@@ -118,11 +118,16 @@ final class DraftProducts {
         return SealedCardPoolGenerator.loadCustomSealed().stream().filter(t -> t.getName().equals(name)).findFirst().orElse(null);
     }
 
+    /** The block's set codes in release order, to show beside its name. */
+    private static List<String> codes(final CardBlock b) {
+        return b.getSets().stream().map(CardEdition::getCode).toList();
+    }
+
     private static List<Block> sealedBlocks(final IStorage<CardBlock> storage) {
         final List<Block> out = new ArrayList<>();
         for (final CardBlock b : storage) {
             try {
-                out.add(new Block(b.getName(), b.getCntBoostersSealed(), SealedCardPoolGenerator.blockCombos(b)));
+                out.add(new Block(b.getName(), b.getCntBoostersSealed(), codes(b), SealedCardPoolGenerator.blockCombos(b)));
             } catch (final RuntimeException e) {
                 // Desktop's dialog fails on a block with no combo for its pack count, so it is not offered
             }
@@ -130,7 +135,7 @@ final class DraftProducts {
         return out;
     }
 
-    public record Block(String name, int packs, List<String> combos) {
+    public record Block(String name, int packs, List<String> codes, List<String> combos) {
     }
 
     public record Edition(String code, String name) {
@@ -140,7 +145,7 @@ final class DraftProducts {
     }
 
     /** A draftable block: its pack count, its sets and desktop's preset combinations. combos is empty when the set of each pack is chosen. */
-    public record DraftBlock(String name, int packs, List<String> sets, List<String> combos) {
+    public record DraftBlock(String name, int packs, List<String> sets, List<String> codes, List<String> combos) {
     }
 
     public record DraftLists(List<DraftBlock> blocks, List<DraftBlock> fantasyBlocks, List<String> cubes, List<String> themes,
