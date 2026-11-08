@@ -67,7 +67,7 @@ public final class DeckCatalog {
     private static final Map<String, String> COLOUR_LETTERS = Map.of(
             "White", "W", "Blue", "U", "Black", "B", "Red", "R", "Green", "G");
     /** The finder lists a deck's cards without problem marks. The verdict line states the problems. */
-    public static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), Map.of(), Set.of(), List.of());
+    public static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), null);
     /** Kept per deck object, not per contents, because working out a deck's formats reads every printing of its cards. */
     private static final Map<Deck, Facts> FACTS = new MapMaker().weakKeys().makeMap();
     private static final Map<Deck, Map<String, Optional<String>>> VERDICTS = new MapMaker().weakKeys().makeMap();

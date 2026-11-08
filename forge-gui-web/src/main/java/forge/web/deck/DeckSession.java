@@ -410,7 +410,7 @@ public final class DeckSession implements IHasForgeLog {
         final DeckFormat df = check.deckFormat();
         // A commander deck without a commander shows only cards that can be its commander. A Background is shown only once the deck has a commander
         final Predicate<PaperCard> commanderOnly = df.hasCommander() && commanders.isEmpty()
-                ? c -> df.isLegalCommander(c.getRules()) && !c.getRules().getType().hasSubtype("Background")
+                ? c -> df.isAllowedCommander(c.getRules(), Legality.enforced()) && !c.getRules().getType().hasSubtype("Background")
                 : null;
         final ColorSet within = q.identity() == null ? null : ColorSet.fromNames(q.identity().toCharArray());
         final Predicate<PaperCard> only = SFilterUtil.optimizedAnd(printedIn(q.sets(), q.format()), within == null ? commanderOnly

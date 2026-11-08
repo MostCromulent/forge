@@ -297,7 +297,7 @@ public final class DeckEditor {
             return Localizer.getInstance().getMessage("lblWebEditorNoSuchCard", String.valueOf(name));
         }
         final CardRules rules = card.getRules();
-        if (!df.isLegalCommander(rules) && !(df.hasSignatureSpell() && rules.canBeSignatureSpell())) {
+        if (!df.isAllowedCommander(rules, Legality.enforced()) && !(df.hasSignatureSpell() && rules.canBeSignatureSpell())) {
             return Localizer.getInstance().getMessage("lblWebEditorCannotCommand", String.valueOf(name));
         }
         final CardPool commanders = deck.getOrCreate(DeckSection.Commander);

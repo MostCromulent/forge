@@ -5,12 +5,14 @@ import forge.deck.Deck;
 import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.web.WebTestSupport;
 import forge.web.lobby.LobbyFormats;
 import forge.web.protocol.ToBrowser.Format;
 import forge.web.protocol.ToBrowser.FormatGroup;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -20,6 +22,12 @@ public class LegalityTest {
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
+        FModel.getPreferences().setPref(FPref.ENFORCE_DECK_LEGALITY, true);
+    }
+
+    @AfterClass(alwaysRun = true)
+    public void tearDown() {
+        FModel.getPreferences().setPref(FPref.ENFORCE_DECK_LEGALITY, false);
     }
 
     private static PaperCard card(final String name) {
@@ -44,13 +52,14 @@ public class LegalityTest {
         }
     }
 
-    // Fails if a Commander ban is missed. getDeckConformanceProblem does not check bans
+    // Fails if a card outside the commander's colours is not marked, or the verdict is not the engine's
     @Test
-    public void commanderBanIsFlagged() {
+    public void cardOutsideTheCommandersColoursIsFlagged() {
         final Deck d = commanderDeck("Meren of Clan Nel Toth");
-        d.getMain().add(card("Mana Crypt"), 1);
+        d.getMain().add(card("Lightning Bolt"), 1);
         final Legality.Result r = Legality.check(d, Check.of(GameType.Commander, null));
-        Assert.assertEquals(r.flags().get("Mana Crypt"), "banned in Commander");
+        Assert.assertEquals(r.flags().get("Lightning Bolt"), "outside B G");
+        Assert.assertEquals(r.verdict(), GameType.Commander.getDeckFormat().getDeckConformanceProblem(d));
     }
 
     // Fails if No restriction applies a format's rules
