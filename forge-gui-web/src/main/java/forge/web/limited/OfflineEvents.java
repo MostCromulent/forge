@@ -7,12 +7,14 @@ import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckGroup;
 import forge.gamemodes.limited.BoosterDraft;
+import forge.gamemodes.limited.CubeImporter;
 import forge.gamemodes.limited.CustomLimited;
 import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.limited.ThemedChaosDraft;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
+import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.CardBlock;
 import forge.model.FModel;
 import forge.util.Localizer;
@@ -35,6 +37,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -55,12 +59,20 @@ public final class OfflineEvents {
         return kind == EventKind.draft ? FModel.getDecks().getDraft() : sealed();
     }
 
+    /** What a limited event can be built from. It is read without prompting, for a frontend that asks for every choice at once. */
     public static LimitedOptions options() {
-        final DraftProducts.SealedLists lists = DraftProducts.sealed();
-        final DraftProducts.DraftLists draft = DraftProducts.draft();
-        return new LimitedOptions(blocks(lists.blocks()), blocks(lists.fantasyBlocks()),
-                lists.prereleases().stream().map(e -> new LimitedEdition(e.code(), e.name())).toList(), lists.templates(),
-                draftBlocks(draft.blocks()), draftBlocks(draft.fantasyBlocks()), draft.cubes(), draft.themes(), draft.lastCube());
+        final List<CardEdition> prereleases = new ArrayList<>();
+        StaticData.instance().getEditions().getPrereleaseEditions().forEach(prereleases::add);
+        prereleases.sort(Comparator.reverseOrder());
+        final List<ThemedChaosDraft> themes = new ArrayList<>();
+        FModel.getThemedChaosDrafts().forEach(themes::add);
+        Collections.sort(themes);
+        return new LimitedOptions(sealedBlocks(FModel.getBlocks()), sealedBlocks(FModel.getFantasyBlocks()),
+                prereleases.stream().map(e -> new LimitedEdition(e.getCode(), e.getName())).toList(),
+                SealedCardPoolGenerator.loadCustomSealed().stream().map(CustomLimited::getName).toList(),
+                draftBlocks(FModel.getBlocks()), draftBlocks(FModel.getFantasyBlocks()),
+                BoosterDraft.loadCustomDrafts().stream().map(CustomLimited::getName).sorted().toList(),
+                themes.stream().map(ThemedChaosDraft::getLabel).toList(), FModel.getPreferences().getPref(FPref.LAST_IMPORTED_CUBE_ID));
     }
 
     /** The pool of a kind that was saved or played most recently, judged by its file times on disk. Null if there is none. */
@@ -128,8 +140,8 @@ public final class OfflineEvents {
         return switch (type) {
             case Full -> BoosterDraft::createFullDraft;
             case Block, FantasyBlock -> {
-                final CardBlock block = d.block() == null ? null : DraftProducts.block(d.block(), type == LimitedPoolType.FantasyBlock);
-                if (block == null || !DraftProducts.isDraftableBlock(block)) {
+                final CardBlock block = d.block() == null ? null : block(d.block(), type == LimitedPoolType.FantasyBlock);
+                if (block == null || !isDraftableBlock(block)) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsBlockNotDraftable"));
                 }
                 final List<String> sets = BoosterDraft.blockSets(block);
@@ -140,25 +152,31 @@ public final class OfflineEvents {
                 yield () -> BoosterDraft.createBlockDraft(type, block, combo);
             }
             case Custom -> {
-                final CustomLimited cube = d.cube() == null ? null : DraftProducts.cube(d.cube());
+                final CustomLimited cube = BoosterDraft.loadCustomDrafts().stream().filter(c -> c.getName().equals(d.cube())).findFirst().orElse(null);
                 if (cube == null) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoCube", String.valueOf(d.cube())));
                 }
                 yield () -> BoosterDraft.createCubeDraft(LimitedPoolType.Custom, cube);
             }
             case Chaos -> {
-                final ThemedChaosDraft theme = d.theme() == null ? null : DraftProducts.theme(d.theme());
+                final ThemedChaosDraft theme = FModel.getThemedChaosDrafts().stream().filter(t -> t.getLabel().equals(d.theme())).findFirst().orElse(null);
                 if (theme == null) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoTheme", String.valueOf(d.theme())));
                 }
-                yield () -> DraftProducts.chaosDraft(theme);
+                yield () -> {
+                    final BoosterDraft draft = BoosterDraft.createChaosDraft(theme);
+                    if (draft == null) {
+                        throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoSetForTheme", theme.getLabel()));
+                    }
+                    return draft;
+                };
             }
             case Import -> {
                 if (d.cubeId() == null || d.cubeId().isBlank()) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsEnterCube"));
                 }
                 final String id = d.cubeId().trim();
-                yield () -> DraftProducts.cubeCobraDraft(id);
+                yield () -> BoosterDraft.createCubeDraft(LimitedPoolType.Import, importCube(id));
             }
             case Prerelease -> throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsPrereleaseNotDrafted"));
         };
@@ -199,14 +217,14 @@ public final class OfflineEvents {
                 yield SealedCardPoolGenerator.createPrerelease(edition);
             }
             case Block, FantasyBlock -> {
-                final CardBlock block = c.block() == null ? null : DraftProducts.block(c.block(), type == LimitedPoolType.FantasyBlock);
+                final CardBlock block = c.block() == null ? null : block(c.block(), type == LimitedPoolType.FantasyBlock);
                 if (block == null || c.combo() == null || !SealedCardPoolGenerator.blockCombos(block).contains(c.combo())) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsBadCombo"));
                 }
                 yield SealedCardPoolGenerator.createBlock(block, c.combo());
             }
             case Custom -> {
-                final CustomLimited template = c.template() == null ? null : DraftProducts.sealedTemplate(c.template());
+                final CustomLimited template = SealedCardPoolGenerator.loadCustomSealed().stream().filter(t -> t.getName().equals(c.template())).findFirst().orElse(null);
                 if (template == null) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoTemplate", String.valueOf(c.template())));
                 }
@@ -216,7 +234,7 @@ public final class OfflineEvents {
                 if (c.cubeId() == null || c.cubeId().isBlank()) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsEnterCube"));
                 }
-                yield DraftProducts.cubeCobraSealed(c.cubeId().trim(), packs(c.packs()));
+                yield SealedCardPoolGenerator.createImported(importCube(c.cubeId().trim()), packs(c.packs()));
             }
             case Chaos -> throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsChaosNotSealed"));
         };
@@ -230,8 +248,40 @@ public final class OfflineEvents {
         return wanted;
     }
 
-    private static List<DraftBlockOption> draftBlocks(final List<DraftProducts.DraftBlock> blocks) {
-        return blocks.stream().map(b -> new DraftBlockOption(b.name(), b.packs(), b.sets(), b.codes(), b.combos(), podSize(b.sets()))).toList();
+    private static CardBlock block(final String name, final boolean fantasy) {
+        return (fantasy ? FModel.getFantasyBlocks() : FModel.getBlocks()).get(name);
+    }
+
+    /** Whether a block is offered for drafting. It must have draft packs and must not be Conspiracy, whose draft-time prompts only a local GUI can answer. */
+    private static boolean isDraftableBlock(final CardBlock block) {
+        return block.getCntBoostersDraft() > 0 && !block.getName().contains("Conspiracy");
+    }
+
+    /** Throws IllegalArgumentException, with a message a player can read, when the cube can't be imported. */
+    private static CustomLimited importCube(final String cubeId) {
+        final CustomLimited imported;
+        try {
+            imported = new CubeImporter(cubeId).importCube();
+        } catch (Exception e) {
+            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage(), e);
+        }
+        if (imported == null) {
+            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + cubeId);
+        }
+        return imported;
+    }
+
+    /** The draftable blocks with desktop's preset set combinations. combos is empty when desktop asks for one set per pack instead. */
+    private static List<DraftBlockOption> draftBlocks(final IStorage<CardBlock> storage) {
+        final List<DraftBlockOption> out = new ArrayList<>();
+        for (final CardBlock b : storage) {
+            final List<String> sets = isDraftableBlock(b) ? BoosterDraft.blockSets(b) : List.of();
+            if (!sets.isEmpty()) {
+                final List<String> combos = b.getCntBoostersDraft() == 3 && sets.size() > 1 && sets.size() < 4 ? BoosterDraft.getSetCombos(sets) : List.of();
+                out.add(new DraftBlockOption(b.getName(), b.getCntBoostersDraft(), sets, codes(b), combos, podSize(sets)));
+            }
+        }
+        return out;
     }
 
     /** The pod size, as BoosterDraft.setupBlock sets it: a single set's recommended pod size, or a full pod for anything else. */
@@ -240,8 +290,21 @@ public final class OfflineEvents {
         return edition == null ? BoosterDraft.N_PLAYERS : edition.getDraftOptions().getRecommendedPodSize();
     }
 
-    private static List<SealedBlock> blocks(final List<DraftProducts.Block> blocks) {
-        return blocks.stream().map(b -> new SealedBlock(b.name(), b.packs(), b.codes(), b.combos())).toList();
+    private static List<SealedBlock> sealedBlocks(final IStorage<CardBlock> storage) {
+        final List<SealedBlock> out = new ArrayList<>();
+        for (final CardBlock b : storage) {
+            try {
+                out.add(new SealedBlock(b.getName(), b.getCntBoostersSealed(), codes(b), SealedCardPoolGenerator.blockCombos(b)));
+            } catch (final RuntimeException e) {
+                // Desktop's dialog fails on a block with no combo for its pack count, so it is not offered
+            }
+        }
+        return out;
+    }
+
+    /** The block's set codes in release order, to show beside its name. */
+    private static List<String> codes(final CardBlock b) {
+        return b.getSets().stream().map(CardEdition::getCode).toList();
     }
 
     private static String colours(final Deck deck) {
