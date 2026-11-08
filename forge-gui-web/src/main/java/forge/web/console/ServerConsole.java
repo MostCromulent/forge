@@ -168,7 +168,6 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
     private JPanel tunnelStateRow;
     private JPanel tunnelMissing;
     private JPanel tunnelFailed;
-    private JPanel picturesAsk;
     private CloudflareTunnel.State tunnelling = CloudflareTunnel.State.OFF;
     private boolean downloadingIndex;
     private int widest;
@@ -216,8 +215,6 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             byRouter.setEnabled(true);
             byCloudflare.setEnabled(true);
             picturesButton.setEnabled(true);
-            // Asked only once, as on desktop and mobile, and only of a host who has never downloaded the data
-            picturesAsk.setVisible(CdnUuidCache.shouldPromptForBulkSync());
             showPictures(new ImageIndex.State(false, -1, false));
         });
         driven.onForwarding(this::forwarding);
@@ -380,7 +377,6 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         if (now.downloading()) {
             words = now.percent() < 0 ? TEXT.getMessage("lblWebConsolePicturesStarting") : TEXT.getMessage("lblWebConsolePicturesDownloading", now.percent());
             action = TEXT.getMessage("lblCancel");
-            picturesAsk.setVisible(false);
         } else if (now.failed()) {
             words = TEXT.getMessage("lblWebConsolePicturesFailed");
             action = TEXT.getMessage("lblTryAgain");
@@ -404,16 +400,6 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         downloadingIndex = now.downloading();
         picturesUpdated.setText(updated > 0 && !now.downloading()
                 ? TEXT.getMessage("lblWebConsolePicturesUpdated", DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date(updated))) + "  " : "");
-        refit();
-    }
-
-    /** Records the host's answer to the one-time offer. The offer is not made again, whatever the answer. */
-    private void answerPictures(final boolean download) {
-        CdnUuidCache.markBulkSyncPromptAnswered();
-        picturesAsk.setVisible(false);
-        if (download) {
-            index.download();
-        }
         refit();
     }
 
@@ -628,14 +614,11 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             if (downloadingIndex) {
                 index.cancel();
             } else {
-                answerPictures(true);
+                // Desktop and mobile then stop offering the same download
+                CdnUuidCache.markBulkSyncPromptAnswered();
+                index.download();
             }
         });
-        picturesAsk = note(heading(TEXT.getMessage("lblWebConsolePicturesAsk"), NOTE),
-                wrapped(TEXT.getMessage("lblWebConsolePicturesAskAbout"), WARN_TEXT, HELP_WIDTH),
-                row(button(TEXT.getMessage("lblWebConsolePicturesDownloadNow"), () -> answerPictures(true)), Box.createHorizontalStrut(8),
-                        button(TEXT.getMessage("lblNotNow"), () -> answerPictures(false))));
-        picturesAsk.setVisible(false);
 
         quitWhenEmpty.setEnabled(false);
         quitWhenEmpty.addActionListener(e -> service.quitWhenEmpty(quitWhenEmpty.isSelected()));
@@ -656,22 +639,23 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         main.setLayout(new BoxLayout(main, BoxLayout.PAGE_AXIS));
         main.setBorder(BorderFactory.createEmptyBorder(14, 26, 12, 26));
         final Color quiet = UIManager.getColor("Label.disabledForeground");
-        section(main, picturesAsk,
-                row(light, Box.createHorizontalStrut(10), stack(row(state, Box.createHorizontalStrut(10), players), keepOpen),
+        section(main, row(light, Box.createHorizontalStrut(10), stack(row(state, Box.createHorizontalStrut(10), players), keepOpen),
                         Box.createHorizontalGlue(), browse, Box.createHorizontalStrut(8), startStop),
                 progress, startHelp);
-        section(main, stack(row(heading(TEXT.getMessage("lblWebConsoleHostPassword")), Box.createHorizontalStrut(12), passwordBox(), Box.createHorizontalGlue()),
-                wrapped(TEXT.getMessage("lblWebConsoleHostPasswordAbout"), quiet, TEXT_WIDTH)));
         netField = field(netAddress, Box.createHorizontalGlue(), retryNet, Box.createHorizontalStrut(8), copyNet);
-        section(main, stack(heading(TEXT.getMessage("lblWebMatchBarInvite")), wrapped(TEXT.getMessage("lblWebConsoleInviteAbout"), quiet, TEXT_WIDTH)),
-                heading(TEXT.getMessage("lblWebConsoleOnNetwork")),
+        section(main, stack(title(TEXT.getMessage("lblWebMatchBarInvite")), wrapped(TEXT.getMessage("lblWebConsoleInviteAbout"), quiet, TEXT_WIDTH)),
+                muted(TEXT.getMessage("lblWebConsoleOnNetwork")),
                 field(homeAddress, Box.createHorizontalGlue(), copyHome, moreHome),
-                row(heading(TEXT.getMessage("lblWebConsoleOnInternet")), Box.createHorizontalStrut(12), byRouter, byCloudflare),
+                row(muted(TEXT.getMessage("lblWebConsoleOnInternet")), Box.createHorizontalGlue(), byRouter, byCloudflare),
                 netField, forwardStateRow, forwardHelp, tunnelStateRow, tunnelMissing, tunnelFailed);
-        section(main, field(picturesLight, Box.createHorizontalStrut(10),
+        section(main, title(TEXT.getMessage("lblSettings")),
+                stack(row(new JLabel(TEXT.getMessage("lblWebConsoleHostPassword")), Box.createHorizontalStrut(12), passwordBox(), Box.createHorizontalGlue()),
+                        wrapped(TEXT.getMessage("lblWebConsoleHostPasswordAbout"), quiet, TEXT_WIDTH)),
+                quitWhenEmpty);
+        section(main, row(picturesLight, Box.createHorizontalStrut(10),
                 stack(picturesState, stack(picturesBar, row(picturesUpdated, imagesButton))),
                 Box.createHorizontalGlue(), picturesButton));
-        final JPanel foot = row(quitWhenEmpty, Box.createHorizontalGlue(), detailsToggle);
+        final JPanel foot = row(Box.createHorizontalGlue(), detailsToggle);
         // A row left centred would push every left-aligned row in by half its width
         foot.setAlignmentX(0f);
         main.add(foot);
@@ -781,6 +765,13 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
 
     private void openGuide() {
         open(GUIDE);
+    }
+
+    /** A group's heading, a size above the labels inside the group. */
+    private static JLabel title(final String words) {
+        final JLabel label = heading(words);
+        label.setFont(label.getFont().deriveFont(label.getFont().getSize2D() + 1f));
+        return label;
     }
 
     /** The password box is only as wide as a password needs, not the width of the window. */

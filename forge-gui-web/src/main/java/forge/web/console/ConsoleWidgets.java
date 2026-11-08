@@ -90,7 +90,7 @@ final class ConsoleWidgets {
         field.setOpaque(true);
         field.setBackground(Color.WHITE);
         field.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(FIELD_EDGE),
-                BorderFactory.createEmptyBorder(5, 10, 5, 6)));
+                BorderFactory.createEmptyBorder(2, 10, 2, 4)));
         return field;
     }
 
