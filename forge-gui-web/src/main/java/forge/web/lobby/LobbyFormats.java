@@ -22,7 +22,7 @@ public final class LobbyFormats {
     static final List<GameType> FORMATS = Stream.concat(Stream.of(GameType.Constructed), FormatChoices.FORMAT_GAME_TYPES.stream()).toList();
 
     /** The casual variants. Each one can be added to any format that the engine allows it with. */
-    static final List<GameType> VARIANTS = FormatChoices.STACKED_GAME_TYPES;
+    static final List<GameType> VARIANTS = FormatChoices.VARIANTS;
 
     /** The description uses the web's own wording, because the engine's older text still calls a commander a "General". */
     static Format explained(final GameType type) {

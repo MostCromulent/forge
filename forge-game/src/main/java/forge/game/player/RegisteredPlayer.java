@@ -40,6 +40,7 @@ public class RegisteredPlayer {
     private Integer id = null;
     private boolean randomFoil = false;
     private boolean enableETBCountersEffect = false;
+    private final List<List<String>> startGameScripts = Lists.newArrayList();
 
     public RegisteredPlayer(Deck deck0) {
         originalDeck = deck0;
@@ -96,6 +97,13 @@ public class RegisteredPlayer {
             this.extraCardsInCommandZone = extraCardsInCommandZone;
         else
             this.extraCardsInCommandZone = Iterables.concat(this.extraCardsInCommandZone, extraCardsInCommandZone);
+    }
+    public final List<List<String>> getStartGameScripts() {
+        return startGameScripts;
+    }
+    /** Card-script lines run after mulligans. A line {@code SVar:Name:Value} sets an SVar the other lines can use, every other line is an ability. */
+    public final void addStartGameScript(List<String> script) {
+        startGameScripts.add(script);
     }
 
     public int getStartingHand() {

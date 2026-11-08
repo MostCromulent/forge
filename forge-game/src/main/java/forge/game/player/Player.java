@@ -3157,6 +3157,27 @@ public class Player extends GameEntity implements Comparable<Player> {
         }
     }
 
+    public void runStartGameScripts() {
+        for (final List<String> script : getRegisteredPlayer().getStartGameScripts()) {
+            // each script gets its own host, so SVar names and remembered cards stay separate
+            final DetachedCardEffect host = new DetachedCardEffect(this, "Start of Game Effect");
+            getZone(ZoneType.Command).add(host);
+            for (final String line : script) {
+                if (line.startsWith("SVar:")) {
+                    final String[] svar = line.split(":", 3);
+                    host.setSVar(svar[1], svar[2]);
+                }
+            }
+            for (final String line : script) {
+                if (!line.startsWith("SVar:")) {
+                    final SpellAbility sa = AbilityFactory.getAbility(line, host);
+                    sa.setActivatingPlayer(this);
+                    getController().playSpellAbilityNoStack(sa, true);
+                }
+            }
+        }
+    }
+
     public void initCommanderColor(Card cmd) {
         if (cmd.getRules().getAddsWildCardColor()) {
             Player p = cmd.getController();
