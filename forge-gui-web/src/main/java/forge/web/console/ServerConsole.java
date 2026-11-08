@@ -660,14 +660,14 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 row(light, Box.createHorizontalStrut(10), stack(row(state, Box.createHorizontalStrut(10), players), keepOpen),
                         Box.createHorizontalGlue(), browse, Box.createHorizontalStrut(8), startStop),
                 progress, startHelp);
+        section(main, stack(row(heading(TEXT.getMessage("lblWebConsoleHostPassword")), Box.createHorizontalStrut(12), passwordBox(), Box.createHorizontalGlue()),
+                wrapped(TEXT.getMessage("lblWebConsoleHostPasswordAbout"), quiet, TEXT_WIDTH)));
         netField = field(netAddress, Box.createHorizontalGlue(), retryNet, Box.createHorizontalStrut(8), copyNet);
         section(main, stack(heading(TEXT.getMessage("lblWebMatchBarInvite")), wrapped(TEXT.getMessage("lblWebConsoleInviteAbout"), quiet, TEXT_WIDTH)),
                 heading(TEXT.getMessage("lblWebConsoleOnNetwork")),
                 field(homeAddress, Box.createHorizontalGlue(), copyHome, moreHome),
                 row(heading(TEXT.getMessage("lblWebConsoleOnInternet")), Box.createHorizontalStrut(12), byRouter, byCloudflare),
-                netField, forwardStateRow, forwardHelp, tunnelStateRow, tunnelMissing, tunnelFailed,
-                stack(heading(TEXT.getMessage("lblWebConsoleHostPassword")), wrapped(TEXT.getMessage("lblWebConsoleHostPasswordAbout"), quiet, TEXT_WIDTH)),
-                row(passwordBox(), Box.createHorizontalGlue()));
+                netField, forwardStateRow, forwardHelp, tunnelStateRow, tunnelMissing, tunnelFailed);
         section(main, field(picturesLight, Box.createHorizontalStrut(10),
                 stack(picturesState, stack(picturesBar, row(picturesUpdated, imagesButton))),
                 Box.createHorizontalGlue(), picturesButton));
