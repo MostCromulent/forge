@@ -6,7 +6,6 @@ import forge.deck.DeckGroup;
 import forge.gui.GuiBase;
 import forge.model.FModel;
 import forge.util.storage.IStorage;
-import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -38,7 +37,7 @@ public class OfflineSealedTest extends SessionsTest {
     /** Connects the host and opens the Limited page of the given kind ("sealed" or "draft"). */
     private TestBrowser host(final String kind) throws InterruptedException {
         final TestBrowser host = connect("host");
-        sessions.onMessage(host, JsonCodec.message("claimHost"));
+        sessions.onMessage(host, TestBrowser.action("claimHost"));
         Assert.assertNotNull(host.awaitMatching("hello", h -> h.get("host").getAsBoolean()));
         sessions.onMessage(host, message("setName", "name", "Host"));
         sessions.onMessage(host, message("limitedOpen", "kind", kind));
@@ -97,7 +96,7 @@ public class OfflineSealedTest extends SessionsTest {
                     && sessions.hostLobby().getHostedMatch().getGame() != null, "the free-for-all never started");
             Assert.assertEquals(sessions.hostLobby().getHostedMatch().getGame().getRegisteredPlayers().size(), 8);
             awaitPriority(host);
-            send(host, JsonCodec.message("leave"));
+            send(host, TestBrowser.action("leave"));
             host.awaitMatching("hello", h -> "event".equals(h.get("screen").getAsString()), "leaving did not return to the pool");
         } finally {
             drafts.delete(name);

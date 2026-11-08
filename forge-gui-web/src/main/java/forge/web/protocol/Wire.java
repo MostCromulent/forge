@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.google.gson.annotations.SerializedName;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
@@ -71,13 +72,6 @@ public final class Wire {
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.RECORD_COMPONENT)
     @interface Nullable {
-    }
-
-    /** The field's name on the wire, for a name Java cannot use. */
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.RECORD_COMPONENT)
-    @interface Name {
-        String value();
     }
 
     /** The field's TypeScript type, for a component whose Java type is not specific enough (a raw JSON tree). */
@@ -198,15 +192,6 @@ public final class Wire {
         return constantsOf(type, "t");
     }
 
-    /** Every {@code kind} a request record is sent as. */
-    static List<String> requestKinds(final Class<?> type) {
-        final Request r = type.getAnnotation(Request.class);
-        if (r == null) {
-            return List.of();
-        }
-        return r.value().isEmpty() ? constantsOf(type, "kind") : List.of(r.value());
-    }
-
     private static List<String> constantsOf(final Class<?> type, final String component) {
         for (final RecordComponent rc : components(type)) {
             if (rc.getName().equals(component) && rc.getType().isEnum()) {
@@ -225,7 +210,8 @@ public final class Wire {
     }
 
     static String nameOf(final RecordComponent c) {
-        final Name n = c.getAnnotation(Name.class);
+        // SerializedName cannot target a record component, so Java copies it onto the component's field and accessor
+        final SerializedName n = c.getAccessor().getAnnotation(SerializedName.class);
         return n == null ? c.getName() : n.value();
     }
 

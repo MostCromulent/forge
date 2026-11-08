@@ -23,7 +23,6 @@ import forge.model.FModel;
 import forge.util.ImageUtil;
 import forge.util.Localizer;
 import forge.web.campaign.QuestGame;
-import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -70,7 +69,7 @@ public class QuestSessionTest extends SessionsTest {
     /** Connects the host and opens the list of saved quests, whatever state the last test left the session in. */
     private TestBrowser onTheShelf() throws InterruptedException {
         final TestBrowser host = connect("host");
-        sessions.onMessage(host, JsonCodec.message("claimHost"));
+        sessions.onMessage(host, TestBrowser.action("claimHost"));
         host.awaitMatching("hello", h -> h.get("host").getAsBoolean(), "the host's seat was not given");
         sessions.onMessage(host, message("setName", "name", "Host"));
         send(host, message("campaignOpen", "mode", "quest", "resume", false));
@@ -92,7 +91,7 @@ public class QuestSessionTest extends SessionsTest {
     @AfterMethod(alwaysRun = true)
     public void leaveTheQuest() throws InterruptedException {
         if (editor != null) {
-            sessions.onMessage(editor, JsonCodec.message("editorClose"));
+            sessions.onMessage(editor, TestBrowser.action("editorClose"));
             editor = null;
         }
         TestBrowser host = null;
@@ -105,24 +104,24 @@ public class QuestSessionTest extends SessionsTest {
             return;
         }
         if ("playing".equals(host.hello.get("screen").getAsString())) {
-            send(host, JsonCodec.message("leave"));
+            send(host, TestBrowser.action("leave"));
             if (host.awaitMatching("hello", h -> !"playing".equals(h.get("screen").getAsString())) == null) {
                 return;
             }
         }
         if (host.hello.get("drafting").getAsBoolean()) {
-            send(host, JsonCodec.message("draftDiscard"));
+            send(host, TestBrowser.action("draftDiscard"));
             host.awaitMatching("hello", h -> !h.get("drafting").getAsBoolean());
         }
         if (str(host.hello, "campaignSave") != null) {
-            send(host, JsonCodec.message("campaignLeave"));
+            send(host, TestBrowser.action("campaignLeave"));
             // The shelf reads every save when it opens. The cleanup must not remove a save during that read
             if (host.awaitMatching("questSaves", saves -> true) == null) {
                 return;
             }
         }
         if ("quest".equals(str(host.hello, "campaign"))) {
-            send(host, JsonCodec.message("campaignLeave"));
+            send(host, TestBrowser.action("campaignLeave"));
             host.awaitMatching("hello", h -> !"quest".equals(str(h, "campaign")));
         }
     }
@@ -272,7 +271,7 @@ public class QuestSessionTest extends SessionsTest {
         // A reload on the result screen shows the same result and records nothing
         final TestBrowser reloaded = connect("host");
         Assert.assertEquals(reloaded.awaitMatching("campaignResult", r -> true, "a reload lost the result"), result);
-        sessions.onMessage(reloaded, JsonCodec.message("leave"));
+        sessions.onMessage(reloaded, TestBrowser.action("leave"));
         final JsonObject reward = untilRewarded(reloaded);
         step(reward, "MESSAGE", Localizer.getInstance().getMessage("lblGameplayResults"));
         final QuestData after = saved(data);
@@ -284,7 +283,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(again.awaitMatching("reward", r -> true, "a reload lost the reward"), reward);
         Assert.assertEquals(saved(data).getAchievements().getWin(), 1);
 
-        send(again, JsonCodec.message("rewardClaim"));
+        send(again, TestBrowser.action("rewardClaim"));
         final TestBrowser third = connect("host");
         third.awaitMatching("questDuels", s -> true, "the page was not sent");
         Assert.assertFalse(third.got.stream().anyMatch(m -> "reward".equals(m.get("t").getAsString())), "a claimed reward was sent again");
@@ -296,10 +295,10 @@ public class QuestSessionTest extends SessionsTest {
         WebTestSupport.skipUnlessStress();
         final QuestData data = QuestFixture.install();
         final TestBrowser host = inDuel(data);
-        sessions.onMessage(host, JsonCodec.message("concede"));
+        sessions.onMessage(host, TestBrowser.action("concede"));
         Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("nextGame", "quit"));
         sessions.onMessage(host, message("nextGame", "decision", "QUIT"));
-        send(host, JsonCodec.message("leave"));
+        send(host, TestBrowser.action("leave"));
         host.awaitMatching("questDuels", s -> true, "leaving did not return to the duels");
         final QuestData after = saved(data);
         Assert.assertEquals(after.getAchievements().getLost(), 1);
@@ -401,7 +400,7 @@ public class QuestSessionTest extends SessionsTest {
         final TestBrowser host = hostInQuest(data);
         final JsonObject card = row(listed(host, "inventory"), r -> !"Forest".equals(r.get("name").getAsString()));
         FModel.getQuest().getCards().getCardpool().add(printing(card), 1);
-        send(host, JsonCodec.message("trading"));
+        send(host, TestBrowser.action("trading"));
         final JsonObject before = host.awaitMatching("trading", t -> true, "the lists were not sent");
         trade(host, "inventory", card.get("key").getAsString(), 1);
         final JsonObject after = host.awaitMatching("trading", t -> true, "the lists were not sent again");
@@ -433,7 +432,7 @@ public class QuestSessionTest extends SessionsTest {
     @Test(timeOut = 120_000)
     public void aQuestMadeFromTheFormOpens() throws Exception {
         final TestBrowser host = onTheShelf();
-        send(host, JsonCodec.message("questOptions"));
+        send(host, TestBrowser.action("questOptions"));
         final JsonObject options = host.awaitMatching("questOptions", o -> true, "the form's options were not sent");
         Assert.assertTrue(options.getAsJsonArray("worlds").contains(new JsonPrimitive("Main world")));
         Assert.assertEquals(options.getAsJsonArray("difficulties").size(), 4);
@@ -494,7 +493,7 @@ public class QuestSessionTest extends SessionsTest {
         awaitPriority(host);
         computerLoses(host);
         host.awaitMatching("campaignResult", r -> true, "no result was sent");
-        sessions.onMessage(host, JsonCodec.message("leave"));
+        sessions.onMessage(host, TestBrowser.action("leave"));
         untilRewarded(host);
         final QuestData after = saved(data);
         Assert.assertFalse(after.getAchievements().getCurrentChallenges().contains(id), "the won challenge is still offered");
@@ -543,7 +542,7 @@ public class QuestSessionTest extends SessionsTest {
     private TestBrowser inTournamentMatch(final QuestData data) throws InterruptedException {
         final TestBrowser host = hostInQuest(data);
         host.awaitNewest("questTournaments", "the tournaments were not sent");
-        send(host, JsonCodec.message("questTournamentNext"));
+        send(host, TestBrowser.action("questTournamentNext"));
         host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the tournament match did not start");
         awaitPriority(host);
         return host;
@@ -582,9 +581,9 @@ public class QuestSessionTest extends SessionsTest {
         final TestBrowser host = hostInQuest(data);
         final JsonObject before = host.awaitNewest("questTournaments", "the tournaments were not sent");
         Assert.assertFalse(before.getAsJsonObject("bracket").get("started").getAsBoolean());
-        send(host, JsonCodec.message("questTournamentStart"));
+        send(host, TestBrowser.action("questTournamentStart"));
         host.awaitMatching("questTournaments", p -> p.getAsJsonObject("bracket").get("started").getAsBoolean(), "the tournament did not start");
-        send(host, JsonCodec.message("questTournamentNext"));
+        send(host, TestBrowser.action("questTournamentNext"));
         host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the player's match did not start");
         final String[] standings = draftOf(data).getStandings();
         Assert.assertNotEquals(standings[8], QuestEventDraft.UNDETERMINED, "the first computer match was not decided");
@@ -604,7 +603,7 @@ public class QuestSessionTest extends SessionsTest {
         awaitPriority(host);
         computerLoses(host);
         Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no second result was sent")), List.of("leave"));
-        send(host, JsonCodec.message("leave"));
+        send(host, TestBrowser.action("leave"));
         final JsonObject page = host.awaitMatching("questTournaments", p -> true, "leaving did not return to the tournaments");
         Assert.assertEquals(draftOf(data).getStandings()[9], QuestEventDraft.HUMAN);
         final JsonArray second = page.getAsJsonObject("bracket").getAsJsonArray("rounds").get(1).getAsJsonArray();
@@ -622,7 +621,7 @@ public class QuestSessionTest extends SessionsTest {
         final int cards = data.getAssets().getCardPool().countAll();
         final TestBrowser host = hostInQuest(data);
         host.awaitNewest("questTournaments", "the tournaments were not sent");
-        send(host, JsonCodec.message("questTournamentLeave"));
+        send(host, TestBrowser.action("questTournamentLeave"));
         // Take the first rare offered, and do not copy the draft to the regular drafts
         JsonObject reward = null;
         final Set<Integer> asked = new HashSet<>();
@@ -660,7 +659,7 @@ public class QuestSessionTest extends SessionsTest {
         });
         final TestBrowser host = hostInQuest(data);
         host.awaitNewest("questTournaments", "the tournaments were not sent");
-        send(host, JsonCodec.message("questTournamentNext"));
+        send(host, TestBrowser.action("questTournamentNext"));
         final JsonObject page = host.awaitMatching("questTournaments", p -> true, "the page was not sent again");
         Assert.assertFalse("playing".equals(host.hello.get("screen").getAsString()));
         final JsonObject bracket = page.getAsJsonObject("bracket");
@@ -675,10 +674,10 @@ public class QuestSessionTest extends SessionsTest {
         final int won = data.getAchievements().getWin();
         final int lost = data.getAchievements().getLost();
         final TestBrowser host = inTournamentMatch(data);
-        sessions.onMessage(host, JsonCodec.message("concede"));
+        sessions.onMessage(host, TestBrowser.action("concede"));
         Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("nextGame", "forfeit"));
         sessions.onMessage(host, message("nextGame", "decision", "QUIT"));
-        send(host, JsonCodec.message("leave"));
+        send(host, TestBrowser.action("leave"));
         host.awaitMatching("questTournaments", p -> true, "leaving did not return to the tournaments");
         final QuestData after = saved(data);
         Assert.assertEquals(after.getAchievements().getWin(), won);
@@ -734,7 +733,7 @@ public class QuestSessionTest extends SessionsTest {
         final QuestData data = withUnlocks(1_000_000);
         final TestBrowser host = hostInQuest(data);
         host.awaitNewest("questDuels", "the duels were not sent");
-        send(host, JsonCodec.message("questUnlock"));
+        send(host, TestBrowser.action("questUnlock"));
         answer(host, host.awaitMatching("hostChoice", q -> "choices".equals(q.get("kind").getAsString()), "no set was offered"), 0);
         answer(host, host.awaitMatching("hostChoice", q -> "confirm".equals(q.get("kind").getAsString()), "the price was not confirmed"), 0);
         final JsonObject reward = host.awaitMatching("reward", r -> true, "the bonus cards were not sent to reveal");

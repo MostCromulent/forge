@@ -6,7 +6,6 @@ import forge.ai.PlayerControllerAi;
 import forge.game.Game;
 import forge.gamemodes.match.HostedMatch;
 import forge.web.deck.DeckCatalog;
-import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -21,12 +20,12 @@ public class GuestSeatTest extends SessionsTest {
     @Test(timeOut = 120_000)
     public void aGuestSitsDownWithTheHostAndLeavesWithTheGame() throws Exception {
         final TestBrowser hostBrowser = connect("host");
-        sessions.onMessage(hostBrowser, JsonCodec.message("claimHost"));
+        sessions.onMessage(hostBrowser, TestBrowser.action("claimHost"));
         hostBrowser.awaitMatching("hello", h -> h.get("host").getAsBoolean(),
                 "asking for the host's seat did not take it");
         // Another test may have left the host at a table, and a reconnect shows it again. send() clears it so only the new table counts
         send(hostBrowser, message("setName", "name", "Host"));
-        sessions.onMessage(hostBrowser, JsonCodec.message("invite"));
+        sessions.onMessage(hostBrowser, TestBrowser.action("invite"));
         final JsonObject hosted = hostBrowser.awaitLobbyWithSeat();
         Assert.assertNotNull(hosted, "the host never got a seat in its own game");
         Assert.assertTrue(hosted.get("shareable").getAsBoolean(), "an invited game offered no link");
@@ -64,7 +63,7 @@ public class GuestSeatTest extends SessionsTest {
         sessions.connected(guestBrowser, "guest", false);
 
         // The guest chooses a deck from the guest's own list. The host must see it, or the host cannot start
-        sessions.onMessage(guestBrowser, JsonCodec.message("decks"));
+        sessions.onMessage(guestBrowser, TestBrowser.action("decks"));
         final String deck = TestDecks.firstLegal(guestBrowser.awaitDecks());
         final JsonObject choose = message("setSeat", "index", guestSeat);
         choose.addProperty("deck", deck);
@@ -79,7 +78,7 @@ public class GuestSeatTest extends SessionsTest {
 
         // The hello sent before the guest sat down also says it is not at the table. So only later messages count
         guestBrowser.forget();
-        sessions.onMessage(hostBrowser, JsonCodec.message("leaveLobby"));
+        sessions.onMessage(hostBrowser, TestBrowser.action("leaveLobby"));
         guestBrowser.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()),
                 "the guest was left in a lobby the host had closed");
     }
@@ -88,12 +87,12 @@ public class GuestSeatTest extends SessionsTest {
     @Test(timeOut = 120_000)
     public void aGuestFollowsTheHostIntoTheMatch() throws Exception {
         final TestBrowser host = connect("host");
-        sessions.onMessage(host, JsonCodec.message("claimHost"));
-        send(host, JsonCodec.message("invite"));
+        sessions.onMessage(host, TestBrowser.action("claimHost"));
+        send(host, TestBrowser.action("invite"));
         final TestBrowser guest = seatGuestAndReady(host);
 
         // Stops set in match setup belong to the player. The match must open with them, not apply them later
-        final JsonObject stops = JsonCodec.message("setStops");
+        final JsonObject stops = TestBrowser.action("setStops");
         stops.addProperty("mine", true);
         final JsonArray phases = new JsonArray();
         phases.add("MAIN2");
@@ -152,7 +151,7 @@ public class GuestSeatTest extends SessionsTest {
         sessions.onMessage(third, message("setName", "name", "Ann"));
         Assert.assertNotNull(third.awaitLobbyWithSeat(), "the removed player's name or seat was still held");
         // A host that returns to a table is sent its decks once, before the next test can ask for them
-        send(host, JsonCodec.message("leaveLobby"));
+        send(host, TestBrowser.action("leaveLobby"));
         host.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()), "the host did not leave its table");
     }
 
@@ -181,7 +180,7 @@ public class GuestSeatTest extends SessionsTest {
         host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 3
                         && "OPEN".equals(l.getAsJsonArray("seats").get(annSeat).getAsJsonObject().get("type").getAsString()),
                 "emptying a guest's seat did not leave it open, or took the seat away with the guest");
-        send(host, JsonCodec.message("leaveLobby"));
+        send(host, TestBrowser.action("leaveLobby"));
         host.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()), "the host did not leave its table");
     }
 
@@ -231,7 +230,7 @@ public class GuestSeatTest extends SessionsTest {
                 "the removed player's seat was not handed to the AI");
         // A game is safe to end only while it waits for the host. If the removed seat had the who-plays-first question, the deal is still running
         awaitPriority(host);
-        send(host, JsonCodec.message("concede"));
+        send(host, TestBrowser.action("concede"));
         host.awaitMatching("gameOver", g -> true, "the host was not shown the first game's result");
         Assert.assertFalse(first.getMatch().isMatchOver(), "one game decided a match of three");
 
@@ -245,7 +244,7 @@ public class GuestSeatTest extends SessionsTest {
     @Test(timeOut = 120_000)
     public void aGuestFollowsTheHostIntoTheMatchAfterASeatBelowIsRemoved() throws Exception {
         final TestBrowser host = hostAt("invite");
-        sessions.onMessage(host, JsonCodec.message("decks"));
+        sessions.onMessage(host, TestBrowser.action("decks"));
         final String deck = TestDecks.firstLegal(host.awaitDecks());
         send(host, message("setPlayerCount", "count", 3));
         send(host, message("aiSeat", "index", 1));
@@ -282,7 +281,7 @@ public class GuestSeatTest extends SessionsTest {
         sessions.onMessage(guest, message("setName", "name", "Player"));
         final JsonObject seated = guest.awaitLobbyWithSeat();
         Assert.assertNotNull(seated, "the guest never took a seat");
-        sessions.onMessage(host, JsonCodec.message("decks"));
+        sessions.onMessage(host, TestBrowser.action("decks"));
         final String deck = TestDecks.firstLegal(host.awaitDecks());
         for (final TestBrowser browser : List.of(host, guest)) {
             final JsonObject choose = message("setSeat", "index", (browser == host ? hosted : seated).get("mySeat").getAsInt());

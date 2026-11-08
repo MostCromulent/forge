@@ -11,7 +11,6 @@ import forge.web.images.CardThumbnails;
 import forge.web.images.Foil;
 import forge.web.images.ImageFiles;
 import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -224,7 +223,7 @@ public class WebServerTest {
         ws.sendText("{\"t\":\"ping\"}", true).get(5, TimeUnit.SECONDS);
         SessionsTest.awaitTrue(() -> !received.isEmpty(), "the endpoint never got the browser's message");
         Assert.assertEquals(received.get(0).get("t").getAsString(), "ping");
-        connected.send(JsonCodec.message("pong"));
+        connected.send(TestBrowser.action("pong"));
         SessionsTest.awaitTrue(() -> !texts.isEmpty(), "the browser never got the server's message");
         Assert.assertTrue(texts.get(0).contains("pong"));
         ws.sendClose(WebSocket.NORMAL_CLOSURE, "").get(5, TimeUnit.SECONDS);

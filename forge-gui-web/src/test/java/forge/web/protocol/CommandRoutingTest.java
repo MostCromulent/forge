@@ -1,5 +1,6 @@
 package forge.web.protocol;
 
+import com.google.gson.JsonObject;
 import forge.web.WebSession;
 import forge.web.campaign.CampaignSession;
 import forge.web.campaign.ConquestGame;
@@ -24,7 +25,10 @@ public class CommandRoutingTest {
         final List<String> wrong = new ArrayList<>();
         for (final Class<? extends Record> c : FromBrowser.COMMANDS) {
             for (final String name : Wire.commandNames(c)) {
-                final long owners = OWNERS.stream().filter(o -> o.names().contains(name)).count();
+                final JsonObject message = new JsonObject();
+                message.addProperty("t", name);
+                final Record command = Wire.decode(message);
+                final long owners = OWNERS.stream().filter(o -> o.handles(command)).count();
                 if (owners != 1) {
                     wrong.add(name + " has " + owners + " owners");
                 }

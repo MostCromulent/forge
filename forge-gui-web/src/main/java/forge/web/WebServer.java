@@ -83,6 +83,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
@@ -200,7 +201,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
      * Never waits for the download. Otherwise the thread that serves every other request would wait too.
      * auto means the page asked on its own, not the player, so art that is not cached yet is downloaded only when online image fetching is on.
      */
-    private void serveSleeveArt(final ChannelHandlerContext ctx, final String asked, final boolean auto) throws IOException {
+    private void serveSleeveArt(final ChannelHandlerContext ctx, final String asked, final boolean auto) {
         final String key = ImageFiles.artKey(asked);
         final File cached = ImageFiles.sleeveArt(key);
         if (cached != null) {
@@ -212,30 +213,18 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             notFound(ctx);
             return;
         }
-        final AtomicBoolean answered = new AtomicBoolean();
-        GuiBase.getInterface().invokeInEdtLater(() -> GuiBase.getInterface().getImageFetcher().fetchSleeveArt(key, () -> {
-            if (answered.compareAndSet(false, true)) {
-                final File fetched = ImageFiles.sleeveArt(key);
-                try {
-                    if (fetched != null) {
-                        respondImage(ctx, fetched);
-                        return;
-                    }
-                } catch (final IOException e) {
-                    netLog.warn("Could not send sleeve art {}: {}", key, e.getMessage());
-                }
+        fetchOrTimeOut(ctx, done -> GuiBase.getInterface().getImageFetcher().fetchSleeveArt(key, done::run), () -> {
+            final File fetched = ImageFiles.sleeveArt(key);
+            if (fetched != null) {
+                respondImage(ctx, fetched);
+            } else {
                 notFound(ctx);
             }
-        }));
-        ctx.executor().schedule(() -> {
-            if (answered.compareAndSet(false, true)) {
-                notFound(ctx);
-            }
-        }, FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        }, () -> notFound(ctx));
     }
 
     /** Downloads a missing image and answers the request when it arrives. small asks for the card at the size the board draws it. */
-    private void serveImage(final ChannelHandlerContext ctx, final String key, final boolean small) throws IOException {
+    private void serveImage(final ChannelHandlerContext ctx, final String key, final boolean small) {
         final int foil = Foil.seed(key);
         final File file = ImageFiles.card(key);
         if (file != null) {
@@ -247,35 +236,42 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             notFound(ctx);
             return;
         }
-        final AtomicBoolean answered = new AtomicBoolean();
-        GuiBase.getInterface().invokeInEdtLater(() -> GuiBase.getInterface().getImageFetcher().fetchImage(key, () -> {
+        fetchOrTimeOut(ctx, done -> GuiBase.getInterface().getImageFetcher().fetchImage(key, () -> {
             // Forge remembers a picture it could not find. Without this it would still report the picture as missing now that it exists
             ImageKeys.clearMissingCards();
+            done.run();
+        }), () -> {
             final File fetched = ImageFiles.card(key);
+            if (fetched != null) {
+                respondCardImage(ctx, fetched, small, foil);
+            } else {
+                notFound(ctx);
+            }
+        }, () -> {
+            if (unavailableImages.size() >= MOST_UNAVAILABLE_IMAGES) {
+                unavailableImages.clear();
+            }
+            unavailableImages.add(key);
+            notFound(ctx);
+        });
+    }
+
+    /** Starts a download on the UI thread, then runs arrived, or timedOut if the download takes too long. Only one of them runs. */
+    private static void fetchOrTimeOut(final ChannelHandlerContext ctx, final Consumer<Runnable> fetch, final Runnable arrived, final Runnable timedOut) {
+        final AtomicBoolean answered = new AtomicBoolean();
+        GuiBase.getInterface().invokeInEdtLater(() -> fetch.accept(() -> {
             if (answered.compareAndSet(false, true)) {
-                try {
-                    if (fetched != null) {
-                        respondCardImage(ctx, fetched, small, foil);
-                    } else {
-                        notFound(ctx);
-                    }
-                } catch (final IOException e) {
-                    notFound(ctx);
-                }
+                arrived.run();
             }
         }));
         ctx.executor().schedule(() -> {
             if (answered.compareAndSet(false, true)) {
-                if (unavailableImages.size() >= MOST_UNAVAILABLE_IMAGES) {
-                    unavailableImages.clear();
-                }
-                unavailableImages.add(key);
-                notFound(ctx);
+                timedOut.run();
             }
         }, FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
-    private void respondCardImage(final ChannelHandlerContext ctx, final File file, final boolean small, final int foil) throws IOException {
+    private void respondCardImage(final ChannelHandlerContext ctx, final File file, final boolean small, final int foil) {
         if (!small && foil == 0) {
             respondImage(ctx, file);
             return;
@@ -286,16 +282,17 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 return;
             }
             netLog.warn("Could not draw {}: {}", file, failed.getMessage());
-            try {
-                respondImage(ctx, file);
-            } catch (final IOException e) {
-                notFound(ctx);
-            }
+            respondImage(ctx, file);
         });
     }
 
-    private void respondImage(final ChannelHandlerContext ctx, final File file) throws IOException {
-        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), ImageFiles.type(file), null, KEEP_FOREVER, null);
+    private void respondImage(final ChannelHandlerContext ctx, final File file) {
+        try {
+            respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), ImageFiles.type(file), null, KEEP_FOREVER, null);
+        } catch (final IOException e) {
+            netLog.warn("Could not send {}: {}", file, e.getMessage());
+            notFound(ctx);
+        }
     }
 
     /** True when the socket's page came from this server, whichever address the browser reached it by. */
@@ -385,18 +382,13 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 type, cookieToken, cacheControl, etag);
     }
 
-    /**
-     * Answers a request. A cookie, when given, is the token that the page was loaded with. The connection stays open when the
-     * browser asked for that, because a board of forty pictures would otherwise need forty handshakes.
-     */
+    /** Answers a request. A cookie, when given, is the token that the page was loaded with. */
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
             final String cookieToken, final String cacheControl, final String etag) {
-        final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
         final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(body));
         resp.headers()
                 .set(HttpHeaderNames.CONTENT_TYPE, type)
-                .set(HttpHeaderNames.CACHE_CONTROL, cacheControl)
-                .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
+                .set(HttpHeaderNames.CACHE_CONTROL, cacheControl);
         // A 304 has no body. A length on it would say that the body the browser already has is empty
         if (status != HttpResponseStatus.NOT_MODIFIED) {
             resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, body.length);
@@ -411,21 +403,22 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             cookie.setSameSite(CookieHeaderNames.SameSite.Strict);
             resp.headers().set(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.STRICT.encode(cookie));
         }
-        send(ctx, resp, keepAlive);
+        send(ctx, resp);
     }
 
     private void redirect(final ChannelHandlerContext ctx, final String location) {
-        final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
         final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FOUND);
         resp.headers()
                 .set(HttpHeaderNames.LOCATION, location)
                 .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
-                .set(HttpHeaderNames.CACHE_CONTROL, "no-store")
-                .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
-        send(ctx, resp, keepAlive);
+                .set(HttpHeaderNames.CACHE_CONTROL, "no-store");
+        send(ctx, resp);
     }
 
-    private static void send(final ChannelHandlerContext ctx, final FullHttpResponse resp, final boolean keepAlive) {
+    /** The connection stays open when the browser asked for that, because a board of forty pictures would otherwise need forty handshakes. */
+    private static void send(final ChannelHandlerContext ctx, final FullHttpResponse resp) {
+        final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
+        resp.headers().set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
         final ChannelFuture sent = ctx.writeAndFlush(resp);
         if (!keepAlive) {
             sent.addListener(ChannelFutureListener.CLOSE);
@@ -506,7 +499,6 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 in.readFully(body);
             }
         }
-        final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
         final FullHttpResponse resp;
         if (partial && from > to) {
             resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
@@ -523,9 +515,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 .set(HttpHeaderNames.ACCEPT_RANGES, HttpHeaderValues.BYTES)
                 .set(HttpHeaderNames.CACHE_CONTROL, cacheControl)
                 .set(HttpHeaderNames.ETAG, etag)
-                .setInt(HttpHeaderNames.CONTENT_LENGTH, resp.content().readableBytes())
-                .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
-        send(ctx, resp, keepAlive);
+                .setInt(HttpHeaderNames.CONTENT_LENGTH, resp.content().readableBytes());
+        send(ctx, resp);
     }
 
     private static String etag(final byte[] body) {

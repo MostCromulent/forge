@@ -88,46 +88,16 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         soloTable = table;
     }
 
-    static String resolveAssetsDir() {
-        final String configured = System.getProperty("forge.assets.dir");
-        if (configured != null) {
-            return withSlash(new File(configured).getAbsolutePath());
-        }
-        final File cwd = new File(System.getProperty("user.dir"));
-        final String fromWorkingDirectory = findAssets(cwd);
-        if (fromWorkingDirectory != null) {
-            return fromWorkingDirectory;
-        }
-        // user.dir may not be where a packaged JAR is installed, so also search upward from the JAR or classes path
-        try {
-            final File codeSource = new File(WebGuiBase.class.getProtectionDomain().getCodeSource()
-                    .getLocation().toURI());
-            final String fromCodeSource = findAssets(codeSource.isDirectory() ? codeSource : codeSource.getParentFile());
-            if (fromCodeSource != null) {
-                return fromCodeSource;
+    /** The working folder or the nearest parent that holds Forge's res folder, directly or in forge-gui. A git checkout runs from the repository or a module folder. */
+    private static String resolveAssetsDir() {
+        for (File dir = new File("").getAbsoluteFile(); dir != null; dir = dir.getParentFile()) {
+            for (final File assets : new File[] {dir, new File(dir, "forge-gui")}) {
+                if (new File(assets, "res").isDirectory()) {
+                    return assets.getPath() + File.separator;
+                }
             }
-        } catch (final Exception ignored) {
-            // Unusual launchers can still set forge.assets.dir explicitly
         }
         return "";
-    }
-
-    /** Searches start and its parents for an assets folder, or for a forge-gui module folder that holds one. */
-    private static String findAssets(final File start) {
-        for (File directory = start; directory != null; directory = directory.getParentFile()) {
-            if (new File(directory, "res").isDirectory()) {
-                return withSlash(directory.getAbsolutePath());
-            }
-            final File gui = new File(directory, "forge-gui");
-            if (new File(gui, "res").isDirectory()) {
-                return withSlash(gui.getAbsolutePath());
-            }
-        }
-        return null;
-    }
-
-    private static String withSlash(final String path) {
-        return path.endsWith(File.separator) ? path : path + File.separator;
     }
 
     /** One thread that runs its jobs in order and ends when idle, so a finished session keeps no thread. A job that throws is logged. */

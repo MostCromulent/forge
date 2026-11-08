@@ -7,7 +7,6 @@ import forge.web.match.BrowserModel;
 import forge.web.match.MatchProbe;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.JsonCodec;
 import forge.web.protocol.Wire;
 import org.testng.Assert;
 
@@ -138,7 +137,9 @@ final class TestBrowser implements BrowserChannel {
     }
 
     static JsonObject action(final String type) {
-        return JsonCodec.message(type);
+        final JsonObject m = new JsonObject();
+        m.addProperty("t", type);
+        return m;
     }
 
     /** Passes a browser's command to the match. */
@@ -147,7 +148,7 @@ final class TestBrowser implements BrowserChannel {
     }
 
     static JsonObject reply(final int id, final JsonElement value) {
-        final JsonObject r = JsonCodec.message("reply");
+        final JsonObject r = action("reply");
         r.addProperty("id", id);
         r.add("value", value);
         return r;

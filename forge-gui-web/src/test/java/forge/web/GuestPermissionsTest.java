@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
-import forge.web.protocol.JsonCodec;
 import forge.web.protocol.ToBrowser.HostChoiceKind;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -44,7 +43,7 @@ public class GuestPermissionsTest extends SessionsTest {
     @Test(timeOut = 60_000)
     public void onlyTheHostAnswersTheHostsQuestion() throws Exception {
         final TestBrowser host = connect("host");
-        sessions.onMessage(host, JsonCodec.message("claimHost"));
+        sessions.onMessage(host, TestBrowser.action("claimHost"));
         host.awaitMatching("hello", h -> h.get("host").getAsBoolean(), "the host's seat was not taken");
         final TestBrowser guest = connect("guest");
         final CompletableFuture<List<Integer>> waiting = CompletableFuture.supplyAsync(() ->

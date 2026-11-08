@@ -1,6 +1,5 @@
 package forge.web;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonObject;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
@@ -10,6 +9,7 @@ import forge.gamemodes.net.server.HostingServer;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
+import forge.util.ThreadUtil;
 import forge.web.lobby.Lobby;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.ToBrowser.Address;
@@ -23,10 +23,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /** Every browser attached to this process, each with its own session. Only the web port must be reachable from outside. */
@@ -34,9 +31,9 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     /** The most browsers tracked at once, because anyone with an invite link can open one browser after another. */
     static final int MOST_SESSIONS = 64;
     /** How long the host's seat stays reserved for a browser that has left, so a reload keeps the seat. */
-    private static final long HOST_GRACE_MILLIS = 20_000;
+    private static final int HOST_GRACE_MILLIS = 20_000;
     /** How long a drafting seat's browser may be gone before the draft host is told the player left. */
-    private static final long DRAFT_HOLD_MILLIS = 15_000;
+    private static final int DRAFT_HOLD_MILLIS = 15_000;
     /** Enough of the conversation for a browser that arrives late to see what was said. */
     private static final int CHAT_KEPT = 60;
     private final WebGuiBase ui;
@@ -49,8 +46,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     private volatile WebServer server;
     /** Set from the console's checkbox. Without a console, nothing else shows that Forge is running. */
     private boolean quitWhenEmpty = true;
-    private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(
-            new ThreadFactoryBuilder().setNameFormat("WebStartIdle").setDaemon(true).build());
+    private volatile boolean stopping;
     /** The app players in the last list of who is here. It is used to detect when one arrives or leaves. */
     private volatile List<String> appSeatNames = List.of();
     /** Runs when no browser has been connected for a while. That is the only sign that the players have finished. */
@@ -65,7 +61,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         this.idleMillis = idleMillis;
         this.onQuit = onQuit;
         // This also covers a browser that never opens
-        idle = timer.schedule(onQuit, idleMillis, TimeUnit.MILLISECONDS);
+        idle = ThreadUtil.delay((int) idleMillis, onQuit);
     }
 
     /** The address Cloudflare gives this server while players connect that way. It then replaces the router's address. */
@@ -161,7 +157,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     private synchronized void letGo() {
         if (quitWhenEmpty && idle == null && byChannel.isEmpty()) {
             netLog.info("No browser is attached. Forge will close in {} seconds.", idleMillis / 1000);
-            idle = timer.schedule(this::quitUnlessAppsSeated, idleMillis, TimeUnit.MILLISECONDS);
+            idle = ThreadUtil.delay((int) idleMillis, this::quitUnlessAppsSeated);
         }
     }
 
@@ -169,7 +165,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     private void quitUnlessAppsSeated() {
         synchronized (this) {
             idle = null;
-            if (!quitWhenEmpty || !byChannel.isEmpty()) {
+            if (stopping || !quitWhenEmpty || !byChannel.isEmpty()) {
                 return;
             }
             if (!appSeats().isEmpty()) {
@@ -202,8 +198,8 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
 
     @Override
     public void disconnected(final BrowserChannel channel) {
-        // Stopping the server closes every browser's socket after the timer has stopped
-        if (timer.isShutdown()) {
+        // Stopping the server closes every browser's socket after the sessions have shut down
+        if (stopping) {
             return;
         }
         final WebSession session = byChannel.remove(channel);
@@ -211,11 +207,11 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             netLog.info("{} left.", session.label());
             session.disconnected(channel);
             announcePresence();
-            timer.schedule(session.eventSeat()::goneAWhile, DRAFT_HOLD_MILLIS, TimeUnit.MILLISECONDS);
+            ThreadUtil.delay(DRAFT_HOLD_MILLIS, session.eventSeat()::goneAWhile);
         }
         letGo();
         // A seat held by a browser that never comes back would leave nobody able to set up the table
-        timer.schedule(this::releaseHostIfAbandoned, HOST_GRACE_MILLIS, TimeUnit.MILLISECONDS);
+        ThreadUtil.delay(HOST_GRACE_MILLIS, this::releaseHostIfAbandoned);
     }
 
     @Override
@@ -312,8 +308,8 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
 
     /** Drops every seat and stops the server. Guests go first, so no guest session stays open after its game. */
     synchronized void shutdown() {
+        stopping = true;
         holdOpen();
-        timer.shutdownNow();
         for (final WebSession session : byId.values()) {
             if (session != host) {
                 session.shutdown();

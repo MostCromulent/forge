@@ -1,7 +1,6 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
-import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -11,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WebSessionTest {
-    /** Each holds a timer thread until it is shut down. */
+    /** Each has its quit scheduled until it is shut down. */
     private final List<WebSessions> opened = new ArrayList<>();
 
     @BeforeClass
@@ -42,16 +41,16 @@ public class WebSessionTest {
         Assert.assertFalse(first.awaitNewest("hello").get("host").getAsBoolean(), "a browser hosted by arriving");
         Assert.assertTrue(first.awaitNewest("hello").get("canClaimHost").getAsBoolean(), "the seat was not offered");
 
-        sessions.onMessage(first, JsonCodec.message("claimHost"));
+        sessions.onMessage(first, TestBrowser.action("claimHost"));
         Assert.assertTrue(first.awaitNewest("hello").get("host").getAsBoolean(), "asking did not take the seat");
 
-        sessions.onMessage(second, JsonCodec.message("claimHost"));
+        sessions.onMessage(second, TestBrowser.action("claimHost"));
         Assert.assertFalse(second.awaitNewest("hello").get("host").getAsBoolean(), "two browsers took the same seat");
         Assert.assertNotNull(second.awaitMatching("error", m -> true), "the second browser was not told why");
     }
 
     private static JsonObject claim(final String password) {
-        final JsonObject m = JsonCodec.message("claimHost");
+        final JsonObject m = TestBrowser.action("claimHost");
         m.addProperty("password", password);
         return m;
     }
@@ -83,7 +82,7 @@ public class WebSessionTest {
             final WebSessions guarded = opened();
             final TestBrowser local = new TestBrowser();
             guarded.connected(local, "local", true);
-            guarded.onMessage(local, JsonCodec.message("claimHost"));
+            guarded.onMessage(local, TestBrowser.action("claimHost"));
             Assert.assertFalse(local.awaitNewest("hello").get("hostPassword").getAsBoolean());
             Assert.assertTrue(local.awaitNewest("hello").get("host").getAsBoolean(), "this machine's browser needed the password");
         } finally {
@@ -92,7 +91,7 @@ public class WebSessionTest {
         final WebSessions sessions = opened();
         final TestBrowser remote = new TestBrowser();
         sessions.connected(remote, "remote", false);
-        sessions.onMessage(remote, JsonCodec.message("claimHost"));
+        sessions.onMessage(remote, TestBrowser.action("claimHost"));
         Assert.assertNotNull(remote.awaitNewest("hello", m -> m.get("host").getAsBoolean()), "another machine could not take the seat with no password set");
     }
 
@@ -127,7 +126,7 @@ public class WebSessionTest {
         sessions.connected(first, "same", true);
         sessions.connected(second, "same", true);
         Assert.assertTrue(first.closed, "the first tab stayed open");
-        sessions.onMessage(first, JsonCodec.message("claimHost"));
+        sessions.onMessage(first, TestBrowser.action("claimHost"));
         Assert.assertTrue(sessions.hostSeatFree(), "the closed tab took the host's seat");
         sessions.disconnected(first);
         Assert.assertEquals(sessions.playersHere(), 1, "the old tab's closing detached the new one");

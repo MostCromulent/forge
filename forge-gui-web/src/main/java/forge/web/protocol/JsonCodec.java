@@ -29,12 +29,6 @@ import java.util.function.Consumer;
 public final class JsonCodec {
     private JsonCodec() {}
 
-    public static JsonObject message(final String type) {
-        final JsonObject m = new JsonObject();
-        m.addProperty("t", type);
-        return m;
-    }
-
     public static JsonObject ref(final int type, final int id) {
         final JsonObject r = new JsonObject();
         r.addProperty("ref", DeltaPacket.makeDeltaKey(type, id));

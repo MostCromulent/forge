@@ -4,7 +4,6 @@ import com.google.gson.JsonObject;
 import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.net.draft.BoosterDraftHost;
 import forge.gamemodes.net.server.ServerGameLobby;
-import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -61,7 +60,7 @@ public class OnlineEventTest extends SessionsTest {
         sessions.onMessage(guest, ready(true));
         host.awaitLobby(l -> l.getAsJsonArray("seats").asList().stream()
                 .allMatch(s -> s.getAsJsonObject().get("ready").getAsBoolean()), "the seats never showed as ready");
-        sessions.onMessage(host, JsonCodec.message("eventStart"));
+        sessions.onMessage(host, TestBrowser.action("eventStart"));
         Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonObject("limited").has("phase")
                 && !"LOBBY_GATHER".equals(l.getAsJsonObject("limited").get("phase").getAsString())), "the event never started: "
                 + host.got.stream().filter(m -> "error".equals(m.get("t").getAsString())).toList() + " " + host.latestTable());
@@ -86,7 +85,7 @@ public class OnlineEventTest extends SessionsTest {
         host.awaitLobby(l -> l.getAsJsonArray("seats").get(hostSeat).getAsJsonObject().get("ready").getAsBoolean(),
                 "the host never showed as ready");
 
-        send(host, JsonCodec.message("eventStart"));
+        send(host, TestBrowser.action("eventStart"));
         host.awaitMatching("error", e -> e.get("message").getAsString().contains("Guest"),
                 "the event started with the guest not ready");
 
@@ -94,7 +93,7 @@ public class OnlineEventTest extends SessionsTest {
         sessions.onMessage(guest, ready(true));
         host.awaitLobby(l -> l.getAsJsonArray("seats").asList().stream().allMatch(s -> s.getAsJsonObject().get("ready").getAsBoolean()),
                 "the guest never showed as ready");
-        sessions.onMessage(host, JsonCodec.message("eventStart"));
+        sessions.onMessage(host, TestBrowser.action("eventStart"));
         host.awaitLobby(l -> "POOL_DISTRIBUTION".equals(l.getAsJsonObject("limited").has("phase")
                 ? l.getAsJsonObject("limited").get("phase").getAsString() : null), "the sealed event never started");
     }
@@ -145,11 +144,11 @@ public class OnlineEventTest extends SessionsTest {
         host.awaitLobby(l -> l.getAsJsonArray("seats").asList().stream()
                 .allMatch(s -> s.getAsJsonObject().get("ready").getAsBoolean()), "the host never showed as ready");
         final ServerGameLobby table = sessions.hostLobby();
-        sessions.onMessage(host, JsonCodec.message("eventStart"));
+        sessions.onMessage(host, TestBrowser.action("eventStart"));
         host.awaitMatching("draft", d -> d.getAsJsonArray("cards").size() > 0, "the host was never shown a pack");
         final BoosterDraftHost draftHost = table.getDraftHost();
         Assert.assertNotNull(draftHost);
-        sessions.onMessage(host, JsonCodec.message("leaveLobby"));
+        sessions.onMessage(host, TestBrowser.action("leaveLobby"));
         host.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()), "the host never left the table");
         // The browser is told it left before the table is closed, so wait for the draft host to finish
         SessionsTest.awaitTrue(draftHost::isFinished, "the draft host outlived its table");

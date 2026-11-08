@@ -12,7 +12,6 @@ import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.interfaces.ILobbyListener;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.JsonCodec;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -156,7 +155,7 @@ public class NetplayTunnelTest extends SessionsTest {
                 "a browser was let play under the app's name");
         sessions.disconnected(guest);
 
-        sessions.onMessage(host, JsonCodec.message("decks"));
+        sessions.onMessage(host, TestBrowser.action("decks"));
         // The list can arrive before hostAt clears the messages, and the server never sends the same list to a browser twice
         final String deck = TestDecks.firstLegal(host.awaitDecks());
         final JsonObject choose = message("setSeat", "index", hostSeat);

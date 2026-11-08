@@ -3,6 +3,7 @@ package forge.web.protocol;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
+import com.google.gson.annotations.SerializedName;
 import forge.card.CardRarity;
 import forge.deck.CommanderOptions;
 import forge.deck.DeckSection;
@@ -17,7 +18,6 @@ import forge.web.protocol.FromBrowser.DeckQueryKind;
 import forge.web.protocol.FromBrowser.EventKind;
 import forge.web.protocol.Wire.Event;
 import forge.web.protocol.Wire.Message;
-import forge.web.protocol.Wire.Name;
 import forge.web.protocol.Wire.Nullable;
 import forge.web.protocol.Wire.Request;
 import forge.web.protocol.Wire.Ts;
@@ -573,7 +573,7 @@ public final class ToBrowser {
     @Request
     public record ChoicesRequest(ChoiceKind kind, @Nullable String message, int min, int max, List<RequestOption> options,
             List<Integer> selected, @Nullable List<Integer> stackKeys, @Nullable Integer atX, @Nullable Integer atY,
-            @Name("default") List<Integer> defaultAnswer, @Nullable Ref aiSkipsOf) {
+            @SerializedName("default") List<Integer> defaultAnswer, @Nullable Ref aiSkipsOf) {
         public ChoicesRequest warningOf(final Ref player) {
             return new ChoicesRequest(kind, message, min, max, options, selected, stackKeys, atX, atY, defaultAnswer, player);
         }
@@ -585,36 +585,36 @@ public final class ToBrowser {
     /** bottom is the label of the other end, for an order with a top and a bottom such as a library. */
     @Request("order")
     public record OrderRequest(@Nullable String title, @Nullable String top, @Nullable String bottom, int min, int max, List<RequestOption> options,
-            List<Integer> selected, boolean remember, @Nullable Ref card, @Name("default") OrderAnswer defaultAnswer) {
+            List<Integer> selected, boolean remember, @Nullable Ref card, @SerializedName("default") OrderAnswer defaultAnswer) {
     }
 
     /** Scry and similar effects: the whole library, with only the top cards movable. */
     @Request("manipulate")
     public record ManipulateRequest(@Nullable String title, List<RequestOption> options, List<Integer> movable, boolean toTop,
-            boolean toBottom, @Name("default") List<Integer> defaultAnswer) {
+            boolean toBottom, @SerializedName("default") List<Integer> defaultAnswer) {
     }
 
     /** A row of buttons. The answer is the index of the button pressed. */
     @Request("option")
     public record OptionRequest(@Nullable String title, @Nullable String message, @Nullable Ref card, List<String> labels,
-            @Name("default") int defaultAnswer) {
+            @SerializedName("default") int defaultAnswer) {
     }
 
     @Request("text")
     public record TextRequest(@Nullable String title, @Nullable String message, @Nullable String initial, boolean numeric,
-            @Name("default") @Nullable String defaultAnswer) {
+            @SerializedName("default") @Nullable String defaultAnswer) {
     }
 
     /** A whole number from min up, and up to max when there is one. When maySkip allows it, null picks no number. */
     @Request("number")
     public record NumberRequest(@Nullable String message, int min, @Nullable Integer max, boolean maySkip,
-            @Name("default") @Nullable Integer defaultAnswer) {
+            @SerializedName("default") @Nullable Integer defaultAnswer) {
     }
 
     /** Divide an amount among the options. When maySkip allows it, null skips. For combat damage, lethal is the damage that destroys each option. */
     @Request("distribute")
     public record DistributeRequest(@Nullable String message, int amount, int perMin, List<RequestOption> options, @Nullable Ref card,
-            boolean maySkip, @Name("default") List<Integer> defaultAnswer, @Nullable List<Integer> lethal) {
+            boolean maySkip, @SerializedName("default") List<Integer> defaultAnswer, @Nullable List<Integer> lethal) {
     }
 
     public record SideboardEntry(String name, String imageKey, int total) {
@@ -623,7 +623,7 @@ public final class ToBrowser {
     /** Between games: how many copies of each card go in the main deck. */
     @Request("sideboard")
     public record SideboardRequest(@Nullable String message, List<SideboardEntry> entries, List<Integer> main,
-            @Name("default") List<Integer> defaultAnswer) {
+            @SerializedName("default") List<Integer> defaultAnswer) {
     }
 
     /** What the sealed setup form can offer, as desktop's sealed dialogs list it. */

@@ -30,7 +30,6 @@ import forge.web.deck.DeckImport;
 import forge.web.images.ImageFiles;
 import forge.web.match.LocalGame;
 import forge.web.match.WebGuiGame;
-import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -170,7 +169,7 @@ public class ConquestSessionTest extends SessionsTest {
         final TestBrowser host = hostInConquest(data);
         final ConquestLocation next = start.getNeighbors().get(0);
         sessions.onMessage(host, message("conquestSelect", "region", next.getRegionIndex(), "row", next.getRow(), "col", next.getCol()));
-        send(host, JsonCodec.message("conquestMove"));
+        send(host, TestBrowser.action("conquestMove"));
         final JsonObject state = host.awaitNewest("conquestState", s -> s.getAsJsonArray("path").size() == 2, "the move sent no path");
         Assert.assertEquals(state.get("steps").getAsInt(), 0);
         Assert.assertEquals(new ConquestData(data.getDirectory()).getCurrentLocation(), next);
@@ -192,7 +191,7 @@ public class ConquestSessionTest extends SessionsTest {
         final TestBrowser host = hostInConquest(data);
         final ConquestLocation end = new ConquestLocation(plane, 0, 0, 2);
         sessions.onMessage(host, message("conquestSelect", "region", 0, "row", end.getRow(), "col", end.getCol()));
-        send(host, JsonCodec.message("conquestMove"));
+        send(host, TestBrowser.action("conquestMove"));
         final JsonArray path = host.awaitNewest("conquestState", s -> s.getAsJsonArray("path").size() > 0, "the move sent no path").getAsJsonArray("path");
         Assert.assertEquals(path.size(), 5, "the walk is not the shortest one along the lines: " + path);
         for (int i = 1; i < path.size() - 1; i++) {
@@ -208,7 +207,7 @@ public class ConquestSessionTest extends SessionsTest {
         final ConquestData data = ConquestFixture.create("Zendikar");
         final TestBrowser host = hostInConquest(data);
         FModel.getConquest().getModel().getSelectedCommander().getDeck().getMain().clear();
-        send(host, JsonCodec.message("conquestBattle"));
+        send(host, TestBrowser.action("conquestBattle"));
         host.awaitMatching("error", e -> true, "the illegal deck was not reported");
         Assert.assertNull(FModel.getConquest().getActiveBattle());
     }
@@ -239,7 +238,7 @@ public class ConquestSessionTest extends SessionsTest {
 
     private TestBrowser inBattle(final ConquestData data) throws InterruptedException {
         final TestBrowser host = hostInConquest(data);
-        send(host, JsonCodec.message("conquestBattle"));
+        send(host, TestBrowser.action("conquestBattle"));
         host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the battle did not start");
         awaitPriority(host);
         return host;
@@ -271,7 +270,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(model.getAEtherShards(), shards + wheelShards);
 
         host.forget();
-        sessions.onMessage(reloaded, JsonCodec.message("leave"));
+        sessions.onMessage(reloaded, TestBrowser.action("leave"));
         final JsonObject reward = reloaded.awaitMatching("reward", r -> true, "the reward was not sent with the map");
         Assert.assertEquals(reward.getAsJsonArray("steps").size(), 3);
 
@@ -282,11 +281,11 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(model.getPlaneswalkEmblems(), emblems);
 
         // No other battle starts until the reward is shown, because the reward may lead to a battle that cannot be refused
-        sessions.onMessage(again, JsonCodec.message("conquestBattle"));
+        sessions.onMessage(again, TestBrowser.action("conquestBattle"));
         onUi(() -> { });
         Assert.assertNull(FModel.getConquest().getActiveBattle(), "a battle started over a reward still to be shown");
 
-        send(again, JsonCodec.message("rewardClaim"));
+        send(again, TestBrowser.action("rewardClaim"));
         final TestBrowser third = connect("host");
         third.awaitMatching("conquestState", s -> true, "the map was not sent");
         Assert.assertFalse(third.got.stream().anyMatch(m -> "reward".equals(m.get("t").getAsString())),
@@ -302,7 +301,7 @@ public class ConquestSessionTest extends SessionsTest {
         data.setCurrentLocation(loc);
         data.saveData();
         final TestBrowser host = inBattle(data);
-        sessions.onMessage(host, JsonCodec.message("concede"));
+        sessions.onMessage(host, TestBrowser.action("concede"));
         final JsonObject result = host.awaitMatching("campaignResult", r -> true, "no result was sent");
         Assert.assertFalse(result.get("won").getAsBoolean());
         Assert.assertEquals(FModel.getConquest().getModel().getCurrentPlaneData().getEventRecord(loc).getTotalLosses(), 1);
@@ -323,14 +322,14 @@ public class ConquestSessionTest extends SessionsTest {
         sessions.onMessage(host, message("devConquestWheel", "outcome", "CHAOS"));
         computerLoses(host);
         host.awaitMatching("campaignResult", r -> true, "no result was sent");
-        send(host, JsonCodec.message("leave"));
+        send(host, TestBrowser.action("leave"));
         host.awaitMatching("reward", r -> true, "the reward was not sent");
-        send(host, JsonCodec.message("rewardClaim"));
+        send(host, TestBrowser.action("rewardClaim"));
         host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the chaos battle did not start");
         awaitPriority(host);
         Assert.assertEquals(sessions.hostLobby().getHostedMatch().getGame().getRules().getGamesPerMatch(), 3);
         final int losses = FModel.getConquest().getModel().getChaosBattleRecord().getLosses();
-        send(host, JsonCodec.message("leave"));
+        send(host, TestBrowser.action("leave"));
         host.awaitMatching("conquestState", s -> true, "leaving did not return to the map");
         Assert.assertEquals(FModel.getConquest().getModel().getChaosBattleRecord().getLosses(), losses + 1);
         Assert.assertNull(FModel.getConquest().getActiveBattle());
@@ -345,13 +344,13 @@ public class ConquestSessionTest extends SessionsTest {
         // While a battle is marked active, the next battle cannot be prepared
         final ConquestLocation loc = FModel.getConquest().getModel().getCurrentLocation();
         FModel.getConquest().prepareBattle(loc.getEvent().createBattle(loc, 0), null);
-        send(host, JsonCodec.message("conquestBattle"));
+        send(host, TestBrowser.action("conquestBattle"));
         host.awaitMatching("error", e -> true, "the failed start was not reported");
         host.awaitMatching("hello", h -> !"playing".equals(h.get("screen").getAsString()) && "conquest".equals(str(h, "campaign")), "the page did not return to the map");
         Assert.assertNull(FModel.getConquest().getActiveBattle());
         Assert.assertNull(FModel.getConquest().getModel().getCurrentPlaneData().getEventRecord(loc), "a battle that never started was recorded");
 
-        send(host, JsonCodec.message("conquestBattle"));
+        send(host, TestBrowser.action("conquestBattle"));
         host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "a second battle did not start");
         awaitPriority(host);
     }
@@ -377,7 +376,7 @@ public class ConquestSessionTest extends SessionsTest {
     @AfterMethod(alwaysRun = true)
     public void leaveTheConquest() throws InterruptedException {
         if (editor != null) {
-            sessions.onMessage(editor, JsonCodec.message("editorClose"));
+            sessions.onMessage(editor, TestBrowser.action("editorClose"));
             editor = null;
         }
         // After a reconnect two browsers have held the host's seat. Only the later one's messages are handled
@@ -391,20 +390,20 @@ public class ConquestSessionTest extends SessionsTest {
             return;
         }
         if ("playing".equals(host.hello.get("screen").getAsString())) {
-            send(host, JsonCodec.message("leave"));
+            send(host, TestBrowser.action("leave"));
             if (host.awaitMatching("hello", h -> !"playing".equals(h.get("screen").getAsString())) == null) {
                 return;
             }
         }
         if (str(host.hello, "campaignSave") != null) {
-            send(host, JsonCodec.message("campaignLeave"));
+            send(host, TestBrowser.action("campaignLeave"));
             // The shelf reads every save when it opens. The cleanup must not remove a save during that read
             if (host.awaitMatching("conquestSaves", saves -> true) == null) {
                 return;
             }
         }
         if ("conquest".equals(str(host.hello, "campaign"))) {
-            send(host, JsonCodec.message("campaignLeave"));
+            send(host, TestBrowser.action("campaignLeave"));
             host.awaitMatching("hello", h -> !"conquest".equals(str(h, "campaign")));
         }
     }
@@ -499,7 +498,7 @@ public class ConquestSessionTest extends SessionsTest {
         final int size = data.getSelectedCommander().getDeck().getMain().countAll();
         editing(host);
         Assert.assertTrue(mainNames(edited(host, message("editorEdit", "op", "add", "name", spare, "to", "Main", "count", 1))).contains(spare));
-        send(host, JsonCodec.message("editorClose"));
+        send(host, TestBrowser.action("editorClose"));
         host.awaitMatching("conquestState", s -> s.getAsJsonObject("commander").get("deckSize").getAsInt() == size + 1,
                 "the map was not told the deck's new size");
         onUi(() -> {
@@ -522,7 +521,7 @@ public class ConquestSessionTest extends SessionsTest {
         final List<PaperCard> spares = spares(data);
         editing(host);
         edited(host, message("editorEdit", "op", "add", "name", spares.get(0).getName(), "to", "Main", "count", 1));
-        edited(host, JsonCodec.message("editorUndo"));
+        edited(host, TestBrowser.action("editorUndo"));
         edited(host, message("editorEdit", "op", "remove", "name", commander.getName(), "from", "Commander", "count", 1));
         edited(host, message("editorEdit", "op", "move", "name", commander.getName(), "from", "Commander", "to", "Main", "count", 1));
         edited(host, message("editorEdit", "op", "commander", "name", spares.get(0).getName(), "count", 1));
@@ -634,7 +633,7 @@ public class ConquestSessionTest extends SessionsTest {
         host.forget();
         sessions.onMessage(host, message("catalogue", "request", 1, "text", "", "colours", "", "type", "any", "filters", "",
                 "sort", "name", "offset", 0, "showAll", true, "source", "collection"));
-        sessions.onMessage(host, JsonCodec.message("trading"));
+        sessions.onMessage(host, TestBrowser.action("trading"));
         host.awaitMatching("catalogue", c -> true, "the collection was not listed");
         host.awaitMatching("trading", c -> true, "the collection was not counted");
         final List<String> types = new ArrayList<>();
@@ -682,7 +681,7 @@ public class ConquestSessionTest extends SessionsTest {
     /** Connects the host and opens the list of saved conquests, whatever state the last test left the session in. */
     private TestBrowser onTheShelf() throws InterruptedException {
         final TestBrowser host = connect("host");
-        sessions.onMessage(host, JsonCodec.message("claimHost"));
+        sessions.onMessage(host, TestBrowser.action("claimHost"));
         host.awaitMatching("hello", h -> h.get("host").getAsBoolean(), "the host's seat was not given");
         sessions.onMessage(host, message("setName", "name", "Host"));
         send(host, message("campaignOpen", "mode", "conquest", "resume", false));
@@ -710,7 +709,7 @@ public class ConquestSessionTest extends SessionsTest {
     public void aCreatedConquestOpensOnItsMap() throws Exception {
         final String name = ConquestFixture.expected();
         final TestBrowser host = onTheShelf();
-        send(host, JsonCodec.message("conquestOptions"));
+        send(host, TestBrowser.action("conquestOptions"));
         final JsonObject planes = host.awaitMatching("conquestOptions", o -> true, "the planes were not sent");
         Assert.assertTrue(names(planes, "planes").contains("Zendikar"));
         Assert.assertTrue(planes.get("startShards").getAsInt() > 0);
@@ -867,7 +866,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(saved.getAsJsonArray("rows").size(), 20);
         Assert.assertEquals(new forge.gamemodes.planarconquest.ConquestPreferences().getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull + 50);
 
-        send(host, JsonCodec.message("campaignPrefsReset"));
+        send(host, TestBrowser.action("campaignPrefsReset"));
         host.awaitMatching("campaignPrefs", p -> true, "the reset did not answer");
         Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), Integer.parseInt(CQPref.AETHER_BASE_PULL_COST.getDefault()));
         Assert.assertEquals(prefs.getPref(CQPref.CURRENT_CONQUEST), current, "the reset forgot which conquest is current");

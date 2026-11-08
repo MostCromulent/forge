@@ -8,7 +8,6 @@ import forge.gamemodes.match.input.InputPassPriority;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.gui.GuiBase;
 import forge.player.PlayerControllerHuman;
-import forge.web.protocol.JsonCodec;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -79,9 +78,9 @@ abstract class SessionsTest {
     /** Connects the host, named Host, and seats it at a new table opened with open ("lobby" or "invite"). */
     TestBrowser hostAt(final String open) throws InterruptedException {
         final TestBrowser host = connect("host");
-        sessions.onMessage(host, JsonCodec.message("claimHost"));
+        sessions.onMessage(host, TestBrowser.action("claimHost"));
         sessions.onMessage(host, message("setName", "name", "Host"));
-        send(host, JsonCodec.message(open));
+        send(host, TestBrowser.action(open));
         // A table left by an earlier test can still send messages until the new one opens. Commands are accepted only after that
         final JsonObject opening = host.awaitMatching("hello", h -> "opening".equals(h.get("screen").getAsString()), "the host's table never started opening");
         final JsonObject opened = host.awaitMatching("hello", h -> host.got.indexOf(h) > host.got.indexOf(opening)
@@ -130,7 +129,7 @@ abstract class SessionsTest {
                         return true;
                     }
                     passed[0] = input;
-                    sessions.onMessage(host, JsonCodec.message("ok"));
+                    sessions.onMessage(host, TestBrowser.action("ok"));
                 }
             }
             return false;
@@ -182,7 +181,7 @@ abstract class SessionsTest {
                             sessions.onMessage(host, message("selectPlayer", "key", players.get(0).getAsJsonObject().get("ref").getAsInt()));
                         } else {
                             // Keeping the opening hand is a separate input, answered with OK
-                            sessions.onMessage(host, JsonCodec.message("ok"));
+                            sessions.onMessage(host, TestBrowser.action("ok"));
                         }
                     }
                 }
@@ -207,7 +206,7 @@ abstract class SessionsTest {
 
     /** Builds a message of the given type from name, value pairs. A field with a null value is left out. */
     static JsonObject message(final String type, final Object... fields) {
-        final JsonObject m = JsonCodec.message(type);
+        final JsonObject m = TestBrowser.action(type);
         for (int i = 0; i < fields.length; i += 2) {
             final Object value = fields[i + 1];
             if (value instanceof Number n) {

@@ -2,7 +2,6 @@ package forge.web.protocol;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /** One owner's handlers for the browser's commands. Each handler is found by the name its command is sent under. */
 public final class Commands<O> {
@@ -47,9 +46,5 @@ public final class Commands<O> {
         }
         handler.run(owner, channel, command);
         return true;
-    }
-
-    public Set<String> names() {
-        return handlers.keySet();
     }
 }
