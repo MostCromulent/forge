@@ -156,7 +156,6 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     @Override public boolean isRunningOnDesktop() { return true; }
     @Override public boolean isLibgdxPort() { return false; }
     @Override public String getCurrentVersion() { return BuildInfo.getVersionString(); }
-    @Override public String getAppName() { return "forge-web"; }
     @Override public String getUserAgent() { return "Forge/" + getCurrentVersion() + " (gui-web)"; }
     @Override public String getAssetsDir() { return assetsDir; }
     @Override public ImageFetcher getImageFetcher() { return imageFetcher; }
