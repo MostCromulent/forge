@@ -70,25 +70,13 @@ public class LegalityTest {
         Assert.assertNull(Legality.check(d, Check.none()).verdict());
     }
 
-    // Fails if a card pool's message no longer names the cards it rejects, or names a restricted card as illegal
-    @Test
-    public void cardPoolNamesWhatItRejects() {
-        final Deck d = new Deck("t");
-        d.getMain().add(card("Black Lotus"), 2);
-        d.getMain().add(card("Forest"), 20);
-        Assert.assertEquals(DeckCatalog.poolProblem(FModel.getFormats().get("Modern"), d), "Not legal in Modern: 1 card. Black Lotus.");
-        Assert.assertEquals(DeckCatalog.poolProblem(FModel.getFormats().get("Vintage"), d), "Vintage allows one copy of Black Lotus.");
-        d.getMain().remove(card("Black Lotus"), 1);
-        Assert.assertNull(DeckCatalog.poolProblem(FModel.getFormats().get("Vintage"), d));
-    }
-
-    // Fails if a format's deck rules, such as singleton, no longer reach the message, or come out as an empty restricted list
+    // Fails if a card pool's own message, such as singleton, no longer reaches the verdict as one line
     @Test
     public void cardPoolReportsDeckRules() {
         final Deck d = new Deck("t");
         d.getMain().add(card("Sol Ring"), 2);
         d.getMain().add(card("Forest"), 98);
-        Assert.assertEquals(DeckCatalog.poolProblem(FModel.getFormats().get("Canadian Highlander"), d),
+        Assert.assertEquals(DeckCatalog.problem(d, GameType.Constructed, FModel.getFormats().get("Canadian Highlander")),
                 "Not legal in Canadian Highlander. The deck contains more copies than allowed of the following cards: Sol Ring");
     }
 }

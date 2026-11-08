@@ -23,7 +23,6 @@ import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
-import forge.util.Lang;
 import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.SleeveArt;
@@ -42,13 +41,11 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiPredicate;
 
 /** The decks a seat may choose from, and what the browser shows about each one. */
 public final class DeckCatalog {
@@ -75,8 +72,6 @@ public final class DeckCatalog {
     private static final Map<Deck, Integer> BRACKETS = new MapMaker().weakKeys().makeMap();
     /** Held while any code reads or changes a deck. A deck loads its sections on first read, and that is not safe from two threads. */
     public static final Object DECKS = new Object();
-    /** The most cards a problem sentence names before it counts the rest. */
-    private static final int NAMED_CARDS = 3;
 
     private final Map<String, Entry> byKey = new ConcurrentHashMap<>();
     /** The categories that the browser asked for and core downloaded. They are kept so a refresh does not lose them. */
@@ -181,7 +176,7 @@ public final class DeckCatalog {
     /** The same verdict as problem, cached for each deck until it is saved. */
     public static String problemAt(final Deck deck, final GameType format, final GameFormat pool) {
         final String table = format.name() + "|" + (pool == null ? "" : pool.getName()) + "|"
-                + FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY);
+                + Legality.enforced();
         return VERDICTS.computeIfAbsent(deck, d -> new ConcurrentHashMap<>())
                 .computeIfAbsent(table, t -> Optional.ofNullable(problem(deck, format, pool))).orElse(null);
     }
@@ -567,54 +562,12 @@ public final class DeckCatalog {
         if (deck == null) {
             return Localizer.getInstance().getMessage("lblWebDeckCatalogNoDeck");
         }
-        final String outOfPool = pool == null ? null : poolProblem(pool, deck);
-        if (outOfPool != null || !FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
-            return outOfPool;
+        final String outOfPool = pool == null ? null : pool.getDeckConformanceProblem(deck);
+        if (outOfPool != null) {
+            // Core lists the cards on separate lines
+            return Localizer.getInstance().getMessage("lblNotLegalInFormat", pool.getName(), outOfPool.replaceFirst("\n+", " ").replace("\n", ", "));
         }
-        return format.getDeckFormat().getDeckConformanceProblem(deck);
-    }
-
-    /** The pool's verdict on a deck as one sentence. It names the cards that fail GameFormat's card checks, in GameFormat's order. */
-    static String poolProblem(final GameFormat pool, final Deck deck) {
-        final String problem = pool.getDeckConformanceProblem(deck);
-        if (problem == null) {
-            return null;
-        }
-        final CardPool cards = deck.getAllCardsInASinglePool();
-        final List<String> illegal = namesIn(cards, (card, count) -> !pool.getFilterRules().test(card));
-        if (!illegal.isEmpty()) {
-            return Localizer.getInstance().getMessage(illegal.size() == 1 ? "lblWebDeckCatalogNotLegalOne" : "lblWebDeckCatalogNotLegal",
-                    pool.getName(), illegal.size(), listOf(illegal));
-        }
-        final boolean legendsRestricted = Boolean.TRUE.equals(pool.isRestrictedLegendary());
-        final List<String> restricted = namesIn(cards, (card, count) -> count > 1 && (pool.getRestrictedCards().contains(card.getName())
-                || legendsRestricted && card.getRules().getType().isLegendary() && !card.getRules().getType().isPlaneswalker()));
-        if (!restricted.isEmpty()) {
-            return Localizer.getInstance().getMessage("lblWebDeckCatalogAllowsOneOf", pool.getName(), listOf(restricted));
-        }
-        // Deck size, singleton or points: core's message, which lists its cards on separate lines
-        return Localizer.getInstance().getMessage("lblNotLegalInFormat", pool.getName(), problem.replaceFirst("\n+", " ").replace("\n", ", "));
-    }
-
-    /** The names of the matching cards. Each name appears once, even when the pool holds several printings. */
-    private static List<String> namesIn(final CardPool cards, final BiPredicate<PaperCard, Integer> matches) {
-        final Set<String> names = new LinkedHashSet<>();
-        for (final Map.Entry<PaperCard, Integer> entry : cards) {
-            if (matches.test(entry.getKey(), entry.getValue())) {
-                names.add(entry.getKey().getDisplayName());
-            }
-        }
-        return new ArrayList<>(names);
-    }
-
-    /** "A", "A and B", "A, B and C", or "A, B, C and 4 more". */
-    private static String listOf(final List<String> names) {
-        final List<String> shown = names.subList(0, Math.min(NAMED_CARDS, names.size()));
-        final int more = names.size() - shown.size();
-        if (more > 0) {
-            return Localizer.getInstance().getMessage("lblWebDeckCatalogAndMore", String.join(", ", shown), more);
-        }
-        return Lang.joinHomogenous(shown);
+        return Legality.enforced() ? format.getDeckFormat().getDeckConformanceProblem(deck) : null;
     }
 
     /** The cards a deck plays with: its main deck and its commanders. A Commander deck's 100 cards include both. */
