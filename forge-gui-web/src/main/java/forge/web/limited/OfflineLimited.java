@@ -5,7 +5,7 @@ import forge.deck.Deck;
 import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.game.GameType;
-import forge.game.GameView;
+import forge.game.Match;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.GauntletMini;
@@ -57,6 +57,7 @@ public final class OfflineLimited implements IHasForgeLog {
     /** The pool the gauntlet returns to, and the game type its rounds are played as, while one is running. */
     private volatile Event gauntletBack;
     private volatile GameType gauntletType;
+    private volatile LobbyPlayer gauntletPlayer;
     private volatile OfflineDraft draft;
     /** What the draft is played for when the Limited pages did not start it, or null. */
     private volatile DraftOwner owner;
@@ -416,7 +417,7 @@ public final class OfflineLimited implements IHasForgeLog {
             return false;
         }
         session.attach(playing.gui());
-        playing.gui().onGameOver(() -> recordGauntletGame(playing));
+        playing.gui().onGameOver(this::recordGauntletGame);
         try {
             final ServerGameLobby table = local.openAlone(session.playerName(), playing.gui());
             table.setLimitedType(gauntletType);
@@ -439,7 +440,7 @@ public final class OfflineLimited implements IHasForgeLog {
         }
     }
 
-    /** Names the gauntlet's players as the Limited pages name a match's seats. The result is read by the player's name. */
+    /** Names the gauntlet's players as the Limited pages name a match's seats, and keeps the player the result is read for. */
     private void dressRound(final List<RegisteredPlayer> players, final RegisteredPlayer me) {
         for (final RegisteredPlayer player : players) {
             final LocalGame.Seat seat = player == me ? mySeat(player.getDeck())
@@ -448,30 +449,31 @@ public final class OfflineLimited implements IHasForgeLog {
                     : GamePlayerUtil.createAiPlayer(seat.name(), seat.avatar(), seat.sleeve());
             dressed.setSleeveArtKey(player.getDeck().getSleeveArtKey());
             player.setPlayer(dressed);
+            if (player == me) {
+                gauntletPlayer = dressed;
+            }
         }
     }
 
     /**
-     * A gauntlet game ended. The win or loss is recorded after every game, as in desktop's limited result. LimitedWinLoseController
-     * is not used because it needs a result screen's buttons and the host's Match, and this page's GameView is a netplay copy with no Match.
-     * So the winner is found by name.
+     * A gauntlet game ended. The win or loss is recorded after every game, as LimitedWinLoseController records it from the host's Match.
+     * That controller is not used because it needs a result screen's buttons.
      */
-    private void recordGauntletGame(final Playing playing) {
-        final GameView game = playing.gui().getGameView();
-        if (!gauntletRunning || game == null) {
+    private void recordGauntletGame() {
+        final HostedMatch hosted = local.hostedMatch();
+        final LobbyPlayer me = gauntletPlayer;
+        if (!gauntletRunning || hosted == null) {
             return;
         }
+        final Match match = hosted.getMatch();
         final GauntletMini gauntlet = FModel.getGauntletMini();
-        final boolean won = session.playerName().equals(game.getWinningPlayerName());
-        if (won) {
+        if (match.getLastOutcome().isWinner(me)) {
             gauntlet.addWin();
         } else {
             gauntlet.addLoss();
         }
-        // The winner of a match's last game is the match's winner
-        final boolean wonMatch = game.isMatchOver() && won;
         lastResult = new LimitedResult(gauntlet.getCurrentRound(), gauntlet.getRounds(), gauntlet.getWins(), gauntlet.getLosses(),
-                game.isMatchOver(), wonMatch && gauntlet.getCurrentRound() < gauntlet.getRounds());
+                match.isMatchOver(), match.isWonBy(me) && gauntlet.getCurrentRound() < gauntlet.getRounds());
         session.tell(lastResult);
     }
 
