@@ -665,9 +665,9 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 heading(TEXT.getMessage("lblWebConsoleOnNetwork")),
                 field(homeAddress, Box.createHorizontalGlue(), copyHome, moreHome),
                 row(heading(TEXT.getMessage("lblWebConsoleOnInternet")), Box.createHorizontalStrut(12), byRouter, byCloudflare),
-                netField, forwardStateRow, forwardHelp, tunnelStateRow, tunnelMissing, tunnelFailed);
-        section(main, stack(heading(TEXT.getMessage("lblWebConsoleHostPassword")), wrapped(TEXT.getMessage("lblWebConsoleHostPasswordAbout"), quiet, TEXT_WIDTH)),
-                field(hostPasswordField()));
+                netField, forwardStateRow, forwardHelp, tunnelStateRow, tunnelMissing, tunnelFailed,
+                stack(heading(TEXT.getMessage("lblWebConsoleHostPassword")), wrapped(TEXT.getMessage("lblWebConsoleHostPasswordAbout"), quiet, TEXT_WIDTH)),
+                row(passwordBox(), Box.createHorizontalGlue()));
         section(main, field(picturesLight, Box.createHorizontalStrut(10),
                 stack(picturesState, stack(picturesBar, row(picturesUpdated, imagesButton))),
                 Box.createHorizontalGlue(), picturesButton));
@@ -783,9 +783,16 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         open(GUIDE);
     }
 
+    /** The password box is only as wide as a password needs, not the width of the window. */
+    private static JPanel passwordBox() {
+        final JPanel box = field(hostPasswordField());
+        box.setMaximumSize(box.getPreferredSize());
+        return box;
+    }
+
     /** Kept when the player presses Enter or leaves the field, so a half-typed password is never saved. */
     private static JPasswordField hostPasswordField() {
-        final JPasswordField field = new JPasswordField(WebService.hostPassword());
+        final JPasswordField field = new JPasswordField(WebService.hostPassword(), 18);
         field.setBorder(null);
         field.setOpaque(false);
         field.getAccessibleContext().setAccessibleName(TEXT.getMessage("lblWebConsoleHostPassword"));
