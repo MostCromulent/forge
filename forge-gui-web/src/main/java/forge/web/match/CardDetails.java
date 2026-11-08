@@ -1,9 +1,12 @@
 package forge.web.match;
 
+import forge.StaticData;
+import forge.card.CardRules;
 import forge.card.CardStateName;
 import forge.game.GameView;
 import forge.game.card.CardView;
 import forge.game.card.CardView.CardStateView;
+import forge.game.keyword.Keyword;
 import forge.game.player.PlayerView;
 import forge.gamemodes.net.DeltaPacket;
 import forge.gui.card.CardDetailUtil;
@@ -76,8 +79,10 @@ final class CardDetails {
             return null;
         }
         if (card.isSplitCard()) {
-            // A view fills in keywords for its current state only, so the half's rules text is read instead
-            final boolean aftermath = card.hasRightSplitState() && card.getRightSplitState().getOracleText().contains("Aftermath");
+            // A view fills in keywords for its current state only, so the printed card's second half is read instead
+            final CardRules rules = StaticData.instance().getCommonCards().getRules(card.getOracleName(), true);
+            final boolean aftermath = rules != null && rules.getOtherPart() != null
+                    && rules.hasStartOfKeyword(Keyword.AFTERMATH.toString(), rules.getOtherPart());
             if (!aftermath) {
                 return 90;
             }
