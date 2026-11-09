@@ -24,15 +24,15 @@ public final class TableCommands {
             .on(SeatCommand.class, atSetup(TableCommands::seatCommand))
             .on(SetFormat.class, atSetup((t, ch, f) -> {
                 t.lobby.setFormat(f.format());
-                t.lobby.relistDecks(ch);
+                t.lobby.relistDecks(ch, t.decks::inTurn);
             }))
             .on(SetCardPool.class, atSetup((t, ch, p) -> {
                 t.lobby.setCardPool(p.cardPool());
-                t.lobby.relistDecks(ch);
+                t.lobby.relistDecks(ch, t.decks::inTurn);
             }))
             .on(SetVariant.class, atSetup((t, ch, v) -> {
                 t.lobby.setVariant(v.variant(), v.on(), WebSession.invited(t.session.stage()));
-                t.lobby.relistDecks(ch);
+                t.lobby.relistDecks(ch, t.decks::inTurn);
             }))
             .on(SetArchenemy.class, atSetup((t, ch, a) -> t.lobby.setArchenemy(a.index())))
             .on(SetTeams.class, atSetup((t, ch, c) -> t.lobby.setTeams(c.count())))
@@ -58,15 +58,15 @@ public final class TableCommands {
             })))
             .on(EventDecksOnly.class, atEvent((t, ch, d) -> {
                 t.lobby.events().setEventDecksOnly(d.on());
-                t.lobby.relistDecks(ch);
+                t.lobby.relistDecks(ch, t.decks::inTurn);
             }))
             .on(EventHostAgain.class, atEvent((t, ch, e) -> {
                 reportProblem(ch, t.lobby.events().hostAgain(e.eventId()));
-                t.lobby.relistDecks(ch);
+                t.lobby.relistDecks(ch, t.decks::inTurn);
             }))
             .on(EventForget.class, atEvent((t, ch, e) -> {
                 reportProblem(ch, t.lobby.events().forgetEvent(e.eventId()));
-                t.lobby.relistDecks(ch);
+                t.lobby.relistDecks(ch, t.decks::inTurn);
             }))
             .on(Plain.eventNew, atEvent((t, ch, c) -> {
                 final String problem = t.lobby.events().newEvent();
@@ -75,7 +75,7 @@ public final class TableCommands {
                 } else {
                     t.sendEventOptions(ch);
                 }
-                t.lobby.relistDecks(ch);
+                t.lobby.relistDecks(ch, t.decks::inTurn);
             }))
             .on(SetLimited.class, atEvent((t, ch, l) -> t.setLimited(ch, l.kind())))
             .on(SitOut.class, atEvent((t, ch, o) -> t.lobby.events().sitOut(o.index(), o.sittingOut())))
@@ -177,7 +177,7 @@ public final class TableCommands {
         } else if (kind != null) {
             sendEventOptions(channel);
         }
-        lobby.relistDecks(channel);
+        lobby.relistDecks(channel, decks::inTurn);
     }
 
     private static void reportProblem(final BrowserChannel channel, final String problem) {

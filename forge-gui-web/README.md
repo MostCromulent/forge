@@ -66,11 +66,12 @@ A few locks remain where several threads share one thing:
 
 - `WebSessions`' own lock covers the list of sessions, the host's seat and the chat.
 - `DeckCatalog.DECKS` guards the deck lists and stores every session reads.
-- `WebSession`'s own lock covers moving between stages and a browser arriving or leaving.
+- `WebSession`'s own lock covers moving between stages and a browser arriving or leaving. `OfflineLimited` also uses it to guard its draft.
+- `DeckSession`'s own lock covers the open deck editor.
 - `Lobby`'s `sentLock` keeps the deck list and table messages to one browser in order.
-- `WebGuiGame`'s `mirrorLock` keeps the server's copy of the browser's game in step with what was sent.
+- `WebGuiGame`'s `mirrorLock` keeps the server's copy of the browser's game in step with what was sent. `PromptState` and `ShownZones` each lock themselves under it, and `PromptState` takes `ShownZones` when it sends.
 
-They are taken in that order: `WebSessions`, the session's lock, then `sentLock`, then `DECKS`.
+They are taken in that order: `WebSessions`, the session's lock, then `DeckSession`'s lock, then `sentLock`, then `DECKS`. `mirrorLock` comes after the session's lock, then `PromptState`, then `ShownZones`.
 
 ### The page
 

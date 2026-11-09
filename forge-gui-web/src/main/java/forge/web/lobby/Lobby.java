@@ -831,10 +831,10 @@ public final class Lobby {
         local.pushLobby();
     }
 
-    /** A new format, card pool or variant can change which decks a seat may use, so the list is sent again. */
-    public void relistDecks(final BrowserChannel to) {
+    /** A new format, card pool or variant can change which decks a seat may use, so the list is sent again, through build as for queueDecks. */
+    public void relistDecks(final BrowserChannel to, final Executor build) {
         if (restrictionsChanged()) {
-            sendDecks(to);
+            queueDecks(to, build);
         }
     }
 

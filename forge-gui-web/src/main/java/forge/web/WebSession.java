@@ -373,7 +373,7 @@ public final class WebSession implements IHasForgeLog {
             campaigns.reconnected(channel, now);
         } else if (now instanceof Setup) {
             // Match setup is drawn from the table, and only these messages describe the table
-            lobby.sendDecks(channel);
+            lobby.queueDecks(channel, decks::inTurn);
             lobby.sendState(channel);
             if (isHost && lobby.events().settingUpEvent()) {
                 table.sendEventOptions(channel);
@@ -533,7 +533,7 @@ public final class WebSession implements IHasForgeLog {
         if (limited != null) {
             table.setLimited(channel, limited);
         }
-        lobby.sendDecks(channel);
+        lobby.queueDecks(channel, decks::inTurn);
         lobby.sendState(channel);
         sessions.hostGameOpened();
     }
@@ -573,7 +573,7 @@ public final class WebSession implements IHasForgeLog {
                 applyChosenAvatar();
                 final BrowserChannel b = browser;
                 if (b != null) {
-                    lobby.sendDecks(b);
+                    lobby.queueDecks(b, decks::inTurn);
                     lobby.sendState(b);
                 }
             });
@@ -605,7 +605,7 @@ public final class WebSession implements IHasForgeLog {
             final BrowserChannel b = browser;
             if (b != null && stage instanceof Setup) {
                 // A guest learns the host's format or card pool only here, so its deck list is rebuilt here too
-                lobby.relistDecks(b);
+                lobby.relistDecks(b, decks::inTurn);
                 lobby.sendState(b);
             }
         });
@@ -873,10 +873,10 @@ public final class WebSession implements IHasForgeLog {
             openLobby(b, playing.invited(), null);
             if (event != null) {
                 lobby.events().playEvent(event, type, decksOnly);
-                lobby.relistDecks(b);
+                lobby.relistDecks(b, decks::inTurn);
             } else if (kept != null) {
                 lobby.restore(kept);
-                lobby.relistDecks(b);
+                lobby.relistDecks(b, decks::inTurn);
                 lobby.sendState(b);
             }
         } else if (move(from, new Menu())) {
