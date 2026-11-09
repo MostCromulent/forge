@@ -444,11 +444,11 @@ public class WebGuiGame extends NetworkGuiGame {
         if (forwarded != null) {
             events.add(forwarded);
         }
-        feedGameLog(event);
         final GameLog log = gv == null ? null : gv.getGameLog();
         if (log == null) {
             return;
         }
+        log.getEventVisitor().recieve(event);
         final ToBrowser.LogMessage entries = gameLog.added(log);
         if (entries != null) {
             send(entries);
