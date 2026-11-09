@@ -224,9 +224,10 @@ function runKey(command: KeyCommand): void {
     case 'cardText': changeUi(u => { u.cardText = !u.cardText; }); break;
     case 'startMatch': dimIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate)); break;
     case 'castWithoutCost':
-    case 'castWithCost': {
+    case 'castWithCost':
+    case 'cancelCast': {
       const req = oldestRequest(model);
-      if (req?.kind === 'costs') actions.answer(req.id, command === 'castWithCost' ? [0] : []);
+      if (req?.kind === 'costs') actions.answer(req.id, command === 'cancelCast' ? null : command === 'castWithCost' ? [0] : []);
       break;
     }
     case 'closeCardMenu': {

@@ -69,13 +69,13 @@ function PointMenu({ x, y, id, cls, label, title, dismiss, children }: {
   );
 }
 
-/** A spell's optional costs at the card click that cast it, which cannot be closed without an answer because the spell is already being cast. */
+/** A spell's optional costs at the card click that cast it, where Escape or a press outside cancels the cast. */
 function CostMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
   const [ticked, setTicked] = useState<number[]>([]);
   const at = ui.cardClickedAt ?? {};
   if (req.options.length === 1) {
     return (
-      <PointMenu {...at} cls="card-menu" label={req.message ?? ''} title={req.message}>
+      <PointMenu {...at} cls="card-menu" label={req.message ?? ''} title={req.message} dismiss={() => answer(null)}>
         <button type="button" role="menuitem" class="card-menu-item" onClick={() => answer([])}><kbd>1</kbd><span>{tCap('lblCast')}</span></button>
         <button type="button" role="menuitem" class="card-menu-item" onClick={() => answer([0])}><kbd>2</kbd><span><SymbolText text={req.options[0].label} /></span></button>
       </PointMenu>
@@ -83,7 +83,7 @@ function CostMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
   }
   const toggle = (i: number) => setTicked(ticked.includes(i) ? ticked.filter(n => n !== i) : [...ticked, i].sort((a, b) => a - b));
   return (
-    <PointMenu {...at} cls="card-menu" label={req.message ?? ''} title={req.message}>
+    <PointMenu {...at} cls="card-menu" label={req.message ?? ''} title={req.message} dismiss={() => answer(null)}>
       {req.options.map((o, i) => (
         <label key={i} class="card-menu-item">
           <input type="checkbox" checked={ticked.includes(i)} onChange={() => toggle(i)} />
