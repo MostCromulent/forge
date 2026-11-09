@@ -358,6 +358,8 @@ button.team-tab:hover, button.team-tab[aria-expanded="true"] { border-color: var
 .not-yet { background: var(--surface); border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line)); border-radius: 8px; padding: 10px 16px; max-width: 560px; margin-top: 12px; }
 .not-yet b { color: var(--danger); }
 .not-yet ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+/* A deck's faults can run over several lines, as startGame lists them */
+.not-yet li { white-space: pre-line; }
 .not-yet.warn { border-color: color-mix(in srgb, var(--accent-2) 55%, var(--line)); }
 .not-yet.warn b { color: var(--accent-2); }
 .not-yet .hint { margin: 8px 0 0; font-size: 12.5px; color: var(--faint); }
