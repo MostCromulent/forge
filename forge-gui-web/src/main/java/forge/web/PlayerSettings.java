@@ -39,10 +39,13 @@ public final class PlayerSettings {
     }
 
     public boolean getBoolean(final FPref pref) {
-        return Boolean.parseBoolean(get(pref));
+        return own == null ? FModel.getPreferences().getPrefBoolean(pref) : Boolean.parseBoolean(get(pref));
     }
 
     public int getInt(final FPref pref) {
+        if (own == null) {
+            return FModel.getPreferences().getPrefInt(pref);
+        }
         try {
             return Integer.parseInt(get(pref));
         } catch (final NumberFormatException e) {

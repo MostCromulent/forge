@@ -181,7 +181,7 @@ public final class WebService implements IHasForgeLog {
 
     /** Whether players on the internet connect through Cloudflare, with no change to the router. Kept between runs. */
     public boolean throughCloudflare() {
-        return Boolean.parseBoolean(FModel.getNetPreferences().getPref(FNetPref.WEB_CLOUDFLARE));
+        return FModel.getNetPreferences().getPrefBoolean(FNetPref.WEB_CLOUDFLARE);
     }
 
     /** Only one way in is open at a time, so choosing one closes the other. The port forwarding choice is kept for when Cloudflare is turned off. */
