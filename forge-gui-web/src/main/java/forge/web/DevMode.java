@@ -75,8 +75,8 @@ final class DevMode {
 
     /**
      * Desktop reads the state from a file on the machine running Forge. Here the browser sends the text. Placing cards fires
-     * no game event, and the cheat sends the board only to an input that is open, so the whole board is sent here too. It is
-     * sent from the game thread task that applies the state, because another task could run at the same time and send the old board.
+     * no game event, so the whole board is sent here. It is sent from the game thread task that applies the state, because
+     * another task could run at the same time and send the old board.
      */
     private static void setUp(final Game game, final IGuiGame gui, final IDevModeCheats cheat, final String text) {
         game.getAction().invoke(() -> {
