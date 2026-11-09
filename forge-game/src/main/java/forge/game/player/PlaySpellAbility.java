@@ -148,6 +148,10 @@ public class PlaySpellAbility {
         List<OptionalCostValue> list = GameActionUtil.getOptionalCostValues(choosen);
         if (!list.isEmpty()) {
             list = c.chooseOptionalCosts(choosen, list);
+            // The player cancelled the cast
+            if (list == null) {
+                return null;
+            }
         }
 
         return GameActionUtil.addOptionalCosts(choosen, list);
