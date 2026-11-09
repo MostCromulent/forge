@@ -396,7 +396,10 @@ public final class DeckCatalog {
         if (e == null || e.proxy() == null) {
             return;
         }
-        DeckPreferences.getPrefs(e.proxy()).setStarCount(on ? 1 : 0);
+        // The stars are a static map that each refresh reads under the same lock
+        synchronized (DECKS) {
+            DeckPreferences.getPrefs(e.proxy()).setStarCount(on ? 1 : 0);
+        }
     }
 
     /** What the panel shows about a deck next to its card list. The types use the editor's own headings, so the two agree. */
