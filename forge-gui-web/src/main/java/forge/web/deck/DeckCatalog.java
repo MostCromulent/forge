@@ -321,7 +321,7 @@ public final class DeckCatalog {
             }
             deck.setSleeveArtKey(imageKey);
             deck.setSleeveArtOffset(SleeveArt.clampOffset(offset));
-            rememberSleeveArt(imageKey, offset);
+            SleeveArt.remember(imageKey, offset);
             return e.proxy().saveDeck();
         }
     }
@@ -583,30 +583,6 @@ public final class DeckCatalog {
             out.add(new SavedSleeveArt(e.getKey(), e.getValue()));
         }
         return out;
-    }
-
-    public static void forgetSleeveArt(final String imageKey) {
-        final var prefs = FModel.getPreferences();
-        final FPref pref = FPref.UI_SLEEVE_ART_LIBRARY;
-        final Map<String, Integer> library = SleeveArt.parseLibrary(prefs.getPref(pref));
-        if (library.remove(imageKey) != null) {
-            prefs.setPref(pref, SleeveArt.formatLibrary(library));
-            prefs.save();
-        }
-    }
-
-    /** Saves a card-art sleeve with the ones desktop has saved, newest last. */
-    public static void rememberSleeveArt(final String imageKey, final int offset) {
-        if (imageKey == null || imageKey.isEmpty()) {
-            return;
-        }
-        final var prefs = FModel.getPreferences();
-        final FPref pref = FPref.UI_SLEEVE_ART_LIBRARY;
-        final Map<String, Integer> library = SleeveArt.parseLibrary(prefs.getPref(pref));
-        library.remove(imageKey);
-        library.put(imageKey, SleeveArt.clampOffset(offset));
-        prefs.setPref(pref, SleeveArt.formatLibrary(library));
-        prefs.save();
     }
 
     /** What a deck's summary says at any table. */

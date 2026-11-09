@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import forge.ai.PlayerControllerAi;
 import forge.game.Game;
 import forge.gamemodes.match.HostedMatch;
+import forge.util.SleeveArt;
 import forge.web.deck.DeckCatalog;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -405,7 +406,7 @@ public class GuestSeatTest extends SessionsTest {
     public void theHostTakesASavedSleeveAway() throws Exception {
         final TestBrowser host = hostAt("lobby");
         final String key = "Sleeve Removal Test Card";
-        DeckCatalog.rememberSleeveArt(key, 500);
+        SleeveArt.remember(key, 500);
         Assert.assertTrue(DeckCatalog.savedSleeveArt().stream().anyMatch(art -> art.key().equals(key)), "the sleeve was never saved");
         // The hello sent when the table opened never had this sleeve, so only a hello sent after the removal counts
         final int from = host.got.size();

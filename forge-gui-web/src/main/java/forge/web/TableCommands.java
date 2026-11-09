@@ -3,7 +3,6 @@ package forge.web;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.Localizer;
-import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckSession;
 import forge.web.limited.OfflineEvents;
 import forge.web.limited.OfflineLimited;
@@ -54,7 +53,7 @@ public final class TableCommands {
             .on(SleeveArt.class, atSetup((t, ch, a) -> t.lobby.setSleeveArt(a.index(), a.key(), a.offset())))
             // The saved sleeves belong to the host's own Forge profile, and their list is sent in the hello
             .on(ForgetSleeveArt.class, atSetup(host((t, ch, f) -> {
-                DeckCatalog.forgetSleeveArt(f.key());
+                forge.util.SleeveArt.forget(f.key());
                 ch.send(t.session.hello());
             })))
             .on(EventDecksOnly.class, atEvent((t, ch, d) -> {
