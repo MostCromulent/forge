@@ -141,7 +141,7 @@ public final class OfflineEvents {
             case Full -> BoosterDraft::createFullDraft;
             case Block, FantasyBlock -> {
                 final CardBlock block = d.block() == null ? null : block(d.block(), type == LimitedPoolType.FantasyBlock);
-                if (block == null || !isDraftableBlock(block)) {
+                if (block == null || !BoosterDraft.isDraftable(block, true)) {
                     throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsBlockNotDraftable"));
                 }
                 final List<String> sets = BoosterDraft.blockSets(block);
@@ -252,11 +252,6 @@ public final class OfflineEvents {
         return (fantasy ? FModel.getFantasyBlocks() : FModel.getBlocks()).get(name);
     }
 
-    /** Whether a block is offered for drafting. It must have draft packs and must not be Conspiracy, whose draft-time prompts only a local GUI can answer. */
-    private static boolean isDraftableBlock(final CardBlock block) {
-        return block.getCntBoostersDraft() > 0 && !block.getName().contains("Conspiracy");
-    }
-
     /** Throws IllegalArgumentException, with a message a player can read, when the cube can't be imported. */
     private static CustomLimited importCube(final String cubeId) {
         final CustomLimited imported;
@@ -275,10 +270,10 @@ public final class OfflineEvents {
     private static List<DraftBlockOption> draftBlocks(final IStorage<CardBlock> storage) {
         final List<DraftBlockOption> out = new ArrayList<>();
         for (final CardBlock b : storage) {
-            final List<String> sets = isDraftableBlock(b) ? BoosterDraft.blockSets(b) : List.of();
+            // Like a network draft, the web leaves out the blocks whose draft-time prompts only a local GUI can answer
+            final List<String> sets = BoosterDraft.isDraftable(b, true) ? BoosterDraft.blockSets(b) : List.of();
             if (!sets.isEmpty()) {
-                final List<String> combos = b.getCntBoostersDraft() == 3 && sets.size() > 1 && sets.size() < 4 ? BoosterDraft.getSetCombos(sets) : List.of();
-                out.add(new DraftBlockOption(b.getName(), b.getCntBoostersDraft(), sets, codes(b), combos, podSize(sets)));
+                out.add(new DraftBlockOption(b.getName(), b.getCntBoostersDraft(), sets, codes(b), BoosterDraft.presetCombos(b, sets), podSize(sets)));
             }
         }
         return out;

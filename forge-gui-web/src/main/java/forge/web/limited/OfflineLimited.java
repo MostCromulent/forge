@@ -306,7 +306,7 @@ public final class OfflineLimited implements IHasForgeLog {
 
     /** A drafted pool is a Commander Draft when its deck has desktop's tag or a commander. Desktop uses the same test. */
     private static GameType poolType(final GameType type, final Deck human) {
-        return type == GameType.Draft && (human.getTags().contains(OfflineDraft.COMMANDER_DRAFT) || human.has(DeckSection.Commander))
+        return type == GameType.Draft && (human.getTags().contains(BoosterDraft.COMMANDER_DRAFT_TAG) || human.has(DeckSection.Commander))
                 ? GameType.CommanderDraft : type;
     }
 
@@ -320,12 +320,10 @@ public final class OfflineLimited implements IHasForgeLog {
         final List<Deck> ai = group.getAiDecks();
         final Deck human = group.getHumanDeck();
         final GameType limitedType = poolType(event.type(), human);
-        if (FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
-            final String illegal = limitedType.getDeckFormat().getDeckConformanceProblem(human);
-            if (illegal != null) {
-                channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionYourDeck", illegal)));
-                return;
-            }
+        final String illegal = DeckCatalog.problem(human, limitedType, null);
+        if (illegal != null) {
+            channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionYourDeck", illegal)));
+            return;
         }
         if (play.games() == 1 || play.games() == 3 || play.games() == 5) {
             FModel.getPreferences().setPref(FPref.UI_MATCHES_PER_GAME, String.valueOf(play.games()));

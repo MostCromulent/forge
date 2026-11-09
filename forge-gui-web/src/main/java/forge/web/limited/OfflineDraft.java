@@ -41,7 +41,6 @@ public final class OfflineDraft implements Draft {
     /** Picks made from the current round's packs. This count gives the pick number, because pack sizes can differ within a round. */
     private int roundPicks;
     private final DraftView view = new DraftView();
-    static final String COMMANDER_DRAFT = "CommanderDraft";
 
     /** make builds the draft on the draft's thread, because importing a cube waits for a web site. dealt says the packs are already opened. fail receives the reason when the draft cannot start. */
     public OfflineDraft(final Supplier<BoosterDraft> make, final boolean dealt, final String playerName, final Consumer<DraftState> publish,
@@ -116,24 +115,7 @@ public final class OfflineDraft implements Draft {
 
     /** The finished draft, saved the way desktop saves it: the player's picks and each computer's deck, all under name. */
     CompletableFuture<DeckGroup> save(final String name) {
-        return CompletableFuture.supplyAsync(() -> {
-            final Deck[] computer = draft.getComputerDecks();
-            final LimitedPlayer[] players = draft.getOpposingPlayers();
-            for (int i = 0; i < computer.length; i++) {
-                computer[i].setDraftNotes(players[i].getSerializedDraftNotes());
-            }
-            final LimitedPlayer me = draft.getHumanPlayer();
-            final Deck human = new Deck(me.getDeck(), name);
-            human.setDraftNotes(me.getSerializedDraftNotes());
-            // Desktop gives the deck this tag. Both clients use it to recognise the pool later
-            if (draft.isCommanderDraft()) {
-                human.getTags().add(COMMANDER_DRAFT);
-            }
-            final DeckGroup group = new DeckGroup(name);
-            group.setHumanDeck(human);
-            group.addAiDecks(computer);
-            return group;
-        }, thread);
+        return CompletableFuture.supplyAsync(() -> draft.toDeckGroup(name), thread);
     }
 
     /** The commander that the drafted set gives every player, or null. Read it only after the draft is done, when no other code uses the draft. */
