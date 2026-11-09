@@ -119,22 +119,17 @@ public final class DeckCatalog {
         final int changers = r.getGamechangers().size();
         reason(reasons, clear, BracketReasonKind.gameChangers, text.getMessage("lblCommanderBracketGameChangers"),
                 text.getMessage("lblWebBracketBriefGameChangers", changers), r.getGamechangers(), r.getGamechangersBracket(),
-                text.getMessage(r.getGamechangersBracket() == 4 ? "lblCommanderBracketReasonGameChangersFour" : "lblCommanderBracketReasonGameChangersOne"));
+                r.getGamechangersReason());
         reason(reasons, clear, BracketReasonKind.massLandDenial, text.getMessage("lblCommanderBracketMassLandDenial"),
                 text.getMessage("lblCommanderBracketMassLandDenial"), r.getMassLandDenial(), r.getMassLandDenialBracket(),
-                text.getMessage("lblCommanderBracketReasonMassLandDenial"));
+                r.getMassLandDenialReason());
         final int turns = r.getExtraTurns().size();
         reason(reasons, clear, BracketReasonKind.extraTurns, text.getMessage("lblCommanderBracketExtraTurns"),
                 text.getMessage("lblWebBracketBriefExtraTurns", turns), r.getExtraTurns(), r.getExtraTurnsBracket(),
-                text.getMessage(switch (r.getExtraTurnsBracket()) {
-                    case 4 -> "lblCommanderBracketReasonExtraTurnsFour";
-                    case 3 -> "lblCommanderBracketReasonExtraTurnsThree";
-                    case 2 -> "lblCommanderBracketReasonExtraTurnsTwo";
-                    default -> "lblCommanderBracketReasonExtraTurnsFew";
-                }));
+                r.getExtraTurnsReason());
         reason(reasons, clear, BracketReasonKind.chainedExtraTurns, text.getMessage("lblCommanderBracketChainedExtraTurns"),
                 text.getMessage("lblCommanderBracketChainedExtraTurns"), r.getChainedExtraTurns(), r.getChainedExtraTurnsBracket(),
-                text.getMessage("lblCommanderBracketReasonChainedExtraTurn"));
+                r.getChainedExtraTurnsReason());
         final List<String> late = r.getLateGameCombos().stream().map(Object::toString).toList();
         final List<String> early = r.getEarlyGameCombos().stream().map(Object::toString).toList();
         final String combos = text.getMessage("lblCommanderBracketTwoCardCombos");
@@ -143,11 +138,11 @@ public final class DeckCatalog {
         }
         if (!late.isEmpty()) {
             reasons.add(new BracketReason(BracketReasonKind.lateCombos, combos + " · " + text.getMessage("lblCommanderBracketLateGame"),
-                    text.getMessage("lblWebBracketBriefLateCombo"), late, r.getLateGameCombosBracket(), text.getMessage("lblCommanderBracketReasonLateGameCombo")));
+                    text.getMessage("lblWebBracketBriefLateCombo"), late, r.getLateGameCombosBracket(), r.getLateGameCombosReason()));
         }
         if (!early.isEmpty()) {
             reasons.add(new BracketReason(BracketReasonKind.earlyCombos, combos + " · " + text.getMessage("lblCommanderBracketEarlyGame"),
-                    text.getMessage("lblWebBracketBriefEarlyCombo"), early, r.getEarlyGameCombosBracket(), text.getMessage("lblCommanderBracketReasonEarlyGameCombo")));
+                    text.getMessage("lblWebBracketBriefEarlyCombo"), early, r.getEarlyGameCombosBracket(), r.getEarlyGameCombosReason()));
         }
         reasons.sort(Comparator.comparingInt(BracketReason::raises).reversed());
         return new Bracket(r.getBracket(), reasons, clear);
