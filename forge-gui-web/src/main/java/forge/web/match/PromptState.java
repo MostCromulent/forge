@@ -20,6 +20,7 @@ import java.util.function.Consumer;
 
 /** The prompt shown to the browser. Both the dispatch thread and the host UI thread change it, so every change is made and sent under one lock. */
 final class PromptState {
+    // Every web seat runs in the host's process with the host's Localizer, so the engine's labels match these keys
     private static final Map<ButtonKind, String> KIND_KEYS = Map.of(ButtonKind.ok, "lblOK", ButtonKind.auto, "lblAuto",
             ButtonKind.endTurn, "lblEndTurn", ButtonKind.alphaStrike, "lblAlphaStrike", ButtonKind.callBack, "lblCallBack");
 

@@ -9,7 +9,6 @@ import forge.interfaces.IDevModeCheats;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.player.PlayerControllerHuman;
-import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.web.match.LocalGame;
 import forge.web.protocol.BrowserChannel;
@@ -21,7 +20,7 @@ import forge.web.protocol.ToBrowser.Notice;
 import java.util.Arrays;
 
 /** Runs the host's dev mode actions on the running game, such as making mana or setting up a board. Forge gives a netplay client no cheats. The host shares its process with the server, so only the host's own seat can cheat. */
-final class DevMode implements IHasForgeLog {
+final class DevMode {
     private DevMode() {
     }
 
@@ -68,35 +67,20 @@ final class DevMode implements IHasForgeLog {
             case winGame -> cheat.winGame();
             case riggedPlanarRoll -> cheat.riggedPlanarRoll();
             case planeswalkTo -> cheat.planeswalkTo();
-            case setupGameState -> setUp(own.getGame(), controller.getGui(), dev.text(), channel);
+            case setupGameState -> setUp(own.getGame(), controller.getGui(), cheat, dev.text());
             case dumpGameState -> dump(own.getGame(), channel);
         }
         channel.send(new DevState(controller.canPlayUnlimitedLands(), controller.mayLookAtAllCards()));
     }
 
-    // Desktop reads the state from a file on the machine running Forge. Here the browser sends the text
-    private static void setUp(final Game game, final IGuiGame gui, final String text, final BrowserChannel channel) {
-        if (game.getPhaseHandler().getPriorityPlayer() == null) {
-            channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDevStateNotSetUp"), Localizer.getInstance().getMessage("lblWebDevWaitPriority"), false));
-            return;
-        }
-        final GameState state = new GameState();
-        try {
-            state.parse(Arrays.asList((text == null ? "" : text).split("\\R")));
-        } catch (final RuntimeException e) {
-            netLog.warn(e, "Could not read a game state");
-            channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDevStateNotSetUp"), Localizer.getInstance().getMessage("lblWebDevUnreadableState"), true));
-            return;
-        }
+    /**
+     * Desktop reads the state from a file on the machine running Forge. Here the browser sends the text. Placing cards fires
+     * no game event, and the cheat sends the board only to an input that is open, so the whole board is sent here too. It is
+     * sent from the game thread task that applies the state, because another task could run at the same time and send the old board.
+     */
+    private static void setUp(final Game game, final IGuiGame gui, final IDevModeCheats cheat, final String text) {
         game.getAction().invoke(() -> {
-            try {
-                state.applyToGame(game);
-            } catch (final RuntimeException e) {
-                netLog.warn(e, "Could not apply a game state");
-                channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDevStateNotSetUp"), String.valueOf(e.getMessage()), true));
-                return;
-            }
-            // Placing cards fires no game event. Another task could run at the same time and send the old board, so this task sends it
+            cheat.setupGameState(Arrays.asList((text == null ? "" : text).split("\\R")));
             if (gui instanceof RemoteClientGuiGame remote) {
                 remote.updateGameView();
             }

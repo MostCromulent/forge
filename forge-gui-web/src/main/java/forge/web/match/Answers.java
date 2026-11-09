@@ -1,7 +1,6 @@
 package forge.web.match;
 
 import com.google.gson.JsonElement;
-import forge.game.card.CardView;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -77,14 +76,13 @@ final class Answers {
         return out;
     }
 
-    static int[] defaultCombatSplit(final List<CardView> blockers, final int damage, final boolean hasDefender) {
-        final int n = blockers.size() + (hasDefender ? 1 : 0);
+    /** Gives each blocker in turn the damage that kills it, given in {@code lethal}, and the rest to the last recipient. */
+    static int[] defaultCombatSplit(final List<Integer> lethal, final int damage, final boolean hasDefender) {
+        final int n = lethal.size() + (hasDefender ? 1 : 0);
         final int[] split = new int[n];
         int remaining = damage;
-        for (int i = 0; i < blockers.size() && remaining > 0; i++) {
-            final CardView blocker = blockers.get(i);
-            final int lethal = Math.max(0, blocker.getLethalDamage());
-            final int assigned = Math.min(remaining, lethal);
+        for (int i = 0; i < lethal.size() && remaining > 0; i++) {
+            final int assigned = Math.min(remaining, lethal.get(i));
             split[i] = assigned;
             remaining -= assigned;
         }

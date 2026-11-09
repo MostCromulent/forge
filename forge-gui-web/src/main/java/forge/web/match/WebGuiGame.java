@@ -151,20 +151,13 @@ public class WebGuiGame extends NetworkGuiGame {
     private final AtomicInteger skippedProperties = new AtomicInteger();
     // Netplay drops the trigger event of a click before it reaches the host. So the ability menu reads the click from here
     private final AtomicReference<BrowserClick> lastClick = new AtomicReference<>();
+    private final ShownZones zones = new ShownZones(this::send, this::isLocalPlayer);
     private final PromptState prompt = new PromptState(p -> {
-        flushZones();
+        zones.flush();
         send(p);
     });
     /** A number the browser gave that was not in the list offered. It is kept for the typed prompt that follows. */
     private Integer typedNumber;
-    // The dispatch thread shows and hides zones. The socket thread resends them to a reloading browser
-    private final Object zonesLock = new Object();
-    private final Map<String, ShownZone> shownZones = new LinkedHashMap<>();
-    /** Zones opened for the current choice and for the cards revealed with the current prompt. They close when those end. */
-    private final List<PlayerZoneUpdate> selectionZonesShown = new ArrayList<>();
-    private final List<PlayerZoneUpdate> revealZonesShown = new ArrayList<>();
-    /** Whether zones have closed since the browser was last told. The browser is told with the next prompt or question. */
-    private boolean zonesClosedUnsent;
     // Written on the dispatch thread. The socket thread resends it to a reloading browser
     private final WebGameLog gameLog;
     private final BrowserSounds sounds = new BrowserSounds(this::getCurrentPlayer);
@@ -237,10 +230,7 @@ public class WebGuiGame extends NetworkGuiGame {
                 channel.send(d);
             }
             prompt.sendTo(channel::send);
-            synchronized (zonesLock) {
-                zonesClosedUnsent = false;
-                channel.send(zonesMessage());
-            }
+            zones.sendTo(channel::send);
             channel.send(controlsMessage());
             channel.send(gameLog.all());
             requests.replay(channel::send);
@@ -452,11 +442,11 @@ public class WebGuiGame extends NetworkGuiGame {
         if (forwarded != null) {
             events.add(forwarded);
         }
+        feedGameLog(event);
         final GameLog log = gv == null ? null : gv.getGameLog();
         if (log == null) {
             return;
         }
-        log.getEventVisitor().recieve(event);
         final ToBrowser.LogMessage entries = gameLog.added(log);
         if (entries != null) {
             send(entries);
@@ -480,7 +470,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     /**
      * Finds each seated player's name in the engine's match summary ("Alice: 1 Bob: 0 "). A name that contains a colon or space is still read whole.
-     * The outcome event carries only this summary, and it is not translated, so this works in every language.
+     * The outcome event carries only this summary. It is not translated, and every web seat runs in the host's process, so the names match the views.
      */
     private List<MatchScore> matchScore(final String summary) {
         final GameView gv = getGameView();
@@ -641,12 +631,10 @@ public class WebGuiGame extends NetworkGuiGame {
         final Selection before = getSelection();
         super.setSelection(selection);
         if (!selection.cards().equals(before.cards()) || selection.max() != before.max()) {
-            synchronized (zonesLock) {
-                hideZones(selectionZonesShown);
-                selectionZonesShown.clear();
-                if (selection.max() > 0) {
-                    selectionZonesShown.addAll(showZones(getZonesHolding(selection.cards())));
-                }
+            if (selection.max() > 0) {
+                zones.showForSelection(getZonesHolding(selection.cards()));
+            } else {
+                zones.hideSelection();
             }
         }
         if (!selection.actionable().equals(before.actionable())) {
@@ -678,17 +666,12 @@ public class WebGuiGame extends NetworkGuiGame {
                 hands.add(new PlayerZoneUpdate(update.getPlayer(), ZoneType.Hand));
             }
         }
-        synchronized (zonesLock) {
-            revealZonesShown.addAll(showZones(hands));
-        }
+        zones.showRevealed(hands);
     }
 
     @Override
     public void hideRevealedCards() {
-        synchronized (zonesLock) {
-            hideZones(revealZonesShown);
-            revealZonesShown.clear();
-        }
+        zones.hideRevealed();
     }
 
     @Override
@@ -711,62 +694,6 @@ public class WebGuiGame extends NetworkGuiGame {
         send(new Notice(title, message, true));
     }
 
-    private Zones zonesMessage() {
-        return new Zones(List.copyOf(shownZones.values()));
-    }
-
-    private static String zoneKey(final PlayerView player, final ZoneType zone) {
-        return player.getId() + "/" + zone.name();
-    }
-
-    /** Call while holding zonesLock. Returns only the zones this call opened, so closing them leaves open the zones something else opened. */
-    private List<PlayerZoneUpdate> showZones(final Iterable<PlayerZoneUpdate> zones) {
-        final List<PlayerZoneUpdate> opened = new ArrayList<>();
-        for (final PlayerZoneUpdate update : zones) {
-            for (final ZoneType zone : update.getZones()) {
-                // The browser always shows the battlefield and the viewer's own hand
-                if (zone == ZoneType.Battlefield || (zone == ZoneType.Hand && isLocalPlayer(update.getPlayer()))) {
-                    continue;
-                }
-                final String key = zoneKey(update.getPlayer(), zone);
-                if (!shownZones.containsKey(key)) {
-                    shownZones.put(key, new ShownZone(Ref.player(update.getPlayer().getId()), zone));
-                    opened.add(new PlayerZoneUpdate(update.getPlayer(), zone));
-                }
-            }
-        }
-        if (!opened.isEmpty() || zonesClosedUnsent) {
-            zonesClosedUnsent = false;
-            send(zonesMessage());
-        }
-        return opened;
-    }
-
-    /**
-     * Closes zones that showZones opened. Call while holding zonesLock. The browser is told with the next prompt or question.
-     * So an effect that reopens the zone for its next step, as Telling Time does, never shows it closing and opening again.
-     */
-    private void hideZones(final List<PlayerZoneUpdate> zones) {
-        if (zones.isEmpty()) {
-            return;
-        }
-        for (final PlayerZoneUpdate update : zones) {
-            for (final ZoneType zone : update.getZones()) {
-                shownZones.remove(zoneKey(update.getPlayer(), zone));
-            }
-        }
-        zonesClosedUnsent = true;
-    }
-
-    private void flushZones() {
-        synchronized (zonesLock) {
-            if (zonesClosedUnsent) {
-                zonesClosedUnsent = false;
-                send(zonesMessage());
-            }
-        }
-    }
-
     @Override public void showCombat() { }
     @Override public void finishGame() { }
     @Override public void alertUser() { }
@@ -775,7 +702,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     // While the player decides, the mirror lock is released so browser actions and replies can still run
     private JsonElement ask(final Record request, final Predicate<JsonElement> valid) {
-        flushZones();
+        zones.flush();
         final int holds = mirrorLock.getHoldCount();
         for (int i = 0; i < holds; i++) {
             mirrorLock.unlock();
@@ -853,7 +780,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     /**
      * The player whose deck the AI will not play all of, as a reveal warns. Null for any other reveal. The host sends no owner,
-     * so the host's title is rebuilt for each player. It matches because host and client share one locale.
+     * so the host's title is rebuilt for each player. Every web seat runs in the host's process with the host's Localizer, so the text matches.
      */
     private PlayerView aiSkipsOwner(final String message) {
         final GameView gv = getGameView();
@@ -956,7 +883,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final int max = Math.max(min, items.size() - Math.max(remainingObjectsMin, 0));
         final List<Integer> preselected = destChoices == null || destChoices.isEmpty() ? IntStream.range(0, min).boxed().toList()
                 : IntStream.range(sourceChoices.size(), items.size()).boxed().toList();
-        // The engine labels a library, graveyard or planar deck order at its top, and the page labels the bottom
+        // The engine labels a library, graveyard or planar deck order at its top, and the page labels the bottom. Web seats share the host's Localizer
         final Localizer loc = Localizer.getInstance();
         final String bottom = loc.getMessage("lblClosestToTop").equals(top) ? loc.getMessage("lblClosestToBottom")
                 : loc.getMessage("lblClosestToBottom").equals(top) ? loc.getMessage("lblClosestToTop") : null;
@@ -1120,7 +1047,7 @@ public class WebGuiGame extends NetworkGuiGame {
         if (abilities.isEmpty()) {
             return null;
         }
-        // A single ability needs no question, unless the ability itself says to ask, as on desktop
+        // A single ability needs no question unless it says to ask. Unlike desktop, canPlay is not checked: a remembered click can come with an engine question, such as a trigger
         if (abilities.size() == 1 && (triggerEvent == null || !abilities.get(0).promptIfOnlyPossibleAbility())) {
             return abilities.get(0);
         }
@@ -1148,15 +1075,19 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         // Desktop's title: "Assign damage dealt by" the attacker
         final String title = Localizer.getInstance().getMessage("lbLAssignDamageDealtBy").replace("%s", attacker == null ? "" : attacker.getName());
+        // As on desktop, one damage from a deathtouch attacker is lethal
+        final boolean deathtouch = attacker != null && attacker.getCurrentState().hasDeathtouch();
         final List<Integer> lethal = new ArrayList<>();
         for (final CardView blocker : blockers) {
-            lethal.add(Math.max(0, blocker.getLethalDamage()));
+            final int toKill = Math.max(0, blocker.getLethalDamage());
+            lethal.add(deathtouch ? Math.min(toKill, 1) : toKill);
         }
+        final int[] split = Answers.defaultCombatSplit(lethal, damage, defender != null);
         if (defender != null) {
             lethal.add(0);
         }
         final DistributeRequest request = new DistributeRequest(title, damage, 0,
-                options(recipients, null), PromptState.cardRef(attacker), maySkip, Ints.asList(Answers.defaultCombatSplit(blockers, damage, defender != null)), lethal);
+                options(recipients, null), PromptState.cardRef(attacker), maySkip, Ints.asList(split), lethal);
         final JsonElement reply = ask(request, Answers.amounts(recipients.size(), damage, 0, maySkip));
         if (reply.isJsonNull()) {
             return null;
