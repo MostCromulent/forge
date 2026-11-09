@@ -67,9 +67,15 @@ public class ActiveClientTest {
             Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
 
             // The Temple's enter trigger scrys. Evolving Wilds searches the library
-            giveWebSeat(local.hostedMatch().getGame(), "Temple of Enlightenment", "Evolving Wilds", "Plains;Plains;Plains;Plains;Plains");
+            final Game game = local.hostedMatch().getGame();
+            giveWebSeat(game, "Temple of Enlightenment", "Evolving Wilds", "Plains;Plains;Plains;Plains;Plains");
             // Placing cards fires no game event. The host's resync sends them while the engine waits for this seat
             WebTestSupport.remoteGui(local.hostedMatch()).updateGameView();
+            // A released browser skips a card it does not have yet, and then passes priority
+            final int temple = cardKey(game, ZoneType.Hand, true, "Temple of Enlightenment", false);
+            final int wilds = cardKey(game, ZoneType.Battlefield, true, "Evolving Wilds", false);
+            SessionsTest.awaitTrue(() -> MatchProbe.objects(browser.model).keySet().containsAll(List.of(temple, wilds)),
+                    "the browser never got the cards");
             // Release one card at a time, so the Wilds activation cannot interleave with the Temple's trigger
             browser.release("Hand:Temple of Enlightenment");
             SessionsTest.awaitTrue(() -> asked(browser, "manipulate"), "no scry reached the browser");
