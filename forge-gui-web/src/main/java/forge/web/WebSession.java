@@ -658,6 +658,9 @@ public final class WebSession implements IHasForgeLog {
                 // Someone must be able to sit down, so the second seat is left open instead of filled
                 lobby.openSeat(1);
             }
+            if (limited == null) {
+                lobby.restoreSetup(invite);
+            }
         } catch (final RuntimeException e) {
             netLog.error(e, "Could not open the lobby");
             gui.close();

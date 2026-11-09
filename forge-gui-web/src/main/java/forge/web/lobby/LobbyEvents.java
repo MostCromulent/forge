@@ -124,6 +124,9 @@ public final class LobbyEvents {
             return Localizer.getInstance().getMessage("lblWebLobbyDraftStillOn");
         }
         lobby.clearCurrentEvent();
+        if (!Lobby.limited(lobby)) {
+            withoutFormat(lobby);
+        }
         lobby.setLimitedType(type);
         lobby.selectEventForMatch(eventId, decksOnly);
         return null;
@@ -203,14 +206,18 @@ public final class LobbyEvents {
             return Localizer.getInstance().getMessage("lblWebLobbyEventStartedSwitch");
         }
         final boolean sealed = kind == EventKind.sealed;
-        // An event is played without a format or casual variant, as desktop's Limited mode hides them
-        owner.setFormat(GameType.Constructed.name());
-        for (final GameType v : FormatChoices.VARIANTS) {
-            lobby.removeVariant(v);
-        }
+        withoutFormat(lobby);
         lobby.setLimitedType(sealed ? GameType.Sealed : GameType.Draft);
         lobby.createEvent(sealed ? EventFormat.SEALED : EventFormat.BOOSTER_DRAFT);
         return null;
+    }
+
+    /** An event is played without a format or casual variant, as desktop's Limited mode hides them. */
+    private void withoutFormat(final ServerGameLobby lobby) {
+        owner.applyFormat(GameType.Constructed);
+        for (final GameType v : FormatChoices.VARIANTS) {
+            lobby.removeVariant(v);
+        }
     }
 
     /** Returns the reason it cannot, or null. Building the product can wait for a web site, so this runs off the host UI thread. It then sets up the table on that thread. */

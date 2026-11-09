@@ -149,6 +149,7 @@ public final class Lobby {
         }
         final GameFormat pool = name == null ? null : FModel.getFormats().getFormat(name);
         lobby.setFormatChoice(pool == null ? GameType.Constructed : pool);
+        lobby.saveSetup();
     }
 
     /** Skips the send when this browser already has this exact list. The list is always rebuilt, because building it records what the lobby shows. */
@@ -462,10 +463,24 @@ public final class Lobby {
                 if (fixedPairs(lobby)) {
                     setPlayerCount(GIANT_SEATS, open);
                 }
+                lobby.saveSetup();
                 local.pushLobby();
                 return;
             }
         }
+    }
+
+    /** Opens a new table with the format, card pool and variants that the host last chose, here or in desktop Forge. */
+    public void restoreSetup(final boolean open) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null) {
+            return;
+        }
+        lobby.restoreSetup();
+        if (fixedPairs(lobby)) {
+            setPlayerCount(GIANT_SEATS, open);
+        }
+        local.pushLobby();
     }
 
     /** Whether seats can be put on teams. They cannot when a draft's pairings or the archenemy's role already decide the sides. */
@@ -768,20 +783,18 @@ public final class Lobby {
             final LobbySlot slot = lobby.getSlot(i);
             seats.add(new KeptSeat(slot.getType(), slot.getName(), slot.getAvatarIndex(), slot.getSleeveIndex(), slot.getTeam(), slot.getAiProfile()));
         }
-        final GameFormat pool = cardPool();
-        return new Kept(format(), pool == null ? null : pool.getName(), variantsOn(lobby), teams(lobby), seats,
-                Map.copyOf(choices));
+        return new Kept(teams(lobby), seats, Map.copyOf(choices));
     }
 
-    /** Sets up a new table the same way as a kept one. A seat that a person held is left open for them to take again, with whatever deck they bring. */
+    /**
+     * Sets up a new table's seats the same way as a kept one. Its format and variants come from {@link #restoreSetup}. A seat that a person
+     * held is left open for them to take again, with whatever deck they bring.
+     */
     public void restore(final Kept kept) {
         final ServerGameLobby lobby = host();
         if (lobby == null) {
             return;
         }
-        setFormat(kept.format().name());
-        setCardPool(kept.cardPool());
-        kept.variants().forEach(v -> setVariant(v, true, false));
         setPlayerCount(kept.seats().size(), false);
         // The archenemy's role sets the teams by itself
         final boolean teamed = kept.teams() > 0 && !lobby.hasVariant(GameType.Archenemy);
@@ -837,25 +850,30 @@ public final class Lobby {
         return pool == null ? null : pool.getName();
     }
 
-    /** The format belongs to the game, so only the host sets it. */
+    /** The format belongs to the game, so only the host sets it. The choice is saved for the next table, as desktop saves it. */
     public void setFormat(final String id) {
         final ServerGameLobby lobby = host();
-        if (lobby == null) {
-            return;
-        }
         for (final GameType wanted : LobbyFormats.FORMATS) {
-            if (!wanted.name().equals(id) || wanted == format()) {
-                continue;
+            if (lobby != null && wanted.name().equals(id)) {
+                applyFormat(wanted);
+                lobby.saveSetup();
+                return;
             }
-            // Decks are cleared before the variants change. That change is announced at once, and the seats are then dealt their new decks
-            choices.replaceAll((i, c) -> c.withDeckKey(null).withComposed(null));
-            for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
-                lobby.getSlot(i).setDeck(null);
-            }
-            lobby.setFormatChoice(wanted);
-            local.pushLobby();
+        }
+    }
+
+    void applyFormat(final GameType wanted) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null || wanted == format()) {
             return;
         }
+        // Decks are cleared before the variants change. That change is announced at once, and the seats are then dealt their new decks
+        choices.replaceAll((i, c) -> c.withDeckKey(null).withComposed(null));
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            lobby.getSlot(i).setDeck(null);
+        }
+        lobby.setFormatChoice(wanted);
+        local.pushLobby();
     }
 
     static boolean limited(final GameLobby lobby) {
@@ -1202,8 +1220,8 @@ public final class Lobby {
         FModel.getPreferences().save();
     }
 
-    /** A table as its host set it up. It is kept across a match, so the next table opens with the same settings. */
-    public record Kept(GameType format, String cardPool, List<String> variants, int teams, List<KeptSeat> seats, Map<Integer, SeatChoice> choices) { }
+    /** A table's seats as its host set them up. They are kept across a match, so the next table opens with the same seats and decks. */
+    public record Kept(int teams, List<KeptSeat> seats, Map<Integer, SeatChoice> choices) { }
 
     private record KeptSeat(LobbySlotType type, String name, int avatar, int sleeve, int team, String aiProfile) { }
 
