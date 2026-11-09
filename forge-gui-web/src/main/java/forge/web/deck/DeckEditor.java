@@ -65,6 +65,8 @@ public final class DeckEditor {
     private String landed;
     /** The edition new basic lands come from, or null for the usual printing. */
     private String landSet;
+    /** False for a new deck until its commander or the player names it. */
+    private boolean named = true;
 
     /** The name a new deck starts with, until its commander or the player names it. */
     static String newDeckName() {
@@ -109,6 +111,11 @@ public final class DeckEditor {
     /** Whether this is a Commander Draft pool. Its commander comes from the pool, or from the few that every player may use without drafting them. */
     private boolean commanderDraft() {
         return !check.unrestricted() && check.deckFormat() == DeckFormat.CommanderDraft;
+    }
+
+    /** Marks a new deck, whose name is a placeholder that its first commander replaces. */
+    void unnamed() {
+        named = false;
     }
 
     void setFreeCommander(final String name) {
@@ -315,7 +322,7 @@ public final class DeckEditor {
                 source.remove(card, 1);
             }
             placeCommander(card, commanders);
-            if (newDeckName().equals(deck.getName())) {
+            if (!named) {
                 nameAfterCommander();
             }
         });
@@ -418,6 +425,7 @@ public final class DeckEditor {
                 return Localizer.getInstance().getMessage("lblWebEditorNameTaken", existing);
             }
         }
+        named = true;
         return change(null, () -> renameTo(name));
     }
 
@@ -671,6 +679,7 @@ public final class DeckEditor {
     }
 
     private void nameAfterCommander() {
+        named = true;
         final String wanted = Localizer.getInstance().getMessage("lblWebImportCommanderDeck", deck.getCommanders().get(0).getName());
         if (target instanceof Stored s) {
             renameTo(DeckStore.freeName(s.storage(), wanted, owned));

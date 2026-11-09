@@ -199,6 +199,9 @@ public final class DeckSession implements IHasForgeLog {
             target = targetOf(o.key(), editorPath, check);
         }
         editor = new DeckEditor(deck, readOnly, o.key() != null, target, check, storages, guest, this::sendDeviceDeck, null);
+        if (o.newFormat() != null) {
+            editor.unnamed();
+        }
         eventPool = false;
         editorSeat = o.seat();
         editorTable = lobby.table();
