@@ -768,6 +768,9 @@ public class WebGuiGame extends NetworkGuiGame {
             ask(skipper == null ? shown : shown.warningOf(Ref.player(skipper.getId())), v -> true);
             return new ArrayList<>();
         }
+        if (asksOptionalCosts(message)) {
+            return askCosts(message, choices);
+        }
         final int need = Math.min(Math.max(min, 0), choices.size());
         // Choices the host labels, such as stickers offered by their place in a list, are read as labels, not as numbers
         final List<T> number = max == 1 && display == null ? askNumber(message, need == 0, choices) : null;
@@ -866,6 +869,17 @@ public class WebGuiGame extends NetworkGuiGame {
                 at == null ? null : at.x(), at == null ? null : at.y(), onDefault, null);
     }
 
+    /** Whether the host is asking for a spell's optional costs, told by its title because every web seat uses the host's Localizer. */
+    private static boolean asksOptionalCosts(final String title) {
+        return Localizer.getInstance().getMessage("lblChooseOptionalCosts").equals(title);
+    }
+
+    /** Asks for any of a spell's optional costs, where none is an answer because the spell is already being cast. */
+    private <T> List<T> askCosts(final String message, final List<T> costs) {
+        final ChoicesRequest request = choicesRequest(ChoiceKind.costs, message, 0, costs.size(), costs, null, null, null, null, List.of());
+        return Answers.pick(costs, ask(request, Answers.indexList(costs.size(), 0, costs.size())));
+    }
+
     /** Asks the browser to pick from a list. {@code onDefault} is the answer used when the browser cannot answer. */
     private <T> List<T> askChoices(final String message, final int min, final int max, final List<T> items,
             final List<T> selected, final FSerializableFunction<T, String> display, final List<Integer> onDefault) {
@@ -876,6 +890,10 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public <T> OrderResult<T> order(final String title, final String top, final int remainingObjectsMin, final int remainingObjectsMax, final List<T> sourceChoices, final List<T> destChoices, final CardView referenceCard, final boolean sideboardingMode, final boolean showRememberCheckbox) {
+        // The host asks for two or more optional costs as an order with no order to choose
+        if (asksOptionalCosts(title) && (destChoices == null || destChoices.isEmpty())) {
+            return new OrderResult<>(askCosts(title, sourceChoices), false);
+        }
         final List<T> items = new ArrayList<>(sourceChoices);
         if (destChoices != null) {
             items.addAll(destChoices);

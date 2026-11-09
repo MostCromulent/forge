@@ -6,7 +6,7 @@ import type { UiState } from './ui';
 export type KeyCommand =
   | 'closeOptions' | 'closeConcede' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closeZones' | 'closePicker' | 'declineHostChoice'
   | 'ok' | 'cancel' | 'nextFace' | 'cardText' | 'startMatch'
-  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'confirmRequest' | 'foldRequest' | 'unfoldRequest' | 'editorUndo' | 'closeImporter' | 'closeBrowse'
+  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'castWithoutCost' | 'castWithCost' | 'closeReveal' | 'confirmRequest' | 'foldRequest' | 'unfoldRequest' | 'editorUndo' | 'closeImporter' | 'closeBrowse'
   | ShortcutCommand;
 
 /** What each of Forge's shortcut preferences does on the web. Alpha strike is a prompt button, so it is handled with the prompt's keys. */
@@ -190,6 +190,10 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
     return /^[1-9]$/.test(key) && Number(key) <= menu.options.length ? `pickCardMenu${key as Digit}` : null;
   }
   const request = oldestRequest(model);
+  // Optional costs cannot be declined, so Escape does nothing, and a single cost's two items take 1 and 2
+  if (request?.kind === 'costs') {
+    return request.options.length !== 1 ? null : key === '1' ? 'castWithoutCost' : key === '2' ? 'castWithCost' : null;
+  }
   if (request?.kind === 'reveal' && (escape || ok)) {
     return 'closeReveal';
   }

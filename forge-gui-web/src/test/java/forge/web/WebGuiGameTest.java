@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import forge.gamemodes.net.ProtocolMethod;
 import forge.gui.interfaces.IGuiGame;
+import forge.util.Localizer;
 import forge.web.match.WebGuiGame;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -43,6 +44,31 @@ public class WebGuiGameTest {
         choice.add(2);
         TestBrowser.command(gui, TestBrowser.reply(request.get("id").getAsInt(), choice));
         Assert.assertEquals(picked.get(60, TimeUnit.SECONDS), List.of("c"));
+    }
+
+    @Test
+    public void oneOptionalCostIsAskedAsACostMenu() throws Exception {
+        final String title = Localizer.getInstance().getMessage("lblChooseOptionalCosts");
+        final CompletableFuture<List<String>> picked = CompletableFuture.supplyAsync(
+                () -> gui.getChoices(title, 0, 1, List.of("Flash"), null, null));
+        final JsonObject request = browser.awaitNewest("request", "no request reached the browser");
+        Assert.assertEquals(request.get("kind").getAsString(), "costs");
+        TestBrowser.command(gui, TestBrowser.reply(request.get("id").getAsInt(), new JsonArray()));
+        Assert.assertEquals(picked.get(60, TimeUnit.SECONDS), List.of());
+    }
+
+    @Test
+    public void severalOptionalCostsAreAskedAsACostMenuNotAnOrder() throws Exception {
+        final String title = Localizer.getInstance().getMessage("lblChooseOptionalCosts");
+        final CompletableFuture<IGuiGame.OrderResult<String>> picked = CompletableFuture.supplyAsync(
+                () -> gui.order(title, "Optional Costs", 0, 2, List.of("Kicker", "Flash"), List.of(), null, false, false));
+        final JsonObject request = browser.awaitNewest("request", "no request reached the browser");
+        Assert.assertEquals(request.get("kind").getAsString(), "costs");
+        Assert.assertEquals(request.get("max").getAsInt(), 2);
+        final JsonArray choice = new JsonArray();
+        choice.add(1);
+        TestBrowser.command(gui, TestBrowser.reply(request.get("id").getAsInt(), choice));
+        Assert.assertEquals(picked.get(60, TimeUnit.SECONDS).ordered(), List.of("Flash"));
     }
 
     @Test

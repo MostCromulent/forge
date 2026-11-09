@@ -71,6 +71,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
     }
     notePick(key);
     foldStack();
+    ui.cardClickedAt = e ? { x: e.clientX, y: e.clientY } : null;
     actions.selectCard(key, menu, e?.clientX ?? 0, e?.clientY ?? 0);
     if (!menu && el.closest('#me .group.creatures')) {
       const box = el.getBoundingClientRect();

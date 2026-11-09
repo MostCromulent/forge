@@ -13,7 +13,7 @@ import { zoneTitle } from './zones';
 import { changeUi, ui } from '../ui';
 import { ICONS, MenuIcon } from '../icons';
 import type { ChoicesRequest, DistributeRequest, NumberRequest, OptionRequest, Request, RequestOption, CardView, PlayerView, StackItemView, TextRequest, YieldAction } from '../protocol';
-import { t, tNodes } from '../text';
+import { t, tCap, tNodes } from '../text';
 import { isPortrait } from '../form';
 import { cutFor } from './stickers';
 import { Backdrop } from '../dialog';
@@ -30,6 +30,9 @@ export function Requests({ model, actions }: { model: Model; actions: Actions })
   if (cardMenu(model) === req) {
     return <CardMenu key={req.id} req={req as ChoicesRequest} answer={value => actions.answer(req.id, value)} />;
   }
+  if (req.kind === 'costs') {
+    return <CostMenu key={req.id} req={req} answer={value => actions.answer(req.id, value)} />;
+  }
   // Cards shown with no question about them use the zone window, as when the player looks through a pile
   if (req.kind === 'reveal' && !req.atX && !req.atY) {
     return <RevealWindow key={req.id} model={model} title={req.message ?? ''} cards={req.options} close={() => actions.answer(req.id, [])}
@@ -39,25 +42,56 @@ export function Requests({ model, actions }: { model: Model; actions: Actions })
   return <RequestDialog key={req.id} req={req} model={model} answer={value => actions.answer(req.id, value)} />;
 }
 
-/** A menu at the pointer. A press or a right-click anywhere else closes it with nothing chosen. A phone draws it along the bottom edge (portrait.css). */
+/**
+ * A menu at the pointer, or in the middle of the window with no pointer position. A press or a right-click anywhere else closes it with nothing chosen,
+ * unless it has no dismiss. A phone draws it along the bottom edge (portrait.css).
+ */
 function PointMenu({ x, y, id, cls, label, title, dismiss, children }: {
-  x: number; y: number; id?: string; cls: string; label: string; title?: string | null; dismiss: () => void; children: ComponentChildren;
+  x?: number; y?: number; id?: string; cls: string; label: string; title?: string | null; dismiss?: () => void; children: ComponentChildren;
 }) {
   const menu = useRef<HTMLDivElement>(null);
-  const [at, setAt] = useState({ x, y });
+  const [at, setAt] = useState({ x: x ?? 0, y: y ?? 0 });
   // Opens down and right from the pointer, but moves back inside the window if it would go past the edge
   useLayoutEffect(() => {
     const el = menu.current;
     if (!el) return;
-    setAt({ x: Math.max(8, Math.min(x, window.innerWidth - el.offsetWidth - 8)), y: Math.max(8, Math.min(y, window.innerHeight - el.offsetHeight - 8)) });
+    const left = x ?? (window.innerWidth - el.offsetWidth) / 2;
+    const top = y ?? (window.innerHeight - el.offsetHeight) / 2;
+    setAt({ x: Math.max(8, Math.min(left, window.innerWidth - el.offsetWidth - 8)), y: Math.max(8, Math.min(top, window.innerHeight - el.offsetHeight - 8)) });
   }, [x, y]);
   return (
-    <Backdrop cls="anchored" dismiss={dismiss} onContextMenu={e => { e.preventDefault(); dismiss(); }}>
+    <Backdrop cls="anchored" dismiss={dismiss} onContextMenu={e => { e.preventDefault(); dismiss?.(); }}>
       <div ref={menu} id={id} class={cls} role="menu" aria-label={label} style={{ left: `${at.x}px`, top: `${at.y}px` }}>
         {title && <p class="card-menu-title">{title}</p>}
         {children}
       </div>
     </Backdrop>
+  );
+}
+
+/** A spell's optional costs at the card click that cast it, which cannot be closed without an answer because the spell is already being cast. */
+function CostMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
+  const [ticked, setTicked] = useState<number[]>([]);
+  const at = ui.cardClickedAt ?? {};
+  if (req.options.length === 1) {
+    return (
+      <PointMenu {...at} cls="card-menu" label={req.message ?? ''} title={req.message}>
+        <button type="button" role="menuitem" class="card-menu-item" onClick={() => answer([])}><kbd>1</kbd><span>{tCap('lblCast')}</span></button>
+        <button type="button" role="menuitem" class="card-menu-item" onClick={() => answer([0])}><kbd>2</kbd><span><SymbolText text={req.options[0].label} /></span></button>
+      </PointMenu>
+    );
+  }
+  const toggle = (i: number) => setTicked(ticked.includes(i) ? ticked.filter(n => n !== i) : [...ticked, i].sort((a, b) => a - b));
+  return (
+    <PointMenu {...at} cls="card-menu" label={req.message ?? ''} title={req.message}>
+      {req.options.map((o, i) => (
+        <label key={i} class="card-menu-item">
+          <input type="checkbox" checked={ticked.includes(i)} onChange={() => toggle(i)} />
+          <span><SymbolText text={o.label} /></span>
+        </label>
+      ))}
+      <div class="card-menu-actions"><button type="button" class="primary" onClick={() => answer(ticked)}>{tCap('lblCast')}</button></div>
+    </PointMenu>
   );
 }
 

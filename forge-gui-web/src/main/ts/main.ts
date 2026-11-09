@@ -223,6 +223,12 @@ function runKey(command: KeyCommand): void {
     case 'nextFace': nextFace(model); break;
     case 'cardText': changeUi(u => { u.cardText = !u.cardText; }); break;
     case 'startMatch': dimIntoMatch(byId('lobby'), () => actions.startMatch(ui.spectate)); break;
+    case 'castWithoutCost':
+    case 'castWithCost': {
+      const req = oldestRequest(model);
+      if (req?.kind === 'costs') actions.answer(req.id, command === 'castWithCost' ? [0] : []);
+      break;
+    }
     case 'closeCardMenu': {
       const menu = cardMenu(model);
       if (menu) actions.answer(menu.id, []);

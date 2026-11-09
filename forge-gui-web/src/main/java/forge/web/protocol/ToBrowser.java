@@ -562,7 +562,8 @@ public final class ToBrowser {
             @Nullable Ref player, @Nullable Ref source, @Nullable String symbol) {
     }
 
-    public enum ChoiceKind { choices, reveal }
+    /** costs asks for a spell's optional costs, which have no way to decline. */
+    public enum ChoiceKind { choices, reveal, costs }
 
     /**
      * A reveal only shows the list. stackKeys is set when every option is a spell on the stack, so the player picks it on the stack.

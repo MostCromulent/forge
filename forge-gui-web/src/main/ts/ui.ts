@@ -26,6 +26,8 @@ export interface UiState {
   zonesMinimised: boolean;
   /** The id of the request collapsed to a bar so the board is visible. It is still open. */
   requestFolded: number | null;
+  /** Where the player last clicked a card, where a spell's optional costs then open. */
+  cardClickedAt: { x: number; y: number } | null;
   /** Filters the open zone to cards whose name contains this text, in lower case. */
   zoneSearch: string;
   zoneSort: ZoneSort;
@@ -88,6 +90,7 @@ export const ui: UiState = {
   openZones: new Set(),
   zonesMinimised: false,
   requestFolded: null,
+  cardClickedAt: null,
   zoneSearch: '',
   zoneSort: 'order',
   zoneChoice: null,
@@ -196,6 +199,7 @@ export function resetMatchUi(): void {
   ui.openZones.clear();
   ui.zonesMinimised = false;
   ui.requestFolded = null;
+  ui.cardClickedAt = null;
   ui.zoneSearch = '';
   ui.zoneSort = 'order';
   ui.zoneChoice = null;

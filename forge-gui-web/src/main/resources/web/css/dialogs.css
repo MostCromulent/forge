@@ -385,6 +385,10 @@ html:not([data-form="portrait"]) .game-menu.dev { overflow: visible; }
 .game-menu .card-menu-item { align-items: center; }
 .game-menu .card-menu-item:nth-of-type(even):not(:hover, :focus-visible, .on) { background: none; }
 .card-menu-sep { height: 1px; margin: 5px 4px; background: var(--line); }
+/* A spell's optional costs are ticked in the menu, then cast with its button (match/dialogs.tsx CostMenu) */
+.card-menu-item:has(> input[type="checkbox"]) { align-items: center; cursor: pointer; }
+.card-menu-item > input[type="checkbox"] { margin: 0; accent-color: var(--accent-2); }
+.card-menu-actions { display: flex; justify-content: flex-end; padding: 8px 4px 2px; }
 .menu-icon { flex: none; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; color: var(--muted); }
 .menu-icon.end { margin-left: auto; color: var(--faint); }
 .game-menu .concede { color: var(--concede); }
