@@ -40,7 +40,7 @@ public abstract class ImageFetcher {
     }
 
     private HashMap<String, HashSet<Callback>> currentFetches = new HashMap<>();
-    /** Counts callbacks added to currentFetches, so a fetch can tell that it started no download. */
+    /** Counts callbacks added to currentFetches, so a fetch can tell that it queued no callback. */
     private int queued;
 
     private String getScryfallDownloadURL(PaperCard c, String face, boolean useArtCrop, boolean hasSetLookup, String imagePath, ArrayList<String> downloadUrls) {
@@ -498,7 +498,7 @@ public abstract class ImageFetcher {
 
     protected abstract Runnable getDownloadTask(String[] toArray, String destPath, Runnable notifyObservers);
 
-    /** For a download task whose every address failed. The path stays in the fetched set, so it is not tried again this run. */
+    /** For a download task whose every address failed. The path stays in fetching, so it is not tried again this run. */
     protected void downloadFailed(final String destPath) {
         FThreads.invokeInEdtLater(() -> {
             final HashSet<Callback> observers = currentFetches.remove(destPath);
@@ -514,7 +514,7 @@ public abstract class ImageFetcher {
     public interface Callback {
         void onImageFetched();
 
-        /** Called instead of onImageFetched when no picture will arrive for this request. */
+        /** Called instead of onImageFetched when the request queues no callback, or when a download task reports failure through downloadFailed. */
         default void onNoImageFetched() {
         }
     }

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.function.Predicate;
 
 public class ColorDeckGenerator extends DeckProxy implements Comparable<ColorDeckGenerator> {
-    /** The choices the generator offers, as DeckgenUtil.colorCheck reads them. */
+    /** The choices the generator offers, by the names DeckgenUtil.buildColorDeck reads. */
     public static final List<String> COLOR_NAMES = List.of("Random 1", "Random 2", "Random 3",
             "White", "Blue", "Black", "Red", "Green");
 

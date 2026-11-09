@@ -553,8 +553,8 @@ public abstract class GameLobby implements IHasGameType {
 
     /**
      * Everything that stops the match before a player is built, in the order startGame meets them: too few players or teams, a seat that
-     * is not ready or has no deck, then a Vanguard seat with no avatar. deckOf gives the deck each seat, by index, will play, which a
-     * screen may hold before the slot does.
+     * is not ready or has no deck, then a Vanguard seat with no avatar. deckOf gives the deck that the seat at each
+     * index will play, which a screen can hold before the slot does.
      */
     public List<String> startProblems(final IntFunction<Deck> deckOf) {
         final Localizer localizer = Localizer.getInstance();
@@ -596,7 +596,8 @@ public abstract class GameLobby implements IHasGameType {
 
     /**
      * The decks that break their format's rules, which startGame lets the player ignore. They are listed whether or not deck legality
-     * is enforced. The format checks skip a seat with no deck, because startProblems reports it. deckOf is as for startProblems.
+     * is enforced. The deck format, card pool and commander checks skip a seat with no deck, because
+     * startProblems reports it. deckOf is as for startProblems.
      */
     public List<String> legalityProblems(final IntFunction<Deck> deckOf) {
         final List<String> legalityProblems = new ArrayList<>();

@@ -56,7 +56,7 @@ public class BoosterDraft implements IBoosterDraft {
     private int nextId = 0;
     public static final int N_PLAYERS = 8;
     public static final String FILE_EXT = ".draft";
-    /** The tag a Commander draft's deck carries, by which its pool is recognised later. */
+    /** Marks the human deck of a Commander draft, so the deck editor and match setup treat it as one. */
     public static final String COMMANDER_DRAFT_TAG = "CommanderDraft";
 
     int podSize;
@@ -286,7 +286,7 @@ public class BoosterDraft implements IBoosterDraft {
         return sets;
     }
 
-    /** Whether a block can be drafted. A network draft leaves out Conspiracy, whose draft-time prompts only a local GUI can answer. */
+    /** Whether a block can be drafted. A network draft leaves out Conspiracy blocks, for the reasons in the TODO in generateProduct. */
     public static boolean isDraftable(final CardBlock block, final boolean forNetwork) {
         return block.getCntBoostersDraft() > 0 && !(forNetwork && block.getName().contains("Conspiracy"));
     }
@@ -747,7 +747,7 @@ public class BoosterDraft implements IBoosterDraft {
         return this.localPlayer;
     }
 
-    /** The finished draft saved under name: the human's deck and each computer's deck, with their draft notes. */
+    /** Builds the finished draft as a deck group called name. Every deck carries its player's draft notes. */
     public DeckGroup toDeckGroup(final String name) {
         final Deck[] computer = getComputerDecks();
         final LimitedPlayer[] opponents = getOpposingPlayers();

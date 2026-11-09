@@ -339,7 +339,7 @@ public class DeckProxy implements InventoryItem {
         return highestRarity;
     }
 
-    /** The card whose art stands for the deck: its first commander, else its most expensive card. */
+    /** The card whose art stands for the deck: its first commander, else its card with the highest mana value. */
     public PaperCard getCoverCard() {
         return getDeck().getCommanders().isEmpty() ? getHighestCMCCard() : getDeck().getCommanders().get(0);
     }
