@@ -59,7 +59,7 @@ public class LegalityTest {
         final Deck d = new Deck("t");
         d.getMain().add(card("Sol Ring"), 2);
         d.getMain().add(card("Forest"), 98);
-        Assert.assertEquals(DeckCatalog.problem(d, GameType.Constructed, FModel.getFormats().get("Canadian Highlander")),
+        Assert.assertEquals(DeckFacts.problem(d, GameType.Constructed, FModel.getFormats().get("Canadian Highlander")),
                 "Not legal in Canadian Highlander. The deck contains more copies than allowed of the following cards: Sol Ring");
     }
 }

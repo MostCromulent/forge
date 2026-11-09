@@ -1,19 +1,15 @@
 package forge.web.deck;
 
-import com.google.common.collect.MapMaker;
-import com.google.common.primitives.Ints;
 import forge.StaticData;
 import forge.card.CardEdition;
 import forge.card.MagicColor;
 import forge.deck.ArchetypeDeckGenerator;
 import forge.deck.CardPool;
 import forge.deck.ColorDeckGenerator;
-import forge.deck.CommanderBracketCalculator;
 import forge.deck.CommanderDeckGenerator;
 import forge.deck.Deck;
 import forge.deck.DeckProxy;
 import forge.deck.DeckSection;
-import forge.deck.DeckStatistics;
 import forge.deck.DeckUrlLoader;
 import forge.deck.DeckgenUtil;
 import forge.deck.NetDeckCategory;
@@ -21,7 +17,6 @@ import forge.deck.io.DeckPreferences;
 import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.gamemodes.quest.QuestController;
-import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
@@ -29,24 +24,15 @@ import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.SleeveArt;
 import forge.web.protocol.FromBrowser.DeckQueryKind;
-import forge.web.protocol.ToBrowser.Bracket;
-import forge.web.protocol.ToBrowser.BracketReason;
-import forge.web.protocol.ToBrowser.BracketReasonKind;
 import forge.web.protocol.ToBrowser.DeckDetails;
-import forge.web.protocol.ToBrowser.DeckStats;
 import forge.web.protocol.ToBrowser.DeckSummary;
 import forge.web.protocol.ToBrowser.SavedSleeveArt;
-import forge.web.protocol.ToBrowser.TypeCount;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** The decks a seat may choose from, and what the browser shows about each one. */
@@ -67,11 +53,6 @@ public final class DeckCatalog {
             "Random 1", "lblWebDeckCatalogRandomOne", "Random 2", "lblWebDeckCatalogRandomTwo", "Random 3", "lblWebDeckCatalogRandomThree");
     /** The finder lists a deck's cards without problem marks. The verdict line states the problems. */
     public static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), null);
-    /** Kept per deck object, not per contents, because working out a deck's formats reads every printing of its cards. */
-    private static final Map<Deck, Facts> FACTS = new MapMaker().weakKeys().makeMap();
-    private static final Map<Deck, Map<String, Optional<String>>> VERDICTS = new MapMaker().weakKeys().makeMap();
-    /** A Commander deck's bracket, cached the same way. It is worked out only for decks listed in Commander. */
-    private static final Map<Deck, Integer> BRACKETS = new MapMaker().weakKeys().makeMap();
     /** Held while any code reads or changes a deck. A deck loads its sections on first read, and that is not safe from two threads. */
     public static final Object DECKS = new Object();
 
@@ -88,89 +69,6 @@ public final class DeckCatalog {
         Entry(final DeckProxy proxy) {
             this(proxy, false, null);
         }
-    }
-
-    /** The sanctioned formats among those a deck is legal in, in the sanctioned list's order. */
-    private static List<String> legalIn(final Set<GameFormat> formats) {
-        final List<String> out = new ArrayList<>();
-        for (final GameFormat f : FModel.getFormats().getSanctionedList()) {
-            if (formats.contains(f)) {
-                out.add(f.getName());
-            }
-        }
-        return out;
-    }
-
-    static void changed(final Deck deck) {
-        FACTS.remove(deck);
-        VERDICTS.remove(deck);
-        BRACKETS.remove(deck);
-    }
-
-    /** A deck's suggested minimum Commander bracket, 1 to 4. */
-    public static int bracketOf(final Deck deck) {
-        return BRACKETS.computeIfAbsent(deck, CommanderBracketCalculator::getBracket);
-    }
-
-    /** The bracket and every kind of card that raised it, for the panel next to the list. */
-    public static Bracket bracket(final Deck deck) {
-        final CommanderBracketCalculator.Result r = CommanderBracketCalculator.calculate(deck);
-        final Localizer text = Localizer.getInstance();
-        final List<BracketReason> reasons = new ArrayList<>();
-        final List<String> clear = new ArrayList<>();
-        final int changers = r.getGamechangers().size();
-        reason(reasons, clear, BracketReasonKind.gameChangers, text.getMessage("lblCommanderBracketGameChangers"),
-                text.getMessage("lblWebBracketBriefGameChangers", changers), r.getGamechangers(), r.getGamechangersBracket(),
-                r.getGamechangersReason());
-        reason(reasons, clear, BracketReasonKind.massLandDenial, text.getMessage("lblCommanderBracketMassLandDenial"),
-                text.getMessage("lblCommanderBracketMassLandDenial"), r.getMassLandDenial(), r.getMassLandDenialBracket(),
-                r.getMassLandDenialReason());
-        final int turns = r.getExtraTurns().size();
-        reason(reasons, clear, BracketReasonKind.extraTurns, text.getMessage("lblCommanderBracketExtraTurns"),
-                text.getMessage("lblWebBracketBriefExtraTurns", turns), r.getExtraTurns(), r.getExtraTurnsBracket(),
-                r.getExtraTurnsReason());
-        reason(reasons, clear, BracketReasonKind.chainedExtraTurns, text.getMessage("lblCommanderBracketChainedExtraTurns"),
-                text.getMessage("lblCommanderBracketChainedExtraTurns"), r.getChainedExtraTurns(), r.getChainedExtraTurnsBracket(),
-                r.getChainedExtraTurnsReason());
-        final List<String> late = r.getLateGameCombos().stream().map(Object::toString).toList();
-        final List<String> early = r.getEarlyGameCombos().stream().map(Object::toString).toList();
-        final String combos = text.getMessage("lblCommanderBracketTwoCardCombos");
-        if (late.isEmpty() && early.isEmpty()) {
-            clear.add(combos);
-        }
-        if (!late.isEmpty()) {
-            reasons.add(new BracketReason(BracketReasonKind.lateCombos, combos + " · " + text.getMessage("lblCommanderBracketLateGame"),
-                    text.getMessage("lblWebBracketBriefLateCombo"), late, r.getLateGameCombosBracket(), r.getLateGameCombosReason()));
-        }
-        if (!early.isEmpty()) {
-            reasons.add(new BracketReason(BracketReasonKind.earlyCombos, combos + " · " + text.getMessage("lblCommanderBracketEarlyGame"),
-                    text.getMessage("lblWebBracketBriefEarlyCombo"), early, r.getEarlyGameCombosBracket(), r.getEarlyGameCombosReason()));
-        }
-        reasons.sort(Comparator.comparingInt(BracketReason::raises).reversed());
-        return new Bracket(r.getBracket(), reasons, clear);
-    }
-
-    private static void reason(final List<BracketReason> reasons, final List<String> clear, final BracketReasonKind kind, final String title,
-            final String brief, final List<String> cards, final int raises, final String why) {
-        if (cards.isEmpty()) {
-            clear.add(title);
-        } else {
-            reasons.add(new BracketReason(kind, title, brief, cards, raises, why));
-        }
-    }
-
-    private static Facts factsOf(final Deck deck, final DeckProxy proxy) {
-        return FACTS.computeIfAbsent(deck, d -> new Facts(colors(d), played(d), count(d.get(DeckSection.Sideboard)),
-                legalIn(proxy != null ? proxy.getFormats() : FModel.getFormats().getAllFormatsOfDeck(d)),
-                proxy == null ? null : proxy.getFormatsString(), d.getAverageCMC()));
-    }
-
-    /** The same verdict as problem, cached for each deck until it is saved. */
-    public static String problemAt(final Deck deck, final GameType format, final GameFormat pool) {
-        final String table = format.name() + "|" + (pool == null ? "" : pool.getName()) + "|"
-                + Legality.enforced();
-        return VERDICTS.computeIfAbsent(deck, d -> new ConcurrentHashMap<>())
-                .computeIfAbsent(table, t -> Optional.ofNullable(problem(deck, format, pool))).orElse(null);
     }
 
     /** Asks core for a net deck category. Core picks one through the browser and downloads it. */
@@ -330,22 +228,12 @@ public final class DeckCatalog {
             if (deck == null) {
                 return null;
             }
-            return new DeckDetails(key, deck.getName(), problem(deck, format, pool), colors(deck), stats(deck),
+            return new DeckDetails(key, deck.getName(), DeckFacts.problem(deck, format, pool), DeckFacts.colors(deck), DeckFacts.stats(deck),
                     CardCatalog.groups(deck.getMain(), NO_FLAGS), CardCatalog.cards(deck.get(DeckSection.Sideboard), NO_FLAGS),
                     deck.getSleeveArtKey(),
                     deck.getSleeveArtOffset(),
-                    format == GameType.Commander ? bracket(deck) : null, aiSkipNames(deck), cover(deck));
+                    format == GameType.Commander ? DeckFacts.bracket(deck) : null, DeckFacts.aiSkipNames(deck), DeckFacts.cover(deck));
         }
-    }
-
-    /** The card whose art heads a deck: its sleeve art, else its commander, else its most expensive card, as mobile Forge picks a deck's cover. */
-    static String cover(final Deck deck) {
-        // A deck with no sleeve art has an empty key
-        if (deck.getSleeveArtKey() != null && !deck.getSleeveArtKey().isEmpty()) {
-            return deck.getSleeveArtKey();
-        }
-        final PaperCard card = new DeckProxy(deck, null, null, null).getCoverCard();
-        return card == null ? null : card.getImageKey(false);
     }
 
     /** The keys of listed decks that hold a matching card. A card matches by name outside or inside the sideboard, or by set code or set name. */
@@ -385,11 +273,6 @@ public final class DeckCatalog {
                 : editions.stream().filter(e -> e.getName().equalsIgnoreCase(codeOrName)).findFirst().orElse(null);
     }
 
-    /** The deck's colour identity as WUBRG letters, or "C" when it has none. */
-    public static String colors(final Deck deck) {
-        return CardCatalog.letters(DeckProxy.getColorIdentity(deck));
-    }
-
     /** Stars a listed deck the way desktop does, in the deck preferences that both clients read. */
     public void setFavourite(final String key, final boolean on) {
         final Entry e = key == null ? null : byKey.get(key);
@@ -400,23 +283,6 @@ public final class DeckCatalog {
         synchronized (DECKS) {
             DeckPreferences.getPrefs(e.proxy()).setStarCount(on ? 1 : 0);
         }
-    }
-
-    /** What the panel shows about a deck next to its card list. The types use the editor's own headings, so the two agree. */
-    public static DeckStats stats(final Deck deck) {
-        final CardPool main = deck.get(DeckSection.Main);
-        final DeckStatistics shared = DeckStatistics.fromDeck(deck);
-        final int[] curve = new int[DeckStatistics.CURVE_BUCKETS];
-        for (int i = 0; i < curve.length; i++) {
-            curve[i] = shared.permanentCurve[i] + shared.spellCurve[i];
-        }
-        final Map<String, Integer> types = new LinkedHashMap<>();
-        if (main != null) {
-            main.forEach(e -> types.merge(CardCatalog.heading(e.getKey()), e.getValue(), Integer::sum));
-        }
-        return new DeckStats(played(deck), count(main), count(deck.get(DeckSection.Sideboard)), shared.landCount,
-                Math.round(shared.averageCmc * 100) / 100f, Ints.asList(curve), Ints.asList(shared.spellCurve),
-                types.entrySet().stream().map(e -> new TypeCount(e.getKey(), e.getValue())).toList(), Ints.asList(shared.pips));
     }
 
     /** Generators are listed by name only. Building a deck to fill each row would build hundreds of decks. */
@@ -478,36 +344,26 @@ public final class DeckCatalog {
             final String key = tag + ":" + proxy.getPath() + "/" + proxy.getName();
             byKey.put(key, new Entry(proxy));
             final Deck deck = proxy.getDeck();
-            final Facts facts = factsOf(deck, proxy);
+            final DeckFacts.Facts facts = DeckFacts.factsOf(deck, proxy);
             // An illegal deck is listed with its problem, and the finder's legal-only filter decides whether it is shown
             final boolean linked = LINKED.equals(tag);
             out.add(new DeckSummary(key, proxy.getName(), tag, facts.colors(), null, null, facts.played(),
-                    facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), facts.formats(),
+                    facts.sideboard(), DeckFacts.problemAt(deck, format, pool), facts.legalIn(), facts.formats(),
                     deck.getSleeveArtKey(), deck.getSleeveArtOffset(), readOnly(key, guest),
                     linked ? site(deck.getSourceUrl()) : null, linked ? deck.getSourceUrl() : null,
-                    linked ? linkedFile(deck).lastModified() : null, format == GameType.Commander ? bracketOf(deck) : null, facts.averageMana(),
-                    proxy.isFavoriteDeck() ? true : null, aiSkips(deck)));
+                    linked ? linkedFile(deck).lastModified() : null, format == GameType.Commander ? DeckFacts.bracketOf(deck) : null, facts.averageMana(),
+                    proxy.isFavoriteDeck() ? true : null, DeckFacts.aiSkips(deck)));
         }
     }
 
     private void addDevice(final List<DeckSummary> out, final GameType format, final String id, final Deck deck) {
         final String key = DEVICE + ":" + id;
         byKey.put(key, new Entry(null, false, deck));
-        final Facts facts = factsOf(deck, null);
+        final DeckFacts.Facts facts = DeckFacts.factsOf(deck, null);
         out.add(new DeckSummary(key, deck.getName(), DEVICE, facts.colors(), null, null, facts.played(),
-                facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), null,
-                deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null, format == GameType.Commander ? bracketOf(deck) : null,
-                facts.averageMana(), null, aiSkips(deck)));
-    }
-
-    private static List<String> aiSkipNames(final Deck deck) {
-        final List<? extends PaperCard> skipped = deck.getUnplayableAICards().unplayable.get(DeckSection.Main);
-        return skipped == null ? null : skipped.stream().map(PaperCard::getName).distinct().toList();
-    }
-
-    private static Integer aiSkips(final Deck deck) {
-        final int skipped = deck.getUnplayableAICards().inMainDeck;
-        return skipped == 0 ? null : skipped;
+                facts.sideboard(), DeckFacts.problemAt(deck, format, pool), facts.legalIn(), null,
+                deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null, format == GameType.Commander ? DeckFacts.bracketOf(deck) : null,
+                facts.averageMana(), null, DeckFacts.aiSkips(deck)));
     }
 
     /** The decks loaded from links that belong to this format. A deck uses the format it records, or Commander when it has a commander. */
@@ -544,28 +400,6 @@ public final class DeckCatalog {
         return new File(ForgeConstants.DECK_BASE_DIR + "URL" + ForgeConstants.PATH_SEPARATOR + deck.getBestFileName() + ".dck");
     }
 
-    /** Why this deck cannot be played here, or null when it can. A chosen card pool is checked even with deck legality checks off. */
-    public static String problem(final Deck deck, final GameType format, final GameFormat pool) {
-        if (deck == null) {
-            return Localizer.getInstance().getMessage("lblWebDeckCatalogNoDeck");
-        }
-        final String outOfPool = pool == null ? null : pool.getDeckConformanceProblem(deck);
-        if (outOfPool != null) {
-            // Core lists the cards on separate lines
-            return Localizer.getInstance().getMessage("lblNotLegalInFormat", pool.getName(), outOfPool.replaceFirst("\n+", " ").replace("\n", ", "));
-        }
-        return Legality.enforced() ? format.getDeckFormat().getDeckConformanceProblem(deck) : null;
-    }
-
-    /** The cards a deck plays with: its main deck and its commanders. A Commander deck's 100 cards include both. */
-    public static int played(final Deck deck) {
-        return count(deck.get(DeckSection.Main)) + count(deck.get(DeckSection.Commander));
-    }
-
-    private static int count(final CardPool pool) {
-        return pool == null ? 0 : pool.countAll();
-    }
-
     /** The card-art sleeves already saved, shared with the desktop client. */
     public static List<SavedSleeveArt> savedSleeveArt() {
         final List<SavedSleeveArt> out = new ArrayList<>();
@@ -575,10 +409,6 @@ public final class DeckCatalog {
             out.add(new SavedSleeveArt(e.getKey(), e.getValue()));
         }
         return out;
-    }
-
-    /** What a deck's summary says at any table. */
-    private record Facts(String colors, int played, int sideboard, List<String> legalIn, String formats, int averageMana) {
     }
 
     /** A deck that a guest stores in its browser, and the format it was built for. */

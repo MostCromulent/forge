@@ -194,7 +194,7 @@ public final class DeckImport {
         final List<PaperCard> commanders = Legality.commanders(deck, check);
         final CardPool commanderSection = deck.get(DeckSection.Commander);
         final CardPool sideboard = deck.get(DeckSection.Sideboard);
-        final String colours = commanders.isEmpty() ? DeckCatalog.colors(deck) : Legality.identityLetters(commanders);
+        final String colours = commanders.isEmpty() ? DeckFacts.colors(deck) : Legality.identityLetters(commanders);
         final ImportSummary summary = new ImportSummary(
                 deck.getMain().countAll() + (commanderSection == null ? 0 : commanderSection.countAll()),
                 sideboard == null ? 0 : sideboard.countAll(), read.notImported(),

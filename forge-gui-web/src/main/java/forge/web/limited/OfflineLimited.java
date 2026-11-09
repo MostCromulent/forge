@@ -24,6 +24,7 @@ import forge.web.WebSession.Event;
 import forge.web.WebSession.Playing;
 import forge.web.WebSession.Stage;
 import forge.web.deck.DeckCatalog;
+import forge.web.deck.DeckFacts;
 import forge.web.deck.DeckSession;
 import forge.web.deck.DeckStore;
 import forge.web.lobby.Lobby;
@@ -320,7 +321,7 @@ public final class OfflineLimited implements IHasForgeLog {
         final List<Deck> ai = group.getAiDecks();
         final Deck human = group.getHumanDeck();
         final GameType limitedType = poolType(event.type(), human);
-        final String illegal = DeckCatalog.problem(human, limitedType, null);
+        final String illegal = DeckFacts.problem(human, limitedType, null);
         if (illegal != null) {
             channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionYourDeck", illegal)));
             return;

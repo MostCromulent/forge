@@ -556,7 +556,7 @@ public final class DeckEditor {
                 CardCatalog.cards(deck.get(DeckSection.Commander), legality), df.hasCommander(), wanted, df.getMaxCardCopies() == Integer.MAX_VALUE ? null : df.getMaxCardCopies(),
                 Legality.identityLetters(leaders),
                 CardCatalog.groups(deck.getMain(), legality), CardCatalog.cards(deck.get(DeckSection.Sideboard), legality), lands(),
-                DeckCatalog.stats(deck), legality.verdict(), !undo.isEmpty(), landed,
+                DeckFacts.stats(deck), legality.verdict(), !undo.isEmpty(), landed,
                 limited(), landSet, limited() ? LandSets.ALL : collection == null ? List.of()
                         : collection.landSets().apply(deck).stream().map(e -> new LandSet(e.getCode(), e.getName())).toList(),
                 collection == null ? null : collection.owner(), collection != null && collection.mainOnly(), sections(legality));
@@ -625,7 +625,7 @@ public final class DeckEditor {
                 }
                 storage.add(deck);
                 // Storage keeps this same deck object, which is still being edited, so the list's cached facts about it are out of date
-                DeckCatalog.changed(deck);
+                DeckFacts.changed(deck);
                 owned = deck.getName();
             }
             saved = true;

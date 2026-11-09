@@ -62,7 +62,7 @@ final class Legality {
                 flags.put(card.getName(), problem);
             }
         }
-        return new Result(flags, check.unrestricted() ? null : DeckCatalog.problem(deck, check.format(), check.pool()));
+        return new Result(flags, check.unrestricted() ? null : DeckFacts.problem(deck, check.format(), check.pool()));
     }
 
     /** Why a card cannot go in this deck, or null: the card pool, the format or the commander's colours. Counts are not checked. */

@@ -33,6 +33,7 @@ import forge.model.FModel;
 import forge.util.Localizer;
 import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
+import forge.web.deck.DeckFacts;
 import forge.web.deck.DeckEditor;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.*;
@@ -418,7 +419,7 @@ public final class ConquestGame implements Campaign {
     static DeckDetails deckDetails(final ConquestCommander commander) {
         final Deck deck = commander.getDeck();
         return new DeckDetails("conquest:" + commander.getName(), commander.getName(), commander.getDeckProblem(),
-                CardCatalog.wubrg(commander.getCard().getRules().getColorIdentity()), DeckCatalog.stats(deck),
+                CardCatalog.wubrg(commander.getCard().getRules().getColorIdentity()), DeckFacts.stats(deck),
                 CardCatalog.groups(deck.getMain(), DeckCatalog.NO_FLAGS), List.of(), null, 0, null);
     }
 

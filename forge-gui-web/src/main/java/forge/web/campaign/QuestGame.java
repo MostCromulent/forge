@@ -48,6 +48,7 @@ import forge.util.Localizer;
 import forge.util.storage.IStorage;
 import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
+import forge.web.deck.DeckFacts;
 import forge.web.deck.DeckEditor;
 import forge.web.deck.DeckStore;
 import forge.web.protocol.BrowserChannel;
@@ -276,7 +277,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         final List<QuestDeckRow> rows = new ArrayList<>();
         for (final Deck deck : quest().getMyDecks()) {
             final CardPool side = deck.get(DeckSection.Sideboard);
-            rows.add(new QuestDeckRow(deck.getName(), face(deck), DeckCatalog.colors(deck), deck.getMain().countAll(), side == null ? 0 : side.countAll(),
+            rows.add(new QuestDeckRow(deck.getName(), face(deck), DeckFacts.colors(deck), deck.getMain().countAll(), side == null ? 0 : side.countAll(),
                     QuestUtil.getDeckConformanceProblemsBeforeGame(deck), deck.getName().equals(current)));
         }
         rows.sort(Comparator.comparing(QuestDeckRow::name, String.CASE_INSENSITIVE_ORDER));
@@ -327,7 +328,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
             // The random opponent is a surprise, so none of its deck is shown
             final boolean random = !duel.showDifficulty();
             rows.add(new QuestDuelRow(i, duel.getTitle(), random ? 0 : duel.getDifficulty().ordinal() + 1, duel.getDescription(),
-                    random ? "" : DeckCatalog.colors(duel.getEventDeck()), random ? null : face(duel.getEventDeck()), random));
+                    random ? "" : DeckFacts.colors(duel.getEventDeck()), random ? null : face(duel.getEventDeck()), random));
         }
         final QuestAchievements record = quest.getAchievements();
         final boolean fantasy = quest.getMode() == QuestMode.Fantasy;
@@ -1008,7 +1009,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
             case questDeckCurrent -> quest().setCurrentDeck(deck.getName());
             case questDeckView -> {
                 channel.send(new DeckDetailsMessage(new DeckDetails("quest:" + deck.getName(), deck.getName(),
-                        QuestUtil.getDeckConformanceProblemsBeforeGame(deck), DeckCatalog.colors(deck), DeckCatalog.stats(deck),
+                        QuestUtil.getDeckConformanceProblemsBeforeGame(deck), DeckFacts.colors(deck), DeckFacts.stats(deck),
                         CardCatalog.groups(deck.getMain(), DeckCatalog.NO_FLAGS), CardCatalog.cards(deck.get(DeckSection.Sideboard), DeckCatalog.NO_FLAGS),
                         null, 0, null)));
                 return;
