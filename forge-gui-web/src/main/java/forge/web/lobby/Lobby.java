@@ -200,16 +200,14 @@ public final class Lobby {
         final boolean newRules;
         synchronized (DeckCatalog.DECKS) {
             final GameType format = format();
-            final GameFormat cardPool = cardPool();
-            final String poolName = cardPool == null ? null : cardPool.getName();
             // A deck key names a deck in one format's lists, so it means nothing in another format
             if (seenFormat != null && format != seenFormat) {
                 deckKeys.clear();
             }
-            newPool = format == seenFormat && !Objects.equals(poolName, seenCardPool);
-            newRules = format != seenFormat || !rules().equals(seenRules);
+            newPool = format == seenFormat && newCardPool();
+            newRules = format != seenFormat || newRules();
             seenFormat = format;
-            seenCardPool = poolName;
+            seenCardPool = cardPoolName();
             seenRules = rules();
         }
         // Any thread may ask for the list, but the table changes it implies are made only on the host UI thread
@@ -829,10 +827,21 @@ public final class Lobby {
     /** True when the format, card pool or rules differ from those the last deck list was built for. */
     public boolean restrictionsChanged() {
         synchronized (DeckCatalog.DECKS) {
-            final GameFormat cardPool = cardPool();
-            return format() != seenFormat || !Objects.equals(cardPool == null ? null : cardPool.getName(), seenCardPool)
-                    || !rules().equals(seenRules);
+            return format() != seenFormat || newCardPool() || newRules();
         }
+    }
+
+    private boolean newCardPool() {
+        return !Objects.equals(cardPoolName(), seenCardPool);
+    }
+
+    private boolean newRules() {
+        return !rules().equals(seenRules);
+    }
+
+    private String cardPoolName() {
+        final GameFormat pool = cardPool();
+        return pool == null ? null : pool.getName();
     }
 
     /** The format belongs to the game, so only the host sets it. */
