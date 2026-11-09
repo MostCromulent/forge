@@ -519,6 +519,8 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-ae-face { position: relative; display: block; padding: 0; border: 0; background: none; border-radius: 12px; animation: cq-ae-grow .82s .08s cubic-bezier(.4,0,.2,1) both; }
 /* The turn is on its own element, because the fade-in on the button would flatten it and show the face through the back */
 .cq-ae-turn { display: block; transform-style: preserve-3d; animation: inherit; animation-name: cq-ae-turn; }
+/* Both faces share the preview, because the pointer can rest on the back while the card turns */
+.cq-ae-faces { display: block; transform-style: preserve-3d; }
 .cq-ae-box.from-orb .cq-ae-face { animation-delay: 0s; }
 .cq-ae-face img, .cq-ae-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .cq-ae-back { position: absolute; inset: 0; border-radius: 12px; box-shadow: 0 16px 44px #000c; }

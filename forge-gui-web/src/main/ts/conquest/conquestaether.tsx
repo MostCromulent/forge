@@ -60,7 +60,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
                   : <span class="cq-ae-orb cq-ae-ghost"><img alt="" src={skinIconUrl('IMG_MULTIVERSE')} /></span>}
                 <i class="rise" />
                 <button class="cq-ae-face" onClick={e => { toCollection(e.currentTarget.querySelector('img')!); setSent(card); }}>
-                  <span class="cq-ae-turn"><span class="cq-ae-back" /><img alt={card.name} src={imageUrl(card.image)} data-image={card.image} /></span>
+                  <span class="cq-ae-turn"><span class="cq-ae-faces" data-image={card.image}><span class="cq-ae-back" /><img alt={card.name} src={imageUrl(card.image)} /></span></span>
                 </button>
               </div>
               <div key={`name${turn.current.count}`} class="what"><span class="new-card">{t('lblNew')}</span><b>{card.name}</b></div>
