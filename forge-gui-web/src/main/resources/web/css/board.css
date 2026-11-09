@@ -1053,7 +1053,7 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 .charge::after { inset: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -14 64 54'><filter id='b' filterUnits='userSpaceOnUse' x='-12' y='-14' width='64' height='54'><feGaussianBlur stdDeviation='5'/></filter><g transform='translate(6 13) scale(.7)' opacity='.55'><path d='M2 19L20 2L38 19L20 8Z' fill='%23ff2a14' opacity='.6' filter='url(%23b)'/><path d='M2 19L20 2L38 19L20 8Z' fill='%23e8321f' stroke='%23ff5a3c' stroke-width='.6'/><path d='M6 18.3L20 3.7L34 18.3L20 6.2Z' fill='%23fff4ee'/></g><path d='M2 19L20 2L38 19L20 8Z' fill='%23ff2a14' opacity='.6' filter='url(%23b)'/><path d='M2 19L20 2L38 19L20 8Z' fill='%23e8321f' stroke='%23ff5a3c' stroke-width='.6'/><path d='M6 18.3L20 3.7L34 18.3L20 6.2Z' fill='%23fff4ee'/></svg>") center / contain no-repeat; }
 @keyframes charge-breathe { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
 html[data-motion="reduced"] .charge::before { animation: none; }
-.slot.charging > .card.attacking { outline: none; }
+.slot.charging > .card.attacking:not(.playable) { outline: none; }
 /* While attackers or blockers are declared, your creatures can be dragged. So a touch on one drags it instead of scrolling. */
 #match:is(.declaring-blocks, .declaring-attacks) #me .battlefield .card { touch-action: none; }
 body.dragging-block, body.dragging-block * { cursor: grabbing !important; }
