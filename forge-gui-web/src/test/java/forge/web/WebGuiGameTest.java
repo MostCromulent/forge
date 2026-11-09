@@ -27,7 +27,7 @@ public class WebGuiGameTest {
 
     @BeforeMethod
     public void setUp() {
-        gui = new WebGuiGame();
+        gui = new WebGuiGame(PlayerSettings.saved());
         browser = new TestBrowser();
         gui.attach(browser);
     }

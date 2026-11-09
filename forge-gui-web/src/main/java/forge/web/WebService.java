@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.function.Consumer;
 
-/** The web server, in a form the console can stop and start again. The tokens are kept across a restart, so old links still work. */
+/** The web server, in a form the console can stop and start again. The link token is kept across a restart, so old links still work. */
 public final class WebService implements IHasForgeLog {
     /** Set at launch for a server that should keep running after its browsers leave, such as one with no window to turn the option off in. */
     public static final boolean KEEP_OPEN = Boolean.getBoolean("forge.web.keepOpen");
@@ -71,7 +71,7 @@ public final class WebService implements IHasForgeLog {
         fresh.quitWhenEmpty(quitWhenEmpty);
         sessions = fresh;
         server = bound;
-        // The address carries the host's token. netLog also writes this line to the network log file
+        // The address carries the link token. netLog also writes this line to the network log file
         netLog.info("Forge web UI: {}", bound.url());
         netLog.info("The web server has started on port {}.", bound.port());
         if (throughCloudflare()) {

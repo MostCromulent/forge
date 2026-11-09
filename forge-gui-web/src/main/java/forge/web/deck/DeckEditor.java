@@ -896,7 +896,7 @@ public final class DeckEditor {
         if (leaders.isEmpty()) {
             return true;
         }
-        final ColorSet identity = Legality.identity(leaders);
+        final ColorSet identity = CommanderDraftUtil.getCommanderColorIdentity(leaders);
         final MagicColor.Color needs = BASICS.get(land);
         return needs == MagicColor.Color.COLORLESS ? identity.isColorless() : identity.hasAnyColor(needs.getColorMask());
     }

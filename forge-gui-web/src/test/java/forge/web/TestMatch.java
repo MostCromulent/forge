@@ -26,7 +26,7 @@ final class TestMatch {
     static <B extends BrowserChannel> void play(final Deck web, final Deck computer, final Function<WebGuiGame, B> browserFor,
             final Body<B> body) throws Exception {
         final LocalGame local = new LocalGame();
-        final WebGuiGame gui = new WebGuiGame();
+        final WebGuiGame gui = new WebGuiGame(PlayerSettings.saved());
         final B browser = browserFor.apply(gui);
         try {
             gui.attach(browser);

@@ -86,7 +86,7 @@ public class LoopbackGameTest {
                     "no land made its sound");
 
             // A second match reuses the running loopback host
-            final WebGuiGame second = new WebGuiGame();
+            final WebGuiGame second = new WebGuiGame(PlayerSettings.saved());
             final TestBrowser secondBrowser = new TestBrowser(second, true);
             second.attach(secondBrowser);
             SessionsTest.onUi(() -> MatchProbe.startMatch(local, islands, bears, second));

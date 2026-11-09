@@ -181,11 +181,6 @@ public class WebGuiGame extends NetworkGuiGame {
         onGameOver = listener;
     }
 
-    /** A GUI for the host's own seat. Its settings are Forge's preferences. */
-    public WebGuiGame() {
-        this(PlayerSettings.saved());
-    }
-
     public WebGuiGame(final PlayerSettings settings) {
         this.settings = settings;
         this.gameLog = new WebGameLog(this::mayView, settings);

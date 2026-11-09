@@ -421,14 +421,11 @@ public final class WebSession implements IHasForgeLog {
         final Record command = Wire.decode(msg);
         if (command == null) {
             netLog.warn("Unknown browser message {}", LogSafe.forLog(msg.toString(), 200));
-        } else if (COMMANDS.run(this, channel, command)) {
+        } else if (COMMANDS.run(this, channel, command) || TableCommands.COMMANDS.run(table, channel, command)
+                || OfflineLimited.COMMANDS.run(limited, channel, command)) {
             return;
-        } else if (TableCommands.COMMANDS.handles(command)) {
-            table.onCommand(channel, command);
         } else if (DeckSession.COMMANDS.handles(command)) {
             deckCommand(channel, command);
-        } else if (OfflineLimited.COMMANDS.handles(command)) {
-            limited.onCommand(channel, command);
         } else if (WebGuiGame.COMMANDS.handles(command)) {
             if (stage instanceof Playing p) {
                 p.gui().onCommand(channel, command);
@@ -450,7 +447,7 @@ public final class WebSession implements IHasForgeLog {
             if (closing) {
                 channel.send(OfflineEvents.pools());
             }
-            decks.onCommand(channel, command);
+            DeckSession.COMMANDS.run(decks, channel, command);
         });
     }
 

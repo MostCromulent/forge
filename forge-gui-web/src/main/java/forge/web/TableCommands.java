@@ -132,10 +132,6 @@ public final class TableCommands {
         this.sessions = sessions;
     }
 
-    void onCommand(final BrowserChannel channel, final Record command) {
-        COMMANDS.run(this, channel, command);
-    }
-
     /**
      * The table can be changed only during setup: not while it is being built, and not once its match is played.
      * Every change to it is made on the host UI thread, which also opens, starts and leaves the table.

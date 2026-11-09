@@ -10,6 +10,7 @@ import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gui.GuiBase;
 import forge.model.FModel;
 import forge.util.storage.IStorage;
+import forge.web.PlayerSettings;
 import forge.web.WebGuiBase;
 import forge.web.WebTestSupport;
 import forge.web.match.WebGuiGame;
@@ -55,7 +56,7 @@ public class GauntletTest {
         FModel.getDecks().getSealed().add(group);
 
         final List<Started> started = new ArrayList<>();
-        ui().playSolo(new WebGuiBase.SoloTable(WebGuiGame::new,
+        ui().playSolo(new WebGuiBase.SoloTable(() -> new WebGuiGame(PlayerSettings.saved()),
                 (match, rules, players, human, begin) -> started.add(new Started(rules, players, human))));
         final GauntletMini gauntlet = FModel.getGauntletMini();
         gauntlet.launch(2, group.getHumanDeck(), GameType.Sealed);

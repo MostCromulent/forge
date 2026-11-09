@@ -96,21 +96,16 @@ final class AudioReplies {
             }
             to = Math.min(to, from + AUDIO_SLICE - 1);
         }
-        final byte[] body;
-        if (partial && from > to) {
-            body = null;
-        } else {
-            body = new byte[(int) (to - from + 1)];
-            try (RandomAccessFile in = new RandomAccessFile(file, "r")) {
-                in.seek(from);
-                in.readFully(body);
-            }
-        }
         final FullHttpResponse resp;
         if (partial && from > to) {
             resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
             resp.headers().set(HttpHeaderNames.CONTENT_RANGE, "bytes */" + length);
         } else {
+            final byte[] body = new byte[(int) (to - from + 1)];
+            try (RandomAccessFile in = new RandomAccessFile(file, "r")) {
+                in.seek(from);
+                in.readFully(body);
+            }
             resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                     partial ? HttpResponseStatus.PARTIAL_CONTENT : HttpResponseStatus.OK, Unpooled.wrappedBuffer(body));
             if (partial) {

@@ -343,12 +343,10 @@ public final class LocalGame implements IHasForgeLog {
 
     public void endMatch() {
         abandonGame();
-        // A draft still running keeps its timers. It would deal packs to the players at the next table
         if (hosted != null) {
+            // A draft still running keeps its timers. It would deal packs to the players at the next table
             hosted.clearCurrentEvent();
-        }
-        // Late disconnects go to an empty lobby. Otherwise this table's seats would be held for a reconnect at the next table
-        if (hosted != null) {
+            // Late disconnects go to an empty lobby. Otherwise this table's seats would be held for a reconnect at the next table
             server.setLobby(new ServerGameLobby());
         }
         if (client != null) {

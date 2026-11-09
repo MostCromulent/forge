@@ -99,10 +99,6 @@ public final class OfflineLimited implements IHasForgeLog {
             // A match is started on the host UI thread, like a table's match
             .on(PoolPlay.class, (l, ch, play) -> l.ui.invokeInEdtLater(() -> l.playPool(ch, play)));
 
-    public void onCommand(final BrowserChannel channel, final Record command) {
-        COMMANDS.run(this, channel, command);
-    }
-
     /** Sends the pools and the setup form's options, which the Limited pages are drawn from. Reading the lists reads files, so it runs as a background task. */
     public void sendLimited(final BrowserChannel channel) {
         ui.runBackgroundTask("Limited", () -> {
@@ -231,7 +227,7 @@ public final class OfflineLimited implements IHasForgeLog {
     }
 
     /** Stops the draft without saving it, as desktop's "quit without saving" does. */
-    public void endDraft() {
+    private void endDraft() {
         final OfflineDraft ended;
         synchronized (session) {
             ended = draft;

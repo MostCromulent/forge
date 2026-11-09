@@ -131,10 +131,6 @@ public final class DeckSession implements IHasForgeLog {
         }
     }
 
-    public void onCommand(final BrowserChannel channel, final Record command) {
-        COMMANDS.run(this, channel, command);
-    }
-
     /** Makes a change to the open deck, if there is one, then shows the updated editor. */
     private static <T extends Record> Handler<DeckSession, T> edit(final Change<T> change) {
         return (d, ch, command) -> {
@@ -160,7 +156,6 @@ public final class DeckSession implements IHasForgeLog {
         }
     }
 
-    // Reading a list looks up misspelt names among all cards, which is too slow for the socket thread
     private void read(final BrowserChannel channel, final ImportRead read) {
         final DeckEditor onCollection = collectionEditor();
         final DeckEditor.Collection collection = onCollection == null ? null : onCollection.collection();

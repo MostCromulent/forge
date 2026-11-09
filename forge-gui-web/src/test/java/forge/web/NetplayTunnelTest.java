@@ -80,7 +80,7 @@ public class NetplayTunnelTest extends SessionsTest {
     /** A netplay client built the way desktop Forge builds one, with a screen state that a test can read. */
     private static final class App implements ILobbyListener {
         final ClientGameLobby lobby = new ClientGameLobby();
-        final WebGuiGame gui = new WebGuiGame();
+        final WebGuiGame gui = new WebGuiGame(PlayerSettings.saved());
         final TestBrowser screen = new TestBrowser();
         final CountDownLatch seated = new CountDownLatch(1);
         /** The chat lines this app has received, as "source: message". */

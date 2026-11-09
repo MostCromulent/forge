@@ -59,7 +59,7 @@ public class ConquestSessionTest extends SessionsTest {
     private static void battleAt(final ConquestLocation loc, final Consumer<HostedMatch> body) {
         final LocalGame local = new LocalGame();
         try {
-            final WebGuiGame gui = new WebGuiGame();
+            final WebGuiGame gui = new WebGuiGame(PlayerSettings.saved());
             gui.attach(new TestBrowser(gui, false));
             final ConquestBattle battle = loc.getEvent().createBattle(loc, 0);
             onUi(() -> {

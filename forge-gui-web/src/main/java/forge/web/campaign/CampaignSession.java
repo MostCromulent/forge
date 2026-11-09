@@ -246,7 +246,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
             return false;
         }
         // A campaign's collection editor reads and saves the campaign's cards. Only the campaign thread may touch them
-        run(() -> session.decks().onCommand(channel, command));
+        run(() -> DeckSession.COMMANDS.run(session.decks(), channel, command));
         // A deck may have changed size or become playable, and the campaign's pages show both
         if (command instanceof Bare b && b.t() == Plain.editorClose) {
             inOpen((s, ch, campaign, c) -> campaign.page().forEach(m -> ch.send(m))).run(this, channel, command);

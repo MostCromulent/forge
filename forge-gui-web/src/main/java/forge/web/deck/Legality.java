@@ -1,12 +1,12 @@
 package forge.web.deck;
 
-import forge.card.ColorSet;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
 import forge.deck.DeckSection;
 import forge.game.GameFormat;
 import forge.game.GameType;
+import forge.gamemodes.limited.CommanderDraftUtil;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
@@ -88,15 +88,7 @@ final class Legality {
 
     /** The commanders' colour identity as WUBRG letters, or "" when there are none. */
     static String identityLetters(final List<PaperCard> commanders) {
-        return CardCatalog.wubrg(identity(commanders));
-    }
-
-    static ColorSet identity(final List<PaperCard> commanders) {
-        byte colours = 0;
-        for (final PaperCard c : commanders) {
-            colours |= c.getRules().getColorIdentity().getColor();
-        }
-        return ColorSet.fromMask(colours);
+        return CardCatalog.wubrg(CommanderDraftUtil.getCommanderColorIdentity(commanders));
     }
 
     /** The cards whose colours the rest of the deck must share. In Oathbreaker that is the oathbreaker alone, not its spell. */
