@@ -380,7 +380,6 @@ public final class OfflineLimited implements IHasForgeLog {
                 LocalGame.storedIndex(FPref.UI_SLEEVES, seat), deck);
     }
 
-    /** Starts a pool's match from the Limited pages. */
     private void playLimited(final Event back, final GameType type, final List<LocalGame.Seat> seats) {
         final Stage from = session.stage();
         final Playing playing = new Playing(new WebGuiGame(session.settings()), false, false, back);
@@ -400,7 +399,7 @@ public final class OfflineLimited implements IHasForgeLog {
     }
 
     /**
-     * Opens a table where the browser sits alone, then runs start, which has core's gauntlet start a round there. The round
+     * Opens a table where the browser sits alone, then runs start, which has GauntletMini start a round there. The round
      * uses the names, avatars and sleeves of the Limited pages' other matches. False when the round did not start.
      */
     private boolean playRound(final Runnable start) {

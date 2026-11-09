@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** What the browser shows about a deck wherever it is listed: its colours, size, verdict, bracket and statistics. The slow ones are cached per deck. */
 public final class DeckFacts {
-    /** Kept per deck object, not per contents, because working out a deck's formats reads every printing of its cards. */
+    /** Cached because working out a deck's formats reads every printing of its cards. The keys are deck objects, so changed() must drop an edited deck. */
     private static final Map<Deck, Facts> FACTS = new MapMaker().weakKeys().makeMap();
     private static final Map<Deck, Map<String, Optional<String>>> VERDICTS = new MapMaker().weakKeys().makeMap();
     /** A Commander deck's bracket, cached the same way. It is worked out only for decks listed in Commander. */
@@ -122,7 +122,7 @@ public final class DeckFacts {
                 .computeIfAbsent(table, t -> Optional.ofNullable(problem(deck, format, pool))).orElse(null);
     }
 
-    /** The card whose art heads a deck: its sleeve art, else its commander, else its most expensive card, as mobile Forge picks a deck's cover. */
+    /** The card whose art heads a deck. Sleeve art comes first, then the card DeckProxy.getCoverCard picks. */
     static String cover(final Deck deck) {
         // A deck with no sleeve art has an empty key
         if (deck.getSleeveArtKey() != null && !deck.getSleeveArtKey().isEmpty()) {
@@ -171,7 +171,7 @@ public final class DeckFacts {
         }
         final String outOfPool = pool == null ? null : pool.getDeckConformanceProblem(deck);
         if (outOfPool != null) {
-            // Core lists the cards on separate lines
+            // GameFormat lists the cards on separate lines
             return Localizer.getInstance().getMessage("lblNotLegalInFormat", pool.getName(), outOfPool.replaceFirst("\n+", " ").replace("\n", ", "));
         }
         return Legality.enforced() ? format.getDeckFormat().getDeckConformanceProblem(deck) : null;

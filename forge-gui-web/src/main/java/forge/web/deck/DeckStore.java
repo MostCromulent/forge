@@ -32,7 +32,7 @@ public final class DeckStore {
         };
     }
 
-    /** The format that a deck is listed under. Limited decks are listed under Draft and are stored the same way as their pools. */
+    /** The format that a deck is listed under. Sealed and draft decks are listed under Draft. */
     static GameType family(final GameType format) {
         return switch (format) {
             case Commander, Oathbreaker, Brawl, TinyLeaders -> format;

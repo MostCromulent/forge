@@ -18,7 +18,7 @@ public final class ImageFiles {
     private ImageFiles() {
     }
 
-    /** Refuses a key that contains "..". Forge joins a key onto a folder path unchanged, and deletes a folder found where an image should be. */
+    /** Refuses a key with a ".." path segment. Forge joins a key onto a folder path unchanged, and deletes a folder found where an image should be. */
     public static boolean safeKey(final String key) {
         return !PARENT.matcher(key).find();
     }

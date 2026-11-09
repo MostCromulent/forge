@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-/** The engine's verdict on a deck, and each card's problem, marked as the mobile deck editor filters cards. */
+/** The engine's verdict on a deck, and each card's problem, marked by the rules the mobile deck editor filters by. */
 final class Legality {
     private Legality() {
     }

@@ -66,7 +66,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Quest mode as one session plays it: the saves, the duels and challenges, the decks, the tournaments, travel and the shops. The quest itself is Forge's, with one per process. So this class holds only what the session knows that the save does not. */
+/** Quest mode as one session plays it: the saves, the duels and challenges, the decks, the tournaments, travel and the shops. The quest itself is Forge's, with one per process, so this class holds only what the session knows that the save does not. */
 public final class QuestGame implements Campaign, IHasForgeLog {
     private static final String[] DIFFICULTIES = {"questDifficultyEasy", "questDifficultyMedium", "questDifficultyHard", "questDifficultyExpert"};
     private List<QuestEventDuel> duels;
@@ -473,7 +473,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         if (draft == null || !draft.isStarted() || reward != null) {
             return null;
         }
-        // injectRandomMatchOutcome returns true forever once the player is out. So the loop ends when the player has no matches left
+        // injectRandomMatchOutcome returns true forever once the player is out, so the loop ends when the player has no matches left
         while (draft.playerHasMatchesLeft() && QuestDraftUtils.injectRandomMatchOutcome(false)) {
         }
         quest().save();

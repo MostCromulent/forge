@@ -213,7 +213,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
                 }
             }
         }
-        // Nobody answered, so use the choice the host would have made on its own
+        // No usable answer, so take the first choice
         if (result.isEmpty() && min > 0 && !all.isEmpty()) {
             netLog.warn("Host choice unanswered, taking the first: {}", message);
             result.add(all.get(0));

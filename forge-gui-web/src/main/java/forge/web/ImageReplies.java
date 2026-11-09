@@ -26,8 +26,8 @@ final class ImageReplies implements IHasForgeLog {
     }
 
     /**
-     * Never waits for the download. Otherwise the thread that serves every other request would wait too.
-     * auto means the page asked on its own, not the player, so art that is not cached yet is downloaded only when online image fetching is on.
+     * Never waits for the download, because that would hold up the socket thread and the other requests it serves.
+     * When auto is true the page asked without a player's action, and uncached art is downloaded only when online image fetching is on.
      */
     static void serveSleeveArt(final ChannelHandlerContext ctx, final String asked, final boolean auto) {
         final String key = ImageFiles.artKey(asked);

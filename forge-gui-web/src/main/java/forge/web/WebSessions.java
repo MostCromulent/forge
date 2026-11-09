@@ -44,7 +44,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     private final Map<BrowserChannel, WebSession> byChannel = new ConcurrentHashMap<>();
     private volatile WebSession host;
     private volatile WebServer server;
-    /** Set from the console's checkbox. Without a console, nothing else shows that Forge is running. */
+    /** Set from the console's checkbox or the keepOpen launch flag. Without a console, nothing else shows that Forge is running. */
     private boolean quitWhenEmpty = true;
     private volatile boolean stopping;
     /** The app players in the last list of who is here. It is used to detect when one arrives or leaves. */
@@ -301,12 +301,12 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         byId.values().forEach(WebSession::lobbyChanged);
     }
 
-    /** Makes every seat's dial read again which pod seats are held, after a player left or came back. */
+    /** Redraws every seat's dial after a pod player left or came back. */
     void seatsChanged() {
         byId.values().forEach(s -> s.eventSeat().seatsChanged());
     }
 
-    /** Drops every seat and stops the server. Guests go first, so no guest session stays open after its game. */
+    /** Shuts down every session. Guests go first, so no guest session stays open after its game. */
     synchronized void shutdown() {
         stopping = true;
         holdOpen();
@@ -376,7 +376,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
             return;
         }
         spread(new ChatLine(who, text, false));
-        // Desktop and mobile players at the table read netplay's chat. Each browser at the table drops the copy from netplay, because it already got the line here
+        // Desktop and mobile players at the table read netplay's chat. relay skips the copy that comes back, because the line was already sent here
         if (HostingServer.isHosting()) {
             FServerManager.getInstance().broadcast(new MessageEvent(who, text));
         }
@@ -431,7 +431,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         byId.values().forEach(session -> session.tell(now));
     }
 
-    /** Tells every browser without a seat that the host's seat has a new holder or is free. */
+    /** Tells every browser except the host's that the host's seat has a new holder or is free. */
     private void announceSeat() {
         byId.values().forEach(WebSession::hostSeatChanged);
     }

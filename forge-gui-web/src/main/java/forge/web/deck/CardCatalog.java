@@ -275,7 +275,7 @@ public final class CardCatalog {
         return NOT_NAME_CHARACTER.matcher(StringUtils.stripAccents(s.toLowerCase())).replaceAll("");
     }
 
-    // A card with several types goes under the first match in the order below, so an artifact land is a land
+    /** A card with several types goes under the first match in the order below, so an artifact land is a land. */
     static String heading(final PaperCard card) {
         final CardType type = card.getRules().getType();
         if (type.isLand()) {

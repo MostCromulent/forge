@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/** Blocking prompts that wait for the browser's answer. A request stays open when the browser reloads, because only the asking thread waits on it. */
+/** Blocking prompts that wait for the browser's answer. A request stays open when the browser reloads, and replay sends it to the new connection. */
 public final class PendingRequests implements IHasForgeLog {
     private record Pending(JsonObject request, JsonElement defaultAnswer, Predicate<JsonElement> valid, CompletableFuture<JsonElement> answer) {}
 
@@ -33,7 +33,7 @@ public final class PendingRequests implements IHasForgeLog {
         this.who = who;
     }
 
-    /** Sends one of the requests in {@link ToBrowser} and waits for its answer. If the game stops waiting, the default answer is returned. */
+    /** Sends one of the requests in {@link ToBrowser} and waits for its answer. Returns the default answer when cancelAll runs or the wait is interrupted. */
     public JsonElement await(final Record payload, final Predicate<JsonElement> valid) {
         final int id;
         final Pending pending;

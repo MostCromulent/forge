@@ -53,7 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-/** Planar Conquest as one session plays it: the saves, the map, the party and its decks, the Aether, planeswalking and the battles. The conquest itself is Forge's, with one per process. So this class holds only what the session knows that the save does not. */
+/** Planar Conquest as one session plays it: the saves, the map, the party and its decks, the Aether, planeswalking and the battles. The conquest itself is Forge's, with one per process, so this class holds only what the session knows that the save does not. */
 public final class ConquestGame implements Campaign {
     private ConquestLocation selection;
     /** The result of the game just ended, while its match is still open. */
@@ -112,7 +112,7 @@ public final class ConquestGame implements Campaign {
         return data != null && readable(data) ? data : null;
     }
 
-    /** A save whose file could not be read to the end has no planes, or no data at all. So it has no page to show. */
+    /** A save whose file could not be read to the end has no planes, or no data at all, so it has no page to show. */
     private static boolean readable(final ConquestData data) {
         return data.getPlaneswalker() != null && data.getCurrentLocation() != null && data.getCurrentPlaneData() != null;
     }

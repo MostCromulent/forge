@@ -95,8 +95,8 @@ final class ShownZones {
     }
 
     /**
-     * Closes zones that showZones opened. The browser is told with the next prompt or question.
-     * So an effect that reopens the zone for its next step, as Telling Time does, never shows it closing and opening again.
+     * Closes zones that showZones opened. The browser is told with the next prompt or question, so an effect that reopens
+     * the zone for its next step, such as Telling Time, does not show it close and open again.
      */
     private void hideZones(final List<PlayerZoneUpdate> zones) {
         if (zones.isEmpty()) {

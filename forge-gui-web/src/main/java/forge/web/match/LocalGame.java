@@ -51,7 +51,7 @@ public final class LocalGame implements IHasForgeLog {
     private static final int MOST_SEATS = 16;
 
     private final FServerManager server = FServerManager.getInstance();
-    // Set on the UI thread or a joining task. Read from the web server's threads and the netplay client's threads
+    // The fields below are set on the host UI thread or a joining task, and read from the web server's and netplay client's threads
     /** The lobby this session owns, or null when another browser is hosting the game. */
     private volatile ServerGameLobby hosted;
     /** Whether this session owns the server as host. The server runs longer than any one game, so the open lobby cannot tell. */
@@ -196,7 +196,7 @@ public final class LocalGame implements IHasForgeLog {
         client.connect();
         try {
             if (!ready.await(JOIN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                // A refused client keeps reconnecting, and every game here has the same address, so it would take a seat in the next one
+                // A refused client keeps reconnecting to the one loopback address and would take a seat at the next table
                 endMatch();
                 throw new IllegalStateException(Localizer.getInstance().getMessage("lblWebLocalGameNoFreeSeat"));
             }
@@ -244,7 +244,7 @@ public final class LocalGame implements IHasForgeLog {
         seatAndStart(seats);
     }
 
-    /** Opens a table with only this browser, at seat webSeat. A game mode then starts a match it built itself on this table. */
+    /** Opens a table where this browser is the only person, at seat webSeat. A game mode then starts a match it built itself on this table. */
     public ServerGameLobby openAlone(final String playerName, final WebGuiGame gui) {
         nameProfile(playerName);
         openHost(playerName, gui, () -> { }, (from, text) -> { });
@@ -385,7 +385,7 @@ public final class LocalGame implements IHasForgeLog {
         });
     }
 
-    /** Leaves the host's seat. The server keeps running for whoever takes the seat next. */
+    /** Gives up ownership of the server, so a later shutdown of this seat leaves it running for the next host. */
     public void disownServer() {
         startedServer = false;
     }

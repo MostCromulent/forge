@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 
 /** The web server, in a form the console can stop and start again. The link token is kept across a restart, so old links still work. */
 public final class WebService implements IHasForgeLog {
-    /** Set at launch for a server that should keep running after its browsers leave, such as one with no window to turn the option off in. */
+    /** Set at launch to keep the server running after its browsers leave, for example when there is no console to change the option in. */
     public static final boolean KEEP_OPEN = Boolean.getBoolean("forge.web.keepOpen");
     private final WebGuiBase ui;
     private final long idleMillis;
@@ -103,7 +103,7 @@ public final class WebService implements IHasForgeLog {
         }
     }
 
-    /** Whether the router is asked to forward the port whenever the server starts. Shares desktop's UPnP choice, and the console has no way to ask, so only ALWAYS forwards. */
+    /** Whether the router is asked to forward the port whenever the server starts. This is desktop's UPnP preference, and only ALWAYS forwards because the console cannot ask the host each time. */
     public boolean forwardPort() {
         return "ALWAYS".equalsIgnoreCase(FModel.getNetPreferences().getPref(FNetPref.UPnP));
     }
@@ -120,7 +120,7 @@ public final class WebService implements IHasForgeLog {
         }
     }
 
-    /** The listener is called on every change in the forwarding state, on whichever thread the router's answer arrives. */
+    /** The listener is called at once with the current state and then on every change, on the caller's thread except for the router's answer, which arrives on a UPnP thread. */
     public synchronized void onForwarding(final Consumer<Forwarding> listener) {
         onForwarding = listener;
         listener.accept(forwarding);

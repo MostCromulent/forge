@@ -23,7 +23,7 @@ public final class WebDownloads implements IHasForgeLog {
             final Consumer<JsonObject> toBrowser) {
         final Progress progress = new Progress(service.getTitle(), toBrowser);
         try {
-            // No dialog waits for Start and Close here. So the service is set up, then run to completion on this thread
+            // No dialog waits for Start and Close, so the service is set up and run to completion on this thread
             service.initialize(new Text(""), new Text(""), progress, new QuietButton(), () -> { }, null, () -> { });
             service.run();
         } catch (final RuntimeException e) {

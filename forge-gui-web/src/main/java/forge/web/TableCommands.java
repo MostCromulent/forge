@@ -79,7 +79,7 @@ public final class TableCommands {
             }))
             .on(SetLimited.class, atEvent((t, ch, l) -> t.setLimited(ch, l.kind())))
             .on(SitOut.class, atEvent((t, ch, o) -> t.lobby.events().sitOut(o.index(), o.sittingOut())))
-            // Building a product can wait for a web site, and dealing packs opens every pool, so neither runs on this thread
+            // Building a product can wait for a web site, so it does not run on the host UI thread
             .on(EventSetup.class, atEvent((t, ch, e) -> t.ui.runBackgroundTask("Event", () -> {
                 reportProblem(ch, t.lobby.events().setUpEvent(e));
                 t.lobby.sendState(ch);
@@ -134,7 +134,7 @@ public final class TableCommands {
 
     /**
      * The table can be changed only during setup: not while it is being built, and not once its match is played.
-     * Every change to it is made on the host UI thread, which also opens, starts and leaves the table.
+     * Each change starts on the host UI thread, which also opens, starts and leaves the table.
      */
     private static <T extends Record> Handler<TableCommands, T> atSetup(final Handler<TableCommands, T> change) {
         return (t, ch, c) -> t.ui.invokeInEdtLater(() -> {
@@ -186,7 +186,7 @@ public final class TableCommands {
         }
     }
 
-    /** The event setup form offers the same options as the offline one. Reading the lists reads files, so it does not run on the socket thread. */
+    /** The event setup form offers the same options as the offline one. Reading the lists reads files, so it runs on a background thread. */
     void sendEventOptions(final BrowserChannel channel) {
         ui.runBackgroundTask("Limited", () -> channel.send(OfflineEvents.options()));
     }

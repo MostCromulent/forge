@@ -159,7 +159,7 @@ public final class OnlineDraft implements IDraftEventHandler, Draft {
         });
     }
 
-    /** The host does not learn where each pick went. So the pool is sorted by the picks this seat stored, and every other card goes to the sideboard. */
+    /** The host does not learn where each pick went, so the pool is sorted by the picks this seat stored, and every other card goes to the sideboard. */
     private Deck sorted(final Deck pool) {
         final Map<String, Integer> main = new HashMap<>();
         for (final DraftCard pick : picks) {

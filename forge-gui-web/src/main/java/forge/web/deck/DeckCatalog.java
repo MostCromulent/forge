@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** The decks a seat may choose from, and what the browser shows about each one. */
 public final class DeckCatalog {
-    /** A deck's source, which the browser shows as a tag on each row. */
+    /** The tag on a deck the host saved. The browser shows each row's source as a tag. */
     static final String MINE = "yours";
     /** A guest's decks, stored in the guest's browser and keyed by the id it stores them under. */
     static final String DEVICE = "device";
@@ -51,11 +51,11 @@ public final class DeckCatalog {
             "Random 1", "lblWebDeckCatalogRandomOne", "Random 2", "lblWebDeckCatalogRandomTwo", "Random 3", "lblWebDeckCatalogRandomThree");
     /** The finder lists a deck's cards without problem marks. The verdict line states the problems. */
     public static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), null);
-    /** Held while any code reads or changes a deck. A deck loads its sections on first read, and that is not safe from two threads. */
+    /** Hold this to read or change a deck. A deck loads its sections on first read, and that is not safe from two threads. */
     public static final Object DECKS = new Object();
 
     private final Map<String, Entry> byKey = new ConcurrentHashMap<>();
-    /** The categories that the browser asked for and core downloaded. They are kept so a refresh does not lose them. */
+    /** The categories that NetDeckCategory loaded for this browser. They are kept so a refresh does not lose them. */
     private final List<NetDeckCategory> netCategories = new ArrayList<>();
     /** The card pool of the last refresh. Generators build from it, and every verdict checks against it. */
     private volatile GameFormat pool;
@@ -69,7 +69,7 @@ public final class DeckCatalog {
         }
     }
 
-    /** Asks core for a net deck category. Core picks one through the browser and downloads it. */
+    /** Asks NetDeckCategory for a net deck category. The host's browser picks one, then it is downloaded. */
     public void loadNetDecks(final GameType format) {
         // Picking waits for the host's answer, so the decks are locked only to record the pick
         final NetDeckCategory category = NetDeckCategory.selectAndLoad(format);
@@ -318,7 +318,7 @@ public final class DeckCatalog {
     private void addCommanderGenerators(final List<DeckSummary> out, final GameType format) {
         final Localizer text = Localizer.getInstance();
         final List<String> kinds = new ArrayList<>(List.of("random"));
-        // The card-based generator reads data that Forge learned from real decks. That data loads at startup only when the settings ask for it
+        // The card-based generator reads the deck generation matrix, which loads at startup only when the settings ask for it
         if (FModel.isdeckGenMatrixLoaded()) {
             kinds.add("cardgen");
         }
@@ -330,7 +330,7 @@ public final class DeckCatalog {
         }
     }
 
-    // Colours are empty when they are not known until the deck is built. A colour filter treats empty colours as no match
+    /** Colours are empty when they are not known until the deck is built. A colour filter treats empty colours as no match. */
     private static void generated(final List<DeckSummary> out, final String key, final String name, final String note,
             final String colours) {
         out.add(new DeckSummary(key, name, GENERATED, colours, true, note, null, null, null, null, null, null, null, true,

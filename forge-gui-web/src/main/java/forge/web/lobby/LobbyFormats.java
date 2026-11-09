@@ -53,7 +53,7 @@ public final class LobbyFormats {
         return main.getMaximum() + (type == GameType.Oathbreaker ? 2 : deck.hasCommander() ? 1 : 0);
     }
 
-    /** Starting life in a game of two and, if it differs, of more. Momir's avatars change it during the game. */
+    /** Starting life in a game of two and, if it differs, of more. In Momir Basic and MoJhoSto the avatar changes the starting life. */
     private static String lifeFact(final GameType type) {
         final Localizer text = Localizer.getInstance();
         if (type == GameType.MomirBasic || type == GameType.MoJhoSto) {

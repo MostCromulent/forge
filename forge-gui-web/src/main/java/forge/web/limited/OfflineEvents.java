@@ -270,7 +270,7 @@ public final class OfflineEvents {
     private static List<DraftBlockOption> draftBlocks(final IStorage<CardBlock> storage) {
         final List<DraftBlockOption> out = new ArrayList<>();
         for (final CardBlock b : storage) {
-            // Like a network draft, the web leaves out the blocks whose draft-time prompts only a local GUI can answer
+            // Like a network draft, the web leaves out Conspiracy blocks
             final List<String> sets = BoosterDraft.isDraftable(b, true) ? BoosterDraft.blockSets(b) : List.of();
             if (!sets.isEmpty()) {
                 out.add(new DraftBlockOption(b.getName(), b.getCntBoostersDraft(), sets, codes(b), BoosterDraft.presetCombos(b, sets), podSize(sets)));

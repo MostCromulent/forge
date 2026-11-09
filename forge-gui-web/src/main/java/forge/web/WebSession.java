@@ -45,7 +45,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * One browser's session. Its current place is one {@link Stage}, which changes only through {@link #move}. Stages include the menu,
+ * One browser's session. Its current place is one {@link Stage}, which changes only through {@link #move}, apart from the session closing. Stages include the menu,
  * the table and a match. The session holds or gives up the host's seat, shows a browser that connects again the place it left, and
  * passes each message to the part that handles it.
  */
@@ -63,7 +63,7 @@ public final class WebSession implements IHasForgeLog {
             // A join that found no seat leaves the browser on the waiting page, which offers to try again
             .on(Plain.join, (s, ch, c) -> s.joinHostGame())
             .on(ClaimHost.class, (s, ch, c) -> s.claimHost(ch, c.password()))
-            // Opening a game connects a client to a server, which the host UI thread owns
+            // Opening a game connects a client to the server, which is done on the host UI thread
             .on(Plain.lobby, (s, ch, c) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, false, null)))
             .on(Invite.class, (s, ch, i) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, true, i.limited())))
             .on(Plain.leaveLobby, (s, ch, c) -> s.ui.invokeInEdtLater(s::leaveLobby))
@@ -83,7 +83,7 @@ public final class WebSession implements IHasForgeLog {
             .on(SearchCards.class, (s, ch, q) -> s.decks.inTurn(() -> ch.send(new CardSearch(CardCatalog.searchCardNames(q.query(), CARD_SEARCH_LIMIT)))))
             .on(AskPrintings.class, (s, ch, a) -> s.decks.inTurn(() -> ch.send(new Printings(a.name(), CardCatalog.printings(a.name(),
                     a.cardPool() == null ? null : FModel.getFormats().getFormat(a.cardPool()))))))
-            // LocalGame runs on the host UI thread, so host-side dialogs during setup never block a web server thread
+            // Starting a match can ask host questions, so it runs on the host UI thread and never blocks a socket thread
             .on(Start.class, (s, ch, st) -> s.ui.invokeInEdtLater(() -> s.start(ch, st)))
             .on(Plain.leave, (s, ch, c) -> s.ui.invokeInEdtLater(s::leave))
             .on(LimitedOpen.class, WebSession::openLimited)
@@ -231,7 +231,6 @@ public final class WebSession implements IHasForgeLog {
         local.disownServer();
     }
 
-    /** Whether this browser must give the host password to take the host's seat. */
     private boolean needsHostPassword() {
         return !onThisMachine && WebService.hostPasswordSet();
     }
@@ -620,7 +619,7 @@ public final class WebSession implements IHasForgeLog {
         if (from == null) {
             tell(new ChatLine(null, text, false));
         } else if (isHost) {
-            // Every browser already has its players' lines from the server's own chat (WebSessions.say). So the host passes on only the other players' lines
+            // Lines typed in a browser here already went out through WebSessions.say, so relay passes on only desktop and mobile players' lines
             sessions.relay(from, text);
         }
     }
@@ -814,9 +813,9 @@ public final class WebSession implements IHasForgeLog {
             channel.send(error(problems.get(0)));
             return;
         }
-        // Saves the seats' looks and the host's name. The name keeps HostedMatch from asking for one, as nameProfile does for other matches
+        // Saves the seats' looks and the host's name, so HostedMatch does not ask for a name
         lobby.saveLooks();
-        // Prepared before leaving the lobby. If the host backs out of desktop's illegal-deck question, the page stays where it was
+        // Prepared before leaving the lobby. If the host backs out of the illegal-deck question, the page stays where it was
         final Runnable begin;
         try {
             begin = local.prepare();

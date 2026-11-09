@@ -201,7 +201,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         SwingUtilities.invokeLater(() -> busy(what));
     }
 
-    /** The server has been started, and the buttons control it from now on. failure is the reason it could not start, or null. */
+    /** Hands the console the service after the first start attempt, and the buttons control it from now on. failure is the reason it could not start, or null. */
     public void attach(final WebService driven, final Exception failure) {
         service = driven;
         images.ready();
@@ -457,7 +457,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         return text.getText().replaceAll("token=\\w+", "token=...");
     }
 
-    /** Zips the network logs and what this window shows into the Downloads folder, as desktop's Help menu does. */
+    /** Zips Forge's logs and what this window shows into the Downloads folder, as desktop's Help menu does. */
     private void exportLogs() {
         final String shown = shownLog();
         FThreads.invokeInBackgroundThread(() -> {

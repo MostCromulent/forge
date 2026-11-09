@@ -80,7 +80,7 @@ final class AudioReplies {
         }
         long from = 0;
         long to = length - 1;
-        // Several ranges in one request, or a header this does not read, are answered with the whole file
+        // A Range header with several ranges, or one this cannot parse, gets the whole file
         final Matcher m = range == null ? null : BYTE_RANGE.matcher(range.trim());
         final boolean partial = m != null && m.matches() && !(m.group(1).isEmpty() && m.group(2).isEmpty());
         if (partial) {

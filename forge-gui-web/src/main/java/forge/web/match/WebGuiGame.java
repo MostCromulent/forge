@@ -87,7 +87,8 @@ import java.util.stream.IntStream;
 
 /**
  * One player's view of a match for the browser. Game calls run on one dispatch thread. Browser replies arrive on the socket thread.
- * It sends the browser the game's full state and then each change, with the events and sounds the change caused. It also shows the
+ * The waiting timer also changes the prompt from the host UI thread.
+ * This class sends the browser the game's full state and then each change, with the events and sounds the change caused. It also shows the
  * prompt, asks the game's questions and waits for the answers, keeps the phase stops and yields, and runs the browser's commands.
  */
 public class WebGuiGame extends NetworkGuiGame {
@@ -153,7 +154,7 @@ public class WebGuiGame extends NetworkGuiGame {
             () -> getCurrentPlayer() == null ? "a player" : getCurrentPlayer().getName());
     private final DeltaSyncManager snapshotter = new DeltaSyncManager();
     private final AtomicInteger skippedProperties = new AtomicInteger();
-    // Netplay drops the trigger event of a click before it reaches the host. So the ability menu reads the click from here
+    /** Netplay drops a click's trigger event, so getAbilityToPlay reads the click from here. */
     private final AtomicReference<BrowserClick> lastClick = new AtomicReference<>();
     private final ShownZones zones = new ShownZones(this::send, this::isLocalPlayer);
     private final PromptState prompt = new PromptState(p -> {
@@ -162,7 +163,7 @@ public class WebGuiGame extends NetworkGuiGame {
     });
     /** A number the browser gave that was not in the list offered. It is kept for the typed prompt that follows. */
     private Integer typedNumber;
-    // Written on the dispatch thread. The socket thread resends it to a reloading browser
+    /** Written on the dispatch thread. The socket thread resends it to a reloading browser. */
     private final WebGameLog gameLog;
     private final BrowserSounds sounds = new BrowserSounds(this::getCurrentPlayer);
     /** The settings of the player this GUI shows the match to. Only the host's settings are the shared preferences. */
@@ -190,10 +191,10 @@ public class WebGuiGame extends NetworkGuiGame {
         this.gameLog = new WebGameLog(this::mayView, settings);
     }
 
-    /** Stops the thread that sends to the browser and stops the waiting timer. Called when the match is over. */
+    /** Answers any open request with its default, stops the waiting timer and shuts down the dispatch thread. Called when this GUI is no longer used. */
     public void close() {
         cancelAwaitNextInput();
-        // A question the browser can no longer answer would keep the dispatch thread waiting for ever
+        // A question the browser can no longer answer would keep the dispatch thread waiting forever
         requests.cancelAll();
         dispatch.shutdown();
     }
@@ -414,7 +415,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         // For a remote seat, the host skips phases only by the state the client seeds (PlayerControllerHuman.isUiSetToSkipPhase)
         seedYieldStateOnHost();
-        // The seed used the shared preferences for all other settings. So this player's own settings are applied after it
+        // The seed reads the shared preferences, so this player's own settings are applied after it
         final IGameController controller = getGameController();
         if (controller != null) {
             WebSettings.applyAll(settings, controller);
@@ -430,10 +431,10 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public void handleGameEvent(final GameEvent event) {
-        // FControlGameEventHandler would post to the host UI thread. So the log, the sound and the animations are sent from here
+        // FControlGameEventHandler would post to the host UI thread, so the log, sounds and animations are sent from here
         if (event instanceof GameEventGameOutcome outcome) {
             score = matchScore(outcome.matchSummary());
-            // The outcome can arrive after the game is already over. So the game-over message is sent again with the score
+            // The outcome can arrive after the game is over, so the game-over message is sent again with the score
             if (gameOver) {
                 send(new GameOver(score));
             }
@@ -460,7 +461,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    /** The event for a card that just moved holds only its name and picture. So the sound is chosen from this client's copy of the card. */
+    /** The event for a moved card holds only its name and picture, so the sound is chosen from this client's copy of the card. */
     private static GameEvent withKnownCard(final GameEvent event, final GameView gv) {
         if (!(event instanceof GameEventZone zone) || zone.card() == null) {
             return event;
@@ -471,7 +472,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     /**
      * Finds each seated player's name in the engine's match summary ("Alice: 1 Bob: 0 "). A name that contains a colon or space is still read whole.
-     * The outcome event carries only this summary. It is not translated, and every web seat runs in the host's process, so the names match the views.
+     * The outcome event carries only this untranslated summary. Every web seat runs in the host's process, so its names match the player views.
      */
     private List<MatchScore> matchScore(final String summary) {
         final GameView gv = getGameView();
@@ -496,7 +497,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return out;
     }
 
-    // Phase stops are the desktop preferences. One row is for the local player's turns and one is for all other turns
+    // Phase stops use the desktop preference keys. One row is for the local player's turns and one for all other turns
     private Controls controlsMessage() {
         final IGameController controller = getGameController();
         final YieldController yields = controller == null ? null : controller.getYieldController();
@@ -644,7 +645,7 @@ public class WebGuiGame extends NetworkGuiGame {
         prompt.selection(selection);
     }
 
-    // Cards the engine says the player can act on now. Cards at strength two are also the ones the Auto button would tap
+    // Cards the engine says the player can act on now. Cards at strength two or more are the ones the Auto button would tap
     private void sendPlayable(final List<CardView> cards) {
         final List<Ref> playable = new ArrayList<>();
         final List<Ref> autoTap = new ArrayList<>();
@@ -701,7 +702,7 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override public void setPanelSelection(final CardView hostCard) { }
     @Override public void setPlayerAvatar(final LobbyPlayer player, final IHasIcon ihi) { }
 
-    // While the player decides, the mirror lock is released so browser actions and replies can still run
+    // While the player decides, the mirror lock is released so browser commands and a reconnecting browser can still run
     private JsonElement ask(final Record request, final Predicate<JsonElement> valid) {
         zones.flush();
         final int holds = mirrorLock.getHoldCount();
@@ -1048,7 +1049,7 @@ public class WebGuiGame extends NetworkGuiGame {
         if (abilities.isEmpty()) {
             return null;
         }
-        // A single ability needs no question unless it says to ask. Unlike desktop, canPlay is not checked: a remembered click can come with an engine question, such as a trigger
+        // A single ability needs no question unless it says to ask. canPlay is not checked, because an engine question such as a trigger can arrive with a remembered click
         if (abilities.size() == 1 && (triggerEvent == null || !abilities.get(0).promptIfOnlyPossibleAbility())) {
             return abilities.get(0);
         }
@@ -1074,7 +1075,6 @@ public class WebGuiGame extends NetworkGuiGame {
         if (defender != null) {
             recipients.add(defender);
         }
-        // Desktop's title: "Assign damage dealt by" the attacker
         final String title = Localizer.getInstance().getMessage("lbLAssignDamageDealtBy").replace("%s", attacker == null ? "" : attacker.getName());
         // As on desktop, one damage from a deathtouch attacker is lethal
         final boolean deathtouch = attacker != null && attacker.getCurrentState().hasDeathtouch();
@@ -1115,7 +1115,7 @@ public class WebGuiGame extends NetworkGuiGame {
         if (def.length > 0) {
             def[0] += Math.max(0, remaining);
         }
-        // Desktop's title, such as "Assign damage by" the spell. amountLabel is the engine's lower-case name for what is assigned
+        // amountLabel is the engine's lower-case name for what is assigned
         final String title = Localizer.getInstance().getMessage("lbLAssignAmountForEffect", amountLabel,
                 effectSource == null ? "" : effectSource.getName());
         final DistributeRequest request = new DistributeRequest(title, amount, perMin, options(recipients, null),
@@ -1188,7 +1188,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final boolean leaving = command instanceof Bare b && b.t() == Plain.concede
                 || command instanceof NextGame n && n.decision() == NextGameDecision.QUIT;
         if (leaving) {
-            // The host's engine thread waits on an open request with no timeout. So the request is answered before leaving
+            // The host's engine thread waits on an open request with no timeout, so the request is answered before leaving
             requests.cancelAll();
         }
         mirrorLock.lock();
@@ -1235,7 +1235,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    /** A setting belongs to the player, not the game. So a setting sent before the game has a controller still applies. */
+    /** A setting belongs to the player, not the game, so a setting sent before the game has a controller still applies. */
     public void setSetting(final SetSetting setting) {
         mirrorLock.lock();
         try {
@@ -1285,7 +1285,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    /** A command run through the player's controller. It runs only once the controller exists. */
+    /** A command run through the player's controller. It is ignored while there is no controller. */
     private interface Play<T> {
         void run(WebGuiGame gui, IGameController controller, T command);
     }

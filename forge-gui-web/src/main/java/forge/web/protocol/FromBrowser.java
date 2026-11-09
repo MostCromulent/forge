@@ -296,7 +296,7 @@ public final class FromBrowser {
     public record UseMana(byte color) {
     }
 
-    /** How the host's generators build decks. singletons means one copy of each card. noArtifacts means no artifacts. */
+    /** How the host's generators build decks. singletons means one copy of each card. */
     @Command("setDeckGen")
     public record SetDeckGen(boolean singletons, boolean noArtifacts) {
     }
@@ -350,7 +350,7 @@ public final class FromBrowser {
             @Nullable String cubeId) {
     }
 
-    /** Picks the card at index from the pack shown in state step. So a click on a state that has already changed is ignored. */
+    /** Picks the card at index from the pack. step is the draft state the click was made on, and a pick with an old step is ignored. */
     @Command("draftPick")
     public record DraftPick(int step, int index, boolean sideboard) {
     }
@@ -419,6 +419,6 @@ public final class FromBrowser {
     public record EventDecksOnly(boolean on) {
     }
 
-    /** Every command record. The TypeScript is generated from these. */
+    /** Every command record. Wire decodes commands by these, and the TypeScript is generated from them. */
     static final List<Class<? extends Record>> COMMANDS = Wire.marked(Command.class);
 }

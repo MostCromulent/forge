@@ -32,7 +32,7 @@ final class DevMode {
         return local.ownPlayer() == null ? Localizer.getInstance().getMessage("lblWebDevNeedsOwnGame") : null;
     }
 
-    /** Runs one cheat. Do not call it on the socket or interface threads, because a cheat waits for the browser's answers. */
+    /** Runs one cheat. Do not call it on a socket thread or the host UI thread, because a cheat waits for the browser's answers. */
     static void run(final LocalGame local, final Dev dev, final BrowserChannel channel) {
         final String refused = refusal(local);
         if (refused != null) {
@@ -74,9 +74,8 @@ final class DevMode {
     }
 
     /**
-     * Desktop reads the state from a file on the machine running Forge. Here the browser sends the text. Placing cards fires
-     * no game event, so the whole board is sent here. It is sent from the game thread task that applies the state, because
-     * another task could run at the same time and send the old board.
+     * Placing cards fires no game event, so the whole board is sent here. It is sent from the game thread task that applies
+     * the state, because another task could run at the same time and send the old board.
      */
     private static void setUp(final Game game, final IGuiGame gui, final IDevModeCheats cheat, final String text) {
         game.getAction().invoke(() -> {

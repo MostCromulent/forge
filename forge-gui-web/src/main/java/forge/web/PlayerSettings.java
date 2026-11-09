@@ -6,7 +6,7 @@ import forge.model.FModel;
 import java.util.EnumMap;
 import java.util.Map;
 
-/** Every setting a player can change is read through this class, never straight from the preferences. This stops one player's choice from changing another player's settings. */
+/** Each player's own settings are read through this class, so one player's choice does not change another player's settings. Settings only the host may change, such as dev mode and the sound set, are read from the preferences directly. */
 public final class PlayerSettings {
     /** Null for the host, whose settings are the preferences themselves. */
     private final Map<FPref, String> own;

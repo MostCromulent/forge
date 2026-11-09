@@ -71,7 +71,7 @@ public final class DeckImport {
         int notImported = 0;
         // Reading starts in the main deck. A legendary card before any heading stays there, and chooseCommander picks the commander later
         DeckSection section = DeckSection.Main;
-        // The list recognizer does not understand a deck file's card lines, so each is read alone, as DeckSerializer reads it, and can be marked
+        // The recognizer cannot read a deck file's card lines, so each is parsed alone as DeckSerializer parses it
         final boolean file = Arrays.stream(raw).anyMatch(l -> l.trim().equalsIgnoreCase("[metadata]"));
         DeckSection fileSection = null;
         boolean fileHead = false;
@@ -221,7 +221,7 @@ public final class DeckImport {
     /**
      * With no Commander section, a single card that could lead the deck becomes its commander, and its name is returned. Several candidates are offered as a choice.
      * As in DeckImportController, the commander is looked for in the sideboard, or in the main deck when there is no sideboard. Unlike there, a candidate must be a
-     * legal commander in this format, because core's test also accepts every instant and sorcery as a possible signature spell.
+     * legal commander in this format, because the test DeckImportController uses also accepts every instant and sorcery as a possible signature spell.
      */
     private static String chooseCommander(final Deck deck, final Check check, final List<ImportProblem> problems) {
         final DeckFormat df = check.deckFormat();

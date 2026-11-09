@@ -666,7 +666,7 @@ public final class DeckEditor {
         }
     }
 
-    /** Storage deletes by the deck's own name. So the old deck keeps its name until it is deleted, and it is deleted first when both names map to one file. */
+    /** Storage deletes by the deck's own name, so the old deck keeps its name until it is deleted, and it is deleted first when both names map to one file. */
     private void moveFile(final IStorage<Deck> from, final IStorage<Deck> to, final String name) {
         if (from == to && DeckStore.sameFile(owned, name)) {
             from.delete(owned);

@@ -23,7 +23,7 @@ import forge.web.protocol.Wire.Ts;
 import java.util.List;
 import java.util.Map;
 
-/** Every message the server sends the browser, as records. The build generates src/main/ts/protocol.gen.ts from this file. So a changed record fails the build at each place the browser reads it. */
+/** Every message the server sends the browser, as records. The build generates src/main/ts/protocol.gen.ts from this file, so a changed record fails the build wherever the browser reads it. */
 public final class ToBrowser {
     private ToBrowser() {
     }
@@ -176,7 +176,7 @@ public final class ToBrowser {
     public record PastEvent(String id, EventKind kind, String product, String date) {
     }
 
-    /** Every entry of the lobby's Format menu, in FormatChoices' order. The deck finder and editor offer the same entries. Sent once per browser. */
+    /** Every entry of the lobby's Format menu, in FormatChoices' order. The deck finder and editor offer the same entries. Sent each time a browser connects. */
     @Message("formats")
     public record Formats(List<Format> formats) {
     }
@@ -243,7 +243,7 @@ public final class ToBrowser {
     @Message("catalogue")
     public record CataloguePage(int request, List<CatalogueRow> rows, int total, int offset, int hiddenBySwitch, boolean ranked,
             @Nullable String source) {
-        /** The same page, marked with the mode's list it belongs to. So the browser never shows one list's cards as another's. */
+        /** The same page, marked with the mode's list it belongs to, so the browser never shows one list's cards as another's. */
         public CataloguePage from(final String list) {
             return new CataloguePage(request, rows, total, offset, hiddenBySwitch, ranked, list);
         }
@@ -565,7 +565,7 @@ public final class ToBrowser {
     public enum ChoiceKind { choices, reveal }
 
     /**
-     * A reveal only shows the list. stackKeys is set when every option is a spell on the stack, so the browser picks it there.
+     * A reveal only shows the list. stackKeys is set when every option is a spell on the stack, so the player picks it on the stack.
      * aiSkipsOf is set on the reveal that warns the AI will not play some of its deck. It names that player.
      */
     @Request

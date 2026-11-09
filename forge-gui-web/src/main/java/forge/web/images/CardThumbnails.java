@@ -25,7 +25,7 @@ import javax.imageio.stream.MemoryCacheImageOutputStream;
 
 /** Makes card images the browser cannot use as stored. It shrinks them with a proper filter, or paints them as a foil. A browser that shrinks a full scan on a rotated or animated layer breaks up the text. */
 public final class CardThumbnails {
-    /** About twice the widest size a board card is drawn at (88px at a fit of 1.4). So it stays sharp on a screen at twice normal scale. */
+    /** About twice the widest size a board card is drawn at, so it stays sharp on a screen at twice normal scale. */
     public static final int WIDTH = 256;
     private static final int MOST_KEPT = 600;
     private static final float JPEG_QUALITY = 0.88f;

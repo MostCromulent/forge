@@ -197,7 +197,7 @@ public final class WebSettings implements IHasForgeLog {
 
     /** Gives a game this player's settings, with two exceptions. Auto-pass always respects the interrupts. Playable cards and the lands that auto-tap would use are always highlighted. */
     public static void applyAll(final PlayerSettings player, final IGameController controller) {
-        // Each setting is pushed after the engine sets its first values from the shared preferences. So a guest plays by its own settings
+        // Each setting is pushed after the engine sets its first values from the shared preferences, so a guest plays by its own settings
         for (final FPref pref : YieldController.SYNCED_PREFS) {
             final boolean always = pref == FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS || pref == FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS
                     || pref == FPref.UI_SHOW_AUTOTAP_PREVIEW;

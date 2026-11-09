@@ -113,7 +113,7 @@ public final class OfflineDraft implements Draft {
         advance(passed);
     }
 
-    /** The finished draft, saved the way desktop saves it: the player's picks and each computer's deck, all under name. */
+    /** Builds the finished draft as desktop does: the player's picks and each computer's deck, all under name. */
     CompletableFuture<DeckGroup> save(final String name) {
         return CompletableFuture.supplyAsync(() -> draft.toDeckGroup(name), thread);
     }

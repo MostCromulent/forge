@@ -12,7 +12,7 @@ import java.util.zip.CRC32;
 
 /** The page's files, read from the jar or from a folder, and the page itself with its stylesheets joined and its files versioned. */
 final class PageBundle {
-    /** A stylesheet or script the page names. The page adds a hash of its contents to the address. */
+    /** A stylesheet or script the page names. page() adds a hash of the file's contents to its address. */
     private static final Pattern PAGE_FILE = Pattern.compile("(href|src)=\"((?:css|js)/[^\"?]+)\"");
     /** A stylesheet link in the page. The page's stylesheets are served joined into one file, STYLES. */
     private static final Pattern STYLESHEET = Pattern.compile("<link rel=\"stylesheet\" href=\"(css/[^\"?]+)\">\\R?");
@@ -27,7 +27,8 @@ final class PageBundle {
 
     /**
      * The page, with a hash of each stylesheet's and script's contents in its address, so the browser keeps them until they change.
-     * Its stylesheets become one file, so a first visit asks for one, and the script's chunks are asked for at once, not one after another.
+     * Its stylesheets are joined into one file, and its script's chunks are preloaded so the browser asks for them all at once.
+     * Returns null when there is no index.html.
      */
     byte[] page() throws IOException {
         final byte[] built = page;
@@ -38,7 +39,7 @@ final class PageBundle {
         if (html == null) {
             return null;
         }
-        // Joined in the page's order, so the cascade is the same as with separate files. Every stylesheet is in the same folder, so its relative addresses still work
+        // Joined in the page's order, so the cascade is unchanged and relative addresses inside css/ still work
         final ByteArrayOutputStream joined = new ByteArrayOutputStream();
         final StringBuilder linked = new StringBuilder();
         final Matcher sheet = STYLESHEET.matcher(new String(html, StandardCharsets.UTF_8));

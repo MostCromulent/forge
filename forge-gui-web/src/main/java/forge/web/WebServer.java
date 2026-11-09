@@ -68,7 +68,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 
-/** The HTTP and WebSocket server on the web port. It serves the page, card images, sounds, the browsers' sockets and the app tunnel. It listens on every interface so that a player on another machine can open a link. The token in the link is new on each launch and keeps everyone else out. */
+/** The HTTP and WebSocket server on the web port. It serves the page, card images, sounds, the browsers' sockets and the netplay tunnel for desktop and mobile Forge. It listens on every interface so that a player on another machine can open a link. The token in the link is new on each launch and keeps everyone else out. */
 public final class WebServer implements AutoCloseable, IHasForgeLog {
     private static final String COOKIE = "forge_token";
     /** Whether a request came from a browser on this machine, not from another machine or through a tunnel. */
@@ -179,7 +179,6 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 && !req.headers().contains("Cf-Connecting-Ip") && !req.headers().contains("X-Forwarded-For") && !req.headers().contains("Forwarded");
     }
 
-    /** A value from the link's query, or null when the link does not carry it. */
     private static String param(final QueryStringDecoder q, final String name) {
         final List<String> values = q.parameters().get(name);
         return values == null ? null : values.get(0);
@@ -307,7 +306,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 final QueryStringDecoder q = new QueryStringDecoder(req.uri());
                 final boolean socket = "/ws".equals(q.path());
                 final boolean netplay = WebSocketTunnel.PATH.equals(q.path());
-                // A netplay client is not a page and sends no origin to check. So a cookie must not let it in, and only its link's token does
+                // A netplay client is not a page and sends no origin to check, so only its link's token lets it in, never a cookie
                 final boolean admitted = netplay ? admits(param(q, "token")) : admitted(req, q);
                 // The token keeps other pages out. The origin check stops them from opening a socket with a stolen cookie
                 if (!admitted || (socket && !sameOrigin(req)) || (netplay && !HostingServer.isHosting())) {
@@ -327,7 +326,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
 
         private void route(final ChannelHandlerContext ctx, final boolean netplay) {
             if (netplay) {
-                // Desktop or mobile Forge. From here on the host's netplay server owns the connection, as it does for one made in this process
+                // Desktop or mobile Forge. The netplay server then handles this connection like one it accepted itself
                 ServerTraffic.carrying(ctx.channel(), ServerTraffic.Kind.GAME);
                 ctx.pipeline().addLast(
                         new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
@@ -459,7 +458,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 notFound(ctx);
                 return;
             }
-            // The page stores the link's token as a cookie, so its later requests come in on the same link
+            // The response sets the link's token as a cookie, so the page's later requests carry it
             final String token = param(q, "token");
             // A chunk's name and the page's version parameter are file hashes, so a changed file gets a new address and the old one never goes stale
             final boolean hashed = resource.startsWith("js/chunks/") || q.parameters().containsKey("v");

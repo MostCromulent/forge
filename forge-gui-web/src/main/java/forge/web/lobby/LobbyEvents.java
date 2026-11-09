@@ -209,7 +209,7 @@ public final class LobbyEvents {
         }
     }
 
-    /** Returns the reason it cannot, or null. Building the product can wait for a web site, so this runs off the host UI thread. It then sets up the table on that thread. */
+    /** Sets up the table's event from the host's form, and returns the reason it cannot, or null. It runs off the host UI thread because building the product can wait for a web site, and it changes the table on the host UI thread. */
     public String setUpEvent(final EventSetup s) {
         final ServerGameLobby lobby = owner.host();
         if (lobby == null || !Lobby.limited(lobby)) {

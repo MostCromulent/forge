@@ -63,7 +63,7 @@ public final class Lobby {
     private final LobbyEvents events;
     /** True once the game was opened for others to join. Only then is a link worth showing. */
     private volatile boolean shareable;
-    /** Whether this browser is a guest's. A guest's own decks are the ones its browser stores. */
+    /** Whether this browser belongs to a guest. A guest's own decks are the ones its browser stores. */
     private final BooleanSupplier guest;
     /** The UI whose thread is the only one that changes the table. */
     private final WebGuiBase ui;
@@ -157,15 +157,15 @@ public final class Lobby {
         lobby.saveSetup();
     }
 
-    /** Skips the send when this browser already has this exact list. The list is always rebuilt, because building it records what the lobby shows. */
+    /** Skips the send when this browser already has this exact list. The list is always rebuilt, because refresh also rebuilds the keys that deck lookups read. */
     public void sendDecks(final BrowserChannel to) {
         settle();
         sendBuilt(to);
     }
 
     /**
-     * Like sendDecks, but the list is built and sent through build, where it may wait in a queue. The table changes the list implies
-     * are made now, in order with the browser's other commands. A Ready pressed after the request is then not undone by a later list.
+     * Like sendDecks, but the list is built and sent through build, where it may wait in a queue. Any table changes that the new list
+     * needs are made now, in order with the browser's other commands, so a Ready pressed after the request is not undone by a later list.
      */
     public void queueDecks(final BrowserChannel to, final Executor build) {
         settle();
@@ -195,7 +195,7 @@ public final class Lobby {
         }
     }
 
-    /** Updates the table to the format, card pool and rules that a list is about to be built for. This is quick. */
+    /** Updates the table to the format, card pool and rules that a list is about to be built for. */
     private void settle() {
         final boolean newPool;
         final boolean newRules;
@@ -261,7 +261,7 @@ public final class Lobby {
         return false;
     }
 
-    /** A slot keeps the generated deck that was built from the old card pool. So a new pool deals this browser's seats the same generator again. */
+    /** A slot keeps the generated deck that was built from the old card pool, so a new pool deals this browser's seats the same generator again. */
     private void dealGeneratorsAgain() {
         final GameLobby lobby = view();
         if (lobby == null) {
@@ -391,7 +391,7 @@ public final class Lobby {
         final String avatar = labelOf(index, DeckSection.Avatar);
         if (index == local.webSeat()) {
             local.updateOwnSeat(UpdateLobbyPlayerEvent.deckUpdate(deck));
-            // A deck readies a seat that is alone. With others seated, the seat waits for Ready. Sent only on a change, because the chat reports each one
+            // Sent only on a change, because the chat reports each one
             final boolean ready = deck != null && !withOthers(lobby);
             if (lobby.getSlot(index).isReady() != ready) {
                 local.updateOwnSeat(UpdateLobbyPlayerEvent.isReadyUpdate(ready));
@@ -578,7 +578,7 @@ public final class Lobby {
         local.pushLobby();
     }
 
-    /** Downloads a net deck category and adds it to the catalogue. Core asks the browser which category to load. */
+    /** Downloads a net deck category and adds it to the catalogue. NetDeckCategory asks the host's browser which category to load. */
     public void loadNetDecks(final BrowserChannel to) {
         catalog.loadNetDecks(format());
         sendDecks(to);
@@ -744,7 +744,7 @@ public final class Lobby {
         return problems(new ArrayList<>());
     }
 
-    /** Adds to illegal the decks that startGame finds illegal. These do not stop the match, but the host is asked whether to play anyway. */
+    /** Adds to illegal the decks that break their format's rules. When deck legality is enforced, startGame asks the host whether to play them anyway. */
     private List<String> problems(final List<String> illegal) {
         synchronized (DeckCatalog.DECKS) {
             final GameLobby lobby = view();
@@ -1196,7 +1196,7 @@ public final class Lobby {
     /** Writes a card-art sleeve onto the seat's deck, which every client reads it from. */
     public void setSleeveArt(final int index, final String imageKey, final int offset) {
         final GameLobby lobby = view();
-        // The deck file and the saved sleeves belong to the host, and the key is written into that file unchanged
+        // Only the host writes the deck file, and the key is written unchanged, so it must name a real card
         if (lobby == null || guest.getAsBoolean() || !dealsFor(lobby, index) || imageKey == null
                 || (!imageKey.isEmpty() && ImageUtil.getPaperCardFromImageKey(imageKey) == null)) {
             return;
@@ -1240,7 +1240,7 @@ public final class Lobby {
     /**
      * This browser's choices for one seat. The lobby slot holds the deck itself, and this holds the choice: the deck by catalogue key,
      * the planar deck, scheme deck and avatar, and the commanders picked to lead the deck, by name. composed is the deck last sent, with
-     * main deck and extras together. This is the deck that counts.
+     * main deck and extras together. deckAt reads it before the catalogue deck.
      */
     private record SeatChoice(String deckKey, Map<DeckSection, Extra> extras, List<String> commanders, Deck composed) {
         static final SeatChoice NONE = new SeatChoice(null, Map.of(), null, null);

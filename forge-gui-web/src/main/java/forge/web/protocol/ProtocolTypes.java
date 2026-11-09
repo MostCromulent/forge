@@ -38,7 +38,7 @@ public final class ProtocolTypes {
 
     /**
      * Writes protocol.gen.ts, then the page's language keys through PageTextKeys. args[0] is the file to write. args[1] is Forge's languages
-     * folder, which the Localizer needs because some enums name themselves as they load. args[2] is the compiled classes' folder, where the page's key list goes.
+     * folder, which the Localizer needs because some enums read localized text when their class loads. args[2] is the compiled classes' folder, where the page's key list goes.
      */
     public static void main(final String[] args) throws IOException {
         Localizer.getInstance().initialize("en-US", args[1]);
@@ -175,7 +175,6 @@ public final class ProtocolTypes {
     }
 
     private void trackedProps() {
-        // The enum table is filled as TrackableProperty's constants are created, so they are created first
         final TrackableProperty[] props = TrackableProperty.values();
         final Map<TrackableType<?>, Class<?>> enums = enumTypes();
         named(ToBrowser.Ref.class);

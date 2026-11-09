@@ -51,7 +51,7 @@ final class HostRequests implements IHasForgeLog {
         }
     }
 
-    /** Asks the browser to pick from a list and waits. images, when given, show each option as a card or a pack, as pictured says. Returns the chosen indices, or null when nobody answers. */
+    /** Asks the browser to pick from a list and waits. When images is given, each option is shown as a picture of the kind pictured names, a card or a pack. Returns the chosen indices, or null when nobody answers. */
     List<Integer> ask(final HostChoiceKind kind, final String title, final String message, final List<String> options, final int min, final int max,
             final List<String> images, final String pictured) {
         final int id = nextId.incrementAndGet();

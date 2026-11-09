@@ -99,7 +99,7 @@ public final class Wire {
         return out;
     }
 
-    /** The JSON for a request's own fields, without the id that the waiting queue adds. */
+    /** The JSON for a request's own fields, without the id that PendingRequests adds. */
     public static JsonObject encodeRequest(final Record request) {
         final JsonObject out = new JsonObject();
         out.addProperty("t", "request");

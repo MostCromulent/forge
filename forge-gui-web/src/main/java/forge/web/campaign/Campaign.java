@@ -65,7 +65,7 @@ public interface Campaign {
     /** A game of the campaign's match ended. It is recorded and rewarded here. hostGame is the host's own view, the only view that knows the match. */
     CampaignResult gameOver(GameView hostGame);
 
-    /** Called when the game's result has been sent. So whatever the mode does next, such as asking about a reward, comes after the result screen. */
+    /** Called when the game's result has been sent, so whatever the mode does next, such as asking about a reward, comes after the result screen. */
     default void resultSent() {
     }
 
@@ -96,7 +96,7 @@ public interface Campaign {
     /** A command of the mode's own. save is null on the list of saved games. */
     void handle(BrowserChannel channel, Record command, String save, Host host);
 
-    /** Whether file is a direct child of the saves folder with exactly that name, however its path was written. Save names come from the browser. So a name with a path in it must not reach a file outside the saves to open, rename or delete. */
+    /** Whether file is a direct child of the saves folder with exactly that name, however its path was written. Save names come from the browser, so a name with a path in it must not reach a file outside the saves to open, rename or delete. */
     static boolean isSaveNamed(final String savesDir, final File file, final String child) {
         try {
             final File canonical = file.getCanonicalFile();
