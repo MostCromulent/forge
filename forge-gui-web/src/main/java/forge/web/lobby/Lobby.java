@@ -681,11 +681,13 @@ public final class Lobby {
             case Schemes -> slot.getSchemeDeckName();
             default -> slot.getAvatarVanguard();
         };
-        final String label = dealsFor(lobby, index) && labelOf(index, section) != null ? labelOf(index, section) : published;
+        final Extra mine = dealsFor(lobby, index) ? choice(index).extras().get(section) : null;
+        final String label = mine != null ? mine.label() : published;
+        final boolean hidden = mine != null ? mine.hidden() : ExtraSections.randomLabel().equals(published);
         final CardPool cards = deck == null ? null : deck.get(section);
         final int count = cards == null ? 0 : cards.countAll();
         String detail = null;
-        if (section == DeckSection.Avatar && count > 0 && !ExtraSections.randomLabel().equals(label)) {
+        if (section == DeckSection.Avatar && count > 0 && !hidden) {
             final var rules = cards.iterator().next().getKey().getRules();
             detail = Localizer.getInstance().getMessage("lblWebLobbyAvatarMods", signed(rules.getHand()), signed(rules.getLife()));
         }

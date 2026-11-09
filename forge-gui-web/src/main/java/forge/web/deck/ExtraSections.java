@@ -21,8 +21,11 @@ public final class ExtraSections {
     private ExtraSections() {
     }
 
-    /** A seat's choice for one extra section: its label and its cards. cards is null to use the main deck's own section. */
-    public record Extra(String label, CardPool cards) {
+    /** A seat's choice for one extra section: its label and its cards. cards is null to use the main deck's own section. hidden is true when the label hides which card was drawn. */
+    public record Extra(String label, CardPool cards, boolean hidden) {
+        Extra(final String label, final CardPool cards) {
+            this(label, cards, false);
+        }
     }
 
     static final String OWN = "own";
@@ -78,7 +81,7 @@ public final class ExtraSections {
             }
             final CardPool one = new CardPool();
             one.add(avatar);
-            return new Extra(RANDOM.equals(choice) ? randomLabel() : avatar.getName(), one);
+            return new Extra(RANDOM.equals(choice) ? randomLabel() : avatar.getName(), one, RANDOM.equals(choice));
         }
         if (RANDOM.equals(choice)) {
             final List<DeckProxy> saved = savedDecks(section);
