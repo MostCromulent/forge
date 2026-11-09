@@ -490,12 +490,17 @@ public final class DeckEditor {
         if (copyOf != null) {
             return Localizer.getInstance().getMessage("lblWebEditorOnlyOwnDelete");
         }
+        return delete(target, owned, check.format(), sink);
+    }
+
+    /** Deletes a deck from where it is saved. name is the deck's saved name, or null when it was never saved. Returns why it failed, or null. */
+    static String delete(final Target target, final String name, final GameType format, final DeviceSink sink) {
         try {
             if (target instanceof Device d) {
-                sink.deviceDeck(d.id(), null, check.format());
-            } else if (target instanceof Stored s && owned != null) {
+                sink.deviceDeck(d.id(), null, format);
+            } else if (target instanceof Stored s && name != null) {
                 synchronized (DeckCatalog.DECKS) {
-                    s.storage().delete(owned);
+                    s.storage().delete(name);
                 }
             }
         } catch (final RuntimeException e) {

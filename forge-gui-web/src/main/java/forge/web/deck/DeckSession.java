@@ -226,8 +226,7 @@ public final class DeckSession implements IHasForgeLog {
             problem = Localizer.getInstance().getMessage("lblWebEditorOnlyOwnDelete");
         } else {
             final Check check = check(lobby.format().name(), null, false);
-            problem = new DeckEditor(deck, false, true, targetOf(key, DeckCatalog.pathOf(key), check), check, storages, guest,
-                    this::sendDeviceDeck, null).delete();
+            problem = DeckEditor.delete(targetOf(key, DeckCatalog.pathOf(key), check), deck.getName(), check.format(), this::sendDeviceDeck);
         }
         if (problem != null) {
             channel.send(new Notice(problem, null, false));
