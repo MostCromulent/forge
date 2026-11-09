@@ -5,6 +5,7 @@ import forge.deck.CardPool;
 import forge.deck.CommanderOptions;
 import forge.deck.Deck;
 import forge.deck.DeckSection;
+import forge.deck.FormatChoices;
 import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.gamemodes.match.GameLobby;
@@ -49,8 +50,6 @@ import java.util.function.Supplier;
 public final class Lobby {
     private static final int MOST_TEAMS = 4;
     private static final int GIANT_SEATS = 4;
-    static final int MAX_SEATS = 8;
-    static final int MAX_POD = 8;
     private final DeckCatalog catalog = new DeckCatalog();
     /** Each seat's planar deck, scheme deck and avatar, for the seats whose decks this browser sends. */
     private final Map<Integer, Map<DeckSection, Extra>> extras = new ConcurrentHashMap<>();
@@ -299,7 +298,7 @@ public final class Lobby {
 
     private static List<String> variantsOn(final GameLobby lobby) {
         final List<String> out = new ArrayList<>();
-        for (final GameType v : LobbyFormats.VARIANTS) {
+        for (final GameType v : FormatChoices.VARIANTS) {
             if (lobby.hasVariant(v)) {
                 out.add(v.name());
             }
@@ -453,7 +452,7 @@ public final class Lobby {
         if (lobby == null) {
             return;
         }
-        for (final GameType v : LobbyFormats.VARIANTS) {
+        for (final GameType v : FormatChoices.VARIANTS) {
             if (v.name().equals(id)) {
                 if (on) {
                     lobby.applyVariant(v);
@@ -602,8 +601,8 @@ public final class Lobby {
             // Only the machine running the game can start it. Everyone else waits for the host
             return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(),
                     cardPool == null ? null : cardPool.getName(),
-                    LobbyFormats.VARIANTS.stream().map(LobbyFormats::explainedVariant).toList(), variantsOn(lobby),
-                    maxSeats(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,
+                    FormatChoices.VARIANTS.stream().map(LobbyFormats::explainedVariant).toList(), variantsOn(lobby),
+                    lobby.getSlotLimit(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,
                     local.isHost() && problems.isEmpty(), illegal, FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY),
                     events.limitedTable(lobby), maxBracket(), overBracket(lobby), teams(lobby), fixedPairs(lobby),
                     local.isHost() ? teamChoices(lobby) : List.of(),
@@ -738,21 +737,12 @@ public final class Lobby {
             }
             final List<String> out = new ArrayList<>(lobby.startProblems(this::deckAt));
             illegal.addAll(lobby.legalityProblems(this::deckAt));
-            int playing = 0;
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 final LobbySlot slot = lobby.getSlot(i);
                 // A seat that sits out is not in the match, so nothing about it stops the match
-                if (slot.isSittingOut()) {
-                    continue;
-                }
-                if (slot.getType() == LobbySlotType.OPEN) {
+                if (!slot.isSittingOut() && slot.getType() == LobbySlotType.OPEN) {
                     out.add(Localizer.getInstance().getMessage("lblWebLobbySeatOpen"));
-                    continue;
                 }
-                playing++;
-            }
-            if (playing > MAX_SEATS) {
-                out.add(0, Localizer.getInstance().getMessage("lblWebLobbyTooManyPlayers", MAX_SEATS, playing - MAX_SEATS));
             }
             return out;
         }
@@ -868,15 +858,6 @@ public final class Lobby {
         }
     }
 
-    /** The most seats the table takes: a full pod at a Limited table, or fewer once a configured draft limits its pod size. */
-    int maxSeats() {
-        final GameLobby lobby = view();
-        if (lobby == null) {
-            return MAX_SEATS;
-        }
-        return limited(lobby) ? Math.min(MAX_POD, lobby.getSlotLimit()) : MAX_SEATS;
-    }
-
     static boolean limited(final GameLobby lobby) {
         final GameLobbyData data = lobby.getData();
         return data != null && data.isLimitedMode();
@@ -904,7 +885,7 @@ public final class Lobby {
         if (lobby == null || drafting(lobby) || (fixedPairs(lobby) && count != GIANT_SEATS)) {
             return;
         }
-        final int wanted = Math.min(maxSeats(), Math.max(2, count));
+        final int wanted = Math.min(lobby.getSlotLimit(), Math.max(2, count));
         while (lobby.getNumberOfSlots() < wanted) {
             final int before = lobby.getNumberOfSlots();
             addSeat(open);
@@ -933,7 +914,7 @@ public final class Lobby {
 
     private void addSeat(final boolean open) {
         final ServerGameLobby lobby = host();
-        if (lobby != null && !drafting(lobby) && lobby.getNumberOfSlots() < maxSeats()) {
+        if (lobby != null && !drafting(lobby) && lobby.getNumberOfSlots() < lobby.getSlotLimit()) {
             // The engine puts a new seat on the team with its index number, which another seat may already use
             final int team = teamForNewSeat(lobby, teams(lobby));
             lobby.addSlot();

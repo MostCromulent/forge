@@ -3,6 +3,7 @@ package forge.web.lobby;
 import forge.card.DraftOptions;
 import forge.deck.Deck;
 import forge.deck.DeckProxy;
+import forge.deck.FormatChoices;
 import forge.game.GameType;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.LimitedPoolType;
@@ -189,9 +190,6 @@ public final class LobbyEvents {
             return Localizer.getInstance().getMessage("lblWebLobbyDraftStillOn");
         }
         if (kind == null) {
-            if (lobby.getNumberOfSlots() > Lobby.MAX_SEATS) {
-                return Localizer.getInstance().getMessage("lblWebLobbyConstructedSeats", Lobby.MAX_SEATS);
-            }
             lobby.clearCurrentEvent();
             lobby.selectEventForMatch(null, false);
             // Sitting out applies only to events. A Constructed table neither shows it nor clears it, so it is cleared here
@@ -207,7 +205,7 @@ public final class LobbyEvents {
         final boolean sealed = kind == EventKind.sealed;
         // An event is played without a format or casual variant, as desktop's Limited mode hides them
         owner.setFormat(GameType.Constructed.name());
-        for (final GameType v : LobbyFormats.VARIANTS) {
+        for (final GameType v : FormatChoices.VARIANTS) {
             lobby.removeVariant(v);
         }
         lobby.setLimitedType(sealed ? GameType.Sealed : GameType.Draft);
@@ -240,7 +238,7 @@ public final class LobbyEvents {
             }
             // Pod size as desktop chooses it: never fewer than the seats at the table, and never more than a full pod
             final int wanted = s.podSize() > 0 ? s.podSize() : draft.getPodSize();
-            draft.setPodSize(Math.min(Lobby.MAX_POD, Math.max(Math.max(2, lobby.getNumberOfSlots()), wanted)));
+            draft.setPodSize(Math.min(BoosterDraft.N_PLAYERS, Math.max(Math.max(2, lobby.getNumberOfSlots()), wanted)));
             if (s.pickRule() != null) {
                 draft.setDoublePick(DraftOptions.DoublePick.valueOf(s.pickRule()));
             }

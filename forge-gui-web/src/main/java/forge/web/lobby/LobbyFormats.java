@@ -24,9 +24,6 @@ public final class LobbyFormats {
     /** The formats on offer, in desktop's order. Every format except Constructed is a variant. Constructed means no variant. */
     static final List<GameType> FORMATS = Stream.concat(Stream.of(GameType.Constructed), FormatChoices.FORMAT_GAME_TYPES.stream()).toList();
 
-    /** The casual variants. Each one can be added to any format that the engine allows it with. */
-    static final List<GameType> VARIANTS = FormatChoices.VARIANTS;
-
     /** The description uses the web's own wording, because the engine's older text still calls a commander a "General". */
     static Format explained(final GameType type) {
         final Localizer text = Localizer.getInstance();
@@ -125,7 +122,7 @@ public final class LobbyFormats {
                 text.getMessage("lblWebPlayConstructed"), cards, true);
     }
 
-    /** FormatChoices lists no archived or digital formats, so every format it offers is one of these. */
+    /** FormatChoices lists no archived formats. Digital formats are grouped with the custom ones. */
     private static FormatGroup kind(final GameFormat format) {
         return switch (format.getFormatType()) {
             case SANCTIONED -> FormatGroup.Sanctioned;
