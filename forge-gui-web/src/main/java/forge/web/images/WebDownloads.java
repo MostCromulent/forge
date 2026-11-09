@@ -24,7 +24,7 @@ public final class WebDownloads implements IHasForgeLog {
         final Progress progress = new Progress(service.getTitle(), toBrowser);
         try {
             // No dialog waits for Start and Close here. So the service is set up, then run to completion on this thread
-            service.initialize(new Text(""), new Text(""), progress, new StartButton(), () -> { }, null, () -> { });
+            service.initialize(new Text(""), new Text(""), progress, new QuietButton(), () -> { }, null, () -> { });
             service.run();
         } catch (final RuntimeException e) {
             netLog.error(e, "Download failed");
@@ -37,11 +37,10 @@ public final class WebDownloads implements IHasForgeLog {
     }
 
     /** Reports a download's progress as a notice, which the browser already knows how to show. */
-    private static final class Progress implements IProgressBar {
+    private static final class Progress extends QuietBar {
         private final String title;
         private final Consumer<JsonObject> toBrowser;
         private String description;
-        private int maximum = 1;
 
         Progress(final String title, final Consumer<JsonObject> toBrowser) {
             this.title = title;
@@ -60,37 +59,26 @@ public final class WebDownloads implements IHasForgeLog {
             description = s;
             say(s);
         }
-
-        @Override public void setValue(final int progress) {
-        }
-
-        @Override public void reset() {
-        }
-
-        @Override public void setShowETA(final boolean b) {
-        }
-
-        @Override public void setShowCount(final boolean b) {
-        }
-
-        @Override public void setPercentMode(final boolean percentMode) {
-        }
-
-        @Override public void setMaximum(final int maximum0) {
-            maximum = maximum0;
-        }
-
-        @Override public int getMaximum() {
-            return maximum;
-        }
     }
 
-    /** The dialog's Start button. Nothing presses it here, because the service is run directly. */
-    private static final class StartButton implements IButton {
-        private boolean enabled;
+    /** A download dialog's progress bar that shows nothing. A subclass overrides the calls it reports. */
+    public static class QuietBar implements IProgressBar {
+        private volatile int maximum = 1;
 
-        @Override public boolean isEnabled() { return enabled; }
-        @Override public void setEnabled(final boolean b) { enabled = b; }
+        @Override public void setDescription(final String s) { }
+        @Override public void setValue(final int progress) { }
+        @Override public void reset() { }
+        @Override public void setShowETA(final boolean b) { }
+        @Override public void setShowCount(final boolean b) { }
+        @Override public void setPercentMode(final boolean percentMode) { }
+        @Override public void setMaximum(final int maximum0) { maximum = maximum0; }
+        @Override public int getMaximum() { return maximum; }
+    }
+
+    /** A download dialog's Start button that nobody sees. Its commands are dropped unless a subclass runs them. */
+    public static class QuietButton implements IButton {
+        @Override public boolean isEnabled() { return true; }
+        @Override public void setEnabled(final boolean b) { }
         @Override public boolean isVisible() { return true; }
         @Override public void setVisible(final boolean b) { }
         @Override public String getToolTipText() { return ""; }

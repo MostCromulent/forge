@@ -7,10 +7,7 @@ import forge.gui.FThreads;
 import forge.gui.UiCommand;
 import forge.gui.download.GuiDownloadFilteredCardImages;
 import forge.gui.download.GuiDownloadService;
-import forge.gui.interfaces.IButton;
-import forge.gui.interfaces.IProgressBar;
 import forge.item.PaperCard;
-import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import forge.util.Localizer;
 import forge.util.storage.IStorage;
@@ -356,34 +353,15 @@ final class CardImageDownloads {
     }
 
     /** Shows the service's progress in the window's own words. */
-    private final class Bar implements IProgressBar {
-        private volatile int maximum;
-
-        @Override public void setDescription(final String s0) { }
-        @Override public void setValue(final int progress) { SwingUtilities.invokeLater(() -> showDownloadProgress(progress, maximum)); }
-        @Override public void reset() { }
-        @Override public void setShowETA(final boolean b0) { }
-        @Override public void setShowCount(final boolean b0) { }
-        @Override public void setPercentMode(final boolean percentMode0) { }
-        @Override public int getMaximum() { return maximum; }
-        @Override public void setMaximum(final int maximum0) { maximum = maximum0; }
+    private final class Bar extends WebDownloads.QuietBar {
+        @Override public void setValue(final int progress) {
+            final int total = getMaximum();
+            SwingUtilities.invokeLater(() -> showDownloadProgress(progress, total));
+        }
     }
 
     /** Replaces the service's Start button. It runs the start and close commands as soon as the service hands each one over. */
-    private static final class Starter implements IButton {
+    private static final class Starter extends WebDownloads.QuietButton {
         @Override public void setCommand(final UiCommand command) { command.run(); }
-        @Override public void setEnabled(final boolean b0) { }
-        @Override public boolean isEnabled() { return true; }
-        @Override public String getText() { return ""; }
-        @Override public void setText(final String text0) { }
-        @Override public boolean isSelected() { return false; }
-        @Override public void setSelected(final boolean b0) { }
-        @Override public boolean requestFocusInWindow() { return false; }
-        @Override public void setImage(final FSkinProp color) { }
-        @Override public void setTextColor(final int r, final int g, final int b) { }
-        @Override public boolean isVisible() { return false; }
-        @Override public void setVisible(final boolean b0) { }
-        @Override public String getToolTipText() { return ""; }
-        @Override public void setToolTipText(final String s0) { }
     }
 }
