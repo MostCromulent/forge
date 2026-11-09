@@ -1,6 +1,7 @@
 package forge.web.protocol;
 
 import com.google.gson.JsonObject;
+import forge.web.TableCommands;
 import forge.web.WebSession;
 import forge.web.campaign.CampaignSession;
 import forge.web.campaign.ConquestGame;
@@ -16,7 +17,7 @@ import java.util.List;
 
 /** The session passes each command to the one of these that owns it, so each command must have exactly one owner. */
 public class CommandRoutingTest {
-    private static final List<Commands<?>> OWNERS = List.of(WebSession.COMMANDS, DeckSession.COMMANDS, OfflineLimited.COMMANDS,
+    private static final List<Commands<?>> OWNERS = List.of(WebSession.COMMANDS, TableCommands.COMMANDS, DeckSession.COMMANDS, OfflineLimited.COMMANDS,
             WebGuiGame.COMMANDS, CampaignSession.COMMANDS, ConquestGame.COMMANDS, QuestGame.COMMANDS);
 
     // Fails if a browser command has no owner, so it is silently dropped, or has two owners, so only the first one handles it

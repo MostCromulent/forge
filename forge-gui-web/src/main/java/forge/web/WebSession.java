@@ -33,7 +33,6 @@ import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.Commands;
 import forge.web.protocol.Commands.Handler;
 import forge.web.protocol.FromBrowser.*;
-import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.*;
 import forge.web.protocol.Wire;
 import org.apache.commons.lang3.StringUtils;
@@ -53,9 +52,8 @@ public final class WebSession implements IHasForgeLog {
     /** Long enough for any name a player types, short enough to fit on a seat plate. */
     static final int MAX_NAME_LENGTH = 24;
     private static final AtomicInteger SESSIONS = new AtomicInteger();
-    /** The commands the session handles itself. The rest belong to the deck editor, the Limited pages, the match or a campaign. */
+    /** The commands the session handles itself. The rest belong to the table, the deck editor, the Limited pages, the match or a campaign. */
     public static final Commands<WebSession> COMMANDS = new Commands<WebSession>()
-            .on(Plain.decks, (s, ch, c) -> s.lobby.queueDecks(ch, s.decks::inTurn))
             .on(PageError.class, (s, ch, e) -> netLog.warn("Page error for {}: {}", s.label(), LogSafe.forLog(e.text(), 1500)))
             .on(SetName.class, (s, ch, n) -> s.rename(ch, n.name(), n.avatar(), n.sleeve()))
             // A join that found no seat leaves the browser on the waiting page, which offers to try again
@@ -65,77 +63,6 @@ public final class WebSession implements IHasForgeLog {
             .on(Plain.lobby, (s, ch, c) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, false, null)))
             .on(Invite.class, (s, ch, i) -> s.ui.invokeInEdtLater(() -> s.openLobby(ch, true, i.limited())))
             .on(Plain.leaveLobby, (s, ch, c) -> s.ui.invokeInEdtLater(s::leaveLobby))
-            .on(Ready.class, atSetup((s, ch, r) -> s.lobby.setReady(r.ready())))
-            .on(SeatCommand.class, atSetup(WebSession::seatCommand))
-            .on(SetFormat.class, atSetup((s, ch, f) -> {
-                s.lobby.setFormat(f.format());
-                s.relistDecks(ch);
-            }))
-            .on(SetCardPool.class, atSetup((s, ch, p) -> {
-                s.lobby.setCardPool(p.cardPool());
-                s.relistDecks(ch);
-            }))
-            .on(SetVariant.class, atSetup((s, ch, v) -> {
-                s.lobby.setVariant(v.variant(), v.on(), invited(s.stage));
-                s.relistDecks(ch);
-            }))
-            .on(SetArchenemy.class, atSetup((s, ch, a) -> s.lobby.setArchenemy(a.index())))
-            .on(SetTeams.class, atSetup((s, ch, t) -> s.lobby.setTeams(t.count())))
-            .on(SetTeam.class, atSetup((s, ch, t) -> s.lobby.setTeam(t.index(), t.team())))
-            .on(SetSeatExtra.class, atSetup((s, ch, e) -> s.lobby.setSeatExtra(e.index(), e.section(), e.choice())))
-            .on(SetPlayerCount.class, atSetup((s, ch, p) -> s.lobby.setPlayerCount(p.count(), invited(s.stage))))
-            .on(SetMatchLength.class, atSetup((s, ch, m) -> {
-                if (s.lobby.setMatchLength(m.games())) {
-                    s.sessions.lobbyChanged();
-                }
-            }))
-            .on(SetMaxBracket.class, atSetup((s, ch, b) -> {
-                if (s.lobby.setMaxBracket(b.bracket())) {
-                    s.sessions.lobbyChanged();
-                }
-            }))
-            .on(SetSeat.class, atSetup(WebSession::applySeat))
-            .on(SleeveArt.class, atSetup((s, ch, a) -> s.lobby.setSleeveArt(a.index(), a.key(), a.offset())))
-            // The saved sleeves belong to the host's own Forge profile, and their list is sent in the hello
-            .on(ForgetSleeveArt.class, atSetup(host((s, ch, f) -> {
-                DeckCatalog.forgetSleeveArt(f.key());
-                ch.send(s.hello());
-            })))
-            .on(EventDecksOnly.class, atEvent((s, ch, d) -> {
-                s.lobby.events().setEventDecksOnly(d.on());
-                s.relistDecks(ch);
-            }))
-            .on(EventHostAgain.class, atEvent((s, ch, e) -> {
-                reportProblem(ch, s.lobby.events().hostAgain(e.eventId()));
-                s.relistDecks(ch);
-            }))
-            .on(EventForget.class, atEvent((s, ch, e) -> {
-                reportProblem(ch, s.lobby.events().forgetEvent(e.eventId()));
-                s.relistDecks(ch);
-            }))
-            .on(Plain.eventNew, atEvent((s, ch, c) -> {
-                final String problem = s.lobby.events().newEvent();
-                if (problem != null) {
-                    ch.send(error(problem));
-                } else {
-                    s.sendEventOptions(ch);
-                }
-                s.relistDecks(ch);
-            }))
-            .on(SetLimited.class, atEvent((s, ch, l) -> s.setLimited(ch, l.kind())))
-            .on(SitOut.class, atEvent((s, ch, o) -> s.lobby.events().sitOut(o.index(), o.sittingOut())))
-            // Building a product can wait for a web site, and dealing packs opens every pool, so neither runs on this thread
-            .on(EventSetup.class, atEvent((s, ch, e) -> s.ui.runBackgroundTask("Event", () -> {
-                reportProblem(ch, s.lobby.events().setUpEvent(e));
-                s.lobby.sendState(ch);
-            })))
-            .on(Plain.eventStart, atEvent((s, ch, c) -> {
-                if (s.limited.draft() != null) {
-                    ch.send(error(Localizer.getInstance().getMessage("lblWebSessionFinishDraft")));
-                } else {
-                    reportProblem(ch, s.lobby.events().startEvent());
-                }
-            }))
             .on(GiveSeat.class, host((s, ch, g) -> s.sessions.giveSeat(g.from(), g.to())))
             .on(DropPlayer.class, host((s, ch, d) -> s.sessions.dropPlayer(d.name())))
             .on(Say.class, (s, ch, say) -> {
@@ -144,33 +71,11 @@ public final class WebSession implements IHasForgeLog {
                     s.sessions.say(s, text.length() > MOST_CHAT_CHARS ? text.substring(0, MOST_CHAT_CHARS) : text);
                 }
             })
-            .on(AskExtraChoices.class, (s, ch, a) -> {
-                final ToBrowser.ExtraChoices choices = s.lobby.extraChoices(a.index(), a.section());
-                if (choices != null) {
-                    ch.send(choices);
-                }
-            })
-            .on(DeckQuery.class, (s, ch, q) -> s.decks.inTurn(() -> ch.send(s.lobby.deckMatches(q.kind(), q.value()))))
-            .on(AskDeckDetails.class, (s, ch, a) -> s.decks.inTurn(() -> {
-                final ToBrowser.DeckDetailsMessage details = s.lobby.deckDetails(a.key());
-                if (details != null) {
-                    ch.send(details);
-                }
-            }))
             // One set of host questions serves the whole process, so only the host's browser may answer them
             .on(HostChoiceAnswer.class, host((s, ch, a) -> s.ui.hostRequests().answer(a.id(), a.value())))
-            // Core asks for the category through a host question and blocks until it is answered, so this must not run on the socket thread
-            .on(Plain.netDecks, host((s, ch, c) -> s.ui.runBackgroundTask("Net decks", () -> s.lobby.loadNetDecks(ch))))
             // Finding the external address is a web request, so it cannot run on the socket thread
             .on(Plain.addresses, host((s, ch, c) -> s.ui.runBackgroundTask("Addresses", () -> ch.send(new Addresses(s.sessions.inviteUrls())))))
             .on(Plain.cardSets, (s, ch, c) -> ch.send(CardCatalog.sets()))
-            .on(SetDeckGen.class, host((s, ch, gen) -> {
-                final var prefs = FModel.getPreferences();
-                prefs.setPref(FPref.DECKGEN_SINGLETONS, gen.singletons());
-                prefs.setPref(FPref.DECKGEN_ARTIFACTS, gen.noArtifacts());
-                prefs.save();
-                s.lobby.queueDecks(ch, s.decks::inTurn);
-            }))
             .on(SearchCards.class, (s, ch, q) -> s.decks.inTurn(() -> ch.send(new CardSearch(CardCatalog.searchCardNames(q.query(), CARD_SEARCH_LIMIT)))))
             .on(AskPrintings.class, (s, ch, a) -> s.decks.inTurn(() -> ch.send(new Printings(a.name(), CardCatalog.printings(a.name(),
                     a.cardPool() == null ? null : FModel.getFormats().getFormat(a.cardPool()))))))
@@ -236,6 +141,7 @@ public final class WebSession implements IHasForgeLog {
     private volatile Integer sleeve;
     private final OfflineLimited limited;
     private final EventSeat eventSeat;
+    private final TableCommands table;
     /** The campaign modes. A build without them uses Campaigns.NONE instead. */
     private final Campaigns campaigns;
     /**
@@ -296,6 +202,7 @@ public final class WebSession implements IHasForgeLog {
         this.decks = new DeckSession(lobby, ui, () -> isHost, () -> stage instanceof Setup, device);
         this.limited = new OfflineLimited(this, ui, lobby, decks, local);
         this.eventSeat = new EventSeat(this, ui, lobby, decks, local, sessions::hostLobby, sessions::seatsChanged);
+        this.table = new TableCommands(this, lobby, decks, limited, ui, sessions);
         this.campaigns = new CampaignSession(new CampaignHost());
     }
 
@@ -468,7 +375,7 @@ public final class WebSession implements IHasForgeLog {
             lobby.sendDecks(channel);
             lobby.sendState(channel);
             if (isHost && lobby.events().settingUpEvent()) {
-                sendEventOptions(channel);
+                table.sendEventOptions(channel);
             }
             eventSeat.reconnected(channel);
         } else if (now instanceof Event) {
@@ -501,24 +408,6 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    /**
-     * The table can be changed only during setup: not while it is being built, and not once its match is played.
-     * Every change to it is made on the host UI thread, which also opens, starts and leaves the table.
-     */
-    private static <T extends Record> Handler<WebSession, T> atSetup(final Handler<WebSession, T> change) {
-        return (s, ch, c) -> s.ui.invokeInEdtLater(() -> {
-            if (s.stage instanceof Setup) {
-                change.run(s, ch, c);
-                s.lobby.sendState(ch);
-            }
-        });
-    }
-
-    /** A change to the table's draft or sealed event. Only the host may make it. */
-    private static <T extends Record> Handler<WebSession, T> atEvent(final Handler<WebSession, T> change) {
-        return atSetup(host(change));
-    }
-
     private static <T extends Record> Handler<WebSession, T> host(final Handler<WebSession, T> handler) {
         return (s, ch, c) -> {
             if (s.isHost) {
@@ -533,6 +422,8 @@ public final class WebSession implements IHasForgeLog {
             netLog.warn("Unknown browser message {}", LogSafe.forLog(msg.toString(), 200));
         } else if (COMMANDS.run(this, channel, command)) {
             return;
+        } else if (TableCommands.COMMANDS.handles(command)) {
+            table.onCommand(channel, command);
         } else if (DeckSession.COMMANDS.handles(command)) {
             deckCommand(channel, command);
         } else if (OfflineLimited.COMMANDS.handles(command)) {
@@ -581,28 +472,6 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    private void seatCommand(final BrowserChannel channel, final SeatCommand seat) {
-        // A guest's seat is emptied by sending the guest away, which opens it. The seat itself is removed only once it is empty
-        if (!isHost || seat.t() == SeatAction.aiSeat || !sessions.releaseGuestAt(seat.index())) {
-            switch (seat.t()) {
-                case openSeat -> lobby.openSeat(seat.index());
-                case aiSeat -> lobby.aiSeat(seat.index());
-                case removeSeat -> lobby.removeSeat(seat.index());
-            }
-        }
-    }
-
-    /** Switches the table to a kind of event, or back to Constructed when kind is null. */
-    private void setLimited(final BrowserChannel channel, final EventKind kind) {
-        final String problem = lobby.events().setLimited(kind);
-        if (problem != null) {
-            channel.send(error(problem));
-        } else if (kind != null) {
-            sendEventOptions(channel);
-        }
-        relistDecks(channel);
-    }
-
     private void openLimited(final BrowserChannel channel, final LimitedOpen open) {
         final EventKind kind = open.kind() == EventKind.draft ? EventKind.draft : EventKind.sealed;
         final Stage now = stage;
@@ -619,17 +488,6 @@ public final class WebSession implements IHasForgeLog {
         if (now instanceof Event e) {
             move(now, next.apply(e));
         }
-    }
-
-    private static void reportProblem(final BrowserChannel channel, final String problem) {
-        if (problem != null) {
-            channel.send(error(problem));
-        }
-    }
-
-    /** The event setup form offers the same options as the offline one. Reading the lists reads files, so it does not run on the socket thread. */
-    private void sendEventOptions(final BrowserChannel channel) {
-        ui.runBackgroundTask("Limited", () -> channel.send(OfflineEvents.options()));
     }
 
     /** Opens match setup: a game of this machine's own, set up for an event when limited is not null, or a seat in the host's game. Tells the browser the result. */
@@ -675,7 +533,7 @@ public final class WebSession implements IHasForgeLog {
         }
         applyChosenAvatar();
         if (limited != null) {
-            setLimited(channel, limited);
+            table.setLimited(channel, limited);
         }
         lobby.sendDecks(channel);
         lobby.sendState(channel);
@@ -740,13 +598,6 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    /** A new format, card pool or variant can change which decks a seat may use, so the list is sent again. */
-    private void relistDecks(final BrowserChannel to) {
-        if (lobby.restrictionsChanged()) {
-            lobby.sendDecks(to);
-        }
-    }
-
     /** The table changed. The browser is shown it only once it is set up. Until then it is still being built. */
     void lobbyChanged() {
         ui.invokeInEdtLater(() -> {
@@ -756,7 +607,7 @@ public final class WebSession implements IHasForgeLog {
             final BrowserChannel b = browser;
             if (b != null && stage instanceof Setup) {
                 // A guest learns the host's format or card pool only here, so its deck list is rebuilt here too
-                relistDecks(b);
+                lobby.relistDecks(b);
                 lobby.sendState(b);
             }
         });
@@ -824,7 +675,7 @@ public final class WebSession implements IHasForgeLog {
         return null;
     }
 
-    private void applySeat(final BrowserChannel channel, final SetSeat seat) {
+    void applySeat(final BrowserChannel channel, final SetSeat seat) {
         // The name on the player's own seat is the name they play under, so it follows the same rules as the first name they chose
         if (seat.name() != null && seat.index() == local.webSeat()) {
             final String problem = nameProblem(seat.name());
@@ -930,7 +781,7 @@ public final class WebSession implements IHasForgeLog {
         }
     }
 
-    private static boolean invited(final Stage stage) {
+    static boolean invited(final Stage stage) {
         if (stage instanceof Setup s) {
             return s.invited();
         }
@@ -1024,10 +875,10 @@ public final class WebSession implements IHasForgeLog {
             openLobby(b, playing.invited(), null);
             if (event != null) {
                 lobby.events().playEvent(event, type, decksOnly);
-                relistDecks(b);
+                lobby.relistDecks(b);
             } else if (kept != null) {
                 lobby.restore(kept);
-                relistDecks(b);
+                lobby.relistDecks(b);
                 lobby.sendState(b);
             }
         } else if (move(from, new Menu())) {

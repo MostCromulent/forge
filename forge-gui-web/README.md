@@ -91,7 +91,7 @@ The campaign modes are kept apart so a build can leave them out. On the server t
 
 The messages are Java records in `ToBrowser` and `FromBrowser`, and the campaigns' in `CampaignProtocol`. Each build generates the page's TypeScript types from them, so a change to a record fails the build wherever the page uses it. A field may be null only when it is marked `@Nullable`.
 
-Each command the page sends has one owner, which handles it from its `Commands` table: the session, the deck editor, the Limited pages, the match or a campaign. The tests check that every `IGuiGame` method is answered and that every command has exactly one owner.
+Each command the page sends has one owner, which handles it from its `Commands` table: the session, the table (`TableCommands`), the deck editor, the Limited pages, the match or a campaign. The tests check that every `IGuiGame` method is answered and that every command has exactly one owner.
 
 Game state needs no protocol work. It travels as Forge's own `TrackableProperty` values, so a new property reaches the page without a change here.
 

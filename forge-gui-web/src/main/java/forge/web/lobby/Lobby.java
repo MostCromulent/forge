@@ -830,8 +830,15 @@ public final class Lobby {
         local.pushLobby();
     }
 
+    /** A new format, card pool or variant can change which decks a seat may use, so the list is sent again. */
+    public void relistDecks(final BrowserChannel to) {
+        if (restrictionsChanged()) {
+            sendDecks(to);
+        }
+    }
+
     /** True when the format, card pool or rules differ from those the last deck list was built for. */
-    public boolean restrictionsChanged() {
+    private boolean restrictionsChanged() {
         synchronized (DeckCatalog.DECKS) {
             return format() != seenFormat || newCardPool() || newRules();
         }
