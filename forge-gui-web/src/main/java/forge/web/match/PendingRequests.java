@@ -1,6 +1,7 @@
 package forge.web.match;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import forge.util.IHasForgeLog;
 import forge.util.LogSafe;
@@ -40,7 +41,7 @@ public final class PendingRequests implements IHasForgeLog {
             id = nextId++;
             final JsonObject request = Wire.encodeRequest(payload);
             request.addProperty("id", id);
-            final JsonElement defaultAnswer = ToBrowser.defaultOf(request);
+            final JsonElement defaultAnswer = request.has("default") ? request.get("default") : JsonNull.INSTANCE;
             pending = new Pending(request, defaultAnswer, valid, new CompletableFuture<>());
             open.put(id, pending);
         }

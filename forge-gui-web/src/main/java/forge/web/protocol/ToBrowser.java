@@ -1,7 +1,5 @@
 package forge.web.protocol;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 import forge.card.CardRarity;
@@ -687,9 +685,4 @@ public final class ToBrowser {
     static final List<Class<? extends Record>> MESSAGES = Wire.marked(Message.class);
 
     static final List<Class<? extends Record>> REQUESTS = Wire.marked(Request.class);
-
-    /** The answer a request takes when nobody answers, read from its JSON. */
-    public static JsonElement defaultOf(final JsonObject request) {
-        return request.has("default") ? request.get("default") : JsonNull.INSTANCE;
-    }
 }
