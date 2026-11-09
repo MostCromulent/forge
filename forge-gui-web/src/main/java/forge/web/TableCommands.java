@@ -107,13 +107,14 @@ public final class TableCommands {
             }))
             // Core asks for the category through a host question and blocks until it is answered, so this must not run on the socket thread
             .on(Plain.netDecks, host((t, ch, c) -> t.ui.runBackgroundTask("Net decks", () -> t.lobby.loadNetDecks(ch))))
-            .on(SetDeckGen.class, host((t, ch, gen) -> {
+            // The host's preferences are written on the host UI thread
+            .on(SetDeckGen.class, host((t, ch, gen) -> t.ui.invokeInEdtLater(() -> {
                 final var prefs = FModel.getPreferences();
                 prefs.setPref(FPref.DECKGEN_SINGLETONS, gen.singletons());
                 prefs.setPref(FPref.DECKGEN_ARTIFACTS, gen.noArtifacts());
                 prefs.save();
                 t.lobby.queueDecks(ch, t.decks::inTurn);
-            }));
+            })));
 
     private final WebSession session;
     private final Lobby lobby;

@@ -109,14 +109,15 @@ public final class WebSession implements IHasForgeLog {
                 if (s.stage instanceof Playing p) {
                     p.gui().setSetting(set);
                 } else {
-                    WebSettings.set(s.settings, null, set.key(), set.value());
+                    // The host's settings are Forge's preferences, which are written on the host UI thread
+                    s.ui.invokeInEdtLater(() -> WebSettings.set(s.settings, null, set.key(), set.value()));
                 }
             })
             .on(SetStops.class, (s, ch, stops) -> {
                 if (s.stage instanceof Playing p) {
                     p.gui().setStops(stops);
                 } else {
-                    WebSettings.setStops(s.settings, stops.mine(), stops.phases());
+                    s.ui.invokeInEdtLater(() -> WebSettings.setStops(s.settings, stops.mine(), stops.phases()));
                 }
             });
     private final Lobby lobby;

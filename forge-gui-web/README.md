@@ -60,14 +60,17 @@ Each seat's netplay client runs its calls on a thread of its own, so a game ques
 
 The table a browser sits at (`Lobby` and `LocalGame`) is changed only on the UI thread, which also opens, starts and leaves it. Other threads may read it, which is why its maps are concurrent and its fields volatile.
 
+Forge's preferences have no lock, and two saves at once can garble their file, so the host's preferences are also written on the UI thread. A seat's settings and stops during a match are the exception. The match writes them as they change, under the seat's `mirrorLock`.
+
 A few locks remain where several threads share one thing:
 
+- `WebSessions`' own lock covers the list of sessions, the host's seat and the chat.
 - `DeckCatalog.DECKS` guards the deck lists and stores every session reads.
 - `WebSession`'s own lock covers moving between stages and a browser arriving or leaving.
 - `Lobby`'s `sentLock` keeps the deck list and table messages to one browser in order.
 - `WebGuiGame`'s `mirrorLock` keeps the server's copy of the browser's game in step with what was sent.
 
-They are taken in that order: the session's lock, then `sentLock`, then `DECKS`.
+They are taken in that order: `WebSessions`, the session's lock, then `sentLock`, then `DECKS`.
 
 ### The page
 
