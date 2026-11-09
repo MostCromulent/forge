@@ -4,8 +4,10 @@ import com.google.common.collect.MapMaker;
 import com.google.common.primitives.Ints;
 import forge.StaticData;
 import forge.card.CardEdition;
+import forge.card.MagicColor;
 import forge.deck.ArchetypeDeckGenerator;
 import forge.deck.CardPool;
+import forge.deck.ColorDeckGenerator;
 import forge.deck.CommanderBracketCalculator;
 import forge.deck.CommanderDeckGenerator;
 import forge.deck.Deck;
@@ -60,9 +62,9 @@ public final class DeckCatalog {
     private static final String GENERATED = "generated";
     private static final String COMMANDER_GEN = "gen:commander:";
     private static final String NET = "net";
-    /** A colour generator's colour is known before it builds a deck. The other generators' colours are not. */
-    private static final Map<String, String> COLOUR_LETTERS = Map.of(
-            "White", "W", "Blue", "U", "Black", "B", "Red", "R", "Green", "G");
+    /** The labels of the colour generator's random choices. Its other choices are colours, which have their own names. */
+    private static final Map<String, String> RANDOM_COLOURS = Map.of(
+            "Random 1", "lblWebDeckCatalogRandomOne", "Random 2", "lblWebDeckCatalogRandomTwo", "Random 3", "lblWebDeckCatalogRandomThree");
     /** The finder lists a deck's cards without problem marks. The verdict line states the problems. */
     public static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), null);
     /** Kept per deck object, not per contents, because working out a deck's formats reads every printing of its cards. */
@@ -342,8 +344,7 @@ public final class DeckCatalog {
         if (deck.getSleeveArtKey() != null && !deck.getSleeveArtKey().isEmpty()) {
             return deck.getSleeveArtKey();
         }
-        final PaperCard card = deck.getCommanders().isEmpty()
-                ? new DeckProxy(deck, null, null, null).getHighestCMCCard() : deck.getCommanders().get(0);
+        final PaperCard card = new DeckProxy(deck, null, null, null).getCoverCard();
         return card == null ? null : card.getImageKey(false);
     }
 
@@ -417,21 +418,14 @@ public final class DeckCatalog {
 
     /** Generators are listed by name only. Building a deck to fill each row would build hundreds of decks. */
     private void addGenerators(final List<DeckSummary> out) {
-        // The names the colour generator expects, shown with friendlier labels
-        final Map<String, String> colours = new LinkedHashMap<>();
         final Localizer text = Localizer.getInstance();
-        colours.put("Random 1", text.getMessage("lblWebDeckCatalogRandomOne"));
-        colours.put("Random 2", text.getMessage("lblWebDeckCatalogRandomTwo"));
-        colours.put("Random 3", text.getMessage("lblWebDeckCatalogRandomThree"));
-        colours.put("White", text.getMessage("lblWhite"));
-        colours.put("Blue", text.getMessage("lblBlue"));
-        colours.put("Black", text.getMessage("lblBlack"));
-        colours.put("Red", text.getMessage("lblRed"));
-        colours.put("Green", text.getMessage("lblGreen"));
-        for (final Map.Entry<String, String> c : colours.entrySet()) {
-            final String key = "gen:color:" + c.getKey();
+        for (final String choice : ColorDeckGenerator.COLOR_NAMES) {
+            final String key = "gen:color:" + choice;
+            // A colour choice's colour is known before it builds a deck. The other generators' colours are not
+            final MagicColor.Color colour = MagicColor.Color.fromName(choice);
             byKey.put(key, new Entry(null, true, null));
-            generated(out, key, c.getValue(), text.getMessage("lblWebDeckCatalogBuiltOnPick"), COLOUR_LETTERS.getOrDefault(c.getKey(), ""));
+            generated(out, key, colour != null ? colour.getTranslatedName() : text.getMessage(RANDOM_COLOURS.get(choice)),
+                    text.getMessage("lblWebDeckCatalogBuiltOnPick"), colour != null ? colour.getShortName() : "");
         }
         // A theme deck is a fixed list, so it cannot be limited to a card pool
         if (pool == null) {
