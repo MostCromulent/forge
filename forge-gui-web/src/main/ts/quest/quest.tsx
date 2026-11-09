@@ -36,7 +36,7 @@ export function Quest({ model, actions }: { model: Model; actions: Actions }) {
 
 function Saves({ saves, current, actions, create }: { saves: QuestSave[]; current: string | null; actions: Actions; create: () => void }) {
   return (
-    <Cards rows={saves} cls={s => (s.name === current ? 'ev qu-save current' : 'ev qu-save')}
+    <Cards rows={saves} createLast cls={s => (s.name === current ? 'ev qu-save current' : 'ev qu-save')}
       create={{ title: t('lblWebQuestNew'), line: t('lblWebQuestNewLine'), go: create }}
       rename={{ field: t('lblQuestName'), go: (s, to) => actions.campaignRename(s.name, to) }}
       remove={{ item: t('lblDelete'), ask: s => t('lblAreYouSuerDeleteConquest', s.name), keep: t('lblCancel'), go: s => actions.campaignDelete(s.name) }}

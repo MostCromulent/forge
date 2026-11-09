@@ -1,13 +1,15 @@
-// A shelf of saved items shown as cards, after a card that starts a new one. Each card offers its next action
+// A shelf of saved items shown as cards, with a card that starts a new one. Each card offers its next action
 
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { Dropdown } from './dialog';
 import { t } from './text';
 
-export function Shelf<Row extends { name: string }>({ rows, create, cls, art, sub, mid, foot, rename, remove }: {
+export function Shelf<Row extends { name: string }>({ rows, create, createLast, cls, art, sub, mid, foot, rename, remove }: {
   rows: Row[];
   create?: { title: string; line?: string; go: () => void };
+  /** Puts the card that starts a new one after the saved items, where it is first by default. */
+  createLast?: boolean;
   cls: (row: Row) => string;
   art?: (row: Row) => ComponentChildren;
   /** The text under a card's name, the card's middle, and its buttons while no delete question is shown. */
@@ -19,15 +21,16 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
 }) {
   const [renaming, setRenaming] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const newCard = create && (
+    <button class="ev new" onClick={create.go}>
+      <span class="plus" aria-hidden="true">+</span>
+      <b>{create.title}</b>
+      {create.line && <span>{create.line}</span>}
+    </button>
+  );
   return (
     <div class="event-shelf">
-      {create && (
-        <button class="ev new" onClick={create.go}>
-          <span class="plus" aria-hidden="true">+</span>
-          <b>{create.title}</b>
-          {create.line && <span>{create.line}</span>}
-        </button>
-      )}
+      {!createLast && newCard}
       {rows.map(r => (
         <article key={r.name} class={cls(r)}>
           {art?.(r)}
@@ -71,6 +74,7 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
           </div>
         </article>
       ))}
+      {createLast && newCard}
     </div>
   );
 }

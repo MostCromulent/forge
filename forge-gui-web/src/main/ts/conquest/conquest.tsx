@@ -36,7 +36,7 @@ export function Conquest({ model, actions }: { model: Model; actions: Actions })
 
 function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; current: string | null; actions: Actions; create: () => void }) {
   return (
-    <Cards rows={saves} cls={s => (s.name === current ? 'ev cq-save current' : 'ev cq-save')}
+    <Cards rows={saves} createLast cls={s => (s.name === current ? 'ev cq-save current' : 'ev cq-save')}
       create={{ title: t('lblWebConquestNew'), go: create }}
       art={s => (
         <div class="cq-save-art" style={{ backgroundImage: `url("${artUrl(s.art)}")` }}>
