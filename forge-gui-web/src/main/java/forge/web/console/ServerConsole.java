@@ -2,6 +2,7 @@ package forge.web.console;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import forge.gamemodes.net.server.FServerManager;
+import forge.gui.FThreads;
 import forge.gui.download.CdnUuidCache;
 import forge.gui.interfaces.IProgressBar;
 import forge.localinstance.properties.ForgeProfileProperties;
@@ -39,7 +40,6 @@ import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.regex.Pattern;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -100,9 +100,6 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
     private static final int TEXT_WIDTH = 480;
     private static final int HELP_WIDTH = TEXT_WIDTH - 26;
     private static final String GUIDE = "https://github.com/Card-Forge/forge/wiki/Network-Play#network-configuration";
-    /** Adapters that the rest of the home network cannot reach. One of them may still be this machine's route to the internet, and so be listed first. */
-    private static final Pattern NOT_HOME = Pattern.compile("vpn|virtual|hamachi|zerotier|tailscale|wireguard|hyper-v|vmware|wsl|bluetooth",
-            Pattern.CASE_INSENSITIVE);
 
     /** Running shows a filled lamp and stopped shows an empty ring. The shape shows the state, so the colour does not have to. */
     private static final Color LIT = new Color(0x3f, 0xb9, 0x50);
@@ -259,7 +256,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             }
             refit();
         });
-        inBackground("ForgeAddresses", () -> {
+        FThreads.invokeInBackgroundThread(() -> {
             final Map<String, String> local = FServerManager.getAllLocalAddresses();
             local.values().removeIf("localhost"::equals);
             SwingUtilities.invokeLater(() -> {
@@ -271,13 +268,6 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 findInternet();
             }
         });
-    }
-
-    /** Runs work that waits for the network or the router. The event thread must not do that work. */
-    private static void inBackground(final String name, final Runnable work) {
-        final Thread t = new Thread(work, name);
-        t.setDaemon(true);
-        t.start();
     }
 
     /** Shows the state of the request to the router, in the words a router's own settings use. */
@@ -332,7 +322,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 showInternet(url == null ? null : url.substring(0, url.indexOf("/?")), TEXT.getMessage("lblWebConsoleCloudflareConnecting"), false);
             } else if (up) {
                 showInternet(null, TEXT.getMessage("lblWebMatchBarWorkingOutAddress"), false);
-                inBackground("ForgeAddresses", this::findInternet);
+                FThreads.invokeInBackgroundThread(this::findInternet);
             }
             refit();
         });
@@ -439,7 +429,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             return;
         }
         busy(TEXT.getMessage(stopping ? "lblWebConsoleStoppingServer" : "lblWebConsoleStartingServer"));
-        inBackground("ForgeServerControl", () -> {
+        FThreads.invokeInBackgroundThread(() -> {
             Exception failure = null;
             try {
                 if (stopping) {
@@ -470,7 +460,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
     /** Zips the network logs and what this window shows into the Downloads folder, as desktop's Help menu does. */
     private void exportLogs() {
         final String shown = shownLog();
-        inBackground("WebExportLogs", () -> {
+        FThreads.invokeInBackgroundThread(() -> {
             String outcome;
             try {
                 // This window's output is not in any file, and the exporter collects every forge*.log in the user folder
@@ -499,8 +489,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
     private void showHome(final Map<String, String> found) {
         homes = found;
         moreHome.setVisible(found.size() > 1);
-        home = found.entrySet().stream().filter(a -> !NOT_HOME.matcher(a.getKey()).find()).findFirst()
-                .orElse(found.entrySet().stream().findFirst().orElse(null));
+        home = found.isEmpty() ? null : found.entrySet().iterator().next();
         showHomeChoice();
     }
 
@@ -561,7 +550,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
         });
         retryNet = button(TEXT.getMessage("lblTryAgain"), () -> {
             showInternet(null, TEXT.getMessage("lblWebMatchBarWorkingOutAddress"), false);
-            inBackground("ForgeAddresses", this::findInternet);
+            FThreads.invokeInBackgroundThread(this::findInternet);
         });
         retryNet.setVisible(false);
 
@@ -582,7 +571,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 row(button(TEXT.getMessage("lblWebConsoleUseCloudflare"), () -> choose(true)), Box.createHorizontalStrut(8),
                         button(TEXT.getMessage("lblTryAgain"), () -> router.execute(() -> service.forwardPort(true))), Box.createHorizontalStrut(8),
                         button(TEXT.getMessage("lblWebConsoleForwardedMyself"), () -> router.execute(() -> service.forwardPort(false))),
-                        Box.createHorizontalStrut(12), Box.createHorizontalGlue(), link(TEXT.getMessage("lblWebConsoleSetupGuide"), this::openGuide)));
+                        Box.createHorizontalStrut(12), Box.createHorizontalGlue(), link(TEXT.getMessage("lblWebConsoleSetupGuide"), () -> open(GUIDE))));
         forwardHelp.setVisible(false);
 
         final ButtonGroup ways = new ButtonGroup();
@@ -761,10 +750,6 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
             detailsToggle.setText((unseenErrors == 0 ? TEXT.getMessage("lblWebConsoleShowDetails")
                     : TEXT.getMessage("lblWebConsoleShowDetailsErrors", unseenErrors)) + " »");
         }
-    }
-
-    private void openGuide() {
-        open(GUIDE);
     }
 
     /** A group's heading, a size above the labels inside the group. */
