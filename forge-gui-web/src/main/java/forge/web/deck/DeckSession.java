@@ -55,7 +55,8 @@ public final class DeckSession implements IHasForgeLog {
             .on(DeviceDecks.class, (d, ch, dd) -> {
                 if (!d.host.getAsBoolean()) {
                     d.keepDeviceDecks(dd.decks());
-                    d.lobby.queueDecks(ch, d::inTurn);
+                    // A guest's command already runs on the deck thread. A host's may run on a campaign's thread, so the host's lists are queued
+                    d.lobby.sendDecks(ch);
                 }
             })
             .on(CatalogueQuery.class, (d, ch, q) -> d.slow(() -> ch.send(d.catalogue(q))))
@@ -388,7 +389,7 @@ public final class DeckSession implements IHasForgeLog {
         final DeckEditor e;
         final Check check;
         final Deck deck;
-        // Take a copy, because the search runs off the socket thread while an edit on that thread changes the open deck
+        // Take a copy, because other threads can open or change the editor while the search runs
         synchronized (this) {
             e = editor;
             check = e == null ? Check.none() : e.check();
