@@ -88,11 +88,15 @@ final class Legality {
 
     /** The commanders' colour identity as WUBRG letters, or "" when there are none. */
     static String identityLetters(final List<PaperCard> commanders) {
+        return CardCatalog.wubrg(identity(commanders));
+    }
+
+    static ColorSet identity(final List<PaperCard> commanders) {
         byte colours = 0;
         for (final PaperCard c : commanders) {
             colours |= c.getRules().getColorIdentity().getColor();
         }
-        return CardCatalog.wubrg(ColorSet.fromMask(colours));
+        return ColorSet.fromMask(colours);
     }
 
     /** The cards whose colours the rest of the deck must share. In Oathbreaker that is the oathbreaker alone, not its spell. */

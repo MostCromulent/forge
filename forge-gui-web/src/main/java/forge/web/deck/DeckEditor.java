@@ -3,6 +3,8 @@ package forge.web.deck;
 import forge.StaticData;
 import forge.card.CardEdition;
 import forge.card.CardRules;
+import forge.card.ColorSet;
+import forge.card.MagicColor;
 import forge.card.mana.ManaCostShard;
 import forge.deck.CardPool;
 import forge.deck.Deck;
@@ -45,7 +47,7 @@ public final class DeckEditor {
     private static final String MAIN_ONLY = "lblWebCollectionMainOnly";
     static final String NOT_OWNED = "lblWebCollectionNotOwned";
     /** The basics the land row offers, with the colour each needs. Wastes needs none. */
-    private static final Map<String, String> BASICS = new LinkedHashMap<>();
+    private static final Map<String, MagicColor.Color> BASICS = new LinkedHashMap<>();
     private final DeckStore.Storages storages;
     private final boolean guest;
     private final DeviceSink sink;
@@ -74,12 +76,9 @@ public final class DeckEditor {
     }
 
     static {
-        BASICS.put("Plains", "W");
-        BASICS.put("Island", "U");
-        BASICS.put("Swamp", "B");
-        BASICS.put("Mountain", "R");
-        BASICS.put("Forest", "G");
-        BASICS.put("Wastes", "C");
+        for (final MagicColor.Color colour : MagicColor.Color.values()) {
+            BASICS.put(colour == MagicColor.Color.COLORLESS ? "Wastes" : colour.getBasicLandType(), colour);
+        }
     }
 
     /** saved says the deck was opened from where target saves it. A new deck, or one that is only being viewed, was not. */
@@ -399,11 +398,11 @@ public final class DeckEditor {
     String suggestLands() {
         final Map<ManaCostShard, Integer> suggested = DeckgenUtil.suggestBasicLandCount(deck);
         final Map<String, Integer> counts = new LinkedHashMap<>();
-        counts.put("Plains", suggested.getOrDefault(ManaCostShard.WHITE, 0));
-        counts.put("Island", suggested.getOrDefault(ManaCostShard.BLUE, 0));
-        counts.put("Swamp", suggested.getOrDefault(ManaCostShard.BLACK, 0));
-        counts.put("Mountain", suggested.getOrDefault(ManaCostShard.RED, 0));
-        counts.put("Forest", suggested.getOrDefault(ManaCostShard.GREEN, 0));
+        BASICS.forEach((land, colour) -> {
+            if (colour != MagicColor.Color.COLORLESS) {
+                counts.put(land, suggested.getOrDefault(ManaCostShard.valueOf(colour.getColorMask()), 0));
+            }
+        });
         return setLands(counts);
     }
 
@@ -892,14 +891,14 @@ public final class DeckEditor {
         if (leaders.isEmpty()) {
             return true;
         }
-        final String identity = Legality.identityLetters(leaders);
-        final String needs = BASICS.get(land);
-        return "C".equals(needs) ? identity.isEmpty() : identity.contains(needs);
+        final ColorSet identity = Legality.identity(leaders);
+        final MagicColor.Color needs = BASICS.get(land);
+        return needs == MagicColor.Color.COLORLESS ? identity.isColorless() : identity.hasAnyColor(needs.getColorMask());
     }
 
     private List<EditorLand> lands() {
         final List<EditorLand> out = new ArrayList<>();
-        BASICS.forEach((name, letter) -> out.add(new EditorLand(name, letter, deck.getMain().countByName(name), landAllowed(name))));
+        BASICS.forEach((name, colour) -> out.add(new EditorLand(name, colour.getShortName(), deck.getMain().countByName(name), landAllowed(name))));
         return out;
     }
 
