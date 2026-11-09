@@ -45,22 +45,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 /** Match setup, read from the engine's lobby. A browser changes its own seat as a client, and the host sets up the rest of the table. */
 public final class Lobby {
     private static final int MOST_TEAMS = 4;
     private static final int GIANT_SEATS = 4;
     private final DeckCatalog catalog = new DeckCatalog();
-    /** Each seat's planar deck, scheme deck and avatar, for the seats whose decks this browser sends. */
-    private final Map<Integer, Map<DeckSection, Extra>> extras = new ConcurrentHashMap<>();
-    /** The deck last sent for each of those seats, with main deck and extras together. This is the deck that counts. */
-    private final Map<Integer, Deck> composed = new ConcurrentHashMap<>();
-    /** The commanders that a seat's player chose to lead its deck, by name. They are kept until another deck is chosen. */
-    private final Map<Integer, List<String>> commanderPicks = new ConcurrentHashMap<>();
+    /** This browser's choices for each seat whose deck it sends, by seat. Only the host UI thread and settle() change them. */
+    private final Map<Integer, SeatChoice> choices = new ConcurrentHashMap<>();
     private final LocalGame local;
     private final LobbyEvents events;
-    /** Which deck each seat was given, by catalogue key. The lobby slot holds the deck itself, and this map holds the choice. */
-    private final Map<Integer, String> deckKeys = new ConcurrentHashMap<>();
     /** True once the game was opened for others to join. Only then is a link worth showing. */
     private volatile boolean shareable;
     /** Whether this browser is a guest's. A guest's own decks are the ones its browser stores. */
@@ -202,7 +197,7 @@ public final class Lobby {
             final GameType format = format();
             // A deck key names a deck in one format's lists, so it means nothing in another format
             if (seenFormat != null && format != seenFormat) {
-                deckKeys.clear();
+                choices.replaceAll((i, c) -> c.withDeckKey(null));
             }
             newPool = format == seenFormat && newCardPool();
             newRules = format != seenFormat || newRules();
@@ -266,10 +261,11 @@ public final class Lobby {
         if (lobby == null) {
             return;
         }
-        for (final Map.Entry<Integer, String> e : Map.copyOf(deckKeys).entrySet()) {
+        for (final Map.Entry<Integer, SeatChoice> e : Map.copyOf(choices).entrySet()) {
             final int i = e.getKey();
-            if (i < lobby.getNumberOfSlots() && e.getValue().startsWith("gen:") && dealsFor(lobby, i)) {
-                setDeck(i, e.getValue());
+            final String key = e.getValue().deckKey();
+            if (i < lobby.getNumberOfSlots() && key != null && key.startsWith("gen:") && dealsFor(lobby, i)) {
+                setDeck(i, key);
             }
         }
     }
@@ -329,8 +325,12 @@ public final class Lobby {
         return out;
     }
 
-    private Map<DeckSection, Extra> extrasAt(final int index) {
-        return extras.computeIfAbsent(index, i -> Collections.synchronizedMap(new EnumMap<>(DeckSection.class)));
+    private SeatChoice choice(final int index) {
+        return choices.getOrDefault(index, SeatChoice.NONE);
+    }
+
+    private void change(final int index, final UnaryOperator<SeatChoice> how) {
+        choices.compute(index, (i, c) -> how.apply(c == null ? SeatChoice.NONE : c));
     }
 
     private void composeMine() {
@@ -345,11 +345,11 @@ public final class Lobby {
     /** A seat that lacks a section its variants need gets generated planes or schemes, or a random avatar. */
     private void fillDefaults(final GameLobby lobby, final int index) {
         for (final DeckSection section : sectionsFor(lobby, index)) {
-            if (!extrasAt(index).containsKey(section)) {
+            if (!choice(index).extras().containsKey(section)) {
                 final Extra fallback = ExtraSections.resolveExtra(section,
                         section == DeckSection.Avatar ? ExtraSections.RANDOM : ExtraSections.GENERATE, forComputer(lobby, index));
                 if (fallback != null) {
-                    extrasAt(index).put(section, fallback);
+                    change(index, c -> c.withExtra(section, fallback));
                 }
             }
         }
@@ -370,7 +370,7 @@ public final class Lobby {
             deck = main == null ? new Deck(Localizer.getInstance().getMessage("lblWebLobbyDealtDeck"))
                     : leaders == null ? new Deck(main) : CommanderOptions.withCommanders(main, leaders);
             for (final DeckSection section : sectionsFor(lobby, index)) {
-                final Extra extra = extrasAt(index).get(section);
+                final Extra extra = choice(index).extras().get(section);
                 final CardPool cards = extra == null ? null : extra.cards() != null ? extra.cards()
                         : main == null ? null : main.get(section);
                 if (cards != null) {
@@ -378,11 +378,8 @@ public final class Lobby {
                 }
             }
         }
-        if (deck == null) {
-            composed.remove(index);
-        } else {
-            composed.put(index, deck);
-        }
+        final Deck sent = deck;
+        change(index, c -> c.withComposed(sent));
         final String planes = labelOf(index, DeckSection.Planes);
         final String schemes = labelOf(index, DeckSection.Schemes);
         final String avatar = labelOf(index, DeckSection.Avatar);
@@ -406,8 +403,7 @@ public final class Lobby {
     }
 
     private String labelOf(final int index, final DeckSection section) {
-        // Read without creating an entry, because this runs while the table is drawn, on whichever thread draws it
-        final Extra extra = extras.getOrDefault(index, Map.of()).get(section);
+        final Extra extra = choice(index).extras().get(section);
         return extra == null ? null : extra.label();
     }
 
@@ -420,7 +416,7 @@ public final class Lobby {
         }
         final Extra extra = ExtraSections.resolveExtra(section, choice, forComputer(lobby, index));
         if (extra != null) {
-            extrasAt(index).put(section, extra);
+            change(index, c -> c.withExtra(section, extra));
             compose(index);
         }
     }
@@ -704,12 +700,12 @@ public final class Lobby {
     }
 
     private String key(final int index) {
-        return deckKeys.get(index);
+        return choice(index).deckKey();
     }
 
     /** A deck that this browser chose for a seat is found by its key. Another player's deck arrives with their seat. */
     private Deck deckAt(final int index) {
-        final Deck made = composed.get(index);
+        final Deck made = choice(index).composed();
         if (made != null) {
             return made;
         }
@@ -749,10 +745,7 @@ public final class Lobby {
     /** Drops the deck choices, because a new lobby's slots hold no decks and the two must agree. */
     public void forget() {
         table++;
-        deckKeys.clear();
-        extras.clear();
-        composed.clear();
-        commanderPicks.clear();
+        choices.clear();
         // settle() reads the seen values under the same lock, from whichever thread asked for the list
         synchronized (DeckCatalog.DECKS) {
             seenFormat = null;
@@ -775,7 +768,7 @@ public final class Lobby {
         }
         final GameFormat pool = cardPool();
         return new Kept(format(), pool == null ? null : pool.getName(), variantsOn(lobby), teams(lobby), seats,
-                Map.copyOf(deckKeys), Map.copyOf(extras), Map.copyOf(commanderPicks));
+                Map.copyOf(choices));
     }
 
     /** Sets up a new table the same way as a kept one. A seat that a person held is left open for them to take again, with whatever deck they bring. */
@@ -814,10 +807,8 @@ public final class Lobby {
             }
         }
         for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
-            if (dealsFor(lobby, i) && (kept.deckKeys().containsKey(i) || kept.extras().containsKey(i))) {
-                deckKeys.compute(i, (k, v) -> kept.deckKeys().get(k));
-                extras.compute(i, (k, v) -> kept.extras().get(k));
-                commanderPicks.compute(i, (k, v) -> kept.commanderPicks().get(k));
+            if (dealsFor(lobby, i) && kept.choices().containsKey(i)) {
+                choices.put(i, kept.choices().get(i));
                 compose(i);
             }
         }
@@ -855,9 +846,7 @@ public final class Lobby {
                 continue;
             }
             // Decks are cleared before the variants change. That change is announced at once, and the seats are then dealt their new decks
-            deckKeys.clear();
-            composed.clear();
-            commanderPicks.clear();
+            choices.replaceAll((i, c) -> c.withDeckKey(null).withComposed(null));
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 lobby.getSlot(i).setDeck(null);
             }
@@ -946,10 +935,7 @@ public final class Lobby {
             slot.setIsReady(false);
             slot.setDeck(null);
             // Whoever sits here brings their own choices, so this browser's choices for the seat are dropped
-            deckKeys.remove(index);
-            extras.remove(index);
-            composed.remove(index);
-            commanderPicks.remove(index);
+            choices.remove(index);
             local.pushLobby();
         }
     }
@@ -980,23 +966,16 @@ public final class Lobby {
         final ServerGameLobby lobby = host();
         if (lobby != null && !drafting(lobby) && !fixedPairs(lobby) && index != local.webSeat() && lobby.getNumberOfSlots() > 2) {
             lobby.removeSlot(index);
-            shiftDown(deckKeys, index);
-            shiftDown(extras, index);
-            shiftDown(composed, index);
-            shiftDown(commanderPicks, index);
+            // The later seats move up by one, as the lobby's slots move
+            final Map<Integer, SeatChoice> moved = new HashMap<>();
+            choices.forEach((i, c) -> {
+                if (i != index) {
+                    moved.put(i > index ? i - 1 : i, c);
+                }
+            });
+            choices.clear();
+            choices.putAll(moved);
         }
-    }
-
-    /** Drops a removed seat's entry and moves the later seats up by one, as the lobby's slots move. */
-    private static <T> void shiftDown(final Map<Integer, T> bySeat, final int removed) {
-        final Map<Integer, T> moved = new HashMap<>();
-        bySeat.forEach((i, v) -> {
-            if (i != removed) {
-                moved.put(i > removed ? i - 1 : i, v);
-            }
-        });
-        bySeat.clear();
-        bySeat.putAll(moved);
     }
 
     /** The named seats of one kind at this table, such as those people hold from another browser or an app. */
@@ -1036,14 +1015,7 @@ public final class Lobby {
         if (lobby == null || index < 0 || index >= lobby.getNumberOfSlots()) {
             return;
         }
-        if (!Objects.equals(key(index), key)) {
-            commanderPicks.remove(index);
-        }
-        if (key == null) {
-            deckKeys.remove(index);
-        } else {
-            deckKeys.put(index, key);
-        }
+        change(index, c -> c.withDeckKey(key));
         compose(index);
     }
 
@@ -1058,12 +1030,12 @@ public final class Lobby {
         if (option < 0 || option >= options.size()) {
             return;
         }
-        commanderPicks.put(index, names(options.get(option).getCommanders()));
+        change(index, c -> c.withCommanders(names(options.get(option).getCommanders())));
         compose(index);
     }
 
     private List<PaperCard> pickedCommanders(final int index, final Deck main) {
-        final List<String> picked = commanderPicks.get(index);
+        final List<String> picked = choice(index).commanders();
         if (picked == null || !format().getDeckFormat().hasCommander()) {
             return null;
         }
@@ -1229,8 +1201,36 @@ public final class Lobby {
     }
 
     /** A table as its host set it up. It is kept across a match, so the next table opens with the same settings. */
-    public record Kept(GameType format, String cardPool, List<String> variants, int teams, List<KeptSeat> seats, Map<Integer, String> deckKeys,
-            Map<Integer, Map<DeckSection, Extra>> extras, Map<Integer, List<String>> commanderPicks) { }
+    public record Kept(GameType format, String cardPool, List<String> variants, int teams, List<KeptSeat> seats, Map<Integer, SeatChoice> choices) { }
 
     private record KeptSeat(LobbySlotType type, String name, int avatar, int sleeve, int team, String aiProfile) { }
+
+    /**
+     * This browser's choices for one seat. The lobby slot holds the deck itself, and this holds the choice: the deck by catalogue key,
+     * the planar deck, scheme deck and avatar, and the commanders picked to lead the deck, by name. composed is the deck last sent, with
+     * main deck and extras together. This is the deck that counts.
+     */
+    private record SeatChoice(String deckKey, Map<DeckSection, Extra> extras, List<String> commanders, Deck composed) {
+        static final SeatChoice NONE = new SeatChoice(null, Map.of(), null, null);
+
+        /** The commanders are kept until another deck is chosen. */
+        SeatChoice withDeckKey(final String key) {
+            return new SeatChoice(key, extras, Objects.equals(key, deckKey) ? commanders : null, composed);
+        }
+
+        SeatChoice withExtra(final DeckSection section, final Extra extra) {
+            final Map<DeckSection, Extra> more = new EnumMap<>(DeckSection.class);
+            more.putAll(extras);
+            more.put(section, extra);
+            return new SeatChoice(deckKey, Collections.unmodifiableMap(more), commanders, composed);
+        }
+
+        SeatChoice withCommanders(final List<String> names) {
+            return new SeatChoice(deckKey, extras, names, composed);
+        }
+
+        SeatChoice withComposed(final Deck deck) {
+            return new SeatChoice(deckKey, extras, commanders, deck);
+        }
+    }
 }
