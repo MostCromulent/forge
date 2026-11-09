@@ -9,6 +9,10 @@ const fixture = join(dirname(fileURLToPath(import.meta.url)), '../src/test/resou
 const deck = readdirSync(join(fixture, 'decks'))[0];
 const saved = 'conquest/saves/Fixture_conquest';
 
+// Card pictures come from Scryfall, which refuses a burst of requests. A stand-in picture keeps the hover previews off the network
+const PICTURE = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../src/main/resources/web/playmats/dawn-steppe-thumb.jpg'));
+const standInPictures = (page: Page) => page.route('**/img?key=*', route => route.fulfill({ contentType: 'image/jpeg', body: PICTURE }));
+
 let server: Server;
 test.beforeEach(async () => {
   server = await startServer(undefined, {
@@ -38,6 +42,7 @@ async function toPriority(page: Page): Promise<void> {
 
 // Fails if a battle cannot be reached from the map, its reward cannot be claimed to the end, or the win is not shown as conquered
 test('a conquest battle is fought and comes back to the map', async ({ page }) => {
+  await standInPictures(page);
   await page.goto(server.url);
   await enterName(page, 'Alice');
   await page.click('[data-mode=play]');
@@ -181,6 +186,7 @@ test('a conquest is started, renamed and deleted', async ({ page }) => {
 
 // Fails if a card cannot be pulled from the Aether at its price, or the planes, statistics or preferences are not shown
 test('the Aether, the planes, the statistics and the preferences open', async ({ page }) => {
+  await standInPictures(page);
   await page.goto(server.url);
   await enterName(page, 'Alice');
   await page.click('[data-mode=play]');
