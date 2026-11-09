@@ -44,7 +44,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-/** One browser's session. Its current place is one {@link Stage}, which changes only through {@link #move}. */
+/**
+ * One browser's session. Its current place is one {@link Stage}, which changes only through {@link #move}. Stages include the menu,
+ * the table and a match. The session holds or gives up the host's seat, shows a browser that connects again the place it left, and
+ * passes each message to the part that handles it.
+ */
 public final class WebSession implements IHasForgeLog {
     private static final int CARD_SEARCH_LIMIT = 60;
     /** Chat is shown to every player, so a message is limited to a length that a chat box can hold. */
@@ -310,6 +314,7 @@ public final class WebSession implements IHasForgeLog {
         return !isHost && (now instanceof Setup || now instanceof Playing p && p.invited());
     }
 
+    /** Whether this browser holds the host's seat. It can hold the seat before it opens a table, unlike {@link LocalGame#isHost}. */
     public boolean hosting() {
         return isHost;
     }

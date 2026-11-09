@@ -85,7 +85,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
-/** One player's view of a match for the browser. Game calls run on one dispatch thread. Browser replies arrive on the socket thread. */
+/**
+ * One player's view of a match for the browser. Game calls run on one dispatch thread. Browser replies arrive on the socket thread.
+ * It sends the browser the game's full state and then each change, with the events and sounds the change caused. It also shows the
+ * prompt, asks the game's questions and waits for the answers, keeps the phase stops and yields, and runs the browser's commands.
+ */
 public class WebGuiGame extends NetworkGuiGame {
     public static final Commands<WebGuiGame> COMMANDS = new Commands<WebGuiGame>()
             .on(Reply.class, (g, ch, r) -> g.requests.complete(r.id(), r.value()))
@@ -237,6 +241,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
+    /** Stops sending to that browser, unless another browser was attached since. */
     public void detach(final BrowserChannel channel) {
         if (browser == channel) {
             browser = null;
@@ -391,6 +396,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return visible;
     }
 
+    /** Sets what runs on the dispatch thread once openView has sent this seat's first state. */
     public void whenOpened(final Runnable action) {
         onOpen = action;
     }
@@ -1173,6 +1179,7 @@ public class WebGuiGame extends NetworkGuiGame {
         };
     }
 
+    /** Runs a browser command on the socket thread. A reply to an open question is handled at once. Other commands take the mirror lock, as game calls do. */
     public void onCommand(final BrowserChannel channel, final Record command) {
         if (command instanceof Reply) {
             COMMANDS.run(this, channel, command);

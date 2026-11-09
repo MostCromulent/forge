@@ -25,7 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-/** Writes netplay's changed properties as JSON for the browser. A property that refers to another object is written as {@code {"ref": key}}. */
+/**
+ * Writes netplay's changed properties as JSON for the browser. A property that refers to another object is written as {@code {"ref": key}}.
+ * Gson's reflection cannot do this. A packet holds a bare id where a property refers to an object, and only the property's type says
+ * what kind of object it is. Reflection would also write classes such as ManaCost as their private fields. Each form written here has
+ * a TypeScript type in {@link ProtocolTypes}.
+ */
 public final class JsonCodec {
     private JsonCodec() {}
 

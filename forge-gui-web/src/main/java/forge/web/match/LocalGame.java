@@ -85,6 +85,7 @@ public final class LocalGame implements IHasForgeLog {
         return joined;
     }
 
+    /** Whether this seat runs the netplay server of the current table. */
     public boolean isHost() {
         return hosted != null;
     }

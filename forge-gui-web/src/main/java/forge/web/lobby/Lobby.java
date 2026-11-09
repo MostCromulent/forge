@@ -48,7 +48,11 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
-/** Match setup, read from the engine's lobby. A browser changes its own seat as a client, and the host sets up the rest of the table. */
+/**
+ * Match setup, read from the engine's lobby. A browser changes its own seat as a client, and the host sets up the rest of the table.
+ * This class builds the deck lists a seat may choose from and sends each seat's chosen deck to the table. It sets the format, card
+ * pool, variants and teams, adds and changes seats, and keeps a hosted table's seats so that the next table starts the same way.
+ */
 public final class Lobby {
     private static final int MOST_TEAMS = 4;
     private static final int GIANT_SEATS = 4;
