@@ -24,10 +24,7 @@ import forge.web.match.LocalGame;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser.*;
 
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /** The Limited half of a table: the draft and sealed events hosted through the lobby. */
@@ -84,17 +81,9 @@ public final class LobbyEvents {
 
     /** The events whose pools the host has stored, newest first, in the same order as desktop's past events list. */
     private static List<PastEvent> pastEvents() {
-        final Map<String, PastEvent> events = new LinkedHashMap<>();
         synchronized (DeckCatalog.DECKS) {
-            for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
-                final String id = DeckProxy.getEventTag(d, "eventId");
-                if (id != null) {
-                    events.putIfAbsent(id, pastEvent(id, d));
-                }
-            }
+            return NetworkEvent.pastEventIds().stream().map(id -> pastEvent(id, NetworkEvent.findEventDeck(id))).toList();
         }
-        // The date is "yyyy-MM-dd HH:mm", so reverse order of the text is newest first
-        return events.values().stream().sorted(Comparator.comparing(PastEvent::date).reversed()).toList();
     }
 
     /** The product of a past event, read from its pools. A pool saved without a product is still named as an earlier event. */
