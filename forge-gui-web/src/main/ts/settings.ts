@@ -13,9 +13,8 @@ const GUEST_KEY = 'forge.guestSettings';
 export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb: string | null }[] = [
   { id: 'nebula', name: 'lblWebPlaymatNebula', image: '/playmats/stormy-nebula.jpg', thumb: '/playmats/stormy-nebula-thumb.jpg' },
   { id: 'azorius', name: 'lblWebPlaymatAzorius', image: '/playmats/azorius.jpg', thumb: '/playmats/azorius-thumb.jpg' },
-  { id: 'bayou', name: 'lblWebPlaymatBayou', image: '/playmats/twilight-bayou.jpg', thumb: '/playmats/twilight-bayou-thumb.jpg' },
-  { id: 'steppe', name: 'lblWebPlaymatSteppe', image: '/playmats/dawn-steppe.jpg', thumb: '/playmats/dawn-steppe-thumb.jpg' },
-  { id: 'molten', name: 'lblWebPlaymatMolten', image: '/playmats/molten-forge.jpg', thumb: '/playmats/molten-forge-thumb.jpg' },
+  { id: 'golgari', name: 'lblWebPlaymatGolgari', image: '/playmats/golgari.jpg', thumb: '/playmats/golgari-thumb.jpg' },
+  { id: 'selesnya', name: 'lblWebPlaymatSelesnya', image: '/playmats/selesnya.jpg', thumb: '/playmats/selesnya-thumb.jpg' },
   { id: 'table', name: 'lblNone', image: null, thumb: null },
 ];
 type SettingValue = string | number | boolean;

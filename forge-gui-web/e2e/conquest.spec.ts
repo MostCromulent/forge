@@ -10,7 +10,7 @@ const deck = readdirSync(join(fixture, 'decks'))[0];
 const saved = 'conquest/saves/Fixture_conquest';
 
 // Card pictures come from Scryfall, which refuses a burst of requests. A stand-in picture keeps the hover previews off the network
-const PICTURE = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../src/main/resources/web/playmats/dawn-steppe-thumb.jpg'));
+const PICTURE = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../src/main/resources/web/playmats/selesnya-thumb.jpg'));
 const standInPictures = (page: Page) => page.route('**/img?key=*', route => route.fulfill({ contentType: 'image/jpeg', body: PICTURE }));
 
 let server: Server;
