@@ -17,7 +17,6 @@ import forge.deck.io.DeckPreferences;
 import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.gamemodes.quest.QuestController;
-import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.Localizer;
@@ -28,7 +27,6 @@ import forge.web.protocol.ToBrowser.DeckDetails;
 import forge.web.protocol.ToBrowser.DeckSummary;
 import forge.web.protocol.ToBrowser.SavedSleeveArt;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -336,7 +334,7 @@ public final class DeckCatalog {
     private static void generated(final List<DeckSummary> out, final String key, final String name, final String note,
             final String colours) {
         out.add(new DeckSummary(key, name, GENERATED, colours, true, note, null, null, null, null, null, null, null, true,
-                null, null, null, null, null, null, null));
+                null, null, null, null, null));
     }
 
     private void add(final List<DeckSummary> out, final GameType format, final Iterable<DeckProxy> source, final String tag) {
@@ -346,12 +344,10 @@ public final class DeckCatalog {
             final Deck deck = proxy.getDeck();
             final DeckFacts.Facts facts = DeckFacts.factsOf(deck, proxy);
             // An illegal deck is listed with its problem, and the finder's legal-only filter decides whether it is shown
-            final boolean linked = LINKED.equals(tag);
             out.add(new DeckSummary(key, proxy.getName(), tag, facts.colors(), null, null, facts.played(),
                     facts.sideboard(), DeckFacts.problemAt(deck, format, pool), facts.legalIn(), facts.formats(),
                     deck.getSleeveArtKey(), deck.getSleeveArtOffset(), readOnly(key, guest),
-                    linked ? site(deck.getSourceUrl()) : null, linked ? deck.getSourceUrl() : null,
-                    linked ? linkedFile(deck).lastModified() : null, format == GameType.Commander ? DeckFacts.bracketOf(deck) : null, facts.averageMana(),
+                    LINKED.equals(tag) ? deck.getSourceUrl() : null, format == GameType.Commander ? DeckFacts.bracketOf(deck) : null, facts.averageMana(),
                     proxy.isFavoriteDeck() ? true : null, DeckFacts.aiSkips(deck)));
         }
     }
@@ -362,7 +358,7 @@ public final class DeckCatalog {
         final DeckFacts.Facts facts = DeckFacts.factsOf(deck, null);
         out.add(new DeckSummary(key, deck.getName(), DEVICE, facts.colors(), null, null, facts.played(),
                 facts.sideboard(), DeckFacts.problemAt(deck, format, pool), facts.legalIn(), null,
-                deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null, format == GameType.Commander ? DeckFacts.bracketOf(deck) : null,
+                deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, format == GameType.Commander ? DeckFacts.bracketOf(deck) : null,
                 facts.averageMana(), null, DeckFacts.aiSkips(deck)));
     }
 
@@ -378,26 +374,6 @@ public final class DeckCatalog {
             }
         }
         return out;
-    }
-
-    /** The site a linked deck came from, spelled as the site spells its own name. */
-    static String site(final String url) {
-        final String host = url == null ? "" : url.toLowerCase();
-        if (host.contains("moxfield.com")) {
-            return "Moxfield";
-        }
-        if (host.contains("archidekt.com")) {
-            return "Archidekt";
-        }
-        if (host.contains("tappedout.net")) {
-            return "TappedOut";
-        }
-        return host.contains("mtggoldfish.com") ? "MTGGoldfish" : Localizer.getInstance().getMessage("lblWebDeckCatalogTheLink");
-    }
-
-    // Loading a link again rewrites its file, so the file's time is when the deck was last synced
-    private static File linkedFile(final Deck deck) {
-        return new File(ForgeConstants.DECK_BASE_DIR + "URL" + ForgeConstants.PATH_SEPARATOR + deck.getBestFileName() + ".dck");
     }
 
     /** The card-art sleeves already saved, shared with the desktop client. */

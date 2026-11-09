@@ -107,8 +107,8 @@ public final class ToBrowser {
     public record DeckSummary(String key, String name, String source, String colors, @Nullable Boolean generated,
             @Nullable String note, @Nullable Integer main, @Nullable Integer sideboard, @Nullable String problem,
             @Nullable List<String> legalIn, @Nullable String formats, @Nullable String sleeveArt,
-            @Nullable Integer sleeveOffset, @Nullable Boolean readOnly, @Nullable String linked, @Nullable String sourceUrl,
-            @Nullable Long synced, @Nullable Integer bracket, @Nullable Integer averageMana, @Nullable Boolean favourite,
+            @Nullable Integer sleeveOffset, @Nullable Boolean readOnly, @Nullable String sourceUrl,
+            @Nullable Integer bracket, @Nullable Integer averageMana, @Nullable Boolean favourite,
             @Nullable Integer aiSkips) {
     }
 

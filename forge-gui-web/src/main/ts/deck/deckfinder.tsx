@@ -359,9 +359,9 @@ export function DeckFinder({ model, actions, seat, close }: {
           </aside>
         </div>
         <footer class="finder-foot">
-          {summary?.linked && summary.sourceUrl && (
+          {summary?.sourceUrl && (
             <span class="linked-line">
-              {summary.synced ? t('lblWebFinderFromSynced', summary.linked, ago(summary.synced)) : t('lblWebFinderFrom', summary.linked)}
+              {t('lblWebFinderFrom', t('lblWebDeckCatalogTheLink'))}
               <button class="small" onClick={() => importer({ url: summary.sourceUrl, sync: true })}>{t('lblWebFinderSyncNow')}</button>
             </span>
           )}
@@ -685,12 +685,3 @@ function BracketPanel({ bracket }: { bracket: Bracket }) {
   );
 }
 
-function ago(millis: number): string {
-  const minutes = Math.round((Date.now() - millis) / 60000);
-  if (minutes < 2) return t('lblWebFinderJustNow');
-  if (minutes < 60) return t('lblWebFinderMinutesAgo', minutes);
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return t(hours === 1 ? 'lblWebFinderHourAgo' : 'lblWebFinderHoursAgo', hours);
-  const days = Math.round(hours / 24);
-  return t(days === 1 ? 'lblWebFinderDayAgo' : 'lblWebFinderDaysAgo', days);
-}
