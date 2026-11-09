@@ -15,6 +15,7 @@ import forge.model.FModel;
 import forge.sound.MusicPlaylist;
 import forge.sound.SoundSystem;
 import forge.util.IHasForgeLog;
+import forge.util.ImageFetcher;
 import forge.util.LogExporter;
 import forge.web.images.CardThumbnails;
 import forge.web.images.Foil;
@@ -78,12 +79,8 @@ import java.security.MessageDigest;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
@@ -108,12 +105,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private static final Pattern BYTE_RANGE = Pattern.compile("bytes=(\\d*)-(\\d*)");
     /** The most bytes that one reply to an audio range request carries: about a minute of music at 128 kbps. */
     private static final int AUDIO_SLICE = 1 << 20;
-    /** Keys that failed are stored so they are not fetched again. Past this many, the list is cleared. */
-    private static final int MOST_UNAVAILABLE_IMAGES = 10_000;
     /** The same port as Forge's own netplay. Hosting from the desktop client at the same time therefore needs {@code -Dforge.web.port}. */
     private static final int DEFAULT_PORT = 36743;
-    /** How long a download is waited on before the browser is told there is no image. */
-    private static final int FETCH_TIMEOUT_SECONDS = 15;
     private static final int PING_SECONDS = 30;
     private static final Map<String, String> CONTENT_TYPES = Map.of(
             ".html", "text/html; charset=utf-8",
@@ -129,8 +122,6 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private final ServerTraffic traffic = new ServerTraffic();
     private final Endpoint endpoint;
     private final String token;
-    // The shared fetcher tries a path only once per run and does not call back again, so a key that failed is not retried
-    private final Set<String> unavailableImages = ConcurrentHashMap.newKeySet();
     private final Channel channel;
     /** The page as served. It is built once, unless the page is read from a folder that may change. */
     private volatile byte[] page;
@@ -208,12 +199,12 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             respondImage(ctx, cached);
             return;
         }
-        // Only a card has art to crop. The fetcher never answers for a token or an effect such as the Ring
+        // Only a card has art to crop, not a token or an effect such as the Ring
         if (!key.startsWith(ImageKeys.CARD_PREFIX) || auto && !FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
             notFound(ctx);
             return;
         }
-        fetchOrTimeOut(ctx, done -> GuiBase.getInterface().getImageFetcher().fetchSleeveArt(key, done::run), () -> {
+        fetch(true, key, () -> {
             final File fetched = ImageFiles.sleeveArt(key);
             if (fetched != null) {
                 respondImage(ctx, fetched);
@@ -231,44 +222,42 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             respondCardImage(ctx, file, small, foil);
             return;
         }
-        if (!ImageFiles.safeKey(key) || unavailableImages.contains(key)
-                || !FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
+        if (!ImageFiles.safeKey(key) || !FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
             notFound(ctx);
             return;
         }
-        fetchOrTimeOut(ctx, done -> GuiBase.getInterface().getImageFetcher().fetchImage(key, () -> {
+        fetch(false, key, () -> {
             // Forge remembers a picture it could not find. Without this it would still report the picture as missing now that it exists
             ImageKeys.clearMissingCards();
-            done.run();
-        }), () -> {
             final File fetched = ImageFiles.card(key);
             if (fetched != null) {
                 respondCardImage(ctx, fetched, small, foil);
             } else {
                 notFound(ctx);
             }
-        }, () -> {
-            if (unavailableImages.size() >= MOST_UNAVAILABLE_IMAGES) {
-                unavailableImages.clear();
-            }
-            unavailableImages.add(key);
-            notFound(ctx);
-        });
+        }, () -> notFound(ctx));
     }
 
-    /** Starts a download on the UI thread, then runs arrived, or timedOut if the download takes too long. Only one of them runs. */
-    private static void fetchOrTimeOut(final ChannelHandlerContext ctx, final Consumer<Runnable> fetch, final Runnable arrived, final Runnable timedOut) {
-        final AtomicBoolean answered = new AtomicBoolean();
-        GuiBase.getInterface().invokeInEdtLater(() -> fetch.accept(() -> {
-            if (answered.compareAndSet(false, true)) {
-                arrived.run();
+    /** Starts a download on the UI thread. Then one of arrived and missing runs, on that thread. */
+    private static void fetch(final boolean sleeveArt, final String key, final Runnable arrived, final Runnable missing) {
+        GuiBase.getInterface().invokeInEdtLater(() -> {
+            final ImageFetcher.Callback answer = new ImageFetcher.Callback() {
+                @Override
+                public void onImageFetched() {
+                    arrived.run();
+                }
+
+                @Override
+                public void onNoImageFetched() {
+                    missing.run();
+                }
+            };
+            if (sleeveArt) {
+                GuiBase.getInterface().getImageFetcher().fetchSleeveArt(key, answer);
+            } else {
+                GuiBase.getInterface().getImageFetcher().fetchImage(key, answer);
             }
-        }));
-        ctx.executor().schedule(() -> {
-            if (answered.compareAndSet(false, true)) {
-                timedOut.run();
-            }
-        }, FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        });
     }
 
     private void respondCardImage(final ChannelHandlerContext ctx, final File file, final boolean small, final int foil) {
