@@ -1,25 +1,15 @@
 package forge.web;
 
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import forge.ImageKeys;
 import forge.gamemodes.net.WebSocketBytes;
 import forge.gamemodes.net.WebSocketTunnel;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.HostingServer;
-import forge.gui.GuiBase;
-import forge.localinstance.properties.ForgePreferences.FPref;
-import forge.model.FModel;
-import forge.sound.MusicPlaylist;
-import forge.sound.SoundSystem;
 import forge.util.IHasForgeLog;
-import forge.util.ImageFetcher;
 import forge.util.LogExporter;
 import forge.web.images.CardThumbnails;
-import forge.web.images.Foil;
-import forge.web.images.ImageFiles;
 import forge.web.images.SkinSprites;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.PageText;
@@ -65,24 +55,17 @@ import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketSe
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.zip.CRC32;
 
 /** The HTTP and WebSocket server on the web port. It serves the page, card images, sounds, the browsers' sockets and the app tunnel. It listens on every interface so that a player on another machine can open a link. The token in the link is new on each launch and keeps everyone else out. */
@@ -92,19 +75,9 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private static final AttributeKey<Boolean> LOCAL = AttributeKey.valueOf("forge.local");
     private static final AttributeKey<Boolean> KEEP_ALIVE = AttributeKey.valueOf("forge.keepAlive");
     /** For content that never changes at its address, such as a card picture of one printing or a hashed script chunk. The browser keeps it permanently. */
-    private static final String KEEP_FOREVER = "public, max-age=31536000, immutable";
+    static final String KEEP_FOREVER = "public, max-age=31536000, immutable";
     /** For skin pictures and sound effects. They change only when the skin or sound set is changed and the server restarted, so a day's wait is fair. */
-    private static final String KEEP_A_DAY = "max-age=86400";
-    /** A stylesheet or script the page names. The page adds a hash of its contents to the address. */
-    private static final Pattern PAGE_FILE = Pattern.compile("(href|src)=\"((?:css|js)/[^\"?]+)\"");
-    /** A stylesheet link in the page. The page's stylesheets are served joined into one file, STYLES. */
-    private static final Pattern STYLESHEET = Pattern.compile("<link rel=\"stylesheet\" href=\"(css/[^\"?]+)\">\\R?");
-    private static final String STYLES = "css/page.css";
-    /** A chunk the page's script imports. */
-    private static final Pattern CHUNK = Pattern.compile("\\./(chunks/[^\"']+\\.js)");
-    private static final Pattern BYTE_RANGE = Pattern.compile("bytes=(\\d*)-(\\d*)");
-    /** The most bytes that one reply to an audio range request carries: about a minute of music at 128 kbps. */
-    private static final int AUDIO_SLICE = 1 << 20;
+    static final String KEEP_A_DAY = "max-age=86400";
     /** The same port as Forge's own netplay. Hosting from the desktop client at the same time therefore needs {@code -Dforge.web.port}. */
     private static final int DEFAULT_PORT = 36743;
     private static final int PING_SECONDS = 30;
@@ -116,16 +89,12 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             ".png", "image/png",
             ".jpg", "image/jpeg",
             ".webmanifest", "application/manifest+json");
-    // -Dforge.web.pageDir=<the web resource folder> serves the page from disk, so an edit needs only a reload
-    private static final String PAGE_DIR = System.getProperty("forge.web.pageDir");
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
     private final ServerTraffic traffic = new ServerTraffic();
     private final Endpoint endpoint;
     private final String token;
     private final Channel channel;
-    /** The page as served. It is built once, unless the page is read from a folder that may change. */
-    private volatile byte[] page;
-    private volatile byte[] styles;
+    private final PageBundle bundle = new PageBundle();
 
     public interface Endpoint {
         /** The id tells browsers apart across a reload. local says the browser is on this machine. */
@@ -188,102 +157,6 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         group.shutdownGracefully();
     }
 
-    /**
-     * Never waits for the download. Otherwise the thread that serves every other request would wait too.
-     * auto means the page asked on its own, not the player, so art that is not cached yet is downloaded only when online image fetching is on.
-     */
-    private void serveSleeveArt(final ChannelHandlerContext ctx, final String asked, final boolean auto) {
-        final String key = ImageFiles.artKey(asked);
-        final File cached = ImageFiles.sleeveArt(key);
-        if (cached != null) {
-            respondImage(ctx, cached);
-            return;
-        }
-        // Only a card has art to crop, not a token or an effect such as the Ring
-        if (!key.startsWith(ImageKeys.CARD_PREFIX) || auto && !FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
-            notFound(ctx);
-            return;
-        }
-        fetch(true, key, () -> {
-            final File fetched = ImageFiles.sleeveArt(key);
-            if (fetched != null) {
-                respondImage(ctx, fetched);
-            } else {
-                notFound(ctx);
-            }
-        }, () -> notFound(ctx));
-    }
-
-    /** Downloads a missing image and answers the request when it arrives. small asks for the card at the size the board draws it. */
-    private void serveImage(final ChannelHandlerContext ctx, final String key, final boolean small) {
-        final int foil = Foil.seed(key);
-        final File file = ImageFiles.card(key);
-        if (file != null) {
-            respondCardImage(ctx, file, small, foil);
-            return;
-        }
-        if (!ImageFiles.safeKey(key) || !FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
-            notFound(ctx);
-            return;
-        }
-        fetch(false, key, () -> {
-            // Forge remembers a picture it could not find. Without this it would still report the picture as missing now that it exists
-            ImageKeys.clearMissingCards();
-            final File fetched = ImageFiles.card(key);
-            if (fetched != null) {
-                respondCardImage(ctx, fetched, small, foil);
-            } else {
-                notFound(ctx);
-            }
-        }, () -> notFound(ctx));
-    }
-
-    /** Starts a download on the UI thread. Then one of arrived and missing runs, on that thread. */
-    private static void fetch(final boolean sleeveArt, final String key, final Runnable arrived, final Runnable missing) {
-        GuiBase.getInterface().invokeInEdtLater(() -> {
-            final ImageFetcher.Callback answer = new ImageFetcher.Callback() {
-                @Override
-                public void onImageFetched() {
-                    arrived.run();
-                }
-
-                @Override
-                public void onNoImageFetched() {
-                    missing.run();
-                }
-            };
-            if (sleeveArt) {
-                GuiBase.getInterface().getImageFetcher().fetchSleeveArt(key, answer);
-            } else {
-                GuiBase.getInterface().getImageFetcher().fetchImage(key, answer);
-            }
-        });
-    }
-
-    private void respondCardImage(final ChannelHandlerContext ctx, final File file, final boolean small, final int foil) {
-        if (!small && foil == 0) {
-            respondImage(ctx, file);
-            return;
-        }
-        CardThumbnails.of(file, small, foil).whenComplete((bytes, failed) -> {
-            if (bytes != null) {
-                respond(ctx, HttpResponseStatus.OK, bytes, ImageFiles.type(file), null, KEEP_FOREVER, null);
-                return;
-            }
-            netLog.warn("Could not draw {}: {}", file, failed.getMessage());
-            respondImage(ctx, file);
-        });
-    }
-
-    private void respondImage(final ChannelHandlerContext ctx, final File file) {
-        try {
-            respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), ImageFiles.type(file), null, KEEP_FOREVER, null);
-        } catch (final IOException e) {
-            netLog.warn("Could not send {}: {}", file, e.getMessage());
-            notFound(ctx);
-        }
-    }
-
     /** True when the socket's page came from this server, whichever address the browser reached it by. */
     private static boolean sameOrigin(final FullHttpRequest req) {
         final String origin = req.headers().get(HttpHeaderNames.ORIGIN);
@@ -329,11 +202,11 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return false;
     }
 
-    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type) {
+    static void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type) {
         respond(ctx, status, body, type, null, "no-cache", null);
     }
 
-    private void notFound(final ChannelHandlerContext ctx) {
+    static void notFound(final ChannelHandlerContext ctx) {
         respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain");
     }
 
@@ -354,7 +227,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         }
     }
 
-    private void respondOrNotFound(final ChannelHandlerContext ctx, final byte[] body, final String type, final String ifNoneMatch) {
+    private static void respondOrNotFound(final ChannelHandlerContext ctx, final byte[] body, final String type, final String ifNoneMatch) {
         if (body == null) {
             notFound(ctx);
         } else {
@@ -363,7 +236,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     }
 
     /** Answers with the body, or with an empty 304 when the browser already holds the same body. */
-    private void respondUnlessUnchanged(final ChannelHandlerContext ctx, final byte[] body, final String type, final String cookieToken,
+    private static void respondUnlessUnchanged(final ChannelHandlerContext ctx, final byte[] body, final String type, final String cookieToken,
             final String cacheControl, final String ifNoneMatch) {
         final String etag = etag(body);
         final boolean unchanged = etag.equals(ifNoneMatch);
@@ -372,7 +245,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     }
 
     /** Answers a request. A cookie, when given, is the token that the page was loaded with. */
-    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
+    static void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
             final String cookieToken, final String cacheControl, final String etag) {
         final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(body));
         resp.headers()
@@ -395,7 +268,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         send(ctx, resp);
     }
 
-    private void redirect(final ChannelHandlerContext ctx, final String location) {
+    static void redirect(final ChannelHandlerContext ctx, final String location) {
         final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FOUND);
         resp.headers()
                 .set(HttpHeaderNames.LOCATION, location)
@@ -405,7 +278,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     }
 
     /** The connection stays open when the browser asked for that, because a board of forty pictures would otherwise need forty handshakes. */
-    private static void send(final ChannelHandlerContext ctx, final FullHttpResponse resp) {
+    static void send(final ChannelHandlerContext ctx, final FullHttpResponse resp) {
         final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
         resp.headers().set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
         final ChannelFuture sent = ctx.writeAndFlush(resp);
@@ -419,168 +292,10 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         return dot < 0 ? "application/octet-stream" : CONTENT_TYPES.getOrDefault(resource.substring(dot), "application/octet-stream");
     }
 
-    /** A playlist request gets a redirect to one of its tracks by name. The shuffle then stays on the server, and each track is downloaded once. */
-    private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name, final String track,
-            final String range, final String ifNoneMatch) throws IOException {
-        if (sound) {
-            respondAudio(ctx, isFileName(name) ? SoundSystem.instance.getSoundResource(name) : null, range, KEEP_A_DAY, ifNoneMatch);
-            return;
-        }
-        final boolean menu = "menu".equals(name);
-        final MusicPlaylist playlist = menu ? MusicPlaylist.MENUS : MusicPlaylist.MATCH;
-        if (track == null) {
-            final String chosen = playlist.getRandomFilename();
-            if (chosen == null) {
-                notFound(ctx);
-            } else {
-                redirect(ctx, "/music?name=" + (menu ? "menu" : "match") + "&track="
-                        + URLEncoder.encode(new File(chosen).getName(), StandardCharsets.UTF_8));
-            }
-            return;
-        }
-        final File dir = SoundSystem.findMusicDirectory(playlist);
-        respondAudio(ctx, dir != null && isFileName(track) ? new File(dir, track) : null, range, KEEP_FOREVER, ifNoneMatch);
-    }
-
-    private static boolean isFileName(final String name) {
-        return name != null && !name.isEmpty() && !name.contains("/") && !name.contains("\\") && !name.contains("..");
-    }
-
-    /** Answers a range one slice at a time, because a media player asks for the rest of a track and often abandons the request. */
-    private void respondAudio(final ChannelHandlerContext ctx, final File file, final String range, final String cacheControl,
-            final String ifNoneMatch) throws IOException {
-        if (file == null || !file.isFile()) {
-            notFound(ctx);
-            return;
-        }
-        final long length = file.length();
-        final String etag = "\"" + Long.toHexString(file.lastModified()) + "-" + Long.toHexString(length) + "\"";
-        // The browser checks its copy before it asks for a range, so an unchanged file is answered before the range is read
-        if (etag.equals(ifNoneMatch)) {
-            respond(ctx, HttpResponseStatus.NOT_MODIFIED, new byte[0], "audio/mpeg", null, cacheControl, etag);
-            return;
-        }
-        long from = 0;
-        long to = length - 1;
-        // Several ranges in one request, or a header this does not read, are answered with the whole file
-        final Matcher m = range == null ? null : BYTE_RANGE.matcher(range.trim());
-        final boolean partial = m != null && m.matches() && !(m.group(1).isEmpty() && m.group(2).isEmpty());
-        if (partial) {
-            final Long first = m.group(1).isEmpty() ? null : Longs.tryParse(m.group(1));
-            final Long last = m.group(2).isEmpty() ? null : Longs.tryParse(m.group(2));
-            if (m.group(1).isEmpty()) {
-                from = last == null ? length : Math.max(0, length - last);
-            } else {
-                from = first == null ? length : first;
-                if (last != null) {
-                    to = Math.min(to, last);
-                }
-            }
-            to = Math.min(to, from + AUDIO_SLICE - 1);
-        }
-        final byte[] body;
-        if (partial && from > to) {
-            body = null;
-        } else {
-            body = new byte[(int) (to - from + 1)];
-            try (RandomAccessFile in = new RandomAccessFile(file, "r")) {
-                in.seek(from);
-                in.readFully(body);
-            }
-        }
-        final FullHttpResponse resp;
-        if (partial && from > to) {
-            resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
-            resp.headers().set(HttpHeaderNames.CONTENT_RANGE, "bytes */" + length);
-        } else {
-            resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                    partial ? HttpResponseStatus.PARTIAL_CONTENT : HttpResponseStatus.OK, Unpooled.wrappedBuffer(body));
-            if (partial) {
-                resp.headers().set(HttpHeaderNames.CONTENT_RANGE, "bytes " + from + "-" + to + "/" + length);
-            }
-        }
-        resp.headers()
-                .set(HttpHeaderNames.CONTENT_TYPE, file.getName().toLowerCase(Locale.ROOT).endsWith(".wav") ? "audio/wav" : "audio/mpeg")
-                .set(HttpHeaderNames.ACCEPT_RANGES, HttpHeaderValues.BYTES)
-                .set(HttpHeaderNames.CACHE_CONTROL, cacheControl)
-                .set(HttpHeaderNames.ETAG, etag)
-                .setInt(HttpHeaderNames.CONTENT_LENGTH, resp.content().readableBytes());
-        send(ctx, resp);
-    }
-
     private static String etag(final byte[] body) {
         final CRC32 crc = new CRC32();
         crc.update(body);
         return "\"" + Long.toHexString(crc.getValue()) + "-" + Integer.toHexString(body.length) + "\"";
-    }
-
-    /**
-     * The page, with a hash of each stylesheet's and script's contents in its address, so the browser keeps them until they change.
-     * Its stylesheets become one file, so a first visit asks for one, and the script's chunks are asked for at once, not one after another.
-     */
-    private byte[] page() throws IOException {
-        final byte[] built = page;
-        if (built != null && PAGE_DIR == null) {
-            return built;
-        }
-        final byte[] html = readResource("index.html");
-        if (html == null) {
-            return null;
-        }
-        // Joined in the page's order, so the cascade is the same as with separate files. Every stylesheet is in the same folder, so its relative addresses still work
-        final ByteArrayOutputStream joined = new ByteArrayOutputStream();
-        final StringBuilder linked = new StringBuilder();
-        final Matcher sheet = STYLESHEET.matcher(new String(html, StandardCharsets.UTF_8));
-        boolean first = true;
-        while (sheet.find()) {
-            final byte[] css = readResource(sheet.group(1));
-            if (css != null) {
-                joined.write(css);
-                joined.write('\n');
-            }
-            sheet.appendReplacement(linked, first ? Matcher.quoteReplacement("<link rel=\"stylesheet\" href=\"" + STYLES + "\">\n") : "");
-            first = false;
-        }
-        sheet.appendTail(linked);
-        styles = joined.toByteArray();
-        final StringBuilder out = new StringBuilder();
-        final Matcher file = PAGE_FILE.matcher(linked);
-        while (file.find()) {
-            final byte[] named = STYLES.equals(file.group(2)) ? styles : readResource(file.group(2));
-            final CRC32 crc = new CRC32();
-            if (named != null) {
-                crc.update(named);
-            }
-            file.appendReplacement(out, Matcher.quoteReplacement(named == null ? file.group()
-                    : file.group(1) + "=\"" + file.group(2) + "?v=" + Long.toHexString(crc.getValue()) + "\""));
-        }
-        file.appendTail(out);
-        final byte[] script = readResource("js/app.js");
-        final StringBuilder preloads = new StringBuilder();
-        final Matcher chunk = CHUNK.matcher(script == null ? "" : new String(script, StandardCharsets.UTF_8));
-        while (chunk.find()) {
-            preloads.append("<link rel=\"modulepreload\" href=\"js/").append(chunk.group(1)).append("\">\n");
-        }
-        final int head = out.indexOf("</head>");
-        if (head >= 0) {
-            out.insert(head, preloads);
-        }
-        return page = out.toString().getBytes(StandardCharsets.UTF_8);
-    }
-
-    private byte[] styles() throws IOException {
-        return page() == null ? null : styles;
-    }
-
-    private static byte[] readResource(final String resource) throws IOException {
-        if (PAGE_DIR != null) {
-            final Path root = Path.of(PAGE_DIR).toAbsolutePath().normalize();
-            final Path file = root.resolve(resource).normalize();
-            return file.startsWith(root) && Files.isRegularFile(file) ? Files.readAllBytes(file) : null;
-        }
-        try (InputStream in = WebServer.class.getResourceAsStream("/web/" + resource)) {
-            return in == null ? null : in.readAllBytes();
-        }
     }
 
     private final class AccessGate extends ChannelInboundHandlerAdapter {
@@ -682,7 +397,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 if (key == null) {
                     notFound(ctx);
                 } else {
-                    serveSleeveArt(ctx, key, "1".equals(param(q, "auto")));
+                    ImageReplies.serveSleeveArt(ctx, key, "1".equals(param(q, "auto")));
                 }
                 return;
             }
@@ -706,7 +421,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 return;
             }
             if ("/sound".equals(path) || "/music".equals(path)) {
-                serveAudio(ctx, "/sound".equals(path), param(q, "name"), param(q, "track"), req.headers().get(HttpHeaderNames.RANGE), ifNoneMatch);
+                AudioReplies.serve(ctx, "/sound".equals(path), param(q, "name"), param(q, "track"), req.headers().get(HttpHeaderNames.RANGE), ifNoneMatch);
                 return;
             }
             if ("/img".equals(path)) {
@@ -714,7 +429,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 if (key == null) {
                     notFound(ctx);
                 } else {
-                    serveImage(ctx, key, String.valueOf(CardThumbnails.WIDTH).equals(param(q, "w")));
+                    ImageReplies.serveImage(ctx, key, String.valueOf(CardThumbnails.WIDTH).equals(param(q, "w")));
                 }
                 return;
             }
@@ -737,8 +452,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 return;
             }
             final String resource = "/".equals(path) ? "index.html" : path.substring(1);
-            final byte[] body = resource.contains("..") ? null : "index.html".equals(resource) ? page()
-                    : STYLES.equals(resource) ? styles() : readResource(resource);
+            final byte[] body = resource.contains("..") ? null : "index.html".equals(resource) ? bundle.page()
+                    : PageBundle.STYLES.equals(resource) ? bundle.styles() : PageBundle.readResource(resource);
             final String type = contentType(resource);
             if (body == null) {
                 notFound(ctx);

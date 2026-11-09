@@ -31,7 +31,7 @@ desktop / mobile Forge ──WebSocket tunnel──▶ WebServer ─────
 
 ### The server side
 
-`WebServer` serves the page, images, sounds and sockets on one port. Every request must carry the link token.
+`WebServer` serves the page, images, sounds and sockets on one port. Every request must carry the link token. `PageBundle` builds the page from its files, and `ImageReplies` and `AudioReplies` answer the requests for pictures and sounds.
 
 Each browser has one `WebSession`, which survives reloads. A session is always at one stage (the menu, a table, a match, an event, a campaign), and it routes the browser's messages to the class that owns that stage. During a match the browser's seat is a `WebGuiGame`, the web's `IGuiGame`, which turns game state, events and questions into messages.
 
