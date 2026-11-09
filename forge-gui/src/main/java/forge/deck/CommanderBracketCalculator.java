@@ -247,22 +247,43 @@ public final class CommanderBracketCalculator {
             return earlyGameCombos.isEmpty() ? 0 : 4;
         }
 
+        /** Why the game changers raise the bracket, or null when the deck has none. The other reasons work the same way. */
+        public String getGamechangersReason() {
+            return gamechangers.size() >= 4 ? localizer.getMessage("lblCommanderBracketReasonGameChangersFour")
+                    : !gamechangers.isEmpty() ? localizer.getMessage("lblCommanderBracketReasonGameChangersOne")
+                    : null;
+        }
+
+        public String getMassLandDenialReason() {
+            return massLandDenial.isEmpty() ? null : localizer.getMessage("lblCommanderBracketReasonMassLandDenial");
+        }
+
+        public String getExtraTurnsReason() {
+            return extraTurns.size() >= 4 ? localizer.getMessage("lblCommanderBracketReasonExtraTurnsFour")
+                    : extraTurns.size() >= 3 ? localizer.getMessage("lblCommanderBracketReasonExtraTurnsThree")
+                    : extraTurns.size() >= 2 ? localizer.getMessage("lblCommanderBracketReasonExtraTurnsTwo")
+                    : extraTurns.isEmpty() ? null : localizer.getMessage("lblCommanderBracketReasonExtraTurnsFew");
+        }
+
+        public String getChainedExtraTurnsReason() {
+            return chainedExtraTurns.isEmpty() ? null : localizer.getMessage("lblCommanderBracketReasonChainedExtraTurn");
+        }
+
+        public String getLateGameCombosReason() {
+            return lateGameCombos.isEmpty() ? null : localizer.getMessage("lblCommanderBracketReasonLateGameCombo");
+        }
+
+        public String getEarlyGameCombosReason() {
+            return earlyGameCombos.isEmpty() ? null : localizer.getMessage("lblCommanderBracketReasonEarlyGameCombo");
+        }
+
         public String toExplanation() {
             final StringBuilder sb = new StringBuilder();
             sb.append(localizer.getMessage("lblCommanderBracketMinimum", bracket)).append("\n\n");
-            appendCards(sb, localizer.getMessage("lblCommanderBracketGameChangers"), gamechangers,
-                    gamechangers.size() >= 4 ? localizer.getMessage("lblCommanderBracketReasonGameChangersFour")
-                            : !gamechangers.isEmpty() ? localizer.getMessage("lblCommanderBracketReasonGameChangersOne")
-                            : null);
-            appendCards(sb, localizer.getMessage("lblCommanderBracketMassLandDenial"), massLandDenial,
-                    massLandDenial.isEmpty() ? null : localizer.getMessage("lblCommanderBracketReasonMassLandDenial"));
-            appendCards(sb, localizer.getMessage("lblCommanderBracketExtraTurns"), extraTurns,
-                    extraTurns.size() >= 4 ? localizer.getMessage("lblCommanderBracketReasonExtraTurnsFour")
-                            : extraTurns.size() >= 3 ? localizer.getMessage("lblCommanderBracketReasonExtraTurnsThree")
-                            : extraTurns.size() >= 2 ? localizer.getMessage("lblCommanderBracketReasonExtraTurnsTwo")
-                            : extraTurns.isEmpty() ? null : localizer.getMessage("lblCommanderBracketReasonExtraTurnsFew"));
-            appendCards(sb, localizer.getMessage("lblCommanderBracketChainedExtraTurns"), chainedExtraTurns,
-                    chainedExtraTurns.isEmpty() ? null : localizer.getMessage("lblCommanderBracketReasonChainedExtraTurn"));
+            appendCards(sb, localizer.getMessage("lblCommanderBracketGameChangers"), gamechangers, getGamechangersReason());
+            appendCards(sb, localizer.getMessage("lblCommanderBracketMassLandDenial"), massLandDenial, getMassLandDenialReason());
+            appendCards(sb, localizer.getMessage("lblCommanderBracketExtraTurns"), extraTurns, getExtraTurnsReason());
+            appendCards(sb, localizer.getMessage("lblCommanderBracketChainedExtraTurns"), chainedExtraTurns, getChainedExtraTurnsReason());
             appendCombos(sb, lateGameCombos, earlyGameCombos);
             return sb.toString();
         }

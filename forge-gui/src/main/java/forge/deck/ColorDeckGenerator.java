@@ -9,12 +9,14 @@ import java.util.List;
 import java.util.function.Predicate;
 
 public class ColorDeckGenerator extends DeckProxy implements Comparable<ColorDeckGenerator> {
+    /** The choices the generator offers, as DeckgenUtil.colorCheck reads them. */
+    public static final List<String> COLOR_NAMES = List.of("Random 1", "Random 2", "Random 3",
+            "White", "Blue", "Black", "Red", "Green");
+
     public static List<DeckProxy> getColorDecks(final IItemManager<DeckProxy> lstDecks0, final Predicate<PaperCard> formatFilter0, final boolean isAi0) {
-        final String[] colors = new String[] { "Random 1", "Random 2", "Random 3",
-                "White", "Blue", "Black", "Red", "Green" };
         final List<DeckProxy> decks = new ArrayList<>();
-        for (int i = 0; i < colors.length; i++) {
-            decks.add(new ColorDeckGenerator(colors[i], i, lstDecks0, formatFilter0, isAi0));
+        for (int i = 0; i < COLOR_NAMES.size(); i++) {
+            decks.add(new ColorDeckGenerator(COLOR_NAMES.get(i), i, lstDecks0, formatFilter0, isAi0));
         }
         return decks;
     }

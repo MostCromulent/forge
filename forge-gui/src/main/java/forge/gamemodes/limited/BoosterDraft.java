@@ -23,6 +23,7 @@ import forge.card.DraftOptions;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckBase;
+import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.gui.util.SGuiChoose;
 import forge.gui.util.SOptionPane;
@@ -55,6 +56,8 @@ public class BoosterDraft implements IBoosterDraft {
     private int nextId = 0;
     public static final int N_PLAYERS = 8;
     public static final String FILE_EXT = ".draft";
+    /** The tag a Commander draft's deck carries, by which its pool is recognised later. */
+    public static final String COMMANDER_DRAFT_TAG = "CommanderDraft";
 
     int podSize;
     private final List<LimitedPlayer> players = new ArrayList<>();
@@ -161,8 +164,7 @@ public class BoosterDraft implements IBoosterDraft {
                 // log isn't shipped over the wire. Custom/Chaos/Import paths can still
                 // smuggle CNS cards in — fix those when the underlying issues are resolved.
                 for (final CardBlock b : storage) {
-                    if (b.getCntBoostersDraft() > 0) {
-                        if (forNetwork && b.getName().contains("Conspiracy")) continue;
+                    if (isDraftable(b, forNetwork)) {
                         blocks.add(b);
                     }
                 }
@@ -180,11 +182,11 @@ public class BoosterDraft implements IBoosterDraft {
 
                 String combo = sets.get(0);
                 if (sets.size() > 1) {
-                    final int nPacks = block.getCntBoostersDraft();
-                    if (nPacks == 3 && sets.size() < 4) {
-                        combo = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseSetCombination"), getSetCombos(sets));
+                    final List<String> presets = presetCombos(block, sets);
+                    if (!presets.isEmpty()) {
+                        combo = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseSetCombination"), presets);
                     } else {
-                        combo = choosePackByPack(sets, nPacks);
+                        combo = choosePackByPack(sets, block.getCntBoostersDraft());
                     }
 
                     if (combo == null) {
@@ -282,6 +284,16 @@ public class BoosterDraft implements IBoosterDraft {
             }
         }
         return sets;
+    }
+
+    /** Whether a block can be drafted. A network draft leaves out Conspiracy, whose draft-time prompts only a local GUI can answer. */
+    public static boolean isDraftable(final CardBlock block, final boolean forNetwork) {
+        return block.getCntBoostersDraft() > 0 && !(forNetwork && block.getName().contains("Conspiracy"));
+    }
+
+    /** The set combinations offered for a block of these sets, or none when each pack's set is chosen in turn. */
+    public static List<String> presetCombos(final CardBlock block, final List<String> sets) {
+        return block.getCntBoostersDraft() == 3 && sets.size() > 1 && sets.size() < 4 ? getSetCombos(sets) : List.of();
     }
 
     private void setupFull() {
@@ -733,6 +745,25 @@ public class BoosterDraft implements IBoosterDraft {
     @Override
     public LimitedPlayer getHumanPlayer() {
         return this.localPlayer;
+    }
+
+    /** The finished draft saved under name: the human's deck and each computer's deck, with their draft notes. */
+    public DeckGroup toDeckGroup(final String name) {
+        final Deck[] computer = getComputerDecks();
+        final LimitedPlayer[] opponents = getOpposingPlayers();
+        for (int i = 0; i < computer.length; i++) {
+            computer[i].setDraftNotes(opponents[i].getSerializedDraftNotes());
+        }
+        final LimitedPlayer human = getHumanPlayer();
+        final Deck humanDeck = (Deck) human.getDeck().copyTo(name);
+        humanDeck.setDraftNotes(human.getSerializedDraftNotes());
+        if (isCommanderDraft) {
+            humanDeck.getTags().add(COMMANDER_DRAFT_TAG);
+        }
+        final DeckGroup group = new DeckGroup(name);
+        group.setHumanDeck(humanDeck);
+        group.addAiDecks(computer);
+        return group;
     }
 
     @Override

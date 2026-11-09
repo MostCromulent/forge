@@ -12,7 +12,10 @@ import forge.util.Localizer;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -208,6 +211,23 @@ public final class NetworkEvent {
             }
         }
         return null;
+    }
+
+    /** The ids of the past events whose pools are on disk, newest first. */
+    public static List<String> pastEventIds() {
+        Map<String, String> datesByEventId = new LinkedHashMap<>();
+        for (Deck d : FModel.getDecks().getNetworkEventDecks()) {
+            String eventId = DeckProxy.getEventTag(d, "eventId");
+            if (eventId != null) {
+                datesByEventId.putIfAbsent(eventId, DeckProxy.getEventTag(d, "eventDate"));
+            }
+        }
+        List<String> ids = new ArrayList<>(datesByEventId.keySet());
+        // eventDate is "yyyy-MM-dd HH:mm", so reverse lexical order lists newest first
+        ids.sort(Comparator.comparing(
+                (String id) -> datesByEventId.get(id) != null ? datesByEventId.get(id) : "",
+                Comparator.reverseOrder()));
+        return ids;
     }
 
     /** Short display label for a past event id, e.g., "Draft — Innistrad — (2026-04-20 10:15)". */

@@ -40,6 +40,8 @@ public abstract class ImageFetcher {
     }
 
     private HashMap<String, HashSet<Callback>> currentFetches = new HashMap<>();
+    /** Counts callbacks added to currentFetches, so a fetch can tell that it started no download. */
+    private int queued;
 
     private String getScryfallDownloadURL(PaperCard c, String face, boolean useArtCrop, boolean hasSetLookup, String imagePath, ArrayList<String> downloadUrls) {
         StaticData data = StaticData.instance();
@@ -105,6 +107,18 @@ public abstract class ImageFetcher {
     }
 
     public void fetchImage(final String imageKey, final Callback callback) {
+        final int before = queued;
+        queueImage(imageKey, callback);
+        noDownloadUnless(before, callback);
+    }
+
+    private void noDownloadUnless(final int queuedBefore, final Callback callback) {
+        if (queued == queuedBefore && callback != null) {
+            callback.onNoImageFetched();
+        }
+    }
+
+    private void queueImage(final String imageKey, final Callback callback) {
         FThreads.assertExecutedByEdt(true);
 
         if (FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_DISABLE_CARD_IMAGES))
@@ -395,6 +409,12 @@ public abstract class ImageFetcher {
      * under CACHE_SLEEVE_PICS_DIR keyed by a hash of the image key.
      */
     public void fetchSleeveArt(final String sleeveArtKey, final Callback callback) {
+        final int before = queued;
+        queueSleeveArt(sleeveArtKey, callback);
+        noDownloadUnless(before, callback);
+    }
+
+    private void queueSleeveArt(final String sleeveArtKey, final Callback callback) {
         FThreads.assertExecutedByEdt(true);
 
         if (sleeveArtKey == null || sleeveArtKey.length() < 2 || !sleeveArtKey.startsWith(ImageKeys.CARD_PREFIX)) {
@@ -447,6 +467,7 @@ public abstract class ImageFetcher {
         if (observers != null) {
             // Already in the queue, simply add the new observer.
             observers.add(callback);
+            queued++;
             return;
         } else if (fetching.contains(destPath)) {
             // Already fetching, but somehow no observers?
@@ -457,6 +478,7 @@ public abstract class ImageFetcher {
         observers.add(callback);
         fetching.add(destPath);
         currentFetches.put(destPath, observers);
+        queued++;
 
         final Runnable notifyObservers = () -> {
             FThreads.assertExecutedByEdt(true);
@@ -476,7 +498,24 @@ public abstract class ImageFetcher {
 
     protected abstract Runnable getDownloadTask(String[] toArray, String destPath, Runnable notifyObservers);
 
+    /** For a download task whose every address failed. The path stays in the fetched set, so it is not tried again this run. */
+    protected void downloadFailed(final String destPath) {
+        FThreads.invokeInEdtLater(() -> {
+            final HashSet<Callback> observers = currentFetches.remove(destPath);
+            if (observers != null) {
+                for (Callback o : observers) {
+                    if (o != null)
+                        o.onNoImageFetched();
+                }
+            }
+        });
+    }
+
     public interface Callback {
         void onImageFetched();
+
+        /** Called instead of onImageFetched when no picture will arrive for this request. */
+        default void onNoImageFetched() {
+        }
     }
 }
