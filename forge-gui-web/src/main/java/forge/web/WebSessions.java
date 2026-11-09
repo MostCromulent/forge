@@ -225,7 +225,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     /** The seated guest with this name. A session whose browser left can still hold the seat. */
     private WebSession seatedGuest(final String name) {
         for (final WebSession session : byId.values()) {
-            if (session.seatedAsGuest() && name != null && name.equals(session.playerName())) {
+            if (session.seatedAsGuest() && name != null && name.equalsIgnoreCase(session.playerName())) {
                 return session;
             }
         }
@@ -244,7 +244,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
         final BrowserChannel channel;
         synchronized (this) {
             seat = seatedGuest(from);
-            taker = byId.values().stream().filter(s -> s.attached() && s != host && !s.hasGame() && to != null && to.equals(s.playerName()))
+            taker = byId.values().stream().filter(s -> s.attached() && s != host && !s.hasGame() && to != null && to.equalsIgnoreCase(s.playerName()))
                     .findFirst().orElse(null);
             channel = taker == null ? null : taker.browser();
             if (seat == null || channel == null || seat.attached()) {
