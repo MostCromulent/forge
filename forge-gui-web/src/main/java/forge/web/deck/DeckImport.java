@@ -71,7 +71,7 @@ public final class DeckImport {
         int notImported = 0;
         // Reading starts in the main deck. A legendary card before any heading stays there, and chooseCommander picks the commander later
         DeckSection section = DeckSection.Main;
-        // A deck file is read the way Forge reads its own decks, because the list recognizer does not understand its card lines
+        // The list recognizer does not understand a deck file's card lines, so each is read alone, as DeckSerializer reads it, and can be marked
         final boolean file = Arrays.stream(raw).anyMatch(l -> l.trim().equalsIgnoreCase("[metadata]"));
         DeckSection fileSection = null;
         boolean fileHead = false;
@@ -219,24 +219,30 @@ public final class DeckImport {
         return new ImportProblem(line, title, Localizer.getInstance().getMessage("lblWebImportNotACard"), fixes);
     }
 
-    /** With no Commander section, a single card that could lead the deck becomes its commander, and its name is returned. Several candidates are offered as a choice. */
+    /**
+     * With no Commander section, a single card that could lead the deck becomes its commander, and its name is returned. Several candidates are offered as a choice.
+     * As in DeckImportController, the commander is looked for in the sideboard, or in the main deck when there is no sideboard. Unlike there, a candidate must be a
+     * legal commander in this format, because core's test also accepts every instant and sorcery as a possible signature spell.
+     */
     private static String chooseCommander(final Deck deck, final Check check, final List<ImportProblem> problems) {
         final DeckFormat df = check.deckFormat();
         final CardPool commanders = deck.get(DeckSection.Commander);
         if (!df.hasCommander() || (commanders != null && !commanders.isEmpty())) {
             return null;
         }
+        final CardPool side = deck.get(DeckSection.Sideboard);
+        final CardPool from = side != null && !side.isEmpty() ? side : deck.getMain();
         final List<PaperCard> candidates = new ArrayList<>();
-        for (final Map.Entry<PaperCard, Integer> e : deck.getMain()) {
+        for (final Map.Entry<PaperCard, Integer> e : from) {
             final CardRules rules = e.getKey().getRules();
-            if (rules.getType().isLegendary() && df.isLegalCommander(rules) && !rules.getType().hasSubtype("Background")
+            if (df.isLegalCommander(rules) && !rules.getType().hasSubtype("Background")
                     && candidates.stream().noneMatch(c -> c.getName().equals(e.getKey().getName()))) {
                 candidates.add(e.getKey());
             }
         }
         if (candidates.size() == 1) {
             final PaperCard only = candidates.get(0);
-            deck.getMain().remove(only, 1);
+            from.remove(only, 1);
             deck.getOrCreate(DeckSection.Commander).add(only, 1);
             return only.getName();
         }
