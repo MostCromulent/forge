@@ -99,7 +99,7 @@ const MENU_ART: Record<string, string> = {
   play: 'c:Mirror Match|C15|1',
   multiplayer: 'c:Secret Rendezvous|SOC|1',
   editor: 'c:Archivist of Oghma|CLB|1',
-  constructed: 'c:Dueling Grounds|INV|1',
+  constructed: 'c:The Deck of Many Things|AFR|1',
   draft: 'c:Cogwork Librarian|CNS|1',
   sealed: 'c:Booster Tutor|UND|1',
   conquest: 'c:Portal of Sanctuary|M20|1',
