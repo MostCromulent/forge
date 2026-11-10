@@ -6,7 +6,7 @@ import type { UiState } from './ui';
 export type KeyCommand =
   | 'closeOptions' | 'closeConcede' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closeZones' | 'closePicker' | 'declineHostChoice'
   | 'ok' | 'cancel' | 'nextFace' | 'cardText' | 'startMatch'
-  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'castWithoutCost' | 'castWithCost' | 'cancelCast' | 'closeReveal' | 'confirmRequest' | 'foldRequest' | 'unfoldRequest' | 'editorUndo' | 'closeImporter' | 'closeBrowse'
+  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'castWithoutCost' | 'castWithCost' | 'cancelCast' | 'closeReveal' | 'confirmRequest' | 'foldRequest' | 'unfoldRequest' | 'editorUndo' | 'closeImporter' | 'closeBrowse' | 'back'
   | ShortcutCommand;
 
 /** What each of Forge's shortcut preferences does on the web. Alpha strike is a prompt button, so it is handled with the prompt's keys. */
@@ -154,6 +154,10 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
     }
     if (model.screen === 'setup' && ui.picker) {
       return escape ? 'closePicker' : null;
+    }
+    // Escape outside a match goes back one step of the page's trail, as its Back button does
+    if (escape && !press.typing) {
+      return 'back';
     }
     const table = model.lobby;
     return !press.typing && model.screen === 'setup' && key === 'Enter' && table?.host && table.canStart

@@ -68,6 +68,16 @@ export function PhoneHead({ back, title, line, action, more, dev, tabs, inert }:
   );
 }
 
+/** The earlier step of the trail on screen, which Escape goes back to. */
+let shownBack: SetupStep | null = null;
+
+/** Goes back one step of the trail on screen. It returns false when the page shows no earlier step. */
+export function goBack(): boolean {
+  if (!shownBack?.go) return false;
+  shownBack.go();
+  return true;
+}
+
 /** The step a phone header's back button returns to: the last earlier step of the trail, if any. */
 export const backStep = (trail: SetupStep[]): SetupStep | undefined => trail.findLast(step => step.go);
 
@@ -88,7 +98,13 @@ export interface SetupStep {
  * On a phone a trail with an earlier step is drawn by the page's PhoneHead instead, so only the aside and the line under the heading are left here.
  */
 export function SetupHead({ trail, title, aside, sub }: { trail: SetupStep[]; title: string; aside?: ComponentChildren; sub?: ComponentChildren }) {
-  if (isPortrait() && backStep(trail)) {
+  const back = backStep(trail);
+  useEffect(() => {
+    if (!back) return;
+    shownBack = back;
+    return () => { if (shownBack === back) shownBack = null; };
+  });
+  if (isPortrait() && back) {
     return aside || sub ? <div class="setup-head">{aside && <div class="setup-aside">{aside}</div>}{sub && <p class="setup-sub">{sub}</p>}</div> : null;
   }
   return (

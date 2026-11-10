@@ -29,6 +29,7 @@ import { boundKeys, initSettings, onServerSettings, rememberGuestAutoPass, resto
 import { behindItsBoard, passingFor } from './match/pace';
 import { createPacer } from './match/pacer';
 import { setVersion } from './links';
+import { goBack } from './header';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { rememberStops, restoreStops } from './match/stopmemory';
 import { byId, isTyping, relayout, saveText } from './dom';
@@ -208,6 +209,8 @@ function runKey(command: KeyCommand): void {
     case 'closePicker': changeUi(u => { u.picker = null; }); break;
     case 'closeImporter': changeUi(u => { u.importer = null; }); break;
     case 'closeBrowse': changeUi(u => { u.browse = null; }); break;
+    // An open dialog or popup hears the same press and closes itself, so the page stays where it is
+    case 'back': if (!ui.volumeOpen && !document.querySelector('.backdrop, [role=menu], .popup')) goBack(); break;
     case 'editorUndo': actions.editorUndo(); break;
     case 'declineHostChoice': if (model.hostChoice) actions.answerHostChoice(model.hostChoice.id, []); break;
     case 'ok': pressPromptButton('ok'); actions.ok(); break;
