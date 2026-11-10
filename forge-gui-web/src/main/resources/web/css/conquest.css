@@ -163,7 +163,15 @@ html[data-motion="reduced"] .cq-trail-in.moving * { transition: none; }
 .cq-where { display: flex; align-items: center; gap: 8px; }
 .cq-art { height: 132px; padding: 0 10px 9px; border: 0; border-radius: 10px; background: var(--surface-2) center 22% / cover; position: relative; display: flex; align-items: flex-end; box-shadow: 0 0 0 1px var(--line-bright); color: var(--text); text-align: left; opacity: 1; overflow: hidden; }
 .cq-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, #0b0e14d9 100%); }
-.cq-art b { position: relative; z-index: 1; font-size: 14px; text-shadow: 0 1px 3px #000, 0 0 10px #000; }
+/* On a wide screen the art heads the panel, faded into it as the deck editor's banner is, with the kicker and title on the fade */
+.cq-side-head { display: contents; }
+html:not([data-form="portrait"]) .cq-side-head:not(.bare) { position: relative; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; min-height: 196px;
+  box-sizing: border-box; margin: -18px -20px 0; padding: 0 20px 10px; overflow: hidden; background: var(--bg-deep); }
+html:not([data-form="portrait"]) .cq-side-head:not(.bare) > .cq-art { position: absolute; inset: 0; height: auto; padding: 0; border-radius: 0; box-shadow: none; background-position: center 20%; }
+html:not([data-form="portrait"]) .cq-side-head:not(.bare) > .cq-art::after { background: linear-gradient(180deg, transparent 25%, color-mix(in srgb, var(--surface) 70%, transparent) 62%, var(--surface)); }
+html:not([data-form="portrait"]) .cq-side-head:not(.bare) > :not(.cq-art) { position: relative; z-index: 1; }
+html:not([data-form="portrait"]) .cq-side-head:not(.bare) .cq-kicker { color: var(--text); text-shadow: 0 1px 6px #000c; }
+html:not([data-form="portrait"]) .cq-side-head:not(.bare) h3 { font-size: 22px; text-shadow: 0 1px 8px #000c; }
 .cq-desc { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
 .cq-steps { margin: 0; font-size: 12px; color: var(--muted); }
 /* The event panel's Format and Reward sections. Each heading has a rule running to the panel's edge */

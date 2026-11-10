@@ -109,7 +109,7 @@ export function Duels({ page, actions }: { page: QuestDuels; actions: Actions })
         </div>
       </div>
       {duel && (
-        <SidePanel kicker={t('lblWebQuestDuel')} title={duel.title} art={duel.face} label={duel.title} zoom={zoom} setZoom={setZoom}
+        <SidePanel kicker={t('lblWebQuestDuel')} title={duel.title} art={duel.face} zoom={zoom} setZoom={setZoom}
           foot={<Brings page={page} actions={actions} zoom={setZoom} start={() => actions.questDuel(duel.index)} label={t('lblWebQuestStartDuel')} />}>
           {duel.difficulty > 0 && <div class="cq-chips"><Difficulty n={duel.difficulty} /></div>}
           <p class="cq-desc">{duel.description}</p>

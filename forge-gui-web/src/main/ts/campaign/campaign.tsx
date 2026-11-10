@@ -101,18 +101,18 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
  * The panel beside a page's list. It shows the chosen item's title, picture and text, and the player's own items in the foot. A pressed picture in the foot is shown large.
  * fold makes the title a button that opens and closes the rest of the panel, for a panel drawn as a small card over the page.
  */
-export function SidePanel({ kicker, where, title, art, label, zoom, setZoom, children, foot, fold }: {
-  kicker: string; where?: ComponentChildren; title?: string; art?: string | null; label?: string;
+export function SidePanel({ kicker, where, title, art, zoom, setZoom, children, foot, fold }: {
+  kicker: string; where?: ComponentChildren; title?: string; art?: string | null;
   zoom: string | null; setZoom: (image: string | null) => void; children: ComponentChildren; foot: ComponentChildren;
   fold?: { open: boolean; toggle: () => void };
 }) {
   return (
     <aside class={fold?.open ? 'cq-side open' : 'cq-side'}>
       <div class="cq-panel">
-        <div class="cq-where"><span class="cq-kicker">{kicker}</span>{where}</div>
-        {fold ? <h3><button class="cq-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3> : <h3>{title}</h3>}
-        <div class="cq-art" data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }}>
-          <b>{label}</b>
+        <div class={art ? 'cq-side-head' : 'cq-side-head bare'}>
+          <div class="cq-where"><span class="cq-kicker">{kicker}</span>{where}</div>
+          {fold ? <h3><button class="cq-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3> : <h3>{title}</h3>}
+          <div class="cq-art" data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }} />
         </div>
         {children}
       </div>

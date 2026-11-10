@@ -309,7 +309,7 @@ function EventPanel({ state, cell, busy, battle }: { state: ConquestState; cell:
   const lead = state.commander;
   return (
     <SidePanel kicker={`${state.plane} - ${region.name}`} where={<span class="pips"><Pips colors={region.colors} /></span>}
-      title={cell.name} art={cell.avatar} label={cell.opponent} zoom={zoom} setZoom={setZoom}
+      title={cell.name} art={cell.avatar} zoom={zoom} setZoom={setZoom}
       fold={isPortrait() ? { open, toggle: () => setOpen(!open) } : undefined}
       foot={<>
         <DeckRow image={lead.image} name={lead.name} line={t('lblWebConquestDeckCards', lead.deckSize)} problem={!!lead.problem}

@@ -57,7 +57,7 @@ export function Challenges({ page, duels, actions }: { page: QuestChallenges; du
         </div>
       </div>
       {challenge && (
-        <SidePanel kicker={t('lblWebQuestChallenge')} title={challenge.title} art={challenge.face} label={challenge.title} zoom={zoom} setZoom={setZoom}
+        <SidePanel kicker={t('lblWebQuestChallenge')} title={challenge.title} art={challenge.face} zoom={zoom} setZoom={setZoom}
           foot={<Brings page={duels} actions={actions} zoom={setZoom} start={() => actions.questChallenge(challenge.id)} label={t('lblWebQuestStartChallenge')}
             fixedDeck={challenge.fixedDeck} />}>
           {challenge.difficulty > 0 && <div class="cq-chips"><Difficulty n={challenge.difficulty} /></div>}
