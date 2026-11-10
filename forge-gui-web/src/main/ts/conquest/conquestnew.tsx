@@ -25,6 +25,8 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
   // An error from before the form opened belongs to the saves list, so this form does not show it
   const [sent, setSent] = useState(false);
   const [prefs, setPrefs] = useState(false);
+  // Randomize all picks a plane, then a commander and a planeswalker as each list arrives from the server
+  const [luck, setLuck] = useState(false);
   useEffect(() => { actions.conquestOptions(value.plane, value.commander); }, [value.plane, value.commander]);
   // A refused conquest has no map to open on, so its opening ends and the form shows why
   useEffect(() => {
@@ -32,10 +34,17 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
     if (model.error) endPlaneswalk();
   }, [model.error]);
   const options = model.conquestOptions;
-  if (!options) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   // Each list belongs to the plane or commander it was requested for. A list for an older choice is not shown for a newer one
-  const commanders = options.plane === value.plane ? options.commanders ?? null : null;
-  const walkers = options.plane === value.plane && options.commander === value.commander ? options.planeswalkers ?? null : null;
+  const commanders = options && options.plane === value.plane ? options.commanders ?? null : null;
+  const walkers = options && options.plane === value.plane && options.commander === value.commander ? options.planeswalkers ?? null : null;
+  useEffect(() => {
+    if (!luck || !options) return;
+    if (!value.plane) setValue({ plane: anyOf(options.planes).name });
+    else if (!value.commander) { if (commanders?.length) setValue(v => ({ ...v, commander: anyOf(commanders).name })); }
+    else if (!value.planeswalker) { if (walkers?.length) setValue(v => ({ ...v, planeswalker: anyOf(walkers).name })); }
+    else setLuck(false);
+  });
+  if (!options) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   const ready = !!value.planeswalker && name.trim().length > 0;
   const start = () => {
     if (!ready || busy) return;
@@ -78,7 +87,10 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
     rows: v => [[t('lblPlane'), v.plane ?? null], [t('lblCommander'), v.commander ?? null], [t('lblPlaneswalker'), v.planeswalker ?? null],
       [t('lblStartingShards'), formatNumber(options.startShards)]],
     note: '',
-    extra: <button class="ticket-prefs" onClick={() => setPrefs(true)}><Icon d={ICONS.sliders} />{t('Preferences')}</button>,
+    extra: <>
+      <button class="ticket-prefs" disabled={luck} onClick={() => { setValue({}); setLuck(true); }}><Icon d={ICONS.dice} />{t('lblWebConquestRandomAll')}</button>
+      <button class="ticket-prefs" onClick={() => setPrefs(true)}><Icon d={ICONS.sliders} />{t('Preferences')}</button>
+    </>,
   };
   return (
     <div class="setup cq-new">
