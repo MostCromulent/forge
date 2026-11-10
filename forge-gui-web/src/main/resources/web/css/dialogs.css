@@ -37,6 +37,8 @@ html[data-back] :is(#menu, #lobby, #editor, #limited, #drafting, #campaign) > *,
 /* A move to another page (main.ts render), or through an ordered set such as a Conquest tab or a step of the start menu (ui.ts eased), slides in the direction of the order, deeper pages to the left. The header has its own name, so it stays in place while the page under it slides */
 :is(#menu, #lobby, #limited, #drafting, #campaign) { view-transition-name: screen; }
 :is(#menu, #lobby, #limited, #drafting, #campaign) :is(.page-head, .ph) { view-transition-name: head; }
+/* The links fixed at the foot of the start menu stay in place too, so they do not slide with the page */
+html:not([data-form="portrait"]) .forge-links.foot { view-transition-name: forge-links; }
 /* The name makes the header a stacking context, so it is raised for its popups to stay above the page */
 :where(.page-head, .ph) { position: relative; z-index: 30; }
 /* A dialog's close button is a quiet square with a drawn X, like the page's other icon buttons */

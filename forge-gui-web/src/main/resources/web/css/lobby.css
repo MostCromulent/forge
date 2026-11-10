@@ -202,6 +202,8 @@ html[data-way] :is(.modes .mode, .kind-card).plaque { animation-duration: 0s; an
 /* The top bar on every page. It holds the wordmark, the page's own middle content, and the page's buttons on the right. */
 .page-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
 .head-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+/* As tall as a text button, so a header is the same height with or without its Back button */
+.page-head .head-right { min-height: 34px; }
 
 .role { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; }
 .role.archenemy { background: var(--brass); color: var(--on-brass); }
