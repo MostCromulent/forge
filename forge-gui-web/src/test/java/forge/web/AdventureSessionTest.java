@@ -9,6 +9,8 @@ import forge.adventure.util.Current;
 import forge.adventure.world.World;
 import forge.adventure.world.WorldSave;
 import forge.gui.GuiBase;
+import forge.localinstance.properties.ForgePreferences.FPref;
+import forge.model.FModel;
 import forge.web.adventure.AdventureFixture;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -219,6 +221,56 @@ public class AdventureSessionTest extends SessionsTest {
         final JsonObject dialog = host.awaitMatching("adventureDialog", d -> true, "no prologue was shown");
         Assert.assertFalse(dialog.get("text").getAsString().isEmpty());
         Assert.assertFalse(dialog.getAsJsonArray("choices").isEmpty());
+    }
+
+    /** Puts a one-game enemy on the player and walks into it, then starts the battle once the encounter is shown. */
+    private void fightGarth(final TestBrowser host) throws InterruptedException {
+        dismissDialogs(host);
+        send(host, message("adventurePlaceholderDone"));
+        host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
+        final float[] ground = wildGround();
+        FModel.getPreferences().setPref(FPref.DEV_MODE_ENABLED, true);
+        send(host, message("adventureMove", "x", ground[0], "y", ground[1], "moving", false));
+        host.awaitMatching("adventureTick", t -> true, "a stop got no answer");
+        send(host, message("adventureDevSpawn", "enemy", "Garth"));
+        JsonObject encounter = null;
+        for (int i = 0; i < 20 && encounter == null; i++) {
+            sessions.onMessage(host, message("adventureMove", "x", ground[0], "y", ground[1], "moving", true));
+            encounter = host.awaitMatching("adventureEncounter", e -> true);
+        }
+        Assert.assertNotNull(encounter, "walking into the enemy started no encounter");
+        send(host, message("adventureFight"));
+        host.awaitMatching("hello", h -> "playing".equals(h.get("screen").getAsString()), "the battle did not start");
+    }
+
+    // Fails if conceding a battle does not end it as a loss that costs life, as AdventurePlayer.defeated does
+    @Test(timeOut = 240_000)
+    public void concededBattleCostsLife() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        final AtomicReference<Integer> life = new AtomicReference<>();
+        onUi(() -> life.set(AdventurePlayer.current().getLife()));
+        fightGarth(host);
+        awaitPriority(host);
+        sessions.onMessage(host, TestBrowser.action("concede"));
+        final JsonObject result = host.awaitMatching("campaignResult", r -> true, "no result was sent");
+        Assert.assertFalse(result.get("won").getAsBoolean());
+        send(host, TestBrowser.action("leave"));
+        host.awaitMatching("adventureState", s -> true, "leaving the battle sent no world");
+        final AtomicReference<Integer> after = new AtomicReference<>();
+        onUi(() -> after.set(AdventurePlayer.current().getLife()));
+        Assert.assertTrue(after.get() < life.get(), life.get() + " -> " + after.get());
+    }
+
+    // Fails if a won battle does not end with the enemy's loot on the reward page
+    @Test(timeOut = 240_000)
+    public void wonBattleShowsLoot() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        fightGarth(host);
+        computerLoses(host);
+        final JsonObject result = host.awaitMatching("campaignResult", r -> true, "no result was sent");
+        Assert.assertTrue(result.get("won").getAsBoolean());
+        send(host, TestBrowser.action("leave"));
+        host.awaitMatching("reward", r -> !r.getAsJsonArray("steps").isEmpty(), "the loot was not shown");
     }
 
     /** Picks the first offered choice of each dialog until none is open. */

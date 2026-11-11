@@ -515,4 +515,14 @@ public final class CampaignProtocol {
     @Command("adventureDialogChoice")
     public record AdventureDialogChoice(int dialogId, int index) {
     }
+
+    /** The browser has shown the encounter, so the battle starts. */
+    @Command("adventureFight")
+    public record AdventureFight() {
+    }
+
+    /** Dev mode: puts an enemy where the player stands. */
+    @Command("adventureDevSpawn")
+    public record AdventureDevSpawn(String enemy) {
+    }
 }

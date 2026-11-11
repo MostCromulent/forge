@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Vector2;
 import forge.adventure.character.EnemySprite;
 import forge.adventure.data.AdventureQuestData;
 import forge.adventure.data.DifficultyData;
+import forge.adventure.data.WorldData;
 import forge.adventure.player.AdventurePlayer;
 import forge.adventure.pointofintrest.PointOfInterest;
 import forge.adventure.pointofintrest.PointOfInterestChanges;
@@ -18,6 +19,7 @@ import forge.adventure.world.WorldSaveHeader;
 import forge.card.CardEdition;
 import forge.card.ColorSet;
 import forge.game.GameView;
+import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
 import forge.player.GamePlayerUtil;
 import forge.util.IHasForgeLog;
@@ -26,10 +28,12 @@ import forge.util.MyRandom;
 import forge.web.campaign.Campaign;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.AdventureCreate;
+import forge.web.protocol.CampaignProtocol.AdventureDevSpawn;
 import forge.web.protocol.CampaignProtocol.AdventureDialogChoice;
 import forge.web.protocol.CampaignProtocol.AdventureEncounter;
 import forge.web.protocol.CampaignProtocol.AdventureEnemy;
 import forge.web.protocol.CampaignProtocol.AdventureEnterPoi;
+import forge.web.protocol.CampaignProtocol.AdventureFight;
 import forge.web.protocol.CampaignProtocol.AdventureHud;
 import forge.web.protocol.CampaignProtocol.AdventureMove;
 import forge.web.protocol.CampaignProtocol.AdventurePlaceholder;
@@ -45,6 +49,7 @@ import forge.web.protocol.CampaignProtocol.CampaignBar;
 import forge.web.protocol.CampaignProtocol.CampaignPrefs;
 import forge.web.protocol.CampaignProtocol.CampaignResult;
 import forge.web.protocol.CampaignProtocol.CampaignStats;
+import forge.web.protocol.CampaignProtocol.ResultButton;
 import forge.web.protocol.CampaignProtocol.Reward;
 import forge.web.protocol.CampaignProtocol.TradePick;
 import forge.web.protocol.CampaignProtocol.Trading;
@@ -84,6 +89,11 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
     private PointOfInterest placeholder;
     private boolean leavingSpawn;
     private EnemySprite encountered;
+    private AdventureDuel duel;
+    /** What the last finished battle left, until the browser is back on the world map. */
+    private AdventureDuel.After after;
+    private volatile CampaignResult result;
+    private volatile Reward reward;
 
     public AdventureGame(final Host host) {
         this.host = host;
@@ -295,27 +305,86 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
         enter(null, false);
     }
 
+    /** Starts the battle against the enemy that caught the player. */
+    private void fight() {
+        if (encountered == null || duel != null) {
+            return;
+        }
+        duel = new AdventureDuel(encountered, overworld::remove);
+        final AdventureDuel starting = duel;
+        host.startMatch(() -> AdventureRuntime.onUi(starting::prepare), () -> AdventureRuntime.onUi(() -> {
+            duel = null;
+            encountered = null;
+            overworld.freeze(placeholder != null);
+            return null;
+        }));
+    }
+
     @Override
     public Reward reward() {
-        return null;
+        return reward;
     }
 
     @Override
     public void claim(final Host host) {
+        reward = null;
     }
 
     @Override
     public CampaignResult gameOver(final GameView hostGame) {
-        return null;
+        if (duel == null || hostGame == null) {
+            return null;
+        }
+        final AdventureDuel.After done = AdventureRuntime.onUi(() -> duel.gameOver(hostGame));
+        final boolean won = duel.humanName() != null && duel.humanName().equals(hostGame.getWinningPlayerName());
+        final Localizer text = Localizer.getInstance();
+        final List<ResultButton> buttons = new ArrayList<>();
+        if (done == null) {
+            buttons.add(new ResultButton(text.getMessage("btnContinue"), "nextGame", true));
+            buttons.add(new ResultButton(text.getMessage("lblQuit"), "quit", false));
+        } else {
+            after = done;
+            reward = done.reward();
+            buttons.add(new ResultButton(text.getMessage(won ? "lblGreat" : "lblOK"), "leave", true));
+        }
+        result = new CampaignResult(won, done != null, null, buttons);
+        return result;
     }
 
     @Override
     public CampaignResult result() {
-        return null;
+        return result;
     }
 
+    /** Back from the battle: a match left early is lost, and a defeat that killed the player sends them to the spawn town, as on mobile. */
     @Override
     public void left() {
+        result = null;
+        AdventureRuntime.onUi(() -> {
+            if (duel == null) {
+                return null;
+            }
+            final AdventureDuel.After forfeited = duel.forfeit();
+            final AdventureDuel.After done = forfeited != null ? forfeited : after;
+            duel = null;
+            after = null;
+            encountered = null;
+            if (done != null && done.defeat() != null) {
+                screens.announcement(done.defeat());
+            }
+            if (done != null && done.died()) {
+                // Ported from GameStage.resetPlayerLocation
+                final PointOfInterest spawn = Current.world().findPointsOfInterest("Spawn");
+                AdventurePlayer.current().setWorldPosX(spawn.getPosition().x - 16f);
+                AdventurePlayer.current().setWorldPosY(spawn.getPosition().y + 16f);
+                overworld.player(AdventurePlayer.current().getWorldPosX(), AdventurePlayer.current().getWorldPosY(), false);
+                enter(spawn, false);
+                WorldSave.getCurrentSave().autoSave();
+            } else {
+                overworld.freeze(placeholder != null);
+            }
+            return null;
+        });
     }
 
     @Override
@@ -426,6 +495,16 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
                 c.game().dialogs.choose(d.dialogId(), d.index());
                 return null;
             })))
+            .on(AdventureFight.class, inSave((c, ch, f) -> AdventureRuntime.onUi(() -> {
+                c.game().fight();
+                return null;
+            })))
+            .on(AdventureDevSpawn.class, inSave((c, ch, d) -> {
+                if (FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.DEV_MODE_ENABLED)) {
+                    AdventureRuntime.onUi(() -> c.game().overworld.place(WorldData.getEnemy(d.enemy()), AdventurePlayer.current().getWorldPosX(),
+                            AdventurePlayer.current().getWorldPosY()));
+                }
+            }))
             .on(AdventurePlaceholderDone.class, inSave((c, ch, d) -> ch.send(AdventureRuntime.onUi(() -> {
                 c.game().leavePlaceholder();
                 return c.game().state();
