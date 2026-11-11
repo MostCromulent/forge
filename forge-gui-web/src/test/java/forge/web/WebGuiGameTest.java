@@ -1,7 +1,6 @@
 package forge.web;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import forge.gamemodes.net.ProtocolMethod;
@@ -56,16 +55,6 @@ public class WebGuiGameTest {
         Assert.assertEquals(request.get("kind").getAsString(), "costs");
         TestBrowser.command(gui, TestBrowser.reply(request.get("id").getAsInt(), new JsonArray()));
         Assert.assertEquals(picked.get(60, TimeUnit.SECONDS), List.of());
-    }
-
-    @Test
-    public void aNullAnswerToOptionalCostsCancelsTheCast() throws Exception {
-        final String title = Localizer.getInstance().getMessage("lblChooseOptionalCosts");
-        final CompletableFuture<List<String>> picked = CompletableFuture.supplyAsync(
-                () -> gui.getChoices(title, 0, 1, List.of("Flash"), null, null));
-        final JsonObject request = browser.awaitNewest("request", "no request reached the browser");
-        TestBrowser.command(gui, TestBrowser.reply(request.get("id").getAsInt(), JsonNull.INSTANCE));
-        Assert.assertNull(picked.get(60, TimeUnit.SECONDS));
     }
 
     @Test

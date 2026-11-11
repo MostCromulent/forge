@@ -874,12 +874,10 @@ public class WebGuiGame extends NetworkGuiGame {
         return Localizer.getInstance().getMessage("lblChooseOptionalCosts").equals(title);
     }
 
-    /** Asks for any of a spell's optional costs, where a null answer cancels the cast. */
+    /** Asks for any of a spell's optional costs, where none is an answer because the spell is already being cast. */
     private <T> List<T> askCosts(final String message, final List<T> costs) {
         final ChoicesRequest request = choicesRequest(ChoiceKind.costs, message, 0, costs.size(), costs, null, null, null, null, List.of());
-        final Predicate<JsonElement> indicesOk = Answers.indexList(costs.size(), 0, costs.size());
-        final JsonElement reply = ask(request, v -> v.isJsonNull() || indicesOk.test(v));
-        return reply.isJsonNull() ? null : Answers.pick(costs, reply);
+        return Answers.pick(costs, ask(request, Answers.indexList(costs.size(), 0, costs.size())));
     }
 
     /** Asks the browser to pick from a list. {@code onDefault} is the answer used when the browser cannot answer. */

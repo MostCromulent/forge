@@ -562,7 +562,7 @@ public final class ToBrowser {
             @Nullable Ref player, @Nullable Ref source, @Nullable String symbol) {
     }
 
-    /** costs asks for a spell's optional costs, where a null answer cancels the cast. */
+    /** costs asks for a spell's optional costs, which have no way to decline. */
     public enum ChoiceKind { choices, reveal, costs }
 
     /**
