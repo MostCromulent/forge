@@ -33,7 +33,7 @@ public class AdventureHostTest {
 
     @AfterMethod
     public void uninstall() {
-        AdventureHost.set(null);
+        AdventureHost.set(new WebAdventureHost());
     }
 
     @Test

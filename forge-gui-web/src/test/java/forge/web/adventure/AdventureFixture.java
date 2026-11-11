@@ -1,6 +1,7 @@
 package forge.web.adventure;
 
 import forge.adventure.data.DifficultyData;
+import forge.adventure.util.AdventureHost;
 import forge.adventure.util.AdventureModes;
 import forge.adventure.util.Config;
 import forge.adventure.world.WorldSave;
@@ -16,6 +17,7 @@ import java.nio.file.Path;
 /** Boots the adventure model on Realm of Legends and makes worlds for the tests. */
 public final class AdventureFixture {
     public static final String PLANE = "Realm of Legends";
+    private static boolean booted;
 
     private AdventureFixture() {}
 
@@ -31,7 +33,12 @@ public final class AdventureFixture {
         } catch (final IOException e) {
             throw new IllegalStateException(e);
         }
-        AdventureRuntime.start();
+        if (!booted) {
+            AdventureRuntime.start();
+            // Without a host the model would build the mobile stages, which need a GL context
+            AdventureHost.set(new WebAdventureHost());
+            booted = true;
+        }
     }
 
     public static WorldSave newWorld(final long seed) {

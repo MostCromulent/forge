@@ -296,7 +296,8 @@ public class Config {
         return compiledPath;
     }
 
-    public FileHandle getFile(String path) {
+    // World generation finds its structure files from several threads at once, and langFilePath shares one StringBuilder
+    public synchronized FileHandle getFile(String path) {
         if (Cache.containsKey(path)) return Cache.get(path);
 
         //if (Cache.containsKey(commonPath)) return Cache.get(commonPath);

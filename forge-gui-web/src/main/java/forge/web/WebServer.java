@@ -9,6 +9,7 @@ import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.HostingServer;
 import forge.util.IHasForgeLog;
 import forge.util.LogExporter;
+import forge.web.adventure.WorldImages;
 import forge.web.images.CardThumbnails;
 import forge.web.images.SkinSprites;
 import forge.web.protocol.BrowserChannel;
@@ -423,6 +424,10 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 AudioReplies.serve(ctx, "/sound".equals(path), param(q, "name"), param(q, "track"), req.headers().get(HttpHeaderNames.RANGE), ifNoneMatch);
                 return;
             }
+            if (path.startsWith("/adv/")) {
+                serveAdventure(ctx, path, q, ifNoneMatch);
+                return;
+            }
             if ("/img".equals(path)) {
                 final String key = param(q, "key");
                 if (key == null) {
@@ -463,6 +468,34 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             // A chunk's name and the page's version parameter are file hashes, so a changed file gets a new address and the old one never goes stale
             final boolean hashed = resource.startsWith("js/chunks/") || q.parameters().containsKey("v");
             respondUnlessUnchanged(ctx, body, type, admits(token) ? token : null, hashed ? KEEP_FOREVER : "no-cache", ifNoneMatch);
+        }
+    }
+
+    /**
+     * Adventure's pictures. A world map picture's address names its world, so it is kept forever and never served for another world.
+     * Atlases and their pictures come from the adventure folders, which change only with a new version.
+     */
+    private static void serveAdventure(final ChannelHandlerContext ctx, final String path, final QueryStringDecoder q, final String ifNoneMatch) {
+        final boolean ofWorld = !"/adv/atlas".equals(path) && !"/adv/res".equals(path);
+        if (ofWorld && !WorldImages.key().equals(param(q, "w"))) {
+            notFound(ctx);
+            return;
+        }
+        final Integer x = Ints.tryParse(String.valueOf(param(q, "x")));
+        final Integer y = Ints.tryParse(String.valueOf(param(q, "y")));
+        final byte[] body = switch (path) {
+            case "/adv/chunk" -> x == null || y == null ? null : WorldImages.chunk(x, y);
+            case "/adv/grid" -> WorldImages.grid();
+            case "/adv/minimap" -> WorldImages.minimap();
+            case "/adv/atlas" -> WorldImages.atlas(param(q, "path"));
+            case "/adv/res" -> WorldImages.res(param(q, "path"));
+            default -> null;
+        };
+        if (body == null) {
+            notFound(ctx);
+        } else {
+            respondUnlessUnchanged(ctx, body, "/adv/atlas".equals(path) ? "application/json; charset=utf-8" : "image/png", null,
+                    ofWorld ? KEEP_FOREVER : KEEP_A_DAY, ifNoneMatch);
         }
     }
 
