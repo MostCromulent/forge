@@ -27,6 +27,29 @@
             <artifactId>forge-gui</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- Adventure runs its mobile model headless in the server -->
+        <dependency>
+            <groupId>forge</groupId>
+            <artifactId>forge-gui-mobile</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.badlogicgames.gdx</groupId>
+            <artifactId>gdx-backend-headless</artifactId>
+            <version>1.14.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.badlogicgames.gdx</groupId>
+            <artifactId>gdx-platform</artifactId>
+            <version>1.14.2</version>
+            <classifier>natives-desktop</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.badlogicgames.gdx</groupId>
+            <artifactId>gdx-freetype-platform</artifactId>
+            <version>1.14.2</version>
+            <classifier>natives-desktop</classifier>
+        </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
