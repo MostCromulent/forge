@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Random;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -227,5 +228,17 @@ public class OverworldTest {
         assertEquals(other.enemies().get(0).x(), only().x(), 0.01);
         assertEquals(other.save().readFloat("globalTimer"), data.readFloat("globalTimer"), 0.0001);
         assertNotEquals(data.readFloat("globalTimer"), 0f);
+    }
+
+    // Fails if the browser cannot learn that the player flies, so it keeps blocking the hero on walls
+    @Test
+    public void flyingIsReported() {
+        overworld.player(openX + 20, openY + 20, true);
+        assertFalse(overworld.flying());
+        overworld.modify("Fly", 1);
+        assertTrue(overworld.flying());
+        tick(0.6f);
+        tick(0.6f);
+        assertFalse(overworld.flying());
     }
 }

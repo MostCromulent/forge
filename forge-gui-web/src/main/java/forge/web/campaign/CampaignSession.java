@@ -293,7 +293,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         if (questSave != null) {
             saves.put("quest", questSave);
         }
-        final String adventureSave = adventure().current();
+        final String adventureSave = AdventureGame.lastSave();
         if (adventureSave != null) {
             saves.put("adventure", adventureSave);
         }

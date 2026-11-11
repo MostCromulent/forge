@@ -119,4 +119,21 @@ public class WorldImagesTest {
         WorldImages.reset();
         assertEquals(WorldImages.key(), first);
     }
+
+    // Fails if a picture being drawn holds the lock that a save opening on the GUI thread waits for, which hangs the GUI thread
+    @Test(timeOut = 30_000)
+    public void resetWhileAChunkDrawsDoesNotHang() throws Exception {
+        WorldImages.reset();
+        AdventureRuntime.onUi(() -> {
+            final Thread drawing = new Thread(() -> WorldImages.chunk(5, 5));
+            drawing.start();
+            try {
+                Thread.sleep(300);
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            WorldImages.reset();
+            return null;
+        });
+    }
 }

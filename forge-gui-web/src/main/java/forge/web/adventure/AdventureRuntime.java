@@ -31,7 +31,12 @@ public final class AdventureRuntime {
     /** Runs job on Forge's GUI thread and returns its result. The adventure model loads its pictures through Assets, which allows only that thread. */
     public static <T> T onUi(final Supplier<T> job) {
         final AtomicReference<T> result = new AtomicReference<>();
-        FThreads.invokeInEdtAndWait(() -> result.set(job.get()));
+        try {
+            FThreads.invokeInEdtAndWait(() -> result.set(job.get()));
+        } catch (final RuntimeException e) {
+            // WebGuiBase wraps a failure from another thread, so the caller sees the job's own exception
+            throw e.getCause() instanceof RuntimeException cause ? cause : e;
+        }
         return result.get();
     }
 }

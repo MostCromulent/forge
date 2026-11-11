@@ -164,7 +164,8 @@ declare module '../actions' {
     adventureQuickSave(): void;
     /** Reports where the player stands on the world map. Each report advances the map by the time since the last. */
     adventureMove(x: number, y: number, moving: boolean): void;
-    adventureEnterPoi(id: string): void;
+    /** The hero touched a point of interest, standing at x, y. */
+    adventureEnterPoi(id: string, x: number, y: number): void;
     /** Leaves the town the browser cannot show yet, back to the world map. */
     adventurePlaceholderDone(): void;
     adventureDialogChoice(dialogId: number, index: number): void;
@@ -327,7 +328,7 @@ registerCampaigns({
     adventureSaveTo: slot => send({ t: 'adventureSaveTo', slot }),
     adventureQuickSave: () => send({ t: 'adventureQuickSave' }),
     adventureMove: (x, y, moving) => send({ t: 'adventureMove', x, y, moving }),
-    adventureEnterPoi: id => send({ t: 'adventureEnterPoi', id }),
+    adventureEnterPoi: (id, x, y) => send({ t: 'adventureEnterPoi', id, x, y }),
     // The notice closes at once, without waiting for the server's answer
     adventurePlaceholderDone: () => {
       model.adventurePlaceholder = null;

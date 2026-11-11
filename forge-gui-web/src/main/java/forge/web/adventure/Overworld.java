@@ -69,7 +69,6 @@ final class Overworld {
     private float globalTimer;
     private float moveModifier = 1;
     private boolean frozen;
-    private boolean poiThisTick;
 
     /** at is the global time the enemy spawned at. id names it to the browser, because enemies made from EnemyData all have object id 0. */
     private record Spawned(int id, float at, EnemySprite sprite) {
@@ -118,14 +117,23 @@ final class Overworld {
         this.frozen = frozen;
     }
 
-    /** The player walked into a point of interest. Mobile checks those before enemies, so no battle starts on the same tick. */
+    /** The player walked into a point of interest. It is entered before the next tick, so no battle starts on the same step, as on mobile. */
     void enteredPoi() {
-        poiThisTick = true;
         frozen = true;
+    }
+
+    /** Moves the player without changing whether it walks. */
+    void moveTo(final float x, final float y) {
+        player.setPosition(x, y);
     }
 
     void modify(final String kind, final float seconds) {
         modifications.put(Modification.valueOf(kind), seconds);
+    }
+
+    /** Whether the player flies over walls now, as WorldStage.isColliding allows. */
+    boolean flying() {
+        return modifications.containsKey(Modification.Fly);
     }
 
     boolean modified(final Modification kind) {
@@ -142,7 +150,6 @@ final class Overworld {
         modifications.replaceAll((kind, left) -> left - delta);
         modifications.values().removeIf(left -> left < 0);
         if (frozen) {
-            poiThisTick = false;
             return;
         }
         if (!moving) {
@@ -150,8 +157,6 @@ final class Overworld {
         }
         handleMonsterSpawn(delta);
         globalTimer += delta;
-        final boolean collided = poiThisTick;
-        poiThisTick = false;
         for (int i = 0; i < enemies.size(); i++) {
             final Spawned pair = enemies.get(i);
             final EnemySprite mob = pair.sprite();
@@ -166,7 +171,7 @@ final class Overworld {
             if (!modifications.containsKey(Modification.Hide)) {
                 chase(mob, delta);
             }
-            if (!collided && player.collideWith(mob)) {
+            if (player.collideWith(mob)) {
                 frozen = true;
                 listener.encounter(pair.id(), mob);
                 break;

@@ -472,9 +472,9 @@ public final class CampaignProtocol {
             @Nullable String announcement) {
     }
 
-    /** The answer to each move: the enemies, and the player's speed and balances as they now are. */
+    /** The answer to each move: the enemies, and the player's speed, balances and whether the player flies over walls, as they now are. */
     @Message("adventureTick")
-    public record AdventureTick(List<AdventureEnemy> enemies, float speed, AdventureHud hud) {
+    public record AdventureTick(List<AdventureEnemy> enemies, float speed, boolean flying, AdventureHud hud) {
     }
 
     @Message("adventureEncounter")
@@ -491,8 +491,9 @@ public final class CampaignProtocol {
     public record AdventureMove(float x, float y, boolean moving) {
     }
 
+    /** The hero touched a point of interest at x, y. The place comes with the command, so it is checked where the browser saw the touch. */
     @Command("adventureEnterPoi")
-    public record AdventureEnterPoi(String id) {
+    public record AdventureEnterPoi(String id, float x, float y) {
     }
 
     @Command("adventurePlaceholderDone")
@@ -563,7 +564,7 @@ public final class CampaignProtocol {
     /** The new-game screen's choices on the open plane. defaultDifficulty is the one the plane marks as the starting difficulty. */
     @Message("adventureOptions")
     public record AdventureOptions(List<String> races, List<String> difficulties, int defaultDifficulty, List<AdventureModeOption> modes,
-            List<String> editions) {
+            List<String> editions, List<String> editionCodes) {
     }
 
     /**

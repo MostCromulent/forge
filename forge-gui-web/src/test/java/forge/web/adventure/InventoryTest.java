@@ -144,4 +144,31 @@ public class InventoryTest {
     public void unknownItemIsRefused() {
         assertNotNull(AdventureRuntime.onUi(() -> inventory.use("999999999")));
     }
+
+    // Fails if an item can be used without the shards it costs, which mobile's Use button refuses
+    @Test
+    public void itemNeedsItsShards() {
+        AdventureRuntime.onUi(() -> {
+            AdventurePlayer.current().addItem("Colorless rune");
+            AdventurePlayer.current().takeShards(AdventurePlayer.current().getShards());
+            return null;
+        });
+        final AdventureItem rune = item(AdventureRuntime.onUi(inventory::page), "Colorless rune");
+        assertFalse(rune.usable());
+        assertNotNull(AdventureRuntime.onUi(() -> inventory.use(rune.id())));
+        assertEquals((int) AdventureRuntime.onUi(() -> AdventurePlayer.current().getShards()), 0);
+    }
+
+    // Fails if a cracked item can be put on, which mobile's Equip button refuses
+    @Test
+    public void crackedItemCannotBePutOn() {
+        AdventureRuntime.onUi(() -> AdventurePlayer.current().addItem("Bronze Blessing of Speed"));
+        final AdventureItem blessing = item(AdventureRuntime.onUi(inventory::page), "Bronze Blessing of Speed");
+        AdventureRuntime.onUi(() -> {
+            AdventurePlayer.current().getItems().stream().filter(i -> String.valueOf(i.longID).equals(blessing.id())).findFirst().orElseThrow().isCracked = true;
+            inventory.equip(blessing.id());
+            return null;
+        });
+        assertFalse(item(AdventureRuntime.onUi(inventory::page), "Bronze Blessing of Speed").equipped());
+    }
 }

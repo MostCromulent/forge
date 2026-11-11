@@ -103,6 +103,7 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
     private PointOfInterest placeholder;
     private boolean leavingSpawn;
     private EnemySprite encountered;
+    private int encounteredId;
     private AdventureDuel duel;
     /** What the last finished battle left, until the browser is back on the world map. */
     private AdventureDuel.After after;
@@ -148,6 +149,11 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
 
     @Override
     public String current() {
+        return lastSave();
+    }
+
+    /** The save played last, read from the settings without starting the adventure model, so the start page can offer it. */
+    public static String lastSave() {
         final String last = Config.instance().getSettingData().lastActiveSave;
         return last != null && WorldSave.isSafeFile(last) && new File(WorldSave.getSaveDir(), last).isFile() ? last : null;
     }
@@ -181,6 +187,7 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
             @Override
             public void encounter(final int id, final EnemySprite mob) {
                 encountered = mob;
+                encounteredId = id;
                 host.tell(new AdventureEncounter(id, mob.getAtlasPath(), mob.getName()));
             }
         });
@@ -228,6 +235,10 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
             }
             if (dialogs.isOpen()) {
                 page.add(dialogs.current());
+            }
+            // A browser that reloads while an enemy has caught the hero must still start the battle
+            if (encountered != null && duel == null) {
+                page.add(new AdventureEncounter(encounteredId, encountered.getAtlasPath(), encountered.getName()));
             }
             return page;
         });
@@ -286,7 +297,7 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
         lastTick = now;
         // WorldStage.onActing does nothing while a dialog takes the input
         if (dialogs.isOpen()) {
-            return new AdventureTick(overworld.enemies(), overworld.playerSpeed(), hud());
+            return new AdventureTick(overworld.enemies(), overworld.playerSpeed(), overworld.flying(), hud());
         }
         if (!overworld.frozen()) {
             AdventurePlayer.current().setWorldPosX(m.x());
@@ -294,14 +305,18 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
             overworld.player(m.x(), m.y(), m.moving());
         }
         overworld.tick(delta);
-        return new AdventureTick(overworld.enemies(), overworld.playerSpeed(), hud());
+        return new AdventureTick(overworld.enemies(), overworld.playerSpeed(), overworld.flying(), hud());
     }
 
     // Ported from WorldStage.handlePointsOfInterestCollision and TileMapScene.load
-    private boolean enterPoi(final String id) {
+    private boolean enterPoi(final AdventureEnterPoi e) {
         if (overworld.frozen()) {
             return false;
         }
+        AdventurePlayer.current().setWorldPosX(e.x());
+        AdventurePlayer.current().setWorldPosY(e.y());
+        overworld.moveTo(e.x(), e.y());
+        final String id = e.id();
         final PointOfInterest poi = Current.world().getAllPointOfInterest().stream().filter(p -> p != null && p.getID().equals(id)).findFirst().orElse(null);
         if (poi == null || !poi.getActive() || !overworld.touches(poi.getBoundingRectangle())) {
             return false;
@@ -547,7 +562,8 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
         for (final String name : config.starterEditionNames()) {
             editions.add(UIActor.localize(name));
         }
-        return new AdventureOptions(List.of(HeroListData.instance().getRaces().toArray(String.class)), difficultyNames, defaultDifficulty, modes, editions);
+        final List<String> editionCodes = List.of(config.starterEditions());
+        return new AdventureOptions(List.of(HeroListData.instance().getRaces().toArray(String.class)), difficultyNames, defaultDifficulty, modes, editions, editionCodes);
     }
 
     public static final Commands<Call> COMMANDS = new Commands<Call>()
@@ -558,8 +574,9 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
                         c.game().create(create);
                         return null;
                     });
-                } catch (final IllegalArgumentException e) {
-                    ch.send(c.host().error(e.getMessage()));
+                } catch (final RuntimeException e) {
+                    netLog.warn(e, "Could not make the new adventure");
+                    ch.send(c.host().error(String.valueOf(e.getMessage())));
                     return;
                 }
                 c.host().opened(WorldSave.filename(WorldSave.AUTO_SAVE_SLOT));
@@ -568,7 +585,7 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
             .on(AdventureQuickSave.class, inSave((c, ch, s) -> reportSave(ch, c.host(), saveTo(WorldSave.QUICK_SAVE_SLOT))))
             .on(AdventureMove.class, inSave((c, ch, m) -> ch.send(AdventureRuntime.onUi(() -> c.game().move(m)))))
             .on(AdventureEnterPoi.class, inSave((c, ch, e) -> {
-                final String name = AdventureRuntime.onUi(() -> c.game().enterPoi(e.id()) ? c.game().placeholder.getDisplayName() : null);
+                final String name = AdventureRuntime.onUi(() -> c.game().enterPoi(e) ? c.game().placeholder.getDisplayName() : null);
                 if (name != null) {
                     ch.send(new AdventurePlaceholder(name));
                 }

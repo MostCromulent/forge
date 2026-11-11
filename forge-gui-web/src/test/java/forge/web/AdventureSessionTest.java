@@ -137,7 +137,7 @@ public class AdventureSessionTest extends SessionsTest {
         final float x = town.get().getPosition().x;
         final float y = town.get().getPosition().y;
         send(host, message("adventureMove", "x", x, "y", y, "moving", true));
-        send(host, message("adventureEnterPoi", "id", town.get().getID()));
+        send(host, message("adventureEnterPoi", "id", town.get().getID(), "x", x, "y", y));
         host.awaitMatching("adventurePlaceholder", p -> true, "the town was not entered");
         final AtomicReference<Boolean> visited = new AtomicReference<>();
         onUi(() -> visited.set(WorldSave.getCurrentSave().getPointOfInterestChanges(town.get().getID()).isVisited()));
@@ -157,7 +157,7 @@ public class AdventureSessionTest extends SessionsTest {
         onUi(() -> town.set(Current.world().getAllPointOfInterest().stream()
                 .filter(p -> p.getActive() && !"Spawn".equals(p.getData().name)).findFirst().orElseThrow()));
         send(host, message("adventureMove", "x", town.get().getPosition().x + 2000, "y", town.get().getPosition().y, "moving", false));
-        send(host, message("adventureEnterPoi", "id", town.get().getID()));
+        send(host, message("adventureEnterPoi", "id", town.get().getID(), "x", town.get().getPosition().x + 2000, "y", town.get().getPosition().y));
         Assert.assertNull(host.awaitMatching("adventurePlaceholder", p -> true));
     }
 
@@ -173,7 +173,7 @@ public class AdventureSessionTest extends SessionsTest {
         final float x = ground[0];
         final float y = ground[1];
         JsonObject tick = null;
-        for (int i = 0; i < 200 && (tick == null || tick.getAsJsonArray("enemies").isEmpty()); i++) {
+        for (int i = 0; i < 400 && (tick == null || tick.getAsJsonArray("enemies").isEmpty()); i++) {
             send(host, message("adventureMove", "x", x, "y", y, "moving", true));
             tick = host.awaitMatching("adventureTick", t -> true, "a move got no answer");
             Thread.sleep(20);
@@ -298,6 +298,53 @@ public class AdventureSessionTest extends SessionsTest {
         Assert.assertFalse(modes.contains("\"Standard\""), modes);
         Assert.assertTrue(options.getAsJsonArray("races").size() > 1);
         Assert.assertEquals(options.getAsJsonArray("difficulties").size(), 4);
+        // Starter editions are sent by code, which the server looks them up by
+        Assert.assertEquals(options.getAsJsonArray("editionCodes").size(), options.getAsJsonArray("editions").size());
+    }
+
+    // Fails if a town is checked against the last move instead of where the browser saw the hero touch it
+    @Test(timeOut = 120_000)
+    public void enterPoiUsesItsOwnPosition() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        dismissDialogs(host);
+        send(host, message("adventurePlaceholderDone"));
+        host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
+        final AtomicReference<PointOfInterest> town = new AtomicReference<>();
+        onUi(() -> town.set(Current.world().getAllPointOfInterest().stream()
+                .filter(p -> p.getActive() && !"Spawn".equals(p.getData().name)).findFirst().orElseThrow()));
+        send(host, message("adventureEnterPoi", "id", town.get().getID(), "x", town.get().getPosition().x, "y", town.get().getPosition().y));
+        host.awaitMatching("adventurePlaceholder", p -> true, "the town was not entered");
+    }
+
+    // Fails if a browser that reloads while an enemy has caught the hero is not told, so it never starts the battle and the map stays frozen
+    @Test(timeOut = 120_000)
+    public void reconnectResendsTheEncounter() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        dismissDialogs(host);
+        send(host, message("adventurePlaceholderDone"));
+        host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
+        final float[] ground = wildGround();
+        FModel.getPreferences().setPref(FPref.DEV_MODE_ENABLED, true);
+        send(host, message("adventureMove", "x", ground[0], "y", ground[1], "moving", false));
+        host.awaitMatching("adventureTick", t -> true, "a stop got no answer");
+        send(host, message("adventureDevSpawn", "enemy", "Garth"));
+        JsonObject encounter = null;
+        for (int i = 0; i < 20 && encounter == null; i++) {
+            sessions.onMessage(host, message("adventureMove", "x", ground[0], "y", ground[1], "moving", true));
+            encounter = host.awaitMatching("adventureEncounter", e -> true);
+        }
+        Assert.assertNotNull(encounter, "walking into the enemy started no encounter");
+        final TestBrowser again = connect("host");
+        again.awaitMatching("adventureEncounter", e -> true, "a reconnect did not resend the encounter");
+    }
+
+    // Fails if a failed new game is not reported, so the form waits for ever
+    @Test(timeOut = 120_000)
+    public void failedNewGameIsReported() throws InterruptedException {
+        final TestBrowser host = onTheShelf();
+        send(host, message("adventureCreate", "name", "Tester", "female", false, "race", 0, "avatar", 0, "colors", "W", "difficulty", 1,
+                "mode", "NoSuchMode", "customDeck", 0, "seed", 42));
+        host.awaitMatching("error", e -> true, "the failure was not reported");
     }
 
     /** Picks the first offered choice of each dialog until none is open. */
@@ -334,7 +381,7 @@ public class AdventureSessionTest extends SessionsTest {
     private List<String> spawnUntilSome(final TestBrowser host) throws InterruptedException {
         final float[] ground = wildGround();
         JsonObject tick = null;
-        for (int i = 0; i < 200 && (tick == null || tick.getAsJsonArray("enemies").isEmpty()); i++) {
+        for (int i = 0; i < 400 && (tick == null || tick.getAsJsonArray("enemies").isEmpty()); i++) {
             send(host, message("adventureMove", "x", ground[0], "y", ground[1], "moving", true));
             tick = host.awaitMatching("adventureTick", t -> true, "a move got no answer");
             Thread.sleep(20);

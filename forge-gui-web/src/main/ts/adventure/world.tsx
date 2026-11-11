@@ -38,13 +38,14 @@ const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && a.x + a.w > b.x && a.y <
 /** The minimap's width on the canvas, in world pixels of the view. */
 const MINIMAP_W = 72;
 
-export function World({ state, enemies, speed, frozen, navAngle, encounter, actions }: {
-  state: AdventureState; enemies: AdventureEnemy[]; speed: number; frozen: boolean; navAngle: number | null; encounter: number | null; actions: Actions;
+export function World({ state, enemies, speed, flying, frozen, navAngle, encounter, actions }: {
+  state: AdventureState; enemies: AdventureEnemy[]; speed: number; flying: boolean; frozen: boolean; navAngle: number | null; encounter: number | null;
+  actions: Actions;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   // What the frame loop reads. Props change on every server message, so the loop reads them from here instead of restarting
-  const live = useRef({ enemies, speed, frozen, navAngle, encounter });
-  live.current = { enemies, speed, frozen, navAngle, encounter };
+  const live = useRef({ enemies, speed, flying, frozen, navAngle, encounter });
+  live.current = { enemies, speed, flying, frozen, navAngle, encounter };
 
   useEffect(() => {
     const el = canvas.current!;
@@ -144,7 +145,7 @@ export function World({ state, enemies, speed, frozen, navAngle, encounter, acti
       if (stopped) return;
       const dt = Math.min(0.1, (now - lastFrame) / 1000);
       lastFrame = now;
-      const { enemies: latest, speed: walk, frozen: still, navAngle: nav, encounter: caught } = live.current;
+      const { enemies: latest, speed: walk, flying: flies, frozen: still, navAngle: nav, encounter: caught } = live.current;
       if (!ticks.length || ticks[ticks.length - 1].list !== latest) ticks = [...ticks.slice(-1), { at: now, list: latest }];
       const between = Math.min(1, (now - ticks[ticks.length - 1].at) / REPORT_MS);
       const before = ticks.length > 1 ? ticks[0].list : latest;
@@ -169,7 +170,7 @@ export function World({ state, enemies, speed, frozen, navAngle, encounter, acti
       if (moving && grid) {
         const len = Math.hypot(dx, dy);
         const step = walk * dt;
-        const [mx, my] = adjustMovement(grid, dx / len * step, dy / len * step, heroBox(hero.x, hero.y, hero.w, hero.h));
+        const [mx, my] = adjustMovement(grid, dx / len * step, dy / len * step, heroBox(hero.x, hero.y, hero.w, hero.h), flies);
         hero.x += mx;
         hero.y += my;
         heroAnim?.set('Walk');
@@ -190,7 +191,7 @@ export function World({ state, enemies, speed, frozen, navAngle, encounter, acti
       if (lockedPoi !== null && touching?.id !== lockedPoi) lockedPoi = null;
       if (!still && touching && touching.id !== lockedPoi) {
         lockedPoi = touching.id;
-        actions.adventureEnterPoi(touching.id);
+        actions.adventureEnterPoi(touching.id, hero.x, hero.y);
       }
       el.dataset.x = String(Math.round(hero.x));
       el.dataset.y = String(Math.round(hero.y));

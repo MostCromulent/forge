@@ -26,8 +26,9 @@ import java.util.Map;
 
 /**
  * The pictures the browser draws the world map from, as PNG. They are drawn by the mobile client's own code, so the map looks the same.
- * A world never changes once made, so each picture is cached by the browser under the world's key. Every method is synchronized,
- * because World.getBiomeSprite draws into one shared image.
+ * A world never changes once made, so each picture is cached by the browser under the world's key. Every picture is drawn on Forge's
+ * GUI thread, which keeps World.getBiomeSprite's one shared image to one writer. The chunk cache has its own lock, and nothing holds
+ * it while waiting for that thread, because the GUI thread resets the cache when a save opens.
  */
 public final class WorldImages {
     private static final int KEPT_CHUNKS = 64;
@@ -47,14 +48,15 @@ public final class WorldImages {
     }
 
     /** A save was opened or made, so the pictures of the last world are dropped. */
-    public static synchronized void reset() {
-        chunks.clear();
+    public static void reset() {
+        synchronized (chunks) {
+            chunks.clear();
+        }
         key = null;
     }
 
     /**
-     * Names the open world in picture addresses. Saves share one World object, so its terrain tells two worlds apart. It takes no lock,
-     * because the GUI thread asks for it while a picture being drawn under the lock waits for that thread.
+     * Names the open world in picture addresses. Saves share one World object, so its terrain tells two worlds apart.
      */
     public static String key() {
         String k = key;
@@ -66,7 +68,7 @@ public final class WorldImages {
     }
 
     /** A chunk's trees and rocks as JSON, each with its layer and its region of the biome sprite atlas, as MapSprite.getMapSprites places them. */
-    public static synchronized byte[] decorations(final int x, final int y) {
+    public static byte[] decorations(final int x, final int y) {
         final World world = world();
         if (!inWorld(world, x, y)) {
             return null;
@@ -101,16 +103,21 @@ public final class WorldImages {
     }
 
     /** A chunk as WorldBackground.buildChunkTexture draws it, or null outside the world. */
-    public static synchronized byte[] chunk(final int x, final int y) {
+    public static byte[] chunk(final int x, final int y) {
         final World world = world();
         if (!inWorld(world, x, y)) {
             return null;
         }
         final long id = (long) x << 32 | y;
-        byte[] png = chunks.get(id);
+        byte[] png;
+        synchronized (chunks) {
+            png = chunks.get(id);
+        }
         if (png == null) {
             png = AdventureRuntime.onUi(() -> drawChunk(world, x, y));
-            chunks.put(id, png);
+            synchronized (chunks) {
+                chunks.put(id, png);
+            }
         }
         return png;
     }
@@ -136,7 +143,11 @@ public final class WorldImages {
     }
 
     /** One pixel per tile, top row first. Red is the tile's highest biome, green is 255 where the tile blocks walking. */
-    public static synchronized byte[] grid() {
+    public static byte[] grid() {
+        return AdventureRuntime.onUi(WorldImages::drawGrid);
+    }
+
+    private static byte[] drawGrid() {
         final World world = world();
         final int width = world.getWidthInTiles();
         final int height = world.getHeightInTiles();
@@ -155,8 +166,8 @@ public final class WorldImages {
         }
     }
 
-    public static synchronized byte[] minimap() {
-        return png(world().getBiomeImage());
+    public static byte[] minimap() {
+        return AdventureRuntime.onUi(() -> png(world().getBiomeImage()));
     }
 
     /**

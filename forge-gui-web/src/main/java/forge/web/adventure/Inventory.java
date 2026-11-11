@@ -60,7 +60,7 @@ final class Inventory implements IHasForgeLog {
     // As InventoryScene enables its Use button
     private static boolean usable(final ItemData item) {
         final boolean inPoi = AdventureHost.get().inMap();
-        return inPoi && item.usableInPoi || !inPoi && item.usableOnWorldMap;
+        return (inPoi && item.usableInPoi || !inPoi && item.usableOnWorldMap) && Current.player().getShards() >= item.shardsNeeded;
     }
 
     private static ItemData find(final String id) {
@@ -75,7 +75,7 @@ final class Inventory implements IHasForgeLog {
     /** Puts the item on, or takes it off when it is on, as AdventurePlayer.equip does. */
     void equip(final String id) {
         final ItemData item = find(id);
-        if (item != null && item.equipmentSlot != null && !item.equipmentSlot.isEmpty()) {
+        if (item != null && item.equipmentSlot != null && !item.equipmentSlot.isEmpty() && !item.isCracked) {
             Current.player().equip(item);
         }
     }

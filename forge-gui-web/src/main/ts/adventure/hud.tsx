@@ -14,13 +14,13 @@ export function Hud({ hud, actions, openInventory }: { hud: AdventureHud; action
   const [notices, setNotices] = useState<{ id: number; text: string }[]>([]);
   const [announcement, setAnnouncement] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
-  // The server sends each notice once, so they are kept here until they time out
+  // The server sends each notice once, so they are kept here until they time out. Every tick brings a new list, so the timer is not
+  // tied to this effect's cleanup
   useEffect(() => {
     if (!hud.notifications.length) return;
     const added = hud.notifications.map(text => ({ id: Math.random(), text: plain(text) }));
     setNotices(n => [...n, ...added]);
-    const timer = setTimeout(() => setNotices(n => n.filter(x => !added.includes(x))), NOTICE_MS);
-    return () => clearTimeout(timer);
+    setTimeout(() => setNotices(n => n.filter(x => !added.includes(x))), NOTICE_MS);
   }, [hud.notifications]);
   useEffect(() => { if (hud.announcement) setAnnouncement(plain(hud.announcement)); }, [hud.announcement]);
   return <>

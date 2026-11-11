@@ -78,7 +78,7 @@ export function NewAdventure({ model, actions }: { model: Model; actions: Action
     actions.adventureCreate({
       name: name.trim(), female: !!value.female, race: value.race!, avatar: 0,
       colors: mode.colorIds ? mode.colorIds[value.choice!] : '', difficulty: value.difficulty ?? options.defaultDifficulty,
-      mode: mode.mode, customDeck: value.choice!, edition: undefined, seed: 0,
+      mode: mode.mode, customDeck: value.choice!, edition: wantsEdition(value) ? options.editionCodes[value.edition!] : undefined, seed: 0,
     });
   };
   const steps: Step<NewValue>[] = [
@@ -192,7 +192,7 @@ function Open({ model, actions }: { model: Model; actions: Actions }) {
   const frozen = busy || inventory;
   return (
     <div class="adv-page">
-      <World state={state} enemies={tick?.enemies ?? state.enemies} speed={tick?.speed ?? state.speed} frozen={frozen}
+      <World state={state} enemies={tick?.enemies ?? state.enemies} speed={tick?.speed ?? state.speed} flying={tick?.flying ?? false} frozen={frozen}
         navAngle={hud.navAngle ?? null} encounter={encounter?.enemyId ?? null} actions={actions} />
       <Hud hud={hud} actions={actions} openInventory={() => setInventory(true)} />
       {model.adventureDialog ? <DialogBox dialog={model.adventureDialog} actions={actions} />
