@@ -97,7 +97,7 @@ public class FGameClient implements IToServer, IHasForgeLog {
     }
 
     public void connect() {
-        final EventLoopGroup group = new NioEventLoopGroup();
+        final EventLoopGroup group = new NioEventLoopGroup(1);
         boolean attached = false;
         try {
             final Bootstrap b = new Bootstrap()

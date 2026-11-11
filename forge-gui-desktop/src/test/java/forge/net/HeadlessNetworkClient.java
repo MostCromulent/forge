@@ -152,6 +152,11 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
         return client;
     }
 
+    /** The controller this client plays through once a game has opened, which sends each call to the host. */
+    public IGameController getGameController() {
+        return guiGame.gameController;
+    }
+
     public void setReady() {
         if (client != null && connected.get()) {
             netLog.info("Sending ready status");

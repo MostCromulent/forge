@@ -7617,7 +7617,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         return CardFactory.getCard(pc, owner, owner == null ? null : owner.getGame());
     }
 
-    private static final Map<PaperCard, Card> cp2card = Maps.newHashMap();
+    private static final Map<PaperCard, Card> cp2card = new ConcurrentHashMap<>();
     public static Card getCardForUi(IPaperCard pc) {
         if (pc instanceof PaperCard) {
             Card res = cp2card.get(pc);

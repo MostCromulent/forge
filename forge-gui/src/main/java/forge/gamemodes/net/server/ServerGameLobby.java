@@ -7,6 +7,7 @@ import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.match.GameLobby;
+import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.draft.BoosterDraftHost;
@@ -155,14 +156,11 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
     }
 
     @Override
-    protected void onMatchOver() {
-        for (int i = 0; i < getNumberOfSlots(); i++) {
-            final LobbySlot slot = getSlot(i);
-            if (slot != null) {
-                slot.setIsReady(false);
-            }
+    protected void onMatchOver(final HostedMatch match) {
+        for (final LobbySlot slot : match.gameControllers.keySet()) {
+            slot.setIsReady(false);
         }
-        super.onMatchOver();
+        super.onMatchOver(match);
         FServerManager.getInstance().clearPlayerGuis();
         FServerManager.getInstance().updateLobbyState();
     }

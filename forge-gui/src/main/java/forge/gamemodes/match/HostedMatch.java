@@ -38,10 +38,12 @@ import forge.haptic.HapticEngine;
 import forge.sound.MusicPlaylist;
 import forge.sound.SoundSystem;
 import forge.trackable.TrackableCollection;
+import forge.util.MyRandom;
 import forge.util.TextUtil;
 import forge.util.collect.FCollectionView;
 import org.apache.commons.lang3.StringUtils;
 
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -50,7 +52,7 @@ public class HostedMatch {
     private Game game;
     private String title;
     private MusicPlaylist matchPlaylist = null;
-    public HashMap<LobbySlot, IGameController> gameControllers = null;
+    public Map<LobbySlot, IGameController> gameControllers = null;
     private Runnable startGameHook = null;
     private Runnable endGameHook = null;
     private Runnable onMatchOver = null;
@@ -284,6 +286,8 @@ public class HostedMatch {
         // It's important to run match in a different thread to allow GUI inputs to be invoked from inside game. 
         // Game is set on pause while gui player takes decisions
         game.getAction().invoke(() -> {
+            // A pooled thread keeps the random stream of the game it last played, and undo counts the draws on its own stream
+            MyRandom.setRandom(new SecureRandom());
             // Capture the current game in a local so this lambda keeps operating on the
             // game it started even if another thread (e.g. the EDT handling a player's
             // "quit"/"continue" decision via addNextGameDecision -> endCurrentGame())

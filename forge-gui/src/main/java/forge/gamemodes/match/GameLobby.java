@@ -15,7 +15,6 @@ import forge.deck.DeckSection;
 import forge.deck.FormatChoices;
 import forge.game.GameFormat;
 import forge.game.GameType;
-import forge.game.GameView;
 import forge.game.IHasGameType;
 import forge.game.player.Player;
 import forge.game.player.RegisteredPlayer;
@@ -38,6 +37,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public abstract class GameLobby implements IHasGameType {
     private final static int MAX_PLAYERS = 8;
@@ -51,19 +51,34 @@ public abstract class GameLobby implements IHasGameType {
 
     private IUpdateable listener;
 
-    private HostedMatch hostedMatch;
-    private final HashMap<LobbySlot, IGameController> gameControllers = Maps.newHashMap();
+    // Started and ended on the GUI thread, read by network threads
+    private final List<HostedMatch> hostedMatches = new CopyOnWriteArrayList<>();
 
     public boolean isAllowNetworking() {
         return true;
     }
 
     public final boolean isMatchActive() {
-        return hostedMatch != null && hostedMatch.isMatchOver() == false;
+        for (final HostedMatch match : hostedMatches) {
+            if (!match.isMatchOver()) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    public HostedMatch getHostedMatch() {
-        return hostedMatch;
+    /** The match the human in this slot plays in, or null. A finished match counts until its players leave it. */
+    public HostedMatch getHostedMatch(final int index) {
+        final LobbySlot slot = getSlot(index);
+        if (slot == null) {
+            return null;
+        }
+        for (final HostedMatch match : hostedMatches) {
+            if (match.gameControllers.containsKey(slot)) {
+                return match;
+            }
+        }
+        return null;
     }
 
     public void setListener(final IUpdateable listener) {
@@ -254,10 +269,8 @@ public abstract class GameLobby implements IHasGameType {
     }
 
     public IGameController getController(final int index) {
-        return gameControllers.get(getSlot(index));
-    }
-    public GameView getGameView() {
-        return hostedMatch.getGameView();
+        final HostedMatch match = getHostedMatch(index);
+        return match == null ? null : match.gameControllers.get(getSlot(index));
     }
 
     public abstract boolean hasControl();
@@ -469,9 +482,9 @@ public abstract class GameLobby implements IHasGameType {
         return data.appliedVariants;
     }
 
-    private boolean isEnoughTeams() {
+    private static boolean isEnoughTeams(final List<LobbySlot> slots) {
         int lastTeam = -1;
-        for (final LobbySlot slot : data.slots) {
+        for (final LobbySlot slot : slots) {
             final int team = slot.getTeam();
             if (lastTeam == -1) {
                 lastTeam = team;
@@ -529,6 +542,18 @@ public abstract class GameLobby implements IHasGameType {
                 activeSlots.add(slot);
             }
         }
+        return startGame(activeSlots);
+    }
+
+    /** Returns a runnable to start a match between these seats if allowed. Matches already running play on beside it. */
+    public Runnable startGame(final List<LobbySlot> activeSlots) {
+        for (final LobbySlot slot : activeSlots) {
+            final HostedMatch match = getHostedMatch(data.slots.indexOf(slot));
+            if (match != null && !match.isMatchOver()) {
+                SOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblPlayerIsInMatch", slot.getName()));
+                return null;
+            }
+        }
 
         if (activeSlots.size() < 2) {
             SOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblRequiredLeastTwoPlayerStartGame"));
@@ -540,7 +565,7 @@ public abstract class GameLobby implements IHasGameType {
             return null;
         }
 
-        if (!isEnoughTeams()) {
+        if (!isEnoughTeams(activeSlots)) {
             SOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblNotEnoughTeams"));
             return null;
         }
@@ -720,10 +745,11 @@ public abstract class GameLobby implements IHasGameType {
         //if above checks succeed, return runnable that can be used to finish starting game
         final GameType baseGameType = data.isLimitedMode() ? GameType.Draft : GameType.Constructed;
         return () -> {
-            hostedMatch = GuiBase.getInterface().hostMatch();
-            hostedMatch.setOnMatchOver(this::onMatchOver);
+            final HostedMatch hostedMatch = GuiBase.getInterface().hostMatch();
+            hostedMatch.setOnMatchOver(() -> onMatchOver(hostedMatch));
             hostedMatch.startMatch(baseGameType, variantTypes, players, guis);
 
+            final Map<LobbySlot, IGameController> gameControllers = Collections.synchronizedMap(new HashMap<>());
             for (final Player p : hostedMatch.getGame().getPlayers()) {
                 final LobbySlot slot = playerToSlot.get(p.getRegisteredPlayer());
                 if (p.getController() instanceof IGameController controller) {
@@ -732,14 +758,16 @@ public abstract class GameLobby implements IHasGameType {
             }
 
             hostedMatch.gameControllers = gameControllers;
+            // A finished match nobody left would keep answering for the seats that now play again
+            hostedMatches.removeIf(match -> match.isMatchOver() && !Collections.disjoint(match.gameControllers.keySet(), activeSlots));
+            hostedMatches.add(hostedMatch);
 
             onGameStarted();
         };
     }
 
-    protected void onMatchOver() {
-        hostedMatch = null;
-        gameControllers.clear();
+    protected void onMatchOver(final HostedMatch match) {
+        hostedMatches.remove(match);
         updateView(true);
     }
 

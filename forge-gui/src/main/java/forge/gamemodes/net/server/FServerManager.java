@@ -1,5 +1,6 @@
 package forge.gamemodes.net.server;
 
+import com.google.common.collect.Iterables;
 import forge.ai.LobbyPlayerAi;
 import forge.ai.PlayerControllerAi;
 import forge.game.Game;
@@ -408,11 +409,6 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         if (!HostingServer.isHosting() || localLobby == null) {
             return AfkTimeout.NOOP;
         }
-        final HostedMatch hostedMatch = localLobby.getHostedMatch();
-        if (hostedMatch == null || controller.getGame() != hostedMatch.getGame()) {
-            // Input belongs to a side-game the host started while waiting (e.g. local vs AI)
-            return AfkTimeout.NOOP;
-        }
         final int fullMinutes = FModel.getNetPreferences().getPrefInt(ForgeNetPreferences.FNetPref.NET_AFK_TIMEOUT);
         if (fullMinutes <= 0) {
             return AfkTimeout.NOOP;
@@ -422,6 +418,11 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
                 ? remoteGui.getClient()
                 : null;
         final int slot = remoteClient != null ? remoteClient.getIndex() : HOST_SLOT;
+        final HostedMatch hostedMatch = localLobby.getHostedMatch(remoteClient != null ? remoteClient.getIndex() : 0);
+        if (hostedMatch == null || controller.getGame() != hostedMatch.getGame()) {
+            // Input belongs to a side-game the host started while waiting (e.g. local vs AI)
+            return AfkTimeout.NOOP;
+        }
         final boolean alreadyAfk = afkSlots.contains(slot);
         final long timeoutMs = alreadyAfk ? AFK_REPEAT_TIMEOUT_MS : fullMinutes * 60_000L;
         final long warningDelayMs = alreadyAfk ? -1 : timeoutMs - AFK_WARNING_LEAD_MS;
@@ -588,12 +589,12 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         }
     }
 
+    /** Drops the GUI of every client that is in no match. The clients of the matches still running keep theirs. */
     public void clearPlayerGuis() {
-        for (final RemoteClient client : clients.values()) {
-            client.setGui(null);
-        }
-        for (final RemoteClient client : disconnectedClients.values()) {
-            client.setGui(null);
+        for (final RemoteClient client : Iterables.concat(clients.values(), disconnectedClients.values())) {
+            if (localLobby.getHostedMatch(client.getIndex()) == null) {
+                client.setGui(null);
+            }
         }
     }
 
@@ -977,7 +978,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         final PlayerControllerHuman pch = findRemoteController(slotIndex);
         // The instanceof check filters out LOCAL host slots — only convert remote players
         if (pch == null || !(pch.getGui() instanceof RemoteClientGuiGame)) { return; }
-        final HostedMatch hostedMatch = localLobby.getHostedMatch();
+        final HostedMatch hostedMatch = localLobby.getHostedMatch(slotIndex);
         if (hostedMatch == null) { return; }
         final Game game = hostedMatch.getGame();
         if (game == null) { return; }

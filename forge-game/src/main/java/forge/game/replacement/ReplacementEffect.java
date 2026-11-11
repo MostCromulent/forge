@@ -19,6 +19,7 @@ package forge.game.replacement;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import forge.util.ITranslatable;
 import org.apache.commons.lang3.StringUtils;
@@ -44,8 +45,8 @@ import forge.util.TextUtil;
  *
  */
 public abstract class ReplacementEffect extends TriggerReplacementBase {
-    private static int maxId = 0;
-    private static int nextId() { return ++maxId; }
+    private static final AtomicInteger maxId = new AtomicInteger();
+    private static int nextId() { return maxId.incrementAndGet(); }
 
     /** The ID. */
     private int id;

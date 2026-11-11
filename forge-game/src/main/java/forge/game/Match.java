@@ -17,7 +17,6 @@ import forge.game.event.GameEventGameFinished;
 import forge.game.player.Player;
 import forge.game.player.PlayerController;
 import forge.game.player.RegisteredPlayer;
-import forge.game.trigger.Trigger;
 import forge.game.zone.PlayerZone;
 import forge.game.zone.ZoneType;
 import forge.item.PaperCard;
@@ -238,7 +237,6 @@ public class Match {
 
     private void prepareAllZones(final Game game) {
         // need this code here, otherwise observables fail
-        Trigger.resetIDs();
         game.getTriggerHandler().clearDelayedTrigger();
 
         // friendliness

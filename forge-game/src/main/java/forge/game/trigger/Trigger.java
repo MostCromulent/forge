@@ -41,6 +41,7 @@ import forge.util.TextUtil;
 import org.apache.commons.lang3.Strings;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 
@@ -53,17 +54,8 @@ import java.util.function.Predicate;
  * @version $Id$
  */
 public abstract class Trigger extends TriggerReplacementBase {
-    private static int maxId = 0;
-    private static int nextId() { return ++maxId; }
-
-    /**
-     * <p>
-     * resetIDs.
-     * </p>
-     */
-    public static void resetIDs() {
-        Trigger.maxId = 50000;
-    }
+    private static final AtomicInteger maxId = new AtomicInteger();
+    private static int nextId() { return maxId.incrementAndGet(); }
 
     /** The ID. */
     private int id;

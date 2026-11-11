@@ -374,21 +374,25 @@ public class SpellAbilityPicker {
         Score bestScore = new Score(Integer.MIN_VALUE);
         final SpellAbilityChoicesIterator choicesIterator = new SpellAbilityChoicesIterator(controller);
         Score lastScore;
-        do {
-            // TODO: MyRandom should be an instance on the game object, so that we could do
-            // simulations in parallel without messing up global state.
-            MyRandom.setRandom(new Random(randomSeedToUse));
-            GameSimulator simulator = new GameSimulator(controller, game, player, phase);
-            simulator.setInterceptor(choicesIterator);
-            // I feel like something here is making a wrong assumption about what the target is
-            lastScore = simulator.simulateSpellAbility(sa);
-            numSimulations++;
-            if (lastScore.value > bestScore.value) {
-                bestScore = lastScore;
-            }
-        } while (choicesIterator.advance(lastScore));
+        try {
+            do {
+                // TODO: MyRandom should be an instance on the game object, so that we could do
+                // simulations in parallel without messing up global state.
+                MyRandom.setRandom(new Random(randomSeedToUse));
+                GameSimulator simulator = new GameSimulator(controller, game, player, phase);
+                simulator.setInterceptor(choicesIterator);
+                // I feel like something here is making a wrong assumption about what the target is
+                lastScore = simulator.simulateSpellAbility(sa);
+                numSimulations++;
+                if (lastScore.value > bestScore.value) {
+                    bestScore = lastScore;
+                }
+            } while (choicesIterator.advance(lastScore));
+        } finally {
+            // A timed-out simulation throws, and its seeded stream must not stay on the game's thread
+            MyRandom.setRandom(origRandom);
+        }
         controller.doneEvaluating(bestScore);
-        MyRandom.setRandom(origRandom);
         return bestScore;
     }
 
