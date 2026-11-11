@@ -495,8 +495,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) :is(.dk-chosen, .finder-foot
 .bracket-more .reason { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 6px 8px; border-radius: 7px; background: var(--surface-2); }
 .bracket-more .reason b { font-size: 12.5px; }
 .bracket-more .to { font-size: 10.5px; font-weight: 700; color: var(--accent-2); align-self: center; }
-.bracket-more .cards, .bracket-more .because { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
-.bracket-more .because { color: var(--faint); font-size: 11.5px; }
+.bracket-more .cards { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
 .bracket-more .clearline { margin: 0; font-size: 11.5px; color: var(--muted); }
 /* A game changer card, highlighted in the deck's list */
 .dk-line.changer { background: color-mix(in srgb, var(--accent-2) 9%, transparent); }

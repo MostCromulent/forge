@@ -139,7 +139,7 @@ public final class ToBrowser {
     public enum BracketReasonKind { gameChangers, massLandDenial, extraTurns, chainedExtraTurns, lateCombos, earlyCombos }
 
     /** One kind of card that affects the bracket. raises is the bracket it puts the deck in, or 0 when it does not raise the bracket by itself. */
-    public record BracketReason(BracketReasonKind kind, String title, String brief, List<String> cards, int raises, @Nullable String why) {
+    public record BracketReason(BracketReasonKind kind, String title, String brief, List<String> cards, int raises) {
     }
 
     /**

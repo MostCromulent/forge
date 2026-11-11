@@ -675,7 +675,6 @@ function BracketPanel({ bracket }: { bracket: Bracket }) {
               <b>{r.title} · {r.cards.length}</b>
               {r.raises > 0 && <span class="to">{t('lblWebBracketRaisesTo', r.raises)}</span>}
               <span class="cards">{r.cards.join(', ')}</span>
-              {r.why && <span class="because">{r.why}</span>}
             </div>
           ))}
           {bracket.clear.length > 0 && <p class="clearline"><b>{t('lblWebOptionsClear')}</b> {bracket.clear.join(', ')}</p>}
