@@ -273,6 +273,20 @@ public class AdventureSessionTest extends SessionsTest {
         host.awaitMatching("reward", r -> !r.getAsJsonArray("steps").isEmpty(), "the loot was not shown");
     }
 
+    // Fails if the inventory cannot be listed or a deck slot does not open in the web deck editor with the player's collection
+    @Test(timeOut = 120_000)
+    public void inventoryOpensDeckEditor() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        dismissDialogs(host);
+        send(host, message("adventureInventoryQuery"));
+        final JsonObject inventory = host.awaitMatching("adventureInventory", i -> true, "the inventory was not sent");
+        Assert.assertFalse(inventory.getAsJsonArray("decks").isEmpty());
+        send(host, message("adventureEditDeck", "slot", 0));
+        final JsonObject editor = host.awaitMatching("editor", e -> e.has("state") && !e.get("state").isJsonNull(), "the deck editor did not open");
+        Assert.assertEquals(editor.getAsJsonObject("state").get("collection").getAsString(), "Tester");
+        sessions.onMessage(host, TestBrowser.action("editorClose"));
+    }
+
     /** Picks the first offered choice of each dialog until none is open. */
     private void dismissDialogs(final TestBrowser host) throws InterruptedException {
         host.awaitMatching("adventureDialog", d -> true, "no dialog was shown");

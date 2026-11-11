@@ -18,6 +18,8 @@ import forge.adventure.world.WorldSave;
 import forge.adventure.world.WorldSaveHeader;
 import forge.card.CardEdition;
 import forge.card.ColorSet;
+import forge.deck.Deck;
+import forge.game.GameType;
 import forge.game.GameView;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
@@ -30,11 +32,14 @@ import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.AdventureCreate;
 import forge.web.protocol.CampaignProtocol.AdventureDevSpawn;
 import forge.web.protocol.CampaignProtocol.AdventureDialogChoice;
+import forge.web.protocol.CampaignProtocol.AdventureEditDeck;
 import forge.web.protocol.CampaignProtocol.AdventureEncounter;
 import forge.web.protocol.CampaignProtocol.AdventureEnemy;
 import forge.web.protocol.CampaignProtocol.AdventureEnterPoi;
+import forge.web.protocol.CampaignProtocol.AdventureEquip;
 import forge.web.protocol.CampaignProtocol.AdventureFight;
 import forge.web.protocol.CampaignProtocol.AdventureHud;
+import forge.web.protocol.CampaignProtocol.AdventureInventoryQuery;
 import forge.web.protocol.CampaignProtocol.AdventureMove;
 import forge.web.protocol.CampaignProtocol.AdventurePlaceholder;
 import forge.web.protocol.CampaignProtocol.AdventurePlaceholderDone;
@@ -43,8 +48,10 @@ import forge.web.protocol.CampaignProtocol.AdventureQuickSave;
 import forge.web.protocol.CampaignProtocol.AdventureSave;
 import forge.web.protocol.CampaignProtocol.AdventureSaveTo;
 import forge.web.protocol.CampaignProtocol.AdventureSaves;
+import forge.web.protocol.CampaignProtocol.AdventureSelectDeck;
 import forge.web.protocol.CampaignProtocol.AdventureState;
 import forge.web.protocol.CampaignProtocol.AdventureTick;
+import forge.web.protocol.CampaignProtocol.AdventureUseItem;
 import forge.web.protocol.CampaignProtocol.CampaignBar;
 import forge.web.protocol.CampaignProtocol.CampaignPrefs;
 import forge.web.protocol.CampaignProtocol.CampaignResult;
@@ -84,6 +91,7 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
     private final WebAdventureHost screens = new WebAdventureHost();
     private final Dialogs dialogs;
     private Overworld overworld;
+    private Inventory inventory;
     private long lastTick;
     /** The point of interest whose map the browser stands in for with a notice, or null. */
     private PointOfInterest placeholder;
@@ -171,6 +179,14 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
             }
         });
         screens.overworld(overworld);
+        inventory = new Inventory(overworld, dialogs);
+        inventory.onTeleport(poi -> {
+            enter(poi, false);
+            AdventureQuestController.instance().updateEnteredPOI(poi);
+            AdventureHost.get().showQuestDialogs();
+            host.tell(state());
+            host.tell(new AdventurePlaceholder(poi.getDisplayName()));
+        });
         lastTick = 0;
         encountered = null;
         enter(point, spawn);
@@ -495,6 +511,32 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
                 c.game().dialogs.choose(d.dialogId(), d.index());
                 return null;
             })))
+            .on(AdventureInventoryQuery.class, inSave((c, ch, q) -> ch.send(AdventureRuntime.onUi(c.game().inventory::page))))
+            .on(AdventureEquip.class, inSave((c, ch, e) -> ch.send(AdventureRuntime.onUi(() -> {
+                c.game().inventory.equip(e.item());
+                return c.game().inventory.page();
+            }))))
+            .on(AdventureUseItem.class, inSave((c, ch, u) -> {
+                final String problem = AdventureRuntime.onUi(() -> c.game().inventory.use(u.item()));
+                if (problem != null) {
+                    ch.send(c.host().error(problem));
+                }
+                ch.send(AdventureRuntime.onUi(c.game().inventory::page));
+            }))
+            .on(AdventureSelectDeck.class, inSave((c, ch, d) -> ch.send(AdventureRuntime.onUi(() -> {
+                if (d.slot() >= 0 && d.slot() < AdventurePlayer.current().getDeckCount()) {
+                    c.game().inventory.selectDeck(d.slot());
+                }
+                return c.game().inventory.page();
+            }))))
+            .on(AdventureEditDeck.class, inSave((c, ch, d) -> {
+                final Deck deck = AdventureRuntime.onUi(() -> d.slot() >= 0 && d.slot() < AdventurePlayer.current().getDeckCount()
+                        ? AdventurePlayer.current().getDeck(d.slot()) : null);
+                if (deck != null) {
+                    final GameType format = AdventureRuntime.onUi(() -> AdventurePlayer.current().isCommanderMode()) ? GameType.Commander : GameType.Adventure;
+                    c.host().decks().openCollectionDeck(deck, AdventureDecks.storage(d.slot()), format, AdventureDecks.collection(d.slot()), true, ch);
+                }
+            }))
             .on(AdventureFight.class, inSave((c, ch, f) -> AdventureRuntime.onUi(() -> {
                 c.game().fight();
                 return null;

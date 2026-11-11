@@ -525,4 +525,34 @@ public final class CampaignProtocol {
     @Command("adventureDevSpawn")
     public record AdventureDevSpawn(String enemy) {
     }
+
+    /** The player's items, balances and deck slots, as the inventory page shows them. */
+    @Message("adventureInventory")
+    public record AdventureInventory(List<AdventureItem> items, int gold, int shards, int life, int maxLife, List<String> decks, int selectedDeck) {
+    }
+
+    /** An item. id is its own number, because the player may carry several of one item. Its picture is a region of the atlas's picture. */
+    public record AdventureItem(String id, String name, String description, @Nullable String slot, boolean equipped, boolean usable, int shards,
+            String atlas, int rx, int ry, int w, int h) {
+    }
+
+    @Command("adventureInventoryQuery")
+    public record AdventureInventoryQuery() {
+    }
+
+    @Command("adventureEquip")
+    public record AdventureEquip(String item) {
+    }
+
+    @Command("adventureUseItem")
+    public record AdventureUseItem(String item) {
+    }
+
+    @Command("adventureSelectDeck")
+    public record AdventureSelectDeck(int slot) {
+    }
+
+    @Command("adventureEditDeck")
+    public record AdventureEditDeck(int slot) {
+    }
 }
