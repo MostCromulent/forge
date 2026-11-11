@@ -1,0 +1,4 @@
+/* Adventure mode: the world map fills the page under the campaign's header, drawn at a whole multiple of its pixels */
+.adv-page { flex: 1; min-height: 0; position: relative; display: flex; }
+.adv-stage { flex: 1; min-height: 0; display: grid; place-items: center; background: #000; overflow: hidden; }
+.adv-canvas { image-rendering: pixelated; touch-action: none; cursor: pointer; }

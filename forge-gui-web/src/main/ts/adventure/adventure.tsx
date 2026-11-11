@@ -4,6 +4,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { Shelf as Cards } from '../shelf';
 import { StepForm, type Step, type Ticket } from '../stepform';
 import { CampaignShelf, CampaignShell } from '../campaign/campaign';
+import { World } from './world';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { AdventureModeOption, AdventureSave } from '../protocol';
@@ -158,8 +159,15 @@ export function NewAdventure({ model, actions }: { model: Model; actions: Action
   );
 }
 
-/** An open save. The world map is drawn here. */
-function Open({ model }: { model: Model; actions: Actions }) {
-  if (!model.adventureState) return <p class="muted pools-wait">{t('lblWebAdventureReading')}</p>;
-  return <div class="adv-world" data-testid="adventure-world" />;
+/** An open save: its world map. The map holds still while a dialog, a town or an encounter is shown over it. */
+function Open({ model, actions }: { model: Model; actions: Actions }) {
+  const state = model.adventureState;
+  if (!state) return <p class="muted pools-wait">{t('lblWebAdventureReading')}</p>;
+  const tick = model.adventureTick;
+  const frozen = !!model.adventurePlaceholder || !!model.adventureDialog || !!model.adventureEncounter;
+  return (
+    <div class="adv-page">
+      <World state={state} enemies={tick?.enemies ?? state.enemies} speed={tick?.speed ?? state.speed} frozen={frozen} actions={actions} />
+    </div>
+  );
 }
