@@ -25,12 +25,17 @@ final class WebAdventureHost implements AdventureHost, IHasForgeLog {
     private Overworld overworld;
     /** The point of interest the player is in, or null on the world map. */
     private PointOfInterest map;
+    private Runnable questDialogs = () -> { };
 
     void overworld(final Overworld overworld) {
         this.overworld = overworld;
         if (overworld != null) {
             overworld.load(worldStage);
         }
+    }
+
+    void onQuestDialogs(final Runnable questDialogs) {
+        this.questDialogs = questDialogs;
     }
 
     void map(final PointOfInterest map) {
@@ -91,6 +96,7 @@ final class WebAdventureHost implements AdventureHost, IHasForgeLog {
 
     @Override
     public void showQuestDialogs() {
+        questDialogs.run();
     }
 
     @Override

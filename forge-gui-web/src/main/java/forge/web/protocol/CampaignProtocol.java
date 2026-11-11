@@ -498,4 +498,21 @@ public final class CampaignProtocol {
     @Command("adventurePlaceholderDone")
     public record AdventurePlaceholderDone() {
     }
+
+    /** A dialog waiting for the player's choice. id changes with each page of it, so a late click on an old page does nothing. */
+    @Message("adventureDialog")
+    public record AdventureDialog(int id, String text, List<AdventureChoice> choices) {
+    }
+
+    /** index is the option's place among all of the dialog's options, including those not offered. */
+    public record AdventureChoice(int index, String label, boolean disabled) {
+    }
+
+    @Message("adventureDialogClosed")
+    public record AdventureDialogClosed() {
+    }
+
+    @Command("adventureDialogChoice")
+    public record AdventureDialogChoice(int dialogId, int index) {
+    }
 }

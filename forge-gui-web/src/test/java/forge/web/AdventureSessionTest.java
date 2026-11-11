@@ -60,18 +60,16 @@ public class AdventureSessionTest extends SessionsTest {
         }
     }
 
-    // Fails if a new game does not build the world, name the player and give the plane's main quest as NewGameScene does
+    // Fails if a new game does not build the world, name the player and give the plane's main quest as NewGameScene does.
+    // Quest 28 has no stages, so entering the spawn town completes it at once and only its dialogs remain to see
     @Test(timeOut = 120_000)
-    public void newGameCreatesWorldAndAddsQuest28() throws InterruptedException {
-        inNewGame();
+    public void newGameCreatesWorldAndGivesQuest28() throws InterruptedException {
+        final TestBrowser host = inNewGame();
         final AtomicReference<String> name = new AtomicReference<>();
-        final AtomicReference<Boolean> quest = new AtomicReference<>();
-        onUi(() -> {
-            name.set(AdventurePlayer.current().getName());
-            quest.set(AdventurePlayer.current().getQuests().stream().anyMatch(q -> q.getID() == 28));
-        });
+        onUi(() -> name.set(AdventurePlayer.current().getName()));
         Assert.assertEquals(name.get(), "Tester");
-        Assert.assertTrue(quest.get());
+        final JsonObject prologue = host.awaitMatching("adventureDialog", d -> true, "no prologue was shown");
+        Assert.assertTrue(prologue.get("text").getAsString().startsWith("Disorientation"), prologue.toString());
     }
 
     // Fails if a save made in the browser cannot be opened again with the same player
@@ -114,6 +112,7 @@ public class AdventureSessionTest extends SessionsTest {
             final PointOfInterest poi = Current.world().findPointsOfInterest("Spawn");
             spawn.set(new float[] {poi.getPosition().x, poi.getPosition().y + 18});
         });
+        dismissDialogs(host);
         send(host, message("adventurePlaceholderDone"));
         final JsonObject state = host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
         Assert.assertEquals(state.get("x").getAsFloat(), spawn.get()[0], 0.01);
@@ -125,6 +124,7 @@ public class AdventureSessionTest extends SessionsTest {
     public void enterPoiMarksVisitedAndSaves() throws InterruptedException {
         final TestBrowser host = inNewGame();
         host.awaitMatching("adventurePlaceholder", p -> true, "the spawn town was not entered");
+        dismissDialogs(host);
         send(host, message("adventurePlaceholderDone"));
         host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
         final AtomicReference<PointOfInterest> town = new AtomicReference<>();
@@ -148,6 +148,7 @@ public class AdventureSessionTest extends SessionsTest {
     public void enterPoiNeedsTheTownUnderfoot() throws InterruptedException {
         final TestBrowser host = inNewGame();
         host.awaitMatching("adventurePlaceholder", p -> true, "the spawn town was not entered");
+        dismissDialogs(host);
         send(host, message("adventurePlaceholderDone"));
         host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
         final AtomicReference<PointOfInterest> town = new AtomicReference<>();
@@ -163,6 +164,7 @@ public class AdventureSessionTest extends SessionsTest {
     public void movesTickTheMap() throws InterruptedException {
         final TestBrowser host = inNewGame();
         host.awaitMatching("adventurePlaceholder", p -> true, "the spawn town was not entered");
+        dismissDialogs(host);
         send(host, message("adventurePlaceholderDone"));
         host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
         final float[] ground = wildGround();
@@ -183,6 +185,7 @@ public class AdventureSessionTest extends SessionsTest {
     public void reconnectResends() throws InterruptedException {
         final TestBrowser host = inNewGame();
         host.awaitMatching("adventurePlaceholder", p -> true, "the spawn town was not entered");
+        dismissDialogs(host);
         send(host, message("adventurePlaceholderDone"));
         host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
         final List<String> before = spawnUntilSome(host);
@@ -196,6 +199,7 @@ public class AdventureSessionTest extends SessionsTest {
     public void saveDuringTicks() throws InterruptedException {
         final TestBrowser host = inNewGame();
         host.awaitMatching("adventurePlaceholder", p -> true, "the spawn town was not entered");
+        dismissDialogs(host);
         send(host, message("adventurePlaceholderDone"));
         host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
         final int count = spawnUntilSome(host).size();
@@ -206,6 +210,45 @@ public class AdventureSessionTest extends SessionsTest {
         send(host, message("campaignLoad", "name", WorldSave.filename(4)));
         final JsonObject state = host.awaitMatching("adventureState", s -> true, "slot 4 sent no world");
         Assert.assertEquals(state.getAsJsonArray("enemies").size(), count);
+    }
+
+    // Fails if the plane's main quest does not open with its prologue, as the spawn town shows it on mobile
+    @Test(timeOut = 120_000)
+    public void newGameShowsTheQuestPrologue() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        final JsonObject dialog = host.awaitMatching("adventureDialog", d -> true, "no prologue was shown");
+        Assert.assertFalse(dialog.get("text").getAsString().isEmpty());
+        Assert.assertFalse(dialog.getAsJsonArray("choices").isEmpty());
+    }
+
+    /** Picks the first offered choice of each dialog until none is open. */
+    private void dismissDialogs(final TestBrowser host) throws InterruptedException {
+        host.awaitMatching("adventureDialog", d -> true, "no dialog was shown");
+        for (int i = 0; i < 30; i++) {
+            final JsonObject dialog = newest(host, "adventureDialog");
+            final JsonObject closed = newest(host, "adventureDialogClosed");
+            // JsonObject equality compares content, and every closing message looks the same, so positions are found from the end
+            if (closed != null && host.got.lastIndexOf(closed) > host.got.lastIndexOf(dialog)) {
+                return;
+            }
+            final JsonObject choice = dialog.getAsJsonArray("choices").get(0).getAsJsonObject();
+            final int id = dialog.get("id").getAsInt();
+            sessions.onMessage(host, message("adventureDialogChoice", "dialogId", id, "index", choice.get("index").getAsInt()));
+            awaitTrue(() -> host.got.lastIndexOf(newest(host, "adventureDialog")) > host.got.lastIndexOf(dialog)
+                    || newest(host, "adventureDialogClosed") != null && host.got.lastIndexOf(newest(host, "adventureDialogClosed")) > host.got.lastIndexOf(dialog),
+                    "a choice got no answer");
+        }
+        Assert.fail("the dialogs did not end");
+    }
+
+    /** The newest message of a type received so far, without waiting, or null. */
+    private static JsonObject newest(final TestBrowser host, final String type) {
+        for (int i = host.got.size() - 1; i >= 0; i--) {
+            if (type.equals(host.got.get(i).get("t").getAsString())) {
+                return host.got.get(i);
+            }
+        }
+        return null;
     }
 
     /** Walks in place on wild ground until at least one enemy is on the map, and returns the enemies' ids as the last answer lists them. */

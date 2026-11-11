@@ -26,6 +26,7 @@ import forge.util.MyRandom;
 import forge.web.campaign.Campaign;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.AdventureCreate;
+import forge.web.protocol.CampaignProtocol.AdventureDialogChoice;
 import forge.web.protocol.CampaignProtocol.AdventureEncounter;
 import forge.web.protocol.CampaignProtocol.AdventureEnemy;
 import forge.web.protocol.CampaignProtocol.AdventureEnterPoi;
@@ -76,6 +77,7 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
 
     private final Host host;
     private final WebAdventureHost screens = new WebAdventureHost();
+    private final Dialogs dialogs;
     private Overworld overworld;
     private long lastTick;
     /** The point of interest whose map the browser stands in for with a notice, or null. */
@@ -85,7 +87,9 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
 
     public AdventureGame(final Host host) {
         this.host = host;
+        dialogs = new Dialogs(host::tell);
         AdventureRuntime.start();
+        screens.onQuestDialogs(dialogs::collect);
         AdventureHost.set(screens);
     }
 
@@ -190,6 +194,9 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
             if (placeholder != null) {
                 page.add(new AdventurePlaceholder(placeholder.getDisplayName()));
             }
+            if (dialogs.isOpen()) {
+                page.add(dialogs.current());
+            }
             return page;
         });
     }
@@ -245,6 +252,10 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
         final long now = System.nanoTime();
         final float delta = lastTick == 0 ? 0 : Math.min(LONGEST_TICK, (now - lastTick) / 1e9f);
         lastTick = now;
+        // WorldStage.onActing does nothing while a dialog takes the input
+        if (dialogs.isOpen()) {
+            return new AdventureTick(overworld.enemies(), overworld.playerSpeed(), hud());
+        }
         if (!overworld.frozen()) {
             AdventurePlayer.current().setWorldPosX(m.x());
             AdventurePlayer.current().setWorldPosY(m.y());
@@ -352,7 +363,11 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
         if (AdventurePlayer.current().getQuests().stream().noneMatch(q -> q.getID() == 28)) {
             AdventurePlayer.current().addQuest("28", true);
         }
-        onWorldMap(Current.world().findPointsOfInterest("Spawn"), true);
+        final PointOfInterest spawn = Current.world().findPointsOfInterest("Spawn");
+        onWorldMap(spawn, true);
+        // As TileMapScene.load does for the spawn town that WorldStage.enterSpawnPOI opens
+        AdventureQuestController.instance().updateEnteredPOI(spawn);
+        AdventureHost.get().showQuestDialogs();
         WorldSave.getCurrentSave().autoSave();
     }
 
@@ -407,6 +422,10 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
                     ch.send(new AdventurePlaceholder(name));
                 }
             }))
+            .on(AdventureDialogChoice.class, inSave((c, ch, d) -> AdventureRuntime.onUi(() -> {
+                c.game().dialogs.choose(d.dialogId(), d.index());
+                return null;
+            })))
             .on(AdventurePlaceholderDone.class, inSave((c, ch, d) -> ch.send(AdventureRuntime.onUi(() -> {
                 c.game().leavePlaceholder();
                 return c.game().state();

@@ -200,7 +200,8 @@ public class AdventureQuestController implements Serializable {
             updateQuestComplete(quest);
         }
 
-        if (activeDialog == null && !dialogQueue.isEmpty()){
+        // A client without stages passes none and shows the queued dialogs itself through pollDialog
+        if (activeDialog == null && !dialogQueue.isEmpty() && stage != null){
             displayNextDialog((MapStage) stage);
         }
 
@@ -212,6 +213,11 @@ public class AdventureQuestController implements Serializable {
             Current.player().removeQuest(toRemove);
             //Todo: Add quest to a separate "completed / failed" log?
         }
+    }
+
+    /** The next quest dialog waiting to be shown, or null. */
+    public DialogData pollDialog() {
+        return dialogQueue.poll();
     }
 
     public boolean locationHasMoreQuests(){
