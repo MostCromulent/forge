@@ -6,10 +6,7 @@ import forge.Forge;
 import forge.adventure.character.EnemySprite;
 import forge.adventure.pointofintrest.PointOfInterest;
 import forge.adventure.pointofintrest.PointOfInterestChanges;
-import forge.adventure.scene.GameScene;
-import forge.adventure.scene.TileMapScene;
-import forge.adventure.stage.GameHUD;
-import forge.adventure.stage.MapStage;
+import forge.adventure.util.AdventureHost;
 import forge.adventure.util.AdventureQuestController;
 import forge.adventure.util.AdventureQuestEvent;
 import forge.adventure.util.Current;
@@ -241,7 +238,7 @@ public class AdventureQuestData implements Serializable {
         PointOfInterest temp = stage.getTargetPOI();
         if (temp != null) {
             poiTokens.put("$(poi_" + stage.id + ")", temp);
-            poiBiomeTokens.put("$(biome_" + stage.id + ")", GameScene.instance().getBiomeByPosition(temp.getPosition()));
+            poiBiomeTokens.put("$(biome_" + stage.id + ")", AdventureHost.get().biomeAt(temp.getPosition()));
         }
 
         EnemyData target = stage.getTargetEnemyData();
@@ -250,7 +247,7 @@ public class AdventureQuestData implements Serializable {
         }
 
         otherTokens.put("$(playername)", Current.player().getName());
-        otherTokens.put("$(currentbiome)", GameScene.instance().getAdventurePlayerLocation(false,true));
+        otherTokens.put("$(currentbiome)", AdventureHost.get().playerLocation(false, true));
         otherTokens.put("$(playerrace)", Current.player().raceName());
     }
 
@@ -392,8 +389,8 @@ public class AdventureQuestData implements Serializable {
 
     public void updateStages(AdventureQuestEvent event){
         boolean done = true;
-        if (event.poi == null && MapStage.getInstance().isInMap())
-            event.poi = TileMapScene.instance().rootPoint;
+        if (event.poi == null && AdventureHost.get().inMap())
+            event.poi = AdventureHost.get().mapPoint();
         for (AdventureQuestStage stage: stages) {
             switch (stage.getStatus()) {
                 case ACTIVE:
@@ -456,7 +453,7 @@ public class AdventureQuestData implements Serializable {
                         .append(stage.description)
                         .append("[]");
             }
-            GameHUD.getInstance().addNotification(description.toString());
+            AdventureHost.get().notification(description.toString());
         }
     }
 

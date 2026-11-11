@@ -2,8 +2,7 @@ package forge.adventure.data;
 
 import forge.adventure.character.EnemySprite;
 import forge.adventure.pointofintrest.PointOfInterest;
-import forge.adventure.scene.TileMapScene;
-import forge.adventure.stage.MapStage;
+import forge.adventure.util.AdventureHost;
 import forge.adventure.util.AdventureQuestController;
 import forge.adventure.util.AdventureQuestEvent;
 import forge.adventure.util.AdventureQuestEventType;
@@ -157,11 +156,11 @@ public class AdventureQuestStage implements Serializable {
     }
 
     public boolean checkIfTargetLocation() {
-        return checkIfTargetLocation(TileMapScene.instance().rootPoint);
+        return checkIfTargetLocation(AdventureHost.get().mapPoint());
     }
 
     public boolean checkIfTargetLocation(PointOfInterest locationToCheck) {
-        if (!MapStage.getInstance().isInMap())
+        if (!AdventureHost.get().inMap())
         {
             return worldMapOK;
         }

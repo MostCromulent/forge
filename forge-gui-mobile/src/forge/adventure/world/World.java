@@ -17,7 +17,7 @@ import forge.adventure.data.*;
 import forge.adventure.pointofintrest.PointOfInterest;
 import forge.adventure.pointofintrest.PointOfInterestMap;
 import forge.adventure.scene.Scene;
-import forge.adventure.stage.WorldStage;
+import forge.adventure.util.AdventureHost;
 import forge.adventure.util.Config;
 import forge.adventure.util.Paths;
 import forge.adventure.util.SaveFileContent;
@@ -815,7 +815,7 @@ public class World implements Disposable, SaveFileContent {
             biomeImage = pix;
             measureGenerationTime("sprites", currentTime[0]);
             System.out.println("Generating world took :\t\t" + ((System.currentTimeMillis() - startTime) / 1000f) + " s");
-            WorldStage.getInstance().clearCache();
+            AdventureHost.get().clearWorldCache();
 
             if (GuiBase.isMobile())
                 GuiBase.getInterface().preventSystemSleep(false);

@@ -7,10 +7,6 @@ import forge.adventure.data.DifficultyData;
 import forge.adventure.player.AdventurePlayer;
 import forge.adventure.pointofintrest.PointOfInterest;
 import forge.adventure.pointofintrest.PointOfInterestChanges;
-import forge.adventure.scene.MapViewScene;
-import forge.adventure.scene.SaveLoadScene;
-import forge.adventure.stage.PointOfInterestMapSprite;
-import forge.adventure.stage.WorldStage;
 import forge.adventure.util.*;
 import forge.card.CardEdition;
 import forge.card.ColorSet;
@@ -101,7 +97,7 @@ public class WorldSave {
                 try {
                     currentSave.world.load(mainData.readSubData("world"));
                     currentSave.pointOfInterestChanges.load(mainData.readSubData("pointOfInterestChanges"));
-                    WorldStage.getInstance().load(mainData.readSubData("worldStage"));
+                    AdventureHost.get().loadWorldStage(mainData.readSubData("worldStage"));
 
                 } catch (Exception e) {
                     System.err.println("Generating New World");
@@ -170,11 +166,11 @@ public class WorldSave {
     }
 
     public boolean autoSave() {
-        return save("auto save" + SaveLoadScene.instance().getSaveFileSuffix(), AUTO_SAVE_SLOT);
+        return save("auto save" + AdventureHost.get().saveFileSuffix(), AUTO_SAVE_SLOT);
     }
 
     public boolean quickSave() {
-        return save("quick save" + SaveLoadScene.instance().getSaveFileSuffix(), QUICK_SAVE_SLOT);
+        return save("quick save" + AdventureHost.get().saveFileSuffix(), QUICK_SAVE_SLOT);
     }
 
     public boolean quickLoad() {
@@ -265,7 +261,7 @@ public class WorldSave {
     public boolean autoSaveAsync() {
         final int slot = AUTO_SAVE_SLOT;
         final String text =
-                "auto save" + SaveLoadScene.instance().getSaveFileSuffix();
+                "auto save" + AdventureHost.get().saveFileSuffix();
 
         final WorldSaveHeader saveHeader;
         final SaveFileData playerData;
@@ -280,7 +276,7 @@ public class WorldSave {
             header.name = text;
             playerData = currentSave.player.save();
             capturedWorld = currentSave.world.snapshotForAsyncSave();
-            worldStageData = WorldStage.getInstance().save();
+            worldStageData = AdventureHost.get().saveWorldStage();
             poiData = currentSave.pointOfInterestChanges.save();
 
             String message = getExceptionMessage(playerData, worldStageData, poiData);
@@ -376,7 +372,7 @@ public class WorldSave {
                  ObjectOutputStream oos = new ObjectOutputStream(def)) {
                 SaveFileData player = currentSave.player.save();
                 SaveFileData world = currentSave.world.save();
-                SaveFileData worldStage = WorldStage.getInstance().save();
+                SaveFileData worldStage = AdventureHost.get().saveWorldStage();
                 SaveFileData poiChanges = currentSave.pointOfInterestChanges.save();
 
                 String message = getExceptionMessage(player, world, worldStage, poiChanges);
@@ -448,7 +444,7 @@ public class WorldSave {
     }
 
     private void announceError(String message) {
-        currentSave.player.getCurrentGameStage().setExtraAnnouncement("Error Saving File!\n" + message);
+        AdventureHost.get().announcement("Error Saving File!\n" + message);
     }
 
     public void clearChanges() {
@@ -459,16 +455,13 @@ public class WorldSave {
         for (PointOfInterest poi : currentSave.world.getAllPointOfInterest()) {
             if (poi == null)
                 continue;
-            PointOfInterestMapSprite mapSprite = WorldStage.getInstance().getMapSprite(poi);
-            if (mapSprite != null)
-                mapSprite.setBookmarked(false, poi);
             PointOfInterestChanges p = pointOfInterestChanges.get(poi.getID());
             if (p == null)
                 continue;
             p.setIsBookmarked(false);
             p.save();
         }
-        MapViewScene.instance().clearBookMarks();
+        AdventureHost.get().clearBookmarks(currentSave.world.getAllPointOfInterest());
     }
 
     // prevent spam of preview if user repeatedly/accidentally reopen scene that request previews

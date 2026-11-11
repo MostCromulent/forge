@@ -5,8 +5,8 @@ import com.badlogic.gdx.utils.Array;
 import forge.Forge;
 import forge.adventure.character.EnemySprite;
 import forge.adventure.pointofintrest.PointOfInterestChanges;
-import forge.adventure.scene.RewardScene;
 import forge.adventure.util.AdventureEventController;
+import forge.adventure.util.AdventureHost;
 import forge.adventure.util.AdventureOverrides;
 import forge.adventure.util.CardUtil;
 import forge.adventure.util.Config;
@@ -800,8 +800,7 @@ public class AdventureEventData implements Serializable {
             }
         }
         if (ret.size > 0) {
-            RewardScene.instance().loadRewards(ret, RewardScene.Type.EventReward, null);
-            Forge.switchScene(RewardScene.instance());
+            AdventureHost.get().showEventRewards(ret);
         }
 
         //todo: more robust logic for event types that can be won without perfect record (Swiss w/cut, round robin)

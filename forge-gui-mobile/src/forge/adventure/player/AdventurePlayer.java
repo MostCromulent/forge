@@ -2,17 +2,13 @@ package forge.adventure.player;
 
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Null;
-import com.github.tommyettinger.textra.TextraLabel;
 import com.google.common.collect.Lists;
 
 import forge.Forge;
 import forge.adventure.data.*;
 import forge.adventure.pointofintrest.PointOfInterestChanges;
-import forge.adventure.scene.AdventureDeckEditor;
-import forge.adventure.scene.DeckEditScene;
 import forge.adventure.stage.GameStage;
 import forge.adventure.stage.MapStage;
 import forge.adventure.stage.WorldStage;
@@ -788,7 +784,7 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
         usingCustomDeck = data.containsKey("usingCustomDeck") && data.readBool("usingCustomDeck");
         announceCustom = data.containsKey("announceCustom") && data.readBool("announceCustom");
         if (migration) {
-            getCurrentGameStage().setExtraAnnouncement(Forge.getLocalizer().getMessage("lblDataMigrationMsg"));
+            AdventureHost.get().announcement(Forge.getLocalizer().getMessage("lblDataMigrationMsg"));
         }
 
         RewardData.invalidateCardPool();
@@ -949,17 +945,7 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
     }
 
     public void addStatusMessage(String iconName, String message, Integer itemCount, float x, float y) {
-        String symbol = itemCount == null || itemCount < 0 ? "" : " +";
-        String icon = iconName == null ? "" : "[+" + iconName + "]";
-        String count = itemCount == null ? "" : String.valueOf(itemCount);
-        TextraLabel actor = Controls.newTextraLabel("[%95]" + icon + "[WHITE]" + symbol + count + " " + message);
-        actor.setPosition(x, y);
-        actor.addAction(Actions.sequence(
-                Actions.parallel(Actions.moveBy(0f, 5f, 3f), Actions.fadeIn(2f)),
-                Actions.hide(),
-                Actions.removeActor())
-        );
-        getCurrentGameStage().addActor(actor);
+        AdventureHost.get().statusMessage(iconName, message, itemCount, x, y);
     }
 
     public void addCard(PaperCard card) {
@@ -1008,9 +994,7 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
     }
 
     private void refreshEditor() {
-        AdventureDeckEditor editor = ((AdventureDeckEditor) DeckEditScene.getInstance(null).getScreen());
-        if (editor != null)
-            editor.refresh();
+        AdventureHost.get().refreshDeckEditor();
     }
 
     private void addGold(int goldCount) {
@@ -1526,7 +1510,7 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
             AdventureQuestController.trackQuest(q);
         q.activateNextStages();
         if (!isNewGame)
-            AdventureQuestController.instance().showQuestDialogs(MapStage.getInstance());
+            AdventureHost.get().showQuestDialogs();
     }
 
     public List<AdventureQuestData> getQuests() {

@@ -3,7 +3,6 @@ package forge.adventure.util;
 import forge.Forge;
 import forge.adventure.data.ItemData;
 import forge.adventure.player.AdventurePlayer;
-import forge.adventure.scene.InventoryScene;
 import forge.adventure.world.World;
 import forge.adventure.world.WorldSave;
 import forge.deck.Deck;
@@ -40,7 +39,7 @@ public class Current {
         if (itemData != null && !(Config.instance().getSettingData().disableCrackedItems)) {
             itemData.isCracked = true;
             player().equip(itemData); // un-equip
-            InventoryScene.instance().clearItemDescription();
+            AdventureHost.get().clearItemDescription();
 
             stringBuilder.setLength(0);
             return stringBuilder.append(baseMessage)

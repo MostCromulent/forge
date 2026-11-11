@@ -12,7 +12,6 @@ import forge.adventure.character.EnemySprite;
 import forge.adventure.data.*;
 import forge.adventure.pointofintrest.PointOfInterest;
 import forge.adventure.pointofintrest.PointOfInterestChanges;
-import forge.adventure.scene.TileMapScene;
 import forge.adventure.stage.GameStage;
 import forge.adventure.stage.MapStage;
 import forge.adventure.world.WorldSave;
@@ -289,14 +288,14 @@ public class AdventureQuestController implements Serializable {
     }
 
     public boolean hasClearQuestActive() {
-        if (!MapStage.getInstance().isInMap() || TileMapScene.instance().rootPoint == null) {
+        if (!AdventureHost.get().inMap() || AdventureHost.get().mapPoint() == null) {
             return false;
         }
         for (AdventureQuestData quest : Current.player().getQuests()) {
             for (AdventureQuestStage stage : quest.stages) {
                 if (stage.getStatus() == ACTIVE
                         && stage.objective == ObjectiveTypes.Clear
-                        && stage.checkIfTargetLocation(TileMapScene.instance().rootPoint)) {
+                        && stage.checkIfTargetLocation(AdventureHost.get().mapPoint())) {
                     return true;
                 }
             }
