@@ -519,7 +519,7 @@ public class PlayerView extends GameEntityView {
         set(TrackableProperty.Mana, mana);
     }
 
-    public List<String> getDetailsList() {
+    private List<String> getDetailsList() {
         final List<String> details = Lists.newArrayListWithCapacity(8);
         details.add(Localizer.getInstance().getMessage("lblLifeHas", getLife()));
 
