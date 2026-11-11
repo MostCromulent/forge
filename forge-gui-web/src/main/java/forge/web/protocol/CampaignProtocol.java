@@ -425,4 +425,27 @@ public final class CampaignProtocol {
     public record QuestOptions(List<String> worlds, List<String> formatWorlds, List<String> sanctioned, List<String> casual, List<String> precons,
             List<String> sealedDecks, List<String> draftDecks, List<String> cubes, List<QuestDifficultyRow> difficulties) {
     }
+
+    /** The adventure saves of the open plane, by file name, and the one played last. */
+    @Message("adventureSaves")
+    public record AdventureSaves(List<AdventureSave> saves, @Nullable String current) {
+    }
+
+    /** saved is the day the file last changed, as yyyy-MM-dd. */
+    public record AdventureSave(String file, int slot, String name, @Nullable String saved) {
+    }
+
+    /** A new adventure, with the choices of the mobile new-game screen. colors are WUBRG letters. edition is an edition code. */
+    @Command("adventureCreate")
+    public record AdventureCreate(String name, boolean female, int race, int avatar, String colors, int difficulty, String mode, int customDeck,
+            @Nullable String edition, long seed) {
+    }
+
+    @Command("adventureSaveTo")
+    public record AdventureSaveTo(int slot) {
+    }
+
+    @Command("adventureQuickSave")
+    public record AdventureQuickSave() {
+    }
 }

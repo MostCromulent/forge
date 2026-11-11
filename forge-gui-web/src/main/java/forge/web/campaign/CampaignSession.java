@@ -11,6 +11,7 @@ import forge.model.FModel;
 import forge.util.IHasForgeLog;
 import forge.util.storage.IStorage;
 import forge.web.Campaigns;
+import forge.web.adventure.AdventureGame;
 import forge.web.WebGuiBase;
 import forge.web.WebSession;
 import forge.web.WebSession.InCampaign;
@@ -41,6 +42,8 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
     /** The open conquest's state that only this session holds: its selection and the last move. */
     private final ConquestGame conquest = new ConquestGame();
     private final QuestGame quest = new QuestGame();
+    /** Made when first used, because it starts libgdx. */
+    private AdventureGame adventure;
     /** One thread for all campaign work, because the campaign model is Forge's own and has no locking. */
     private final Executor work = WebGuiBase.worker("WebCampaign");
 
@@ -49,7 +52,14 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
     }
 
     private Campaign campaign(final String mode) {
-        return "quest".equals(mode) ? quest : "conquest".equals(mode) ? conquest : null;
+        return "quest".equals(mode) ? quest : "conquest".equals(mode) ? conquest : "adventure".equals(mode) ? adventure() : null;
+    }
+
+    private synchronized AdventureGame adventure() {
+        if (adventure == null) {
+            adventure = new AdventureGame();
+        }
+        return adventure;
     }
 
     private final Campaign.Host host = new Campaign.Host() {
@@ -219,7 +229,8 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
 
     @Override
     public boolean handles(final Record command) {
-        return COMMANDS.handles(command) || ConquestGame.COMMANDS.handles(command) || QuestGame.COMMANDS.handles(command);
+        return COMMANDS.handles(command) || ConquestGame.COMMANDS.handles(command) || QuestGame.COMMANDS.handles(command)
+                || AdventureGame.COMMANDS.handles(command);
     }
 
     @Override
@@ -276,6 +287,10 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         final String questSave = quest.current();
         if (questSave != null) {
             saves.put("quest", questSave);
+        }
+        final String adventureSave = adventure().current();
+        if (adventureSave != null) {
+            saves.put("adventure", adventureSave);
         }
         return saves;
     }

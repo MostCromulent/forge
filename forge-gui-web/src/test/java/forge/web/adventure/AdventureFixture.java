@@ -14,13 +14,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /** Boots the adventure model on Realm of Legends and makes worlds for the tests. */
-final class AdventureFixture {
-    static final String PLANE = "Realm of Legends";
+public final class AdventureFixture {
+    public static final String PLANE = "Realm of Legends";
 
     private AdventureFixture() {}
 
     /** Config reads the plane from the user's settings once, when it is first used, so the settings are written before that. */
-    static synchronized void boot() {
+    public static synchronized void boot() {
         WebTestSupport.initModel();
         try {
             final Path settings = Path.of(ForgeConstants.USER_ADVENTURE_DIR, "settings.json");
@@ -34,7 +34,7 @@ final class AdventureFixture {
         AdventureRuntime.start();
     }
 
-    static WorldSave newWorld(final long seed) {
+    public static WorldSave newWorld(final long seed) {
         boot();
         // Realm of Legends offers only commander starter decks
         return AdventureRuntime.onUi(() -> {
