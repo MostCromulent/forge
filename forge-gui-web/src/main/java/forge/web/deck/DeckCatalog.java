@@ -286,7 +286,9 @@ public final class DeckCatalog {
     /** Generators are listed by name only. Building a deck to fill each row would build hundreds of decks. */
     private void addGenerators(final List<DeckSummary> out) {
         final Localizer text = Localizer.getInstance();
-        for (final String choice : ColorDeckGenerator.COLOR_NAMES) {
+        // The generator needs a deck list only when it builds, to read which colours are picked together
+        for (final DeckProxy generator : ColorDeckGenerator.getColorDecks(null, null, false)) {
+            final String choice = generator.getName();
             final String key = "gen:color:" + choice;
             // A colour choice's colour is known before it builds a deck. The other generators' colours are not
             final MagicColor.Color colour = MagicColor.Color.fromName(choice);
