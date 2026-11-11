@@ -140,6 +140,33 @@ public class ConcurrentMatchesTest {
         Assert.assertNull(matchBetween(2, 3), "a seat started a second match while it was playing");
     }
 
+    // Fails if a finished match nobody quit keeps its seats, survives their next match, or comes back on a late continue
+    @Test(timeOut = 120_000)
+    public void aFinishedMatchIsQuitWhenItsSeatsPlayAgain() throws Exception {
+        matchBetween(1, 2).run();
+        matchBetween(3, 4).run();
+        final HostedMatch first = lobby.getHostedMatch(1);
+        final HostedMatch second = lobby.getHostedMatch(3);
+        final Game firstGame = first.getGame();
+
+        await(() -> clientOf(1).getGameController() != null, "the first match never opened on its client");
+        await(() -> firstGame.getAge() == GameStage.Play, "the first match never dealt its opening hands");
+        clientOf(1).getGameController().concede();
+        await(firstGame::isGameOver, "the concession did not end the game");
+
+        matchBetween(1, 2).run();
+        final HostedMatch third = lobby.getHostedMatch(1);
+        Assert.assertNotNull(third, "the seats of a finished match could not play again");
+        Assert.assertNotSame(third, first);
+        Assert.assertTrue(first.isMatchOver(), "the finished match was not quit");
+        Assert.assertTrue(lobby.getSlot(1).isReady() && lobby.getSlot(2).isReady(), "quitting the old match unreadied seats that play now");
+        Assert.assertNotNull(server.findClientByIndex(1).getGui(), "the new match's client has no GUI");
+        Assert.assertSame(lobby.getHostedMatch(4), second);
+
+        first.continueMatch();
+        Assert.assertNull(first.getGame(), "a quit match started another game");
+    }
+
     // Fails if the AFK timer is armed only for one of the matches
     @Test(timeOut = 120_000)
     public void afkTimerArmsInEveryMatch() {

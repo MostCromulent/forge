@@ -67,7 +67,7 @@ public abstract class GameLobby implements IHasGameType {
         return false;
     }
 
-    /** The match the human in this slot plays in, or null. A finished match counts until its players leave it. */
+    /** The match the human in this slot plays in, or null. A finished match counts until its players leave it or start another. */
     public HostedMatch getHostedMatch(final int index) {
         final LobbySlot slot = getSlot(index);
         if (slot == null) {
@@ -545,14 +545,21 @@ public abstract class GameLobby implements IHasGameType {
         return startGame(activeSlots);
     }
 
+    private boolean seatsFree(final List<LobbySlot> slots) {
+        for (final LobbySlot slot : slots) {
+            final HostedMatch match = getHostedMatch(data.slots.indexOf(slot));
+            if (match != null && match.isGameRunning()) {
+                SOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblPlayerIsInMatch", slot.getName()));
+                return false;
+            }
+        }
+        return true;
+    }
+
     /** Returns a runnable to start a match between these seats if allowed. Matches already running play on beside it. */
     public Runnable startGame(final List<LobbySlot> activeSlots) {
-        for (final LobbySlot slot : activeSlots) {
-            final HostedMatch match = getHostedMatch(data.slots.indexOf(slot));
-            if (match != null && !match.isMatchOver()) {
-                SOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblPlayerIsInMatch", slot.getName()));
-                return null;
-            }
+        if (!seatsFree(activeSlots)) {
+            return null;
         }
 
         if (activeSlots.size() < 2) {
@@ -745,6 +752,27 @@ public abstract class GameLobby implements IHasGameType {
         //if above checks succeed, return runnable that can be used to finish starting game
         final GameType baseGameType = data.isLimitedMode() ? GameType.Draft : GameType.Constructed;
         return () -> {
+            // Another start may have taken a seat since this one was checked
+            if (!seatsFree(activeSlots)) {
+                return;
+            }
+            // A finished match some of these seats never left is ended first, so its clean-up cannot reach the new match
+            final Map<LobbySlot, Boolean> ready = new HashMap<>();
+            activeSlots.forEach(slot -> ready.put(slot, slot.isReady()));
+            boolean quitOld = false;
+            for (final LobbySlot slot : activeSlots) {
+                final HostedMatch old = getHostedMatch(data.slots.indexOf(slot));
+                if (old != null) {
+                    old.quitMatch();
+                    quitOld = true;
+                }
+            }
+            if (quitOld) {
+                // Quitting unreadies the old match's seats and drops its remote GUIs, and these seats are about to play
+                ready.forEach(LobbySlot::setIsReady);
+                guis.replaceAll((rp, gui) -> playerToSlot.get(rp).getType() == LobbySlotType.REMOTE
+                        ? getGui(data.slots.indexOf(playerToSlot.get(rp))) : gui);
+            }
             final HostedMatch hostedMatch = GuiBase.getInterface().hostMatch();
             hostedMatch.setOnMatchOver(() -> onMatchOver(hostedMatch));
             hostedMatch.startMatch(baseGameType, variantTypes, players, guis);
@@ -758,9 +786,10 @@ public abstract class GameLobby implements IHasGameType {
             }
 
             hostedMatch.gameControllers = gameControllers;
-            // A finished match nobody left would keep answering for the seats that now play again
-            hostedMatches.removeIf(match -> match.isMatchOver() && !Collections.disjoint(match.gameControllers.keySet(), activeSlots));
-            hostedMatches.add(hostedMatch);
+            // A match with no human seat has nothing to route, and no player would ever quit it out of the list
+            if (!gameControllers.isEmpty()) {
+                hostedMatches.add(hostedMatch);
+            }
 
             onGameStarted();
         };

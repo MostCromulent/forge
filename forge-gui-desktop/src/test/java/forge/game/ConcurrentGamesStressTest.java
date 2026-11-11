@@ -101,6 +101,8 @@ public class ConcurrentGamesStressTest {
                 new RegisteredPlayer(deck((index + 1) % DECKS.length)).setPlayer(GamePlayerUtil.createAiPlayer("AI" + index + "b", 1))), "Concurrent" + index);
         final Game game = match.createGame();
         game.setNoGUIUser();
+        // As a hosted match sets it from the default preference, so the search AI's per-thread state is exercised too
+        game.AI_FLAT_MONTE_CARLO = true;
         game.subscribeToEvents(new Object() {
             @Subscribe
             public void turn(final GameEventTurnBegan e) {

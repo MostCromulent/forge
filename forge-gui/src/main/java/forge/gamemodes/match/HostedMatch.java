@@ -63,6 +63,8 @@ public class HostedMatch {
     private final MatchUiEventVisitor visitor = new MatchUiEventVisitor();
     private final Map<PlayerControllerHuman, NextGameDecision> nextGameDecisions = Maps.newHashMap();
     private boolean isMatchOver = false;
+    /** Set once the match is quit. A late continue or restart from an end screen must not bring it back. */
+    private volatile boolean quit = false;
     public int subGameCount = 0;
 
     public HostedMatch() {}
@@ -115,6 +117,7 @@ public class HostedMatch {
         }
 
         this.guis = guis == null ? ImmutableMap.of() : guis;
+        isMatchOver = false;
         final boolean useRandomFoil = FModel.getPreferences().getPrefBoolean(FPref.UI_RANDOM_FOIL);
         for (final RegisteredPlayer rp : players) {
             rp.setRandomFoil(useRandomFoil);
@@ -148,11 +151,13 @@ public class HostedMatch {
     }
 
     public void continueMatch() {
+        if (quit) { return; }
         endCurrentGame();
         startGame();
     }
 
     public void restartMatch() {
+        if (quit) { return; }
         endCurrentGame();
         startMatch(match.getRules(), null, match.getPlayers(), this.guis, this.matchPlaylist);
     }
@@ -442,6 +447,22 @@ public class HostedMatch {
         return isMatchOver;
     }
 
+    public boolean isGameRunning() {
+        final Game current = game;
+        return current != null && !current.isGameOver();
+    }
+
+    /** Ends the match for every player. Calling it again does nothing. */
+    public void quitMatch() {
+        if (quit) { return; }
+        quit = true;
+        endCurrentGame();
+        isMatchOver = true;
+        if (onMatchOver != null) {
+            onMatchOver.run();
+        }
+    }
+
     public GameOutcome.AnteResult getAnteResult(RegisteredPlayer player) {
         return match.getAnteResult(player);
     }
@@ -556,13 +577,7 @@ public class HostedMatch {
 
     private synchronized void addNextGameDecision(final PlayerControllerHuman controller, final NextGameDecision decision) {
         if (decision == NextGameDecision.QUIT) {
-            FThreads.invokeInEdtNowOrLater(() -> {
-                endCurrentGame();
-                isMatchOver = true;
-                if (onMatchOver != null) {
-                    onMatchOver.run();
-                }
-            });
+            FThreads.invokeInEdtNowOrLater(this::quitMatch);
             return; // if any player chooses quit, quit the match
         }
 

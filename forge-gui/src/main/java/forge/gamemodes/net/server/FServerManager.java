@@ -958,8 +958,8 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         final RemoteClient client = disconnectedClients.remove(username);
         if (client == null) { return; }
 
-        // If match already ended, just clean up
-        if (!isMatchActive()) {
+        // A seat in no match has nothing for the AI to take over
+        if (localLobby.getHostedMatch(client.getIndex()) == null) {
             localLobby.disconnectPlayer(client.getIndex());
             return;
         }

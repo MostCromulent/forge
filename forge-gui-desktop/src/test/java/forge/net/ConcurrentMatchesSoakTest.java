@@ -171,6 +171,7 @@ public class ConcurrentMatchesSoakTest {
 
         final List<List<WeakReference<Game>>> gamesByRound = new ArrayList<>();
         final Map<String, Integer> baselineThreads = threadCounts();
+        Map<String, Integer> afterFirstRound = null;
         log("baseline threads %s", baselineThreads);
         try {
             for (int round = 1; round <= ROUNDS; round++) {
@@ -277,7 +278,11 @@ public class ConcurrentMatchesSoakTest {
                 matches.clear();
                 games.clear();
                 leaveClients();
-                log("round %d threads %s", round, threadCounts());
+                final Map<String, Integer> threads = threadCounts();
+                log("round %d threads %s", round, threads);
+                if (afterFirstRound == null) {
+                    afterFirstRound = threads;
+                }
             }
 
             for (int i = 0; i < 5; i++) {
@@ -299,6 +304,14 @@ public class ConcurrentMatchesSoakTest {
             }
             final Map<String, Integer> end = threadCounts();
             log("end threads %s", end);
+            // Netty starts a worker per new connection up to a fixed number, and the test clients' own threads wind down on their own
+            for (final Map.Entry<String, Integer> e : end.entrySet()) {
+                final String name = e.getKey();
+                final int before = afterFirstRound == null ? 0 : afterFirstRound.getOrDefault(name, 0);
+                if (!name.startsWith("nioEventLoopGroup") && !name.startsWith("HeadlessClient") && e.getValue() > before) {
+                    problem("%s threads grew from %d after the first round to %d", name, before, e.getValue());
+                }
+            }
         } finally {
             if (HostingServer.isHosting()) {
                 server.stopServer();

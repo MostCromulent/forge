@@ -236,7 +236,6 @@ public class Match {
     }
 
     private void prepareAllZones(final Game game) {
-        // need this code here, otherwise observables fail
         game.getTriggerHandler().clearDelayedTrigger();
 
         // friendliness

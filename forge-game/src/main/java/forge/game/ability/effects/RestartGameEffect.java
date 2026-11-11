@@ -36,7 +36,6 @@ public class RestartGameEffect extends SpellAbilityEffect {
         String leaveRestriction = sa.getParamOrDefault("RestrictFromValid", "Card");
 
         //Card.resetUniqueNumber();
-        // need this code here, otherwise observables fail
         TriggerHandler trigHandler = game.getTriggerHandler();
         trigHandler.clearDelayedTrigger();
         trigHandler.clearPlayerDefinedDelayedTrigger();
