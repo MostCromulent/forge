@@ -555,4 +555,21 @@ public final class CampaignProtocol {
     @Command("adventureEditDeck")
     public record AdventureEditDeck(int slot) {
     }
+
+    @Command("adventureOptionsQuery")
+    public record AdventureOptionsQuery() {
+    }
+
+    /** The new-game screen's choices on the open plane. defaultDifficulty is the one the plane marks as the starting difficulty. */
+    @Message("adventureOptions")
+    public record AdventureOptions(List<String> races, List<String> difficulties, int defaultDifficulty, List<AdventureModeOption> modes,
+            List<String> editions) {
+    }
+
+    /**
+     * A way to start, with the starting decks it offers. With colors, each choice is a colour identity and colorIds holds the letters
+     * the server is sent. Otherwise each choice is a deck, sent by its index.
+     */
+    public record AdventureModeOption(String mode, String label, String choiceLabel, List<String> choices, @Nullable List<String> colorIds) {
+    }
 }

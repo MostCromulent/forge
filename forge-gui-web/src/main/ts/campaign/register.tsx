@@ -5,16 +5,18 @@ import { t } from '../text';
 import { Conquest } from '../conquest/conquest';
 import { Quest } from '../quest/quest';
 import { TournamentDrafted } from '../quest/tournamentdrafted';
+import { Adventure } from '../adventure/adventure';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type {
-  CampaignBar, CampaignPrefs, CampaignResult, CampaignStats, ConquestAetherState, ConquestOptions, ConquestParty, ConquestPlanes,
+  AdventureDialog, AdventureEncounter, AdventureInventory, AdventureOptions, AdventurePlaceholder, AdventureSaves, AdventureState,
+  AdventureTick, AdventureCreate, CampaignBar, CampaignPrefs, CampaignResult, CampaignStats, ConquestAetherState, ConquestOptions, ConquestParty, ConquestPlanes,
   ConquestSaves, ConquestState, QuestBazaar, QuestChallenges, QuestCreate, QuestDecks, QuestDuels, QuestOptions, QuestSaves, QuestTournaments,
   Reward, Trading,
 } from '../protocol';
 
 /** The modes, by the names the server uses for them. */
-export type CampaignMode = 'conquest' | 'quest';
+export type CampaignMode = 'conquest' | 'quest' | 'adventure';
 export type ConquestTab = 'map' | 'aether' | 'party' | 'collection' | 'planes' | 'stats';
 export type QuestTab = 'duels' | 'challenges' | 'tournaments' | 'decks' | 'shop' | 'bazaar' | 'stats';
 
@@ -46,6 +48,19 @@ declare module '../model' {
     conquestPlanes: ConquestPlanes | null;
     campaignStats: CampaignStats | null;
     campaignPrefs: CampaignPrefs | null;
+    adventureSaves: AdventureSaves | null;
+    /** The choices the new-adventure form offers. It is set once the form has requested them. */
+    adventureOptions: AdventureOptions | null;
+    /** The open adventure's world map, as last sent whole. Ticks move its enemies in adventureTick. */
+    adventureState: AdventureState | null;
+    adventureTick: AdventureTick | null;
+    /** The town the player is in, which the browser cannot show yet, or null on the world map. */
+    adventurePlaceholder: AdventurePlaceholder | null;
+    /** The dialog page waiting for a choice, or null. */
+    adventureDialog: AdventureDialog | null;
+    /** The enemy that caught the player, until the battle starts. */
+    adventureEncounter: AdventureEncounter | null;
+    adventureInventory: AdventureInventory | null;
   }
 }
 
@@ -141,6 +156,27 @@ declare module '../actions' {
     /** Unlocks a set. The host asks which one. */
     questUnlock(): void;
     questCreate(c: Omit<QuestCreate, 't'>): void;
+
+    /** Requests the choices the new-adventure form offers. */
+    adventureOptions(): void;
+    adventureCreate(c: Omit<AdventureCreate, 't'>): void;
+    adventureSaveTo(slot: number): void;
+    adventureQuickSave(): void;
+    /** Reports where the player stands on the world map. Each report advances the map by the time since the last. */
+    adventureMove(x: number, y: number, moving: boolean): void;
+    adventureEnterPoi(id: string): void;
+    /** Leaves the town the browser cannot show yet, back to the world map. */
+    adventurePlaceholderDone(): void;
+    adventureDialogChoice(dialogId: number, index: number): void;
+    /** Starts the battle once the encounter has been shown. */
+    adventureFight(): void;
+    adventureInventory(): void;
+    adventureEquip(item: string): void;
+    adventureUseItem(item: string): void;
+    adventureSelectDeck(slot: number): void;
+    adventureEditDeck(slot: number): void;
+    /** Dev mode: puts an enemy where the player stands. */
+    adventureDevSpawn(enemy: string): void;
   }
 }
 
@@ -152,20 +188,29 @@ const NO_CONQUEST = { conquestState: null, conquestParty: null, conquestAether: 
 const NO_QUEST = {
   questSaves: null, questDuels: null, questDecks: null, questChallenges: null, questBazaar: null, questTournaments: null,
 } satisfies Partial<Model>;
+/** The same for an open adventure's own pages. */
+const NO_ADVENTURE = {
+  adventureSaves: null, adventureState: null, adventureTick: null, adventurePlaceholder: null, adventureDialog: null, adventureEncounter: null,
+  adventureInventory: null,
+} satisfies Partial<Model>;
 
 /** The messages that are only stored in the campaign field of the same name. */
 const STORED = new Set(['conquestSaves', 'questSaves', 'questDuels', 'questDecks', 'questOptions', 'questChallenges', 'questBazaar', 'questTournaments',
   'campaignBar', 'conquestState', 'campaignResult', 'reward', 'conquestParty', 'trading', 'conquestOptions', 'conquestAether', 'conquestPlanes',
-  'campaignStats', 'campaignPrefs']);
+  'campaignStats', 'campaignPrefs', 'adventureSaves', 'adventureOptions', 'adventureState', 'adventureTick', 'adventurePlaceholder',
+  'adventureDialog', 'adventureEncounter', 'adventureInventory']);
 
 // Conquest's icon is a ringed planet. Quest's icon is a pennant on a staff
 const CONQUEST_ICON = <><circle cx="24" cy="24" r="11" /><ellipse cx="24" cy="24" rx="20" ry="6.5" transform="rotate(-18 24 24)" /></>;
 const QUEST_ICON = <><path d="M13 42V7" /><path d="M13 9h22l-6 7 6 7H13" /></>;
+// Adventure's icon is a compass
+const ADVENTURE_ICON = <><circle cx="24" cy="24" r="18" /><path d="M30 18l-4 8-8 4 4-8z" /></>;
 
 Object.assign(ui, { conquestTab: 'map', questTab: 'duels', conquestOpened: {}, conquestWheel: '' });
 
 registerCampaigns({
-  fields: () => ({ conquestSaves: null, questOptions: null, campaignResult: null, conquestOptions: null, campaignPrefs: null, ...NO_CAMPAIGN, ...NO_CONQUEST, ...NO_QUEST }),
+  fields: () => ({ conquestSaves: null, questOptions: null, campaignResult: null, conquestOptions: null, campaignPrefs: null, adventureOptions: null,
+    ...NO_CAMPAIGN, ...NO_CONQUEST, ...NO_QUEST, ...NO_ADVENTURE }),
 
   hello: (model, msg) => {
     // A match's result is cleared when its match ends. A campaign's pages are cleared when the campaign is left
@@ -181,9 +226,14 @@ registerCampaigns({
       // A match is played from the quest's page, so the player returns to the tab the match was started from
       if (msg.screen !== 'playing') ui.questTab = 'duels';
     }
+    if (msg.campaign !== 'adventure') Object.assign(model, NO_ADVENTURE);
   },
 
   message: (model, msg) => {
+    if (msg.t === 'adventureDialogClosed') {
+      model.adventureDialog = null;
+      return true;
+    }
     if (!STORED.has(msg.t)) return false;
     (model as unknown as Record<string, unknown>)[msg.t] = msg;
     return true;
@@ -269,9 +319,36 @@ registerCampaigns({
     conquestEditDeck: commander => send({ t: 'conquestEditDeck', commander }),
     trading: () => send({ t: 'trading' }),
     trade: (source, picks) => send({ t: 'trade', source, picks }),
+    adventureOptions: () => send({ t: 'adventureOptionsQuery' }),
+    adventureCreate: c => {
+      model.error = null;
+      send({ t: 'adventureCreate', ...c });
+    },
+    adventureSaveTo: slot => send({ t: 'adventureSaveTo', slot }),
+    adventureQuickSave: () => send({ t: 'adventureQuickSave' }),
+    adventureMove: (x, y, moving) => send({ t: 'adventureMove', x, y, moving }),
+    adventureEnterPoi: id => send({ t: 'adventureEnterPoi', id }),
+    // The notice closes at once, without waiting for the server's answer
+    adventurePlaceholderDone: () => {
+      model.adventurePlaceholder = null;
+      send({ t: 'adventurePlaceholderDone' });
+      schedule();
+    },
+    adventureDialogChoice: (dialogId, index) => send({ t: 'adventureDialogChoice', dialogId, index }),
+    adventureFight: () => {
+      model.adventureEncounter = null;
+      send({ t: 'adventureFight' });
+    },
+    adventureInventory: () => send({ t: 'adventureInventoryQuery' }),
+    adventureEquip: item => send({ t: 'adventureEquip', item }),
+    adventureUseItem: item => send({ t: 'adventureUseItem', item }),
+    adventureSelectDeck: slot => send({ t: 'adventureSelectDeck', slot }),
+    adventureEditDeck: slot => send({ t: 'adventureEditDeck', slot }),
+    adventureDevSpawn: enemy => send({ t: 'adventureDevSpawn', enemy }),
   }),
 
-  Page: ({ model, actions }) => (model.campaign === 'quest' ? <Quest model={model} actions={actions} /> : <Conquest model={model} actions={actions} />),
+  Page: ({ model, actions }) => (model.campaign === 'quest' ? <Quest model={model} actions={actions} />
+    : model.campaign === 'adventure' ? <Adventure model={model} actions={actions} /> : <Conquest model={model} actions={actions} />),
 
   Menu: ({ model, actions }) => {
     const resume = (mode: CampaignMode) => model.campaignResume[mode];
@@ -286,6 +363,10 @@ registerCampaigns({
             onClick={() => actions.campaignOpen('quest', false)}
             resume={resume('quest') ? () => actions.campaignOpen('quest', true) : undefined}
             resumeLabel={resume('quest') ? t('lblWebConquestResume', resume('quest')) : undefined} />
+          <Kind id="adventure" icon={ADVENTURE_ICON} name={t('lblAdventure')} blurb={t('lblWebAdventureBlurb')}
+            onClick={() => actions.campaignOpen('adventure', false)}
+            resume={resume('adventure') ? () => actions.campaignOpen('adventure', true) : undefined}
+            resumeLabel={resume('adventure') ? t('lblWebAdventureResume') : undefined} />
         </div>
       </>
     );

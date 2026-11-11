@@ -287,6 +287,19 @@ public class AdventureSessionTest extends SessionsTest {
         sessions.onMessage(host, TestBrowser.action("editorClose"));
     }
 
+    // Fails if the new-game form is not offered the plane's own modes: Realm of Legends has only commander starter decks
+    @Test(timeOut = 120_000)
+    public void optionsFollowThePlane() throws InterruptedException {
+        final TestBrowser host = onTheShelf();
+        send(host, message("adventureOptionsQuery"));
+        final JsonObject options = host.awaitMatching("adventureOptions", o -> true, "no options were sent");
+        final String modes = options.getAsJsonArray("modes").toString();
+        Assert.assertTrue(modes.contains("\"Commander\""), modes);
+        Assert.assertFalse(modes.contains("\"Standard\""), modes);
+        Assert.assertTrue(options.getAsJsonArray("races").size() > 1);
+        Assert.assertEquals(options.getAsJsonArray("difficulties").size(), 4);
+    }
+
     /** Picks the first offered choice of each dialog until none is open. */
     private void dismissDialogs(final TestBrowser host) throws InterruptedException {
         host.awaitMatching("adventureDialog", d -> true, "no dialog was shown");

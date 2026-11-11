@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Vector2;
 import forge.adventure.character.EnemySprite;
 import forge.adventure.data.AdventureQuestData;
 import forge.adventure.data.DifficultyData;
+import forge.adventure.data.HeroListData;
 import forge.adventure.data.WorldData;
 import forge.adventure.player.AdventurePlayer;
 import forge.adventure.pointofintrest.PointOfInterest;
@@ -13,12 +14,14 @@ import forge.adventure.util.AdventureModes;
 import forge.adventure.util.AdventureQuestController;
 import forge.adventure.util.Config;
 import forge.adventure.util.Current;
+import forge.adventure.util.UIActor;
 import forge.adventure.world.World;
 import forge.adventure.world.WorldSave;
 import forge.adventure.world.WorldSaveHeader;
 import forge.card.CardEdition;
 import forge.card.ColorSet;
 import forge.deck.Deck;
+import forge.deck.DeckProxy;
 import forge.game.GameType;
 import forge.game.GameView;
 import forge.localinstance.properties.ForgePreferences;
@@ -40,7 +43,10 @@ import forge.web.protocol.CampaignProtocol.AdventureEquip;
 import forge.web.protocol.CampaignProtocol.AdventureFight;
 import forge.web.protocol.CampaignProtocol.AdventureHud;
 import forge.web.protocol.CampaignProtocol.AdventureInventoryQuery;
+import forge.web.protocol.CampaignProtocol.AdventureModeOption;
 import forge.web.protocol.CampaignProtocol.AdventureMove;
+import forge.web.protocol.CampaignProtocol.AdventureOptions;
+import forge.web.protocol.CampaignProtocol.AdventureOptionsQuery;
 import forge.web.protocol.CampaignProtocol.AdventurePlaceholder;
 import forge.web.protocol.CampaignProtocol.AdventurePlaceholderDone;
 import forge.web.protocol.CampaignProtocol.AdventurePoi;
@@ -485,7 +491,67 @@ public final class AdventureGame implements Campaign, IHasForgeLog {
         };
     }
 
+    // Ported from NewGameScene's constructor, which fills its selectors from the plane's config
+    private static AdventureOptions options() {
+        final Config config = Config.instance();
+        final List<String> colorNames = new ArrayList<>();
+        for (final String name : config.colorIdNames()) {
+            colorNames.add(UIActor.localize(name));
+        }
+        final List<String> colorIds = List.of(config.colorIds());
+        final List<AdventureModeOption> modes = new ArrayList<>();
+        final DifficultyData[] difficulties = config.getConfigData().difficulties;
+        final List<String> difficultyNames = new ArrayList<>();
+        int defaultDifficulty = 0;
+        for (int i = 0; i < difficulties.length; i++) {
+            difficultyNames.add(difficulties[i].name);
+            if (difficulties[i].startingDifficulty) {
+                defaultDifficulty = i;
+            }
+        }
+        final String colorLabel = Localizer.getInstance().getMessage("lblColorIdentity");
+        final String deckLabel = Localizer.getInstance().getMessage("lblDeck");
+        if (difficulties.length > 0) {
+            final DifficultyData first = difficulties[0];
+            if (first.starterDecks != null) {
+                modes.add(new AdventureModeOption(AdventureModes.Standard.name(), AdventureModes.Standard.getName(), colorLabel, colorNames, colorIds));
+            }
+            if (first.constructedStarterDecks != null) {
+                modes.add(new AdventureModeOption(AdventureModes.Constructed.name(), AdventureModes.Constructed.getName(), colorLabel, colorNames, colorIds));
+            }
+            if (first.pileDecks != null) {
+                modes.add(new AdventureModeOption(AdventureModes.Pile.name(), AdventureModes.Pile.getName(), colorLabel, colorNames, colorIds));
+            }
+            if (first.commanderDecks != null) {
+                modes.add(new AdventureModeOption(AdventureModes.Commander.name(), AdventureModes.Commander.getName(), colorLabel, colorNames, colorIds));
+            }
+        }
+        if (config.hasPreconDecks()) {
+            modes.add(new AdventureModeOption(AdventureModes.Precon.name(), AdventureModes.Precon.getName(), deckLabel,
+                    List.of(config.filterPreconDecks(0).toArray(String.class)), null));
+        }
+        if (config.hasCommanderPreconDecks()) {
+            modes.add(new AdventureModeOption(AdventureModes.CommanderPrecon.name(), AdventureModes.CommanderPrecon.getName(), deckLabel,
+                    List.of(config.filterCommanderPreconDecks(0).toArray(String.class)), null));
+        }
+        modes.add(new AdventureModeOption(AdventureModes.Chaos.name(), AdventureModes.Chaos.getName(), deckLabel,
+                List.of(Localizer.getInstance().getMessage("lblRandomDeck")), null));
+        final List<String> custom = new ArrayList<>();
+        for (final DeckProxy deck : DeckProxy.getAllCustomStarterDecks()) {
+            custom.add(deck.getName());
+        }
+        if (!custom.isEmpty()) {
+            modes.add(new AdventureModeOption(AdventureModes.Custom.name(), AdventureModes.Custom.getName(), deckLabel, custom, null));
+        }
+        final List<String> editions = new ArrayList<>();
+        for (final String name : config.starterEditionNames()) {
+            editions.add(UIActor.localize(name));
+        }
+        return new AdventureOptions(List.of(HeroListData.instance().getRaces().toArray(String.class)), difficultyNames, defaultDifficulty, modes, editions);
+    }
+
     public static final Commands<Call> COMMANDS = new Commands<Call>()
+            .on(AdventureOptionsQuery.class, onShelf((c, ch, q) -> ch.send(AdventureRuntime.onUi(AdventureGame::options))))
             .on(AdventureCreate.class, onShelf((c, ch, create) -> {
                 try {
                     AdventureRuntime.onUi(() -> {

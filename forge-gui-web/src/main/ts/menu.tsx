@@ -104,6 +104,7 @@ const MENU_ART: Record<string, string> = {
   sealed: 'c:Booster Tutor|UND|1',
   conquest: 'c:Portal of Sanctuary|M20|1',
   quest: "c:Explorer's Scope|CMM|1",
+  adventure: "c:Adventurers' Guildhouse|CMR|1",
 };
 
 /** A tile's art once it has loaded, as a CSS url. The tile keeps its drawn look until then, and for good when the server has no art. */
