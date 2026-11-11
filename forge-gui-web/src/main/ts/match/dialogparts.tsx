@@ -141,12 +141,14 @@ export function BoardCard({ model, card, title, picked, onClick }: {
 export function InlineCard({ imageKey, name, title, picked, onClick }: {
   imageKey?: string; name?: string; title?: string; picked?: boolean; onClick?: () => void;
 }) {
-  const [broken, setBroken] = useState(!imageKey);
   const src = imageKey ? imageUrl(imageKey) : undefined;
+  // The address the picture failed at. A picture that arrives later has a new address
+  const [failedAt, setFailedAt] = useState<string | undefined>(undefined);
+  const broken = !src || failedAt === src;
   return (
     <div class={`card inline${broken ? ' noimg' : ''}${picked ? ' picked' : ''}`} title={title ?? ''} data-zoom={src} tabIndex={onClick ? 0 : -1}
       onClick={onClick} onMouseEnter={e => hoverCard(e.currentTarget)} onMouseLeave={() => hoverCard(null)}>
-      <img alt="" loading="lazy" src={src} onError={() => setBroken(true)} />
+      <img alt="" loading="lazy" src={src} onError={() => setFailedAt(src)} />
       <div class="frame">{name}</div>
       {picked && <span class="pick-mark" />}
     </div>

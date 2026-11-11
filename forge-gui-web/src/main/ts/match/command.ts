@@ -117,11 +117,15 @@ export function renderEmblems(root: HTMLElement, model: Model, player: PlayerVie
       if (el.classList.contains('cmd-tile')) {
         setImage(q<HTMLImageElement>(el, 'img'), src);
         el.classList.toggle('noimg', !src);
-      } else if (el.dataset.art !== (state.ImageKey ?? '')) {
-        el.dataset.art = state.ImageKey ?? '';
-        el.classList.remove('whole', 'noimg');
-        setImage(q<HTMLImageElement>(el, 'img'), src && state.ImageKey ? artUrl(state.ImageKey) : '');
-        el.classList.toggle('noimg', !src);
+      } else {
+        // The address changes when the art arrives after it was missing, which tries the art again
+        const art = src && state.ImageKey ? artUrl(state.ImageKey) : '';
+        if (el.dataset.art !== art) {
+          el.dataset.art = art;
+          el.classList.remove('whole', 'noimg');
+          setImage(q<HTMLImageElement>(el, 'img'), art);
+          el.classList.toggle('noimg', !src);
+        }
       }
       const tax = commanderTax(player, card);
       el.title = tax > 0 ? t('lblWebBoardEffectCostsMoreHere', state.Name ?? '', tax)

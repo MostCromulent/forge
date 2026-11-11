@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { LookPicker } from './lookpicker';
 import { changeUi, eased, ui } from './ui';
 import { avatarUrl } from './looks';
+import { artUrl } from './images';
 import { BackButton, HeadControls, PageHeader, PhoneHead, SetupHead, WAY_NAMES, Wordmark } from './header';
 import { isPortrait } from './form';
 import type { Actions } from './actions';
@@ -110,15 +111,15 @@ const MENU_ART: Record<string, string> = {
 function useArt(id: string): string | null {
   const key = MENU_ART[id];
   const [loaded, setLoaded] = useState<string | null>(null);
+  // auto marks the download as the page's own idea, so the server skips it when online image fetching is off
+  const src = key ? `${artUrl(key)}&auto=1` : '';
   useEffect(() => {
-    if (!key) return;
-    // auto marks the download as the page's own idea, so the server skips it when online image fetching is off
-    const src = `/sleeveart?key=${encodeURIComponent(key)}&auto=1`;
+    if (!src) return;
     const img = new Image();
     img.onload = () => setLoaded(`url("${src}")`);
     img.src = src;
     return () => { img.onload = null; };
-  }, [key]);
+  }, [src]);
   return loaded;
 }
 

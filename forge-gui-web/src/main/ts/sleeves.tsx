@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { sleeveUrl } from './looks';
 import { rememberSleeve } from './identity';
-import { imageUrl } from './images';
+import { imageUrl, artUrl } from './images';
 import { t } from './text';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -17,7 +17,7 @@ export const CENTRE = 500;
 
 /** Converts the stored 0-1000 crop offset to a CSS position. It moves the art along whichever axis overflows. */
 export const objectPosition = (value: number | undefined): string => `${(value ?? CENTRE) / 10}% ${(value ?? CENTRE) / 10}%`;
-export const artUrl = (key: string): string => `/sleeveart?key=${encodeURIComponent(key)}`;
+export { artUrl };
 
 export function SleevePicker({ model, actions, index, seat, close }: {
   model: Model; actions: Actions; index: number; seat: Seat; close: () => void;

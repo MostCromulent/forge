@@ -599,14 +599,15 @@ function Chosen({ details, listed, formats, forComputer }: { details: DeckDetail
   // Game changers are marked in the card list, whether or not the bracket's reasons are open
   const changers = new Set(details.bracket?.reasons.find(r => r.kind === 'gameChangers')?.cards ?? []);
   const [cards, view] = useDeckView();
-  // A cover whose picture fails to load leaves the plain head, so the name stays readable
+  // A cover whose picture fails to load leaves the plain head, so the name stays readable. A picture that arrives later has a new address
   const [missing, setMissing] = useState<string | null>(null);
-  const cover = details.cover && details.cover !== missing ? details.cover : null;
+  const coverSrc = details.cover ? imageUrl(details.cover) : null;
+  const cover = coverSrc !== missing ? coverSrc : null;
   return (
     <>
       <div class="dk-chosen-head">
         <div class={cover ? 'dk-banner' : 'dk-banner bare'}>
-          {cover && <img class="dk-banner-art" alt="" src={imageUrl(cover)} onError={() => setMissing(cover)} />}
+          {cover && <img class="dk-banner-art" alt="" src={cover} onError={() => setMissing(cover)} />}
           <div class="dk-chosen-title">
             <h3>{details.name || listed} <span class="pips"><Pips colors={details.colors} /></span></h3>
             <span class="seg view-seg" role="group" aria-label={t('lblWebEditorShowDeckAs')}>

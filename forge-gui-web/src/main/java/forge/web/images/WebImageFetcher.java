@@ -25,19 +25,11 @@ public final class WebImageFetcher extends ImageFetcher implements IHasForgeLog 
     @Override
     protected Runnable getDownloadTask(final String[] downloadUrls, final String destPath, final Runnable notifyObservers) {
         return () -> {
-            boolean saved = false;
-            try {
-                for (final String url : downloadUrls) {
-                    saved = fetch(url.replace("PLANECHASEBG:", ""), destPath);
-                    if (saved) {
-                        break;
-                    }
-                }
-            } finally {
-                if (saved) {
+            // As in desktop and mobile, observers hear only of a picture that arrived
+            for (final String url : downloadUrls) {
+                if (fetch(url.replace("PLANECHASEBG:", ""), destPath)) {
                     FThreads.invokeInEdtLater(notifyObservers);
-                } else {
-                    downloadFailed(destPath);
+                    return;
                 }
             }
         };

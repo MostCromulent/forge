@@ -308,9 +308,11 @@ function textData(card: DraftCard) {
 /** A card's picture. If the picture fails to load, it shows the name, cost, type and rules text in the card's shape. */
 function CardFace({ card }: { card: DraftCard }) {
   const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [card.image]);
+  const src = imageUrl(card.image);
+  // A new address is a new card, or the picture arriving after it was missing
+  useEffect(() => setFailed(false), [src]);
   if (!failed) {
-    return <img loading="lazy" alt="" draggable={false} src={imageUrl(card.image)} onError={() => setFailed(true)} />;
+    return <img loading="lazy" alt="" draggable={false} src={src} onError={() => setFailed(true)} />;
   }
   return (
     <span class="text-face">

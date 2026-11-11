@@ -546,6 +546,11 @@ public final class ToBrowser {
     public record Flash() {
     }
 
+    /** A picture the page was told is missing has been downloaded. key is the key the page asked for, and art says it is sleeve art. */
+    @Message("pictureReady")
+    public record PictureReady(String key, boolean art) {
+    }
+
     /** The game has ended. score is each player's games won in the match so far, once the engine has counted them. */
     @Message("gameOver")
     public record GameOver(List<MatchScore> score) {

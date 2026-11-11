@@ -33,6 +33,7 @@ import { goBack } from './header';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { rememberStops, restoreStops } from './match/stopmemory';
 import { byId, isTyping, relayout, saveText } from './dom';
+import { pictureArrived } from './images';
 import { initNotices, showNotice } from './notices';
 import { forgetWakeLock, keepAwake } from './wakelock';
 import { deleteDeviceDeck, listDeviceDecks, putDeviceDeck } from './deck/devicedecks';
@@ -430,6 +431,7 @@ function apply(msg: ServerMessage): void {
     case 'devDump': saveText(msg.text, 'game-state.txt', 'text/plain'); return;
     case 'deckFileText': saveText(msg.text, `${msg.name}.dck`, 'text/plain'); return;
     case 'flash': flash(); return;
+    case 'pictureReady': pictureArrived(msg.key, msg.art); break;
     default: campaigns()?.message(model, msg); break;
   }
   schedule();

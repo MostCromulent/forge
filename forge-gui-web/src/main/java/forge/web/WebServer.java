@@ -13,6 +13,7 @@ import forge.web.images.CardThumbnails;
 import forge.web.images.SkinSprites;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.PageText;
+import forge.web.protocol.ToBrowser.PictureReady;
 import forge.web.protocol.Wire;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
@@ -24,6 +25,8 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -54,6 +57,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.io.File;
 import java.io.IOException;
@@ -95,6 +99,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
     private final String token;
     private final Channel channel;
     private final PageBundle bundle = new PageBundle();
+    /** Every open page. A closed socket leaves the group by itself. */
+    private final ChannelGroup browsers = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     public interface Endpoint {
         /** The id tells browsers apart across a reload. local says the browser is on this machine. */
@@ -203,6 +209,11 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
 
     static void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type) {
         respond(ctx, status, body, type, null, "no-cache", null);
+    }
+
+    /** Sends one of the messages in {@link forge.web.protocol.ToBrowser} to every open page. */
+    private void toEveryBrowser(final Record message) {
+        browsers.writeAndFlush(new TextWebSocketFrame(Wire.WRITER.toJson(Wire.encode(message))));
     }
 
     static void notFound(final ChannelHandlerContext ctx) {
@@ -344,7 +355,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                             .websocketPath("/ws").checkStartsWith(true).maxFramePayloadLength(1 << 22)
                             .allowExtensions(true).build()),
                     new StaticFiles(),
-                    new BrowserSocket(endpoint));
+                    new BrowserSocket(endpoint, browsers));
         }
     }
 
@@ -396,7 +407,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 if (key == null) {
                     notFound(ctx);
                 } else {
-                    ImageReplies.serveSleeveArt(ctx, key, "1".equals(param(q, "auto")));
+                    ImageReplies.serveSleeveArt(ctx, key, "1".equals(param(q, "auto")), () -> toEveryBrowser(new PictureReady(key, true)));
                 }
                 return;
             }
@@ -428,7 +439,8 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 if (key == null) {
                     notFound(ctx);
                 } else {
-                    ImageReplies.serveImage(ctx, key, String.valueOf(CardThumbnails.WIDTH).equals(param(q, "w")));
+                    ImageReplies.serveImage(ctx, key, String.valueOf(CardThumbnails.WIDTH).equals(param(q, "w")),
+                            () -> toEveryBrowser(new PictureReady(key, false)));
                 }
                 return;
             }
@@ -468,11 +480,13 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
 
     private static final class BrowserSocket extends SimpleChannelInboundHandler<WebSocketFrame> {
         private final Endpoint endpoint;
+        private final ChannelGroup browsers;
         private BrowserChannel browser;
         private ScheduledFuture<?> pings;
 
-        BrowserSocket(final Endpoint endpoint) {
+        BrowserSocket(final Endpoint endpoint, final ChannelGroup browsers) {
             this.endpoint = endpoint;
+            this.browsers = browsers;
         }
 
         @Override
@@ -480,6 +494,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
             if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete done) {
                 ServerTraffic.carrying(ctx.channel(), ServerTraffic.Kind.GAME);
                 final Channel ch = ctx.channel();
+                browsers.add(ch);
                 browser = new BrowserChannel() {
                     @Override
                     public void send(final JsonObject message) {
