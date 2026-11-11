@@ -49,7 +49,7 @@ public class GameSimulator {
         eval = new GameStateEvaluator();
 
         origLines = new ArrayList<>();
-        debugLines = origLines;
+        debugLines.set(origLines);
 
         debugPrint = false;
         origScore = eval.getScoreForGameState(origGame, origAiPlayer);
@@ -63,7 +63,7 @@ public class GameSimulator {
         // want to compare to the eval score after simulating.
         if (COPY_STACK && !origGame.getStackZone().isEmpty()) {
             origLines = new ArrayList<>();
-            debugLines = origLines;
+            debugLines.set(origLines);
             Game copyOrigGame = copier.makeCopy();
             Player copyOrigAiPlayer = copyOrigGame.getPlayers().get(1);
             resolveStack(copyOrigGame, copyOrigGame.getPlayers().get(0));
@@ -71,7 +71,7 @@ public class GameSimulator {
         }
 
         debugPrint = false;
-        debugLines = null;
+        debugLines.remove();
     }
 
     /**
@@ -131,12 +131,12 @@ public class GameSimulator {
     private void ensureGameCopyScoreMatches(Game origGame, Player origAiPlayer) {
         eval.setDebugging(true);
         List<String> simLines = new ArrayList<>();
-        debugLines = simLines;
+        debugLines.set(simLines);
         Score simScore = eval.getScoreForGameState(simGame, aiPlayer);
         if (!simScore.equals(origScore)) {
             // Re-eval orig with debug printing.
             origLines = new ArrayList<>();
-            debugLines = origLines;
+            debugLines.set(origLines);
             eval.getScoreForGameState(origGame, origAiPlayer);
             // Print debug info.
             printDiff(origLines, simLines);
@@ -180,13 +180,15 @@ public class GameSimulator {
     }
 
     public static boolean debugPrint;
-    public static List<String> debugLines;
+    // Kept per thread: a simulation on another game's thread must not add to this one's lines
+    private static final ThreadLocal<List<String>> debugLines = new ThreadLocal<>();
     public static void debugPrint(String str) {
         if (debugPrint) {
             System.out.println(str);
         }
-        if (debugLines != null) {
-            debugLines.add(str);
+        final List<String> lines = debugLines.get();
+        if (lines != null) {
+            lines.add(str);
         }
     }
 
@@ -289,12 +291,12 @@ public class GameSimulator {
         if (debugPrint) {
             debugPrint("SimGame:");
             simLines = new ArrayList<>();
-            debugLines = simLines;
+            debugLines.set(simLines);
             debugPrint = false;
         }
         Score score = eval.getScoreForGameState(simGame, aiPlayer);
         if (simLines != null) {
-            debugLines = null;
+            debugLines.remove();
             debugPrint = true;
             printDiff(origLines, simLines);
         }

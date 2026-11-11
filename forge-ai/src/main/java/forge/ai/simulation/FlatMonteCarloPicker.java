@@ -105,13 +105,14 @@ public final class FlatMonteCarloPicker {
     private static final double AGGRO_HOLD_FACTOR = 0.5;
 
     /** Why the last rollout that returned null did so, for the statistics (only read right after such a rollout). */
-    private static volatile String lastRolloutProblem = "?";
+    private static final ThreadLocal<String> lastRolloutProblem = ThreadLocal.withInitial(() -> "?");
     /**
      * When a playout must give up: twice the decision's budget, the same as the hard deadline. The soft and hard deadlines are only checked
      * between rollouts, and a rollout is a series of heuristic decisions of its own, so one slow position could
-     * otherwise take several times the budget (5 s were seen with the 2.5 s desktop budget).
+     * otherwise take several times the budget (5 s were seen with the 2.5 s desktop budget). Kept per thread, because games on
+     * other threads make decisions of their own.
      */
-    private static volatile long rolloutDeadlineNanos = Long.MAX_VALUE;
+    private static final ThreadLocal<Long> rolloutDeadlineNanos = ThreadLocal.withInitial(() -> Long.MAX_VALUE);
     private static final int ROLLOUT_DEADLINE_FACTOR = 2;
     /** Decisions slower than this are written down in the statistics, with where the time went. */
     private static final long SLOW_DECISION_NANOS = TimeUnit.MILLISECONDS.toNanos(2500);
@@ -126,7 +127,7 @@ public final class FlatMonteCarloPicker {
     }
 
     private static void checkRolloutDeadline() {
-        if (System.nanoTime() > rolloutDeadlineNanos) {
+        if (System.nanoTime() > rolloutDeadlineNanos.get()) {
             throw new RolloutTooSlow();
         }
     }
@@ -518,7 +519,7 @@ public final class FlatMonteCarloPicker {
             reportFailure(e);
             return new Result(heuristicChoice, heuristicChoice == null, false, 0, 0, System.nanoTime() - start, "error");
         } finally {
-            rolloutDeadlineNanos = Long.MAX_VALUE;
+            rolloutDeadlineNanos.remove();
         }
     }
 
@@ -550,7 +551,7 @@ public final class FlatMonteCarloPicker {
         }
         final long softDeadline = start + budget;
         final long hardDeadline = start + HARD_DEADLINE_FACTOR * budget;
-        rolloutDeadlineNanos = start + ROLLOUT_DEADLINE_FACTOR * budget;
+        rolloutDeadlineNanos.set(start + ROLLOUT_DEADLINE_FACTOR * budget);
         final long baseSeed = MyRandom.getRandom().nextLong();
 
         final int playoutPlays = playoutLength(player, cfg);
@@ -621,7 +622,7 @@ public final class FlatMonteCarloPicker {
                 }
                 if (value == null) {
                     invalid[c] = true;
-                    FlatMonteCarloStats.noteUnsimulatable(cand.label() + (!stillWanted ? " [revalidate]" : !aimed ? " [target]" : " [" + lastRolloutProblem + "]"));
+                    FlatMonteCarloStats.noteUnsimulatable(cand.label() + (!stillWanted ? " [revalidate]" : !aimed ? " [target]" : " [" + lastRolloutProblem.get() + "]"));
                 } else {
                     sum[c] += value;
                     vals[c][count[c]] = value;
@@ -1680,16 +1681,16 @@ public final class FlatMonteCarloPicker {
         } catch (final AITimeoutTracker.Expired e) {
             throw e;
         } catch (final RolloutTooSlow e) {
-            lastRolloutProblem = "slow";
+            lastRolloutProblem.set("slow");
             return null;
         } catch (final RuntimeException e) {
             reportFailure(e);
-            lastRolloutProblem = "error";
+            lastRolloutProblem.set("error");
             return null;
         } catch (final StackOverflowError | OutOfMemoryError e) {
             // A runaway copy must not kill the real game either (Android has small heaps).
             reportFailure(new RuntimeException(e));
-            lastRolloutProblem = "error";
+            lastRolloutProblem.set("error");
             return null;
         } finally {
             MyRandom.setRandom(savedRandom);
@@ -1700,7 +1701,7 @@ public final class FlatMonteCarloPicker {
                                     final Config cfg, final int playoutPlays) {
         if (!cand.isHold()) {
             if (!sim.applySpellAbility(cand.sa)) {
-                lastRolloutProblem = "apply";
+                lastRolloutProblem.set("apply");
                 return null;
             }
             playOut(simGame, simAi, playoutPlays);
@@ -1748,7 +1749,7 @@ public final class FlatMonteCarloPicker {
             reportFailure(e);
             return new Result(null, false, false, 0, 0, System.nanoTime() - start, "error");
         } finally {
-            rolloutDeadlineNanos = Long.MAX_VALUE;
+            rolloutDeadlineNanos.remove();
         }
     }
 
@@ -1842,7 +1843,7 @@ public final class FlatMonteCarloPicker {
         final forge.game.combat.Combat simCombat = ph.getCombat();
         if (simCombat == null || !ph.is(PhaseType.COMBAT_DECLARE_ATTACKERS)
                 || !(simAi.getController() instanceof PlayerControllerAi)) {
-            lastRolloutProblem = "no-combat";
+            lastRolloutProblem.set("no-combat");
             return null;
         }
         final Map<Card, GameEntity> mapped = new LinkedHashMap<>();
@@ -1850,7 +1851,7 @@ public final class FlatMonteCarloPicker {
             final Card c = sim.getGameCopier().find(e.getKey());
             final GameEntity d = sim.getGameCopier().find(e.getValue());
             if (c == null || d == null) {
-                lastRolloutProblem = "attack-map";
+                lastRolloutProblem.set("attack-map");
                 return null;
             }
             mapped.put(c, d);
@@ -1949,7 +1950,7 @@ public final class FlatMonteCarloPicker {
         final Player simOpp = simAi.getWeakestOpponent();
         if (!cand.isHold()) {
             if (!sim.applySpellAbility(cand.sa, false)) {
-                lastRolloutProblem = "apply";
+                lastRolloutProblem.set("apply");
                 return null;
             }
             GameSimulator.resolveOwnTop(simGame, simAi, simOpp);
@@ -1979,7 +1980,7 @@ public final class FlatMonteCarloPicker {
         final Player simOpp = simAi.getWeakestOpponent();
         if (!cand.isHold()) {
             if (!sim.applySpellAbility(cand.sa, false)) {
-                lastRolloutProblem = "apply";
+                lastRolloutProblem.set("apply");
                 return null;
             }
             GameSimulator.resolveOwnTop(simGame, simAi, simOpp);
@@ -2346,14 +2347,14 @@ public final class FlatMonteCarloPicker {
                                        final Candidate cand, final Config cfg, final int playoutPlays) {
         final Player simOpp = simAi.getWeakestOpponent();
         if (!cand.isHold() && !sim.applySpellAbility(cand.sa)) {
-            lastRolloutProblem = "apply";
+            lastRolloutProblem.set("apply");
             return null;
         }
         final PhaseHandler ph = simGame.getPhaseHandler();
         if (!simGame.isGameOver()
                 && !ph.devAdvanceThroughTurnEnd(PhaseType.MAIN1, () -> GameSimulator.resolveStack(simGame, simOpp))
                 && !simGame.isGameOver()) {
-            lastRolloutProblem = "advance";
+            lastRolloutProblem.set("advance");
             return null;
         }
         if (!simGame.isGameOver() && ph.isPlayerTurn(simAi)) {

@@ -102,13 +102,16 @@ public final class StormSolver {
     private static final boolean TRACE = Boolean.getBoolean("storm.trace");
     /** The plays that make the hand better when no kill was found (null: nothing worth doing). */
     static List<Step> lastSetup() {
-        return lastSetup;
+        return lastSetup.get();
     }
 
     /** What the last search that found no line saw: the start, the best state and why it stopped. */
-    private static String lastDiagnostic = "";
-    /** The plays of the best state to end the turn in when no kill was found (see {@link ComboPlan#setupScore}), or null. */
-    private static volatile List<Step> lastSetup;
+    private static final ThreadLocal<String> lastDiagnostic = ThreadLocal.withInitial(() -> "");
+    /**
+     * The plays of the best state to end the turn in when no kill was found (see {@link ComboPlan#setupScore}), or null.
+     * Kept per thread, as is the diagnostic, because games on other threads search at the same time.
+     */
+    private static final ThreadLocal<List<Step>> lastSetup = new ThreadLocal<>();
     /** A setup play has to make the hand this much better, or the AI does what it always did. */
     private static final int SETUP_MIN_GAIN = 30;
 
@@ -247,7 +250,7 @@ public final class StormSolver {
                 }
                 line = null;
             }
-            lastNote = "no winning line: " + lastDiagnostic;
+            lastNote = "no winning line: " + lastDiagnostic.get();
             return null;
         }
         solves = 0; // a line was found: what was searched in vain before does not count against playing it
@@ -376,7 +379,7 @@ public final class StormSolver {
 
     /** What the last search that found no line saw (see {@link #solve}). */
     public static String lastDiagnostic() {
-        return lastDiagnostic;
+        return lastDiagnostic.get();
     }
 
     /** How many different orders of the unseen library are tried: Ad Nauseam, Infernal Tutor and the like draw or find cards at random. */
@@ -413,7 +416,7 @@ public final class StormSolver {
         addWishTargets(ai, root);
         root.releaseCopier(); // the shuffle above was the last use of the link to the real game
 
-        lastSetup = null;
+        lastSetup.remove();
         int setupBest = combos.setupScore(root.getSimulatedAiPlayer());
         final int setupStart = setupBest;
         List<Step> setupSteps = null;
@@ -542,11 +545,11 @@ public final class StormSolver {
             }
         }
         if (setupSteps != null && setupBest - setupStart >= SETUP_MIN_GAIN) {
-            lastSetup = Collections.unmodifiableList(setupSteps);
+            lastSetup.set(Collections.unmodifiableList(setupSteps));
         }
-        lastDiagnostic = "start {" + startState + "} searched " + nodes + " states in " + (System.nanoTime() - start) / 1_000_000
+        lastDiagnostic.set("start {" + startState + "} searched " + nodes + " states in " + (System.nanoTime() - start) / 1_000_000
                 + " ms (" + (open.isEmpty() ? "all explored" : nodes >= maxNodes ? "state limit" : lowMemory() ? "memory limit" : "time limit")
-                + ", games kept " + cap + ", heap " + heap() + "); best score " + bestScore + " after " + bestSteps + " {" + bestState + "}" + trail;
+                + ", games kept " + cap + ", heap " + heap() + "); best score " + bestScore + " after " + bestSteps + " {" + bestState + "}" + trail);
         return null;
     }
 
