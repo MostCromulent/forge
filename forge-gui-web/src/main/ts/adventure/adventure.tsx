@@ -6,6 +6,8 @@ import { StepForm, type Step, type Ticket } from '../stepform';
 import { CampaignShelf, CampaignShell } from '../campaign/campaign';
 import { World } from './world';
 import { DialogBox, Hud, TownNotice } from './hud';
+import { Inventory } from './inventory';
+import { Reveal } from '../campaign/reward';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { AdventureModeOption, AdventureSave } from '../protocol';
@@ -167,22 +169,36 @@ const ENCOUNTER_MS = 900;
 function Open({ model, actions }: { model: Model; actions: Actions }) {
   const state = model.adventureState;
   const encounter = model.adventureEncounter;
+  const [inventory, setInventory] = useState(false);
   useEffect(() => {
     if (!encounter) return;
     const timer = setTimeout(() => actions.adventureFight(), ENCOUNTER_MS);
     return () => clearTimeout(timer);
   }, [encounter]);
+  const busy = !!model.adventurePlaceholder || !!model.adventureDialog || !!encounter || !!model.reward;
+  // KeyBinding's Inventory and Deck keys. The inventory closes itself on its own key
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (busy || inventory || (e.target as HTMLElement)?.closest('input, textarea')) return;
+      if (e.code === 'KeyI') { e.preventDefault(); setInventory(true); }
+      if (e.code === 'KeyE' && state) { e.preventDefault(); actions.adventureEditDeck(model.adventureInventory?.selectedDeck ?? 0); }
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [busy, inventory, state, model.adventureInventory]);
   if (!state) return <p class="muted pools-wait">{t('lblWebAdventureReading')}</p>;
   const tick = model.adventureTick;
   const hud = tick?.hud ?? state.hud;
-  const frozen = !!model.adventurePlaceholder || !!model.adventureDialog || !!encounter;
+  const frozen = busy || inventory;
   return (
     <div class="adv-page">
       <World state={state} enemies={tick?.enemies ?? state.enemies} speed={tick?.speed ?? state.speed} frozen={frozen}
         navAngle={hud.navAngle ?? null} encounter={encounter?.enemyId ?? null} actions={actions} />
-      <Hud hud={hud} actions={actions} />
+      <Hud hud={hud} actions={actions} openInventory={() => setInventory(true)} />
       {model.adventureDialog ? <DialogBox dialog={model.adventureDialog} actions={actions} />
         : model.adventurePlaceholder ? <TownNotice name={model.adventurePlaceholder.name} actions={actions} /> : null}
+      {inventory && <Inventory page={model.adventureInventory} actions={actions} close={() => setInventory(false)} />}
+      {model.reward && <Reveal key={model.reward.steps.length} reward={model.reward} onOwed={() => {}} done={() => actions.rewardClaim()} />}
     </div>
   );
 }

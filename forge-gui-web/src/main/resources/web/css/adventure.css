@@ -13,3 +13,13 @@
 .adv-dialog-text { white-space: pre-line; line-height: 1.5; }
 .adv-choices { display: flex; flex-direction: column; gap: 6px; }
 .adv-choices button { text-align: left; }
+.adv-inventory { width: min(94vw, 640px); max-height: 86vh; overflow-y: auto; }
+.adv-decks, .adv-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.adv-decks li, .adv-items li { display: flex; align-items: center; gap: 8px; }
+.adv-decks li > span { flex: 1; }
+.adv-decks li.current > span { font-weight: 700; }
+.adv-items li.equipped .adv-item-text b::after { content: ' ✓'; }
+.adv-item-text { flex: 1; display: flex; flex-direction: column; }
+.adv-item-text .dim { opacity: .7; font-size: .9em; white-space: pre-line; }
+.adv-item-pic { flex: none; display: inline-block; position: relative; }
+.adv-item-sprite { position: absolute; left: 0; top: 0; transform-origin: 0 0; image-rendering: pixelated; background-repeat: no-repeat; }
