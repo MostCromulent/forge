@@ -5,13 +5,14 @@ import { Shelf as Cards } from '../shelf';
 import { StepForm, type Step, type Ticket } from '../stepform';
 import { CampaignShelf, CampaignShell } from '../campaign/campaign';
 import { World } from './world';
+import { DialogBox, Hud, TownNotice } from './hud';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { AdventureModeOption, AdventureSave } from '../protocol';
 import { t, shortDay } from '../text';
 
 /** Text with mobile's markup taken out: colour and icon tags, and the bar a save's name puts before its place. */
-export const plain = (text: string) => text.replace(/\[[^\]]*\]/g, '').replace(/│/g, ' · ').replace(/\s+/g, ' ').trim();
+export const plain = (text: string) => text.replace(/\[[^\]]*\]/g, '').replace(/│/g, ' · ').replace(/[ \t]+/g, ' ').trim();
 
 export function Adventure({ model, actions }: { model: Model; actions: Actions }) {
   const saves = model.adventureSaves;
@@ -159,15 +160,29 @@ export function NewAdventure({ model, actions }: { model: Model; actions: Action
   );
 }
 
-/** An open save: its world map. The map holds still while a dialog, a town or an encounter is shown over it. */
+/** How long the encounter shows before the battle starts, as WorldStage pauses for the attack animations. */
+const ENCOUNTER_MS = 900;
+
+/** An open save: its world map, with the HUD over it. The map holds still while a dialog, a town or an encounter is shown. */
 function Open({ model, actions }: { model: Model; actions: Actions }) {
   const state = model.adventureState;
+  const encounter = model.adventureEncounter;
+  useEffect(() => {
+    if (!encounter) return;
+    const timer = setTimeout(() => actions.adventureFight(), ENCOUNTER_MS);
+    return () => clearTimeout(timer);
+  }, [encounter]);
   if (!state) return <p class="muted pools-wait">{t('lblWebAdventureReading')}</p>;
   const tick = model.adventureTick;
-  const frozen = !!model.adventurePlaceholder || !!model.adventureDialog || !!model.adventureEncounter;
+  const hud = tick?.hud ?? state.hud;
+  const frozen = !!model.adventurePlaceholder || !!model.adventureDialog || !!encounter;
   return (
     <div class="adv-page">
-      <World state={state} enemies={tick?.enemies ?? state.enemies} speed={tick?.speed ?? state.speed} frozen={frozen} actions={actions} />
+      <World state={state} enemies={tick?.enemies ?? state.enemies} speed={tick?.speed ?? state.speed} frozen={frozen}
+        navAngle={hud.navAngle ?? null} encounter={encounter?.enemyId ?? null} actions={actions} />
+      <Hud hud={hud} actions={actions} />
+      {model.adventureDialog ? <DialogBox dialog={model.adventureDialog} actions={actions} />
+        : model.adventurePlaceholder ? <TownNotice name={model.adventurePlaceholder.name} actions={actions} /> : null}
     </div>
   );
 }

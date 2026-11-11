@@ -2,3 +2,14 @@
 .adv-page { flex: 1; min-height: 0; position: relative; display: flex; }
 .adv-stage { flex: 1; min-height: 0; display: grid; place-items: center; background: #000; overflow: hidden; }
 .adv-canvas { image-rendering: pixelated; touch-action: none; cursor: pointer; }
+.adv-hud { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; gap: 8px; align-items: center; pointer-events: none; }
+.adv-hud > * { pointer-events: auto; }
+.adv-hud .sp { flex: 1; }
+.adv-chip { background: #000a; color: #fff; padding: 4px 10px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+.adv-menu { position: absolute; top: 40px; right: 0; display: flex; flex-direction: column; gap: 4px; background: var(--panel, #1b2230); padding: 6px; border-radius: 8px; }
+.adv-notices { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
+.adv-notices p { margin: 0; white-space: pre-line; background: #000c; color: #fff; padding: 4px 12px; border-radius: 6px; }
+.adv-dialog { width: min(92vw, 560px); }
+.adv-dialog-text { white-space: pre-line; line-height: 1.5; }
+.adv-choices { display: flex; flex-direction: column; gap: 6px; }
+.adv-choices button { text-align: left; }

@@ -32,13 +32,19 @@ export function cameraAt(x: number, y: number, worldW: number, worldH: number): 
   return [Math.min(Math.max(VIEW_W / 2, x), worldW - VIEW_W / 2), Math.min(Math.max(VIEW_H / 2, y), worldH - VIEW_H / 2)];
 }
 
-export function World({ state, enemies, speed, frozen, actions }: {
-  state: AdventureState; enemies: AdventureEnemy[]; speed: number; frozen: boolean; actions: Actions;
+/** Whether two boxes overlap, as libgdx Rectangle.overlaps tests them. */
+const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+/** The minimap's width on the canvas, in world pixels of the view. */
+const MINIMAP_W = 72;
+
+export function World({ state, enemies, speed, frozen, navAngle, encounter, actions }: {
+  state: AdventureState; enemies: AdventureEnemy[]; speed: number; frozen: boolean; navAngle: number | null; encounter: number | null; actions: Actions;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   // What the frame loop reads. Props change on every server message, so the loop reads them from here instead of restarting
-  const live = useRef({ enemies, speed, frozen });
-  live.current = { enemies, speed, frozen };
+  const live = useRef({ enemies, speed, frozen, navAngle, encounter });
+  live.current = { enemies, speed, frozen, navAngle, encounter };
 
   useEffect(() => {
     const el = canvas.current!;
@@ -58,6 +64,13 @@ export function World({ state, enemies, speed, frozen, actions }: {
     const decorations = new Map<string, Decoration[] | null>();
     const enemyAnims = new Map<number, Animator>();
     const enemyLast = new Map<number, [number, number]>();
+    // The last two enemy lists and when each came. Enemies are drawn between them, a tick behind, so they move smoothly
+    let ticks: { at: number; list: AdventureEnemy[] }[] = [];
+    // The point of interest the hero stands in. It is entered again only after the hero has left it, as WorldStage.collidingPoint does
+    let lockedPoi: string | null = null;
+    let fought: number | null = null;
+    const minimap = new Image();
+    minimap.src = `/adv/minimap?w=${state.world}`;
     let stopped = false;
     let lastFrame = performance.now();
     let lastReport = 0;
@@ -131,7 +144,14 @@ export function World({ state, enemies, speed, frozen, actions }: {
       if (stopped) return;
       const dt = Math.min(0.1, (now - lastFrame) / 1000);
       lastFrame = now;
-      const { enemies: foes, speed: walk, frozen: still } = live.current;
+      const { enemies: latest, speed: walk, frozen: still, navAngle: nav, encounter: caught } = live.current;
+      if (!ticks.length || ticks[ticks.length - 1].list !== latest) ticks = [...ticks.slice(-1), { at: now, list: latest }];
+      const between = Math.min(1, (now - ticks[ticks.length - 1].at) / REPORT_MS);
+      const before = ticks.length > 1 ? ticks[0].list : latest;
+      const foes = latest.map(e => {
+        const was = before.find(b => b.id === e.id);
+        return was ? { ...e, x: was.x + (e.x - was.x) * between, y: was.y + (e.y - was.y) * between } : e;
+      });
 
       // Ported from GameStage.act: the pointer wins over the keys, and the move is the walking speed in the chosen direction
       let dx = 0;
@@ -154,10 +174,24 @@ export function World({ state, enemies, speed, frozen, actions }: {
         hero.y += my;
         heroAnim?.set('Walk');
         heroAnim?.face(directionOf(dx, dy));
-      } else {
+      } else if (caught === null) {
         heroAnim?.set('Idle');
       }
+      // Ported from WorldStage.onActing: both sides play their attack when an enemy catches the hero
+      if (caught !== null && fought !== caught) {
+        fought = caught;
+        heroAnim?.set('Attack');
+        enemyAnims.get(caught)?.set('Attack');
+      }
       heroAnim?.tick(dt);
+      // Ported from WorldStage.handlePointsOfInterestCollision
+      const box = heroBox(hero.x, hero.y, hero.w, hero.h);
+      const touching = state.pois.find(p => p.active && overlaps(box, { x: p.x, y: p.y, w: p.w, h: p.h }));
+      if (lockedPoi !== null && touching?.id !== lockedPoi) lockedPoi = null;
+      if (!still && touching && touching.id !== lockedPoi) {
+        lockedPoi = touching.id;
+        actions.adventureEnterPoi(touching.id);
+      }
       el.dataset.x = String(Math.round(hero.x));
       el.dataset.y = String(Math.round(hero.y));
       if (now - lastReport >= REPORT_MS || moving !== movingReported) {
@@ -208,7 +242,7 @@ export function World({ state, enemies, speed, frozen, actions }: {
         const last = enemyLast.get(e.id);
         if (last && (last[0] !== e.x || last[1] !== e.y)) anim.face(directionOf(e.x - last[0], e.y - last[1]));
         enemyLast.set(e.id, [e.x, e.y]);
-        anim.set(e.animation === 'Walk' ? 'Walk' : 'Idle');
+        if (e.id !== caught) anim.set(e.animation === 'Walk' ? 'Walk' : 'Idle');
         anim.tick(dt);
         const f = anim.frame();
         if (f) drawn.push({ y: e.y, draw: (c, t, l) => drawFrame(c, a.picture!, f, e.x - l, t - e.y - f.h) });
@@ -219,8 +253,12 @@ export function World({ state, enemies, speed, frozen, actions }: {
       // SpriteGroup draws the highest first, so what stands lower on the map covers it
       drawn.sort((a, b) => b.y - a.y);
       for (const d of drawn) d.draw(g, top, left);
+      if (nav !== null) drawArrow(g, hero.x + hero.w / 2 - left, top - hero.y - hero.h / 2, nav);
+      if (minimap.complete && minimap.naturalWidth) drawMinimap(g, minimap, hero.x / worldW, hero.y / worldH);
       requestAnimationFrame(frame);
     };
+    // A hero already standing in a point of interest, as after leaving a town, does not enter it again until it walks out
+    lockedPoi = state.pois.find(p => p.active && overlaps(heroBox(hero.x, hero.y, hero.w, hero.h), { x: p.x, y: p.y, w: p.w, h: p.h }))?.id ?? null;
     requestAnimationFrame(frame);
     return () => {
       stopped = true;
@@ -243,6 +281,40 @@ function drawFrame(g: CanvasRenderingContext2D, picture: HTMLImageElement, f: { 
   g.scale(-1, 1);
   g.drawImage(picture, f.x, f.y, f.w, f.h, 0, 0, f.w, f.h);
   g.restore();
+}
+
+/** The quest arrow round the hero, pointing at the tracked quest's target, as NavArrowActor draws it. angle is counterclockwise from east. */
+function drawArrow(g: CanvasRenderingContext2D, x: number, y: number, angle: number) {
+  g.save();
+  g.translate(Math.round(x), Math.round(y));
+  g.rotate(-angle * Math.PI / 180);
+  g.fillStyle = '#ffd34d';
+  g.strokeStyle = '#000';
+  g.beginPath();
+  g.moveTo(22, 0);
+  g.lineTo(14, -5);
+  g.lineTo(14, 5);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.restore();
+}
+
+/** The whole world small in the top right corner, with the hero's place marked. fx and fy are the hero's place as a fraction of the world. */
+function drawMinimap(g: CanvasRenderingContext2D, map: HTMLImageElement, fx: number, fy: number) {
+  const h = Math.round(MINIMAP_W * map.naturalHeight / map.naturalWidth);
+  const x = VIEW_W - MINIMAP_W - 4;
+  const y = 4;
+  g.globalAlpha = 0.85;
+  g.drawImage(map, x, y, MINIMAP_W, h);
+  g.globalAlpha = 1;
+  g.strokeStyle = '#000';
+  g.strokeRect(x - 0.5, y - 0.5, MINIMAP_W + 1, h + 1);
+  // A white mark in a black frame stands out by brightness on any biome
+  g.fillStyle = '#000';
+  g.fillRect(Math.round(x + fx * MINIMAP_W) - 2, Math.round(y + (1 - fy) * h) - 2, 5, 5);
+  g.fillStyle = '#fff';
+  g.fillRect(Math.round(x + fx * MINIMAP_W) - 1, Math.round(y + (1 - fy) * h) - 1, 3, 3);
 }
 
 function drawPoi(g: CanvasRenderingContext2D, picture: HTMLImageElement, p: AdventurePoi, top: number, left: number) {

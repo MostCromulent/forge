@@ -38,3 +38,30 @@ test('a new adventure starts on its world map', async ({ page }) => {
   await expect(page.locator('[data-testid=adventure-world]')).toBeVisible({ timeout: 90_000 });
   await expect.poll(() => painted(page), { timeout: 30_000 }).toBe(true);
 });
+
+/** Picks the first offered choice of each quest dialog page until none is open. */
+async function dismissDialogs(page: Page): Promise<void> {
+  const dialog = page.locator('[data-testid=adventure-dialog]');
+  await dialog.waitFor({ timeout: 30_000 });
+  for (let i = 0; i < 30 && await dialog.count(); i++) {
+    await dialog.locator('.adv-choices button:not([disabled])').first().click();
+    await page.waitForTimeout(150);
+  }
+  await expect(dialog).toHaveCount(0);
+}
+
+// Fails if the spawn town's notice cannot be left, the HUD is not shown, or the hero cannot walk on the world map afterwards
+test('the hero leaves the spawn town and walks', async ({ page }) => {
+  await newAdventure(page);
+  await dismissDialogs(page);
+  await page.locator('[data-testid=adventure-town]').getByRole('button', { name: 'Continue' }).click();
+  await expect(page.locator('[data-testid=adventure-hud]')).toContainText('♥');
+  const world = page.locator('[data-testid=adventure-world]');
+  const before = Number(await world.getAttribute('data-x')) + Number(await world.getAttribute('data-y'));
+  for (const key of ['ArrowRight', 'ArrowUp', 'ArrowLeft', 'ArrowDown']) {
+    await page.keyboard.down(key);
+    await page.waitForTimeout(700);
+    await page.keyboard.up(key);
+  }
+  await expect.poll(async () => Number(await world.getAttribute('data-x')) + Number(await world.getAttribute('data-y'))).not.toBe(before);
+});
