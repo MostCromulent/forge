@@ -26,7 +26,8 @@ final class CardDetails {
     }
 
     static PlayerDetail player(final PlayerView player) {
-        final List<String> details = player.getDetailsList();
+        // The name comes first, and the commander damage messages end in a line break of their own, which leaves blank lines
+        final List<String> details = player.getDetails().lines().skip(1).filter(line -> !line.isBlank()).toList();
         // The browser draws commander damage itself, so those lines are left out. They end the list, after the cast counts
         final int casts = player.getCommanders() == null ? 0 : 1 + player.getCommanders().size();
         final int damage = Math.max(0, player.getPlayerCommanderInfo().size() - casts);
