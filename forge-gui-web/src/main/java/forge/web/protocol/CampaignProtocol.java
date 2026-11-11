@@ -452,4 +452,50 @@ public final class CampaignProtocol {
     /** An enemy on the world map. animation is a CharacterSprite animation name. */
     public record AdventureEnemy(int id, String atlas, float x, float y, String animation, boolean flying, boolean boss) {
     }
+
+    /**
+     * The world map an open adventure is on. world names the world in the picture addresses. x and y are where the player stands,
+     * in world pixels counted from the bottom left. speed is the player's walking speed in pixels per second.
+     */
+    @Message("adventureState")
+    public record AdventureState(String world, int width, int height, int tileSize, int chunkSize, float x, float y, String heroAtlas,
+            float speed, List<AdventurePoi> pois, List<AdventureEnemy> enemies, AdventureHud hud) {
+    }
+
+    /** A point of interest. Its picture is the region at rx, ry, as wide and high as the point, in the atlas's picture. */
+    public record AdventurePoi(String id, String name, float x, float y, float w, float h, String atlas, int rx, int ry, boolean active,
+            boolean visited, boolean bookmarked, boolean dungeon) {
+    }
+
+    /** navAngle points to the tracked quest's target, in degrees counterclockwise from east, or is null. */
+    public record AdventureHud(int life, int maxLife, int gold, int shards, @Nullable Float navAngle, List<String> notifications,
+            @Nullable String announcement) {
+    }
+
+    /** The answer to each move: the enemies, and the player's speed and balances as they now are. */
+    @Message("adventureTick")
+    public record AdventureTick(List<AdventureEnemy> enemies, float speed, AdventureHud hud) {
+    }
+
+    @Message("adventureEncounter")
+    public record AdventureEncounter(int enemyId, String enemyAtlas, String enemyName) {
+    }
+
+    /** The player went into a point of interest whose map the browser cannot show yet. */
+    @Message("adventurePlaceholder")
+    public record AdventurePlaceholder(String name) {
+    }
+
+    /** Where the browser has moved the player, sent several times a second while the world map is shown. */
+    @Command("adventureMove")
+    public record AdventureMove(float x, float y, boolean moving) {
+    }
+
+    @Command("adventureEnterPoi")
+    public record AdventureEnterPoi(String id) {
+    }
+
+    @Command("adventurePlaceholderDone")
+    public record AdventurePlaceholderDone() {
+    }
 }

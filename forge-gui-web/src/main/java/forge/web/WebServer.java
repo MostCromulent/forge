@@ -485,6 +485,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         final Integer y = Ints.tryParse(String.valueOf(param(q, "y")));
         final byte[] body = switch (path) {
             case "/adv/chunk" -> x == null || y == null ? null : WorldImages.chunk(x, y);
+            case "/adv/decorations" -> x == null || y == null ? null : WorldImages.decorations(x, y);
             case "/adv/grid" -> WorldImages.grid();
             case "/adv/minimap" -> WorldImages.minimap();
             case "/adv/atlas" -> WorldImages.atlas(param(q, "path"));

@@ -3,12 +3,18 @@ package forge.web.adventure;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.PixmapIO;
+import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas.TextureAtlasData;
+import com.badlogic.gdx.math.Vector2;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import forge.adventure.data.BiomeSpriteData;
 import forge.adventure.util.Config;
+import forge.adventure.world.BiomeSprites;
 import forge.adventure.world.World;
 import forge.adventure.world.WorldSave;
+
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,7 +37,7 @@ public final class WorldImages {
             return size() > KEPT_CHUNKS;
         }
     };
-    private static String key;
+    private static volatile String key;
     private static Pixmap scratch;
 
     private WorldImages() {}
@@ -46,21 +52,58 @@ public final class WorldImages {
         key = null;
     }
 
-    /** Names the open world in picture addresses. Saves share one World object, so its terrain tells two worlds apart. */
-    public static synchronized String key() {
-        if (key == null) {
-            key = Integer.toHexString(Arrays.deepHashCode(world().terrainMap));
+    /**
+     * Names the open world in picture addresses. Saves share one World object, so its terrain tells two worlds apart. It takes no lock,
+     * because the GUI thread asks for it while a picture being drawn under the lock waits for that thread.
+     */
+    public static String key() {
+        String k = key;
+        if (k == null) {
+            k = Integer.toHexString(Arrays.deepHashCode(world().terrainMap));
+            key = k;
         }
-        return key;
+        return k;
+    }
+
+    /** A chunk's trees and rocks as JSON, each with its layer and its region of the biome sprite atlas, as MapSprite.getMapSprites places them. */
+    public static synchronized byte[] decorations(final int x, final int y) {
+        final World world = world();
+        if (!inWorld(world, x, y)) {
+            return null;
+        }
+        return AdventureRuntime.onUi(() -> {
+            final BiomeSprites sprites = world.getData().GetBiomeSprites();
+            final JsonArray list = new JsonArray();
+            for (final Pair<Vector2, Integer> entry : world.GetMapObjects(x, y)) {
+                final BiomeSpriteData data = world.getObject(entry.getValue());
+                final Sprite sprite = sprites.getSprite(data.name, (int) entry.getKey().x + (int) entry.getKey().y * 11483);
+                if (sprite == null) {
+                    continue;
+                }
+                final JsonObject item = new JsonObject();
+                item.addProperty("x", entry.getKey().x);
+                item.addProperty("y", entry.getKey().y);
+                item.addProperty("layer", data.layer);
+                item.addProperty("atlas", sprites.textureAtlas);
+                item.addProperty("rx", sprite.getRegionX());
+                item.addProperty("ry", sprite.getRegionY());
+                item.addProperty("w", sprite.getRegionWidth());
+                item.addProperty("h", sprite.getRegionHeight());
+                list.add(item);
+            }
+            return list.toString().getBytes(StandardCharsets.UTF_8);
+        });
+    }
+
+    private static boolean inWorld(final World world, final int x, final int y) {
+        final int size = world.getChunkSize();
+        return x >= 0 && y >= 0 && x < Math.ceil((double) world.getWidthInTiles() / size) && y < Math.ceil((double) world.getHeightInTiles() / size);
     }
 
     /** A chunk as WorldBackground.buildChunkTexture draws it, or null outside the world. */
     public static synchronized byte[] chunk(final int x, final int y) {
         final World world = world();
-        final int size = world.getChunkSize();
-        final int across = (int) Math.ceil((double) world.getWidthInTiles() / size);
-        final int down = (int) Math.ceil((double) world.getHeightInTiles() / size);
-        if (x < 0 || y < 0 || x >= across || y >= down) {
+        if (!inWorld(world, x, y)) {
             return null;
         }
         final long id = (long) x << 32 | y;

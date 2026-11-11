@@ -57,7 +57,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
 
     private synchronized AdventureGame adventure() {
         if (adventure == null) {
-            adventure = new AdventureGame();
+            adventure = new AdventureGame(host);
         }
         return adventure;
     }
@@ -66,6 +66,11 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         @Override
         public Record error(final String text) {
             return WebSession.error(text);
+        }
+
+        @Override
+        public void tell(final Record message) {
+            session.tell(message);
         }
 
         @Override

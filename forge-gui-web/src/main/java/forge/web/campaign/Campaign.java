@@ -27,6 +27,9 @@ public interface Campaign {
     interface Host {
         Record error(String text);
 
+        /** Sends a message to the host's browser outside the answer to a command, as a mode with a running map needs. */
+        void tell(Record message);
+
         DeckSession decks();
 
         /** The campaign made a save and opened it, so the session moves to that save. */

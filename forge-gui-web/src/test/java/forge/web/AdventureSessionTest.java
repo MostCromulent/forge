@@ -1,7 +1,12 @@
 package forge.web;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import forge.adventure.data.BiomeData;
 import forge.adventure.player.AdventurePlayer;
+import forge.adventure.pointofintrest.PointOfInterest;
+import forge.adventure.util.Current;
+import forge.adventure.world.World;
 import forge.adventure.world.WorldSave;
 import forge.gui.GuiBase;
 import forge.web.adventure.AdventureFixture;
@@ -10,6 +15,9 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Tests adventure driven from a browser. */
@@ -83,5 +91,161 @@ public class AdventureSessionTest extends SessionsTest {
         final AtomicReference<float[]> after = new AtomicReference<>();
         onUi(() -> after.set(new float[] {AdventurePlayer.current().getWorldPosX(), AdventurePlayer.current().getGold()}));
         Assert.assertEquals(after.get(), before.get());
+    }
+
+    // Fails if opening a game does not send the world the overworld page draws
+    @Test(timeOut = 120_000)
+    public void openSendsState() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        final JsonObject state = host.awaitMatching("adventureState", s -> true, "no world was sent");
+        Assert.assertEquals(state.get("chunkSize").getAsInt(), 30);
+        Assert.assertEquals(state.get("width").getAsInt(), 700);
+        Assert.assertFalse(state.get("world").getAsString().isEmpty());
+        Assert.assertTrue(state.getAsJsonArray("pois").size() > 10);
+    }
+
+    // Fails if a new game does not stop at its spawn town, as WorldStage.enterSpawnPOI does
+    @Test(timeOut = 120_000)
+    public void newGameStartsInSpawnPlaceholder() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        host.awaitMatching("adventurePlaceholder", p -> true, "the spawn town was not entered");
+        final AtomicReference<float[]> spawn = new AtomicReference<>();
+        onUi(() -> {
+            final PointOfInterest poi = Current.world().findPointsOfInterest("Spawn");
+            spawn.set(new float[] {poi.getPosition().x, poi.getPosition().y + 18});
+        });
+        send(host, message("adventurePlaceholderDone"));
+        final JsonObject state = host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
+        Assert.assertEquals(state.get("x").getAsFloat(), spawn.get()[0], 0.01);
+        Assert.assertEquals(state.get("y").getAsFloat(), spawn.get()[1], 0.01);
+    }
+
+    // Fails if walking into a point of interest does not record the visit, save, and stop the map
+    @Test(timeOut = 120_000)
+    public void enterPoiMarksVisitedAndSaves() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        host.awaitMatching("adventurePlaceholder", p -> true, "the spawn town was not entered");
+        send(host, message("adventurePlaceholderDone"));
+        host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
+        final AtomicReference<PointOfInterest> town = new AtomicReference<>();
+        onUi(() -> town.set(Current.world().getAllPointOfInterest().stream()
+                .filter(p -> p.getActive() && !"Spawn".equals(p.getData().name)).findFirst().orElseThrow()));
+        final File autoSave = new File(WorldSave.getSaveFile(WorldSave.AUTO_SAVE_SLOT));
+        autoSave.setLastModified(0);
+        final float x = town.get().getPosition().x;
+        final float y = town.get().getPosition().y;
+        send(host, message("adventureMove", "x", x, "y", y, "moving", true));
+        send(host, message("adventureEnterPoi", "id", town.get().getID()));
+        host.awaitMatching("adventurePlaceholder", p -> true, "the town was not entered");
+        final AtomicReference<Boolean> visited = new AtomicReference<>();
+        onUi(() -> visited.set(WorldSave.getCurrentSave().getPointOfInterestChanges(town.get().getID()).isVisited()));
+        Assert.assertTrue(visited.get());
+        Assert.assertTrue(autoSave.lastModified() > 0);
+    }
+
+    // Fails if a point of interest far from where the player stands can be entered
+    @Test(timeOut = 120_000)
+    public void enterPoiNeedsTheTownUnderfoot() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        host.awaitMatching("adventurePlaceholder", p -> true, "the spawn town was not entered");
+        send(host, message("adventurePlaceholderDone"));
+        host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
+        final AtomicReference<PointOfInterest> town = new AtomicReference<>();
+        onUi(() -> town.set(Current.world().getAllPointOfInterest().stream()
+                .filter(p -> p.getActive() && !"Spawn".equals(p.getData().name)).findFirst().orElseThrow()));
+        send(host, message("adventureMove", "x", town.get().getPosition().x + 2000, "y", town.get().getPosition().y, "moving", false));
+        send(host, message("adventureEnterPoi", "id", town.get().getID()));
+        Assert.assertNull(host.awaitMatching("adventurePlaceholder", p -> true));
+    }
+
+    // Fails if moves from the browser do not drive the world map and answer with its enemies
+    @Test(timeOut = 120_000)
+    public void movesTickTheMap() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        host.awaitMatching("adventurePlaceholder", p -> true, "the spawn town was not entered");
+        send(host, message("adventurePlaceholderDone"));
+        host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
+        final float[] ground = wildGround();
+        final float x = ground[0];
+        final float y = ground[1];
+        JsonObject tick = null;
+        for (int i = 0; i < 200 && (tick == null || tick.getAsJsonArray("enemies").isEmpty()); i++) {
+            send(host, message("adventureMove", "x", x, "y", y, "moving", true));
+            tick = host.awaitMatching("adventureTick", t -> true, "a move got no answer");
+            Thread.sleep(20);
+        }
+        Assert.assertFalse(tick.getAsJsonArray("enemies").isEmpty(), "nothing spawned");
+        Assert.assertTrue(tick.get("speed").getAsFloat() > 0);
+    }
+
+    // Fails if a reconnect loses the map or spawns its enemies again (Review Focus 2)
+    @Test(timeOut = 120_000)
+    public void reconnectResends() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        host.awaitMatching("adventurePlaceholder", p -> true, "the spawn town was not entered");
+        send(host, message("adventurePlaceholderDone"));
+        host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
+        final List<String> before = spawnUntilSome(host);
+        final TestBrowser again = connect("host");
+        final JsonObject state = again.awaitMatching("adventureState", s -> true, "a reconnect sent no world");
+        Assert.assertEquals(ids(state.getAsJsonArray("enemies")), before);
+    }
+
+    // Fails if a save made while the map runs does not keep the enemies there at that moment (Review Focus 5)
+    @Test(timeOut = 120_000)
+    public void saveDuringTicks() throws InterruptedException {
+        final TestBrowser host = inNewGame();
+        host.awaitMatching("adventurePlaceholder", p -> true, "the spawn town was not entered");
+        send(host, message("adventurePlaceholderDone"));
+        host.awaitMatching("adventureState", s -> true, "leaving the town sent no world");
+        final int count = spawnUntilSome(host).size();
+        send(host, message("adventureSaveTo", "slot", 4));
+        host.awaitMatching("notice", n -> true, "saving was not confirmed");
+        send(host, message("campaignLeave"));
+        host.awaitMatching("adventureSaves", s -> true, "the saves were not listed");
+        send(host, message("campaignLoad", "name", WorldSave.filename(4)));
+        final JsonObject state = host.awaitMatching("adventureState", s -> true, "slot 4 sent no world");
+        Assert.assertEquals(state.getAsJsonArray("enemies").size(), count);
+    }
+
+    /** Walks in place on wild ground until at least one enemy is on the map, and returns the enemies' ids as the last answer lists them. */
+    private List<String> spawnUntilSome(final TestBrowser host) throws InterruptedException {
+        final float[] ground = wildGround();
+        JsonObject tick = null;
+        for (int i = 0; i < 200 && (tick == null || tick.getAsJsonArray("enemies").isEmpty()); i++) {
+            send(host, message("adventureMove", "x", ground[0], "y", ground[1], "moving", true));
+            tick = host.awaitMatching("adventureTick", t -> true, "a move got no answer");
+            Thread.sleep(20);
+        }
+        send(host, message("adventureMove", "x", ground[0], "y", ground[1], "moving", false));
+        tick = host.awaitMatching("adventureTick", t -> true, "a stop got no answer");
+        Assert.assertFalse(tick.getAsJsonArray("enemies").isEmpty(), "nothing spawned");
+        return ids(tick.getAsJsonArray("enemies"));
+    }
+
+    /** A place off the roads, where nothing blocks walking and the biome has enemies to spawn, in world pixels. */
+    private static float[] wildGround() {
+        final AtomicReference<float[]> found = new AtomicReference<>();
+        onUi(() -> {
+            final World world = Current.world();
+            final List<BiomeData> biomes = world.getData().GetBiomes();
+            for (int x = 30; x < world.getWidthInTiles() - 30 && found.get() == null; x += 3) {
+                for (int y = 30; y < world.getHeightInTiles() - 30 && found.get() == null; y += 3) {
+                    final int biome = World.highestBiome(world.getBiome(x, y));
+                    if (biome < biomes.size() && biomes.get(biome).getEnemyList() != null && !world.isColliding(x, y)
+                            && !world.isColliding(x + 1, y) && !world.isColliding(x, y + 1)) {
+                        found.set(new float[] {x * world.getTileSize(), y * world.getTileSize()});
+                    }
+                }
+            }
+        });
+        Assert.assertNotNull(found.get(), "no wild ground");
+        return found.get();
+    }
+
+    private static List<String> ids(final JsonArray enemies) {
+        final List<String> ids = new ArrayList<>();
+        enemies.forEach(e -> ids.add(e.getAsJsonObject().get("id").getAsString()));
+        return ids;
     }
 }

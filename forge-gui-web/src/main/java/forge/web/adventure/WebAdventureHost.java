@@ -15,21 +15,36 @@ import forge.util.IHasForgeLog;
 import java.util.ArrayList;
 import java.util.List;
 
-/** The adventure model's screens, as the web session plays them. There are no town maps yet, so the player is always on the world map. */
+/** The adventure model's screens, as the web session plays them. The session sets the world map and the point of interest the player is in. */
 final class WebAdventureHost implements AdventureHost, IHasForgeLog {
     /** What the HUD has not shown yet. */
     private final List<String> notifications = new ArrayList<>();
     private String announcement;
+    /** The enemies a loaded save brought, until the session has made the world map they go on. */
     private SaveFileData worldStage = new SaveFileData();
+    private Overworld overworld;
+    /** The point of interest the player is in, or null on the world map. */
+    private PointOfInterest map;
+
+    void overworld(final Overworld overworld) {
+        this.overworld = overworld;
+        if (overworld != null) {
+            overworld.load(worldStage);
+        }
+    }
+
+    void map(final PointOfInterest map) {
+        this.map = map;
+    }
 
     @Override
     public boolean inMap() {
-        return false;
+        return map != null;
     }
 
     @Override
     public PointOfInterest mapPoint() {
-        return null;
+        return map;
     }
 
     // Ported from GameScene.getBiomeByPosition
@@ -94,16 +109,20 @@ final class WebAdventureHost implements AdventureHost, IHasForgeLog {
     @Override
     public void clearWorldCache() {
         worldStage = new SaveFileData();
+        overworld = null;
+        map = null;
     }
 
     @Override
     public void loadWorldStage(final SaveFileData data) {
         worldStage = data;
+        overworld = null;
+        map = null;
     }
 
     @Override
     public SaveFileData saveWorldStage() {
-        return worldStage;
+        return overworld != null ? overworld.save() : worldStage;
     }
 
     // Copied from SaveLoadScene.getSaveFileSuffix

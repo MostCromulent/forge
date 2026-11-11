@@ -96,6 +96,19 @@ final class Overworld {
         return player.getY();
     }
 
+    /** Whether the player's box overlaps the rectangle, as PlayerSprite.collideWith tests a point of interest. */
+    boolean touches(final Rectangle rectangle) {
+        return player.collideWith(rectangle);
+    }
+
+    Vector2 playerCenter() {
+        return player.getCenter();
+    }
+
+    boolean has(final EnemySprite mob) {
+        return enemies.stream().anyMatch(e -> e.sprite() == mob);
+    }
+
     boolean frozen() {
         return frozen;
     }

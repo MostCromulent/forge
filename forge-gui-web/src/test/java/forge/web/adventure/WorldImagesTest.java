@@ -87,6 +87,28 @@ public class WorldImagesTest {
         assertNotNull(WorldImages.res(atlas.get("image").getAsString()));
     }
 
+    // Fails if a chunk's trees and rocks are not listed with the atlas region MapSprite.getMapSprites would draw
+    @Test
+    public void decorationsOfAChunk() {
+        int cx = 0;
+        int cy = 0;
+        search:
+        for (cx = 0; cx < world.getWidthInChunks(); cx++) {
+            for (cy = 0; cy < world.getHeightInChunks(); cy++) {
+                if (!world.GetMapObjects(cx, cy).isEmpty()) {
+                    break search;
+                }
+            }
+        }
+        final int count = world.GetMapObjects(cx, cy).size();
+        final var list = JsonParser.parseString(new String(WorldImages.decorations(cx, cy), StandardCharsets.UTF_8)).getAsJsonArray();
+        assertEquals(list.size(), count);
+        final JsonObject first = list.get(0).getAsJsonObject();
+        assertTrue(first.get("atlas").getAsString().endsWith(".atlas"));
+        assertTrue(first.get("w").getAsInt() > 0);
+        assertNull(WorldImages.decorations(-1, 0));
+    }
+
     @Test
     public void keyChangesWithWorld() {
         final String first = WorldImages.key();
