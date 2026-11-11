@@ -448,4 +448,8 @@ public final class CampaignProtocol {
     @Command("adventureQuickSave")
     public record AdventureQuickSave() {
     }
+
+    /** An enemy on the world map. animation is a CharacterSprite animation name. */
+    public record AdventureEnemy(int id, String atlas, float x, float y, String animation, boolean flying, boolean boss) {
+    }
 }
