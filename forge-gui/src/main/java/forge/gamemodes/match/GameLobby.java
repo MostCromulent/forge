@@ -545,6 +545,14 @@ public abstract class GameLobby implements IHasGameType {
         return startGame(activeSlots);
     }
 
+    /**
+     * Whether this lobby runs several matches between its seats at once, so that a seat must sit in one running match at a time.
+     * A local lobby starts each match on its own screen and keeps only the newest.
+     */
+    protected boolean playsMatchesSideBySide() {
+        return false;
+    }
+
     private boolean seatsFree(final List<LobbySlot> slots) {
         for (final LobbySlot slot : slots) {
             final HostedMatch match = getHostedMatch(data.slots.indexOf(slot));
@@ -558,7 +566,7 @@ public abstract class GameLobby implements IHasGameType {
 
     /** Returns a runnable to start a match between these seats if allowed. Matches already running play on beside it. */
     public Runnable startGame(final List<LobbySlot> activeSlots) {
-        if (!seatsFree(activeSlots)) {
+        if (playsMatchesSideBySide() && !seatsFree(activeSlots)) {
             return null;
         }
 
@@ -752,26 +760,12 @@ public abstract class GameLobby implements IHasGameType {
         //if above checks succeed, return runnable that can be used to finish starting game
         final GameType baseGameType = data.isLimitedMode() ? GameType.Draft : GameType.Constructed;
         return () -> {
-            // Another start may have taken a seat since this one was checked
-            if (!seatsFree(activeSlots)) {
-                return;
-            }
-            // A finished match some of these seats never left is ended first, so its clean-up cannot reach the new match
-            final Map<LobbySlot, Boolean> ready = new HashMap<>();
-            activeSlots.forEach(slot -> ready.put(slot, slot.isReady()));
-            boolean quitOld = false;
-            for (final LobbySlot slot : activeSlots) {
-                final HostedMatch old = getHostedMatch(data.slots.indexOf(slot));
-                if (old != null) {
-                    old.quitMatch();
-                    quitOld = true;
+            if (playsMatchesSideBySide()) {
+                // Another start may have taken a seat since this one was checked
+                if (!seatsFree(activeSlots)) {
+                    return;
                 }
-            }
-            if (quitOld) {
-                // Quitting unreadies the old match's seats and drops its remote GUIs, and these seats are about to play
-                ready.forEach(LobbySlot::setIsReady);
-                guis.replaceAll((rp, gui) -> playerToSlot.get(rp).getType() == LobbySlotType.REMOTE
-                        ? getGui(data.slots.indexOf(playerToSlot.get(rp))) : gui);
+                quitFinishedMatches(activeSlots, guis, playerToSlot);
             }
             final HostedMatch hostedMatch = GuiBase.getInterface().hostMatch();
             hostedMatch.setOnMatchOver(() -> onMatchOver(hostedMatch));
@@ -786,13 +780,36 @@ public abstract class GameLobby implements IHasGameType {
             }
 
             hostedMatch.gameControllers = gameControllers;
-            // A match with no human seat has nothing to route, and no player would ever quit it out of the list
-            if (!gameControllers.isEmpty()) {
-                hostedMatches.add(hostedMatch);
+            if (!playsMatchesSideBySide()) {
+                hostedMatches.clear();
             }
+            hostedMatches.add(hostedMatch);
 
             onGameStarted();
         };
+    }
+
+    /** Ends any finished match these seats never left, so its end-of-match clean-up cannot reach the match they start now. */
+    private void quitFinishedMatches(final List<LobbySlot> activeSlots, final Map<RegisteredPlayer, IGuiGame> guis,
+            final Map<RegisteredPlayer, LobbySlot> playerToSlot) {
+        final Map<LobbySlot, Boolean> ready = new HashMap<>();
+        activeSlots.forEach(slot -> ready.put(slot, slot.isReady()));
+        boolean quitOld = false;
+        for (final LobbySlot slot : activeSlots) {
+            final HostedMatch old = getHostedMatch(data.slots.indexOf(slot));
+            if (old != null) {
+                old.quitMatch();
+                quitOld = true;
+            }
+        }
+        if (!quitOld) {
+            return;
+        }
+        // Quitting unreadies the old match's seats and drops its remote GUIs, and these seats are about to play
+        ready.forEach(LobbySlot::setIsReady);
+        guis.replaceAll((rp, gui) -> playerToSlot.get(rp).getType() == LobbySlotType.REMOTE
+                ? getGui(data.slots.indexOf(playerToSlot.get(rp))) : gui);
+        updateView(true);
     }
 
     protected void onMatchOver(final HostedMatch match) {

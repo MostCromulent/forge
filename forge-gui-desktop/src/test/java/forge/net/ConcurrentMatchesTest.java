@@ -1,8 +1,10 @@
 package forge.net;
 
+import com.google.common.eventbus.Subscribe;
 import forge.deck.Deck;
 import forge.game.Game;
 import forge.game.GameStage;
+import forge.game.event.GameEventTurnBegan;
 import forge.game.player.Player;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
@@ -17,7 +19,10 @@ import forge.gamemodes.net.server.HostingServer.AfkTimeout;
 import forge.gamemodes.net.server.RemoteClient;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.interfaces.ILobbyListener;
+import forge.localinstance.properties.ForgePreferences.FPref;
+import forge.model.FModel;
 import forge.player.PlayerControllerHuman;
+import forge.util.MyRandom;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -25,6 +30,8 @@ import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 
 /** One lobby plays several matches at once, each between some of its seats. */
@@ -164,7 +171,61 @@ public class ConcurrentMatchesTest {
         Assert.assertSame(lobby.getHostedMatch(4), second);
 
         first.continueMatch();
+        first.restartMatch();
         Assert.assertNull(first.getGame(), "a quit match started another game");
+    }
+
+    // Fails if a rematch of a finished match still counts as over, which opens the lobby to logins while it plays
+    @Test(timeOut = 120_000)
+    public void aRematchCountsAsRunning() throws Exception {
+        final String gamesPerMatch = FModel.getPreferences().getPref(FPref.UI_MATCHES_PER_GAME);
+        FModel.getPreferences().setPref(FPref.UI_MATCHES_PER_GAME, "1");
+        try {
+            matchBetween(1, 2).run();
+            final HostedMatch match = lobby.getHostedMatch(1);
+            final Game game = match.getGame();
+            await(() -> clientOf(1).getGameController() != null, "the match never opened on its client");
+            await(() -> game.getAge() == GameStage.Play, "the match never dealt its opening hands");
+            clientOf(1).getGameController().concede();
+            await(match::isMatchOver, "a one-game match did not end with its game");
+
+            match.restartMatch();
+            Assert.assertTrue(match.isGameRunning(), "the rematch did not start");
+            Assert.assertFalse(match.isMatchOver(), "the rematch counts as over");
+            Assert.assertTrue(lobby.isMatchActive());
+            Assert.assertNull(matchBetween(2, 3), "a seat of the rematch started another match");
+        } finally {
+            FModel.getPreferences().setPref(FPref.UI_MATCHES_PER_GAME, gamesPerMatch);
+        }
+    }
+
+    // Fails if the team check counts seats that are not in the match being started
+    @Test(timeOut = 120_000)
+    public void theTeamCheckCoversOnlyTheStartingSeats() {
+        lobby.getSlot(1).setTeam(1);
+        lobby.getSlot(2).setTeam(1);
+        Assert.assertNull(matchBetween(1, 2), "two seats of one team started a match");
+    }
+
+    // Fails if games share a random stream, so that one game's draws count against another game's undo
+    @Test(timeOut = 120_000)
+    public void eachGameDrawsFromItsOwnRandomStream() throws Exception {
+        matchBetween(1, 2).run();
+        matchBetween(3, 4).run();
+        final List<AtomicReference<Random>> streams = new ArrayList<>();
+        for (final int seat : new int[] {1, 3}) {
+            final AtomicReference<Random> stream = new AtomicReference<>();
+            streams.add(stream);
+            lobby.getHostedMatch(seat).getGame().subscribeToEvents(new Object() {
+                @Subscribe
+                public void turnBegan(final GameEventTurnBegan event) {
+                    stream.compareAndSet(null, MyRandom.getRandom());
+                }
+            });
+        }
+        await(() -> streams.get(0).get() != null && streams.get(1).get() != null, "a game never began a turn");
+        Assert.assertNotSame(streams.get(0).get(), streams.get(1).get(), "two games draw from one stream");
+        Assert.assertNotSame(streams.get(0).get(), MyRandom.getRandom(), "a game draws from the stream of the thread that started it");
     }
 
     // Fails if the AFK timer is armed only for one of the matches

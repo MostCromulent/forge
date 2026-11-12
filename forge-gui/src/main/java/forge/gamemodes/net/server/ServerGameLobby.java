@@ -156,6 +156,11 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
     }
 
     @Override
+    protected boolean playsMatchesSideBySide() {
+        return true;
+    }
+
+    @Override
     protected void onMatchOver(final HostedMatch match) {
         for (final LobbySlot slot : match.gameControllers.keySet()) {
             slot.setIsReady(false);

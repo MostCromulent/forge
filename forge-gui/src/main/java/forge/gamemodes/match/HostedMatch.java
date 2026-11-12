@@ -46,6 +46,8 @@ import org.apache.commons.lang3.StringUtils;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class HostedMatch {
     private Match match;
@@ -56,7 +58,8 @@ public class HostedMatch {
     private Runnable startGameHook = null;
     private Runnable endGameHook = null;
     private Runnable onMatchOver = null;
-    private final List<PlayerControllerHuman> humanControllers = Lists.newArrayList();
+    // The game thread flushes through these after a game while the GUI thread may already be quitting the match
+    private final List<PlayerControllerHuman> humanControllers = new CopyOnWriteArrayList<>();
     private Map<RegisteredPlayer, IGuiGame> guis;
     private int humanCount;
     private FControlGamePlayback playbackControl = null;
@@ -64,7 +67,7 @@ public class HostedMatch {
     private final Map<PlayerControllerHuman, NextGameDecision> nextGameDecisions = Maps.newHashMap();
     private boolean isMatchOver = false;
     /** Set once the match is quit. A late continue or restart from an end screen must not bring it back. */
-    private volatile boolean quit = false;
+    private final AtomicBoolean quit = new AtomicBoolean();
     public int subGameCount = 0;
 
     public HostedMatch() {}
@@ -151,13 +154,13 @@ public class HostedMatch {
     }
 
     public void continueMatch() {
-        if (quit) { return; }
+        if (quit.get()) { return; }
         endCurrentGame();
         startGame();
     }
 
     public void restartMatch() {
-        if (quit) { return; }
+        if (quit.get()) { return; }
         endCurrentGame();
         startMatch(match.getRules(), null, match.getPlayers(), this.guis, this.matchPlaylist);
     }
@@ -334,8 +337,10 @@ public class HostedMatch {
                 replay.finish();
             }
 
-            // After game is over...
-            isMatchOver = match.isMatchOver();
+            // After game is over... A match quit meanwhile stays over
+            if (!quit.get()) {
+                isMatchOver = match.isMatchOver();
+            }
             if (humanCount == 0) {
                 // ... if no human players, let AI decide next game
                 if (currentGame.getRules().getGameType() == GameType.Constructed) {
@@ -454,8 +459,7 @@ public class HostedMatch {
 
     /** Ends the match for every player. Calling it again does nothing. */
     public void quitMatch() {
-        if (quit) { return; }
-        quit = true;
+        if (!quit.compareAndSet(false, true)) { return; }
         endCurrentGame();
         isMatchOver = true;
         if (onMatchOver != null) {

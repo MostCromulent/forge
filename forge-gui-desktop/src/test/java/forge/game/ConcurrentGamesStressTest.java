@@ -26,7 +26,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -85,15 +87,27 @@ public class ConcurrentGamesStressTest {
         }
     }
 
-    private static void check(final int index, final Game game, final Queue<String> problems) {
+    private static void check(final int index, final Game game, final Queue<String> problems, final Map<String, Integer> owners) {
         final Ids ids = new Ids();
         ids.record(game);
         for (final String s : ids.shared()) {
             problems.add("game " + index + " turn " + game.getPhaseHandler().getTurn() + " gave one id to two objects: " + s);
         }
+        // Card ids count per game, but the other counters are shared by every game in the process
+        ids.byKind.forEach((kind, m) -> {
+            if (!kind.equals("card")) {
+                for (final Integer id : m.keySet()) {
+                    final Integer owner = owners.putIfAbsent(kind + " " + id, index);
+                    if (owner != null && owner != index) {
+                        problems.add("games " + owner + " and " + index + " both hold " + kind + " " + id);
+                    }
+                }
+            }
+        });
     }
 
-    private static Game play(final int index, final Queue<String> problems) {
+    private static Game play(final int index, final boolean flatMonteCarlo, final Queue<String> problems, final Map<String, Integer> owners,
+                             final CountDownLatch turnBegan) {
         final GameRules rules = new GameRules(GameType.Constructed);
         rules.setGamesPerMatch(1);
         final Match match = new Match(rules, List.of(
@@ -101,12 +115,13 @@ public class ConcurrentGamesStressTest {
                 new RegisteredPlayer(deck((index + 1) % DECKS.length)).setPlayer(GamePlayerUtil.createAiPlayer("AI" + index + "b", 1))), "Concurrent" + index);
         final Game game = match.createGame();
         game.setNoGUIUser();
-        // As a hosted match sets it from the default preference, so the search AI's per-thread state is exercised too
-        game.AI_FLAT_MONTE_CARLO = true;
+        // A hosted match turns it on from the default preference, and its search keeps state per thread
+        game.AI_FLAT_MONTE_CARLO = flatMonteCarlo;
         game.subscribeToEvents(new Object() {
             @Subscribe
             public void turn(final GameEventTurnBegan e) {
-                check(index, game, problems);
+                check(index, game, problems, owners);
+                turnBegan.countDown();
             }
         });
         try {
@@ -114,11 +129,17 @@ public class ConcurrentGamesStressTest {
         } catch (final RuntimeException e) {
             problems.add("game " + index + " threw " + e);
         }
-        check(index, game, problems);
+        check(index, game, problems, owners);
         if (game.getOutcome() == null) {
             problems.add("game " + index + " ended without an outcome");
         }
         return game;
+    }
+
+    // Fails if a game that starts while another plays hands out ids the other holds, as when a game's start resets a counter
+    @Test(timeOut = 600_000)
+    public void aGameStartedBesideAnotherSharesNoIds() throws Exception {
+        playAtOnce(2, 2, false, true);
     }
 
     // Fails if games on parallel threads share an id, lose their outcome, or throw
@@ -127,20 +148,29 @@ public class ConcurrentGamesStressTest {
         if (!"true".equalsIgnoreCase(System.getProperty("run.stress.tests"))) {
             throw new SkipException("Stress tests skipped. Use -Drun.stress.tests=true to run.");
         }
+        playAtOnce(GAMES, THREADS, true, false);
+    }
+
+    private static void playAtOnce(final int count, final int threads, final boolean flatMonteCarlo, final boolean oneAtATime) throws Exception {
         TestUtils.ensureFModelInitialized();
         FModel.getPreferences().setPref(FPref.UI_RECORD_REPLAYS, false);
         FModel.getPreferences().setPref(FPref.MATCH_AI_TIMEOUT, "5");
         final Queue<String> problems = new ConcurrentLinkedQueue<>();
-        final ExecutorService pool = Executors.newFixedThreadPool(THREADS, r -> {
+        final Map<String, Integer> owners = new ConcurrentHashMap<>();
+        final ExecutorService pool = Executors.newFixedThreadPool(threads, r -> {
             // A name starting with "Game" makes ThreadUtil.isGameThread() true, as on HostedMatch's pool
             final Thread t = new Thread(r, "Game-concurrent-" + THREAD_SEQ.incrementAndGet());
             t.setDaemon(true);
             return t;
         });
         final List<Future<Game>> games = new ArrayList<>();
-        for (int i = 0; i < GAMES; i++) {
+        for (int i = 0; i < count; i++) {
             final int index = i;
-            games.add(pool.submit(() -> play(index, problems)));
+            final CountDownLatch turnBegan = new CountDownLatch(1);
+            games.add(pool.submit(() -> play(index, flatMonteCarlo, problems, owners, turnBegan)));
+            if (oneAtATime) {
+                Assert.assertTrue(turnBegan.await(120, TimeUnit.SECONDS), "game " + index + " never began a turn");
+            }
         }
         final Set<Integer> gameIds = new HashSet<>();
         for (final Future<Game> f : games) {

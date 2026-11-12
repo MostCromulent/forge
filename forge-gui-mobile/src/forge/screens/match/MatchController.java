@@ -6,7 +6,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
@@ -69,7 +68,6 @@ import forge.menu.FCheckBoxMenuItem;
 import forge.menu.FMenuItem;
 import forge.menu.FPopupMenu;
 import forge.model.FModel;
-import forge.player.PlayerControllerHuman;
 import forge.player.PlayerZoneUpdate;
 import forge.player.PlayerZoneUpdates;
 import forge.screens.match.views.VAssignCombatDamage;
@@ -98,8 +96,7 @@ public class MatchController extends NetworkGuiGame {
     }
     public static final MatchController instance = new MatchController();
 
-    // A host can run several matches at once, and this screen shows at most one of them
-    private static final List<HostedMatch> hostedMatches = new CopyOnWriteArrayList<>();
+    private static HostedMatch hostedMatch;
     private static MatchScreen view;
     private static GameState phaseGameState;
     private static boolean introShowing;      // EDT only
@@ -269,7 +266,7 @@ public class MatchController extends NetworkGuiGame {
                 @Override
                 public void buildTouchListeners(final float screenX, final float screenY, final List<FDisplayObject> listeners) {
                     if (screenY < view.getHeight() - VPrompt.HEIGHT) {
-                        getHostedMatch().pause();
+                        hostedMatch.pause();
                     }
                 }
             });
@@ -877,23 +874,12 @@ public class MatchController extends NetworkGuiGame {
     }
 
     public static HostedMatch hostMatch() {
-        hostedMatches.removeIf(match -> match.getGame() == null);
-        final HostedMatch match = new HostedMatch();
-        hostedMatches.add(match);
-        return match;
+        hostedMatch = new HostedMatch();
+        return hostedMatch;
     }
 
     public static HostedMatch getHostedMatch() {
-        HostedMatch newest = null;
-        for (final HostedMatch match : hostedMatches) {
-            newest = match;
-            for (final PlayerControllerHuman human : match.getHumanControllers()) {
-                if (human.getGui() == instance) {
-                    return match;
-                }
-            }
-        }
-        return newest;
+        return hostedMatch;
     }
 
     public void showFullControl(PlayerView selected, float x, float y) {
