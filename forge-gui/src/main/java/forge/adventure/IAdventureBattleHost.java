@@ -2,6 +2,7 @@ package forge.adventure;
 
 import forge.deck.Deck;
 import forge.deck.io.DeckSerializer;
+import forge.game.GameOutcome;
 import forge.item.IPaperCard;
 import forge.item.PaperCard;
 import forge.item.PaperToken;
@@ -161,6 +162,7 @@ public class IAdventureBattleHost {
         // Cards that adventure effects such as items and blessings start in play
         public List<String> humanExtraCardsOnBattlefield = new ArrayList<>();
         public List<String> humanExtraCardsInCommandZone = new ArrayList<>();
+        public List<List<String>> humanStartGameScripts = new ArrayList<>();
 
         // Its size is also the number of AI deck files
         public List<AIPlayerData> aiPlayers = new ArrayList<>();
@@ -201,6 +203,7 @@ public class IAdventureBattleHost {
         // Cards an effect starts the enemy with, such as the monks' starting permanents
         public List<String> extraCardsOnBattlefield = new ArrayList<>();
         public List<String> extraCardsInCommandZone = new ArrayList<>();
+        public List<List<String>> startGameScripts = new ArrayList<>();
     }
 
     public static class BattleResult implements Serializable {
@@ -209,6 +212,7 @@ public class IAdventureBattleHost {
         public boolean humanWon;
         // Negative when no game decided the battle. Adventure then keeps the shards it had
         public int shardsAfterBattle;
+        public GameOutcome.AnteResult ante = new GameOutcome.AnteResult();
 
         public void write() throws IOException {
             writeObjectAtomic(getBattleResultPath(), this);

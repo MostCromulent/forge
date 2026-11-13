@@ -23,7 +23,7 @@ public final class DesktopAdventureBridge {
 
     private static LoadingOverlay waitingOverlay;
 
-    // Far longer than any real match, so it only frees the waiter thread when the server has died
+    // Far longer than any real match, so it only frees the waiter thread when the server hangs
     private static final long MAX_BATTLE_WAIT_MS = 6L * 60 * 60 * 1000;
 
     private DesktopAdventureBridge() {}
@@ -59,6 +59,7 @@ public final class DesktopAdventureBridge {
         request.humanEnableETBCountersEffect = params.humanPlayer.hasEnableETBCountersEffect();
         request.humanExtraCardsOnBattlefield = cardNames(params.humanPlayer.getCardsOnBattlefield());
         request.humanExtraCardsInCommandZone = cardNames(params.humanPlayer.getExtraCardsInCommandZone());
+        request.humanStartGameScripts = params.humanPlayer.getStartGameScripts();
 
         IAdventureBattleHost.saveHumanDeck(params.playerDeck);
 
@@ -80,6 +81,7 @@ public final class DesktopAdventureBridge {
             aiData.enableETBCountersEffect = p.hasEnableETBCountersEffect();
             aiData.extraCardsOnBattlefield = cardNames(p.getCardsOnBattlefield());
             aiData.extraCardsInCommandZone = cardNames(p.getExtraCardsInCommandZone());
+            aiData.startGameScripts = p.getStartGameScripts();
             request.aiPlayers.add(aiData);
             aiIndex++;
         }
@@ -128,6 +130,10 @@ public final class DesktopAdventureBridge {
                 if (System.currentTimeMillis() > deadline) {
                     throw new IOException("Timed out waiting for the web server's battle result");
                 }
+                // Checked again, because the server may write its result just before it exits
+                if (!DesktopAdventureMode.isActive() && !IAdventureBattleHost.isBattleComplete()) {
+                    throw new IOException("The web server stopped before the battle ended");
+                }
                 Thread.sleep(500);
             }
 
@@ -142,7 +148,7 @@ public final class DesktopAdventureBridge {
             Gdx.app.postRunnable(() -> {
                 hideOverlay();
                 DesktopAdventureMode.requestFocus();
-                listener.onComplete(result.humanWon);
+                listener.onComplete(result);
             });
         } catch (Throwable e) {
             System.err.println("Error waiting for the web server's battle result: " + e.getClass().getName() + ": " + e.getMessage());
@@ -187,7 +193,7 @@ public final class DesktopAdventureBridge {
 
     public interface BattleResultListener {
         void onWaitStart();
-        void onComplete(boolean humanWon);
+        void onComplete(IAdventureBattleHost.BattleResult result);
         void onError();
     }
 }

@@ -126,6 +126,7 @@ final class AdventureBattles implements IHasForgeLog {
             return result;
         }
         result.humanWon = match.getMatch().isMatchOver() && match.getMatch().getWinner() == prepared.human();
+        result.ante = match.getAnteResult(prepared.human());
         return result;
     }
 
@@ -199,7 +200,7 @@ final class AdventureBattles implements IHasForgeLog {
     }
 
     /** Builds the match as adventure's own duel scene does, from what it wrote to the folder. */
-    private static PreparedMatch prepare(final BattleRequest request) {
+    static PreparedMatch prepare(final BattleRequest request) {
         final Set<GameType> variants = EnumSet.of(GameType.valueOf(request.gameType));
         final int playerCount = 1 + request.aiPlayers.size();
 
@@ -212,6 +213,7 @@ final class AdventureBattles implements IHasForgeLog {
         human.setEnableETBCountersEffect(request.humanEnableETBCountersEffect);
         human.addExtraCardsOnBattlefield(IAdventureBattleHost.resolveCards(request.humanExtraCardsOnBattlefield));
         human.addExtraCardsInCommandZone(IAdventureBattleHost.resolveCards(request.humanExtraCardsInCommandZone));
+        request.humanStartGameScripts.forEach(human::addStartGameScript);
         if (request.assignConspiracies) {
             human.assignConspiracies();
         }
@@ -227,6 +229,7 @@ final class AdventureBattles implements IHasForgeLog {
             ai.setEnableETBCountersEffect(data.enableETBCountersEffect);
             ai.addExtraCardsOnBattlefield(IAdventureBattleHost.resolveCards(data.extraCardsOnBattlefield));
             ai.addExtraCardsInCommandZone(IAdventureBattleHost.resolveCards(data.extraCardsInCommandZone));
+            data.startGameScripts.forEach(ai::addStartGameScript);
             if (request.assignConspiracies) {
                 ai.assignConspiracies();
             }

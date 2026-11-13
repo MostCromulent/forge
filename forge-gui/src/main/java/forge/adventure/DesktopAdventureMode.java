@@ -2,7 +2,8 @@ package forge.adventure;
 
 /** Whether adventure hands its battles to the web server it started, and how adventure brings its window back afterwards. */
 public final class DesktopAdventureMode {
-    private static boolean active = false;
+    // Cleared from the thread that sees the web server exit
+    private static volatile boolean active = false;
     private static Runnable focusRequest;
 
     private DesktopAdventureMode() {}
@@ -13,6 +14,10 @@ public final class DesktopAdventureMode {
 
     public static void activate() {
         active = true;
+    }
+
+    public static void deactivate() {
+        active = false;
     }
 
     public static void setFocusRequest(Runnable r) {

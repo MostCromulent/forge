@@ -14,6 +14,7 @@ import forge.card.CardRenderer;
 import forge.card.CardRenderer.CardStackPosition;
 import forge.card.CardZoom;
 import forge.adventure.DesktopAdventureBridge;
+import forge.adventure.IAdventureBattleHost;
 import forge.adventure.character.EnemySprite;
 import forge.adventure.character.PlayerSprite;
 import forge.adventure.data.*;
@@ -171,12 +172,8 @@ public class DuelScene extends ForgeScene {
     }
 
     public void GameEnd() {
-        //TODO: Progress towards applicable Adventure quests also needs to be reported here.
-        if (eventData != null)
-            eventData.nextOpponent = null;
         boolean winner = false;
-        List<PaperCard> anteWonCards = Collections.emptyList();
-        List<PaperCard> anteLostCards = Collections.emptyList();
+        GameOutcome.AnteResult anteResult = null;
         try {
             winner = humanPlayer == hostedMatch.getGame().getMatch().getWinner();
 
@@ -191,7 +188,21 @@ public class DuelScene extends ForgeScene {
             }
 
             // Mostly for ante handling, but also blacker lotus
-            GameOutcome.AnteResult anteResult = hostedMatch.getAnteResult(humanPlayer);
+            anteResult = hostedMatch.getAnteResult(humanPlayer);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        endDuel(winner, anteResult);
+    }
+
+    /** Applies a finished duel's result to the run, then shows the ante and boss popups. Sets callbackExit when a popup leaves the scene itself. */
+    void endDuel(boolean winner, GameOutcome.AnteResult anteResult) {
+        //TODO: Progress towards applicable Adventure quests also needs to be reported here.
+        if (eventData != null)
+            eventData.nextOpponent = null;
+        List<PaperCard> anteWonCards = Collections.emptyList();
+        List<PaperCard> anteLostCards = Collections.emptyList();
+        try {
             if (anteResult != null) {
                 if (eventData != null) {
                     //In an event. Apply the ante result to the current event deck.
@@ -670,27 +681,21 @@ public class DuelScene extends ForgeScene {
                     eventData != null ? eventData.eventRules.gamesPerMatch : enemy.getData().gamesPerMatch,
                     eventData == null || eventData.eventRules.allowsShards,
                     eventData != null && eventData.draft != null);
-            final String enemyName = enemy.getName();
             DesktopAdventureBridge.runBattle(params, new DesktopAdventureBridge.BattleResultListener() {
                 @Override public void onWaitStart() {
                     waitingForExternalOperation = true;
                 }
-                @Override public void onComplete(final boolean humanWon) {
-                    end(humanWon);
+                @Override public void onComplete(final IAdventureBattleHost.BattleResult result) {
+                    end(result.humanWon, result.ante);
                 }
                 @Override public void onError() {
-                    end(false);
+                    end(false, null);
                 }
-                // What GameEnd does besides reading the match, which was played in the other process
-                private void end(final boolean humanWon) {
+                private void end(final boolean humanWon, final GameOutcome.AnteResult ante) {
                     waitingForExternalOperation = false;
-                    if (eventData != null) {
-                        eventData.nextOpponent = null;
-                    }
-                    final List<PaperCard> modifierLosses = humanWon || eventData != null ? Collections.emptyList() : loseModifierCards();
-                    Current.player().clearBlessing();
-                    afterGameEnd(enemyName, humanWon, modifierLosses);
-                    exitDuelScene();
+                    endDuel(humanWon, ante);
+                    if (!callbackExit)
+                        exitDuelScene();
                 }
             });
             return;

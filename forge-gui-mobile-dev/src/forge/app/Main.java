@@ -30,7 +30,6 @@ public class Main {
             Forge.forceAdventureMode = true;
             // Without a server, battles are played here as usual
             if (WebBattleServer.start()) {
-                DesktopAdventureMode.activate();
                 System.out.println("Adventure Mode: battles are played in the web GUI");
             }
             DesktopAdventureMode.setFocusRequest(() -> {

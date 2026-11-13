@@ -1,5 +1,6 @@
 package forge.app;
 
+import forge.adventure.DesktopAdventureMode;
 import forge.adventure.IAdventureBattleHost;
 
 import java.io.File;
@@ -10,7 +11,7 @@ import java.nio.file.Paths;
 final class WebBattleServer {
     private WebBattleServer() {}
 
-    /** Whether the server process started. */
+    /** Whether the server process started. Battles go to it until it exits. */
     static boolean start() {
         final File jar = webJar();
         if (!jar.isFile()) {
@@ -28,6 +29,9 @@ final class WebBattleServer {
         builder.environment().put(IAdventureBattleHost.IPC_DIR_ENV, dir);
         try {
             final Process server = builder.start();
+            DesktopAdventureMode.activate();
+            // Later battles are played in adventure's window, and a battle waiting on the server ends as a loss
+            server.onExit().thenRun(DesktopAdventureMode::deactivate);
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 server.destroy();
                 IAdventureBattleHost.purgeIpcDir();
