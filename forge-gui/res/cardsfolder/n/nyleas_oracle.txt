@@ -9,3 +9,4 @@ SVar:X:Count$Devotion.Green
 SVar:LibSize:PlayerCountPropertyYou$CardsInLibrary
 SVar:StartingSize:PlayerCountPropertyYou$StartingLibrarySize
 Oracle:When this creature enters, conjure X cards named Nylea's Oracle into your library, where X is your devotion to green, then shuffle. Then if there are more cards in your library than your starting deck, creatures you control get +X/+X and gain haste until end of turn.
+
