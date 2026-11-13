@@ -27,3 +27,10 @@ jobs:
           export DISPLAY=":1"
           Xvfb :1 -screen 0 800x600x8 &
           mvn -U -B clean test
+
+      - name: Upload TestNG results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testng-java${{ matrix.java }}
+          path: forge-gui-desktop/target/surefire-reports/testng-results.xml
