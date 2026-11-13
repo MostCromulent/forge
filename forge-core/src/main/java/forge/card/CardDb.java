@@ -896,6 +896,9 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     }
 
     public void setPreferredLanguageAvailability(BiPredicate<String, String> availability) {
+        if (availability == this.preferredLanguageAvailability) {
+            return;
+        }
         this.preferredLanguageAvailability = availability;
         if (initialized) {
             reIndex();

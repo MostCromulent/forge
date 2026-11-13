@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.stream.Stream;
 
 import org.testng.annotations.BeforeClass;
@@ -31,9 +31,9 @@ public class AiCombosDataTest {
     @BeforeClass
     public void setUp() {
         GuiBase.setInterface(new GuiDesktop());
-        cardNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        cardNames = new ConcurrentSkipListSet<>(String.CASE_INSENSITIVE_ORDER);
         try (Stream<Path> paths = Files.walk(Path.of(ForgeConstants.CARD_DATA_DIR))) {
-            paths.filter(p -> p.toString().endsWith(".txt")).forEach(this::readNames);
+            paths.parallel().filter(p -> p.toString().endsWith(".txt")).forEach(this::readNames);
         } catch (final IOException e) {
             fail("Could not read card names from " + ForgeConstants.CARD_DATA_DIR, e);
         }
