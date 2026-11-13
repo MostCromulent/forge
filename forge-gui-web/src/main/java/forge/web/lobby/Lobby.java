@@ -1213,18 +1213,9 @@ public final class Lobby {
         if (lobby == null || !local.isHost()) {
             return;
         }
-        final StringBuilder avatars = new StringBuilder();
-        final StringBuilder sleeves = new StringBuilder();
-        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
-            if (i > 0) {
-                avatars.append(',');
-                sleeves.append(',');
-            }
-            avatars.append(lobby.getSlot(i).getAvatarIndex());
-            sleeves.append(lobby.getSlot(i).getSleeveIndex());
-        }
-        FModel.getPreferences().setPref(FPref.UI_AVATARS, avatars.toString());
-        FModel.getPreferences().setPref(FPref.UI_SLEEVES, sleeves.toString());
+        // Desktop and mobile store the first two seats only, and the mobile lobby fails on a longer list
+        FModel.getPreferences().setPref(FPref.UI_AVATARS, lobby.getSlot(0).getAvatarIndex() + "," + lobby.getSlot(1).getAvatarIndex());
+        FModel.getPreferences().setPref(FPref.UI_SLEEVES, lobby.getSlot(0).getSleeveIndex() + "," + lobby.getSlot(1).getSleeveIndex());
         final int mine = local.webSeat();
         if (mine >= 0 && lobby.getSlot(mine).getName() != null) {
             FModel.getPreferences().setPref(FPref.PLAYER_NAME, lobby.getSlot(mine).getName());
