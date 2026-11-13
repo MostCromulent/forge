@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -45,8 +46,19 @@ public class PerfPatchUnitTest {
         Assert.assertTrue(ok, msg);
     }
 
+    private static void check(boolean ok, Supplier<String> msg) {
+        if (!ok) {
+            Assert.fail(msg.get());
+        }
+    }
+
     private static void eq(Object actual, Object expected, String ctx) {
-        check(Objects.equals(actual, expected), ctx + "\n  expected=" + expected + "\n  actual  =" + actual);
+        eq(actual, expected, () -> ctx);
+    }
+
+    // The differential loops run millions of checks, so the message is built only when one fails
+    private static void eq(Object actual, Object expected, Supplier<String> ctx) {
+        check(Objects.equals(actual, expected), () -> ctx.get() + "\n  expected=" + expected + "\n  actual  =" + actual);
     }
 
     private static void expectUnsupported(Runnable r, String ctx) {
@@ -455,21 +467,21 @@ public class PerfPatchUnitTest {
             }
 
             // full invariant after every operation
-            eq(new ArrayList<>(fc), ref, ctx + " content/order");
-            eq(fc.size(), ref.size(), ctx + " size");
+            eq(new ArrayList<>(fc), ref, () -> ctx + " content/order");
+            eq(fc.size(), ref.size(), () -> ctx + " size");
             Set<E> refSet = new HashSet<>(ref);
             for (int k = 0; k < domain; k++) {
                 E probe = mk.apply(k);
                 boolean in = refSet.contains(probe);
-                eq(fc.contains(probe), in, ctx + " contains(" + probe + ")");
+                eq(fc.contains(probe), in, () -> ctx + " contains(" + probe + ")");
                 if (in) {
-                    check(fc.get(probe) == ref.get(ref.indexOf(probe)), ctx + " get(T) must return the STORED instance");
+                    check(fc.get(probe) == ref.get(ref.indexOf(probe)), () -> ctx + " get(T) must return the STORED instance");
                 } else {
-                    check(fc.get(probe) == probe, ctx + " get(T) of absent element returns the argument");
+                    check(fc.get(probe) == probe, () -> ctx + " get(T) of absent element returns the argument");
                 }
             }
-            eq(fc.contains(null), false, ctx + " contains(null)");
-            eq(fc.add(null), false, ctx + " add(null)");
+            eq(fc.contains(null), false, () -> ctx + " contains(null)");
+            eq(fc.add(null), false, () -> ctx + " add(null)");
         }
     }
 

@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 import static org.testng.Assert.fail;
@@ -50,10 +50,9 @@ public class CommanderBracketDataTest {
     }
 
     private static Set<String> getCardDatabaseNames() {
-        final Set<String> cardNames = new ConcurrentSkipListSet<>(String.CASE_INSENSITIVE_ORDER);
+        final Set<String> cardNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         try (Stream<Path> paths = Files.walk(Path.of(ForgeConstants.CARD_DATA_DIR))) {
-            paths.parallel()
-                    .filter(path -> path.toString().endsWith(".txt"))
+            paths.filter(path -> path.toString().endsWith(".txt"))
                     .forEach(path -> readCardName(path, cardNames));
         } catch (final IOException e) {
             fail("Could not read card database names from " + ForgeConstants.CARD_DATA_DIR, e);
