@@ -122,3 +122,4 @@ public enum CHomeUI implements ICDoc, IMenuProvider {
         return null;
     }
 }
+// scope test
