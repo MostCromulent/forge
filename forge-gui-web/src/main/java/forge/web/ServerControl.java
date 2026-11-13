@@ -287,7 +287,7 @@ public final class ServerControl implements IHasForgeLog {
         return now == null ? 0 : now.playersHere();
     }
 
-    WebSessions sessions() {
+    WebHub sessions() {
         return sessions;
     }
 

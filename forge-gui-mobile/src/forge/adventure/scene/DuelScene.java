@@ -687,8 +687,9 @@ public class DuelScene extends ForgeScene {
                     if (eventData != null) {
                         eventData.nextOpponent = null;
                     }
+                    final List<PaperCard> modifierLosses = humanWon || eventData != null ? Collections.emptyList() : loseModifierCards();
                     Current.player().clearBlessing();
-                    afterGameEnd(enemyName, humanWon);
+                    afterGameEnd(enemyName, humanWon, modifierLosses);
                     exitDuelScene();
                 }
             });

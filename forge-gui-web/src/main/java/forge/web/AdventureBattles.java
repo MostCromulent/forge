@@ -21,7 +21,7 @@ import forge.web.WebSession.Opening;
 import forge.web.WebSession.Playing;
 import forge.web.WebSession.Stage;
 import forge.web.images.SkinSprites;
-import forge.web.match.LocalGame;
+import forge.web.match.NetplaySeat;
 import forge.web.match.WebGuiGame;
 
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ final class AdventureBattles implements IHasForgeLog {
         return dir != null && !dir.isEmpty();
     }
 
-    static void startIfAsked(final WebService service, final WebGuiBase ui) {
+    static void startIfAsked(final ServerControl service, final WebGuiBase ui) {
         if (!asked()) {
             return;
         }
@@ -60,7 +60,7 @@ final class AdventureBattles implements IHasForgeLog {
         netLog.info("Playing adventure battles from {}", dir);
     }
 
-    private static void watch(final WebService service, final WebGuiBase ui) {
+    private static void watch(final ServerControl service, final WebGuiBase ui) {
         while (true) {
             try {
                 if (IAdventureBattleHost.isBattlePending()) {
@@ -86,7 +86,7 @@ final class AdventureBattles implements IHasForgeLog {
         }
     }
 
-    private static BattleResult play(final WebService service, final WebGuiBase ui, final BattleRequest request) throws InterruptedException {
+    private static BattleResult play(final ServerControl service, final WebGuiBase ui, final BattleRequest request) throws InterruptedException {
         final BattleResult result = new BattleResult();
         result.shardsAfterBattle = request.humanManaShards;
         final PreparedMatch prepared = prepare(request);
@@ -138,10 +138,10 @@ final class AdventureBattles implements IHasForgeLog {
     }
 
     /** The host's session once it can take a match. If no browser is open, one is opened. */
-    private static WebSession awaitHost(final WebService service, final WebGuiBase ui) throws InterruptedException {
+    private static WebSession awaitHost(final ServerControl service, final WebGuiBase ui) throws InterruptedException {
         boolean opened = false;
         while (true) {
-            final WebSessions sessions = service.sessions();
+            final WebHub sessions = service.sessions();
             final WebSession host = sessions == null ? null : sessions.host();
             if (host != null && host.attached() && !(host.stage() instanceof Playing) && !(host.stage() instanceof Opening)) {
                 return host;
@@ -167,12 +167,12 @@ final class AdventureBattles implements IHasForgeLog {
             return null;
         }
         session.attach(playing.gui());
-        final LocalGame local = session.local();
+        final NetplaySeat local = session.local();
         try {
             // The board finds the browser's seat by the session's player name
             prepared.human().getPlayer().setName(session.playerName());
             prepared.human().getPlayer().setAvatarIndex(session.avatarIndex());
-            prepared.human().getPlayer().setSleeveIndex(LocalGame.storedIndex(FPref.UI_SLEEVES, 0));
+            prepared.human().getPlayer().setSleeveIndex(NetplaySeat.storedIndex(FPref.UI_SLEEVES, 0));
             for (final RegisteredPlayer p : prepared.players()) {
                 if (p != prepared.human()) {
                     p.getPlayer().setAvatarIndex(randomAvatarExcept(session.avatarIndex()));
