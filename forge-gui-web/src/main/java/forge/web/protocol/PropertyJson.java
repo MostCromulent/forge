@@ -31,8 +31,8 @@ import java.util.function.Consumer;
  * what kind of object it is. Reflection would also write classes such as ManaCost as their private fields. Each form written here has
  * a TypeScript type in {@link ProtocolTypes}.
  */
-public final class JsonCodec {
-    private JsonCodec() {}
+public final class PropertyJson {
+    private PropertyJson() {}
 
     public static JsonObject ref(final int type, final int id) {
         final JsonObject r = new JsonObject();

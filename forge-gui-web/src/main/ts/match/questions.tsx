@@ -18,7 +18,7 @@ import { isPortrait } from '../form';
 import { cutFor } from './stickers';
 import { Backdrop } from '../dialog';
 import { leave } from '../closing';
-import { type Answer, useCardFit, offerAnswer, withdrawAnswer, FoldButton, OkKey, Button, ButtonRow, SECTION, OptionView, BoardCard } from './dialogparts';
+import { type Answer, useCardFit, offerAnswer, withdrawAnswer, FoldButton, OkKey, Button, ButtonRow, SECTION, OptionView, BoardCard } from './questionparts';
 import { Manipulate, Order, Sideboard } from './arrange';
 
 export function Requests({ model, actions }: { model: Model; actions: Actions }) {

@@ -27,7 +27,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.function.Consumer;
 
 /** Every browser attached to this process, each with its own session. Only the web port must be reachable from outside. */
-final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
+final class WebHub implements WebServer.Endpoint, IHasForgeLog {
     /** The most browsers tracked at once, because anyone with an invite link can open one browser after another. */
     static final int MOST_SESSIONS = 64;
     /** How long the host's seat stays reserved for a browser that has left, so a reload keeps the seat. */
@@ -56,7 +56,7 @@ final class WebSessions implements WebServer.Endpoint, IHasForgeLog {
     private volatile String cloudflare;
     private final Deque<ChatLine> said = new ArrayDeque<>();
 
-    WebSessions(final WebGuiBase ui, final long idleMillis, final Runnable onQuit) {
+    WebHub(final WebGuiBase ui, final long idleMillis, final Runnable onQuit) {
         this.ui = ui;
         this.idleMillis = idleMillis;
         this.onQuit = onQuit;

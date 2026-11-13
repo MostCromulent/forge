@@ -19,8 +19,8 @@ import forge.gamemodes.net.server.ServerGameLobby;
 import forge.model.FModel;
 import forge.util.Localizer;
 import forge.web.deck.DeckCatalog;
-import forge.web.limited.OfflineEvents;
-import forge.web.match.LocalGame;
+import forge.web.limited.OfflinePools;
+import forge.web.match.NetplaySeat;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser.*;
 
@@ -28,11 +28,11 @@ import java.util.List;
 import java.util.Objects;
 
 /** The Limited half of a table: the draft and sealed events hosted through the lobby. */
-public final class LobbyEvents {
+public final class LimitedEvents {
     private final Lobby owner;
-    private final LocalGame local;
+    private final NetplaySeat local;
 
-    LobbyEvents(final Lobby owner, final LocalGame local) {
+    LimitedEvents(final Lobby owner, final NetplaySeat local) {
         this.owner = owner;
         this.local = local;
     }
@@ -220,14 +220,14 @@ public final class LobbyEvents {
         }
         try {
             if (lobby.getData().getLimitedType() == GameType.Sealed) {
-                final SealedCardPoolGenerator gen = OfflineEvents.generator(new SealedCreate(s.product(), s.block(), s.combo(),
+                final SealedCardPoolGenerator gen = OfflinePools.generator(new SealedCreate(s.product(), s.block(), s.combo(),
                         s.edition(), s.template(), s.cubeId(), s.packs(), "", false));
                 return owner.onTable(() -> {
                     lobby.createEvent(EventFormat.SEALED);
                     return lobby.configureEvent(LimitedPoolType.valueOf(s.product()), gen, 0, 0) ? null : Localizer.getInstance().getMessage("lblWebLobbySealedSetUpFailed");
                 });
             }
-            final BoosterDraft draft = OfflineEvents.draft(new DraftStart(s.product(), s.block(), s.combo(), s.cube(), s.theme(),
+            final BoosterDraft draft = OfflinePools.draft(new DraftStart(s.product(), s.block(), s.combo(), s.cube(), s.theme(),
                     s.cubeId())).get();
             if (draft == null) {
                 return Localizer.getInstance().getMessage("lblWebLobbyDraftSetUpFailed");

@@ -11,20 +11,20 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
-public class HostRequestsTest {
+public class HostQuestionsTest {
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
     }
 
-    private static List<Integer> ask(final HostRequests requests) {
+    private static List<Integer> ask(final HostQuestions requests) {
         return requests.ask(HostChoiceKind.confirm, "Title", "Keep going?", List.of("Yes", "No"), 1, 1, null, null);
     }
 
     // Fails if an unanswered question holds its thread past the time limit, returns an answer, or is asked again of a browser that reloads
     @Test(timeOut = 10_000)
     public void anUnansweredQuestionGivesUpAndIsWithdrawn() throws Exception {
-        final HostRequests requests = new HostRequests(100);
+        final HostQuestions requests = new HostQuestions(100);
         final List<JsonObject> asked = new CopyOnWriteArrayList<>();
         requests.setSink(asked::add);
         final CompletableFuture<List<Integer>> waiting = CompletableFuture.supplyAsync(() -> ask(requests));
@@ -40,11 +40,11 @@ public class HostRequestsTest {
     // Fails if an answer does not reach the thread that asked, or an open question is not asked again of a browser that reloads
     @Test(timeOut = 10_000)
     public void anOpenQuestionIsAskedAgainAndItsAnswerReturned() throws Exception {
-        final HostRequests requests = new HostRequests(60_000);
+        final HostQuestions requests = new HostQuestions(60_000);
         final List<JsonObject> asked = new CopyOnWriteArrayList<>();
         requests.setSink(asked::add);
         final CompletableFuture<List<Integer>> waiting = CompletableFuture.supplyAsync(() -> ask(requests));
-        SessionsTest.awaitTrue(() -> !asked.isEmpty(), "the question never reached the browser");
+        WebHubTest.awaitTrue(() -> !asked.isEmpty(), "the question never reached the browser");
         final List<JsonObject> replayed = new CopyOnWriteArrayList<>();
         requests.replay(replayed::add);
         Assert.assertEquals(replayed, asked);

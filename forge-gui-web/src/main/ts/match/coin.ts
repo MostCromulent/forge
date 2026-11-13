@@ -37,7 +37,7 @@ export function readyCoin(): void {
 }
 
 /** Tosses the coin and calls `then` when it has rested. The coin lands heads if the player won the toss. A click ends the toss early.
- *  The loser's coin is then removed. The winner's coin stays where it rests, because the question of who goes first opens under it (starter.ts). */
+ *  The loser's coin is then removed. The winner's coin stays where it rests, because the question of who goes first opens under it (firstplayer.ts). */
 export function tossCoin(heads: boolean, caption: string, then: () => void): void {
   if (reducedMotion()) {
     playSoundPart(SOUND, 0);
@@ -107,7 +107,7 @@ export function tossCoin(heads: boolean, caption: string, then: () => void): voi
     inAir = false;
     return;
   }
-  // Drawn outside the board, which may still be hidden (entry.ts), with the side column's width so it is centred over the table
+  // Drawn outside the board, which may still be hidden (matchentry.ts), with the side column's width so it is centred over the table
   root.style.setProperty('--side-w', getComputedStyle(byId('match')).getPropertyValue('--side-w'));
   document.body.append(root);
   playSoundPart(SOUND, 0, FLICK_END);

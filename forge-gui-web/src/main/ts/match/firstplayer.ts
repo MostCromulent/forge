@@ -2,7 +2,7 @@
 
 import { isLocal, me, players, type Model } from '../model';
 import { coinInAir, dropCoin, readyCoin, resetCoin, tossCoin } from './coin';
-import { playerAvatarUrl } from '../looks';
+import { playerAvatarUrl } from '../avatarsleeves';
 import { byId, make, replay } from '../dom';
 import { leave } from '../closing';
 import { redrawUi } from '../ui';

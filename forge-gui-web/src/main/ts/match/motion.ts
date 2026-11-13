@@ -2,7 +2,7 @@
 
 import { hoverable } from '../preview';
 import type { CardMoved, GameEvent, Place, CardView, PlayerView } from '../protocol';
-import { cssUrl, playerSleeveUrl } from '../looks';
+import { cssUrl, playerSleeveUrl } from '../avatarsleeves';
 import { echoSound } from '../audio';
 import { unmake } from './leaving';
 import type { Model } from '../model';
@@ -675,7 +675,7 @@ function riffle(player: number): void {
   tile.animate([{ scale: '1' }, { scale: '1', offset: 0.82 }, { scale: '0.97 1', offset: 0.9 }, { scale: '1' }], { duration: RIFFLE_MS });
 }
 
-/** Whether the board is hidden or still fading in as the match comes on screen (entry.ts). */
+/** Whether the board is hidden or still fading in as the match comes on screen (matchentry.ts). */
 function boardHidden(): boolean {
   return !!document.querySelector('#match:is(.held, .arriving)');
 }

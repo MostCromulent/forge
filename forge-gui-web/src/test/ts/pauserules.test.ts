@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { asksPlayer, behindItsBoard, passingFor, worthSeeing } from '../../main/ts/match/pace';
+import { asksPlayer, behindItsBoard, passingFor, worthSeeing } from '../../main/ts/match/pauserules';
 import type { Controls, GameEvent, Prompt } from '../../main/ts/protocol';
 
 const ME = 1;

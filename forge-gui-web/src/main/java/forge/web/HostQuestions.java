@@ -4,7 +4,7 @@ import com.google.gson.JsonObject;
 import forge.util.IHasForgeLog;
 import forge.web.protocol.ToBrowser.HostChoice;
 import forge.web.protocol.ToBrowser.HostChoiceKind;
-import forge.web.protocol.Wire;
+import forge.web.protocol.MessageJson;
 
 import java.util.List;
 import java.util.Map;
@@ -18,10 +18,10 @@ import java.util.function.Consumer;
 
 /**
  * Questions the host asks outside a match. The calling thread waits for the browser's answer, as desktop waits for its dialog.
- * These are kept apart from {@link forge.web.match.PendingRequests}, which holds one seat's questions during its game. These questions go to the
+ * These are kept apart from {@link forge.web.match.MatchQuestions}, which holds one seat's questions during its game. These questions go to the
  * browser that holds the host's seat at the time. They are shown on any screen, and they time out because no game ends them.
  */
-final class HostRequests implements IHasForgeLog {
+final class HostQuestions implements IHasForgeLog {
     /** Long enough for someone to read the list and decide. Short enough that a question to a closed browser times out. */
     private static final long ANSWER_TIMEOUT_MINUTES = 5;
 
@@ -32,11 +32,11 @@ final class HostRequests implements IHasForgeLog {
     private volatile Consumer<JsonObject> toBrowser = message -> { };
     private final long timeoutMillis;
 
-    HostRequests() {
+    HostQuestions() {
         this(TimeUnit.MINUTES.toMillis(ANSWER_TIMEOUT_MINUTES));
     }
 
-    HostRequests(final long timeoutMillis) {
+    HostQuestions(final long timeoutMillis) {
         this.timeoutMillis = timeoutMillis;
     }
 
@@ -47,7 +47,7 @@ final class HostRequests implements IHasForgeLog {
     /** Sends the open questions again, so a browser that reloaded can still answer them. */
     void replay(final Consumer<JsonObject> sink) {
         for (final HostChoice again : pending.values()) {
-            sink.accept(Wire.encode(again));
+            sink.accept(MessageJson.encode(again));
         }
     }
 
@@ -59,7 +59,7 @@ final class HostRequests implements IHasForgeLog {
         final CompletableFuture<List<Integer>> answer = new CompletableFuture<>();
         open.put(id, answer);
         pending.put(id, request);
-        toBrowser.accept(Wire.encode(request));
+        toBrowser.accept(MessageJson.encode(request));
         try {
             return answer.get(timeoutMillis, TimeUnit.MILLISECONDS);
         } catch (final InterruptedException e) {

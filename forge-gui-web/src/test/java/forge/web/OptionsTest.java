@@ -12,7 +12,7 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Map;
 
-public class WebSettingsTest {
+public class OptionsTest {
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
@@ -30,9 +30,9 @@ public class WebSettingsTest {
         final Map<FPref, String> host = hostPrefs();
         final PlayerSettings guest = PlayerSettings.fresh();
         final boolean attackers = guest.getBoolean(FPref.YIELD_INTERRUPT_ON_ATTACKERS);
-        WebSettings.set(guest, null, "interruptAttackers", String.valueOf(!attackers));
-        WebSettings.set(guest, null, "soundVolume", "37");
-        WebSettings.set(guest, null, "devMode", "true");
+        Options.set(guest, null, "interruptAttackers", String.valueOf(!attackers));
+        Options.set(guest, null, "soundVolume", "37");
+        Options.set(guest, null, "devMode", "true");
         Assert.assertEquals(guest.getBoolean(FPref.YIELD_INTERRUPT_ON_ATTACKERS), !attackers);
         Assert.assertEquals(guest.get(FPref.UI_VOL_SOUNDS), "37");
         Assert.assertTrue(guest.getBoolean(FPref.DEV_MODE_ENABLED));
@@ -44,14 +44,14 @@ public class WebSettingsTest {
     @Test
     public void badValuesAndUnknownKeysAreRefused() {
         final PlayerSettings guest = PlayerSettings.fresh();
-        final ServerSettings before = WebSettings.values(guest);
-        WebSettings.set(guest, null, "soundVolume", "101");
-        WebSettings.set(guest, null, "musicVolume", "-1");
-        WebSettings.set(guest, null, "soundVolume", "loud");
-        WebSettings.set(guest, null, FPref.SHORTCUT_SHOWSTACK.name(), "ctrl+s");
-        WebSettings.set(guest, null, "PLAYER_NAME", "Mallory");
-        WebSettings.set(guest, null, "nonsense", "true");
-        Assert.assertEquals(WebSettings.values(guest), before);
+        final ServerSettings before = Options.values(guest);
+        Options.set(guest, null, "soundVolume", "101");
+        Options.set(guest, null, "musicVolume", "-1");
+        Options.set(guest, null, "soundVolume", "loud");
+        Options.set(guest, null, FPref.SHORTCUT_SHOWSTACK.name(), "ctrl+s");
+        Options.set(guest, null, "PLAYER_NAME", "Mallory");
+        Options.set(guest, null, "nonsense", "true");
+        Assert.assertEquals(Options.values(guest), before);
         Assert.assertNotEquals(guest.get(FPref.PLAYER_NAME), "Mallory", "a key that names a preference but no setting set it");
     }
 
@@ -60,13 +60,13 @@ public class WebSettingsTest {
     public void aGuestCannotChangeTheTablesRules() {
         final Map<FPref, String> host = hostPrefs();
         final PlayerSettings guest = PlayerSettings.fresh();
-        final ServerSettings before = WebSettings.values(guest);
-        WebSettings.set(guest, null, "filteredHands", String.valueOf(!guest.getBoolean(FPref.FILTERED_HANDS)));
-        WebSettings.set(guest, null, "mulliganRule", "Original");
-        WebSettings.set(guest, null, "undoMode", "off".equals(guest.get(FPref.UI_UNDO_MODE)) ? "free" : "off");
-        WebSettings.set(guest, null, "ante", String.valueOf(!guest.getBoolean(FPref.UI_ANTE)));
-        WebSettings.set(guest, null, "aiProfile", "Reckless");
-        Assert.assertEquals(WebSettings.values(guest), before);
+        final ServerSettings before = Options.values(guest);
+        Options.set(guest, null, "filteredHands", String.valueOf(!guest.getBoolean(FPref.FILTERED_HANDS)));
+        Options.set(guest, null, "mulliganRule", "Original");
+        Options.set(guest, null, "undoMode", "off".equals(guest.get(FPref.UI_UNDO_MODE)) ? "free" : "off");
+        Options.set(guest, null, "ante", String.valueOf(!guest.getBoolean(FPref.UI_ANTE)));
+        Options.set(guest, null, "aiProfile", "Reckless");
+        Assert.assertEquals(Options.values(guest), before);
         Assert.assertEquals(hostPrefs(), host);
     }
 
@@ -78,9 +78,9 @@ public class WebSettingsTest {
         final String undo = prefs.getPref(FPref.UI_UNDO_MODE);
         try {
             final String changed = "37".equals(volume) ? "38" : "37";
-            WebSettings.set(PlayerSettings.saved(), null, "soundVolume", changed);
+            Options.set(PlayerSettings.saved(), null, "soundVolume", changed);
             Assert.assertEquals(new ForgePreferences().getPref(FPref.UI_VOL_SOUNDS), changed);
-            WebSettings.set(PlayerSettings.saved(), null, "undoMode", "sometimes");
+            Options.set(PlayerSettings.saved(), null, "undoMode", "sometimes");
             Assert.assertEquals(prefs.getPref(FPref.UI_UNDO_MODE), undo);
         } finally {
             prefs.setPref(FPref.UI_VOL_SOUNDS, volume);

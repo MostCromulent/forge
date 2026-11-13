@@ -47,7 +47,7 @@ public final class WebMain implements IHasForgeLog {
             deckGen.setDaemon(true);
             deckGen.start();
         }
-        final WebService service = new WebService(ui, IDLE_MILLIS, quit::countDown, console != null, newToken());
+        final ServerControl service = new ServerControl(ui, IDLE_MILLIS, quit::countDown, console != null, newToken());
         // Ctrl+C or a machine shutdown skips the finally below. Without this hook a forwarded port would stay open on the router
         Runtime.getRuntime().addShutdownHook(new Thread(service::stop, "ForgeWebShutdown"));
         try {
@@ -90,7 +90,7 @@ public final class WebMain implements IHasForgeLog {
      * input, followed by any preferences as key=value, drops every seat and match. It then resets the preferences to their
      * defaults, applies the given ones, and starts the server again on the same address.
      */
-    private static void resetOnInput(final WebService service) {
+    private static void resetOnInput(final ServerControl service) {
         // Nobody is connected between tests. Without this call that would end the process
         service.quitWhenEmpty(false);
         final Thread reader = new Thread(() -> {

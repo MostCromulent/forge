@@ -6,7 +6,7 @@ import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gui.GuiBase;
 import forge.web.match.BrowserModel;
-import forge.web.match.LocalGame;
+import forge.web.match.NetplaySeat;
 import forge.web.match.MatchProbe;
 import forge.web.match.WebGuiGame;
 import org.testng.Assert;
@@ -26,8 +26,8 @@ public class LoopbackGameTest {
         WebTestSupport.initModel();
     }
 
-    private static void awaitGameStarted(final LocalGame local, final TestBrowser browser) {
-        SessionsTest.awaitTrue(() -> {
+    private static void awaitGameStarted(final NetplaySeat local, final TestBrowser browser) {
+        WebHubTest.awaitTrue(() -> {
             final HostedMatch match = local.hostedMatch();
             return match != null && match.getGame() != null && browser.all("state").size() > 1;
         }, "game did not start");
@@ -89,7 +89,7 @@ public class LoopbackGameTest {
             final WebGuiGame second = new WebGuiGame(PlayerSettings.saved());
             final TestBrowser secondBrowser = new TestBrowser(second, true);
             second.attach(secondBrowser);
-            SessionsTest.onUi(() -> MatchProbe.startMatch(local, islands, bears, second));
+            WebHubTest.onUi(() -> MatchProbe.startMatch(local, islands, bears, second));
             awaitGameStarted(local, secondBrowser);
         });
     }

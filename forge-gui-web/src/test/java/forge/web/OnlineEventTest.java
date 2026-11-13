@@ -8,7 +8,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 /** Tests draft and sealed events at a web table. The host sets them up and starts them with guests seated, as desktop's lobby does. */
-public class OnlineEventTest extends SessionsTest {
+public class OnlineEventTest extends WebHubTest {
     /** Seats the host at a new table, invited or not, with the Limited switch set to kind. */
     private TestBrowser hostAt(final String open, final String kind) throws InterruptedException {
         final TestBrowser host = hostAt(open);
@@ -151,6 +151,6 @@ public class OnlineEventTest extends SessionsTest {
         sessions.onMessage(host, TestBrowser.action("leaveLobby"));
         host.awaitMatching("hello", h -> !"setup".equals(h.get("screen").getAsString()), "the host never left the table");
         // The browser is told it left before the table is closed, so wait for the draft host to finish
-        SessionsTest.awaitTrue(draftHost::isFinished, "the draft host outlived its table");
+        WebHubTest.awaitTrue(draftHost::isFinished, "the draft host outlived its table");
     }
 }

@@ -17,9 +17,9 @@ import forge.web.WebSession.InCampaign;
 import forge.web.WebSession.Menu;
 import forge.web.WebSession.Playing;
 import forge.web.WebSession.Stage;
-import forge.web.deck.DeckSession;
+import forge.web.deck.DeckWorkspace;
 import forge.web.limited.DraftOwner;
-import forge.web.match.LocalGame;
+import forge.web.match.NetplaySeat;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.Commands;
@@ -59,7 +59,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         }
 
         @Override
-        public DeckSession decks() {
+        public DeckWorkspace decks() {
             return session.decks();
         }
 
@@ -87,8 +87,8 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
                 prepared.human().getPlayer().setName(session.playerName());
                 // Quest plays as Forge's one shared human player. Its avatar and sleeve are whatever the last match set
                 prepared.human().getPlayer().setAvatarIndex(session.avatarIndex());
-                prepared.human().getPlayer().setSleeveIndex(LocalGame.storedIndex(FPref.UI_SLEEVES, 0));
-                final LocalGame local = session.local();
+                prepared.human().getPlayer().setSleeveIndex(NetplaySeat.storedIndex(FPref.UI_SLEEVES, 0));
+                final NetplaySeat local = session.local();
                 local.openAlone(session.playerName(), gui).startPrepared(prepared, local.webSeat());
             }, failed, game -> run(() -> {
                 final Record result = campaign.gameOver(game);
@@ -246,7 +246,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
             return false;
         }
         // A campaign's collection editor reads and saves the campaign's cards. Only the campaign thread may touch them
-        run(() -> DeckSession.COMMANDS.run(session.decks(), channel, command));
+        run(() -> DeckWorkspace.COMMANDS.run(session.decks(), channel, command));
         // A deck may have changed size or become playable, and the campaign's pages show both
         if (command instanceof Bare b && b.t() == Plain.editorClose) {
             inOpen((s, ch, campaign, c) -> campaign.page().forEach(m -> ch.send(m))).run(this, channel, command);

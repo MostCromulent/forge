@@ -41,7 +41,7 @@ final class Legality {
         return FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY);
     }
 
-    static Result check(final Deck deck, final Check check) {
+    static Result check(final Deck deck, final LegalityScope check) {
         final DeckFormat df = check.deckFormat();
         // A Commander Draft's sideboard is the rest of the drafted pool. The deck's rules do not apply to it
         final CardPool all = df == DeckFormat.CommanderDraft ? played(deck) : deck.getAllCardsInASinglePool(df.hasCommander(), false);
@@ -66,7 +66,7 @@ final class Legality {
     }
 
     /** Why a card cannot go in this deck, or null: the card pool, the format or the commander's colours. Counts are not checked. */
-    static Function<PaperCard, String> cardProblems(final Check check, final List<PaperCard> commanders) {
+    static Function<PaperCard, String> cardProblems(final LegalityScope check, final List<PaperCard> commanders) {
         final GameFormat pool = check.pool();
         final boolean enforced = !check.unrestricted() && enforced();
         if (pool == null && !enforced) {
@@ -92,7 +92,7 @@ final class Legality {
     }
 
     /** The cards whose colours the rest of the deck must share. In Oathbreaker that is the oathbreaker alone, not its spell. */
-    static List<PaperCard> commanders(final Deck deck, final Check check) {
+    static List<PaperCard> commanders(final Deck deck, final LegalityScope check) {
         if (check.unrestricted() || !check.deckFormat().hasCommander()) {
             return List.of();
         }

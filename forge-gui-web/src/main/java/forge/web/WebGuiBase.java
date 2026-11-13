@@ -26,7 +26,7 @@ import forge.web.images.WebDownloads;
 import forge.web.images.WebImageFetcher;
 import forge.web.protocol.ToBrowser.HostChoiceKind;
 import forge.web.protocol.ToBrowser.Notice;
-import forge.web.protocol.Wire;
+import forge.web.protocol.MessageJson;
 import org.jupnp.DefaultUpnpServiceConfiguration;
 import org.jupnp.UpnpServiceConfiguration;
 
@@ -67,7 +67,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     private volatile Consumer<JsonObject> noticeSink = notice -> { };
     /** Where cards shown to the host are sent. The open campaign's reward screen shows them. */
     private volatile BiConsumer<String, List<PaperCard>> cardsSink = (title, cards) -> { };
-    private final HostRequests hostRequests = new HostRequests();
+    private final HostQuestions hostQuestions = new HostQuestions();
     /** Set while a core game mode, such as the limited gauntlet, starts a match for the host's browser. */
     private volatile SoloTable soloTable;
 
@@ -77,11 +77,11 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
 
     public void setNoticeSink(final Consumer<JsonObject> sink) {
         noticeSink = sink;
-        hostRequests.setSink(sink);
+        hostQuestions.setSink(sink);
     }
 
-    HostRequests hostRequests() {
-        return hostRequests;
+    HostQuestions hostQuestions() {
+        return hostQuestions;
     }
 
     public void playSolo(final SoloTable table) {
@@ -171,10 +171,10 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     public int showOptionDialog(final String message, final String title, final FSkinProp icon, final List<String> options, final int defaultOption) {
         // A single-option dialog is a message box (SOptionPane.showMessageDialog), which needs no answer
         if (options == null || options.size() <= 1) {
-            noticeSink.accept(Wire.encode(new Notice(title, message, icon == FSkinProp.ICO_ERROR || icon == FSkinProp.ICO_WARNING)));
+            noticeSink.accept(MessageJson.encode(new Notice(title, message, icon == FSkinProp.ICO_ERROR || icon == FSkinProp.ICO_WARNING)));
             return defaultOption;
         }
-        final List<Integer> answer = hostRequests.ask(HostChoiceKind.confirm, title, message, options, 1, 1, null, null);
+        final List<Integer> answer = hostQuestions.ask(HostChoiceKind.confirm, title, message, options, 1, 1, null, null);
         if (answer != null && !answer.isEmpty()) {
             final int picked = answer.get(0);
             if (picked >= 0 && picked < options.size()) {
@@ -204,7 +204,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         final boolean cards = !all.isEmpty() && all.stream().allMatch(PaperCard.class::isInstance);
         final List<String> images = packs ? all.stream().map(e -> boosterImage((CardEdition) e)).toList()
                 : cards ? all.stream().map(c -> Foil.key((PaperCard) c)).toList() : null;
-        final List<Integer> answer = hostRequests.ask(HostChoiceKind.choices, null, message, options, min, max, images, packs ? "pack" : cards ? "card" : null);
+        final List<Integer> answer = hostQuestions.ask(HostChoiceKind.choices, null, message, options, min, max, images, packs ? "pack" : cards ? "card" : null);
         final List<T> result = new ArrayList<>();
         if (answer != null) {
             for (final int i : answer) {
@@ -232,7 +232,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         if (list == null || list.isEmpty()) {
             return null;
         }
-        final List<Integer> answer = hostRequests.ask(HostChoiceKind.choices, title, message,
+        final List<Integer> answer = hostQuestions.ask(HostChoiceKind.choices, title, message,
                 list.stream().map(c -> c.getDisplayName() + " (" + c.getEdition() + ")").toList(), 1, 1,
                 list.stream().map(Foil::key).toList(), "card");
         if (answer != null && !answer.isEmpty() && answer.get(0) >= 0 && answer.get(0) < list.size()) {

@@ -1,7 +1,7 @@
 // The end of a game. Each loser's portrait breaks, then the result is shown with the buttons for what comes next
 
 import { game, isLocal, players, type Model } from '../model';
-import { cssUrl, playerAvatarUrl } from '../looks';
+import { cssUrl, playerAvatarUrl } from '../avatarsleeves';
 import { canShatter, shatter } from './shatter';
 import { byId, make, q } from '../dom';
 import { t } from '../text';

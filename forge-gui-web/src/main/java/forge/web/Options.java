@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 /** What the options dialog reads and writes: a player's own settings (see {@link PlayerSettings}) and the phase stops. */
-public final class WebSettings implements IHasForgeLog {
+public final class Options implements IHasForgeLog {
     private static final Map<String, FPref> BOOLEAN_PREFS = Map.ofEntries(
             Map.entry("interruptAttackers", FPref.YIELD_INTERRUPT_ON_ATTACKERS),
             Map.entry("interruptOpponentSpell", FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL),
@@ -49,7 +49,7 @@ public final class WebSettings implements IHasForgeLog {
     private static final List<String> TABLE_SETTINGS = List.of("filteredHands", "mulliganRule", "aiProfile", "ante", "undoMode");
     private static final List<String> UNDO_MODES = List.of(ForgeConstants.UNDO_MODE_OFF, ForgeConstants.UNDO_MODE_SINGLE, ForgeConstants.UNDO_MODE_FREE);
 
-    private WebSettings() {
+    private Options() {
     }
 
     public static ServerSettings values(final PlayerSettings player) {

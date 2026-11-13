@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 /** Tests a second browser taking a seat in the host's game. Both browsers run in this process and connect to the same loopback server. */
-public class GuestSeatTest extends SessionsTest {
+public class GuestSeatTest extends WebHubTest {
     // Fails if a guest cannot reach the host's game
     @Test(timeOut = 120_000)
     public void aGuestSitsDownWithTheHostAndLeavesWithTheGame() throws Exception {

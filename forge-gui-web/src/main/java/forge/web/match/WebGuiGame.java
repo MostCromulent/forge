@@ -55,16 +55,16 @@ import forge.util.Lang;
 import forge.util.Localizer;
 import forge.util.MessageUtil;
 import forge.web.PlayerSettings;
-import forge.web.WebSettings;
+import forge.web.Options;
 import forge.web.images.Foil;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.Commands;
 import forge.web.protocol.Commands.Handler;
 import forge.web.protocol.FromBrowser.*;
-import forge.web.protocol.JsonCodec;
+import forge.web.protocol.PropertyJson;
 import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.*;
-import forge.web.protocol.Wire;
+import forge.web.protocol.MessageJson;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
@@ -123,7 +123,7 @@ public class WebGuiGame extends NetworkGuiGame {
             .on(Plain.macroRecord, play((g, controller, c) -> controller.macros().setRememberedActions()))
             .on(Plain.macroRepeat, play((g, controller, c) -> controller.macros().repeatRememberedActions()))
             .on(Plain.autoPass, play((g, controller, c) -> {
-                WebSettings.set(g.settings, controller, "autoPassNoActions", String.valueOf(!g.settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)));
+                Options.set(g.settings, controller, "autoPassNoActions", String.valueOf(!g.settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)));
                 g.send(g.controlsMessage());
             }))
             .on(PhaseCommand.class, play((g, controller, p) -> {
@@ -150,7 +150,7 @@ public class WebGuiGame extends NetworkGuiGame {
     /** Every card key the browser was sent in this game. The visible list is chosen from these. */
     private final Set<Integer> cardKeys = new LinkedHashSet<>();
     private List<Integer> localPlayerKeys = List.of();
-    private final PendingRequests requests = new PendingRequests(this::send,
+    private final MatchQuestions requests = new MatchQuestions(this::send,
             () -> getCurrentPlayer() == null ? "a player" : getCurrentPlayer().getName());
     private final DeltaSyncManager snapshotter = new DeltaSyncManager();
     private final AtomicInteger skippedProperties = new AtomicInteger();
@@ -257,7 +257,7 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     private void send(final Record message) {
-        send(Wire.encode(message));
+        send(MessageJson.encode(message));
     }
 
     /** How many properties were dropped because they have no JSON form. Tests check that it stays at zero. */
@@ -287,7 +287,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     private JsonObject stateMessage(final boolean full, final long seq, final Map<Integer, JsonObject> newObjects,
             final Map<Integer, JsonObject> deltas, final List<Record> happened) {
-        return Wire.encode(new StateMessage(full, seq, rootKey(getGameView()), byKey(newObjects), byKey(deltas),
+        return MessageJson.encode(new StateMessage(full, seq, rootKey(getGameView()), byKey(newObjects), byKey(deltas),
                 visibleCardKeys(), localPlayerKeys, happened));
     }
 
@@ -298,7 +298,7 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     private Map<Integer, JsonObject> encode(final Map<Integer, Map<TrackableProperty, Object>> objects) {
-        return JsonCodec.encodeAll(objects, name -> {
+        return PropertyJson.encodeAll(objects, name -> {
             skippedProperties.incrementAndGet();
             netLog.warn("Web client: no JSON form for property {}", name);
         });
@@ -418,7 +418,7 @@ public class WebGuiGame extends NetworkGuiGame {
         // The seed reads the shared preferences, so this player's own settings are applied after it
         final IGameController controller = getGameController();
         if (controller != null) {
-            WebSettings.applyAll(settings, controller);
+            Options.applyAll(settings, controller);
         }
         onOpen.run();
     }
@@ -426,7 +426,7 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override
     public boolean isUiSetToSkipPhase(final PlayerView playerTurn, final PhaseType phase) {
         // The first phase has no stop of its own
-        return phase.ordinal() > 0 && !settings.getBoolean(WebSettings.stopKey(phase, isLocalPlayer(playerTurn)));
+        return phase.ordinal() > 0 && !settings.getBoolean(Options.stopKey(phase, isLocalPlayer(playerTurn)));
     }
 
     @Override
@@ -502,11 +502,11 @@ public class WebGuiGame extends NetworkGuiGame {
         final IGameController controller = getGameController();
         final YieldController yields = controller == null ? null : controller.getYieldController();
         final YieldMarker marker = yields == null ? null : yields.getAutoPassUntilMarker();
-        return new Controls(WebSettings.stops(settings, FPref.PHASES_HUMAN), WebSettings.stops(settings, FPref.PHASES_AI),
+        return new Controls(Options.stops(settings, FPref.PHASES_HUMAN), Options.stops(settings, FPref.PHASES_AI),
                 settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS), getDayTime(),
                 marker == null ? null : new TurnMarker(marker.getPhase(), isLocalPlayer(marker.getPhaseOwner())),
                 yields != null && yields.autoPassUntilEndOfTurn(), yields != null && yields.autoPassUntilStackEmpty(),
-                WebSettings.values(settings));
+                Options.values(settings));
     }
 
     @Override
@@ -522,12 +522,12 @@ public class WebGuiGame extends NetworkGuiGame {
 
     private void toggleStop(final PhaseType phase, final boolean mine) {
         if (phase.ordinal() > 0) {
-            setStop(phase, mine, !settings.getBoolean(WebSettings.stopKey(phase, mine)));
+            setStop(phase, mine, !settings.getBoolean(Options.stopKey(phase, mine)));
         }
     }
 
     private void setStop(final PhaseType phase, final boolean mine, final boolean stop) {
-        settings.set(WebSettings.stopKey(phase, mine), stop);
+        settings.set(Options.stopKey(phase, mine), stop);
         settings.save();
         pushStop(phase, mine);
     }
@@ -1257,7 +1257,7 @@ public class WebGuiGame extends NetworkGuiGame {
     public void setSetting(final SetSetting setting) {
         mirrorLock.lock();
         try {
-            WebSettings.set(settings, getGameController(), setting.key(), setting.value());
+            Options.set(settings, getGameController(), setting.key(), setting.value());
             send(controlsMessage());
         } finally {
             mirrorLock.unlock();
@@ -1268,7 +1268,7 @@ public class WebGuiGame extends NetworkGuiGame {
     public void setStops(final SetStops stops) {
         mirrorLock.lock();
         try {
-            for (final PhaseType phase : WebSettings.setStops(settings, stops.mine(), stops.phases())) {
+            for (final PhaseType phase : Options.setStops(settings, stops.mine(), stops.phases())) {
                 pushStop(phase, stops.mine());
             }
             send(controlsMessage());

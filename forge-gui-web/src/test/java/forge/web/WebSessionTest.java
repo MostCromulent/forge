@@ -11,7 +11,7 @@ import java.util.List;
 
 public class WebSessionTest {
     /** Each has its quit scheduled until it is shut down. */
-    private final List<WebSessions> opened = new ArrayList<>();
+    private final List<WebHub> opened = new ArrayList<>();
 
     @BeforeClass
     public void setUp() {
@@ -20,12 +20,12 @@ public class WebSessionTest {
 
     @AfterMethod(alwaysRun = true)
     public void shutDown() {
-        opened.forEach(WebSessions::shutdown);
+        opened.forEach(WebHub::shutdown);
         opened.clear();
     }
 
-    private WebSessions opened() {
-        final WebSessions sessions = new WebSessions(new WebGuiBase(), 60_000, () -> { });
+    private WebHub opened() {
+        final WebHub sessions = new WebHub(new WebGuiBase(), 60_000, () -> { });
         opened.add(sessions);
         return sessions;
     }
@@ -33,7 +33,7 @@ public class WebSessionTest {
     /** Fails if a browser gets the host's seat just by connecting, or if two browsers can both hold it. */
     @Test
     public void theFirstBrowserToAskGetsTheHostSeat() throws Exception {
-        final WebSessions sessions = opened();
+        final WebHub sessions = opened();
         final TestBrowser first = new TestBrowser();
         final TestBrowser second = new TestBrowser();
         sessions.connected(first, "first", true);
@@ -58,9 +58,9 @@ public class WebSessionTest {
     /** Fails if a browser on another machine can take the host's seat without the host password once one is set. The host's seat can stop the server or set up the table. */
     @Test
     public void anotherMachineNeedsTheHostPasswordWhenOneIsSet() throws Exception {
-        WebService.hostPassword("open sesame");
+        ServerControl.hostPassword("open sesame");
         try {
-            final WebSessions sessions = opened();
+            final WebHub sessions = opened();
             final TestBrowser remote = new TestBrowser();
             sessions.connected(remote, "remote", false);
             Assert.assertTrue(remote.awaitNewest("hello").get("hostPassword").getAsBoolean(), "the page was not told to ask for the password");
@@ -70,25 +70,25 @@ public class WebSessionTest {
             sessions.onMessage(remote, claim("open sesame"));
             Assert.assertNotNull(remote.awaitNewest("hello", m -> m.get("host").getAsBoolean()), "the right password did not take the host's seat");
         } finally {
-            WebService.hostPassword("");
+            ServerControl.hostPassword("");
         }
     }
 
     /** Fails if this machine's own browser has to give the host password, or a browser on another machine has to when none is set. */
     @Test
     public void thisMachineAndAnUnguardedSeatNeedNoPassword() throws Exception {
-        WebService.hostPassword("open sesame");
+        ServerControl.hostPassword("open sesame");
         try {
-            final WebSessions guarded = opened();
+            final WebHub guarded = opened();
             final TestBrowser local = new TestBrowser();
             guarded.connected(local, "local", true);
             guarded.onMessage(local, TestBrowser.action("claimHost"));
             Assert.assertFalse(local.awaitNewest("hello").get("hostPassword").getAsBoolean());
             Assert.assertTrue(local.awaitNewest("hello").get("host").getAsBoolean(), "this machine's browser needed the password");
         } finally {
-            WebService.hostPassword("");
+            ServerControl.hostPassword("");
         }
-        final WebSessions sessions = opened();
+        final WebHub sessions = opened();
         final TestBrowser remote = new TestBrowser();
         sessions.connected(remote, "remote", false);
         sessions.onMessage(remote, TestBrowser.action("claimHost"));
@@ -98,9 +98,9 @@ public class WebSessionTest {
     /** Fails if anyone with a link can make the server track an unlimited number of browsers. */
     @Test
     public void browsersBeyondTheLimitAreTurnedAwayUntilOthersLeave() {
-        final WebSessions sessions = opened();
+        final WebHub sessions = opened();
         final List<TestBrowser> attached = new ArrayList<>();
-        for (int i = 0; i < WebSessions.MOST_SESSIONS; i++) {
+        for (int i = 0; i < WebHub.MOST_SESSIONS; i++) {
             final TestBrowser r = new TestBrowser();
             sessions.connected(r, "b" + i, false);
             attached.add(r);
@@ -120,7 +120,7 @@ public class WebSessionTest {
     /** Fails if two tabs of one browser can both act for its seat, or the old tab's closing detaches the new one. */
     @Test
     public void aSecondTabClosesTheFirst() {
-        final WebSessions sessions = opened();
+        final WebHub sessions = opened();
         final TestBrowser first = new TestBrowser();
         final TestBrowser second = new TestBrowser();
         sessions.connected(first, "same", true);

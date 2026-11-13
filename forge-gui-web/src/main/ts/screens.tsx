@@ -9,7 +9,7 @@ import { Limited } from './limited/limited';
 import { Drafting } from './limited/drafting';
 import { Importer } from './deck/importer';
 import { DeckFinder } from './deck/deckfinder';
-import { Requests, StackMenu } from './match/dialogs';
+import { Requests, StackMenu } from './match/questions';
 import { HostChoice } from './hostchoice';
 import { Options } from './options';
 import { AutoDecisionsDialog, AutoPassStops, ConcedeQuestion, DrawOfferQuestion, GameMenu } from './match/gamemenu';
@@ -56,7 +56,7 @@ export function renderScreens(model: Model, actions: Actions): void {
   editing = page === 'editor';
   render(under === 'name' ? <NamePrompt model={model} actions={actions} initial={rememberedName() ?? ''} />
     : under === 'menu' ? <Menu key={edits} model={model} actions={actions} /> : null, byId('menu'));
-  // The page a match starts from keeps what it last showed until the board covers it (match/entry.ts)
+  // The page a match starts from keeps what it last showed until the board covers it (match/matchentry.ts)
   if (!byId('lobby').classList.contains('to-match')) render(under === 'lobby' ? <Lobby key={edits} model={model} actions={actions} /> : null, byId('lobby'));
   render(page === 'editor' ? <Editor model={model} actions={actions} /> : null, byId('editor'));
   render(under === 'limited' ? <Limited key={edits} model={model} actions={actions} /> : null, byId('limited'));

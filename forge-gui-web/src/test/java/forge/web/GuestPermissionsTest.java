@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /** Tests that a browser on a guest's link is refused what only the host may do. */
-public class GuestPermissionsTest extends SessionsTest {
+public class GuestPermissionsTest extends WebHubTest {
     private WebGuiBase ui;
 
     @Override
@@ -47,7 +47,7 @@ public class GuestPermissionsTest extends SessionsTest {
         host.awaitMatching("hello", h -> h.get("host").getAsBoolean(), "the host's seat was not taken");
         final TestBrowser guest = connect("guest");
         final CompletableFuture<List<Integer>> waiting = CompletableFuture.supplyAsync(() ->
-                ui.hostRequests().ask(HostChoiceKind.confirm, "Title", "Keep going?", List.of("Yes", "No"), 1, 1, null, null));
+                ui.hostQuestions().ask(HostChoiceKind.confirm, "Title", "Keep going?", List.of("Yes", "No"), 1, 1, null, null));
         final int id = host.awaitMatching("hostChoice", m -> true, "the question never reached the host").get("id").getAsInt();
         sessions.onMessage(guest, answer(id, 1));
         sessions.onMessage(host, answer(id, 0));

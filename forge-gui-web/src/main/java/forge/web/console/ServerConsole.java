@@ -12,7 +12,7 @@ import forge.util.LogExporter;
 import forge.web.WebGuiBase;
 import forge.web.WebMain;
 import forge.web.ServerTraffic;
-import forge.web.WebService;
+import forge.web.ServerControl;
 import forge.web.images.ImageIndex;
 
 import java.awt.BorderLayout;
@@ -107,7 +107,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
 
     private final WebGuiBase ui;
     private final Runnable onQuit;
-    private WebService service;
+    private ServerControl service;
     /** Whether the server is up and the console is not starting or stopping it. */
     private boolean up;
     private Map<String, String> homes = Map.of();
@@ -136,7 +136,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
     private final JProgressBar picturesBar = new JProgressBar(0, 100);
     private final JButton picturesButton = new JButton();
     private final ImageIndex index = new ImageIndex(now -> SwingUtilities.invokeLater(() -> showPictures(now)));
-    private final JCheckBox quitWhenEmpty = new JCheckBox(TEXT.getMessage("lblWebConsoleQuitWhenEmpty"), !WebService.KEEP_OPEN);
+    private final JCheckBox quitWhenEmpty = new JCheckBox(TEXT.getMessage("lblWebConsoleQuitWhenEmpty"), !ServerControl.KEEP_OPEN);
     private final JCheckBox forwardPort = new JCheckBox(TEXT.getMessage("lblWebConsoleForwardPort"));
     private final Light forwardLight = new Light();
     private final JTextArea forwardState = wrapped("", UIManager.getColor("Label.foreground"), TEXT_WIDTH - 250);
@@ -202,7 +202,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
     }
 
     /** Hands the console the service after the first start attempt, and the buttons control it from now on. failure is the reason it could not start, or null. */
-    public void attach(final WebService driven, final Exception failure) {
+    public void attach(final ServerControl driven, final Exception failure) {
         service = driven;
         images.ready();
         SwingUtilities.invokeLater(() -> {
@@ -271,15 +271,15 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
     }
 
     /** Shows the state of the request to the router, in the words a router's own settings use. */
-    private void forwarding(final WebService.Forwarding now) {
+    private void forwarding(final ServerControl.Forwarding now) {
         SwingUtilities.invokeLater(() -> {
             final boolean wanted = service.forwardPort();
             final boolean viaRouter = !service.throughCloudflare();
             forwardPort.setSelected(wanted);
-            forwardLight.lit(now == WebService.Forwarding.FORWARDED);
+            forwardLight.lit(now == ServerControl.Forwarding.FORWARDED);
             // A refusal only means UPnP did not forward the port. It may still be forwarded by hand, so the link stays usable
             refused.setText(TEXT.getMessage("lblWebConsoleRefused", service.port()));
-            forwardHelp.setVisible(viaRouter && now == WebService.Forwarding.REFUSED);
+            forwardHelp.setVisible(viaRouter && now == ServerControl.Forwarding.REFUSED);
             final String words = switch (now) {
                 case OFF -> wanted ? "" : TEXT.getMessage("lblWebConsoleUpnpOff", service.port());
                 case ASKING -> TEXT.getMessage("lblWebConsoleAskingRouter");
@@ -287,7 +287,7 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
                 case REFUSED -> "";
             };
             // Forwarding is off until the host turns it on, so the line that says so is highlighted
-            final boolean off = now == WebService.Forwarding.OFF;
+            final boolean off = now == ServerControl.Forwarding.OFF;
             forwardState.setForeground(off ? WARN : UIManager.getColor("Label.foreground"));
             forwardState.setFont(UIManager.getFont("Label.font").deriveFont(off ? Font.BOLD : Font.PLAIN));
             reword(forwardState, words, TEXT_WIDTH - 250);
@@ -768,11 +768,11 @@ public final class ServerConsole implements IProgressBar, IHasForgeLog {
 
     /** Kept when the player presses Enter or leaves the field, so a half-typed password is never saved. */
     private static JPasswordField hostPasswordField() {
-        final JPasswordField field = new JPasswordField(WebService.hostPassword(), 18);
+        final JPasswordField field = new JPasswordField(ServerControl.hostPassword(), 18);
         field.setBorder(null);
         field.setOpaque(false);
         field.getAccessibleContext().setAccessibleName(TEXT.getMessage("lblWebConsoleHostPassword"));
-        final Runnable keep = () -> WebService.hostPassword(new String(field.getPassword()));
+        final Runnable keep = () -> ServerControl.hostPassword(new String(field.getPassword()));
         field.addActionListener(e -> keep.run());
         field.addFocusListener(new FocusAdapter() {
             @Override

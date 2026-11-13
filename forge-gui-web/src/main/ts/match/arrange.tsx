@@ -2,14 +2,14 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { SymbolText } from '../symbols';
-import { cssUrl, playerSleeveUrl } from '../looks';
+import { cssUrl, playerSleeveUrl } from '../avatarsleeves';
 import { me, stateOf, type Model } from '../model';
 import type { ManipulateRequest, OrderRequest, RequestOption, CardView, SideboardRequest } from '../protocol';
 import { t } from '../text';
 import { make, reducedMotion } from '../dom';
 import { isPortrait } from '../form';
 import { trackDrag } from '../press';
-import { BoardCard, Button, ButtonRow, OkKey, OptionView, offerAnswer, useCardFit, type Answer } from './dialogparts';
+import { BoardCard, Button, ButtonRow, OkKey, OptionView, offerAnswer, useCardFit, type Answer } from './questionparts';
 
 /** The player's library as a pile in their sleeve. The top and bottom ends of the library are drawn on either side of it. */
 function LibraryPile({ model, count }: { model: Model; count: number }) {

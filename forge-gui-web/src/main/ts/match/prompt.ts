@@ -2,11 +2,11 @@
 
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from '../images';
 import { askingCard, cardPrompt, deref, game, me, oldestRequest, stackPick, stackTopSource, stateOf, type Model } from '../model';
-import { playerAvatarUrl } from '../looks';
+import { playerAvatarUrl } from '../avatarsleeves';
 import { hoverable, inspectCard } from '../preview';
 import { longPress } from '../press';
 import { stepName } from './phasebar';
-import { boardBehind } from './pace';
+import { boardBehind } from './pauserules';
 import { byId, q, playOnce, replay, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
@@ -258,7 +258,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   const body = (heading ? lines.slice(1) : lines).map(line => line.trim()).filter(line => line).join('\n');
   setSymbolText(q(root, '.message'), body || (p.priority && p.ok.enabled ? priorityLine(model, p.ok.label) : ''));
   renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, p.card);
-  // Who goes first is answered on the board, under the coin (starter.ts). The prompt keeps only its message
+  // Who goes first is answered on the board, under the coin (firstplayer.ts). The prompt keeps only its message
   const elsewhere = !!p.starterChoice;
   renderPlayerChoices(root, model, elsewhere ? [] : p.selectablePlayers ?? [], actions);
   setButton(q<HTMLButtonElement>(root, '.ok'), elsewhere ? undefined : p.ok);

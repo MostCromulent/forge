@@ -21,7 +21,7 @@ public class SealedProductsTest {
     /** Fails if the web offers a block, or a combo, that desktop's sealed dialog does not. */
     @Test
     public void sealedListsMatchDesktop() {
-        final LimitedOptions lists = OfflineEvents.options();
+        final LimitedOptions lists = OfflinePools.options();
         int offered = 0;
         for (final CardBlock b : FModel.getBlocks()) {
             try {

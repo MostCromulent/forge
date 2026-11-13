@@ -49,7 +49,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
 /** Tests desktop or mobile Forge joining a web host. The netplay client connects through the web port by the invite link. */
-public class NetplayTunnelTest extends SessionsTest {
+public class NetplayTunnelTest extends WebHubTest {
     private static final String GUEST_TOKEN = "link-token";
     private WebServer server;
     private final List<App> apps = new ArrayList<>();

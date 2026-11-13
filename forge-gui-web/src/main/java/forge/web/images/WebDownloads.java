@@ -10,7 +10,7 @@ import forge.localinstance.skin.FSkinProp;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.web.protocol.ToBrowser;
-import forge.web.protocol.Wire;
+import forge.web.protocol.MessageJson;
 
 import java.util.function.Consumer;
 
@@ -52,7 +52,7 @@ public final class WebDownloads implements IHasForgeLog {
         }
 
         void say(final String text) {
-            toBrowser.accept(Wire.encode(new ToBrowser.Notice(title, text, false)));
+            toBrowser.accept(MessageJson.encode(new ToBrowser.Notice(title, text, false)));
         }
 
         @Override public void setDescription(final String s) {

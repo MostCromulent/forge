@@ -8,7 +8,7 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LobbyTeamsTest extends SessionsTest {
+public class LobbyTeamsTest extends WebHubTest {
     /** Each seat's team, with -1 for a seat that the table shows no team for. */
     private static List<Integer> teams(final JsonObject table) {
         final List<Integer> out = new ArrayList<>();

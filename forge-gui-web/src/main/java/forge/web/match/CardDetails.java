@@ -11,7 +11,7 @@ import forge.game.player.PlayerView;
 import forge.gamemodes.net.DeltaPacket;
 import forge.gui.card.CardDetailUtil;
 import forge.web.images.Foil;
-import forge.web.protocol.JsonCodec;
+import forge.web.protocol.PropertyJson;
 import forge.web.protocol.ToBrowser.CardFace;
 import forge.web.protocol.ToBrowser.Detail;
 import forge.web.protocol.ToBrowser.PlayerDetail;
@@ -53,7 +53,7 @@ final class CardDetails {
         final String pt = state.isCreature() ? state.getPower() + "/" + state.getToughness()
                 : state.isPlaneswalker() ? state.getLoyalty()
                 : state.isBattle() ? state.getDefense() : null;
-        return new CardFace(state.getName(), JsonCodec.manaCost(state.getManaCost()),
+        return new CardFace(state.getName(), PropertyJson.manaCost(state.getManaCost()),
                 state.getType() == null ? "" : state.getType().toString(), pt,
                 CardDetailUtil.composeCardText(state, game, true).trim(), Foil.key(card, state),
                 state.getColors() == null ? 0 : state.getColors().getColor(),

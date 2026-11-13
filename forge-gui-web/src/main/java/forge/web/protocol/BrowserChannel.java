@@ -15,6 +15,6 @@ public interface BrowserChannel {
 
     /** Sends one of the messages in {@link ToBrowser}. */
     default void send(final Record message) {
-        send(Wire.encode(message));
+        send(MessageJson.encode(message));
     }
 }

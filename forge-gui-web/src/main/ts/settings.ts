@@ -24,7 +24,7 @@ interface SettingBase {
   key: string;
   label: string;
   hint?: string;
-  /** The game also reads it. Its preference is in WebSettings and its value is in ServerSettings. */
+  /** The game also reads it. Its preference is in Options and its value is in ServerSettings. */
   server?: boolean;
   /** Also set from the volume control beside the options button. */
   volume?: boolean;

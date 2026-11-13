@@ -6,7 +6,7 @@ import com.google.gson.JsonObject;
 import forge.util.IHasForgeLog;
 import forge.util.LogSafe;
 import forge.web.protocol.ToBrowser;
-import forge.web.protocol.Wire;
+import forge.web.protocol.MessageJson;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -19,7 +19,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /** Blocking prompts that wait for the browser's answer. A request stays open when the browser reloads, and replay sends it to the new connection. */
-public final class PendingRequests implements IHasForgeLog {
+public final class MatchQuestions implements IHasForgeLog {
     private record Pending(JsonObject request, JsonElement defaultAnswer, Predicate<JsonElement> valid, CompletableFuture<JsonElement> answer) {}
 
     private final Consumer<JsonObject> send;
@@ -28,7 +28,7 @@ public final class PendingRequests implements IHasForgeLog {
     private int nextId = 1;
 
     /** {@code who} gives the name of the player asked, for the log. */
-    public PendingRequests(final Consumer<JsonObject> send, final Supplier<String> who) {
+    public MatchQuestions(final Consumer<JsonObject> send, final Supplier<String> who) {
         this.send = send;
         this.who = who;
     }
@@ -39,7 +39,7 @@ public final class PendingRequests implements IHasForgeLog {
         final Pending pending;
         synchronized (this) {
             id = nextId++;
-            final JsonObject request = Wire.encodeRequest(payload);
+            final JsonObject request = MessageJson.encodeRequest(payload);
             request.addProperty("id", id);
             final JsonElement defaultAnswer = request.has("default") ? request.get("default") : JsonNull.INSTANCE;
             pending = new Pending(request, defaultAnswer, valid, new CompletableFuture<>());

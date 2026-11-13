@@ -26,7 +26,7 @@ import forge.web.deck.DeckFacts;
 import forge.web.deck.ExtraSections;
 import forge.web.deck.ExtraSections.Extra;
 import forge.web.images.SkinSprites;
-import forge.web.match.LocalGame;
+import forge.web.match.NetplaySeat;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser;
@@ -59,8 +59,8 @@ public final class Lobby {
     private final DeckCatalog catalog = new DeckCatalog();
     /** This browser's choices for each seat whose deck it sends, by seat. Only the host UI thread and settle() change them. */
     private final Map<Integer, SeatChoice> choices = new ConcurrentHashMap<>();
-    private final LocalGame local;
-    private final LobbyEvents events;
+    private final NetplaySeat local;
+    private final LimitedEvents events;
     /** True once the game was opened for others to join. Only then is a link worth showing. */
     private volatile boolean shareable;
     /** Whether this browser belongs to a guest. A guest's own decks are the ones its browser stores. */
@@ -84,10 +84,10 @@ public final class Lobby {
     /** Whether another player had a seat when the deck list was last built, so their arrival is noticed only once. */
     private volatile boolean othersSeated;
 
-    public Lobby(final LocalGame local, final BooleanSupplier guest, final Map<String, DeckCatalog.OnDevice> device, final WebGuiBase ui) {
+    public Lobby(final NetplaySeat local, final BooleanSupplier guest, final Map<String, DeckCatalog.OnDevice> device, final WebGuiBase ui) {
         this.local = local;
         this.ui = ui;
-        this.events = new LobbyEvents(this, local);
+        this.events = new LimitedEvents(this, local);
         this.guest = guest;
         this.device = device;
     }
@@ -136,7 +136,7 @@ public final class Lobby {
         return catalog;
     }
 
-    public LobbyEvents events() {
+    public LimitedEvents events() {
         return events;
     }
 

@@ -12,10 +12,10 @@ import forge.web.WebGuiBase;
 import forge.web.WebSession;
 import forge.web.WebSession.Setup;
 import forge.web.deck.DeckCatalog;
-import forge.web.deck.DeckSession;
+import forge.web.deck.DeckWorkspace;
 import forge.web.deck.DeckStore;
 import forge.web.lobby.Lobby;
-import forge.web.match.LocalGame;
+import forge.web.match.NetplaySeat;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.ToBrowser.DraftState;
@@ -27,8 +27,8 @@ public final class EventSeat {
     private final WebSession session;
     private final WebGuiBase ui;
     private final Lobby lobby;
-    private final DeckSession decks;
-    private final LocalGame local;
+    private final DeckWorkspace decks;
+    private final NetplaySeat local;
     /** The host's table, for any seat. Every seat's session runs in the host's process, where the draft runs. */
     private final Supplier<ServerGameLobby> hostTable;
     private final Runnable seatsChanged;
@@ -38,7 +38,7 @@ public final class EventSeat {
     private volatile boolean reportedGone;
     private volatile boolean toldDrafting;
 
-    public EventSeat(final WebSession session, final WebGuiBase ui, final Lobby lobby, final DeckSession decks, final LocalGame local,
+    public EventSeat(final WebSession session, final WebGuiBase ui, final Lobby lobby, final DeckWorkspace decks, final NetplaySeat local,
             final Supplier<ServerGameLobby> hostTable, final Runnable seatsChanged) {
         this.session = session;
         this.ui = ui;

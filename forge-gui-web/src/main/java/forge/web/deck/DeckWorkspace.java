@@ -44,8 +44,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /** One browser's deck editor and importer. It also holds the decks that a guest's browser stores. */
-public final class DeckSession implements IHasForgeLog {
-    public static final Commands<DeckSession> COMMANDS = new Commands<DeckSession>()
+public final class DeckWorkspace implements IHasForgeLog {
+    public static final Commands<DeckWorkspace> COMMANDS = new Commands<DeckWorkspace>()
             .on(BrowseFormat.class, (d, ch, b) -> {
                 if (d.host.getAsBoolean() && !d.atTable.getAsBoolean()) {
                     d.lobby.setBrowseFormat(gameType(b.format()));
@@ -60,11 +60,11 @@ public final class DeckSession implements IHasForgeLog {
                 }
             })
             .on(CatalogueQuery.class, (d, ch, q) -> d.slow(() -> ch.send(d.catalogue(q))))
-            .on(ImportRead.class, DeckSession::read)
+            .on(ImportRead.class, DeckWorkspace::read)
             // Fetching waits for a web site
             .on(ImportFetch.class, (d, ch, f) -> d.ui.runBackgroundTask("Import", () -> ch.send(d.fetched(f))))
-            .on(ImportCommit.class, DeckSession::commit)
-            .on(DeckFile.class, DeckSession::addFile)
+            .on(ImportCommit.class, DeckWorkspace::commit)
+            .on(DeckFile.class, DeckWorkspace::addFile)
             .on(DeckDelete.class, (d, ch, del) -> d.deleteDeck(ch, del.key()))
             // The stars belong to the host and are stored where desktop stores them
             .on(DeckFavourite.class, (d, ch, star) -> {
@@ -73,7 +73,7 @@ public final class DeckSession implements IHasForgeLog {
                     d.lobby.queueDecks(ch, d::inTurn);
                 }
             })
-            .on(EditorOpen.class, DeckSession::openFromBrowser)
+            .on(EditorOpen.class, DeckWorkspace::openFromBrowser)
             .on(EditorEdit.class, edit((d, ch, e) -> d.change(e)))
             .on(EditorRename.class, edit((d, ch, r) -> d.editor.rename(r.name())))
             .on(EditorCheck.class, edit((d, ch, c) -> d.editor.setCheck(check(c.format(), c.cardPool(), c.unrestricted()))))
@@ -108,7 +108,7 @@ public final class DeckSession implements IHasForgeLog {
     /** Where to send a guest's deck. The session updates it as the browser connects and disconnects. */
     private final AtomicReference<BrowserChannel> channelFor = new AtomicReference<>();
 
-    public DeckSession(final Lobby lobby, final WebGuiBase ui, final BooleanSupplier host, final BooleanSupplier atTable,
+    public DeckWorkspace(final Lobby lobby, final WebGuiBase ui, final BooleanSupplier host, final BooleanSupplier atTable,
             final Map<String, OnDevice> device) {
         this.lobby = lobby;
         this.ui = ui;
@@ -133,7 +133,7 @@ public final class DeckSession implements IHasForgeLog {
     }
 
     /** Makes a change to the open deck, if there is one, then shows the updated editor. */
-    private static <T extends Record> Handler<DeckSession, T> edit(final Change<T> change) {
+    private static <T extends Record> Handler<DeckWorkspace, T> edit(final Change<T> change) {
         return (d, ch, command) -> {
             synchronized (d) {
                 if (d.editor == null) {
@@ -161,7 +161,7 @@ public final class DeckSession implements IHasForgeLog {
         final DeckEditor onCollection = collectionEditor();
         final DeckEditor.Collection collection = onCollection == null ? null : onCollection.collection();
         // A collection's deck has one format, whatever the importer's format control says
-        final Check check = onCollection != null ? onCollection.check() : check(read.format(), read.cardPool(), read.unrestricted());
+        final LegalityScope check = onCollection != null ? onCollection.check() : check(read.format(), read.cardPool(), read.unrestricted());
         slow(() -> {
             final DeckImport.Read parsed = DeckImport.read(read.text(), check, collection);
             channel.send(DeckImport.result(read.request(), parsed, parsed.name(), check, null));
@@ -169,16 +169,16 @@ public final class DeckSession implements IHasForgeLog {
     }
 
     /** Opens the editor. checkedAgainst is the check to open with. Null means the table's check, or the finder's when there is no table. */
-    private void open(final EditorOpen o, final Check checkedAgainst, final BrowserChannel channel) {
+    private void open(final EditorOpen o, final LegalityScope checkedAgainst, final BrowserChannel channel) {
         final boolean guest = !host.getAsBoolean();
         final Deck deck;
         final boolean readOnly;
         final DeckEditor.Target target;
-        Check check = checkedAgainst != null ? checkedAgainst
+        LegalityScope check = checkedAgainst != null ? checkedAgainst
                 : check(lobby.format().name(), atTable.getAsBoolean() && lobby.cardPool() != null ? lobby.cardPool().getName() : null, false);
         editorPath = "";
         if (o.newFormat() != null) {
-            check = Check.of(gameType(o.newFormat()), null);
+            check = LegalityScope.of(gameType(o.newFormat()), null);
             deck = new Deck(DeckEditor.newDeckName());
             readOnly = false;
             target = guest ? new DeckEditor.Device(UUID.randomUUID().toString()) : new DeckEditor.Stored(storages.of(check.format()));
@@ -204,7 +204,7 @@ public final class DeckSession implements IHasForgeLog {
     }
 
     /** Where a deck is saved: the browser's own list, or a folder in its format's decks ("" for the top). */
-    private DeckEditor.Target targetOf(final String key, final String path, final Check check) {
+    private DeckEditor.Target targetOf(final String key, final String path, final LegalityScope check) {
         if (key.startsWith(DeckCatalog.DEVICE + ":")) {
             return new DeckEditor.Device(key.substring(DeckCatalog.DEVICE.length() + 1));
         }
@@ -221,7 +221,7 @@ public final class DeckSession implements IHasForgeLog {
         if (deck == null || DeckCatalog.readOnly(key, guest)) {
             problem = Localizer.getInstance().getMessage("lblWebEditorOnlyOwnDelete");
         } else {
-            final Check check = check(lobby.format().name(), null, false);
+            final LegalityScope check = check(lobby.format().name(), null, false);
             problem = DeckEditor.delete(targetOf(key, DeckCatalog.pathOf(key), check), deck.getName(), check.format(), this::sendDeviceDeck);
         }
         if (problem != null) {
@@ -236,7 +236,7 @@ public final class DeckSession implements IHasForgeLog {
      */
     public synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final String freeCommander,
             final BrowserChannel channel) {
-        editor = new DeckEditor(human, false, true, new DeckEditor.Group(storage), Check.of(type, null), storages,
+        editor = new DeckEditor(human, false, true, new DeckEditor.Group(storage), LegalityScope.of(type, null), storages,
                 !host.getAsBoolean(), this::sendDeviceDeck, null);
         editor.setFreeCommander(freeCommander);
         editorSeat = null;
@@ -257,7 +257,7 @@ public final class DeckSession implements IHasForgeLog {
         } else {
             target = new DeckEditor.Stored(eventDecks);
         }
-        editor = new DeckEditor(pool, false, true, target, Check.of(type, null), storages, eventDecks == null, this::sendDeviceDeck, null);
+        editor = new DeckEditor(pool, false, true, target, LegalityScope.of(type, null), storages, eventDecks == null, this::sendDeviceDeck, null);
         eventPool = true;
         editorSeat = lobby.mySeat();
         editorTable = lobby.table();
@@ -270,7 +270,7 @@ public final class DeckSession implements IHasForgeLog {
     /** Opens a game mode's own deck, built from that mode's collection and saved among its decks. */
     public synchronized void openCollectionDeck(final Deck deck, final IStorage<Deck> storage, final GameType type,
             final DeckEditor.Collection collection, final boolean exists, final BrowserChannel channel) {
-        editor = new DeckEditor(deck, false, exists, new DeckEditor.Stored(storage), Check.of(type, null), storages, false,
+        editor = new DeckEditor(deck, false, exists, new DeckEditor.Stored(storage), LegalityScope.of(type, null), storages, false,
                 this::sendDeviceDeck, collection);
         eventPool = false;
         editorSeat = null;
@@ -387,12 +387,12 @@ public final class DeckSession implements IHasForgeLog {
 
     private ToBrowser.CataloguePage catalogue(final CatalogueQuery q) {
         final DeckEditor e;
-        final Check check;
+        final LegalityScope check;
         final Deck deck;
         // Take a copy, because other threads can open or change the editor while the search runs
         synchronized (this) {
             e = editor;
-            check = e == null ? Check.none() : e.check();
+            check = e == null ? LegalityScope.none() : e.check();
             deck = e == null ? new Deck("") : new Deck(e.deck());
         }
         final DeckSection section = q.section();
@@ -433,7 +433,7 @@ public final class DeckSession implements IHasForgeLog {
         try {
             final DeckUrlProvider.RemoteDeck f = DeckUrlLoader.fetch(fetch.url());
             final String text = String.join("\n", DeckUrlLoader.getRecognizableImportLines(new DeckRecognizer(), f.importText()));
-            final Check check = Check.of(DeckStore.family(f.format()), null);
+            final LegalityScope check = LegalityScope.of(DeckStore.family(f.format()), null);
             return DeckImport.result(fetch.request(), DeckImport.read(text, check), f.name(), check,
                     new Fetched(f.providerName(), f.sourceUrl(), text, check.format().name()));
         } catch (final IOException | RuntimeException e) {
@@ -448,7 +448,7 @@ public final class DeckSession implements IHasForgeLog {
     /** Saves an imported deck, then does what the player asked: puts it on a seat, opens it, or adds it to the open deck. */
     private synchronized void commit(final BrowserChannel channel, final ImportCommit c) {
         final DeckEditor.Collection collection = editor == null ? null : editor.collection();
-        final Check check = collection != null ? editor.check() : check(c.format(), c.cardPool(), c.unrestricted());
+        final LegalityScope check = collection != null ? editor.check() : check(c.format(), c.cardPool(), c.unrestricted());
         final Deck deck = DeckImport.read(c.text(), check, collection).deck();
         // A list read against a collection is for the deck open on that collection. It does not make a deck of its own
         if (collection != null && c.action() != FromBrowser.ImportAction.add && c.action() != FromBrowser.ImportAction.replace) {
@@ -507,7 +507,7 @@ public final class DeckSession implements IHasForgeLog {
     }
 
     /** Returns false when nothing was saved: the name is not valid, or it is taken and the browser must be asked. */
-    private boolean save(final BrowserChannel channel, final Deck deck, final Check check, final ImportCommit c) {
+    private boolean save(final BrowserChannel channel, final Deck deck, final LegalityScope check, final ImportCommit c) {
         final String nameProblem = DeckStore.nameProblem(c.name());
         if (nameProblem != null) {
             channel.send(new Notice(nameProblem, null, false));
@@ -558,7 +558,7 @@ public final class DeckSession implements IHasForgeLog {
     }
 
     /** Saves to the host's decks, or to the decks loaded from links. Returns null when the name is taken and the browser must be asked. */
-    private String saveOnHost(final BrowserChannel channel, final Deck deck, final Check check, final ImportCommit c) {
+    private String saveOnHost(final BrowserChannel channel, final Deck deck, final LegalityScope check, final ImportCommit c) {
         final boolean linked = c.url() != null;
         final IStorage<Deck> storage = linked ? DeckUrlLoader.getStorage() : storages.of(check.format());
         synchronized (DeckCatalog.DECKS) {
@@ -577,7 +577,7 @@ public final class DeckSession implements IHasForgeLog {
         return lobby.catalog().adopt(linked ? DeckCatalog.LINKED : DeckCatalog.MINE, "", deck);
     }
 
-    private String saveOnDevice(final BrowserChannel channel, final Deck deck, final Check check, final ImportCommit c) {
+    private String saveOnDevice(final BrowserChannel channel, final Deck deck, final LegalityScope check, final ImportCommit c) {
         String id = null;
         for (final Map.Entry<String, OnDevice> e : device.entrySet()) {
             if (DeckStore.sameFile(e.getValue().deck().getName(), deck.getName())) {
@@ -659,13 +659,13 @@ public final class DeckSession implements IHasForgeLog {
         return out;
     }
 
-    private static Check check(final String format, final String cardPool, final boolean unrestricted) {
+    private static LegalityScope check(final String format, final String cardPool, final boolean unrestricted) {
         if (unrestricted) {
-            return Check.none();
+            return LegalityScope.none();
         }
         final GameType type = gameType(format);
         final GameFormat pool = type == GameType.Constructed && cardPool != null ? FModel.getFormats().getFormat(cardPool) : null;
-        return Check.of(type, pool);
+        return LegalityScope.of(type, pool);
     }
 
     private static GameType gameType(final String name) {
@@ -674,7 +674,7 @@ public final class DeckSession implements IHasForgeLog {
 
     /** A change to the open deck. It returns why it was refused, or null. */
     private interface Change<T> {
-        String run(DeckSession decks, BrowserChannel channel, T command);
+        String run(DeckWorkspace decks, BrowserChannel channel, T command);
     }
 
     private record EventPool(String id, Deck deck, GameType format) {

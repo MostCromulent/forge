@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 /** Turns the message records into JSON and back. A null component is left out of the JSON. Only components marked {@link Nullable} may be null. */
-public final class Wire {
+public final class MessageJson {
     /** The classes whose nested records make up the protocol. The campaign modes have their own class, so a build can leave them out. */
     private static final List<Class<?>> HOLDERS = List.of(FromBrowser.class, ToBrowser.class, CampaignProtocol.class);
     private static final Gson GSON = new Gson();
@@ -34,7 +34,7 @@ public final class Wire {
     public static final Gson WRITER = new GsonBuilder().serializeNulls().create();
     private static final Map<Class<?>, RecordComponent[]> COMPONENTS = new ConcurrentHashMap<>();
 
-    private Wire() {
+    private MessageJson() {
     }
 
     /** A message to the browser, sent as {@code {"t": value, ...}}. */
@@ -99,7 +99,7 @@ public final class Wire {
         return out;
     }
 
-    /** The JSON for a request's own fields, without the id that PendingRequests adds. */
+    /** The JSON for a request's own fields, without the id that MatchQuestions adds. */
     public static JsonObject encodeRequest(final Record request) {
         final JsonObject out = new JsonObject();
         out.addProperty("t", "request");

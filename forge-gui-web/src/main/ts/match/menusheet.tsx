@@ -6,7 +6,7 @@ import { changeUi, ui } from '../ui';
 import { sheet, swipeDown } from '../sheet';
 import { inspectPlayer } from '../preview';
 import { players, type Model } from '../model';
-import { playerAvatarUrl } from '../looks';
+import { playerAvatarUrl } from '../avatarsleeves';
 import { t } from '../text';
 
 const TABS = ['log', 'chat', 'players'] as const;

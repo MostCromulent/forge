@@ -3,7 +3,7 @@
 import { t } from './text';
 import { Backdrop } from './dialog';
 
-export function LookPicker({ title, count, urlOf, current, taken = [], close }: {
+export function AvatarPicker({ title, count, urlOf, current, taken = [], close }: {
   title: string; count: number; urlOf: (index: number) => string; current: number; taken?: readonly number[];
   close: (chosen: number | null) => void;
 }) {

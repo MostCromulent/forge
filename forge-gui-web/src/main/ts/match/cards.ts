@@ -4,14 +4,14 @@ import { combatShown, commanderTax, deref, game, stateOf, type Model } from '../
 import { hoverable, inspectCard } from '../preview';
 import { longPress } from '../press';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from '../images';
-import { playerSleeveUrl, cssUrl } from '../looks';
+import { playerSleeveUrl, cssUrl } from '../avatarsleeves';
 import { reconcile } from './reconcile';
 import { q, playOnce, replay, make, reducedMotion } from '../dom';
 import type { CardView, KeywordText, PlayerView, Ref } from '../protocol';
 import { t } from '../text';
 import { drawStickers } from './stickers';
 import { ICONS, iconSvg } from '../icons';
-import { frameColour, ptShift } from './rules';
+import { frameColour, ptShift } from './gamerules';
 
 /** A tapped card is drawn rotated and at this scale (board.css). */
 export const TAPPED_SCALE = 0.9;

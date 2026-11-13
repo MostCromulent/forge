@@ -24,7 +24,7 @@
 .backdrop.on-board.closing, .backdrop.on-board.closing > * { animation-duration: .2s; }
 /* A screen rises in when it opens, as a box does (index.html holds a root for each screen) */
 :is(#menu, #lobby, #editor, #limited, #drafting, #campaign) > * { animation: box-in .18s ease-out; }
-/* A page that starts a match dims and blurs under the rising coin. The board then fades in over it when its seats are drawn (match/entry.ts).
+/* A page that starts a match dims and blurs under the rising coin. The board then fades in over it when its seats are drawn (match/matchentry.ts).
    The page is fixed where it was scrolled to, so the board can be drawn while it dims. The board comes later in the page, so it is drawn on top */
 .to-match { position: fixed; inset: var(--scrolled, 0) 0 auto; pointer-events: none; animation: to-match .3s ease-out forwards; }
 @keyframes to-match { to { filter: blur(6px) brightness(.3); } }
@@ -387,7 +387,7 @@ html:not([data-form="portrait"]) .game-menu.dev { overflow: visible; }
 .game-menu .card-menu-item { align-items: center; }
 .game-menu .card-menu-item:nth-of-type(even):not(:hover, :focus-visible, .on) { background: none; }
 .card-menu-sep { height: 1px; margin: 5px 4px; background: var(--line); }
-/* A spell's optional costs are ticked in the menu, then cast with its button (match/dialogs.tsx CostMenu) */
+/* A spell's optional costs are ticked in the menu, then cast with its button (match/questions.tsx CostMenu) */
 .card-menu-item:has(> input[type="checkbox"]) { align-items: center; cursor: pointer; }
 .card-menu-item > input[type="checkbox"] { margin: 0; accent-color: var(--accent-2); }
 .card-menu-actions { display: flex; justify-content: flex-end; padding: 8px 4px 2px; }

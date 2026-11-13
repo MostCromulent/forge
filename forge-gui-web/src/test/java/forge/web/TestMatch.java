@@ -4,7 +4,7 @@ import forge.deck.Deck;
 import forge.game.Game;
 import forge.game.GameState;
 import forge.gui.GuiBase;
-import forge.web.match.LocalGame;
+import forge.web.match.NetplaySeat;
 import forge.web.match.MatchProbe;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
@@ -20,12 +20,12 @@ final class TestMatch {
     }
 
     interface Body<B> {
-        void run(LocalGame local, WebGuiGame gui, B browser) throws Exception;
+        void run(NetplaySeat local, WebGuiGame gui, B browser) throws Exception;
     }
 
     static <B extends BrowserChannel> void play(final Deck web, final Deck computer, final Function<WebGuiGame, B> browserFor,
             final Body<B> body) throws Exception {
-        final LocalGame local = new LocalGame();
+        final NetplaySeat local = new NetplaySeat();
         final WebGuiGame gui = new WebGuiGame(PlayerSettings.saved());
         final B browser = browserFor.apply(gui);
         try {

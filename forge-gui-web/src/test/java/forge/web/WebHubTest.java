@@ -23,8 +23,8 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /** One server runs for the whole class, because a restart between tests races with the server's own shutdown. */
-abstract class SessionsTest {
-    WebSessions sessions;
+abstract class WebHubTest {
+    WebHub sessions;
     final List<TestBrowser> browsers = new CopyOnWriteArrayList<>();
     /** Tracked by message, not by id, because a restarted match numbers its questions from the start again. */
     final Set<JsonObject> answered = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -32,7 +32,7 @@ abstract class SessionsTest {
     @BeforeClass
     public void startSessions() {
         WebTestSupport.initModel();
-        sessions = new WebSessions(gui(), 120_000, () -> { });
+        sessions = new WebHub(gui(), 120_000, () -> { });
     }
 
     /** The GUI the sessions run on. It is their own, unless a test needs core's questions sent to the browser. */

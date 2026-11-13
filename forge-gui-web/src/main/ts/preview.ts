@@ -19,7 +19,7 @@ import { openedOver, sheet, swipeAcross, swipeDown } from './sheet';
 import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from './protocol';
 import { t, type TextKey } from './text';
 import { conditionsOf, type Progress } from './match/thresholds';
-import { COMMANDER_LETHAL, COMMANDER_WARNING, frameColour, ptShift } from './match/rules';
+import { COMMANDER_LETHAL, COMMANDER_WARNING, frameColour, ptShift } from './match/gamerules';
 
 // The host builds a hovered card's text with CardDetailUtil, as desktop does. The text reaches the model shortly after the hover starts
 

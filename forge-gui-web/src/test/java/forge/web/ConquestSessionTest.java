@@ -25,10 +25,10 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.Localizer;
 import forge.web.campaign.ConquestGame;
-import forge.web.deck.Check;
+import forge.web.deck.LegalityScope;
 import forge.web.deck.DeckImport;
 import forge.web.images.ImageFiles;
-import forge.web.match.LocalGame;
+import forge.web.match.NetplaySeat;
 import forge.web.match.WebGuiGame;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -44,7 +44,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /** Tests a conquest driven from a browser, with its battles played over netplay. */
-public class ConquestSessionTest extends SessionsTest {
+public class ConquestSessionTest extends WebHubTest {
     @Override
     WebGuiBase gui() {
         return (WebGuiBase) GuiBase.getInterface();
@@ -57,7 +57,7 @@ public class ConquestSessionTest extends SessionsTest {
 
     /** Starts the battle at a place over the loopback without a session, then passes the running match to body. */
     private static void battleAt(final ConquestLocation loc, final Consumer<HostedMatch> body) {
-        final LocalGame local = new LocalGame();
+        final NetplaySeat local = new NetplaySeat();
         try {
             final WebGuiGame gui = new WebGuiGame(PlayerSettings.saved());
             gui.attach(new TestBrowser(gui, false));
@@ -563,7 +563,7 @@ public class ConquestSessionTest extends SessionsTest {
         final String stranger = stranger(data).getName();
         final int forests = data.getSelectedCommander().getDeck().getMain().countByName("Forest");
         final String list = "1 " + owned.getName() + " (" + otherPrinting.getEdition() + ")\n1 " + stranger + "\n5 Forest\n";
-        Assert.assertNotEquals(DeckImport.read(list, Check.of(GameType.PlanarConquest, null)).deck().getMain().toFlatList().get(0), owned,
+        Assert.assertNotEquals(DeckImport.read(list, LegalityScope.of(GameType.PlanarConquest, null)).deck().getMain().toFlatList().get(0), owned,
                 "the list names the printing owned, so it shows nothing");
         editing(host);
         send(host, message("importRead", "request", 7, "text", list, "format", "PlanarConquest", "unrestricted", false));

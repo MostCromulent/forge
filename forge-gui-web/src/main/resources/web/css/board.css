@@ -674,7 +674,7 @@ html:not([data-form="portrait"]) #zones.asking:not(.minimised) { padding-block: 
 /* A reveal opens in the same window as a zone, over the same dimmed board */
 .reveal-back { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--scrim-deep); }
 .reveal-panel { max-height: 88vh; }
-/* A plain reveal has no bars. It is as wide as its cards, which grow into the space the board leaves them (dialogs.tsx useCardFit). */
+/* A plain reveal has no bars. It is as wide as its cards, which grow into the space the board leaves them (questions.tsx useCardFit). */
 .reveal-panel.bare { gap: 14px; width: fit-content; max-width: min(860px, 88vw); padding: 16px 8px; }
 .reveal-panel.bare header { display: block; padding: 0 10px; border: 0; text-align: center; }
 /* The heading wraps to the width of the cards instead of widening the window */
@@ -1220,7 +1220,7 @@ html:has(#match[hidden]) #coin-toss { display: none; }
 #coin-toss .coin-shadow { position: absolute; left: 10%; right: 10%; bottom: -30px; height: 24px; border-radius: 50%; background: #000; filter: blur(11px); opacity: .5; }
 #coin-toss p { margin: 0; font-size: 20px; font-weight: 600; text-align: center; opacity: 0; transition: opacity .3s; }
 #coin-toss.landed p { opacity: 1; }
-/* The question of who goes first opens under the coin that decided it. The coin shrinks in place, and the question and its answers fade in below (starter.ts). */
+/* The question of who goes first opens under the coin that decided it. The coin shrinks in place, and the question and its answers fade in below (firstplayer.ts). */
 #coin-toss.asking { cursor: auto; gap: 14px; }
 #coin-toss.asking .coin-scene { scale: .38; margin: -62px 0; }
 #coin-toss .first-ask { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--opening); }

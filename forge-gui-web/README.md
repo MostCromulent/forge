@@ -58,20 +58,20 @@ Forge's models were written for a single UI thread, and most have no locks. The 
 
 Each seat's netplay client runs its calls on a thread of its own, so a game question waiting on a browser holds only that seat's thread, never a web server thread.
 
-The table a browser sits at (`Lobby` and `LocalGame`) is changed only on the UI thread, which also opens, starts and leaves it. Other threads may read it, which is why its maps are concurrent and its fields volatile.
+The table a browser sits at (`Lobby` and `NetplaySeat`) is changed only on the UI thread, which also opens, starts and leaves it. Other threads may read it, which is why its maps are concurrent and its fields volatile.
 
 Forge's preferences have no lock, and two saves at once can garble their file, so the host's preferences are also written on the UI thread. A seat's settings and stops during a match are the exception. The match writes them as they change, under the seat's `mirrorLock`.
 
 A few locks remain where several threads share one thing:
 
-- `WebSessions`' own lock covers the list of sessions, the host's seat and the chat.
+- `WebHub`' own lock covers the list of sessions, the host's seat and the chat.
 - `DeckCatalog.DECKS` guards the deck lists and stores every session reads.
 - `WebSession`'s own lock covers moving between stages and a browser arriving or leaving. `OfflineLimited` also uses it to guard its draft.
-- `DeckSession`'s own lock covers the open deck editor.
+- `DeckWorkspace`'s own lock covers the open deck editor.
 - `Lobby`'s `sentLock` keeps the deck list and table messages to one browser in order.
 - `WebGuiGame`'s `mirrorLock` keeps the server's copy of the browser's game in step with what was sent. `PromptState` and `ShownZones` each lock themselves under it, and `PromptState` takes `ShownZones` when it sends.
 
-They are taken in that order: `WebSessions`, the session's lock, then `DeckSession`'s lock, then `sentLock`, then `DECKS`. `mirrorLock` comes after the session's lock, then `PromptState`, then `ShownZones`.
+They are taken in that order: `WebHub`, the session's lock, then `DeckWorkspace`'s lock, then `sentLock`, then `DECKS`. `mirrorLock` comes after the session's lock, then `PromptState`, then `ShownZones`.
 
 ### The page
 
@@ -121,7 +121,7 @@ A new command from the page:
 A new setting:
 
 - an entry in `SETTINGS` in `settings.ts`
-- for one marked `server: true`, which the game must know, its preference in `WebSettings` and its value in `ServerSettings`
+- for one marked `server: true`, which the game must know, its preference in `Options` and its value in `ServerSettings`
 
 ## Text and languages
 

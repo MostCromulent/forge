@@ -13,8 +13,8 @@ import { byId, make, q } from '../dom';
 import type { CardView, PlayerView, StackItemView, ZoneType } from '../protocol';
 import { t, tCap } from '../text';
 import { zoneTitle } from './zones';
-import { frameColour, manaValue } from './rules';
-import { starterShowing } from './starter';
+import { frameColour, manaValue } from './gamerules';
+import { starterShowing } from './firstplayer';
 
 // Sorts by colour as Arena does. Each single colour comes in WUBRG order, then multicoloured, colourless, and lands last
 function colourRank(colours: number, type: string): number {

@@ -98,7 +98,7 @@ public class WebServerTest {
     }
 
     private void awaitConnected() {
-        SessionsTest.awaitTrue(() -> connected != null, "the socket never reached the endpoint");
+        WebHubTest.awaitTrue(() -> connected != null, "the socket never reached the endpoint");
     }
 
     @Test
@@ -221,10 +221,10 @@ public class WebServerTest {
         final List<String> texts = new CopyOnWriteArrayList<>();
         final WebSocket ws = openSocket(origin(), texts, null);
         ws.sendText("{\"t\":\"ping\"}", true).get(5, TimeUnit.SECONDS);
-        SessionsTest.awaitTrue(() -> !received.isEmpty(), "the endpoint never got the browser's message");
+        WebHubTest.awaitTrue(() -> !received.isEmpty(), "the endpoint never got the browser's message");
         Assert.assertEquals(received.get(0).get("t").getAsString(), "ping");
         connected.send(TestBrowser.action("pong"));
-        SessionsTest.awaitTrue(() -> !texts.isEmpty(), "the browser never got the server's message");
+        WebHubTest.awaitTrue(() -> !texts.isEmpty(), "the browser never got the server's message");
         Assert.assertTrue(texts.get(0).contains("pong"));
         ws.sendClose(WebSocket.NORMAL_CLOSURE, "").get(5, TimeUnit.SECONDS);
     }

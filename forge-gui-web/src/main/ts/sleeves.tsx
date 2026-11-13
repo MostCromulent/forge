@@ -1,7 +1,7 @@
 // The sleeve picker. A card-art sleeve belongs to the deck, not the player. Choosing one writes it to the deck, so every Forge client uses it
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { sleeveUrl } from './looks';
+import { sleeveUrl } from './avatarsleeves';
 import { rememberSleeve } from './identity';
 import { imageUrl, artUrl } from './images';
 import { t } from './text';

@@ -16,7 +16,7 @@ import forge.itemmanager.SFilterUtil;
 import forge.model.FModel;
 import forge.util.Localizer;
 import forge.web.images.Foil;
-import forge.web.protocol.JsonCodec;
+import forge.web.protocol.PropertyJson;
 import forge.web.protocol.ToBrowser;
 import forge.web.protocol.ToBrowser.CataloguePage;
 import forge.web.protocol.ToBrowser.CatalogueRow;
@@ -112,7 +112,7 @@ public final class CardCatalog {
 
     private static Row row(final PaperCard card) {
         final CardRules rules = card.getRules();
-        return new Row(card, normalize(card.getName()), letters(rules.getColor()), JsonCodec.manaCost(rules.getManaCost()),
+        return new Row(card, normalize(card.getName()), letters(rules.getColor()), PropertyJson.manaCost(rules.getManaCost()),
                 rules.getManaCost().getCMC(), heading(card));
     }
 
@@ -335,7 +335,7 @@ public final class CardCatalog {
             final List<EditorPrinting> split = printings.stream()
                     .map(p -> new EditorPrinting(p.getKey().getImageKey(false), p.getValue())).toList();
             out.add(new EditorCard(name, printings.stream().mapToInt(Map.Entry::getValue).sum(), Foil.key(shown),
-                    JsonCodec.manaCost(rules.getManaCost()), rules.getManaCost().getCMC(), letters(rules.getColor()),
+                    PropertyJson.manaCost(rules.getManaCost()), rules.getManaCost().getCMC(), letters(rules.getColor()),
                     printings.size(), split, legality.flags().get(name), printings.stream().allMatch(p -> p.getKey().isFoil())));
         });
         out.sort(Comparator.comparingInt(EditorCard::mv).thenComparing(EditorCard::name));

@@ -8,7 +8,7 @@ import { hoverCard } from '../preview';
 import { SymbolText } from '../symbols';
 import { keyName } from '../keys';
 import { boundKeys } from '../settings';
-import { playerAvatarUrl } from '../looks';
+import { playerAvatarUrl } from '../avatarsleeves';
 import { isLocal, type Model } from '../model';
 import type { RequestOption, PlayerView, TrackedObject } from '../protocol';
 import { cutFor } from './stickers';

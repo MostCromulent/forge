@@ -5,9 +5,9 @@ import forge.deck.DeckSection;
 import forge.game.phase.PhaseType;
 import forge.gamemodes.match.DrawOfferMessage;
 import forge.gamemodes.match.NextGameDecision;
-import forge.web.protocol.Wire.Command;
-import forge.web.protocol.Wire.Nullable;
-import forge.web.protocol.Wire.Ts;
+import forge.web.protocol.MessageJson.Command;
+import forge.web.protocol.MessageJson.Nullable;
+import forge.web.protocol.MessageJson.Ts;
 
 import java.util.List;
 
@@ -419,6 +419,6 @@ public final class FromBrowser {
     public record EventDecksOnly(boolean on) {
     }
 
-    /** Every command record. Wire decodes commands by these, and the TypeScript is generated from them. */
-    static final List<Class<? extends Record>> COMMANDS = Wire.marked(Command.class);
+    /** Every command record. MessageJson decodes commands by these, and the TypeScript is generated from them. */
+    static final List<Class<? extends Record>> COMMANDS = MessageJson.marked(Command.class);
 }

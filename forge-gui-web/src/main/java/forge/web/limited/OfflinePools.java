@@ -44,10 +44,10 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /** The host's offline sealed and draft pools, stored where desktop stores them. This class lists the setup form's options, makes pools and drafts, and lists saved pools. */
-public final class OfflineEvents {
+public final class OfflinePools {
     private static final DateTimeFormatter DAY = DateTimeFormatter.ISO_LOCAL_DATE.withZone(ZoneId.systemDefault());
 
-    private OfflineEvents() {
+    private OfflinePools() {
     }
 
     public static IStorage<DeckGroup> sealed() {

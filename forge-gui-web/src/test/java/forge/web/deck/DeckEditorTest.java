@@ -56,7 +56,7 @@ public class DeckEditorTest {
     }
 
     private DeckEditor editor(final Deck deck, final GameType format) {
-        return new DeckEditor(deck, false, false, new DeckEditor.Stored(storages.of(format)), Check.of(format, null), storages,
+        return new DeckEditor(deck, false, false, new DeckEditor.Stored(storages.of(format)), LegalityScope.of(format, null), storages,
                 false, (id, text, f) -> { }, null);
     }
 
@@ -70,7 +70,7 @@ public class DeckEditorTest {
         final Deck precon = new Deck("Precon");
         precon.getMain().add(card("Forest"), 10);
         final DeckEditor e = new DeckEditor(precon, true, false, new DeckEditor.Stored(storages.of(GameType.Constructed)),
-                Check.of(GameType.Constructed, null), storages, false, (id, text, f) -> { }, null);
+                LegalityScope.of(GameType.Constructed, null), storages, false, (id, text, f) -> { }, null);
         Assert.assertEquals(e.copyOf(), "Precon");
         Assert.assertNull(e.add("Llanowar Elves", DeckSection.Main, 1));
         Assert.assertEquals(precon.getMain().countByName("Llanowar Elves"), 0);
@@ -124,7 +124,7 @@ public class DeckEditorTest {
         host.getMain().add(card("Forest"), 10);
         final List<String> sent = new ArrayList<>();
         final DeckEditor e = new DeckEditor(host, true, false, new DeckEditor.Stored(storages.of(GameType.Constructed)),
-                Check.of(GameType.Constructed, null), storages, true, (id, text, f) -> sent.add(text), null);
+                LegalityScope.of(GameType.Constructed, null), storages, true, (id, text, f) -> sent.add(text), null);
         Assert.assertNull(e.add("Llanowar Elves", DeckSection.Main, 1));
         Assert.assertTrue(e.target() instanceof DeckEditor.Device);
         Assert.assertEquals(sent.size(), 1);
@@ -138,7 +138,7 @@ public class DeckEditorTest {
         for (int i = 0; i < nameSetCount.length; i += 3) {
             owned.add(StaticData.instance().getCommonCards().getCard((String) nameSetCount[i], (String) nameSetCount[i + 1]), (Integer) nameSetCount[i + 2]);
         }
-        return new DeckEditor(new Deck("Owned deck"), false, false, new DeckEditor.Stored(storages.of(format)), Check.of(format, null), storages,
+        return new DeckEditor(new Deck("Owned deck"), false, false, new DeckEditor.Stored(storages.of(format)), LegalityScope.of(format, null), storages,
                 false, (id, text, f) -> { }, new DeckEditor.Collection("Test", () -> owned, c -> false, () -> { }, d -> List.of(), () -> { }, mainOnly));
     }
 

@@ -74,14 +74,14 @@ public class ActiveClientTest {
             // A released browser skips a card it does not have yet, and then passes priority
             final int temple = cardKey(game, ZoneType.Hand, true, "Temple of Enlightenment", false);
             final int wilds = cardKey(game, ZoneType.Battlefield, true, "Evolving Wilds", false);
-            SessionsTest.awaitTrue(() -> MatchProbe.objects(browser.model).keySet().containsAll(List.of(temple, wilds)),
+            WebHubTest.awaitTrue(() -> MatchProbe.objects(browser.model).keySet().containsAll(List.of(temple, wilds)),
                     "the browser never got the cards");
             // Release one card at a time, so the Wilds activation cannot interleave with the Temple's trigger
             browser.release("Hand:Temple of Enlightenment");
-            SessionsTest.awaitTrue(() -> asked(browser, "manipulate"), "no scry reached the browser");
+            WebHubTest.awaitTrue(() -> asked(browser, "manipulate"), "no scry reached the browser");
 
             browser.release("Battlefield:Evolving Wilds");
-            SessionsTest.awaitTrue(() -> shown(browser, "Library"), "no library search reached the browser");
+            WebHubTest.awaitTrue(() -> shown(browser, "Library"), "no library search reached the browser");
             Assert.assertTrue(browser.reloaded, "no reload happened mid-request");
             Assert.assertEquals(MatchProbe.skippedProperties(gui), 0);
             TestBrowser.command(gui, TestBrowser.action("concede"));
@@ -165,7 +165,7 @@ public class ActiveClientTest {
             final int split = cardKey(game, ZoneType.Hand, true, "Fire // Ice", false);
             final int ownFaceDown = cardKey(game, ZoneType.Battlefield, true, "Grizzly Bears", true);
             final int theirFaceDown = cardKey(game, ZoneType.Battlefield, false, "Grizzly Bears", true);
-            SessionsTest.awaitTrue(() -> MatchProbe.objects(browser.model).keySet().containsAll(List.of(delver, split, ownFaceDown, theirFaceDown)),
+            WebHubTest.awaitTrue(() -> MatchProbe.objects(browser.model).keySet().containsAll(List.of(delver, split, ownFaceDown, theirFaceDown)),
                     "the browser never got the cards");
 
             Assert.assertEquals(faces(gui, browser, delver).size(), 2, "a double-faced card shows both faces");
@@ -209,7 +209,7 @@ public class ActiveClientTest {
             final int turn = game.getPhaseHandler().getTurn();
             browser.release();
             // Wait for the web seat's next turn, past the upkeep that asks for the payment
-            SessionsTest.awaitTrue(() -> game.getPhaseHandler().getTurn() > turn && game.getPhaseHandler().getPhase().isAfter(PhaseType.UPKEEP),
+            WebHubTest.awaitTrue(() -> game.getPhaseHandler().getTurn() > turn && game.getPhaseHandler().getPhase().isAfter(PhaseType.UPKEEP),
                     () -> "the next turn's upkeep never ended: turn " + game.getPhaseHandler().getTurn() + " in " + game.getPhaseHandler().getPhase());
             Assert.assertEquals(game.getPhaseHandler().getPlayerTurn(), seat, "the web seat's next turn never came: turn "
                     + game.getPhaseHandler().getTurn() + " in " + game.getPhaseHandler().getPhase());

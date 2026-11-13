@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
-import { avatarUrl } from './looks';
-import { LookPicker } from './lookpicker';
+import { avatarUrl } from './avatarsleeves';
+import { AvatarPicker } from './avatarpicker';
 import { rememberAvatar, rememberedSleeve } from './identity';
 import { logTints } from './match/log';
 import { players, type ChatEntry, type Model } from './model';
@@ -92,7 +92,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   }
   // Before a match, pressing your own avatar in the roster opens this picker. During a match the seat's avatar is fixed
   const picker = picking && (
-    <LookPicker title={t('lblWebMenuChooseYourAvatar')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
+    <AvatarPicker title={t('lblWebMenuChooseYourAvatar')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
       current={people.find(p => p.name === model.playerName)?.avatar ?? 0} close={chosen => {
         setPicking(false);
         if (chosen !== null) {

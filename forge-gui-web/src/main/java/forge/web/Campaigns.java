@@ -5,9 +5,9 @@ import forge.gamemodes.limited.BoosterDraft;
 import forge.web.WebSession.InCampaign;
 import forge.web.WebSession.Playing;
 import forge.web.WebSession.Stage;
-import forge.web.deck.DeckSession;
+import forge.web.deck.DeckWorkspace;
 import forge.web.limited.DraftOwner;
-import forge.web.match.LocalGame;
+import forge.web.match.NetplaySeat;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
 
@@ -34,7 +34,7 @@ public interface Campaigns {
 
         BrowserChannel browser();
 
-        DeckSession decks();
+        DeckWorkspace decks();
 
         WebGuiBase ui();
 
@@ -42,7 +42,7 @@ public interface Campaigns {
 
         int avatarIndex();
 
-        LocalGame local();
+        NetplaySeat local();
 
         /**
          * Starts a match that a campaign builds. Leaving the match returns to back. start builds the match on the GUI it is played

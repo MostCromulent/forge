@@ -17,7 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class JsonCodecTest {
+public class PropertyJsonTest {
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
@@ -36,7 +36,7 @@ public class JsonCodecTest {
         final Map<TrackableProperty, Object> props = new HashMap<>();
         props.put(prop, value);
         final List<String> skipped = new ArrayList<>();
-        final JsonObject out = JsonCodec.encodeProps(ownerKey, props, skipped::add);
+        final JsonObject out = PropertyJson.encodeProps(ownerKey, props, skipped::add);
         Assert.assertTrue(skipped.isEmpty(), "skipped " + skipped);
         return out.get(prop.name());
     }
@@ -47,12 +47,12 @@ public class JsonCodecTest {
 
     @Test
     public void cardReferenceBecomesRefMarker() {
-        Assert.assertEquals(encodeOne(cardKey(1), ofType(TrackableTypes.CardViewType), 7), JsonCodec.ref(DeltaPacket.TYPE_CARD_VIEW, 7));
+        Assert.assertEquals(encodeOne(cardKey(1), ofType(TrackableTypes.CardViewType), 7), PropertyJson.ref(DeltaPacket.TYPE_CARD_VIEW, 7));
     }
 
     @Test
     public void cardStateOrdinalBecomesCardStateKeyOfTheOwningCard() {
-        Assert.assertEquals(encodeOne(cardKey(12), TrackableProperty.CurrentState, 2), JsonCodec.ref(DeltaPacket.TYPE_CSV, 12 * 16 + 2));
+        Assert.assertEquals(encodeOne(cardKey(12), TrackableProperty.CurrentState, 2), PropertyJson.ref(DeltaPacket.TYPE_CSV, 12 * 16 + 2));
     }
 
     @Test
@@ -67,8 +67,8 @@ public class JsonCodecTest {
         final DeltaPacket.CombatData data = new DeltaPacket.CombatData(attackers, defenders, blockers, planned);
         final JsonObject band = encodeOne(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_GAME_VIEW, 1), TrackableProperty.CombatView, data)
                 .getAsJsonArray().get(0).getAsJsonObject();
-        Assert.assertEquals(band.getAsJsonArray("attackers").get(0), JsonCodec.ref(DeltaPacket.TYPE_CARD_VIEW, 4));
-        Assert.assertEquals(band.get("defender"), JsonCodec.ref(DeltaPacket.TYPE_PLAYER_VIEW, 2));
+        Assert.assertEquals(band.getAsJsonArray("attackers").get(0), PropertyJson.ref(DeltaPacket.TYPE_CARD_VIEW, 4));
+        Assert.assertEquals(band.get("defender"), PropertyJson.ref(DeltaPacket.TYPE_PLAYER_VIEW, 2));
         Assert.assertTrue(band.get("blockers").isJsonNull());
     }
 
@@ -77,7 +77,7 @@ public class JsonCodecTest {
         final Map<TrackableProperty, Object> props = new LinkedHashMap<>();
         props.put(TrackableProperty.Name, new Object());
         final List<String> skipped = new ArrayList<>();
-        final JsonObject out = JsonCodec.encodeProps(cardKey(1), props, skipped::add);
+        final JsonObject out = PropertyJson.encodeProps(cardKey(1), props, skipped::add);
         Assert.assertEquals(skipped, List.of("Name"));
         Assert.assertFalse(out.has("Name"));
     }

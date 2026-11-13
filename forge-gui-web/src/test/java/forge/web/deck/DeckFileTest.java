@@ -17,7 +17,7 @@ public class DeckFileTest {
     // Fails if a card unknown to Forge stops the deck from being read, or is dropped without being counted
     @Test
     public void unknownCardsAreCounted() {
-        final DeckSession.FileDeck read = DeckSession.readFile("[metadata]\nName=Mini\n[Main]\n4 Lightning Bolt|M10\n3 No Such Card Anywhere|M10\n");
+        final DeckWorkspace.FileDeck read = DeckWorkspace.readFile("[metadata]\nName=Mini\n[Main]\n4 Lightning Bolt|M10\n3 No Such Card Anywhere|M10\n");
         Assert.assertEquals(read.deck().getMain().countAll(), 4);
         Assert.assertEquals(read.leftOut(), 3);
     }
@@ -25,14 +25,14 @@ public class DeckFileTest {
     // Fails if a pasted list is treated as a deck file. It would then be saved without the importer reading it
     @Test
     public void plainListIsNotADeckFile() {
-        Assert.assertNull(DeckSession.readFile("4 Lightning Bolt\n20 Mountain\n"));
+        Assert.assertNull(DeckWorkspace.readFile("4 Lightning Bolt\n20 Mountain\n"));
     }
 
     // Fails if the importer loses a card, its printing or its foil when it is given a deck file
     @Test
     public void importerReadsADeckFile() {
         final DeckImport.Read read = DeckImport.read("[metadata]\nName=Mini\n[Main]\n4 Lightning Bolt|M10\n3 Shock|M10|1\n"
-                + "2 Forest|M10|[246]\n1 Counterspell+|7ED\n[Sideboard]\n2 Duress|M10|[96]\n", Check.of(GameType.Constructed, null));
+                + "2 Forest|M10|[246]\n1 Counterspell+|7ED\n[Sideboard]\n2 Duress|M10|[96]\n", LegalityScope.of(GameType.Constructed, null));
         Assert.assertEquals(read.name(), "Mini");
         Assert.assertEquals(read.deck().getMain().countAll(), 10);
         Assert.assertEquals(read.deck().get(DeckSection.Sideboard).countAll(), 2);
@@ -48,7 +48,7 @@ public class DeckFileTest {
     @Test
     public void importerMarksADeckFilesUnknownCard() {
         final DeckImport.Read read = DeckImport.read("[metadata]\nName=Mini\n[Main]\n4 Lightning Bolt|M10\n3 No Such Card Anywhere|M10\n",
-                Check.of(GameType.Constructed, null));
+                LegalityScope.of(GameType.Constructed, null));
         Assert.assertEquals(read.deck().getMain().countAll(), 4);
         Assert.assertEquals(read.notImported(), 1);
         Assert.assertEquals(read.lines().get(4).kind().name(), "problem");

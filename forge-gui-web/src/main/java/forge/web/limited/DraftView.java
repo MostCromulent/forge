@@ -5,7 +5,7 @@ import forge.gamemodes.limited.CardRanker;
 import forge.item.PaperCard;
 import forge.web.deck.CardCatalog;
 import forge.web.images.Foil;
-import forge.web.protocol.JsonCodec;
+import forge.web.protocol.PropertyJson;
 import forge.web.protocol.ToBrowser.DraftCard;
 import forge.web.protocol.ToBrowser.DraftLogKind;
 import forge.web.protocol.ToBrowser.DraftLogLine;
@@ -50,7 +50,7 @@ final class DraftView {
         final CardRules rules = card.getRules();
         // A ranked card scores at least 1. Desktop's rounding can show 0
         final double score = CardRanker.getRawScore(card);
-        return new DraftCard(card.getName(), Foil.key(card), JsonCodec.manaCost(rules.getManaCost()),
+        return new DraftCard(card.getName(), Foil.key(card), PropertyJson.manaCost(rules.getManaCost()),
                 rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()), rules.getType().toString(),
                 rules.getOracleText().replace("\\n", "\n").replace("\r\n", "\n"), CardCatalog.pt(rules),
                 card.getRarity().toString(), score <= 0 ? null : (int) Math.max(1, Math.round(Math.min(99, score))), packNumber, pickNumber, sideboard);

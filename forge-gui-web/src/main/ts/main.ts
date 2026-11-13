@@ -13,9 +13,9 @@ import { initSheets, matchHistory } from './sheet';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName, rememberedSleeve } from './identity';
 import { renderScreens, pageUnder, screenOf, slideWay } from './screens';
-import { confirmShown } from './match/dialogparts';
+import { confirmShown } from './match/questionparts';
 import { renderMatch, renderSky, resetTable } from './match/board';
-import { arriveAtMatch, dimIntoMatch } from './match/entry';
+import { arriveAtMatch, dimIntoMatch } from './match/matchentry';
 import { renderPrompt, flash, pressPromptButton } from './match/prompt';
 import { appendLog, initLog, logTints } from './match/log';
 import { initSide, renderSide, showLog } from './match/side';
@@ -26,7 +26,7 @@ import { showShortcuts } from './options';
 import { initOverlay, drawOverlay } from './match/overlay';
 import { afterCombatDrags, initCombatDrag, renderCombatDrag } from './match/combatdrag';
 import { boundKeys, initSettings, onServerSettings, rememberGuestAutoPass, restoreGuestSettings, setGuest, setting, shortcutKeys } from './settings';
-import { behindItsBoard, passingFor } from './match/pace';
+import { behindItsBoard, passingFor } from './match/pauserules';
 import { createPacer } from './match/pacer';
 import { setVersion } from './links';
 import { goBack } from './header';
@@ -50,7 +50,7 @@ let askedAddresses = false;
 let restoredFor: number | null = null;
 // A guest's decks are stored in its browser, so each connection sends the server the list
 let sentDeviceDecks = false;
-// A sound or log line arrives before its board update. It is applied after that board, or alone after 300 ms if no board follows (pace.ts)
+// A sound or log line arrives before its board update. It is applied after that board, or alone after 300 ms if no board follows (pauserules.ts)
 const send = connect(behindItsBoard(msg => pacer.receive(msg), 300), online => {
   byId('banner').hidden = online;
   // The server replays the chat on every connection, so the browser clears it when the connection drops
@@ -495,7 +495,7 @@ function draw(): void {
   byId('editor').hidden = page !== 'editor';
   for (const id of ['menu', 'lobby', 'limited', 'drafting', 'campaign', 'match']) {
     const el = byId(id);
-    // A phone's editor hides the page under it, and the page that started a match stays drawn until the board is on screen (match/entry.ts)
+    // A phone's editor hides the page under it, and the page that started a match stays drawn until the board is on screen (match/matchentry.ts)
     el.hidden = (id !== (under === 'name' ? 'menu' : under) || (page === 'editor' && isPortrait())) && !el.classList.contains('to-match');
     // On a desktop the page under the editor stays visible but cannot be used
     el.inert = page === 'editor';

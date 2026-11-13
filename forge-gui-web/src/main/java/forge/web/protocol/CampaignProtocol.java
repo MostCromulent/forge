@@ -1,9 +1,9 @@
 package forge.web.protocol;
 
 import forge.web.protocol.ToBrowser.CatalogueRow;
-import forge.web.protocol.Wire.Command;
-import forge.web.protocol.Wire.Message;
-import forge.web.protocol.Wire.Nullable;
+import forge.web.protocol.MessageJson.Command;
+import forge.web.protocol.MessageJson.Message;
+import forge.web.protocol.MessageJson.Nullable;
 
 import java.util.List;
 import java.util.Map;

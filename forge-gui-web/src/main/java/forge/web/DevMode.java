@@ -10,7 +10,7 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.player.PlayerControllerHuman;
 import forge.util.Localizer;
-import forge.web.match.LocalGame;
+import forge.web.match.NetplaySeat;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.FromBrowser.Dev;
 import forge.web.protocol.ToBrowser.DevDump;
@@ -25,7 +25,7 @@ final class DevMode {
     }
 
     /** Why the host cannot cheat in the game now, or null when it can. */
-    static String refusal(final LocalGame local) {
+    static String refusal(final NetplaySeat local) {
         if (!FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {
             return Localizer.getInstance().getMessage("lblWebDevOff");
         }
@@ -33,7 +33,7 @@ final class DevMode {
     }
 
     /** Runs one cheat. Do not call it on a socket thread or the host UI thread, because a cheat waits for the browser's answers. */
-    static void run(final LocalGame local, final Dev dev, final BrowserChannel channel) {
+    static void run(final NetplaySeat local, final Dev dev, final BrowserChannel channel) {
         final String refused = refusal(local);
         if (refused != null) {
             channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDevNoCheating"), refused, false));

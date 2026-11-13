@@ -14,7 +14,7 @@ import forge.web.images.SkinSprites;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.PageText;
 import forge.web.protocol.ToBrowser.PictureReady;
-import forge.web.protocol.Wire;
+import forge.web.protocol.MessageJson;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -213,7 +213,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
 
     /** Sends one of the messages in {@link forge.web.protocol.ToBrowser} to every open page. */
     private void toEveryBrowser(final Record message) {
-        browsers.writeAndFlush(new TextWebSocketFrame(Wire.WRITER.toJson(Wire.encode(message))));
+        browsers.writeAndFlush(new TextWebSocketFrame(MessageJson.WRITER.toJson(MessageJson.encode(message))));
     }
 
     static void notFound(final ChannelHandlerContext ctx) {
@@ -498,7 +498,7 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 browser = new BrowserChannel() {
                     @Override
                     public void send(final JsonObject message) {
-                        ch.writeAndFlush(new TextWebSocketFrame(Wire.WRITER.toJson(message)));
+                        ch.writeAndFlush(new TextWebSocketFrame(MessageJson.WRITER.toJson(message)));
                     }
 
                     @Override

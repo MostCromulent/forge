@@ -57,7 +57,7 @@ public final class DeckEditor {
     private final Deque<Snapshot> undo = new ArrayDeque<>();
     private Deck deck;
     private Target target;
-    private Check check;
+    private LegalityScope check;
     /** The name of the deck that this editor cannot change in place, until the first change copies it. */
     private String copyOf;
     /** The name this editor has saved the deck under, or null before its first save. */
@@ -82,7 +82,7 @@ public final class DeckEditor {
     }
 
     /** saved says the deck was opened from where target saves it. A new deck, or one that is only being viewed, was not. */
-    DeckEditor(final Deck deck, final boolean readOnly, final boolean saved, final Target target, final Check check,
+    DeckEditor(final Deck deck, final boolean readOnly, final boolean saved, final Target target, final LegalityScope check,
             final DeckStore.Storages storages, final boolean guest, final DeviceSink sink, final Collection collection) {
         // Edit a copy, so a deck that another screen holds (a catalogue entry, a seat) never changes under that screen
         this.deck = new Deck(deck, deck.getName());
@@ -171,7 +171,7 @@ public final class DeckEditor {
         return deck;
     }
 
-    Check check() {
+    LegalityScope check() {
         return check;
     }
 
@@ -429,7 +429,7 @@ public final class DeckEditor {
     }
 
     /** Changes what the deck is checked against. A change of format family moves the deck to that format's folder. */
-    String setCheck(final Check wanted) {
+    String setCheck(final LegalityScope wanted) {
         if (collection != null) {
             return Localizer.getInstance().getMessage(DECK_FIXED);
         }
@@ -601,7 +601,7 @@ public final class DeckEditor {
     private String save() {
         try {
             if (target instanceof Device d) {
-                sink.deviceDeck(d.id(), DeckSession.text(deck), check.format());
+                sink.deviceDeck(d.id(), DeckWorkspace.text(deck), check.format());
                 saved = true;
                 return null;
             }
@@ -650,7 +650,7 @@ public final class DeckEditor {
     }
 
     /** Changes the check. Moves the deck when the new format stores its decks in another folder. */
-    private void moveTo(final Check wanted) {
+    private void moveTo(final LegalityScope wanted) {
         final boolean newFamily = DeckStore.family(wanted.format()) != DeckStore.family(check.format());
         check = wanted;
         if (!newFamily || !(target instanceof Stored s) || copyOf != null) {
@@ -935,7 +935,7 @@ public final class DeckEditor {
         void deviceDeck(String id, String text, GameType format);
     }
 
-    private record Snapshot(Deck deck, Check check) {
+    private record Snapshot(Deck deck, LegalityScope check) {
     }
 
     /** Built once here. StaticData's sorted list is built lazily without a lock, so two editors opening at once could read it half sorted. */

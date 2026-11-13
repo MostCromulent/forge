@@ -13,7 +13,7 @@ import java.security.MessageDigest;
 import java.util.function.Consumer;
 
 /** The web server, in a form the console can stop and start again. The link token is kept across a restart, so old links still work. */
-public final class WebService implements IHasForgeLog {
+public final class ServerControl implements IHasForgeLog {
     /** Set at launch to keep the server running after its browsers leave, for example when there is no console to change the option in. */
     public static final boolean KEEP_OPEN = Boolean.getBoolean("forge.web.keepOpen");
     private final WebGuiBase ui;
@@ -23,7 +23,7 @@ public final class WebService implements IHasForgeLog {
     private final boolean consoleShown;
     private final String token;
     private WebServer server;
-    private volatile WebSessions sessions;
+    private volatile WebHub sessions;
     private boolean quitWhenEmpty = !KEEP_OPEN;
     private volatile PortForward forward;
     private volatile Forwarding forwarding = Forwarding.OFF;
@@ -35,7 +35,7 @@ public final class WebService implements IHasForgeLog {
     /** The state of the request to the router to forward the port. */
     public enum Forwarding { OFF, ASKING, FORWARDED, REFUSED }
 
-    WebService(final WebGuiBase ui, final long idleMillis, final Runnable onQuit, final boolean consoleShown,
+    ServerControl(final WebGuiBase ui, final long idleMillis, final Runnable onQuit, final boolean consoleShown,
             final String token) {
         this.ui = ui;
         this.idleMillis = idleMillis;
@@ -55,7 +55,7 @@ public final class WebService implements IHasForgeLog {
         }
         // One log for the whole time the port is bound, starting before the first table
         NetworkLogConfig.activateNetworkLogging();
-        final WebSessions fresh = new WebSessions(ui, idleMillis, onQuit);
+        final WebHub fresh = new WebHub(ui, idleMillis, onQuit);
         final WebServer bound;
         try {
             bound = new WebServer(fresh, token);
@@ -250,7 +250,7 @@ public final class WebService implements IHasForgeLog {
 
     private void setTunnelling(final CloudflareTunnel.State value) {
         tunnelling = value;
-        final WebSessions now = sessions;
+        final WebHub now = sessions;
         final CloudflareTunnel open = tunnel;
         if (now != null) {
             now.throughCloudflare(value == CloudflareTunnel.State.CONNECTED && open != null ? open.address() : null);
@@ -283,7 +283,7 @@ public final class WebService implements IHasForgeLog {
 
     /** Takes no lock, so the console can call it on the event thread while a stop is in progress. */
     public int playersHere() {
-        final WebSessions now = sessions;
+        final WebHub now = sessions;
         return now == null ? 0 : now.playersHere();
     }
 

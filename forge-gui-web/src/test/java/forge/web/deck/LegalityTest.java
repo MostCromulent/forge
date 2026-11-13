@@ -40,7 +40,7 @@ public class LegalityTest {
     public void cardOutsideTheCommandersColoursIsFlagged() {
         final Deck d = commanderDeck("Meren of Clan Nel Toth");
         d.getMain().add(card("Lightning Bolt"), 1);
-        final Legality.Result r = Legality.check(d, Check.of(GameType.Commander, null));
+        final Legality.Result r = Legality.check(d, LegalityScope.of(GameType.Commander, null));
         Assert.assertEquals(r.flags().get("Lightning Bolt"), "outside B G");
         Assert.assertEquals(r.verdict(), GameType.Commander.getDeckFormat().getDeckConformanceProblem(d));
     }
@@ -50,7 +50,7 @@ public class LegalityTest {
     public void noRestrictionOnlyCountsCopies() {
         final Deck d = commanderDeck("Meren of Clan Nel Toth");
         d.getMain().add(card("Mana Crypt"), 1);
-        Assert.assertNull(Legality.check(d, Check.none()).verdict());
+        Assert.assertNull(Legality.check(d, LegalityScope.none()).verdict());
     }
 
     // Fails if a card pool's own message, such as singleton, no longer reaches the verdict as one line

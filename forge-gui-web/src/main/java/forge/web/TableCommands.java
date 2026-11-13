@@ -3,8 +3,8 @@ package forge.web;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.Localizer;
-import forge.web.deck.DeckSession;
-import forge.web.limited.OfflineEvents;
+import forge.web.deck.DeckWorkspace;
+import forge.web.limited.OfflinePools;
 import forge.web.limited.OfflineLimited;
 import forge.web.lobby.Lobby;
 import forge.web.protocol.BrowserChannel;
@@ -117,13 +117,13 @@ public final class TableCommands {
 
     private final WebSession session;
     private final Lobby lobby;
-    private final DeckSession decks;
+    private final DeckWorkspace decks;
     private final OfflineLimited limited;
     private final WebGuiBase ui;
-    private final WebSessions sessions;
+    private final WebHub sessions;
 
-    TableCommands(final WebSession session, final Lobby lobby, final DeckSession decks, final OfflineLimited limited, final WebGuiBase ui,
-            final WebSessions sessions) {
+    TableCommands(final WebSession session, final Lobby lobby, final DeckWorkspace decks, final OfflineLimited limited, final WebGuiBase ui,
+            final WebHub sessions) {
         this.session = session;
         this.lobby = lobby;
         this.decks = decks;
@@ -188,6 +188,6 @@ public final class TableCommands {
 
     /** The event setup form offers the same options as the offline one. Reading the lists reads files, so it runs on a background thread. */
     void sendEventOptions(final BrowserChannel channel) {
-        ui.runBackgroundTask("Limited", () -> channel.send(OfflineEvents.options()));
+        ui.runBackgroundTask("Limited", () -> channel.send(OfflinePools.options()));
     }
 }

@@ -41,7 +41,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /** Tests a quest driven from a browser, with its duels played over netplay. */
-public class QuestSessionTest extends SessionsTest {
+public class QuestSessionTest extends WebHubTest {
     @Override
     WebGuiBase gui() {
         return (WebGuiBase) GuiBase.getInterface();

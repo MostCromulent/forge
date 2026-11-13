@@ -11,7 +11,7 @@ import type { Actions } from '../actions';
 import type { ConquestCell, ConquestPlace, ConquestState } from '../protocol';
 import { t, tCap, type TextKey } from '../text';
 import { byId, reducedMotion } from '../dom';
-import { dimIntoMatch } from '../match/entry';
+import { dimIntoMatch } from '../match/matchentry';
 import { isPortrait } from '../form';
 
 /** The time the marker takes for one step, the same as mobile's token. */

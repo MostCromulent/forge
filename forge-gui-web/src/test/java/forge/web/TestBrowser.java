@@ -7,7 +7,7 @@ import forge.web.match.BrowserModel;
 import forge.web.match.MatchProbe;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
-import forge.web.protocol.Wire;
+import forge.web.protocol.MessageJson;
 import org.testng.Assert;
 
 import java.util.Deque;
@@ -144,7 +144,7 @@ final class TestBrowser implements BrowserChannel {
 
     /** Passes a browser's command to the match. */
     static void command(final WebGuiGame gui, final JsonObject message) {
-        gui.onCommand(null, Wire.decode(message));
+        gui.onCommand(null, MessageJson.decode(message));
     }
 
     static JsonObject reply(final int id, final JsonElement value) {

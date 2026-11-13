@@ -25,10 +25,10 @@ import forge.web.WebSession.Playing;
 import forge.web.WebSession.Stage;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckFacts;
-import forge.web.deck.DeckSession;
+import forge.web.deck.DeckWorkspace;
 import forge.web.deck.DeckStore;
 import forge.web.lobby.Lobby;
-import forge.web.match.LocalGame;
+import forge.web.match.NetplaySeat;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.Commands;
@@ -47,8 +47,8 @@ public final class OfflineLimited implements IHasForgeLog {
     private final WebSession session;
     private final WebGuiBase ui;
     private final Lobby lobby;
-    private final DeckSession decks;
-    private final LocalGame local;
+    private final DeckWorkspace decks;
+    private final NetplaySeat local;
     /** Whether a sealed pool is being opened. Opening takes seconds and may wait for an answer from the player. */
     private final AtomicBoolean openingPacks = new AtomicBoolean();
     /** A match seats at most eight players, so a game against several opponents has at most seven. */
@@ -63,7 +63,7 @@ public final class OfflineLimited implements IHasForgeLog {
     /** What the draft is played for when the Limited pages did not start it, or null. */
     private volatile DraftOwner owner;
 
-    public OfflineLimited(final WebSession session, final WebGuiBase ui, final Lobby lobby, final DeckSession decks, final LocalGame local) {
+    public OfflineLimited(final WebSession session, final WebGuiBase ui, final Lobby lobby, final DeckWorkspace decks, final NetplaySeat local) {
         this.session = session;
         this.ui = ui;
         this.lobby = lobby;
@@ -102,8 +102,8 @@ public final class OfflineLimited implements IHasForgeLog {
     /** Sends the pools and the setup form's options, which the Limited pages are drawn from. Reading the lists reads files, so it runs as a background task. */
     public void sendLimited(final BrowserChannel channel) {
         ui.runBackgroundTask("Limited", () -> {
-            channel.send(OfflineEvents.pools());
-            channel.send(OfflineEvents.options());
+            channel.send(OfflinePools.pools());
+            channel.send(OfflinePools.options());
         });
     }
 
@@ -134,7 +134,7 @@ public final class OfflineLimited implements IHasForgeLog {
         if (name.equals(e.pool())) {
             session.move(now, new Event(e.kind(), null));
         }
-        channel.send(OfflineEvents.pools());
+        channel.send(OfflinePools.pools());
     }
 
     /** Opens a sealed pool as desktop's sealed screen does, then opens its deck in the editor. The check for a name already in use comes first. */
@@ -148,7 +148,7 @@ public final class OfflineLimited implements IHasForgeLog {
             channel.send(WebSession.error(problem));
             return;
         }
-        if (OfflineEvents.sealed().contains(name) && !create.replace()) {
+        if (OfflinePools.sealed().contains(name) && !create.replace()) {
             channel.send(new NameTaken(name));
             return;
         }
@@ -162,7 +162,7 @@ public final class OfflineLimited implements IHasForgeLog {
             try {
                 final DeckGroup group;
                 try {
-                    group = OfflineEvents.create(create, name);
+                    group = OfflinePools.create(create, name);
                 } catch (final IllegalArgumentException ex) {
                     session.tell(WebSession.error(ex.getMessage()));
                     return;
@@ -170,13 +170,13 @@ public final class OfflineLimited implements IHasForgeLog {
                 if (group == null) {
                     return;
                 }
-                OfflineEvents.store(OfflineEvents.sealed(), group);
+                OfflinePools.store(OfflinePools.sealed(), group);
                 final Stage now = session.stage();
                 if (now instanceof Event) {
                     session.move(now, new Event(EventKind.sealed, name));
                 }
-                session.tell(OfflineEvents.pools());
-                decks.openPool(group.getHumanDeck(), OfflineEvents.sealed(), GameType.Sealed, null, session.browser());
+                session.tell(OfflinePools.pools());
+                decks.openPool(group.getHumanDeck(), OfflinePools.sealed(), GameType.Sealed, null, session.browser());
             } finally {
                 openingPacks.set(false);
             }
@@ -196,7 +196,7 @@ public final class OfflineLimited implements IHasForgeLog {
             }
             final Supplier<BoosterDraft> make;
             try {
-                make = OfflineEvents.draft(start);
+                make = OfflinePools.draft(start);
             } catch (final IllegalArgumentException ex) {
                 channel.send(WebSession.error(ex.getMessage()));
                 return;
@@ -279,7 +279,7 @@ public final class OfflineLimited implements IHasForgeLog {
             channel.send(WebSession.error(problem));
             return;
         }
-        final IStorage<DeckGroup> drafts = OfflineEvents.storage(EventKind.draft);
+        final IStorage<DeckGroup> drafts = OfflinePools.storage(EventKind.draft);
         if (drafts.contains(name) && !save.replace()) {
             channel.send(new NameTaken(name));
             return;
@@ -290,13 +290,13 @@ public final class OfflineLimited implements IHasForgeLog {
                 session.tell(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionDraftSaveFailed", String.valueOf(ex.getMessage()))));
                 return;
             }
-            OfflineEvents.store(drafts, group);
+            OfflinePools.store(drafts, group);
             endDraft();
             final Stage now = session.stage();
             if (now instanceof Event) {
                 session.move(now, new Event(EventKind.draft, name));
             }
-            session.tell(OfflineEvents.pools());
+            session.tell(OfflinePools.pools());
             decks.openPool(group.getHumanDeck(), drafts, poolType(GameType.Draft, group.getHumanDeck()), draft.freeCommander(), session.browser());
         });
     }
@@ -354,7 +354,7 @@ public final class OfflineLimited implements IHasForgeLog {
                     indices.add(i);
                 }
                 Collections.shuffle(indices);
-                final List<LocalGame.Seat> seats = new ArrayList<>(List.of(mySeat(human)));
+                final List<NetplaySeat.Seat> seats = new ArrayList<>(List.of(mySeat(human)));
                 for (int k = 0; k < count; k++) {
                     seats.add(opponentSeat(indices.get(k) + 1, k + 1, ai.get(indices.get(k))));
                 }
@@ -370,17 +370,17 @@ public final class OfflineLimited implements IHasForgeLog {
         }
     }
 
-    private LocalGame.Seat mySeat(final Deck deck) {
-        return new LocalGame.Seat(session.playerName(), false, session.avatarIndex(), LocalGame.storedIndex(FPref.UI_SLEEVES, 0), deck);
+    private NetplaySeat.Seat mySeat(final Deck deck) {
+        return new NetplaySeat.Seat(session.playerName(), false, session.avatarIndex(), NetplaySeat.storedIndex(FPref.UI_SLEEVES, 0), deck);
     }
 
     /** An opponent named by its deck's position in the pool, numbered as on desktop. seat selects its avatar and sleeve. */
-    private static LocalGame.Seat opponentSeat(final int number, final int seat, final Deck deck) {
-        return new LocalGame.Seat(Localizer.getInstance().getMessage("lblWebSessionOpponent", number), true, LocalGame.storedIndex(FPref.UI_AVATARS, seat),
-                LocalGame.storedIndex(FPref.UI_SLEEVES, seat), deck);
+    private static NetplaySeat.Seat opponentSeat(final int number, final int seat, final Deck deck) {
+        return new NetplaySeat.Seat(Localizer.getInstance().getMessage("lblWebSessionOpponent", number), true, NetplaySeat.storedIndex(FPref.UI_AVATARS, seat),
+                NetplaySeat.storedIndex(FPref.UI_SLEEVES, seat), deck);
     }
 
-    private void playLimited(final Event back, final GameType type, final List<LocalGame.Seat> seats) {
+    private void playLimited(final Event back, final GameType type, final List<NetplaySeat.Seat> seats) {
         final Stage from = session.stage();
         final Playing playing = new Playing(new WebGuiGame(session.settings()), false, false, back);
         if (!session.move(from, playing)) {
@@ -437,7 +437,7 @@ public final class OfflineLimited implements IHasForgeLog {
     /** Names the gauntlet's players as the Limited pages name a match's seats, and keeps the player the result is read for. */
     private void dressRound(final List<RegisteredPlayer> players, final RegisteredPlayer me) {
         for (final RegisteredPlayer player : players) {
-            final LocalGame.Seat seat = player == me ? mySeat(player.getDeck())
+            final NetplaySeat.Seat seat = player == me ? mySeat(player.getDeck())
                     : opponentSeat(FModel.getGauntletMini().getCurrentRound(), 1, player.getDeck());
             final LobbyPlayer dressed = player == me ? GamePlayerUtil.getGuiPlayer(seat.name(), seat.avatar(), seat.sleeve(), false)
                     : GamePlayerUtil.createAiPlayer(seat.name(), seat.avatar(), seat.sleeve());

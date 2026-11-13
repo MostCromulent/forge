@@ -3,9 +3,9 @@
 import type { ComponentChildren } from 'preact';
 import { ForgeLinks } from './links';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { LookPicker } from './lookpicker';
+import { AvatarPicker } from './avatarpicker';
 import { changeUi, eased, ui } from './ui';
-import { avatarUrl } from './looks';
+import { avatarUrl } from './avatarsleeves';
 import { artUrl } from './images';
 import { BackButton, HeadControls, PageHeader, PhoneHead, SetupHead, WAY_NAMES, Wordmark } from './header';
 import { isPortrait } from './form';
@@ -242,7 +242,7 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
       </form>
       <p class={model.error ? 'menu-note bad' : 'menu-note'}>{model.error ?? ''}</p>
       {picking && (
-        <LookPicker title={t('lblWebMenuChooseYourAvatar')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl} current={avatar}
+        <AvatarPicker title={t('lblWebMenuChooseYourAvatar')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl} current={avatar}
           close={chosen => {
             setPicking(false);
             if (chosen !== null) {

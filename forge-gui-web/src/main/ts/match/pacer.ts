@@ -1,7 +1,7 @@
 // Delays game messages while the page shows something the player should see first. That is a turn's banner or another player's play
 
 import { announceComing } from './turnbanner';
-import { asksPlayer, passingFor, setBoardBehind, worthSeeing } from './pace';
+import { asksPlayer, passingFor, setBoardBehind, worthSeeing } from './pauserules';
 import { setting } from '../settings';
 import type { Model } from '../model';
 import type { ServerMessage } from '../protocol';

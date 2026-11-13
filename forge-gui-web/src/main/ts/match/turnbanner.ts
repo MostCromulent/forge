@@ -2,7 +2,7 @@
 
 import { deref, game, me, players, sharesTurns, takesTurn, teamOf, type Model } from '../model';
 import { byId, make } from '../dom';
-import { playerAvatarUrl } from '../looks';
+import { playerAvatarUrl } from '../avatarsleeves';
 import { t } from '../text';
 import type { GameView, PlayerView, Ref, StateMessage } from '../protocol';
 

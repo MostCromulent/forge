@@ -7,7 +7,7 @@ import { fitCards } from './fit';
 import { isLocal, stateOf, zone, type Model } from '../model';
 import { byId, q, make, reducedMotion } from '../dom';
 import { setImage, setSymbolText } from '../images';
-import { playerAvatarUrl } from '../looks';
+import { playerAvatarUrl } from '../avatarsleeves';
 import { sourceName, splitQuestion } from './asking';
 import { changeUi, ui, type ZoneSort } from '../ui';
 import { normalize, rankByName } from '../search';
@@ -18,7 +18,7 @@ import { keyName } from '../keys';
 import { boundKeys } from '../settings';
 import type { CardView, PlayerView, PromptButton, ZoneType } from '../protocol';
 import { t, tCap, type TextKey } from '../text';
-import { manaValue } from './rules';
+import { manaValue } from './gamerules';
 
 // One open zone. It is either a zone the game asks to show or a pile the player opened by clicking
 interface Panel {

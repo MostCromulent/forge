@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from '../ui';
-import { sleeveUrl, avatarUrl } from '../looks';
-import { LookPicker } from '../lookpicker';
+import { sleeveUrl, avatarUrl } from '../avatarsleeves';
+import { AvatarPicker } from '../avatarpicker';
 import { rememberAvatar, rememberSleeve } from '../identity';
 import { BracketMark, DeckFinder } from '../deck/deckfinder';
 import { imageUrl, smallImage } from '../images';
@@ -22,7 +22,7 @@ import type { CommanderChoice, DeckSummary, Format, LobbyTable, Seat, SeatExtra 
 import { Backdrop, Dropdown } from '../dialog';
 import { ICONS, Icon } from '../icons';
 import { byId } from '../dom';
-import { dimIntoMatch } from '../match/entry';
+import { dimIntoMatch } from '../match/matchentry';
 
 export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const picker = ui.picker;
@@ -83,7 +83,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
       {seat && picker?.kind === 'sleeve' && <SleevePicker model={model} actions={actions} index={picker.seat} seat={seat} close={close} />}
       {seat && picker?.kind === 'commander' && <CommanderPicker actions={actions} index={picker.seat} seat={seat} close={close} />}
       {seat && picker?.kind === 'avatar' && (
-        <LookPicker title={t('lblWebLobbyChooseAvatarFor', seat.name ?? '')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
+        <AvatarPicker title={t('lblWebLobbyChooseAvatarFor', seat.name ?? '')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
           current={seat.avatar} taken={lobby.seats.filter((_, i) => i !== picker.seat).map(s => s.avatar)} close={chosen => {
             if (chosen !== null) {
               if (seat.mine) rememberAvatar(chosen);

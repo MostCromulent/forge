@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
-/** Writes protocol.gen.ts. It holds the TypeScript for the protocol's records, and for the game objects' properties as {@link JsonCodec} encodes them. */
+/** Writes protocol.gen.ts. It holds the TypeScript for the protocol's records, and for the game objects' properties as {@link PropertyJson} encodes them. */
 public final class ProtocolTypes {
     private final StringBuilder out = new StringBuilder();
     private final Map<Class<?>, String> declared = new LinkedHashMap<>();
@@ -52,11 +52,11 @@ public final class ProtocolTypes {
                 .append("// forge.trackable.TrackableProperty. Do not edit: Maven writes it again from the Java.\n\n");
         out.append("// ---- Server to browser ----\n\n");
         for (final Class<? extends Record> m : ToBrowser.MESSAGES) {
-            record(m, "  t: '" + m.getAnnotation(Wire.Message.class).value() + "';\n");
+            record(m, "  t: '" + m.getAnnotation(MessageJson.Message.class).value() + "';\n");
         }
         out.append("// ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} ----\n\n");
         for (final Class<? extends Record> r : ToBrowser.REQUESTS) {
-            final String kind = r.getAnnotation(Wire.Request.class).value();
+            final String kind = r.getAnnotation(MessageJson.Request.class).value();
             record(r, "  t: 'request';\n  id: number;\n" + (kind.isEmpty() ? "" : "  kind: '" + kind + "';\n"));
         }
         union("Request", ToBrowser.REQUESTS);
@@ -65,17 +65,17 @@ public final class ProtocolTypes {
         union("ServerMessage", server);
         out.append("// ---- Browser to server ----\n\n");
         for (final Class<? extends Record> c : FromBrowser.COMMANDS) {
-            final String t = c.getAnnotation(Wire.Command.class).value();
+            final String t = c.getAnnotation(MessageJson.Command.class).value();
             record(c, t.isEmpty() ? "" : "  t: '" + t + "';\n");
         }
         union("ClientMessage", FromBrowser.COMMANDS);
         out.append("// ---- Game events: what happened, carried by the state message that shows its result ----\n\n");
         for (final Class<? extends Record> e : ToBrowser.EVENTS) {
-            record(e, "  kind: '" + e.getAnnotation(Wire.Event.class).value() + "';\n");
+            record(e, "  kind: '" + e.getAnnotation(MessageJson.Event.class).value() + "';\n");
         }
         union("GameEvent", ToBrowser.EVENTS);
         drain();
-        out.append("// ---- Game objects: TrackableProperty values as JsonCodec encodes them ----\n\n");
+        out.append("// ---- Game objects: TrackableProperty values as PropertyJson encodes them ----\n\n");
         trackedProps();
         return out.toString();
     }
@@ -90,13 +90,13 @@ public final class ProtocolTypes {
     private void record(final Class<?> type, final String head) {
         declared.put(type, type.getSimpleName());
         out.append("export interface ").append(type.getSimpleName()).append(" {\n").append(head);
-        for (final RecordComponent c : Wire.components(type)) {
-            final boolean optional = c.isAnnotationPresent(Wire.Nullable.class);
-            final Wire.Ts override = c.getAnnotation(Wire.Ts.class);
+        for (final RecordComponent c : MessageJson.components(type)) {
+            final boolean optional = c.isAnnotationPresent(MessageJson.Nullable.class);
+            final MessageJson.Ts override = c.getAnnotation(MessageJson.Ts.class);
             final boolean discriminant = c.getName().equals("t") || c.getName().equals("kind");
             final String ts = override != null ? override.value()
                     : discriminant && c.getType().isEnum() ? literals(c.getType()) : tsOf(c.getGenericType());
-            out.append("  ").append(Wire.nameOf(c)).append(optional ? "?: " : ": ").append(ts).append(";\n");
+            out.append("  ").append(MessageJson.nameOf(c)).append(optional ? "?: " : ": ").append(ts).append(";\n");
         }
         out.append("}\n\n");
     }
@@ -199,7 +199,7 @@ public final class ProtocolTypes {
                 .append("export type TrackedDelta = { [K in keyof TrackedProps]?: TrackedProps[K] | null };\n");
     }
 
-    /** Matches JsonCodec.encodeValue: the JSON that each kind of property value becomes. */
+    /** Matches PropertyJson.encodeValue: the JSON that each kind of property value becomes. */
     private String tsOf(final TrackableProperty prop, final Map<TrackableType<?>, Class<?>> enums, final StringBuilder aliases) {
         final TrackableType<?> t = prop.getType();
         if (prop == TrackableProperty.CommanderDamage || prop == TrackableProperty.CommanderCast) {
@@ -255,7 +255,7 @@ public final class ProtocolTypes {
             }
             return name;
         }
-        throw new IllegalStateException("No TypeScript for property " + prop + ": add its JSON form to JsonCodec and here, or its enum to enumTypes");
+        throw new IllegalStateException("No TypeScript for property " + prop + ": add its JSON form to PropertyJson and here, or its enum to enumTypes");
     }
 
     /** Which enum each EnumType property holds. EnumType returns the one type made for a class, so each lookup finds the property's own type. */

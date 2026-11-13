@@ -48,12 +48,12 @@ public final class DeckImport {
             int notImported, Legality.Result legality) {
     }
 
-    public static Read read(final String text, final Check check) {
+    public static Read read(final String text, final LegalityScope check) {
         return read(text, check, null);
     }
 
     /** With a collection, a card that is not owned is a problem. A collection that keeps every section except the main deck unchanged imports only the main deck. */
-    public static Read read(final String text, final Check check, final DeckEditor.Collection collection) {
+    public static Read read(final String text, final LegalityScope check, final DeckEditor.Collection collection) {
         final Set<String> owned = new HashSet<>();
         if (collection != null) {
             collection.cards().get().forEach(e -> owned.add(e.getKey().getName()));
@@ -188,7 +188,7 @@ public final class DeckImport {
         return new Read(marks, problems, deck, name == null ? null : name.trim(), chosen, notImported, legality);
     }
 
-    static ImportResult result(final int request, final Read read, final String name, final Check check, final Fetched fetched) {
+    static ImportResult result(final int request, final Read read, final String name, final LegalityScope check, final Fetched fetched) {
         final Deck deck = read.deck();
         final Legality.Result legality = read.legality();
         final List<PaperCard> commanders = Legality.commanders(deck, check);
@@ -223,7 +223,7 @@ public final class DeckImport {
      * As in DeckImportController, the commander is looked for in the sideboard, or in the main deck when there is no sideboard. Unlike there, a candidate must be a
      * legal commander in this format, because the test DeckImportController uses also accepts every instant and sorcery as a possible signature spell.
      */
-    private static String chooseCommander(final Deck deck, final Check check, final List<ImportProblem> problems) {
+    private static String chooseCommander(final Deck deck, final LegalityScope check, final List<ImportProblem> problems) {
         final DeckFormat df = check.deckFormat();
         final CardPool commanders = deck.get(DeckSection.Commander);
         if (!df.hasCommander() || (commanders != null && !commanders.isEmpty())) {

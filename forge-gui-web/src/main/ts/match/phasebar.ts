@@ -2,14 +2,14 @@
 
 import { reconcile } from './reconcile';
 import { deref, game, isLocal, me, opponents, players, takesTurn, teamOf, type Model } from '../model';
-import { playerAvatarUrl } from '../looks';
+import { playerAvatarUrl } from '../avatarsleeves';
 import { byId, q, playOnce, make, onPressOutside, reducedMotion, easeOut, escapeHtml } from '../dom';
 import { changeUi, ui } from '../ui';
 import { t, tCap, tNodes, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { GameView, PhaseType, TurnMarker } from '../protocol';
 import { isPortrait } from '../form';
-import { asksPlayer, boardBehind, passingFor } from './pace';
+import { asksPlayer, boardBehind, passingFor } from './pauserules';
 import { sheet, swipeDown } from '../sheet';
 
 function star(): string {

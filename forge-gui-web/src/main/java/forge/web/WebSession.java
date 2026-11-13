@@ -17,24 +17,24 @@ import forge.util.storage.IStorage;
 import forge.web.campaign.CampaignSession;
 import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
-import forge.web.deck.DeckSession;
+import forge.web.deck.DeckWorkspace;
 import forge.web.images.SkinSprites;
 import forge.web.limited.Draft;
 import forge.web.limited.DraftOwner;
 import forge.web.limited.EventSeat;
 import forge.web.limited.OfflineDraft;
-import forge.web.limited.OfflineEvents;
+import forge.web.limited.OfflinePools;
 import forge.web.limited.OfflineLimited;
 import forge.web.lobby.Lobby;
 import forge.web.lobby.LobbyFormats;
-import forge.web.match.LocalGame;
+import forge.web.match.NetplaySeat;
 import forge.web.match.WebGuiGame;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.Commands;
 import forge.web.protocol.Commands.Handler;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser.*;
-import forge.web.protocol.Wire;
+import forge.web.protocol.MessageJson;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
@@ -76,7 +76,7 @@ public final class WebSession implements IHasForgeLog {
                 }
             })
             // One set of host questions serves the whole process, so only the host's browser may answer them
-            .on(HostChoiceAnswer.class, host((s, ch, a) -> s.ui.hostRequests().answer(a.id(), a.value())))
+            .on(HostChoiceAnswer.class, host((s, ch, a) -> s.ui.hostQuestions().answer(a.id(), a.value())))
             // Finding the external address is a web request, so it cannot run on the socket thread
             .on(Plain.addresses, host((s, ch, c) -> s.ui.runBackgroundTask("Addresses", () -> ch.send(new Addresses(s.sessions.inviteUrls())))))
             .on(Plain.cardSets, (s, ch, c) -> ch.send(CardCatalog.sets()))
@@ -114,26 +114,26 @@ public final class WebSession implements IHasForgeLog {
                     p.gui().setSetting(set);
                 } else {
                     // The host's settings are Forge's preferences, which are written on the host UI thread
-                    s.ui.invokeInEdtLater(() -> WebSettings.set(s.settings, null, set.key(), set.value()));
+                    s.ui.invokeInEdtLater(() -> Options.set(s.settings, null, set.key(), set.value()));
                 }
             })
             .on(SetStops.class, (s, ch, stops) -> {
                 if (s.stage instanceof Playing p) {
                     p.gui().setStops(stops);
                 } else {
-                    s.ui.invokeInEdtLater(() -> WebSettings.setStops(s.settings, stops.mine(), stops.phases()));
+                    s.ui.invokeInEdtLater(() -> Options.setStops(s.settings, stops.mine(), stops.phases()));
                 }
             });
     private final Lobby lobby;
     /** The deck editor and importer. They open beside the menu or the table and are not a stage of their own. */
-    private final DeckSession decks;
+    private final DeckWorkspace decks;
     private final WebGuiBase ui;
-    private final WebSessions sessions;
+    private final WebHub sessions;
     /** True for the browser that claimed the host's seat. Only that browser may set up the table. */
     private volatile boolean isHost;
     /** Whether this browser is on the machine running the server. It takes the host's seat without the host password. */
     private final boolean onThisMachine;
-    private final LocalGame local = new LocalGame();
+    private final NetplaySeat local = new NetplaySeat();
     private volatile BrowserChannel browser;
     private volatile Stage stage = new Menu();
     /** This player's settings: a guest's own, or the host's, which are Forge's preferences. */
@@ -172,7 +172,7 @@ public final class WebSession implements IHasForgeLog {
     /** The Limited pages for a kind of event: the saved pools and the setup form. When pool is not null, that pool's opponents screen is shown. */
     public record Event(EventKind kind, String pool) implements Stage {
         public IStorage<DeckGroup> storage() {
-            return OfflineEvents.storage(kind);
+            return OfflinePools.storage(kind);
         }
 
         public GameType type() {
@@ -198,13 +198,13 @@ public final class WebSession implements IHasForgeLog {
         return left == 0 ? -1 : (System.currentTimeMillis() - left) / 1000;
     }
 
-    WebSession(final WebGuiBase ui, final WebSessions sessions, final boolean onThisMachine) {
+    WebSession(final WebGuiBase ui, final WebHub sessions, final boolean onThisMachine) {
         this.onThisMachine = onThisMachine;
         this.ui = ui;
         this.sessions = sessions;
         final Map<String, DeckCatalog.OnDevice> device = new ConcurrentHashMap<>();
         this.lobby = new Lobby(local, () -> !isHost, device, ui);
-        this.decks = new DeckSession(lobby, ui, () -> isHost, () -> stage instanceof Setup, device);
+        this.decks = new DeckWorkspace(lobby, ui, () -> isHost, () -> stage instanceof Setup, device);
         this.limited = new OfflineLimited(this, ui, lobby, decks, local);
         this.eventSeat = new EventSeat(this, ui, lobby, decks, local, sessions::hostLobby, sessions::seatsChanged);
         this.table = new TableCommands(this, lobby, decks, limited, ui, sessions);
@@ -232,7 +232,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     private boolean needsHostPassword() {
-        return !onThisMachine && WebService.hostPasswordSet();
+        return !onThisMachine && ServerControl.hostPasswordSet();
     }
 
     /** Where the browser is. Only {@link #move} changes it, apart from the session closing. */
@@ -291,7 +291,7 @@ public final class WebSession implements IHasForgeLog {
         return lobby;
     }
 
-    LocalGame local() {
+    NetplaySeat local() {
         return local;
     }
 
@@ -313,7 +313,7 @@ public final class WebSession implements IHasForgeLog {
         return !isHost && (now instanceof Setup || now instanceof Playing p && p.invited());
     }
 
-    /** Whether this browser holds the host's seat. It can hold the seat before it opens a table, unlike {@link LocalGame#isHost}. */
+    /** Whether this browser holds the host's seat. It can hold the seat before it opens a table, unlike {@link NetplaySeat#isHost}. */
     public boolean hosting() {
         return isHost;
     }
@@ -368,7 +368,7 @@ public final class WebSession implements IHasForgeLog {
         // These are the same for the whole run, so a browser gets them once instead of with every table change
         channel.send(new Formats(LobbyFormats.choices()));
         if (isHost) {
-            ui.hostRequests().replay(channel::send);
+            ui.hostQuestions().replay(channel::send);
         }
         decks.reconnected(channel);
         if (now instanceof Playing p) {
@@ -422,13 +422,13 @@ public final class WebSession implements IHasForgeLog {
     }
 
     void onMessage(final BrowserChannel channel, final JsonObject msg) {
-        final Record command = Wire.decode(msg);
+        final Record command = MessageJson.decode(msg);
         if (command == null) {
             netLog.warn("Unknown browser message {}", LogSafe.forLog(msg.toString(), 200));
         } else if (COMMANDS.run(this, channel, command) || TableCommands.COMMANDS.run(table, channel, command)
                 || OfflineLimited.COMMANDS.run(limited, channel, command)) {
             return;
-        } else if (DeckSession.COMMANDS.handles(command)) {
+        } else if (DeckWorkspace.COMMANDS.handles(command)) {
             deckCommand(channel, command);
         } else if (WebGuiGame.COMMANDS.handles(command)) {
             if (stage instanceof Playing p) {
@@ -449,14 +449,14 @@ public final class WebSession implements IHasForgeLog {
         decks.inTurn(() -> {
             // Send the pools first, because closing the editor lists every deck again before the page changes
             if (closing) {
-                channel.send(OfflineEvents.pools());
+                channel.send(OfflinePools.pools());
             }
-            DeckSession.COMMANDS.run(decks, channel, command);
+            DeckWorkspace.COMMANDS.run(decks, channel, command);
         });
     }
 
     private void claimHost(final BrowserChannel channel, final String password) {
-        if (needsHostPassword() && !WebService.hostPasswordMatches(password)) {
+        if (needsHostPassword() && !ServerControl.hostPasswordMatches(password)) {
             channel.send(error(Localizer.getInstance().getMessage("lblWebSessionWrongHostPassword")));
         } else if (!sessions.claimHost(this)) {
             channel.send(error(Localizer.getInstance().getMessage("lblWebSessionAlreadyHosting")));
@@ -479,7 +479,7 @@ public final class WebSession implements IHasForgeLog {
         final Stage now = stage;
         if (isHost && ((now instanceof Event e && e.kind() == kind && !open.resume())
                 || ((now instanceof Menu || now instanceof Event)
-                    && move(now, new Event(kind, open.resume() ? OfflineEvents.latest(kind) : null))))) {
+                    && move(now, new Event(kind, open.resume() ? OfflinePools.latest(kind) : null))))) {
             limited.sendLimited(channel);
         }
     }
@@ -619,7 +619,7 @@ public final class WebSession implements IHasForgeLog {
         if (from == null) {
             tell(new ChatLine(null, text, false));
         } else if (isHost) {
-            // Lines typed in a browser here already went out through WebSessions.say, so relay passes on only desktop and mobile players' lines
+            // Lines typed in a browser here already went out through WebHub.say, so relay passes on only desktop and mobile players' lines
             sessions.relay(from, text);
         }
     }
@@ -724,9 +724,9 @@ public final class WebSession implements IHasForgeLog {
                 // Seat 0 is the player and seat 1 the opponent, as in the desktop lobby's saved choices
                 seatIndices(FPref.UI_AVATARS), seatIndices(FPref.UI_SLEEVES),
                 SkinSprites.avatarCount(), SkinSprites.sleeveCount(), DeckCatalog.savedSleeveArt(),
-                now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
+                now instanceof Event e ? e.pool() : null, isHost ? OfflinePools.sealed().size() : 0,
                 now instanceof Event e ? e.kind() : null, limited.draft() != null || (now instanceof Setup && eventSeat.drafting()),
-                isHost ? OfflineEvents.storage(EventKind.draft).size() : 0,
+                isHost ? OfflinePools.storage(EventKind.draft).size() : 0,
                 now instanceof InCampaign m ? m.mode() : null,
                 // The open save is named during its matches too, so the result screen knows which save's ending it shows
                 now instanceof InCampaign c ? c.save() : now instanceof Playing p && p.back() instanceof InCampaign c ? c.save() : null,
@@ -734,7 +734,7 @@ public final class WebSession implements IHasForgeLog {
                 // The jar's manifest holds the version, so a server run from classes has none
                 WebSession.class.getPackage().getImplementationVersion(),
                 // The menu's volume slider and music need the settings before any match sends them with its controls
-                WebSettings.values(settings), number);
+                Options.values(settings), number);
     }
 
     private static Screen screen(final Stage stage) {
@@ -791,7 +791,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     private static List<Integer> seatIndices(final FPref pref) {
-        return List.of(LocalGame.storedIndex(pref, 0), LocalGame.storedIndex(pref, 1));
+        return List.of(NetplaySeat.storedIndex(pref, 0), NetplaySeat.storedIndex(pref, 1));
     }
 
     public static ErrorMessage error(final String message) {
@@ -936,7 +936,7 @@ public final class WebSession implements IHasForgeLog {
         }
 
         @Override
-        public DeckSession decks() {
+        public DeckWorkspace decks() {
             return decks;
         }
 
@@ -956,7 +956,7 @@ public final class WebSession implements IHasForgeLog {
         }
 
         @Override
-        public LocalGame local() {
+        public NetplaySeat local() {
             return local;
         }
 

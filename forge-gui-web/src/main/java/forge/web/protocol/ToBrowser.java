@@ -14,11 +14,11 @@ import forge.gamemodes.net.DeltaPacket;
 import forge.player.AutoYieldStore.TriggerDecision;
 import forge.web.protocol.FromBrowser.DeckQueryKind;
 import forge.web.protocol.FromBrowser.EventKind;
-import forge.web.protocol.Wire.Event;
-import forge.web.protocol.Wire.Message;
-import forge.web.protocol.Wire.Nullable;
-import forge.web.protocol.Wire.Request;
-import forge.web.protocol.Wire.Ts;
+import forge.web.protocol.MessageJson.Event;
+import forge.web.protocol.MessageJson.Message;
+import forge.web.protocol.MessageJson.Nullable;
+import forge.web.protocol.MessageJson.Request;
+import forge.web.protocol.MessageJson.Ts;
 
 import java.util.List;
 import java.util.Map;
@@ -451,7 +451,7 @@ public final class ToBrowser {
     public record CoinTossed(Ref winner) {
     }
 
-    static final List<Class<? extends Record>> EVENTS = Wire.marked(Event.class);
+    static final List<Class<? extends Record>> EVENTS = MessageJson.marked(Event.class);
 
     /** Why this player chooses who goes first: the player won the coin toss, or lost the last game. */
     public enum StarterChoice { toss, lastGame }
@@ -688,7 +688,7 @@ public final class ToBrowser {
     }
 
     /** Every message record. The TypeScript is generated from these. */
-    static final List<Class<? extends Record>> MESSAGES = Wire.marked(Message.class);
+    static final List<Class<? extends Record>> MESSAGES = MessageJson.marked(Message.class);
 
-    static final List<Class<? extends Record>> REQUESTS = Wire.marked(Request.class);
+    static final List<Class<? extends Record>> REQUESTS = MessageJson.marked(Request.class);
 }

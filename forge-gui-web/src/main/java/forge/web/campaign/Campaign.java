@@ -3,7 +3,7 @@ package forge.web.campaign;
 import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.PreparedMatch;
-import forge.web.deck.DeckSession;
+import forge.web.deck.DeckWorkspace;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
@@ -27,7 +27,7 @@ public interface Campaign {
     interface Host {
         Record error(String text);
 
-        DeckSession decks();
+        DeckWorkspace decks();
 
         /** The campaign made a save and opened it, so the session moves to that save. */
         void opened(String save);
