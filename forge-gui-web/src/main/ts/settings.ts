@@ -11,10 +11,18 @@ const GUEST_KEY = 'forge.guestSettings';
 
 /** The playmats a player can show under the board. The last is the bare table, with no picture. */
 export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb: string | null }[] = [
-  { id: 'nebula', name: 'lblWebPlaymatNebula', image: '/playmats/stormy-nebula.jpg', thumb: '/playmats/stormy-nebula-thumb.jpg' },
+  { id: 'waves', name: 'lblWebPlaymatWaves', image: '/playmats/waves.jpg', thumb: '/playmats/waves-thumb.jpg' },
+  { id: 'sunset', name: 'lblWebPlaymatSunset', image: '/playmats/sunset.jpg', thumb: '/playmats/sunset-thumb.jpg' },
   { id: 'azorius', name: 'lblWebPlaymatAzorius', image: '/playmats/azorius.jpg', thumb: '/playmats/azorius-thumb.jpg' },
+  { id: 'boros', name: 'lblWebPlaymatBoros', image: '/playmats/boros.jpg', thumb: '/playmats/boros-thumb.jpg' },
+  { id: 'dimir', name: 'lblWebPlaymatDimir', image: '/playmats/dimir.jpg', thumb: '/playmats/dimir-thumb.jpg' },
   { id: 'golgari', name: 'lblWebPlaymatGolgari', image: '/playmats/golgari.jpg', thumb: '/playmats/golgari-thumb.jpg' },
+  { id: 'gruul', name: 'lblWebPlaymatGruul', image: '/playmats/gruul.jpg', thumb: '/playmats/gruul-thumb.jpg' },
+  { id: 'izzet', name: 'lblWebPlaymatIzzet', image: '/playmats/izzet.jpg', thumb: '/playmats/izzet-thumb.jpg' },
+  { id: 'orzhov', name: 'lblWebPlaymatOrzhov', image: '/playmats/orzhov.jpg', thumb: '/playmats/orzhov-thumb.jpg' },
+  { id: 'rakdos', name: 'lblWebPlaymatRakdos', image: '/playmats/rakdos.jpg', thumb: '/playmats/rakdos-thumb.jpg' },
   { id: 'selesnya', name: 'lblWebPlaymatSelesnya', image: '/playmats/selesnya.jpg', thumb: '/playmats/selesnya-thumb.jpg' },
+  { id: 'simic', name: 'lblWebPlaymatSimic', image: '/playmats/simic.jpg', thumb: '/playmats/simic-thumb.jpg' },
   { id: 'table', name: 'lblNone', image: null, thumb: null },
 ];
 type SettingValue = string | number | boolean;
@@ -87,7 +95,7 @@ export const SETTINGS: SettingDef[] = [
   { section: t('lblAutomaticSuggestions'), key: 'suppressAfterYield', label: t('lblSuppressAfterYield'), type: 'toggle', server: true, menu: 'stops', inside: true, def: true },
   { section: t('lblAutomaticSuggestions'), key: 'suppressOwnTurn', label: t('lblSuppressOnOwnTurn'), type: 'toggle', server: true, menu: 'stops', inside: true, def: true },
   {
-    section: t('lblDisplay'), key: 'playmat', label: t('lblWebPlaymat'), type: 'playmat', menu: 'playmat', def: 'nebula',
+    section: t('lblDisplay'), key: 'playmat', label: t('lblWebPlaymat'), type: 'playmat', menu: 'playmat', def: 'waves',
   },
   {
     section: t('lblDisplay'), key: 'playmatBrightness', label: t('lblWebPlaymatBrightness'), type: 'choice', menu: 'playmat', inside: true,

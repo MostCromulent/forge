@@ -125,6 +125,8 @@ function PlaymatPicker({ beside }: { beside: { current: HTMLDivElement | null } 
     if (!button || !el || !beside.current) return;
     el.style.right = `${Math.max(8, innerWidth - button.right) + beside.current.offsetWidth + 8}px`;
     el.style.bottom = `${innerHeight - button.top + 6}px`;
+    // A short window scrolls the panel rather than pushing its top rows off screen
+    el.style.maxHeight = `${button.top - 14}px`;
   }, []);
   return (
     <div ref={panel} class="playmat-picker" role="dialog" aria-label={t('lblWebPlaymat')}>
