@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import forge.gamemodes.net.WebSocketTunnel;
 import forge.gamemodes.net.server.HostingServer;
 import forge.util.IHasForgeLog;
+import forge.util.LogExporter;
 import forge.web.images.CardThumbnails;
 import forge.web.images.SkinSprites;
 import forge.web.protocol.BrowserChannel;
@@ -206,6 +207,23 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain");
     }
 
+    /** Forge's logs zipped as desktop's Help menu exports them, or null when there are none. */
+    private static byte[] logsZip() throws IOException {
+        final Path dir = Files.createTempDirectory("forge-web-logs");
+        try {
+            final File zip = LogExporter.exportLogs(dir.toFile());
+            return zip == null ? null : Files.readAllBytes(zip.toPath());
+        } finally {
+            final File[] made = dir.toFile().listFiles();
+            if (made != null) {
+                for (final File f : made) {
+                    Files.deleteIfExists(f.toPath());
+                }
+            }
+            Files.deleteIfExists(dir);
+        }
+    }
+
     private static void respondOrNotFound(final ChannelHandlerContext ctx, final byte[] body, final String type, final String ifNoneMatch) {
         if (body == null) {
             notFound(ctx);
@@ -392,6 +410,20 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 } else {
                     ImageReplies.serveImage(ctx, key, String.valueOf(CardThumbnails.WIDTH).equals(param(q, "w")),
                             () -> toEveryBrowser(new PictureReady(key, false)));
+                }
+                return;
+            }
+            if ("/logs".equals(path)) {
+                // The logs are this machine's files, and they name the players who connected, so only a browser on this machine gets them
+                if (!Boolean.TRUE.equals(ctx.channel().attr(LOCAL).get())) {
+                    respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain");
+                } else {
+                    final byte[] zip = logsZip();
+                    if (zip == null) {
+                        notFound(ctx);
+                    } else {
+                        respond(ctx, HttpResponseStatus.OK, zip, "application/zip");
+                    }
                 }
                 return;
             }
