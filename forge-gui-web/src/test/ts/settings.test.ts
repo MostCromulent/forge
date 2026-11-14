@@ -7,8 +7,8 @@ const ofType = (type: SettingDef['type']): SettingDef => SETTINGS.find(d => d.ty
 describe('a stored setting', () => {
   // Fails if a playmat that was removed is still used
   it('drops a playmat that no longer exists, and keeps one that does', () => {
-    expect(stored(def('playmat'), 'mistbound')).toBeUndefined();
-    expect(stored(def('playmat'), 'nebula')).toBe('nebula');
+    expect(stored(def('playmat'), 'nebula')).toBeUndefined();
+    expect(stored(def('playmat'), 'waves')).toBe('waves');
   });
   // Fails if a choice value outside the current options is used
   it('drops a choice that is no longer offered', () => {
