@@ -3,7 +3,9 @@ package forge.web;
 import com.google.common.primitives.Ints;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import forge.gamemodes.net.WebSocketBytes;
 import forge.gamemodes.net.WebSocketTunnel;
+import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.HostingServer;
 import forge.util.IHasForgeLog;
 import forge.util.LogExporter;
@@ -323,6 +325,16 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
         }
 
         private void route(final ChannelHandlerContext ctx, final boolean netplay) {
+            if (netplay) {
+                // Desktop or mobile Forge. The netplay server then handles this connection like one it accepted itself
+                ctx.pipeline().addLast(
+                        new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
+                                .websocketPath(WebSocketTunnel.PATH).checkStartsWith(true)
+                                .maxFramePayloadLength(WebSocketTunnel.FRAME_BYTES).build()),
+                        new WebSocketBytes());
+                FServerManager.getInstance().adopt(ctx.channel());
+                return;
+            }
             ctx.pipeline().addLast(
                     // State and deck lists are JSON that repeats its field names, so compression matters to a guest over the internet
                     new WebSocketServerCompressionHandler(),
