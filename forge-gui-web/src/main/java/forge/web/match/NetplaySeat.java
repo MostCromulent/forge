@@ -4,6 +4,7 @@ import com.google.common.primitives.Ints;
 import forge.deck.Deck;
 import forge.game.Game;
 import forge.game.GameEndReason;
+import forge.game.GameType;
 import forge.game.player.Player;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
@@ -13,12 +14,14 @@ import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.NetworkLogConfig;
 import forge.gamemodes.net.client.ClientGameLobby;
 import forge.gamemodes.net.client.FGameClient;
+import forge.gamemodes.net.event.NetEvent;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.HostingServer;
 import forge.gamemodes.net.server.RemoteClient;
 import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gamemodes.net.server.ServerGameLobby;
+import forge.gui.interfaces.IDraftEventHandler;
 import forge.interfaces.ILobbyListener;
 import forge.interfaces.IUpdateable;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -27,6 +30,7 @@ import forge.player.PlayerControllerHuman;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.web.lobby.Lobby;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,8 +59,22 @@ public final class NetplaySeat implements IHasForgeLog {
     private volatile ClientGameLobby joined;
     private volatile FGameClient client;
     private volatile int webSeat = -1;
+    /** Receives the draft and pool events the host sends this seat. Set before a table is opened or joined. */
+    private volatile IDraftEventHandler draftHandler;
 
     public record Seat(String name, boolean ai, int avatar, int sleeve, Deck deck) {
+    }
+
+    public void setDraftHandler(final IDraftEventHandler handler) {
+        draftHandler = handler;
+    }
+
+    /** Sends an event to the host through this seat's client. A draft pick reaches the draft host this way. */
+    public void sendToHost(final NetEvent event) {
+        final FGameClient c = client;
+        if (c != null) {
+            c.send(event);
+        }
     }
 
     public ServerGameLobby hostedLobby() {
@@ -210,6 +228,35 @@ public final class NetplaySeat implements IHasForgeLog {
             throw new IllegalStateException(Localizer.getInstance().getMessage("lblWebSessionHostStarts"));
         }
         return hosted.startGame();
+    }
+
+    /** Starts a sealed or draft match of type limitedType against AI seats. Desktop's offline limited screens start one the same way. */
+    public void startLimitedMatch(final List<Seat> seats, final GameType limitedType, final WebGuiGame gui) {
+        final Seat mine = seats.stream().filter(s -> !s.ai()).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No seat for the browser"));
+        nameProfile(mine.name());
+        openHost(mine.name(), gui, () -> { }, (from, text) -> { });
+        hosted.setLimitedType(limitedType);
+        // Desktop starts a Commander Draft match with the Commander variant. That gives each deck its commander and 40 life
+        if (limitedType == GameType.CommanderDraft) {
+            hosted.applyVariant(GameType.Commander);
+        }
+        seatAndStart(seats);
+    }
+
+    /** Opens a table where this browser is the only person, at seat webSeat. A game mode then starts a match it built itself on this table. */
+    public ServerGameLobby openAlone(final String playerName, final WebGuiGame gui) {
+        nameProfile(playerName);
+        openHost(playerName, gui, () -> { }, (from, text) -> { });
+        return hosted;
+    }
+
+    /** Saves the player's name if the profile has none. Otherwise HostedMatch would ask for a name on the host's screen. */
+    private static void nameProfile(final String name) {
+        if (StringUtils.isBlank(FModel.getPreferences().getPref(FPref.PLAYER_NAME))) {
+            FModel.getPreferences().setPref(FPref.PLAYER_NAME, name);
+            FModel.getPreferences().save();
+        }
     }
 
     void seatAndStart(final List<Seat> seats) {
