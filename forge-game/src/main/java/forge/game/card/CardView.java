@@ -991,6 +991,12 @@ public class CardView extends GameEntityView {
         return CardStateName.PreparedSpell.equals(getCurrentState().state);
     }
 
+    void updatePaperCardBackup(Card c) {
+        if (get(TrackableProperty.PaperCardBackup) != null) {
+            set(TrackableProperty.PaperCardBackup, c.getPaperCard());
+        }
+    }
+
     void updateState(Card c) {
         updateName(c);
         updateZoneText(c);

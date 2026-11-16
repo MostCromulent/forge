@@ -63,6 +63,7 @@ public class VDev implements IVDoc<CDev>, IDevListener {
     private final DevLabel lblTutor = new DevLabel(Localizer.getInstance().getMessage("lblTutor"));
     private final DevLabel lblAddCounterPermanent = new DevLabel(Localizer.getInstance().getMessage("lblAddCounterPermanent"));
     private final DevLabel lblSubCounterPermanent = new DevLabel(Localizer.getInstance().getMessage("lblSubCounterPermanent"));
+    private final DevLabel lblChangePrinting = new DevLabel(Localizer.getInstance().getMessage("lblChangeCardPrinting"));
     private final DevLabel lblTapPermanent = new DevLabel(Localizer.getInstance().getMessage("lblTapPermanent"));
     private final DevLabel lblUntapPermanent = new DevLabel(Localizer.getInstance().getMessage("lblUntapPermanent"));
     private final DevLabel lblSetLife = new DevLabel(Localizer.getInstance().getMessage("lblSetLife"));
@@ -123,6 +124,7 @@ public class VDev implements IVDoc<CDev>, IDevListener {
         viewport.add(this.lblAskSimulationAI, halfConstraintsLeft);
         viewport.add(this.lblSetupGame, halfConstraints);
         viewport.add(this.lblDumpGame, halfConstraintsLeft);
+        viewport.add(this.lblChangePrinting, halfConstraints);
     }
 
     //========= Overridden methods
@@ -266,6 +268,10 @@ public class VDev implements IVDoc<CDev>, IDevListener {
     /** @return {@link forge.screens.match.views.VDev.DevLabel} */
     public DevLabel getLblSubCounterPermanent() {
         return this.lblSubCounterPermanent;
+    }
+
+    public DevLabel getLblChangePrinting() {
+        return this.lblChangePrinting;
     }
 
     /** @return {@link forge.screens.match.views.VDev.DevLabel} */

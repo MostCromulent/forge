@@ -45,6 +45,7 @@ public final class CDev implements ICDoc {
         view.getLblRepeatAddCard().addMouseListener(onClick(this::repeatAddCard));
         view.getLblAddCounterPermanent().addMouseListener(onClick(this::addCounterToPermanent));
         view.getLblSubCounterPermanent().addMouseListener(onClick(this::removeCountersFromPermanent));
+        view.getLblChangePrinting().addMouseListener(onClick(this::changeCardPrinting));
         view.getLblTapPermanent().addMouseListener(onClick(this::tapPermanent));
         view.getLblUntapPermanent().addMouseListener(onClick(this::untapPermanent));
         view.getLblSetLife().addMouseListener(onClick(this::setPlayerLife));
@@ -128,6 +129,9 @@ public final class CDev implements ICDoc {
     }
     public void removeCountersFromPermanent() {
         getController().cheat().removeCountersFromPermanent();
+    }
+    public void changeCardPrinting() {
+        getController().cheat().changeCardPrinting();
     }
     public void tapPermanent() {
         getController().cheat().tapPermanents();

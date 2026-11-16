@@ -28,6 +28,7 @@ import forge.game.combat.Combat;
 import forge.game.combat.CombatUtil;
 import forge.game.cost.*;
 import forge.game.event.GameEventAddLog;
+import forge.game.event.GameEventCardStatsChanged;
 import forge.game.event.GameEventPlayerStatsChanged;
 import forge.game.keyword.Keyword;
 import forge.game.keyword.KeywordInterface;
@@ -3177,6 +3178,43 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
                 card.addCounterInternal(counter, count, card.getController(), false, null, null);
             }
             sendToRemoteClients();
+        }
+
+        @Override
+        public void changeCardPrinting() {
+            final CardCollectionView cards = CardLists.filter(getGame().getCardsIn(Arrays.asList(ZoneType.Battlefield,
+                    ZoneType.Hand, ZoneType.Graveyard, ZoneType.Exile, ZoneType.Stack, ZoneType.Command)),
+                    c -> !c.isToken() && !c.isImmutable());
+            GameEntityViewMap<Card, CardView> gameCachePrinting = GameEntityView.getMap(cards);
+
+            final CardView cv = getGui().oneOrNone(localizer.getMessage("lblChangePrintingOfWhichCard"), gameCachePrinting.getTrackableKeys());
+            if (cv == null || !gameCachePrinting.containsKey(cv)) {
+                return;
+            }
+            final Card card = gameCachePrinting.get(cv);
+            if (!(card.getPaperCard() instanceof PaperCard current)) {
+                return;
+            }
+
+            final List<PaperCard> printings = FModel.getMagicDb().getCommonCards().getAllCards(current.getRules(),
+                    pc -> Objects.equals(pc.getFunctionalVariant(), current.getFunctionalVariant()));
+            final PaperCard currentPlain = current.getUnFoiled().copyWithoutFlags();
+            if (printings.remove(currentPlain)) {
+                printings.add(0, currentPlain);
+            }
+            final FSerializableFunction<PaperCard, String> display = pc -> pc.getEdition() + " #" + pc.getCollectorNumber()
+                    + (IPaperCard.NO_COLLECTOR_NUMBER.equals(pc.getCollectorNumber()) ? " " + pc.getArtIndex() : "");
+            final List<PaperCard> picked = getGui().getChoices(localizer.getMessage("lblChoosePrinting"), 0, 1, printings, null, display);
+            if (picked.isEmpty()) {
+                return;
+            }
+
+            final PaperCard chosen = picked.get(0);
+            final PaperCard printing = new PaperCard(current.isFoil() ? chosen.getFoiled() : chosen, current.getMarkedFlags());
+            invokeThenSend(() -> {
+                card.setPrinting(printing);
+                getGame().fireEvent(new GameEventCardStatsChanged(card));
+            });
         }
 
         /*

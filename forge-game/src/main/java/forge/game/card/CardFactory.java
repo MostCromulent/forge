@@ -176,71 +176,40 @@ public class CardFactory {
         c.setOwner(owner);
         buildAbilities(c);
 
-        c.setSetCode(cp.getEdition());
-        c.setRarity(cp.getRarity());
-
-        // Would like to move this away from in-game entities
-        String originalPicture = cp.getImageKey(false);
-        c.setImageKey(originalPicture);
-
         if(cp.isToken())
             c.setGamePieceType(GamePieceType.TOKEN);
         else
             c.setGamePieceType(c.getRules().getType().getGamePieceType());
 
-        if (c.hasAlternateState()) {
-            if (c.isFlipCard()) {
-                c.setState(CardStateName.Flipped, false);
-                // set the imagekey altstate to false since the rotated image is handled by graphics renderer
-                // setting this to true will download the original image with different name.
-                c.setImageKey(cp.getImageKey(false));
-            }
-            else if (c.isDoubleFaced()) {
-                c.setState(cp.getRules().getSplitType().getChangedStateName(), false);
-                c.setImageKey(cp.getImageKey(true));
-            }
-            else if (c.isSplitCard()) {
-                c.setState(CardStateName.LeftSplit, false);
-                c.setImageKey(originalPicture);
-                c.setSetCode(cp.getEdition());
-                c.setRarity(cp.getRarity());
-                c.setState(CardStateName.RightSplit, false);
-                c.setImageKey(originalPicture);
-            } else if (c.hasState(CardStateName.Secondary)) {
-                c.setState(CardStateName.Secondary, false);
-                c.setImageKey(originalPicture);
-            } else if (c.hasState(CardStateName.PreparedSpell)) {
-                c.setState(CardStateName.PreparedSpell, false);
-                c.setImageKey(originalPicture);
-            } else if (c.canSpecialize()) {
-                c.setState(CardStateName.SpecializeW, false);
-                c.setImageKey(cp.getImageKey(false) + ImageKeys.SPECFACE_W);
-                c.setSetCode(cp.getEdition());
-                c.setRarity(cp.getRarity());
-                c.setState(CardStateName.SpecializeU, false);
-                c.setImageKey(cp.getImageKey(false) + ImageKeys.SPECFACE_U);
-                c.setSetCode(cp.getEdition());
-                c.setRarity(cp.getRarity());
-                c.setState(CardStateName.SpecializeB, false);
-                c.setImageKey(cp.getImageKey(false) + ImageKeys.SPECFACE_B);
-                c.setSetCode(cp.getEdition());
-                c.setRarity(cp.getRarity());
-                c.setState(CardStateName.SpecializeR, false);
-                c.setImageKey(cp.getImageKey(false) + ImageKeys.SPECFACE_R);
-                c.setSetCode(cp.getEdition());
-                c.setRarity(cp.getRarity());
-                c.setState(CardStateName.SpecializeG, false);
-                c.setImageKey(cp.getImageKey(false) + ImageKeys.SPECFACE_G);
-                c.setSetCode(cp.getEdition());
-                c.setRarity(cp.getRarity());
-            }
-
-            c.setSetCode(cp.getEdition());
-            c.setRarity(cp.getRarity());
-            c.setState(CardStateName.Original, false);
-        }
+        setPrinting(c, cp);
 
         return c;
+    }
+
+    /** Sets the set, rarity and image of every face of the card, without changing which face is current. */
+    public static void setPrinting(final Card c, final IPaperCard cp) {
+        final CardStateName backFace = c.isDoubleFaced() ? cp.getRules().getSplitType().getChangedStateName() : null;
+        for (final CardStateName name : c.getStates()) {
+            if (name == CardStateName.FaceDown) {
+                continue;
+            }
+            final CardState state = c.getOriginalState(name);
+            state.setSetCode(cp.getEdition());
+            state.setRarity(cp.getRarity());
+            // flipped faces use the front image, which the renderer rotates
+            state.setImageKey(name == backFace ? cp.getImageKey(true) : cp.getImageKey(false) + specializeImageSuffix(name));
+        }
+    }
+
+    private static String specializeImageSuffix(final CardStateName name) {
+        return switch (name) {
+            case SpecializeW -> ImageKeys.SPECFACE_W;
+            case SpecializeU -> ImageKeys.SPECFACE_U;
+            case SpecializeB -> ImageKeys.SPECFACE_B;
+            case SpecializeR -> ImageKeys.SPECFACE_R;
+            case SpecializeG -> ImageKeys.SPECFACE_G;
+            default -> "";
+        };
     }
 
     private static void buildAbilities(final Card card) {

@@ -77,6 +77,9 @@ public class VDevMenu extends FDropDownMenu {
         addItem(new FMenuItem(Forge.getLocalizer().getMessage("lblSubCounterPermanent"), e ->
                 ThreadUtil.invokeInGameThread(() -> MatchController.instance.getGameController().cheat().removeCountersFromPermanent())
         ));
+        addItem(new FMenuItem(Forge.getLocalizer().getMessage("lblChangeCardPrinting"), e ->
+                ThreadUtil.invokeInGameThread(() -> MatchController.instance.getGameController().cheat().changeCardPrinting())
+        ));
         addItem(new FMenuItem(Forge.getLocalizer().getMessage("lblTapPermanent"), e ->
                 ThreadUtil.invokeInGameThread(() -> MatchController.instance.getGameController().cheat().tapPermanents())
         ));

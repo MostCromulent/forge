@@ -95,7 +95,7 @@ import static java.lang.Math.max;
  */
 public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITranslatable {
     private Game game;
-    private final IPaperCard paperCard;
+    private IPaperCard paperCard;
 
     private final Map<CardStateName, CardState> states = Maps.newEnumMap(CardStateName.class);
     private CardState currentState;
@@ -7646,6 +7646,13 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
     public void setRenderForUI(boolean value) {
         renderForUi = value;
+    }
+
+    /** Foil and marked colors are not re-read, so the new printing should carry the old one's. */
+    public void setPrinting(final IPaperCard printing) {
+        paperCard = printing;
+        CardFactory.setPrinting(this, printing);
+        view.updatePaperCardBackup(this);
     }
 
     public IPaperCard getPaperCard() {

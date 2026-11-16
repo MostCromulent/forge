@@ -18,6 +18,8 @@ public interface IDevModeCheats {
 
     void removeCountersFromPermanent();
 
+    void changeCardPrinting();
+
     void tapPermanents();
 
     void untapPermanents();
@@ -108,6 +110,9 @@ public interface IDevModeCheats {
         }
         @Override
         public void removeCountersFromPermanent() {
+        }
+        @Override
+        public void changeCardPrinting() {
         }
         @Override
         public void addCardToHand() {
