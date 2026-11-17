@@ -2,7 +2,6 @@ package forge.adventure.scene;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Array;
 import com.google.common.collect.ImmutableList;
@@ -154,13 +153,8 @@ public class DuelScene extends ForgeScene {
         if (!waitingForExternalOperation) {
             return; // normal battles render through MatchController
         }
-        // ForgeScene.render() is a no-op; draw the global overlays directly so the waiting message shows.
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        float w = Forge.getScreenWidth(), h = Forge.getScreenHeight();
-        Forge.getGraphics().setProjectionMatrix(Forge.camera.combined);
-        Forge.getGraphics().begin(w, h);
-        Forge.drawOverlays(Forge.getGraphics(), getScreen(), w, h);
-        Forge.getGraphics().end();
+        // ForgeScene.render() draws nothing, so the waiting message is drawn here
+        DesktopAdventureBridge.drawWaiting(getScreen());
     }
 
     public boolean hasCallbackExit() {

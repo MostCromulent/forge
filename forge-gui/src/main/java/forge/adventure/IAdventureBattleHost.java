@@ -1,5 +1,6 @@
 package forge.adventure;
 
+import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.io.DeckSerializer;
 import forge.game.GameOutcome;
@@ -19,7 +20,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
-/** The files through which adventure hands a battle to the web server it started, and through which the server sends back the result. */
+/** The files through which adventure hands a battle or a deck to edit to the web server it started, and through which the server sends back the result. */
 public class IAdventureBattleHost {
 
     private static final String IPC_SUBDIR = "forge_adventure_ipc";
@@ -29,6 +30,11 @@ public class IAdventureBattleHost {
     private static final String BATTLE_COMPLETE_SIGNAL = "battle_complete";
     private static final String HUMAN_DECK_FILE = "human_deck.dck";
     private static final String AI_DECK_PREFIX = "ai_deck_";
+    private static final String EDIT_REQUEST_FILE = "deck_edit_request.dat";
+    private static final String EDIT_PENDING_SIGNAL = "deck_edit_pending";
+    private static final String EDIT_COMPLETE_SIGNAL = "deck_edit_complete";
+    private static final String EDIT_DECK_FILE = "edit_deck.dck";
+    private static final String COLLECTION_FILE = "collection.dck";
 
     /** Names the folder for the web server that adventure starts. */
     public static final String IPC_DIR_ENV = "FORGE_ADVENTURE_IPC_DIR";
@@ -225,6 +231,64 @@ public class IAdventureBattleHost {
                     new FileInputStream(getBattleResultPath().toFile()))) {
                 return (BattleResult) ois.readObject();
             }
+        }
+    }
+
+    /** A deck to edit in the browser. The deck and the collection it is built from are written beside it as deck files. */
+    public static class DeckEditRequest implements Serializable {
+        private static final long serialVersionUID = 1L;
+
+        public String playerName;
+        public boolean commander;
+        // Codes of the editions whose basic lands the player has unlocked
+        public List<String> landSets = new ArrayList<>();
+
+        public void write(Deck deck, CardPool collection) throws IOException {
+            ensureIpcDir();
+            DeckSerializer.writeDeck(deck, Paths.get(ipcDir, EDIT_DECK_FILE).toFile());
+            final Deck owned = new Deck("Collection");
+            owned.getMain().addAll(collection);
+            DeckSerializer.writeDeck(owned, Paths.get(ipcDir, COLLECTION_FILE).toFile());
+            writeObjectAtomic(Paths.get(ipcDir, EDIT_REQUEST_FILE), this);
+            touch(Paths.get(ipcDir, EDIT_PENDING_SIGNAL));
+        }
+
+        public static DeckEditRequest read() throws IOException, ClassNotFoundException {
+            try (ObjectInputStream ois = new ObjectInputStream(
+                    new FileInputStream(Paths.get(ipcDir, EDIT_REQUEST_FILE).toFile()))) {
+                return (DeckEditRequest) ois.readObject();
+            }
+        }
+    }
+
+    public static Deck loadEditDeck() {
+        return DeckSerializer.fromFile(Paths.get(ipcDir, EDIT_DECK_FILE).toFile());
+    }
+
+    public static CardPool loadCollection() {
+        return DeckSerializer.fromFile(Paths.get(ipcDir, COLLECTION_FILE).toFile()).getMain();
+    }
+
+    /** Writes the edited deck back and tells adventure the editor has closed. */
+    public static void finishDeckEdit(Deck deck) throws IOException {
+        DeckSerializer.writeDeck(deck, Paths.get(ipcDir, EDIT_DECK_FILE).toFile());
+        Files.deleteIfExists(Paths.get(ipcDir, EDIT_PENDING_SIGNAL));
+        touch(Paths.get(ipcDir, EDIT_COMPLETE_SIGNAL));
+    }
+
+    public static boolean isDeckEditPending() {
+        return Files.exists(Paths.get(ipcDir, EDIT_PENDING_SIGNAL));
+    }
+
+    public static boolean isDeckEditComplete() {
+        return Files.exists(Paths.get(ipcDir, EDIT_COMPLETE_SIGNAL));
+    }
+
+    public static void clearDeckEditComplete() {
+        try {
+            Files.deleteIfExists(Paths.get(ipcDir, EDIT_COMPLETE_SIGNAL));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

@@ -1,5 +1,6 @@
 package forge.adventure.scene;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -10,6 +11,7 @@ import com.badlogic.gdx.utils.IntMap;
 import com.github.tommyettinger.textra.TextraButton;
 import com.github.tommyettinger.textra.TextraLabel;
 import forge.Forge;
+import forge.adventure.DesktopAdventureBridge;
 import forge.adventure.player.AdventurePlayer;
 import forge.adventure.stage.GameHUD;
 import forge.adventure.util.Controls;
@@ -26,6 +28,8 @@ public class DeckSelectScene extends UIScene {
     int currentSlot = 0;
     ScrollPane scrollPane;
     Dialog renameDialog;
+
+    private boolean waitingForBrowser = false;
 
     private static DeckSelectScene object;
 
@@ -246,7 +250,27 @@ public class DeckSelectScene extends UIScene {
         updateDeckButton(currentSlot);
     }
 
+    @Override
+    public void render() {
+        if (waitingForBrowser) {
+            DesktopAdventureBridge.drawWaiting(null);
+            return;
+        }
+        super.render();
+    }
+
     private void edit() {
+        if (DesktopAdventureBridge.isActive()) {
+            waitingForBrowser = true;
+            // No input reaches this scene until the browser's editor closes
+            Gdx.input.setInputProcessor(null);
+            DesktopAdventureBridge.editDeck(() -> {
+                waitingForBrowser = false;
+                Gdx.input.setInputProcessor(stage);
+                updateDeckButton(currentSlot);
+            });
+            return;
+        }
         TextureRegion textureRegion;
         if (Forge.lastPreview != null)
             textureRegion = new TextureRegion(Forge.lastPreview);

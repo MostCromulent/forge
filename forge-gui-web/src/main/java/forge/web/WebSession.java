@@ -307,6 +307,10 @@ public final class WebSession implements IHasForgeLog {
         return browser;
     }
 
+    DeckWorkspace decks() {
+        return decks;
+    }
+
     /** Whether this guest holds a seat at the host's table. It keeps the seat while its browser is gone. */
     boolean seatedAsGuest() {
         final Stage now = stage;

@@ -5,20 +5,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.GL20;
 
+import forge.adventure.player.AdventurePlayer;
+import forge.adventure.scene.AdventureDeckEditor;
 import forge.adventure.util.Current;
+import forge.card.CardEdition;
+import forge.deck.CardPool;
+import forge.Forge;
 import forge.ai.AiProfileUtil;
 import forge.ai.LobbyPlayerAi;
 import forge.deck.Deck;
+import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.game.player.RegisteredPlayer;
 import forge.item.IPaperCard;
 import forge.item.PaperToken;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
+import forge.screens.FScreen;
 import forge.screens.LoadingOverlay;
 
-/** Hands a battle to the web server that adventure started, shows a waiting overlay, and reports the result it writes back. */
+/** Hands a battle or a deck to edit to the web server that adventure started, and reports the result it writes back. */
 public final class DesktopAdventureBridge {
 
     private static LoadingOverlay waitingOverlay;
@@ -48,6 +56,16 @@ public final class DesktopAdventureBridge {
             hideOverlay();
             Gdx.app.postRunnable(listener::onError);
         }
+    }
+
+    /** Draws only the waiting overlay, for a scene whose own drawing would leave it hidden. */
+    public static void drawWaiting(final FScreen screen) {
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        float w = Forge.getScreenWidth(), h = Forge.getScreenHeight();
+        Forge.getGraphics().setProjectionMatrix(Forge.camera.combined);
+        Forge.getGraphics().begin(w, h);
+        Forge.drawOverlays(Forge.getGraphics(), screen, w, h);
+        Forge.getGraphics().end();
     }
 
     private static IAdventureBattleHost.BattleRequest buildRequest(final BattleParams params) {
@@ -109,6 +127,68 @@ public final class DesktopAdventureBridge {
             }
         }
         return names;
+    }
+
+    /** Opens the selected deck in the browser's editor. onDone runs on the render thread once the editor closes and the deck holds its changes. */
+    public static void editDeck(final Runnable onDone) {
+        final AdventurePlayer player = Current.player();
+        try {
+            final IAdventureBattleHost.DeckEditRequest request = new IAdventureBattleHost.DeckEditRequest();
+            request.playerName = player.getName();
+            request.commander = player.isCommanderMode();
+            for (final CardEdition e : AdventureDeckEditor.unlockedLandSets(player.getSelectedDeck())) {
+                request.landSets.add(e.getCode());
+            }
+            // The editor's catalogue leaves out the cards set aside for auto-sell, as adventure's own editor does
+            final CardPool owned = new CardPool();
+            owned.addAll(player.getCards());
+            owned.removeAll(player.autoSellCards);
+            request.write(player.getSelectedDeck(), owned);
+            waitingOverlay = new LoadingOverlay("Editing the deck in the browser...", true);
+            waitingOverlay.show();
+            new Thread(() -> waitForDeck(player, onDone), "WebDeckEdit-Waiter").start();
+        } catch (Exception e) {
+            System.err.println("Failed to hand the deck to the web server: " + e.getMessage());
+            e.printStackTrace();
+            hideOverlay();
+            Gdx.app.postRunnable(onDone);
+        }
+    }
+
+    private static void waitForDeck(final AdventurePlayer player, final Runnable onDone) {
+        try {
+            while (!IAdventureBattleHost.isDeckEditComplete()) {
+                if (!DesktopAdventureMode.isActive() && !IAdventureBattleHost.isDeckEditComplete()) {
+                    throw new IOException("The web server stopped before the deck editor closed");
+                }
+                Thread.sleep(500);
+            }
+            final Deck edited = IAdventureBattleHost.loadEditDeck();
+            IAdventureBattleHost.clearDeckEditComplete();
+            Gdx.app.postRunnable(() -> {
+                // Adventure's decks are edited in place and saved with the adventure
+                final Deck deck = player.getSelectedDeck();
+                for (final DeckSection section : DeckSection.values()) {
+                    final CardPool cards = edited.get(section);
+                    if (cards != null) {
+                        deck.putSection(section, cards);
+                    } else if (deck.get(section) != null) {
+                        deck.get(section).clear();
+                    }
+                }
+                player.setSelectedDeckSlot(player.getSelectedDeckIndex(), false);
+                hideOverlay();
+                DesktopAdventureMode.requestFocus();
+                onDone.run();
+            });
+        } catch (Throwable e) {
+            System.err.println("Error waiting for the web server's deck editor: " + e.getClass().getName() + ": " + e.getMessage());
+            e.printStackTrace();
+            Gdx.app.postRunnable(() -> {
+                hideOverlay();
+                onDone.run();
+            });
+        }
     }
 
     private static String resolveAiProfile(final RegisteredPlayer p) {

@@ -1,9 +1,14 @@
 package forge.web;
 
+import forge.StaticData;
 import forge.adventure.IAdventureBattleHost;
 import forge.adventure.IAdventureBattleHost.AIPlayerData;
 import forge.adventure.IAdventureBattleHost.BattleRequest;
 import forge.adventure.IAdventureBattleHost.BattleResult;
+import forge.adventure.IAdventureBattleHost.DeckEditRequest;
+import forge.card.CardEdition;
+import forge.deck.CardPool;
+import forge.deck.Deck;
 import forge.game.Game;
 import forge.game.GameRules;
 import forge.game.GameType;
@@ -16,22 +21,30 @@ import forge.player.GamePlayerUtil;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.util.MyRandom;
+import forge.util.storage.IStorage;
+import forge.util.storage.StorageBase;
 import forge.web.WebSession.Menu;
 import forge.web.WebSession.Opening;
 import forge.web.WebSession.Playing;
 import forge.web.WebSession.Stage;
+import forge.web.deck.DeckEditor;
 import forge.web.images.SkinSprites;
 import forge.web.match.NetplaySeat;
 import forge.web.match.WebGuiGame;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 
 /**
- * Plays the battles of an adventure that runs in another process. That process starts this server and names a folder in the environment.
+ * Plays the battles of an adventure that runs in another process, and edits its decks. That process starts this server and names a folder in the environment.
  * Each battle it writes there is played in the host's browser. The result is written back when the player leaves the match.
+ * Each deck it writes there opens in the host's deck editor, and is written back when the player closes the editor.
  */
 final class AdventureBattles implements IHasForgeLog {
     private static final long POLL_MILLIS = 500;
@@ -65,13 +78,20 @@ final class AdventureBattles implements IHasForgeLog {
             try {
                 if (IAdventureBattleHost.isBattlePending()) {
                     play(service, ui, BattleRequest.read()).write();
+                } else if (IAdventureBattleHost.isDeckEditPending()) {
+                    IAdventureBattleHost.finishDeckEdit(edit(service, ui, DeckEditRequest.read()));
                 }
                 Thread.sleep(POLL_MILLIS);
             } catch (final InterruptedException e) {
                 return;
             } catch (final Exception e) {
-                netLog.error(e, "Could not play the adventure battle");
-                writeLoss();
+                if (IAdventureBattleHost.isBattlePending()) {
+                    netLog.error(e, "Could not play the adventure battle");
+                    writeLoss();
+                } else {
+                    netLog.error(e, "Could not edit the adventure deck");
+                    endEditUnchanged();
+                }
             }
         }
     }
@@ -83,6 +103,14 @@ final class AdventureBattles implements IHasForgeLog {
             loss.write();
         } catch (final Exception e) {
             netLog.error(e, "Could not write the adventure battle's result");
+        }
+    }
+
+    private static void endEditUnchanged() {
+        try {
+            IAdventureBattleHost.finishDeckEdit(IAdventureBattleHost.loadEditDeck());
+        } catch (final Exception e) {
+            netLog.error(e, "Could not hand the adventure deck back");
         }
     }
 
@@ -128,6 +156,39 @@ final class AdventureBattles implements IHasForgeLog {
         result.humanWon = match.getMatch().isMatchOver() && match.getMatch().getWinner() == prepared.human();
         result.ante = match.getAnteResult(prepared.human());
         return result;
+    }
+
+    /** Opens the deck in the host's editor, built from adventure's collection, and returns it as last saved once the editor closes. */
+    private static Deck edit(final ServerControl service, final WebGuiBase ui, final DeckEditRequest request) throws InterruptedException {
+        final Deck deck = IAdventureBattleHost.loadEditDeck();
+        final CardPool owned = IAdventureBattleHost.loadCollection();
+        final List<CardEdition> landSets = request.landSets.stream().map(code -> StaticData.instance().getEditions().get(code))
+                .filter(Objects::nonNull).toList();
+        final Map<String, Deck> decks = new HashMap<>();
+        decks.put(deck.getName(), deck);
+        // The editor saves each change here. Adventure keeps its decks in its own save
+        final IStorage<Deck> storage = new StorageBase<>("Adventure decks", null, decks) {
+            @Override
+            public void add(final Deck item) {
+                map.put(item.getName(), item);
+            }
+        };
+        final CountDownLatch closed = new CountDownLatch(1);
+        final DeckEditor.Collection collection = new DeckEditor.Collection(request.playerName, () -> owned, card -> false, closed::countDown,
+                d -> landSets, () -> { }, false);
+        final WebSession session = awaitHost(service, ui);
+        session.decks().openCollectionDeck(deck, storage, request.commander ? GameType.Commander : GameType.Adventure, collection, true,
+                session.browser());
+        int pollsAway = 0;
+        while (closed.getCount() > 0 && service.running()) {
+            pollsAway = session.attached() ? 0 : pollsAway + 1;
+            // A reload comes back within this time. A closed window is opened again, and the editor is sent to it
+            if (pollsAway == AWAY_POLLS) {
+                WebMain.openBrowser(service.url(), ui);
+            }
+            Thread.sleep(POLL_MILLIS);
+        }
+        return decks.get(deck.getName());
     }
 
     /** Leaves the match for a browser that has gone, as its leave button would. */

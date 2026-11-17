@@ -52,6 +52,11 @@ public class AdventureDeckEditor extends FDeckEditor {
             g.drawPix(backDrop, 0, 0, Forge.getScreenWidth(), Forge.getScreenHeight());
     }
 
+    /** The editions whose basic lands the player may add to a deck. */
+    public static List<CardEdition> unlockedLandSets(Deck deck) {
+        return new AdventureEditorConfig().getBasicLandSets(deck);
+    }
+
     protected static class AdventureEditorConfig extends DeckEditorConfig {
         @Override
         public GameType getGameType() {
