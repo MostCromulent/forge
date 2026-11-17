@@ -192,11 +192,11 @@ export function NewQuest({ model, actions }: { model: Model; actions: Actions })
       render: (v, set) => <Names names={prizesFrom(v) ?? []} pick={prizeFormat => set({ prizeFormat })} />,
     },
     {
-      id: 'name', label: t('MsgQuestNewName'), short: t('lblQuestName'), hint: '', fields: [],
+      id: 'name', label: t('MsgQuestNewName'), short: t('lblWebQuestName'), hint: '', fields: [],
       answer: () => null,
       render: () => (
         <form class="rows" onSubmit={e => { e.preventDefault(); start(); }}>
-          <input type="text" placeholder={t('lblQuestName')} aria-label={t('lblQuestName')} maxLength={60} autoFocus value={name} onInput={e => setName(e.currentTarget.value)} />
+          <input type="text" placeholder={t('lblWebQuestName')} aria-label={t('lblWebQuestName')} maxLength={60} autoFocus value={name} onInput={e => setName(e.currentTarget.value)} />
         </form>
       ),
     },
