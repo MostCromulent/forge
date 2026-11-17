@@ -105,6 +105,8 @@ function launch(index: number): void {
 export function Drafting({ model, actions }: { model: Model; actions: Actions }) {
   const state = model.draft;
   const [leaving, setLeaving] = useState(false);
+  // A draft opened from its setup waits for its first pack on the intro's dark screen, so the intro starts from it
+  const fromDark = useRef(!state);
   /** On a phone the picks are a drawer over the pack. Its bar at the bottom of the screen opens it. */
   const [picksOpen, setPicksOpen] = useState(false);
   // An online draft belongs to the table and continues without this browser. So leaving only goes back to the table
@@ -124,11 +126,10 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
         </div>
       </PageHeader>
       {model.error && <p class="limited-error">{model.error}</p>}
-      {/* Opening packs can wait on a web site. The leave button stays available while it does */}
-      {!state && <p class="muted drafting-wait">{t('lblWebDraftOpeningPacks')}</p>}
+      {!state && !model.error && <div class="pack-intro pi-wait"><div class="pi-scrim" /></div>}
       {state && (
         <div class="drafting-shell">
-          <Pack state={state} faces={faces} actions={actions} log={online && state.log.length > 0} />
+          <Pack state={state} faces={faces} actions={actions} log={online && state.log.length > 0} fromDark={fromDark.current} />
           <Picks state={state} actions={actions} open={picksOpen} toggle={() => setPicksOpen(o => !o)} />
         </div>
       )}
@@ -196,7 +197,7 @@ function useClock(state: DraftState): number {
   return state.clockSeconds ? Math.max(0, state.clockLeftMillis - (now - stamp.current)) : 0;
 }
 
-function Pack({ state, faces, actions, log }: { state: DraftState; faces: string[]; actions: Actions; log: boolean }) {
+function Pack({ state, faces, actions, log, fromDark }: { state: DraftState; faces: string[]; actions: Actions; log: boolean; fromDark: boolean }) {
   const [selected, setSelected] = useState<number | null>(null);
   const [sort, setSort] = useState<PackSort>('rarity');
   // A new state clears the selection, because its cards are not the ones that were selected
@@ -225,7 +226,7 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
     // The draft's first pack is opened on screen. Every later pack slides in from the seat it came from
     if (state.pack === 1 && state.pick === 1 && !state.picks.length) {
       endIntro.current = playPackIntro({ title: state.product || t('lblBoosterDraft'), line: [t('lblWebDraftProductSeats', t('lblBoosterDraft'), state.seats.length), t('lblWebSetupNPacks', state.packs)].join(' \u00b7 '),
-        packImage: state.packImage ?? null, packs: state.packs }, grid.current, [...grid.current.querySelectorAll<HTMLElement>('.draft-slot .tile')], 0,
+        packImage: state.packImage ?? null, packs: state.packs, fromDark }, grid.current, [...grid.current.querySelectorAll<HTMLElement>('.draft-slot .tile')], 0,
       grid.current.closest('.draft-pack')?.querySelector<HTMLElement>('.pick-title') ?? null);
     } else arrive(grid.current, -passSide(state.direction) as -1 | 1);
   }, [cards]);

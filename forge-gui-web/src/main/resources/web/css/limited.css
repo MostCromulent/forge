@@ -150,6 +150,8 @@ button.outline:hover { background: var(--accent-soft); }
 /* The opening of a draft or sealed event (packintro.ts). It covers the screen until its cards land on the real ones, then lifts */
 .pack-intro { position: fixed; inset: 0; z-index: 58; overflow: hidden; cursor: pointer; }
 .pi-scrim { position: absolute; inset: 0; background: var(--bg-deep); opacity: 0; }
+.pi-wait { cursor: default; }
+.pi-wait .pi-scrim { opacity: .9; }
 .pi-title { position: absolute; left: 0; right: 0; top: 13vh; padding: 0 16px; text-align: center; opacity: 0; pointer-events: none; }
 .pi-set { font-size: clamp(28px, 3.1vw, 46px); font-weight: 700; color: var(--text); text-shadow: 0 4px 22px #000; text-wrap: balance; }
 .pi-line { margin-top: 8px; font-size: 15px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--accent-2); }
@@ -163,8 +165,8 @@ button.outline:hover { background: var(--accent-soft); }
 .pi-mouth { position: absolute; left: 0; right: 0; height: 6px; border-radius: 50%; background: #fff3d2; box-shadow: 0 0 34px 18px #ffdf9ccc; opacity: 0; }
 /* Flecks of foil from a tearing pack, here and in Planar Conquest (packopen.ts) */
 .pk-fleck { position: absolute; width: 6px; height: 3px; margin: -1px 0 0 -3px; background: linear-gradient(90deg, #fff, #f0c05a); opacity: 0; pointer-events: none; z-index: 7; }
-.pi-card { position: absolute; perspective: 900px; opacity: 0; will-change: transform, opacity; }
+.pi-card { position: absolute; perspective: 900px; will-change: transform, opacity; }
 .pi-card-y, .pi-card-turn { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
-.pi-face, .pi-back { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 4.75% / 3.4%; backface-visibility: hidden; box-shadow: 0 8px 18px #000a; }
+.pi-face, .pi-back { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 4.75% / 3.4%; backface-visibility: hidden; box-shadow: 0 3px 10px #0007; }
 .pi-face { object-fit: cover; }
 .pi-back { transform: rotateY(180deg); background: center / 100% 100% no-repeat; }

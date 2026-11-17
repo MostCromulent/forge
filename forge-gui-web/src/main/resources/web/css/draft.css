@@ -37,7 +37,6 @@
 
 #drafting { height: 100%; }
 .drafting-page { position: relative; height: 100%; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
-.drafting-wait { padding: 20px; }
 .drafting-shell { grid-row: 3; width: 100%; max-width: 1760px; justify-self: center; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px;
   padding: 18px 22px 22px; min-height: 0; }
 .draft-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: grid; min-height: 0; }

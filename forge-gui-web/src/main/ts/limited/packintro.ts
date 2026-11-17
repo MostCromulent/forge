@@ -14,6 +14,8 @@ export interface PackIntro {
   /** The booster picture's image key, or null for Forge's own pack with the title on it. */
   packImage: string | null;
   packs: number;
+  /** The screen is already dark when the intro starts. */
+  fromDark?: boolean;
 }
 
 const TURN = 440;
@@ -98,6 +100,8 @@ export function playPackIntro(intro: PackIntro, grid: HTMLElement, tiles: HTMLEl
   };
   const layer = make('div', 'pack-intro');
   const scrim = make('div', 'pi-scrim');
+  const dark = intro.fromDark ? .9 : 0;
+  scrim.style.opacity = String(dark);
   const title = make('div', 'pi-title');
   title.append(Object.assign(make('div', 'pi-set'), { textContent: intro.title }), Object.assign(make('div', 'pi-line'), { textContent: intro.line }));
   const skip = Object.assign(make('div', 'pi-skip'), { textContent: t('lblSkip') });
@@ -107,9 +111,11 @@ export function playPackIntro(intro: PackIntro, grid: HTMLElement, tiles: HTMLEl
   document.body.append(layer);
   let timer = 0;
   let ended = false;
+  const listening = new AbortController();
   const end = () => {
     if (ended) return;
     ended = true;
+    listening.abort();
     clearTimeout(timer);
     animations.forEach(a => { try { a.cancel(); } catch { /* already gone */ } });
     grid.style.opacity = '';
@@ -176,14 +182,13 @@ export function playPackIntro(intro: PackIntro, grid: HTMLElement, tiles: HTMLEl
 
     const sleeve = sleeveUrl(rememberedSleeve() ?? 0);
     const sample = tiles[0].getBoundingClientRect();
-    const targets: { rect: DOMRect; src: string; sink: boolean }[] = tiles.map(tile => ({
-      rect: tile.getBoundingClientRect(), src: tile.querySelector('img:not(.sym)')?.getAttribute('src') ?? '', sink: false }));
+    const targets: { rect: DOMRect; tile: HTMLElement; sink: boolean }[] = tiles.map(tile => ({ rect: tile.getBoundingClientRect(), tile, sink: false }));
     const gridBox = grid.getBoundingClientRect();
     for (let i = 0; i < Math.min(unseen, MAX_UNSEEN); i++) {
       // A card below the visible ones runs on past the bottom of the grid and fades, so the pool reads as larger than the screen
       const col = i % 4;
       targets.push({ rect: new DOMRect(gridBox.left + col * (sample.width + 12), gridBox.bottom - sample.height * .3, sample.width, sample.height),
-        src: targets[i % tiles.length].src, sink: true });
+        tile: tiles[i % tiles.length], sink: true });
     }
     const starts: { turn: HTMLElement; start: number }[] = [];
     targets.forEach((target, i) => {
@@ -194,7 +199,11 @@ export function playPackIntro(intro: PackIntro, grid: HTMLElement, tiles: HTMLEl
       const face = make('img', 'pi-face');
       // A picture that has not been downloaded yet lands as the sleeve, as the real tile hides its broken picture
       face.onerror = () => { face.onerror = null; face.src = sleeve; };
-      face.src = target.src;
+      face.src = target.tile.querySelector('img:not(.sym)')?.getAttribute('src') ?? '';
+      // A picture still downloading reaches the real card later, in a new image element, so the flyer takes it from there
+      target.tile.addEventListener('load', e => {
+        if (e.target instanceof HTMLImageElement && !e.target.classList.contains('sym')) face.src = e.target.src;
+      }, { capture: true, signal: listening.signal });
       face.alt = '';
       turn.append(back, face);
       y.append(turn);
@@ -219,7 +228,7 @@ export function playPackIntro(intro: PackIntro, grid: HTMLElement, tiles: HTMLEl
 
     // The heading stays up while the packs wait. Once the cards are down the screen lifts and the real cards take their place
     const swap = landed + 150, T = swap + 1100, at = (ms: number) => Math.min(1, Math.max(0, ms / T));
-    anim(scrim, [{ opacity: 0 }, { opacity: .9, offset: at(350) }, { opacity: .9, offset: at(landed - 500) }, { opacity: 0, offset: at(landed + 200) }, { opacity: 0 }], { duration: T, easing: 'linear' });
+    anim(scrim, [{ opacity: dark }, { opacity: .9, offset: at(350) }, { opacity: .9, offset: at(landed - 500) }, { opacity: 0, offset: at(landed + 200) }, { opacity: 0 }], { duration: T, easing: 'linear' });
     anim(title, [{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 0, offset: at(250) }, { opacity: 1, transform: 'none', offset: at(750) },
       { opacity: 1, offset: at(tearAt - 100) }, { opacity: 0, offset: at(tearAt + 250) }, { opacity: 0 }], { duration: T, easing: 'linear' });
     anim(skip, [{ opacity: 0 }, { opacity: 0, offset: at(500) }, { opacity: .7, offset: at(900) }, { opacity: .7, offset: at(landed - 500) }, { opacity: 0, offset: at(landed + 200) }, { opacity: 0 }],
