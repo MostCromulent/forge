@@ -75,6 +75,7 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
     private final HashMap<String, Long> equippedItems = new HashMap<>();
     private final ArrayList<HashMap<String, Long>> deckLoadouts = new ArrayList<>();
     private final List<AdventureQuestData> quests = new ArrayList<>();
+    private final List<AdventureQuestData> unseenFinishedQuests = new ArrayList<>();
     private final List<AdventureEventData> events = new ArrayList<>();
     private final Set<PaperCard> unsupportedCards = new HashSet<>();
     private final Predicate<PaperCard> isUnsupported = pc -> pc != null && pc.getRules() != null && pc.getRules().isUnsupported();
@@ -137,6 +138,7 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
         characterFlags.clear();
         questFlags.clear();
         quests.clear();
+        unseenFinishedQuests.clear();
         events.clear();
         cards.clear();
         statistic.clear();
@@ -651,6 +653,13 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
                     quests.add((AdventureQuestData) itsReallyAQuest);
             }
         }
+        if (data.containsKey("unseenFinishedQuests")) {
+            Object[] q = (Object[]) data.readObject("unseenFinishedQuests");
+            if (q != null) {
+                for (Object quest : q)
+                    unseenFinishedQuests.add((AdventureQuestData) quest);
+            }
+        }
         if (data.containsKey("events")) {
             events.clear();
             Object[] q = (Object[]) data.readObject("events");
@@ -922,6 +931,7 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
         data.storeObject("questFlagsKey", questFlagsKey.toArray(new String[0]));
         data.storeObject("questFlagsValue", questFlagsValue.toArray(new Byte[0]));
         data.storeObject("quests", quests.toArray());
+        data.storeObject("unseenFinishedQuests", unseenFinishedQuests.toArray());
         data.storeObject("events", events.toArray());
 
         data.storeObject("deckCards", deck.getMain().toCardList("\n").split("\n"));
@@ -1613,6 +1623,10 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
         quests.remove(quest);
     }
 
+    public List<AdventureQuestData> getUnseenFinishedQuests() {
+        return unseenFinishedQuests;
+    }
+
     /**
      * Clears a deck by replacing the current selected deck with a new deck
      */
@@ -1645,18 +1659,40 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
      * @return int - index of new copy slot, or -1 if no slot was available
      */
     public int copyDeck() {
+        int i = findEmptyDeckSlot();
+        if (i < 0)
+            return -1;
+        decks.set(i, (Deck) deck.copyTo(deck.getName() + " (" + Forge.getLocalizer().getMessage("lblCopy") + ")"));
+        // Copy loadout from source deck to new slot
+        ensureDeckLoadoutsSize();
+        HashMap<String, Long> sourceLoadout = selectedDeckIndex < deckLoadouts.size() ? deckLoadouts.get(selectedDeckIndex) : null;
+        deckLoadouts.set(i, sourceLoadout != null ? new HashMap<>(sourceLoadout) : null);
+        return i;
+    }
+
+    /**
+     * Puts a deck into the first empty deck slot.
+     *
+     * @return int - index of the slot used, or -1 if no slot was available
+     */
+    public int addDeckToEmptySlot(Deck newDeck) {
+        int i = findEmptyDeckSlot();
+        if (i < 0)
+            return -1;
+        decks.set(i, newDeck);
+        // The player may have the empty slot selected, so refresh the selected deck from it
+        if (i == selectedDeckIndex)
+            setSelectedDeckSlot(i, false);
+        return i;
+    }
+
+    /** Adds deck slots up to the maximum while searching, so a returned index is always valid. */
+    private int findEmptyDeckSlot() {
         for (int i = 0; i < maxDeckCount; i++) {
             if (i >= getDeckCount()) addDeck();
-            if (isEmptyDeck(i)) {
-                decks.set(i, (Deck) deck.copyTo(deck.getName() + " (" + Forge.getLocalizer().getMessage("lblCopy") + ")"));
-                // Copy loadout from source deck to new slot
-                ensureDeckLoadoutsSize();
-                HashMap<String, Long> sourceLoadout = selectedDeckIndex < deckLoadouts.size() ? deckLoadouts.get(selectedDeckIndex) : null;
-                deckLoadouts.set(i, sourceLoadout != null ? new HashMap<>(sourceLoadout) : null);
+            if (isEmptyDeck(i))
                 return i;
-            }
         }
-
         return -1;
     }
 
