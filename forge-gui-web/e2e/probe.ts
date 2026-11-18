@@ -205,7 +205,7 @@ export interface Table {
 
 /**
  * Starts a match against the computer and sets up the board from a dev-mode game state. The state uses the format of
- * the dev menu's "Set up a game state" (lines of key=value). Players are human and ai in a two-player game, and p0
+ * the dev menu's "Load Game State" (lines of key=value). Players are human and ai in a two-player game, and p0
  * (you) to p3 with more. activeplayer=human, activephase=MAIN1 and each player's life are added if not given, because
  * a state without a life total sets it to -1. It answers the coin toss and mulligan, and returns once the first card
  * the state names is on the table.
