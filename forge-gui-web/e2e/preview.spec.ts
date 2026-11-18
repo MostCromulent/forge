@@ -8,7 +8,7 @@ async function newDeck(p: Probe): Promise<void> {
   const page = p.page;
   await lobby(p);
   await page.locator('.plate.mine .sleeve').click();
-  await page.getByRole('button', { name: '+ New deck' }).click();
+  await page.getByRole('button', { name: '+ New Deck' }).click();
   await page.locator('.dialog.new-deck').getByText('Build a deck').click();
   await page.locator('#editor').waitFor();
   await page.locator('.catalogue .tile').nth(2).waitFor();

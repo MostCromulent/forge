@@ -352,6 +352,6 @@ export async function drafting(p: Probe): Promise<void> {
   await page.click('.ev.new');
   await page.locator('.tile-choice', { hasText: /full card ?pool/i }).click();
   await page.locator('.stp-open .tile-choice', { hasText: /^One card/ }).click();
-  await page.click('.ticket button:has-text("Start drafting")');
+  await page.click('.ticket button:has-text("Start Draft")');
   await expect(page.locator('#drafting')).toBeVisible({ timeout: 60_000 });
 }
