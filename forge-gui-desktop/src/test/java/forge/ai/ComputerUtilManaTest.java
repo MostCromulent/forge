@@ -279,6 +279,15 @@ public class ComputerUtilManaTest extends SimulationTest {
     }
 
     @Test
+    public void estimateCountsDevotionMana() {
+        final Player p = initAndCreateGame().getPlayers().get(1);
+        addCards("Forest", 2, p);
+        addCard("Nykthos, Shrine to Nyx", p);
+        addCards("Grizzly Bears", 4, p);
+        assertEquals(ComputerUtilMana.getAvailableManaEstimate(p), 4, "two Forests, and Nykthos adds four green for {2}");
+    }
+
+    @Test
     public void snowStorageLandStillMakesManaForASnowShard() {
         final Player p = initAndCreateGame().getPlayers().get(1);
         final Card vault = addCard("Bottomless Vault", p);

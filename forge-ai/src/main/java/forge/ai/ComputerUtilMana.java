@@ -1893,7 +1893,7 @@ public class ComputerUtilMana {
                     }
                     // a sub-ability can make the mana instead, when the first part's condition isn't met
                     for (SpellAbility part = ma; part != null; part = part.getSubAbility()) {
-                        producedTotal += part.amountOfManaGenerated(true);
+                        producedTotal += mostManaOfPart(part);
                     }
                     if (counters >= 0) {
                         ma.setXManaCostPaid(xPaid);
@@ -2547,12 +2547,15 @@ public class ComputerUtilMana {
 
     /** The most mana the ability can add, using the best color if it chooses a color on resolution. */
     private static int mostManaGenerated(final SpellAbility ma) {
-        final SpellAbility part = activeManaPart(ma);
+        return mostManaOfPart(activeManaPart(ma));
+    }
+
+    private static int mostManaOfPart(final SpellAbility part) {
         final AbilityManaPart mp = part.getManaPart();
         if (mp == null || !mp.choosesColorOnResolution(part)) {
             return part.amountOfManaGenerated(true);
         }
-        return Arrays.stream(mp.amountsIfChosen(part)).max().orElse(0);
+        return part.metConditions() ? Arrays.stream(mp.amountsIfChosen(part)).max().orElse(0) : 0;
     }
 
     /** The pool's mana that may be spent on the ability. */
