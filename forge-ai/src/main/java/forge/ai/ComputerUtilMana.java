@@ -792,7 +792,9 @@ public class ComputerUtilMana {
             // Manabarbs and its kin: this is the final ordering, after mana preferences and multi-mana requirements
             saList = painfulSourcesLast(saList, ai, painSources);
 
-            SpellAbility saPayment = saList.isEmpty() ? null : chooseManaAbility(cost, sa, ai, toPay, saList, checkPlayable || !test, paymentList);
+            final SpellAbility chosen = saList.isEmpty() ? null : chooseManaAbility(cost, sa, ai, toPay, saList, checkPlayable || !test, paymentList);
+            final SpellAbility saPayment = chosen != null && chosen.getHostCard().hasCounters()
+                    ? moreManaFromCounters(chosen, saList, cost, ai, counterXCaps) : chosen;
 
             if (saPayment != null && ComputerUtilCost.isSacrificeSelfCost(saPayment.getPayCosts()) && sa.isTargeting(saPayment.getHostCard())) {
                 // not a good idea to sac a card that you're targeting with the SA you're paying for
@@ -1231,6 +1233,33 @@ public class ComputerUtilMana {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Mage-Ring Network's plain {T}: Add {C} comes first, and tapping for it would leave its counters unused.
+     * @return the source's counter ability, with X chosen, when it makes more mana than the chosen ability
+     */
+    private static SpellAbility moreManaFromCounters(final SpellAbility chosen, final Collection<SpellAbility> saList,
+            final ManaCostBeingPaid cost, final Player ai, final Map<Card, Integer> caps) {
+        if (removableCounters(chosen) >= 0) {
+            return chosen;
+        }
+        final int plain = TextUtil.split(GameActionUtil.generatedTotalMana(chosen), ' ').length;
+        for (final SpellAbility other : saList) {
+            if (!other.getHostCard().equals(chosen.getHostCard()) || removableCounters(other) <= 0) {
+                continue;
+            }
+            other.setActivatingPlayer(ai);
+            if (!other.canPlay() || !chooseCounterX(other, cost, caps)) {
+                continue;
+            }
+            if (TextUtil.split(GameActionUtil.generatedTotalMana(other), ' ').length > plain) {
+                return other;
+            }
+            other.setXManaCostPaid(null);
+            activeManaPart(other).getManaPart().clearExpressChoice();
+        }
+        return chosen;
     }
 
     /**

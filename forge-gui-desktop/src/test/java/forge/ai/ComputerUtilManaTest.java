@@ -279,6 +279,19 @@ public class ComputerUtilManaTest extends SimulationTest {
     }
 
     @Test
+    public void mageRingSpendsCountersOnlyBeyondItsPlainMana() {
+        final Player p = initAndCreateGame().getPlayers().get(1);
+        final Card ring = addCard("Mage-Ring Network", p);
+        ring.setCounters(CounterEnumType.STORAGE, 3);
+
+        payForReal(p, "2");
+        assertEquals(ring.getCounters(CounterEnumType.STORAGE), 1);
+        ring.setTapped(false);
+        payForReal(p, "1");
+        assertEquals(ring.getCounters(CounterEnumType.STORAGE), 1, "its plain {T}: Add {C} pays {1}");
+    }
+
+    @Test
     public void estimateCountsDevotionMana() {
         final Player p = initAndCreateGame().getPlayers().get(1);
         addCards("Forest", 2, p);
