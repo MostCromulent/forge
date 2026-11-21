@@ -31,11 +31,12 @@ public class ExploreAi extends SpellAbilityAi {
     }
 
     public static boolean shouldPutInGraveyard(Card topCard, Player ai) {
-        int predictedMana = ComputerUtilMana.getAvailableManaSources(ai, false).size();
         CardCollectionView cardsOTB = ai.getCardsIn(ZoneType.Battlefield);
         CardCollectionView cardsInHand = ai.getCardsIn(ZoneType.Hand);
         CardCollection landsOTB = CardLists.filter(cardsOTB, CardPredicates.LANDS_PRODUCING_MANA);
         CardCollection landsInHand = CardLists.filter(cardsInHand, CardPredicates.LANDS_PRODUCING_MANA);
+        // next turn's mana, with one land played
+        int predictedMana = ComputerUtilMana.getAvailableManaEstimate(ai, false) + (landsInHand.isEmpty() ? 0 : 1);
 
         int maxCMCDiff = AiProfileUtil.getIntProperty(ai, AiProps.EXPLORE_MAX_CMC_DIFF_TO_PUT_IN_GRAVEYARD);
         int numLandsToStillNeedMore = AiProfileUtil.getIntProperty(ai, AiProps.EXPLORE_NUM_LANDS_TO_STILL_NEED_MORE);

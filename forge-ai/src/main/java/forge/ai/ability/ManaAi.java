@@ -144,11 +144,6 @@ public class ManaAi extends SpellAbilityAi {
             }
         }
 
-        CardCollection manaSources = ComputerUtilMana.getAvailableManaSources(ai, true);
-        int numManaSrcs = manaSources.size();
-        if (manaSources.contains(host) && ComputerUtilCost.isSacrificeSelfCost(sa.getRootAbility().getPayCosts())) {
-            numManaSrcs--;
-        }
         int manaReceived = sa.hasParam("Amount") ? AbilityUtils.calculateAmount(host, sa.getParam("Amount"), sa) : 1;
         manaReceived *= sa.getParam("Produced").split(" ").length;
 
@@ -162,7 +157,11 @@ public class ManaAi extends SpellAbilityAi {
             manaReceived = host.getCounters(ctrType);
         }
 
-        int searchCMC = numManaSrcs - selfCost + manaReceived;
+        int searchCMC = ComputerUtilMana.getAvailableManaEstimate(ai) + manaReceived - selfCost;
+        if (sa.isManaAbility() && host.isInPlay()) {
+            // the estimate already counts this ability, apart from an X it can't work out (Petalmane Baku's counters)
+            searchCMC -= Math.max(0, sa.amountOfManaGenerated(true) - selfCost);
+        }
 
         if ("X".equals(sa.getParam("Produced"))) {
             String x = host.getSVar("X");
