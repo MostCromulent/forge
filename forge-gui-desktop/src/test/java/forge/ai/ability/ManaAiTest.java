@@ -25,4 +25,19 @@ public class ManaAiTest extends AITest {
 
         assertTrue(ManaAi.doManaRitualLogic(ai, ritual, false), "the Swamp pays for Dark Ritual, and its {B}{B}{B} and Sol Ring's {C}{C} cast Sengir Vampire");
     }
+
+    @Test
+    public void ritualCountsASpiritGuideInHand() {
+        final Game game = initAndCreateGame();
+        final Player ai = game.getPlayers().get(1);
+        addCards("Mountain", 2, ai);
+        addCard("Sol Ring", ai);
+        addCardToZone("Simian Spirit Guide", ai, ZoneType.Hand);
+        addCardToZone("Shivan Dragon", ai, ZoneType.Hand);
+        final SpellAbility ritual = addCardToZone("Desperate Ritual", ai, ZoneType.Hand).getFirstSpellAbility();
+        ritual.setActivatingPlayer(ai);
+        game.getPhaseHandler().devModeSet(PhaseType.MAIN2, ai);
+
+        assertTrue(ManaAi.doManaRitualLogic(ai, ritual, false), "four mana on the battlefield and the Spirit Guide's one pay {1}{R} for {R}{R}{R}, six in all");
+    }
 }

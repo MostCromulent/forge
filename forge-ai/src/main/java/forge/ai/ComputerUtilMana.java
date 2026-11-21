@@ -1244,7 +1244,6 @@ public class ComputerUtilMana {
         if (removableCounters(chosen) >= 0) {
             return chosen;
         }
-        final int plain = TextUtil.split(GameActionUtil.generatedTotalMana(chosen), ' ').length;
         for (final SpellAbility other : saList) {
             if (!other.getHostCard().equals(chosen.getHostCard()) || removableCounters(other) <= 0) {
                 continue;
@@ -1253,7 +1252,8 @@ public class ComputerUtilMana {
             if (!other.canPlay() || !chooseCounterX(other, cost, caps)) {
                 continue;
             }
-            if (TextUtil.split(GameActionUtil.generatedTotalMana(other), ' ').length > plain) {
+            if (TextUtil.split(GameActionUtil.generatedTotalMana(other), ' ').length
+                    > TextUtil.split(GameActionUtil.generatedTotalMana(chosen), ' ').length) {
                 return other;
             }
             other.setXManaCostPaid(null);

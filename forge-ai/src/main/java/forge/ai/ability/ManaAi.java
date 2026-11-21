@@ -158,6 +158,8 @@ public class ManaAi extends SpellAbilityAi {
         }
 
         int searchCMC = ComputerUtilMana.getAvailableManaEstimate(ai) + manaReceived - selfCost;
+        // the estimate leaves out the hand, where a Spirit Guide makes one mana
+        searchCMC += CardLists.count(ComputerUtilMana.getAvailableManaSources(ai, true), CardPredicates.inZone(ZoneType.Hand));
         if (sa.isManaAbility() && host.isInPlay()) {
             // the estimate already counts this ability, apart from an X it can't work out (Petalmane Baku's counters)
             searchCMC -= Math.max(0, sa.amountOfManaGenerated(true) - selfCost);
