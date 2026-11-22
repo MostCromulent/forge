@@ -188,10 +188,6 @@ public enum CSubmenuRogueMap implements ICDoc {
     return flow.run();
   }
 
-  void setCurrentRun(RogueRun run) {
-    flow.setRun(run);
-  }
-
   public void clearCurrentRun() {
     flow.clearRun();
   }

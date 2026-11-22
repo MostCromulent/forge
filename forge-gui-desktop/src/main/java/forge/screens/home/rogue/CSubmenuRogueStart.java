@@ -6,25 +6,19 @@ import forge.ImageCache;
 import forge.ImageKeys;
 import forge.gamemodes.rogue.*;
 import forge.gamemodes.rogue.effect.*;
-import forge.gamemodes.rogue.flow.RogueDecisions;
-import forge.gamemodes.rogue.npc.NPCContext;
+import forge.gamemodes.rogue.flow.RogueStart;
 import forge.gamemodes.rogue.npc.NPC;
-import forge.gamemodes.rogue.npc.NPCEncounterComposite;
-import forge.gamemodes.rogue.path.RoguePathGenerator;
 import forge.gui.GuiBase;
 import forge.gui.framework.EDocID;
 import forge.gui.framework.ICDoc;
-import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
 import forge.screens.home.CHomeUI;
 import forge.toolbox.FOptionPane;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.swing.SwingUtilities;
-import org.tinylog.Logger;
 
 /**
  * Controls the Rogue Commander start screen. Handles commander selection via card carousel and new run
@@ -35,7 +29,6 @@ public enum CSubmenuRogueStart implements ICDoc {
   private static final String HIDDEN_CARD_KEY = ImageKeys.getTokenKey(ImageKeys.HIDDEN_CARD);
 
   private final VSubmenuRogueStart view = VSubmenuRogueStart.SINGLETON_INSTANCE;
-  private final RogueDecisions decisions = new DesktopRogueDecisions();
   private RogueDeck selectedDeck;
   private int selectedDescensionLevel = 0;
   private boolean updatingDescensionUi;
@@ -111,8 +104,7 @@ public enum CSubmenuRogueStart implements ICDoc {
     loadAvailableCommanders();
     SwingUtilities.invokeLater(() -> {
       view.getBtnBeginRun().requestFocusInWindow();
-      RogueMetaProgress.getInstance().notifyEndlessModeUnlocked();
-      showBetweenRunNpcDialogs();
+      CSubmenuRogueMap.SINGLETON_INSTANCE.getFlow().betweenRuns();
       showTutorials();
     });
   }
@@ -132,13 +124,6 @@ public enum CSubmenuRogueStart implements ICDoc {
     }
   }
 
-  private void showBetweenRunNpcDialogs() {
-    RogueMetaProgress progress = RogueMetaProgress.getInstance();
-    for (NPCContext ctx : NPCEncounterComposite.INSTANCE.onBetweenRuns(progress)) {
-      decisions.chooseBoon(ctx, new ChoiceRerollContext());
-    }
-  }
-
   private void loadAvailableCommanders() {
     boolean customRunsUnlocked = RogueMetaProgress.getInstance().isCustomRunsUnlocked();
     if (!customRunsUnlocked) {
@@ -148,22 +133,15 @@ public enum CSubmenuRogueStart implements ICDoc {
     view.getPnlCustomRunLock().setVisible(!customRunsUnlocked);
     view.setCustomModificationsVisible(view.getChkCustomRuns().isSelected());
 
-    List<RogueDeck> availableDecks = RogueConfig.loadRogueDecks();
     boolean experimental = view.getChkCustomRuns().isSelected()
         && view.getChkCustomModification(CustomRunModification.EXPERIMENT).isSelected();
-    availableDecks.removeIf(deck -> deck.isExperimental() != experimental);
     String previousCommanderName = selectedDeck != null ? selectedDeck.getCommanderCardName() : null;
     int previousDescensionLevel = selectedDescensionLevel;
-
-    // Sort commanders: unlocked first (alphabetically), then locked (alphabetically)
-    availableDecks.sort(Comparator
-        .comparing((RogueDeck d) -> !d.isUnlocked())  // false (unlocked) before true (locked)
-        .thenComparing(RogueDeck::getName));
 
     // Clear existing commander panels
     view.getCommanderCarouselPanel().clear();
 
-    for (RogueDeck deck : availableDecks) {
+    for (RogueDeck deck : RogueStart.roster(experimental)) {
       CommanderCardPanel cardPanel = new CommanderCardPanel(deck, view);
       cardPanel.setSelectionCallback(this::onCommanderSelected);
       view.getCommanderCarouselPanel().addCommanderPanel(cardPanel);
@@ -357,23 +335,11 @@ public enum CSubmenuRogueStart implements ICDoc {
   }
 
   private void updateStartButtonState() {
-    boolean custom = view.getChkCustomRuns().isSelected();
-    boolean ignoresSelectedCommander = custom && isGeneratedCommanderSelected();
+    boolean ignoresSelectedCommander = view.getChkCustomRuns().isSelected() && isGeneratedCommanderSelected();
     for (CommanderCardPanel panel : view.getCommanderPanels()) {
       panel.setDimmed(ignoresSelectedCommander);
     }
-    boolean customAllowed = !custom || RogueMetaProgress.getInstance().isCustomRunsUnlocked();
-    boolean hasAnyMod = false;
-    for (CustomRunModification modification : CustomRunModification.values()) {
-      hasAnyMod |= view.getChkCustomModification(modification).isSelected();
-    }
-    boolean hasDeck = custom ? hasAnyMod && (ignoresSelectedCommander || selectedDeck != null)
-        : selectedDeck != null;
-    boolean descensionAllowed = selectedDescensionLevel == 0
-        || (RogueMetaProgress.getInstance().isDescensionModeUnlocked()
-        && (custom || (selectedDeck != null && selectedDescensionLevel <= RogueMetaProgress
-            .getInstance().getMaxDescensionUnlocked(selectedDeck.getCommanderCardName()))));
-    view.getBtnBeginRun().setEnabled(customAllowed && hasDeck && descensionAllowed);
+    view.getBtnBeginRun().setEnabled(selectedStart().canBegin(RogueMetaProgress.getInstance()));
   }
 
   private void updateCommanderDetails(CommanderCardPanel panel) {
@@ -525,146 +491,17 @@ public enum CSubmenuRogueStart implements ICDoc {
   }
 
   private void beginNewRun() {
-    boolean custom = view.getChkCustomRuns().isSelected();
-    boolean generatedCommander = isGeneratedCommanderSelected();
-    List<CustomRunModification> modifications = custom
-        ? getSelectedRunModifications(generatedCommander) : List.of();
-    if (!canBeginNewRun(custom, generatedCommander, modifications)) {
-      return;
-    }
-
-    boolean chosenOne = modifications.contains(CustomRunModification.CHOSEN_ONE);
-    List<PaperCard> chosenCommanders = chosenOne
-        ? decisions.chooseCommanders() : List.of();
-    if (chosenOne && chosenCommanders.isEmpty()) {
-      return;
-    }
-    RogueDeck runDeck = createRunDeck(modifications, chosenCommanders);
-    if (runDeck == null) {
-      FOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblRogueCouldNotGenerateDeck"),
-          Localizer.getInstance().getMessage("lblRogueCustomRun"));
-      return;
-    }
-    if (chosenOne) {
-      runDeck.setAvatarIndex(decisions.choosePortrait(chosenCommanders.get(0), runDeck.getAvatarIndex()));
-    }
-
-    RogueMetaProgress progress = RogueMetaProgress.getInstance();
-    if (!abandonPreviousRuns(progress)) {
-      return;
-    }
-
-    // Create new run and snapshot active Aetherworks
-    RogueRun newRun = new RogueRun(runDeck);
-    for (CustomRunModification modification : modifications) {
-      newRun.addCustomRunModification(modification);
-    }
-    newRun.getRunTimer().start();
-    newRun.setDescensionLevel(selectedDescensionLevel);
-    newRun.snapshotAetherEffects(progress);
-
-    // Generate path and apply run start effects
-    RoguePathGenerator.generateRandomPath(newRun);
-    CSubmenuRogueMap.SINGLETON_INSTANCE.getFlow().runStartBoon(newRun, progress);
-
-    // Generate unique name for the run (used as filename)
-    // Format: DeckName_Timestamp (e.g., "MeriaRogueCommander_12-11-25_143022")
-    String runName = (custom ? runDeck.getName().replaceAll("[^a-zA-Z0-9_-]", "_")
-        : runDeck.getName()) + "_" + System.currentTimeMillis();
-    newRun.setName(runName);
-
-    // Track meta progress
-    RogueStats.fireOnRunStarted(newRun, progress);
-
-    // Save the run
-    RogueIO.saveRun(newRun);
-
-    // Set as current run in the map controller
-    CSubmenuRogueMap.SINGLETON_INSTANCE.setCurrentRun(newRun);
-
-
-    // Navigate to the Rogue Map
-    CHomeUI.SINGLETON_INSTANCE.itemClick(EDocID.HOME_ROGUEMAP);
+    CSubmenuRogueMap.SINGLETON_INSTANCE.getFlow().begin(selectedStart());
   }
 
-  private List<CustomRunModification> getSelectedRunModifications(boolean generatedCommander) {
-    List<CustomRunModification> modifications = new ArrayList<>();
+  private RogueStart selectedStart() {
+    Set<CustomRunModification> modifications = EnumSet.noneOf(CustomRunModification.class);
     for (CustomRunModification modification : CustomRunModification.values()) {
-      if (view.getChkCustomModification(modification).isSelected()
-          && (!generatedCommander || !modification.isIncludedWithGeneratedCommander())) {
+      if (view.getChkCustomModification(modification).isSelected()) {
         modifications.add(modification);
       }
     }
-    return modifications;
-  }
-
-  private boolean canBeginNewRun(boolean custom, boolean generatedCommander,
-                                 List<CustomRunModification> modifications) {
-    if (custom && !RogueMetaProgress.getInstance().isCustomRunsUnlocked()) {
-      return false;
-    }
-    if (selectedDescensionLevel > 0 && !RogueMetaProgress.getInstance().isDescensionModeUnlocked()) {
-      return false;
-    }
-    if (custom) {
-      return !modifications.isEmpty() && (generatedCommander || selectedDeck != null);
-    }
-    return selectedDeck != null;
-  }
-
-  private RogueDeck createRunDeck(List<CustomRunModification> modifications, List<PaperCard> chosenCommanders) {
-    RogueDeck runDeck = selectedDeck;
-    try {
-      for (CustomRunModification modification : modifications) {
-        runDeck = modification.createRogueDeck(runDeck, chosenCommanders,
-            (deck, ctx) -> new CardSelectionDialog(
-                Localizer.getInstance().getMessage("lblRogueStartingDeck"), ctx.cardSelectionSubtitle,
-                ctx.candidateCards, new RogueRun(deck), ctx.cardSelectionMinCount,
-                ctx.cardSelectionMaxCount, ctx.buildDeckPreview).show());
-        if (runDeck == null) {
-          return null;
-        }
-      }
-      return runDeck;
-    } catch (RuntimeException e) {
-      Logger.error(e, "Could not generate a custom Rogue Commander deck");
-      return null;
-    }
-  }
-
-  private boolean abandonPreviousRuns(RogueMetaProgress progress) {
-    List<RogueRun> runsToAbandon = getContinuableRunsToAbandon();
-    if (!runsToAbandon.isEmpty()) {
-      if (!decisions.confirmReplaceRun()) {
-        return false;
-      }
-
-      for (RogueRun run : runsToAbandon) {
-        run.getRunTimer().stop();
-        progress.addRunHistoryEntry(RogueRunHistoryEntry.fromRun(run, "ABANDONED", ""));
-      }
-    }
-
-    for (RogueRun old : RogueIO.loadAllRuns()) {
-      RogueIO.deleteRun(old);
-    }
-    return true;
-  }
-
-  private List<RogueRun> getContinuableRunsToAbandon() {
-    Map<String, RogueRun> runsByName = new LinkedHashMap<>();
-    addContinuableRun(runsByName, CSubmenuRogueMap.SINGLETON_INSTANCE.getCurrentRun());
-    for (RogueRun run : RogueIO.loadContinuableRuns()) {
-      addContinuableRun(runsByName, run);
-    }
-    return new ArrayList<>(runsByName.values());
-  }
-
-  private void addContinuableRun(Map<String, RogueRun> runsByName, RogueRun run) {
-    if (!RogueIO.isContinuableRun(run)) {
-      return;
-    }
-    String key = run.getName() != null ? run.getName() : "run@" + System.identityHashCode(run);
-    runsByName.putIfAbsent(key, run);
+    return new RogueStart(selectedDeck, view.getChkCustomRuns().isSelected(), modifications,
+        selectedDescensionLevel);
   }
 }

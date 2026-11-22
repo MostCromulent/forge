@@ -4,6 +4,7 @@ import forge.gamemodes.rogue.CodexHelper;
 import forge.gamemodes.rogue.PreviewReference;
 import forge.gamemodes.rogue.PreviewReferenceType;
 import forge.gamemodes.rogue.RogueConfig;
+import forge.gamemodes.rogue.RogueDeck;
 import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RoguePlanebound;
@@ -14,6 +15,8 @@ import forge.gamemodes.rogue.RogueStats;
 import forge.gamemodes.rogue.RogueWinLoseController;
 import forge.gamemodes.rogue.TextHelper;
 import forge.gamemodes.rogue.effect.*;
+import forge.gamemodes.rogue.flow.RogueDecisions.CardChoice;
+import forge.gamemodes.rogue.flow.RogueDecisions.CardChoiceKind;
 import forge.gamemodes.rogue.flow.RogueDecisions.Pick;
 import forge.gamemodes.rogue.flow.RogueDecisions.ResultKind;
 import forge.gamemodes.rogue.flow.RogueDecisions.Section;
@@ -36,7 +39,9 @@ import forge.util.MyRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -377,7 +382,127 @@ public final class RogueFlow {
         decisions.runEnded();
     }
 
-    public void runStartBoon(RogueRun newRun, RogueMetaProgress progress) {
+    public void betweenRuns() {
+        RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        progress.notifyEndlessModeUnlocked();
+        for (NPCContext ctx : NPCEncounterComposite.INSTANCE.onBetweenRuns(progress)) {
+            decisions.chooseBoon(ctx, new ChoiceRerollContext());
+        }
+    }
+
+    public boolean begin(RogueStart start) {
+        RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        if (!start.canBegin(progress)) {
+            return false;
+        }
+
+        List<CustomRunModification> modifications = start.runModifications();
+        boolean chosenOne = modifications.contains(CustomRunModification.CHOSEN_ONE);
+        List<PaperCard> chosenCommanders = chosenOne
+            ? decisions.chooseCommanders() : List.of();
+        if (chosenOne && chosenCommanders.isEmpty()) {
+            return false;
+        }
+        RogueDeck runDeck = createRunDeck(start.deck(), modifications, chosenCommanders);
+        if (runDeck == null) {
+            decisions.showMessage(Localizer.getInstance().getMessage("lblRogueCustomRun"),
+                Localizer.getInstance().getMessage("lblRogueCouldNotGenerateDeck"));
+            return false;
+        }
+        if (chosenOne) {
+            runDeck.setAvatarIndex(decisions.choosePortrait(chosenCommanders.get(0), runDeck.getAvatarIndex()));
+        }
+
+        List<RogueRun> runsToAbandon = getContinuableRunsToAbandon();
+        if (!runsToAbandon.isEmpty() && !decisions.confirmReplaceRun()) {
+            return false;
+        }
+        for (RogueRun run : runsToAbandon) {
+            run.getRunTimer().stop();
+        }
+
+        // Create new run and snapshot active Aetherworks
+        RogueRun newRun = new RogueRun(runDeck);
+        for (CustomRunModification modification : modifications) {
+            newRun.addCustomRunModification(modification);
+        }
+        newRun.getRunTimer().start();
+        newRun.setDescensionLevel(start.descension());
+        newRun.snapshotAetherEffects(progress);
+
+        // Generate path and apply run start effects
+        RoguePathGenerator.generateRandomPath(newRun);
+        runStartBoon(newRun, progress);
+
+        // Generate unique name for the run (used as filename)
+        // Format: DeckName_Timestamp (e.g., "MeriaRogueCommander_12-11-25_143022")
+        String runName = (start.custom() ? runDeck.getName().replaceAll("[^a-zA-Z0-9_-]", "_")
+            : runDeck.getName()) + "_" + System.currentTimeMillis();
+        newRun.setName(runName);
+
+        // Track meta progress
+        RogueStats.fireOnRunStarted(newRun, progress);
+
+        // Until the new run is on disk, a start that is cut short must leave the old one
+        RogueIO.saveRun(newRun);
+        abandonPreviousRuns(runsToAbandon, newRun, progress);
+
+        currentRun = newRun;
+        decisions.runStarted(newRun);
+        return true;
+    }
+
+    private RogueDeck createRunDeck(RogueDeck selectedDeck, List<CustomRunModification> modifications,
+                                    List<PaperCard> chosenCommanders) {
+        RogueDeck runDeck = selectedDeck;
+        try {
+            for (CustomRunModification modification : modifications) {
+                runDeck = modification.createRogueDeck(runDeck, chosenCommanders,
+                    (deck, ctx) -> decisions.chooseCards(new CardChoice(CardChoiceKind.STARTING_DECK,
+                        Localizer.getInstance().getMessage("lblRogueStartingDeck"), ctx.cardSelectionSubtitle,
+                        ctx.candidateCards, new RogueRun(deck), ctx.cardSelectionMinCount,
+                        ctx.cardSelectionMaxCount, ctx.buildDeckPreview)));
+                if (runDeck == null) {
+                    return null;
+                }
+            }
+            return runDeck;
+        } catch (RuntimeException e) {
+            Logger.error(e, "Could not generate a custom Rogue Commander deck");
+            return null;
+        }
+    }
+
+    private void abandonPreviousRuns(List<RogueRun> runsToAbandon, RogueRun newRun, RogueMetaProgress progress) {
+        for (RogueRun run : runsToAbandon) {
+            progress.addRunHistoryEntry(RogueRunHistoryEntry.fromRun(run, "ABANDONED", ""));
+        }
+
+        for (RogueRun old : RogueIO.loadAllRuns()) {
+            if (!old.getName().equals(newRun.getName())) {
+                RogueIO.deleteRun(old);
+            }
+        }
+    }
+
+    private List<RogueRun> getContinuableRunsToAbandon() {
+        Map<String, RogueRun> runsByName = new LinkedHashMap<>();
+        addContinuableRun(runsByName, currentRun);
+        for (RogueRun run : RogueIO.loadContinuableRuns()) {
+            addContinuableRun(runsByName, run);
+        }
+        return new ArrayList<>(runsByName.values());
+    }
+
+    private void addContinuableRun(Map<String, RogueRun> runsByName, RogueRun run) {
+        if (!RogueIO.isContinuableRun(run)) {
+            return;
+        }
+        String key = run.getName() != null ? run.getName() : "run@" + System.identityHashCode(run);
+        runsByName.putIfAbsent(key, run);
+    }
+
+    private void runStartBoon(RogueRun newRun, RogueMetaProgress progress) {
         RogueEffectComposite.INSTANCE.onRunStart(newRun, ctx -> EffectResultHelper.handleTrigger(ctx, newRun, decisions));
 
         // Show NPC encounter dialogs (e.g. Tyvar offering npcEffect choices)
