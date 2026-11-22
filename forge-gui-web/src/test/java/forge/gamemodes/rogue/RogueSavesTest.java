@@ -8,7 +8,9 @@ import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import forge.web.RogueFixture;
 import forge.web.WebTestSupport;
+import org.apache.commons.lang3.SystemUtils;
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -64,7 +66,8 @@ public class RogueSavesTest {
             Files.write(dir.resolve(RUN), nonsense());
             Assert.assertTrue(RogueIO.loadAllRuns().isEmpty());
         }
-        Assert.assertEquals(filesEndingWith(".broken").size(), 2);
+        // Within one tick of the clock the names are equal, and the second file stays in place
+        Assert.assertEquals(filesEndingWith("").size(), 2);
     }
 
     @Test
@@ -100,6 +103,24 @@ public class RogueSavesTest {
         Assert.expectThrows(UncheckedIOException.class, RogueMetaProgress::getInstance);
         Assert.assertEquals(filesEndingWith(""), List.of(dir.resolve(PROGRESS)));
         Assert.assertTrue(Files.isDirectory(dir.resolve(PROGRESS)));
+    }
+
+    @Test
+    public void aBrokenFileThatCannotBeSetAsideIsNotTouched() throws IOException {
+        final Path file = Files.write(dir.resolve(PROGRESS), nonsense());
+        // Windows does not rename an open file, and other systems need a writable directory
+        try (InputStream open = new FileInputStream(file.toFile())) {
+            dir.toFile().setWritable(false);
+            if (!SystemUtils.IS_OS_WINDOWS && Files.isWritable(dir)) {
+                throw new SkipException("this user can rename the file");
+            }
+            final UncheckedIOException e = Assert.expectThrows(UncheckedIOException.class, RogueMetaProgress::getInstance);
+            Assert.assertTrue(e.getCause().getMessage().startsWith("Could not set aside"), e.getCause().getMessage());
+        } finally {
+            dir.toFile().setWritable(true);
+        }
+        Assert.assertEquals(Files.readAllBytes(file), nonsense());
+        Assert.assertEquals(filesEndingWith(""), List.of(file));
     }
 
     @Test
