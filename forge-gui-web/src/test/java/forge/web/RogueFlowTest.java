@@ -1,5 +1,8 @@
 package forge.web;
 
+import forge.game.GameType;
+import forge.gamemodes.match.HostedMatch;
+import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueEvent;
 import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueMetaProgress;
@@ -9,10 +12,13 @@ import forge.gamemodes.rogue.RogueRunState;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.BazaarItem;
 import forge.gamemodes.rogue.effect.ChestEffect;
+import forge.gamemodes.rogue.effect.CustomRunModification;
 import forge.gamemodes.rogue.effect.EventEffect;
 import forge.gamemodes.rogue.effect.WoundEffect;
+import forge.gamemodes.rogue.effect.WrathfulEffect;
 import forge.gamemodes.rogue.flow.RogueDecisions.Pick;
 import forge.gamemodes.rogue.flow.RogueDecisions.ResultKind;
+import forge.gamemodes.rogue.flow.RogueDecisions.RogueMatch;
 import forge.gamemodes.rogue.flow.RogueDecisions.SanctumAction;
 import forge.gamemodes.rogue.flow.RogueDecisions.SanctumAnswer;
 import forge.gamemodes.rogue.flow.RogueDecisions.SanctumOffer;
@@ -23,6 +29,7 @@ import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.path.NodeBazaar;
 import forge.gamemodes.rogue.path.NodeChest;
 import forge.gamemodes.rogue.path.NodeEvent;
+import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.NodeSanctum;
 import forge.gamemodes.rogue.path.RoguePathNode;
 import forge.item.PaperCard;
@@ -34,9 +41,12 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 
 @Test(singleThreaded = true)
 public class RogueFlowTest {
@@ -290,6 +300,19 @@ public class RogueFlowTest {
         Assert.assertEquals(run.getCurrentGold(), 4);
     }
 
+    /** Seeds the random so that the draw comes out true when the flow makes it next. */
+    private static void seedFor(final BooleanSupplier draw) {
+        long seed = 0;
+        do {
+            MyRandom.setRandom(new Random(++seed));
+        } while (!draw.getAsBoolean());
+        MyRandom.setRandom(new Random(seed));
+    }
+
+    private void boardTakesTo(final int index) {
+        seedFor(() -> MyRandom.getRandom().nextInt(run.getPath().getNodeCount()) == index);
+    }
+
     @Test
     public void movingByEventEntersTheTargetNode() {
         start(NodeEvent.class);
@@ -299,13 +322,7 @@ public class RogueFlowTest {
         event.setCompleted(false);
         run.setCurrentNodeIndex(3);
         final RoguePathNode sanctum = nodes.get(11);
-        // Board rolls an index of the 16 nodes
-        MyRandom.setRandom(new Random(1) {
-            @Override
-            public int nextInt(final int bound) {
-                return bound == 16 ? 11 : super.nextInt(bound);
-            }
-        });
+        boardTakesTo(11);
         decisions.then("chooseEvent", choice(RogueEvent.ON_THE_EDGE, EventEffect.ON_THE_EDGE_BOARD))
                 .then("chooseSanctum", args -> {
                     Assert.assertSame(((SanctumOffer) args[0]).run(), run);
@@ -318,5 +335,119 @@ public class RogueFlowTest {
         Assert.assertEquals(run.getCurrentLife(), 19);
         Assert.assertTrue(sanctum.isCompleted());
         Assert.assertFalse(event.isCompleted());
+    }
+
+    private RogueMatch startedMatch() {
+        final RogueMatch[] started = new RogueMatch[1];
+        decisions.then("startMatch", args -> {
+            started[0] = (RogueMatch) args[0];
+            return null;
+        });
+        flow.enter();
+        Assert.assertNotNull(started[0], "no match in " + decisions.asked);
+        return started[0];
+    }
+
+    @Test
+    public void enteringAPlaneAnnouncesThenStarts() {
+        final NodePlanebound plane = (NodePlanebound) start(NodePlanebound.class);
+        plane.setWrathfulCount(2);
+        plane.setCursedCount(1);
+        decisions.then("showPlaneboundEffects", args -> {
+            Assert.assertSame(args[0], plane);
+            Assert.assertEquals(run.getActiveWrathfulEffects(), args[1]);
+            Assert.assertEquals(run.getActiveCursedEffects(), args[2]);
+            Assert.assertEquals(run.getActiveWrathfulEffects().size(), 2);
+            Assert.assertEquals(run.getActiveCursedEffects().size(), 1);
+            return null;
+        });
+        Assert.assertSame(startedMatch().node(), plane);
+        Assert.assertEquals(decisions.asked, List.of("showPlaneboundEffects", "startMatch"));
+    }
+
+    @Test
+    public void theMatchHasBothDecksAndTheRunsLife() {
+        final NodePlanebound plane = (NodePlanebound) start(NodePlanebound.class);
+        final RogueMatch match = startedMatch();
+        Assert.assertEquals(match.human().getStartingLife(), 14);
+        Assert.assertEquals(match.human().getDeck().getCommanders(), run.getCurrentDeck().getCommanders());
+        Assert.assertEquals(match.human().getDeck().getMain(), run.getCurrentDeck().getMain());
+        Assert.assertEquals(match.variants(), Set.of(GameType.Commander, GameType.Planechase));
+        Assert.assertSame(match.players().get(0), match.human());
+        // 5 for each of the two rows with planes
+        Assert.assertEquals(match.players().get(1).getStartingLife(), 10);
+        Assert.assertEquals(match.players().get(1).getDeck().getCommanders(),
+                RogueConfig.loadPlaneboundDeck(plane.getRoguePlanebound()).getCommanders());
+
+        run.addCustomRunModification(CustomRunModification.VOID);
+        Assert.assertEquals(startedMatch().variants(), Set.of(GameType.Commander));
+    }
+
+    /** At level 665 the next choice brings Henzie's story. The contract he offers instead of the event is rerolled to the given event. */
+    private void startAnEventWithAStory(final RogueEvent event) {
+        start(NodeEvent.class);
+        RogueMetaProgress.getInstance().setNPCLevel(NPC.HENZIE.id, 665);
+        decisions.then("chooseEvent", args -> {
+            seedFor(() -> {
+                final List<RogueEvent> others = new ArrayList<>(List.of(RogueEvent.values()));
+                others.removeIf(e -> !e.isAvailable() || e == args[0]);
+                Collections.shuffle(others, MyRandom.getRandom());
+                return others.get(0) == event;
+            });
+            return new Pick<>(true, null);
+        }).then("chooseBoon", new Pick<>(false, null));
+    }
+
+    @Test
+    public void anEventBattleTellsItsStoryFirst() {
+        startAnEventWithAStory(RogueEvent.AMBUSH);
+        decisions.then("chooseEvent", args -> {
+            Assert.assertEquals(args[0], RogueEvent.AMBUSH);
+            return choice(RogueEvent.AMBUSH, EventEffect.AMBUSH_FIGHT);
+        });
+        Assert.assertSame(startedMatch().run(), run);
+        Assert.assertEquals(decisions.asked, List.of("chooseEvent", "chooseEvent", "chooseBoon", "startMatch"));
+    }
+
+    @Test
+    public void movingOntoABattleStartsItOnce() {
+        startAnEventWithAStory(RogueEvent.ON_THE_EDGE);
+        final NodePlanebound elite = (NodePlanebound) run.getPath().getNode(10);
+        elite.setCursedCount(1);
+        decisions.then("chooseEvent", args -> {
+            Assert.assertEquals(args[0], RogueEvent.ON_THE_EDGE);
+            boardTakesTo(10);
+            return choice(RogueEvent.ON_THE_EDGE, EventEffect.ON_THE_EDGE_BOARD);
+        });
+        Assert.assertSame(startedMatch().node(), elite);
+        Assert.assertEquals(decisions.asked,
+                List.of("chooseEvent", "chooseEvent", "chooseBoon", "showPlaneboundEffects", "startMatch"));
+    }
+
+    @Test
+    public void aMatchThatCannotStartReloadsTheSave() {
+        final NodePlanebound plane = (NodePlanebound) start(NodePlanebound.class);
+        run.addWrathful(WrathfulEffect.AGGRESSION);
+        RogueIO.saveRun(run);
+        plane.setCursedCount(1);
+        decisions.then("startMatch", args -> {
+            Assert.assertTrue(run.getActiveWrathfulEffects().isEmpty(), "the match spends the effect");
+            run.setHostedMatch(new HostedMatch());
+            throw new IllegalStateException("no match today");
+        }).then("mapChanged", args -> {
+            Assert.assertSame(args[0], flow.run());
+            decisions.asked.add("mapChanged");
+            return null;
+        });
+        flow.enter();
+        Assert.assertEquals(decisions.asked, List.of("showPlaneboundEffects", "startMatch", "showMessage", "mapChanged"));
+        Assert.assertNotSame(flow.run(), run);
+        Assert.assertNull(run.getHostedMatch());
+        Assert.assertEquals(flow.run().getName(), run.getName());
+        Assert.assertEquals(flow.run().getActiveWrathfulEffects(), List.of(WrathfulEffect.AGGRESSION));
+        Assert.assertTrue(flow.run().getActiveCursedEffects().isEmpty());
+        Assert.assertEquals(((NodePlanebound) flow.run().getCurrentNode()).getCursedCount(), 0);
+
+        Assert.assertSame(startedMatch().run(), flow.run());
     }
 }

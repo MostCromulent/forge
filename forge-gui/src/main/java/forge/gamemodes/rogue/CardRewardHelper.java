@@ -46,13 +46,17 @@ public class CardRewardHelper {
     }
 
     /**
+     * Calculate gold cost of the next reroll, 0 while free ones are left.
+     */
+    public static int getRerollCost(int freeRerolls, int rerollCount) {
+        return rerollCount < freeRerolls ? 0 : getRerollCost(rerollCount - freeRerolls);
+    }
+
+    /**
      * Build the reroll button label showing gold cost, or "Reroll (free)" if free.
      */
     public static String buildRerollLabel(int freeRerolls, int rerollCount) {
-        if (rerollCount < freeRerolls) {
-            return "Reroll: 0";
-        }
-        return "Reroll: " + getRerollCost(rerollCount - freeRerolls);
+        return "Reroll: " + getRerollCost(freeRerolls, rerollCount);
     }
 
     /**

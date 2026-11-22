@@ -25,10 +25,11 @@ public final class RogueFlow {
     private final NodePlaneboundHelper nodePlaneboundHelper = new NodePlaneboundHelper(this);
     private final NodeSanctumHelper nodeSanctumHelper = new NodeSanctumHelper(this);
     private final NodeEffectResultHelper nodeEffectResultHelper =
-        new NodeEffectResultHelper(this, nodeBazaarHelper, nodeChestHelper, nodeSanctumHelper, nodePlaneboundHelper);
+        new NodeEffectResultHelper(this, nodeBazaarHelper, nodeChestHelper, nodeSanctumHelper);
     private final NodeEventHelper nodeEventHelper = new NodeEventHelper(this, nodeEffectResultHelper);
 
     private RogueRun currentRun;
+    private NodePlanebound pendingBattle;
 
     public RogueFlow(RogueDecisions decisions) {
         this.decisions = decisions;
@@ -52,6 +53,19 @@ public final class RogueFlow {
     }
 
     public void enter() {
+        pendingBattle = null;
+        enterNode();
+        if (pendingBattle != null) {
+            nodePlaneboundHelper.handlePlaneboundNode(pendingBattle, currentRun);
+        }
+    }
+
+    /** The battle starts once everything else the node does is over. */
+    void battle(NodePlanebound node) {
+        pendingBattle = node;
+    }
+
+    void enterNode() {
         if (currentRun == null) {
             return;
         }
@@ -63,7 +77,7 @@ public final class RogueFlow {
         }
 
         if (node instanceof NodePlanebound nodePlanebound) {
-            nodePlaneboundHelper.handlePlaneboundNode(nodePlanebound, currentRun);
+            battle(nodePlanebound);
         } else if (node instanceof NodeSanctum nodeSanctum) {
             nodeSanctumHelper.handleSanctumNode(nodeSanctum, currentRun);
         } else if (node instanceof NodeBazaar nodeBazaar) {

@@ -103,8 +103,7 @@ class NodeBazaarHelper {
             }
 
             String rerollLabel = CardRewardHelper.buildRerollLabel(freeRerolls, rerollCount);
-            int rerollCost = rerollCount < freeRerolls
-                ? 0 : CardRewardHelper.getRerollCost(rerollCount - freeRerolls);
+            int rerollCost = CardRewardHelper.getRerollCost(freeRerolls, rerollCount);
             boolean rerollEnabled =
                 CardRewardHelper.canAffordReroll(freeRerolls, rerollCount, currentRun.getCurrentGold());
             CodexHelper.recordBazaarInventory(currentRun, inventory);

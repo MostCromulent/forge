@@ -272,6 +272,9 @@ class DesktopRogueDecisions implements RogueDecisions {
 
         try {
             RogueRun run = match.run();
+            if (!run.getCarryCards().isEmpty()) {
+                showTutorial(RogueTutorial.CARRY_CARDS);
+            }
             LobbyPlayer lobbyPlayer = match.human().getPlayer();
             lobbyPlayer.setName(run.getCurrentCommanderName());
             lobbyPlayer.setAvatarIndex(run.getSelectedRogueDeck().getAvatarIndex());

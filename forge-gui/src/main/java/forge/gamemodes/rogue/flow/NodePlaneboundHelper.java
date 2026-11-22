@@ -9,10 +9,10 @@ import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.rogue.CodexHelper;
 import forge.gamemodes.rogue.RogueConfig;
+import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueRun.CarryCard;
-import forge.gamemodes.rogue.RogueTutorial;
 import forge.gamemodes.rogue.effect.*;
 import forge.gamemodes.rogue.flow.RogueDecisions.RogueMatch;
 import forge.gamemodes.rogue.path.NodePlanebound;
@@ -74,7 +74,6 @@ class NodePlaneboundHelper {
             human.setPlayer(GamePlayerUtil.getGuiPlayer());
 
             if (!currentRun.getCarryCards().isEmpty()) {
-                flow.decisions().showTutorial(RogueTutorial.CARRY_CARDS);
                 RogueEffect.addCardToCommandZone("Rogue - Carry Card Enabler", human);
             }
             for (CarryCard card : currentRun.getCarryCards()) {
@@ -114,6 +113,13 @@ class NodePlaneboundHelper {
             ));
         } catch (Exception e) {
             Logger.error(e, "Could not start Rogue match for Planebound {}", node.getRoguePlanebound());
+            // Charges and event effects are spent before a match exists, so the last save is the only state to return to
+            currentRun.setHostedMatch(null);
+            flow.setRun(RogueIO.loadRun(RogueIO.getRogueFile(currentRun)));
+            flow.decisions().showMessage(
+                Localizer.getInstance().getMessage("lblRogueRogueCommanderMap"),
+                Localizer.getInstance().getMessage("lblRogueMatchNotStarted"));
+            flow.decisions().mapChanged(flow.run());
         }
     }
 
