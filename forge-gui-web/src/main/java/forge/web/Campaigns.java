@@ -46,7 +46,8 @@ public interface Campaigns {
 
         /**
          * Starts a match that a campaign builds. Leaving the match returns to back. start builds the match on the GUI it is played
-         * through, and throws if it cannot. gameOver receives each game's end with the host's view of it. failed undoes the preparation.
+         * through, and throws if it cannot. gameOver receives each game's end with the host's view of it.
+         * failed undoes the preparation, and runs once if the match does not start.
          */
         void startMatch(InCampaign back, Consumer<WebGuiGame> start, Runnable failed, Consumer<GameView> gameOver);
 

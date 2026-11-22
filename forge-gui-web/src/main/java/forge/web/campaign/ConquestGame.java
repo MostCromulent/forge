@@ -852,7 +852,7 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
     }
 
     private static void startBattle(final ConquestBattle battle, final Host host) {
-        host.startMatch(() -> FModel.getConquest().prepareBattle(battle, null), () -> FModel.getConquest().cancelBattle());
+        host.startMatch("conquest", model().getName(), () -> FModel.getConquest().prepareBattle(battle, null), () -> FModel.getConquest().cancelBattle());
     }
 
     /** A command to this conquest. save is the open save, or null when the command comes from the list of saves. */

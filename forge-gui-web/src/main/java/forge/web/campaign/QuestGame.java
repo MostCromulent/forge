@@ -75,7 +75,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
     private static final String[] DIFFICULTIES = {"questDifficultyEasy", "questDifficultyMedium", "questDifficultyHard", "questDifficultyExpert"};
     private List<QuestEventDuel> duels;
     /** The match being played. Its view keeps every game's steps. The latest game's controller records the match. */
-    private volatile WebQuestView view;
+    private volatile RecordedWinLoseView view;
     private volatile QuestWinLoseController controller;
     /** The result of the game just ended, while its match is still open. */
     private volatile CampaignResult result;
@@ -519,7 +519,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         view = null;
         controller = null;
         tournamentDecided = false;
-        host.startMatch(() -> {
+        host.startMatch("quest", quest().getName(), () -> {
             final PreparedMatch match = QuestDraftUtils.prepareNextMatch();
             if (match != null) {
                 tournamentOpponent = match.players().stream().filter(p -> p != match.human()).findFirst().orElseThrow().getPlayer().getName();
@@ -560,7 +560,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
             cancelDraft();
             return;
         }
-        final WebQuestView shown = new WebQuestView();
+        final RecordedWinLoseView shown = new RecordedWinLoseView();
         if (draft.isStarted()) {
             QuestDraftTournaments.prizes(draft, shown);
         }
@@ -591,10 +591,10 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         quest().getDuelsManager().randomizeOpponents();
         quest().setCurrentEvent(duel);
         quest().save();
-        view = new WebQuestView();
+        view = new RecordedWinLoseView();
         controller = null;
         final String face = face(duel.getEventDeck());
-        host.startMatch(() -> {
+        host.startMatch("quest", quest().getName(), () -> {
             final PreparedMatch match = QuestUtil.prepareGame();
             match.players().get(1).getPlayer().setAvatarCardImageKey(face);
             return match;
@@ -611,7 +611,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         if (opponent != null && hostGame != null) {
             return tournamentGameOver(hostGame, opponent);
         }
-        final WebQuestView shown = view;
+        final RecordedWinLoseView shown = view;
         if (shown == null || hostGame == null || quest().getCurrentEvent() == null) {
             return null;
         }
@@ -633,7 +633,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
     /** The controller's reward logic may ask the player questions. Those questions belong after the result screen. */
     @Override
     public void resultSent() {
-        final WebQuestView shown = view;
+        final RecordedWinLoseView shown = view;
         final Runnable rest = shown == null ? null : shown.takeScript();
         if (rest != null) {
             rest.run();
@@ -661,7 +661,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
             return;
         }
         final QuestWinLoseController last = controller;
-        final WebQuestView shown = view;
+        final RecordedWinLoseView shown = view;
         controller = null;
         view = null;
         result = null;
@@ -686,7 +686,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
     /** Cards Forge showed the host, such as a booster just bought. They are added to what the reveal has not shown yet. A product the shop sold opens as a pack. */
     private void shown(final String title, final List<PaperCard> cards) {
         final List<RewardStep> steps = new ArrayList<>(reward == null ? List.of() : reward.steps());
-        steps.add(WebGuiBase.isProductName(title) ? WebQuestView.packStep(title, cards, WebGuiBase.boosterImageNamed(title)) : WebQuestView.cardsStep(title, cards, false));
+        steps.add(WebGuiBase.isProductName(title) ? RecordedWinLoseView.packStep(title, cards, WebGuiBase.boosterImageNamed(title)) : RecordedWinLoseView.cardsStep(title, cards, false));
         reward = new Reward(steps);
     }
 

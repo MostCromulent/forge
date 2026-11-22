@@ -33,8 +33,11 @@ public interface Campaign {
         /** The campaign made a save and opened it, so the session moves to that save. */
         void opened(String save);
 
-        /** Starts a match the campaign built. failed undoes what preparing it did. */
-        void startMatch(Supplier<PreparedMatch> prepare, Runnable failed);
+        /**
+         * Starts a match the campaign built, if the browser is still at that mode and save. failed undoes what preparing it did.
+         * It runs once, on this thread or the host UI thread, whenever the match does not start.
+         */
+        void startMatch(String mode, String save, Supplier<PreparedMatch> prepare, Runnable failed);
 
         Campaigns.Host session();
 
@@ -109,6 +112,11 @@ public interface Campaign {
 
     /** Called when the reward has been shown. The campaign then goes on to whatever comes next. */
     default void claim(final Host host) {
+    }
+
+    /** Whether a match of this mode has only one game, which cannot be continued or restarted. */
+    default boolean oneGame() {
+        return false;
     }
 
     /** A game of the campaign's match ended. It is recorded and rewarded here. hostGame is the host's own view, the only view that knows the match. */

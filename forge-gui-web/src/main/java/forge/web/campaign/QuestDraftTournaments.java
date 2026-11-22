@@ -149,7 +149,7 @@ final class QuestDraftTournaments {
     }
 
     /** Gives the prizes for the player's placing, as desktop's endTournamentAndAwardPrizes does, and shows them as reward steps. */
-    static void prizes(final QuestEventDraft draft, final WebQuestView shown) {
+    static void prizes(final QuestEventDraft draft, final RecordedWinLoseView shown) {
         final Localizer text = Localizer.getInstance();
         final String placing = text.getMessage("lblForPlacing") + draft.getPlacementString();
         final QuestDraftPrizes prizes = draft.collectPrizes();
@@ -169,7 +169,7 @@ final class QuestDraftTournaments {
             shown.showMessage(placing + text.getMessage("lblHaveBeAward") + prizes.boosterPacks.size() + " " + text.getMessage("lblBoosterPack") + plural + "!",
                     text.getMessage("lblBoosterPack") + plural + " " + text.getMessage("lblAwarded"), FSkinProp.ICO_QUEST_BOX);
             for (final BoosterPack pack : prizes.boosterPacks) {
-                shown.steps.add(WebQuestView.packStep(pack.getName(), pack.getCards(), pack.getImageKey(false)));
+                shown.steps.add(RecordedWinLoseView.packStep(pack.getName(), pack.getCards(), pack.getImageKey(false)));
             }
         }
         if (prizes.selectRareFromSets()) {

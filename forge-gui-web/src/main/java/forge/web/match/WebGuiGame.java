@@ -143,7 +143,11 @@ public class WebGuiGame extends NetworkGuiGame {
                 }
             }))
             .on(AutoYieldTop.class, play((g, controller, y) -> g.autoYieldTop(controller, y.yes())))
-            .on(NextGame.class, play((g, controller, n) -> controller.nextGameDecision(n.decision())));
+            .on(NextGame.class, play((g, controller, n) -> {
+                if (!g.oneGame || n.decision() == NextGameDecision.QUIT) {
+                    controller.nextGameDecision(n.decision());
+                }
+            }));
     private final ReentrantLock mirrorLock = new ReentrantLock();
     private final ExecutorService dispatch = Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder().setNameFormat("WebClient").setDaemon(true).build());
@@ -171,6 +175,7 @@ public class WebGuiGame extends NetworkGuiGame {
     private final PlayerSettings settings;
     private volatile BrowserChannel browser;
     private volatile boolean gameOver;
+    private volatile boolean oneGame;
     /** Each player's games won in the match. It is read from the engine's outcome of the game that just ended. */
     private volatile List<MatchScore> score = List.of();
     // The last of each that the browser was sent. A reloading browser gets them again, because they are sent only when they change
@@ -185,6 +190,11 @@ public class WebGuiGame extends NetworkGuiGame {
 
     public void onGameOver(final Runnable listener) {
         onGameOver = listener;
+    }
+
+    /** Refuses another game of this match. The host would start one when asked, even after the match is over. */
+    public void allowOneGame() {
+        oneGame = true;
     }
 
     public WebGuiGame(final PlayerSettings settings) {

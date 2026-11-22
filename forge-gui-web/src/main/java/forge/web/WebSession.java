@@ -777,6 +777,7 @@ public final class WebSession implements IHasForgeLog {
         final Playing playing = new Playing(new WebGuiGame(settings), false, false, back);
         if (!move(back, playing)) {
             playing.gui().close();
+            failed.run();
             return;
         }
         attach(playing.gui());

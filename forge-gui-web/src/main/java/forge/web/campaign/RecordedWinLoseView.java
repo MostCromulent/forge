@@ -13,14 +13,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/** Quest's result view. It records what QuestWinLoseController shows as reward steps, and the button text it sets as the result's buttons. */
-final class WebQuestView implements IWinLoseView<WebQuestView.Button> {
+/** A result view that is never shown. It records what a mode's controller shows as reward steps, and the button text it sets as the result's buttons. */
+public final class RecordedWinLoseView implements IWinLoseView<RecordedWinLoseView.Button> {
     /** A button that is never shown. What the controller sets on it is read back to build the result's buttons. */
-    static final class Button implements IButton {
+    public static final class Button implements IButton {
         private final String defaultText;
         private String text;
         private boolean visible;
         private boolean enabled;
+        private String toolTip;
 
         Button(final String defaultText) {
             this.defaultText = defaultText;
@@ -31,6 +32,7 @@ final class WebQuestView implements IWinLoseView<WebQuestView.Button> {
             text = defaultText;
             visible = true;
             enabled = true;
+            toolTip = null;
         }
 
         @Override public String getText() { return text; }
@@ -45,19 +47,19 @@ final class WebQuestView implements IWinLoseView<WebQuestView.Button> {
         @Override public void setCommand(final UiCommand command0) { }
         @Override public void setImage(final FSkinProp color) { }
         @Override public void setTextColor(final int r, final int g, final int b) { }
-        @Override public String getToolTipText() { return null; }
-        @Override public void setToolTipText(final String s0) { }
+        @Override public String getToolTipText() { return toolTip; }
+        @Override public void setToolTipText(final String s0) { toolTip = s0; }
     }
 
     private final Button continueButton = new Button(Localizer.getInstance().getMessage("btnContinue"));
     private final Button restartButton = new Button(Localizer.getInstance().getMessage("btnRestart"));
     private final Button quitButton = new Button(Localizer.getInstance().getMessage("lblQuit"));
     /** Every step the match's games showed, in order. A match's rewards are shown together once the match is left. */
-    final List<RewardStep> steps = new ArrayList<>();
+    public final List<RewardStep> steps = new ArrayList<>();
     private Runnable script;
 
     /** Resets the buttons for each game's result, as desktop creates a new window for each game. */
-    void newGame() {
+    public void newGame() {
         continueButton.reset();
         restartButton.reset();
         quitButton.reset();
@@ -65,7 +67,7 @@ final class WebQuestView implements IWinLoseView<WebQuestView.Button> {
     }
 
     /** Returns the rest of the controller's work, once. It runs after the result has been sent, so its questions come after the result screen. */
-    Runnable takeScript() {
+    public Runnable takeScript() {
         final Runnable r = script;
         script = null;
         return r;

@@ -1,6 +1,7 @@
 package forge.web.campaign;
 
 import forge.gamemodes.match.PreparedMatch;
+import forge.gamemodes.match.PreparedMatch.Looks;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.web.Campaigns;
 import forge.web.WebGuiBase;
@@ -59,12 +60,13 @@ public final class CampaignSession implements Campaigns {
         }
 
         @Override
-        public void startMatch(final Supplier<PreparedMatch> prepare, final Runnable failed) {
-            if (!(session.stage() instanceof InCampaign back)) {
+        public void startMatch(final String mode, final String save, final Supplier<PreparedMatch> prepare, final Runnable failed) {
+            if (!(session.stage() instanceof InCampaign back) || !back.equals(new InCampaign(mode, save))) {
+                failed.run();
                 return;
             }
             // A game's result belongs to the campaign that started it, wherever the browser is when the result is recorded
-            final Campaign campaign = modes.get(back.mode());
+            final Campaign campaign = modes.get(mode);
             session.startMatch(back, gui -> {
                 final PreparedMatch prepared = prepare.get();
                 if (prepared == null) {
@@ -72,9 +74,14 @@ public final class CampaignSession implements Campaigns {
                 }
                 // The game names its winner by this name. The board finds the seat by the session's player name
                 prepared.human().getPlayer().setName(session.playerName());
-                // Quest plays as Forge's one shared human player. Its avatar and sleeve are whatever the last match set
-                prepared.human().getPlayer().setAvatarIndex(session.avatarIndex());
-                prepared.human().getPlayer().setSleeveIndex(NetplaySeat.storedIndex(FPref.UI_SLEEVES, 0));
+                // A mode may play as Forge's one shared human player. Its avatar and sleeve are whatever the last match set
+                final Looks looks = prepared.looks() != null ? prepared.looks()
+                        : new Looks(session.avatarIndex(), NetplaySeat.storedIndex(FPref.UI_SLEEVES, 0));
+                prepared.human().getPlayer().setAvatarIndex(looks.avatar());
+                prepared.human().getPlayer().setSleeveIndex(looks.sleeve());
+                if (campaign.oneGame()) {
+                    gui.allowOneGame();
+                }
                 final NetplaySeat local = session.local();
                 local.openAlone(session.playerName(), gui).startPrepared(prepared, local.webSeat());
             }, failed, game -> run(() -> {
