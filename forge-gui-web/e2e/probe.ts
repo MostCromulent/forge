@@ -207,11 +207,23 @@ export interface Table {
  * Starts a match against the computer and sets up the board from a dev-mode game state. The state uses the format of
  * the dev menu's "Load Game State" (lines of key=value). Players are human and ai in a two-player game, and p0
  * (you) to p3 with more. activeplayer=human, activephase=MAIN1 and each player's life are added if not given, because
- * a state without a life total sets it to -1. It answers the coin toss and mulligan, and returns once the first card
- * the state names is on the table.
+ * a state without a life total sets it to -1. It returns once you have priority and the first card the state names is
+ * on the table. A Constructed match starts at the board (BoardStart.java). Any other game goes through match setup, the
+ * coin toss and the mulligan.
  */
 export async function board(p: Probe, state: string, table: Table = {}): Promise<void> {
   const page = p.page;
+  if (!table.game) {
+    const { lines, first } = stateLines(state, table);
+    await home(p);
+    await p.until('the start page', () => window.forge?.model.screen === 'menu' && !!window.forge.model.host);
+    p.mark('menu');
+    await act(page, 'dev', 'setupGameState', lines);
+    await p.until('the board', name => window.forge.model.screen === 'playing' && !!window.forge.model.prompt?.priority && (!name
+      || [...document.querySelectorAll<HTMLElement>('#match .card')].some(c => c.offsetParent !== null && c.textContent?.includes(name))), first, page, 60_000);
+    p.mark('board');
+    return;
+  }
   await lobby(p);
   const want = { game: table.game ?? null, players: table.players ?? 2 };
   // Set the game, the seats and each seat's deck through the lobby's actions, as the menus do
@@ -259,6 +271,19 @@ export async function board(p: Probe, state: string, table: Table = {}): Promise
  */
 export async function setState(p: Probe, state: string, table: Table = {}, others: Page[] = []): Promise<void> {
   const page = p.page;
+  const { lines, first } = stateLines(state, table);
+  await untilPriority(page, others);
+  p.mark('priority');
+  await act(page, 'dev', 'setupGameState', lines);
+  if (!first) return;
+  // The board is sent after the cards are placed. A prompt answered before it arrives is the old prompt
+  await p.until(`${first} on the table`, name => [...document.querySelectorAll<HTMLElement>('#match .card')]
+    .some(c => c.offsetParent !== null && c.textContent?.includes(name)), first, page, 10_000);
+  p.mark('placed');
+}
+
+/** A state with the defaults added, and the first card it names. */
+function stateLines(state: string, table: Table): { lines: string; first: string | undefined } {
   const players = table.players ?? 2;
   const lines = state.trim().split('\n').map(l => l.trim()).filter(Boolean);
   const life = String(table.life ?? (table.game === 'Commander' ? 40 : 20));
@@ -268,15 +293,7 @@ export async function setState(p: Probe, state: string, table: Table = {}, other
     if (!lines.some(l => l.startsWith(`${key}=`))) lines.unshift(`${key}=${value}`);
   }
   const named = /^(?:human|ai|p\d)(?:battlefield|hand)=([^;|]+)/;
-  const first = lines.map(l => named.exec(l)?.[1]).find(Boolean);
-  await untilPriority(page, others);
-  p.mark('priority');
-  await act(page, 'dev', 'setupGameState', lines.join('\n'));
-  if (!first) return;
-  // The board is sent after the cards are placed. A prompt answered before it arrives is the old prompt
-  await p.until(`${first} on the table`, name => [...document.querySelectorAll<HTMLElement>('#match .card')]
-    .some(c => c.offsetParent !== null && c.textContent?.includes(name)), first, page, 10_000);
-  p.mark('placed');
+  return { lines: lines.join('\n'), first: lines.map(l => named.exec(l)?.[1]).find(Boolean) };
 }
 
 /** Calls one of the page's actions directly, as its buttons and keys do. */

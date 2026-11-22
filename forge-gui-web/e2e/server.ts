@@ -85,6 +85,8 @@ export async function startServer(onPort?: number, seed: Seed = {}, reusable = f
     ...(process.env.FORGE_E2E_JVM ?? '').split(' ').filter(Boolean),
     '-Djava.awt.headless=true',
     '-Dforge.web.noBrowser=true',
+    // Lets a probe start a match at a board (probe.ts board)
+    '-Dforge.web.boardStart=true',
     `-Dforge.web.port=${port}`,
     // FORGE_PAGE_DIR serves another build of the page, so two page builds can be compared on the same server
     `-Dforge.web.pageDir=${process.env.FORGE_PAGE_DIR ?? join(module, 'src/main/resources/web')}`,

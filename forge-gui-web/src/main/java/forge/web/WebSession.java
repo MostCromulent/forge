@@ -107,6 +107,8 @@ public final class WebSession implements IHasForgeLog {
             .on(Dev.class, host((s, ch, d) -> {
                 if (s.stage instanceof Playing playing) {
                     s.ui.runBackgroundTask("Dev mode", () -> DevMode.run(s.local, playing.gui(), d, ch));
+                } else if (BoardStart.ENABLED && s.stage instanceof Menu menu && d.text() != null) {
+                    s.ui.invokeInEdtLater(() -> BoardStart.start(s, menu, new WebGuiGame(s.settings), d.text()));
                 }
             }))
             // A setting changed before a match is used to set up the match. During a match the game is told as well
