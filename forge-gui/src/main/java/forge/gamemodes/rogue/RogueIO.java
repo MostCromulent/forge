@@ -23,6 +23,8 @@ import forge.util.IgnoringXStream;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -216,12 +218,38 @@ public class RogueIO {
         }
     }
 
-    private static void savePacked(final XStream xStream0, final RogueRun rd, final File file) throws IOException {
-        ensureRogueDirectoryExists();
-        try (final BufferedOutputStream bout = new BufferedOutputStream(Files.newOutputStream(file.toPath()));
-             final GZIPOutputStream zout = new GZIPOutputStream(bout)) {
-            xStream0.toXML(rd, zout);
-            zout.flush();
+    static void savePacked(final XStream xStream, final Object value, final File target) throws IOException {
+        final Path file = target.toPath();
+        Files.createDirectories(file.getParent());
+        final Path temp = Files.createTempFile(file.getParent(), "save", ".tmp");
+        try {
+            try (final BufferedOutputStream bout = new BufferedOutputStream(Files.newOutputStream(temp));
+                 final GZIPOutputStream zout = new GZIPOutputStream(bout)) {
+                xStream.toXML(value, zout);
+                zout.flush();
+            }
+            if (!moveOver(temp, file)) {
+                // Windows does not replace a file that another program has open, but it can be written
+                Files.write(file, Files.readAllBytes(temp));
+            }
+        } finally {
+            deleteRunFile(temp.toFile());
+        }
+    }
+
+    private static boolean moveOver(final Path source, final Path target) {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                // Without ATOMIC_MOVE, Windows deletes the target before the move
+                Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                return true;
+            } catch (final IOException e) {
+                if (attempt == 3) {
+                    Logger.warn(e, "Could not move Rogue save over {}", target);
+                    return false;
+                }
+                pause(50);
+            }
         }
     }
 

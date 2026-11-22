@@ -1,5 +1,11 @@
 package forge.gamemodes.rogue;
 
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.converters.Converter;
+import com.thoughtworks.xstream.converters.MarshallingContext;
+import com.thoughtworks.xstream.converters.UnmarshallingContext;
+import com.thoughtworks.xstream.io.HierarchicalStreamReader;
+import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import forge.web.RogueFixture;
 import forge.web.WebTestSupport;
 import org.testng.Assert;
@@ -8,15 +14,19 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 @Test(singleThreaded = true)
@@ -106,6 +116,74 @@ public class RogueSavesTest {
         RogueMetaProgress.getInstance().setDevUnlockAll(true);
         RogueMetaProgress.reload();
         Assert.assertTrue(RogueMetaProgress.getInstance().isDevUnlockAll());
+    }
+
+    @Test
+    public void aFailedSaveKeepsTheOldFile() throws IOException {
+        final Path target = Files.write(dir.resolve(RUN), nonsense());
+        final XStream xStream = RogueIO.getSerializer(false);
+        xStream.registerConverter(new ThrowingConverter());
+        final List<Object> value = new ArrayList<>(List.of("written", new Unwritable()));
+        Assert.expectThrows(IllegalStateException.class, () -> RogueIO.savePacked(xStream, value, target.toFile()));
+        Assert.assertEquals(Files.readAllBytes(target), nonsense());
+        Assert.assertEquals(filesEndingWith(""), List.of(target));
+    }
+
+    @Test
+    public void aSaveOverAnOpenFileStillSaves() throws IOException {
+        final Path target = Files.write(dir.resolve(RUN), nonsense());
+        // Windows does not move a file over one that is open this way
+        try (InputStream open = new FileInputStream(target.toFile())) {
+            RogueIO.savePacked(RogueIO.getSerializer(false), "new", target.toFile());
+        }
+        try (InputStream zip = new GZIPInputStream(Files.newInputStream(target))) {
+            Assert.assertEquals(new String(zip.readAllBytes(), StandardCharsets.UTF_8), "<string>new</string>");
+        }
+        Assert.assertEquals(filesEndingWith(""), List.of(target));
+    }
+
+    @Test
+    public void theFixtureRoundTrips() throws IOException {
+        final Path runFile = RogueFixture.install("/rogue/run-master.xml", RUN);
+        final Path progressFile = RogueFixture.install("/rogue/meta-master.xml", PROGRESS);
+        final RogueRun before = RogueIO.loadRun(runFile.toFile());
+        final RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        Files.delete(runFile);
+        Files.delete(progressFile);
+        RogueIO.saveRun(before);
+        progress.save();
+
+        final RogueRun after = RogueIO.loadRun(runFile.toFile());
+        Assert.assertEquals(xml(after.getPath()), xml(before.getPath()));
+        Assert.assertEquals(xml(after.getCurrentDeck()), xml(before.getCurrentDeck()));
+        Assert.assertEquals(xml(after.getCarryCards()), xml(before.getCarryCards()));
+        RogueMetaProgress.reload();
+        Assert.assertNotSame(RogueMetaProgress.getInstance(), progress);
+        Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 25);
+    }
+
+    private static final class Unwritable {
+    }
+
+    private static final class ThrowingConverter implements Converter {
+        @Override
+        public boolean canConvert(@SuppressWarnings("rawtypes") final Class type) {
+            return type == Unwritable.class;
+        }
+
+        @Override
+        public void marshal(final Object source, final HierarchicalStreamWriter writer, final MarshallingContext context) {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public Object unmarshal(final HierarchicalStreamReader reader, final UnmarshallingContext context) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static String xml(final Object value) {
+        return RogueIO.getSerializer(false).toXML(value);
     }
 
     private static byte[] nonsense() throws IOException {

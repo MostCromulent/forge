@@ -21,7 +21,6 @@ import forge.model.FModel;
 import forge.sound.SoundEffectType;
 import forge.sound.SoundSystem;
 import forge.util.IgnoringXStream;
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -31,7 +30,6 @@ import java.nio.file.Files;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 /**
  * Tracks persistent meta-progression for Rogue Commander mode.
@@ -1167,18 +1165,12 @@ public class RogueMetaProgress {
     public void save() {
         File file = getMetaProgressFile();
         try {
-            Files.createDirectories(file.toPath().getParent());
-            savePacked(file);
+            // Not this object's lock, because reload() replaces the instance
+            synchronized (RogueMetaProgress.class) {
+                RogueIO.savePacked(getSerializer(), this, file);
+            }
         } catch (Exception e) {
             Logger.error(e, "Error saving Rogue meta progress: {}", file);
-        }
-    }
-
-    private void savePacked(File file) throws IOException {
-        try (BufferedOutputStream bout = new BufferedOutputStream(Files.newOutputStream(file.toPath()));
-             GZIPOutputStream zout = new GZIPOutputStream(bout)) {
-            getSerializer().toXML(this, zout);
-            zout.flush();
         }
     }
 }
