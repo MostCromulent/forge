@@ -4,6 +4,7 @@ import forge.util.Localizer;
 
 import forge.deck.Deck;
 import forge.gamemodes.rogue.CodexHelper;
+import forge.gamemodes.rogue.CodexHelper.JournalEntry;
 import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueDeck;
 import forge.gamemodes.rogue.RogueMetaProgress;
@@ -87,13 +88,6 @@ public enum VSubmenuRogueCodex implements IVSubmenu<CSubmenuRogueCodex> {
 
     CodexTab(String labelKey) {
       this.labelKey = labelKey;
-    }
-  }
-
-  record JournalEntry(String id, String title, String text) {
-    @Override
-    public String toString() {
-      return title;
     }
   }
 
@@ -691,7 +685,7 @@ public enum VSubmenuRogueCodex implements IVSubmenu<CSubmenuRogueCodex> {
   private JPanel createPlaneboundTopSections(RoguePlanebound selectedPlanebound,
                                              List<CodexCardGrid.Entry> commanderEntries) {
     JPanel commanderSection = createCardGridSection(localizer.getMessage("lblCommander"), commanderEntries);
-    PaperCard planeCard = getPlaneCard(selectedPlanebound);
+    PaperCard planeCard = CodexHelper.getPlaneCard(selectedPlanebound);
     if (planeCard == null) {
       return commanderSection;
     }
@@ -714,18 +708,6 @@ public enum VSubmenuRogueCodex implements IVSubmenu<CSubmenuRogueCodex> {
     addSectionLabel(panel, localizer.getMessage("lblPlane"));
     panel.addPlanePanel(new CodexPlanePanel(planeCard, this::getZoomUtil));
     return panel;
-  }
-
-  private PaperCard getPlaneCard(RoguePlanebound planebound) {
-    if (planebound == null || planebound.planeName() == null) {
-      return null;
-    }
-    for (PaperCard card : RogueConfig.getAllPlanes().toFlatList()) {
-      if (planebound.planeName().equalsIgnoreCase(card.getName())) {
-        return card;
-      }
-    }
-    return null;
   }
 
   private List<CodexCardGrid.Entry> createCommanderCardEntries(RogueDeck selectedCommander) {
