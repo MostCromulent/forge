@@ -871,7 +871,7 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #game-over .panel > * { animation: ending-rise .9s cubic-bezier(.2,.8,.2,1) both; }
 #game-over .panel > .word { animation-delay: .12s; }
 #game-over .panel > .rule { animation-delay: .3s; }
-#game-over .panel > .sub { animation-delay: .45s; }
+#game-over .panel > :is(.sub, .sub + .stage) { animation-delay: .45s; }
 #game-over .panel > .tally { animation-delay: .58s; }
 #game-over .panel > .actions { animation-delay: .7s; }
 #game-over .face { width: 88px; height: 88px; border-radius: 50%; background: var(--surface-2) center / cover; border: 2px solid rgba(242,195,68,.85); box-shadow: 0 0 0 4px #0a0d13, 0 14px 34px #000; }
@@ -879,8 +879,8 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
   background: var(--metal); -webkit-background-clip: text; background-clip: text; color: transparent; }
 #game-over .rule { width: 240px; height: 1px; background: linear-gradient(90deg, transparent, var(--rule), transparent); }
 #game-over .sub { margin: 0; font-size: 13px; letter-spacing: .26em; text-transform: uppercase; color: #aeb8c6; }
-/* Which game of the match this was, shown above the result */
-#game-over .stage { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: #aeb8c6; }
+/* Which game of the match this was, shown above the result. A campaign's second line is drawn the same way under it */
+#game-over .stage { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; text-align: center; color: #aeb8c6; }
 #game-over .tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 #game-over .tally-player { display: flex; align-items: center; gap: 9px; padding: 5px 12px 5px 5px; border-radius: 999px;
   background: #0d1016d9; border: 1px solid var(--line-bright); }

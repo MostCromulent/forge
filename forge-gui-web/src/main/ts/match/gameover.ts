@@ -190,12 +190,21 @@ export function renderGameOver(model: Model, g: GameView, actions: Actions): voi
   q(root, '.sub').textContent = limited
     ? t('lblWebBoardGauntletResult', sub, limited.round, limited.rounds, limited.wins, limited.losses)
     : ending?.line ?? sub;
+  if (ending?.detail) {
+    const detail = make('p', 'stage');
+    detail.textContent = ending.detail;
+    q(root, '.sub').after(detail);
+  }
   const buttons = q(root, '.actions');
-  const add = (label: string, primary: boolean, onClick: () => void) => {
+  const add = (label: string, primary: boolean, onClick: () => void, disabled?: string) => {
     const b = document.createElement('button');
     b.textContent = label;
     if (primary) b.className = 'primary';
     b.onclick = onClick;
+    if (disabled) {
+      b.disabled = true;
+      b.title = disabled;
+    }
     buttons.append(b);
   };
   // The player can view the battlefield whatever buttons the campaign offers

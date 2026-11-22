@@ -84,8 +84,8 @@ public interface Campaigns {
     default void leavingMatch(final InCampaign back) {
     }
 
-    /** The player left the match that was started from back. */
-    default void left(final Playing from, final InCampaign back) {
+    /** The player left the match that was started from back. choice is the result's button that was pressed, or null. */
+    default void left(final Playing from, final InCampaign back, final String choice) {
     }
 
     /** The campaign stage is shown again, so its page is sent. */

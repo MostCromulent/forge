@@ -90,7 +90,7 @@ public final class WebSession implements IHasForgeLog {
                     a.cardPool() == null ? null : FModel.getFormats().getFormat(a.cardPool()))))))
             // Starting a match can ask host questions, so it runs on the host UI thread and never blocks a socket thread
             .on(Start.class, (s, ch, st) -> s.ui.invokeInEdtLater(() -> s.start(ch, st)))
-            .on(Plain.leave, (s, ch, c) -> s.ui.invokeInEdtLater(s::leave))
+            .on(Leave.class, (s, ch, l) -> s.ui.invokeInEdtLater(() -> s.leave(l.choice())))
             .on(LimitedOpen.class, WebSession::openLimited)
             .on(Plain.limitedLeave, (s, ch, c) -> s.atPool(e -> new Menu()))
             .on(Plain.poolClose, (s, ch, c) -> s.atPool(e -> new Event(e.kind(), null)))
@@ -862,7 +862,7 @@ public final class WebSession implements IHasForgeLog {
     }
 
     /** Leaves the match: to the pool or campaign it came from, to a new table of the same kind for the host, or to the menu for a guest. */
-    private void leave() {
+    private void leave(final String choice) {
         final Stage from = stage;
         if (!(from instanceof Playing playing)) {
             return;
@@ -875,7 +875,7 @@ public final class WebSession implements IHasForgeLog {
             }
             local.endMatch();
             if (playing.back() instanceof InCampaign c) {
-                campaigns.left(playing, c);
+                campaigns.left(playing, c, choice);
             } else if (move(from, playing.back()) && b != null) {
                 limited.sendLimited(b);
             }

@@ -542,10 +542,10 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         }
         final Localizer text = Localizer.getInstance();
         final List<ResultButton> buttons = over
-                ? List.of(new ResultButton(text.getMessage("lblWebQuestContinueTournament"), "leave", true))
-                : List.of(new ResultButton(text.getMessage("btnContinue"), "nextGame", true),
-                        new ResultButton(text.getMessage("lblWebQuestForfeitTournament"), "forfeit", false));
-        result = new CampaignResult(won, over, null, buttons);
+                ? List.of(new ResultButton(text.getMessage("lblWebQuestContinueTournament"), "leave", true, null))
+                : List.of(new ResultButton(text.getMessage("btnContinue"), "nextGame", true, null),
+                        new ResultButton(text.getMessage("lblWebQuestForfeitTournament"), "forfeit", false, null));
+        result = new CampaignResult(won, over, null, null, buttons);
         return result;
     }
 
@@ -621,12 +621,12 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         final boolean over = hostGame.isMatchOver();
         final List<ResultButton> buttons = new ArrayList<>();
         if (shown.getBtnContinue().isVisible()) {
-            buttons.add(new ResultButton(shown.getBtnContinue().getText(), "nextGame", true));
+            buttons.add(new ResultButton(shown.getBtnContinue().getText(), "nextGame", true, null));
         }
         if (shown.getBtnQuit().isVisible()) {
-            buttons.add(new ResultButton(shown.getBtnQuit().getText(), over ? "leave" : "quit", buttons.isEmpty()));
+            buttons.add(new ResultButton(shown.getBtnQuit().getText(), over ? "leave" : "quit", buttons.isEmpty(), null));
         }
-        result = new CampaignResult(GamePlayerUtil.getQuestPlayer().getName().equals(hostGame.getWinningPlayerName()), over, null, buttons);
+        result = new CampaignResult(GamePlayerUtil.getQuestPlayer().getName().equals(hostGame.getWinningPlayerName()), over, null, null, buttons);
         return result;
     }
 
@@ -647,7 +647,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
 
     /** Leaving records the match, as desktop's Quit does. The match's steps become the reward shown over the Duels page. */
     @Override
-    public void left() {
+    public void left(final String choice) {
         final String opponent = tournamentOpponent;
         if (opponent != null) {
             tournamentOpponent = null;

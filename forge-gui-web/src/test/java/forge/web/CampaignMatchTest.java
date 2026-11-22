@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** Tests how a campaign mode starts and leaves a match, with a mode that has no pages. */
@@ -30,9 +31,10 @@ public class CampaignMatchTest extends WebHubTest {
     private static final String MODE = "stub";
     private static final String SAVE = "run";
 
-    private static final class StubMode implements Campaign {
+    private final class StubMode implements Campaign {
         private Host host;
         private final AtomicInteger gameOvers = new AtomicInteger();
+        private final List<String> leaving = new CopyOnWriteArrayList<>();
 
         @Override
         public void becameHost(final Host h) {
@@ -72,11 +74,17 @@ public class CampaignMatchTest extends WebHubTest {
         @Override
         public CampaignResult gameOver(final GameView hostGame) {
             gameOvers.incrementAndGet();
-            return new CampaignResult(false, true, null, List.of());
+            return new CampaignResult(false, true, null, null, List.of());
         }
 
         @Override
-        public void left() {
+        public void leavingMatch() {
+            leaving.add("leaving, table " + (sessions.hostLobby() != null));
+        }
+
+        @Override
+        public void left(final String choice) {
+            leaving.add("left for " + choice + ", table " + (sessions.hostLobby() != null));
         }
 
         @Override
@@ -122,6 +130,7 @@ public class CampaignMatchTest extends WebHubTest {
             host.awaitMatching("hello", h -> true, "the mode was not left");
         }
         mode.gameOvers.set(0);
+        mode.leaving.clear();
         failures.set(0);
         games.set(0);
     }
@@ -199,5 +208,30 @@ public class CampaignMatchTest extends WebHubTest {
         awaitTrue(() -> sessions.hostLobby().getHostedMatch() == null, "the match did not end");
         Assert.assertEquals(games.get(), 1);
         Assert.assertEquals(mode.gameOvers.get(), 1);
+    }
+
+    private List<String> leaveWith(final String choice) throws InterruptedException {
+        final TestBrowser host = hostIn(MODE);
+        startMatch(null);
+        awaitPriority(host);
+        mode.leaving.clear();
+        send(host, message("leave", "choice", choice));
+        host.awaitMatching("hello", h -> MODE.equals(str(h, "campaign")), "the match was not left");
+        return mode.leaving;
+    }
+
+    // Fails if a mode is not told which of its own buttons the player left with, or is told of one when none was pressed
+    @Test(timeOut = 180_000)
+    public void leavingTellsTheCampaignTheChoice() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        Assert.assertEquals(leaveWith("endless").get(1), "left for endless, table false");
+        Assert.assertEquals(leaveWith(null).get(1), "left for null, table false");
+    }
+
+    // Fails if a mode cannot tell a match the player left from the draw that closing its table ends it in
+    @Test(timeOut = 180_000)
+    public void leavingMatchComesBeforeTheTableCloses() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        Assert.assertEquals(leaveWith(null), List.of("leaving, table true", "left for null, table false"));
     }
 }

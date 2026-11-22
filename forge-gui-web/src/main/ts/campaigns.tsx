@@ -11,12 +11,15 @@ export interface CampaignEnding {
   /** Identifies the result, so a panel drawn before the result arrived is drawn again. Null until the result arrives. */
   key: string | null;
   line: string | null;
+  /** A second line under that one. */
+  detail: string | null;
   buttons(panel: EndingPanel): void;
 }
 
 /** The bottom of the result panel, where an ending adds its buttons. */
 export interface EndingPanel {
-  add(label: string, primary: boolean, onClick: () => void): void;
+  /** disabled is why the button cannot be pressed. */
+  add(label: string, primary: boolean, onClick: () => void, disabled?: string): void;
   /** A line above the buttons, such as a question they answer. */
   say(text: string): void;
   /** Empties the bottom of the panel so another set of buttons can be added. */

@@ -17,7 +17,7 @@ public final class FromBrowser {
     }
 
     /** Messages that are only a name. */
-    public enum Plain { decks, join, lobby, leaveLobby, addresses, cardSets, netDecks, leave, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
+    public enum Plain { decks, join, lobby, leaveLobby, addresses, cardSets, netDecks, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede, macroRecord, macroRepeat,
         editorClose, editorUndo }
 
@@ -315,6 +315,11 @@ public final class FromBrowser {
     /** A cheat for the host's own seat. text is the game state to set up, for setupGameState. */
     @Command("dev")
     public record Dev(DevAction action, @Nullable String text) {
+    }
+
+    /** Leaves the match. choice is the action of the campaign result's button that was pressed, when the button has an action of its own. */
+    @Command("leave")
+    public record Leave(@Nullable String choice) {
     }
 
     @Command("nextGame")

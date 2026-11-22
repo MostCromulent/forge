@@ -65,13 +65,17 @@ public final class CampaignProtocol {
     public record CampaignBar(String name, String line, List<Balance> balances, Map<String, List<String>> fresh) {
     }
 
-    /** A button of the result screen. action is nextGame, leave, restart, quit or forfeit. quit leaves a match that is not over. forfeit is a quit the player must confirm first. */
-    public record ResultButton(String label, String action, boolean primary) {
+    /**
+     * A button of the result screen. action is nextGame, leave, restart, quit, forfeit or the mode's own. quit leaves a match that is not over.
+     * forfeit is a quit the player must confirm first. One of the mode's own leaves the match with that action as the choice.
+     * disabled is why the button cannot be pressed.
+     */
+    public record ResultButton(String label, String action, boolean primary, @Nullable String disabled) {
     }
 
-    /** A game of a campaign's match ended. line is the text under the result screen's heading, if the mode has any. */
+    /** A game of a campaign's match ended. line is the text under the result screen's heading, and detail a second line under it, if the mode has any. */
     @Message("campaignResult")
-    public record CampaignResult(boolean won, boolean matchOver, @Nullable String line, List<ResultButton> buttons) {
+    public record CampaignResult(boolean won, boolean matchOver, @Nullable String line, @Nullable String detail, List<ResultButton> buttons) {
     }
 
     /** A statistics figure: its amount, and the total it is out of when it is a share. */

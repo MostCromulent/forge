@@ -135,8 +135,8 @@ public interface Campaign {
     default void leavingMatch() {
     }
 
-    /** The match was left. Its result is dropped with it. */
-    void left();
+    /** The match was left. Its result is dropped with it. choice is the action of the result's button that was pressed, if it was one of the mode's own, or null. */
+    void left(String choice);
 
     default CataloguePage cards(final CatalogueQuery q) {
         return null;

@@ -20,7 +20,7 @@ export interface CampaignModeHooks {
   /** The start page's entry. art is the card picture behind it. */
   tile: { icon: VNode; art: string; name: TextKey; blurb: TextKey; resumeLabel(save: string): string; order: number };
   draft?(model: Model): CampaignDraft | null;
-  /** What the result's buttons of the mode's own do, by their action. redraw shows the result's buttons again after a question. */
+  /** What the result's buttons of the mode's own do, by their action. A button with no function here leaves the match with its action as the choice. redraw shows the result's buttons again after a question. */
   ending?(model: Model, actions: Actions, result: CampaignResult, panel: EndingPanel, redraw: () => void): Record<string, () => void>;
 }
 

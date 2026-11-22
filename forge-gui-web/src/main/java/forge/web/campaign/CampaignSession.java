@@ -283,12 +283,12 @@ public final class CampaignSession implements Campaigns {
     }
 
     @Override
-    public void left(final Playing from, final InCampaign back) {
+    public void left(final Playing from, final InCampaign back, final String choice) {
         // Queued after the last game's result, so the campaign records the game before it is told the match was left
         final Campaign campaign = modes.get(back.mode());
         run(() -> {
             if (session.stage() == from) {
-                campaign.left();
+                campaign.left(choice);
                 if (session.move(from, back) && session.browser() != null) {
                     show();
                 }

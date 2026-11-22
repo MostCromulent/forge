@@ -126,15 +126,16 @@ registerCampaigns({
     if (!model.campaignSave) return null;
     // The campaign's result sets which buttons the ending offers, so the panel waits for it
     const result = model.campaignResult;
-    if (!result) return { key: null, line: null, buttons: () => {} };
+    if (!result) return { key: null, line: null, detail: null, buttons: () => {} };
     return {
       key: `${result.won}:${result.matchOver}`,
       line: result.line ?? null,
+      detail: result.detail ?? null,
       buttons: panel => {
         const draw = () => {
           panel.clear();
           result.buttons.forEach((b, i) => {
-            panel.add(b.label, b.primary, does[b.action]);
+            panel.add(b.label, b.primary, does[b.action] ?? (() => actions.leave(b.action)), b.disabled);
             if (i === 0) panel.add(t('lblReconnectViewBattlefield'), false, panel.view);
           });
         };

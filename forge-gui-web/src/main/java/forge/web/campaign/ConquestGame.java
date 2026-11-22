@@ -295,22 +295,22 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
         final List<ResultButton> buttons = new ArrayList<>();
         // A battle ends as on mobile. A win is acknowledged. A lost event can be fought again, but a lost chaos battle cannot
         if (!over) {
-            buttons.add(new ResultButton(text.getMessage("btnContinue"), "nextGame", true));
-            buttons.add(new ResultButton(text.getMessage("lblQuit"), "quit", false));
+            buttons.add(new ResultButton(text.getMessage("btnContinue"), "nextGame", true, null));
+            buttons.add(new ResultButton(text.getMessage("lblQuit"), "quit", false, null));
         } else if (won || chaos) {
-            buttons.add(new ResultButton(text.getMessage(won ? "lblGreat" : "lblOK"), "leave", true));
+            buttons.add(new ResultButton(text.getMessage(won ? "lblGreat" : "lblOK"), "leave", true, null));
         } else {
-            buttons.add(new ResultButton(text.getMessage("lblRetry"), "restart", true));
-            buttons.add(new ResultButton(text.getMessage("lblQuit"), "leave", false));
+            buttons.add(new ResultButton(text.getMessage("lblRetry"), "restart", true, null));
+            buttons.add(new ResultButton(text.getMessage("lblQuit"), "leave", false, null));
         }
         final String event = battle.getEventName();
         result = new CampaignResult(won, over,
-                !won || chaos ? null : first ? event + " \u00b7 " + text.getMessage("lblWebCampaignFirstConquest") : event, buttons);
+                !won || chaos ? null : first ? event + " \u00b7 " + text.getMessage("lblWebCampaignFirstConquest") : event, null, buttons);
         return result;
     }
 
     @Override
-    public void left() {
+    public void left(final String choice) {
         FModel.getConquest().finishBattle();
         result = null;
     }

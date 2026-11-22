@@ -33,8 +33,8 @@ export interface PageActions {
   dev(action: DevAction, text?: string): void;
   nextGame(): void;
   quitMatch(): void;
-  /** Leaves a finished match for the start page. */
-  leave(): void;
+  /** Leaves the match. choice is the campaign result's button that was pressed, when it has an action of its own. */
+  leave(choice?: string): void;
   answer(requestId: number, value: unknown): void;
   toggleStop(phase: PhaseType, mine: boolean): void;
   /** Sets all the stops of one row at once. Phases not listed are turned off. With no phases, the row gets Forge's default stops. */
@@ -180,7 +180,7 @@ export function createActions(send: Send): PageActions {
     dev: (action, text) => send({ t: 'dev', action, text }),
     nextGame: () => send({ t: 'nextGame', decision: 'CONTINUE' }),
     quitMatch: () => send({ t: 'nextGame', decision: 'QUIT' }),
-    leave: () => send({ t: 'leave' }),
+    leave: choice => send({ t: 'leave', choice }),
     answer: (id, value) => send({ t: 'reply', id, value }),
     toggleStop: (phase, mine) => send({ t: 'toggleStop', phase, mine }),
     setStops: (mine, phases) => send({ t: 'setStops', mine, phases }),
