@@ -13,7 +13,6 @@ import forge.deck.DeckProxy;
 import forge.deck.DeckSection;
 import forge.deck.DeckgenUtil;
 import forge.game.GameType;
-import forge.gamemodes.limited.CommanderDraftUtil;
 import forge.item.PaperCard;
 import forge.model.FModel;
 import forge.util.ImageUtil;
@@ -52,7 +51,6 @@ public final class DeckEditor {
     private final DeviceSink sink;
     /** The cards the deck is built from, or null when it is built from every card. */
     private final Collection collection;
-    private String freeCommander;
     private final Deque<Snapshot> undo = new ArrayDeque<>();
     private Deck deck;
     private Target target;
@@ -116,17 +114,8 @@ public final class DeckEditor {
         named = false;
     }
 
-    void setFreeCommander(final String name) {
-        freeCommander = name;
-    }
-
     private List<String> freeCommanders() {
-        final List<String> names = new ArrayList<>();
-        if (freeCommander != null && !freeCommander.isEmpty()) {
-            names.add(freeCommander);
-        }
-        names.addAll(List.of(CommanderDraftUtil.FREE_COMMANDER_FALLBACKS));
-        return names;
+        return DeckFormat.getFreeCommanders(deck.getAllCardsInASinglePool(false, false).toFlatList());
     }
 
     private boolean isFreeCommander(final String name) {
@@ -316,10 +305,11 @@ public final class DeckEditor {
             }
         }
         return change(name, () -> {
+            // Before the card leaves the pool, which the Commander Draft partner rule reads
+            placeCommander(card, commanders);
             if (source != null) {
                 source.remove(card, 1);
             }
-            placeCommander(card, commanders);
             if (!named) {
                 nameAfterCommander();
             }
@@ -705,7 +695,7 @@ public final class DeckEditor {
             final boolean partner = existing.size() == 1 && (card.getRules().canBePartnerCommander()
                     && existing.get(0).getRules().canBePartnerCommanders(card.getRules())
                     // A Commander Draft also pairs two commanders that the draft rules allow as partners, such as two one-colour legends
-                    || commanderDraft() && CommanderDraftUtil.isPartnerEligible(existing.get(0)) && CommanderDraftUtil.isPartnerEligible(card));
+                    || commanderDraft() && DeckFormat.CommanderDraft.getPartnerableCommander(deck, card, true) != null);
             if (!partner) {
                 final CardPool home = commanderDraft() ? deck.getOrCreate(DeckSection.Sideboard) : deck.getMain();
                 for (final Map.Entry<PaperCard, Integer> e : commanders) {

@@ -116,7 +116,7 @@ public final class OfflineLimited implements IHasForgeLog {
             channel.send(WebSession.error(Localizer.getInstance().getMessage("lblWebSessionNoPool", name)));
             return;
         }
-        decks.openPool(group.getHumanDeck(), e.storage(), poolType(e.type(), group.getHumanDeck()), null, channel);
+        decks.openPool(group.getHumanDeck(), e.storage(), poolType(e.type(), group.getHumanDeck()), channel);
     }
 
     private void deletePool(final BrowserChannel channel, final String name) {
@@ -179,7 +179,7 @@ public final class OfflineLimited implements IHasForgeLog {
                 }
                 session.tell(OfflinePools.pools());
                 session.tell(new PacksOpened(null, 0, WebGuiBase.boosterImageOf(group.getHumanDeck().getAllCardsInASinglePool().toFlatList())));
-                decks.openPool(group.getHumanDeck(), OfflinePools.sealed(), GameType.Sealed, null, session.browser());
+                decks.openPool(group.getHumanDeck(), OfflinePools.sealed(), GameType.Sealed, session.browser());
             } finally {
                 openingPacks.set(false);
             }
@@ -300,7 +300,7 @@ public final class OfflineLimited implements IHasForgeLog {
                 session.move(now, new Event(EventKind.draft, name));
             }
             session.tell(OfflinePools.pools());
-            decks.openPool(group.getHumanDeck(), drafts, poolType(GameType.Draft, group.getHumanDeck()), draft.freeCommander(), session.browser());
+            decks.openPool(group.getHumanDeck(), drafts, poolType(GameType.Draft, group.getHumanDeck()), session.browser());
         });
     }
 

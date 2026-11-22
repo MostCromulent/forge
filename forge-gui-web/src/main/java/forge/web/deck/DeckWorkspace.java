@@ -230,15 +230,11 @@ public final class DeckWorkspace implements IHasForgeLog {
         lobby.sendDecks(channel);
     }
 
-    /**
-     * Opens a pool's deck, which saves back into its pool. channel is null when no browser is attached to show it yet.
-     * freeCommander is the commander that a Commander Draft's set gives every player, or null. It is known only just after the draft.
-     */
-    public synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final String freeCommander,
+    /** Opens a pool's deck, which saves back into its pool. channel is null when no browser is attached to show it yet. */
+    public synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type,
             final BrowserChannel channel) {
         editor = new DeckEditor(human, false, true, new DeckEditor.Group(storage), LegalityScope.of(type, null), storages,
                 !host.getAsBoolean(), this::sendDeviceDeck, null);
-        editor.setFreeCommander(freeCommander);
         editorSeat = null;
         editorPath = "";
         if (channel != null) {

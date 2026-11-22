@@ -119,11 +119,6 @@ public final class OfflineDraft implements Draft {
         return CompletableFuture.supplyAsync(() -> draft.toDeckGroup(name), thread);
     }
 
-    /** The commander that the drafted set gives every player, or null. Read it only after the draft is done, when no other code uses the draft. */
-    String freeCommander() {
-        return draft == null ? null : draft.getFreeCommanderName();
-    }
-
     void close() {
         thread.shutdownNow();
     }
