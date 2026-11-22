@@ -1,4 +1,4 @@
-/* Quest. The save shelf reuses the Limited shelf (limited.css). The bar, side panel and reveal reuse the campaign styles in conquest.css. */
+/* Quest. The save shelf reuses the Limited shelf (limited.css). The bar, side panel and reveal reuse the campaign styles in campaign.css. */
 
 .qu-save .ev-line .cq-coin { margin-left: 6px; }
 .qu-save.current { border-color: color-mix(in srgb, var(--accent-2) 60%, #000); }
