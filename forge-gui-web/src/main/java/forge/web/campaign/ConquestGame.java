@@ -41,6 +41,7 @@ import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.Commands;
 import forge.web.protocol.Commands.Handler;
+import forge.web.protocol.ConquestProtocol.*;
 import forge.web.protocol.FromBrowser.*;
 import forge.web.protocol.ToBrowser.*;
 import org.apache.commons.lang3.EnumUtils;
@@ -890,14 +891,14 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
                 c.game().select(at.region(), at.row(), at.col());
                 ch.send(c.game().state(List.of()));
             }))
-            .on(CampaignPlain.conquestMove, inSave((c, ch, m) -> {
+            .on(ConquestPlain.conquestMove, inSave((c, ch, m) -> {
                 // A move with nowhere to go gets no answer. A map with no path would end a walk in progress
                 final List<ConquestLocation> walked = c.game().move();
                 if (walked != null) {
                     ch.send(c.game().state(walked));
                 }
             }))
-            .on(CampaignPlain.conquestBattle, inSave((c, ch, b) -> {
+            .on(ConquestPlain.conquestBattle, inSave((c, ch, b) -> {
                 // A reward still to be shown may end in a chaos battle, which must come before any other battle
                 if (c.game().reward != null) {
                     return;
@@ -909,14 +910,14 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
                 }
                 startBattle(c.game().battle(), c.host());
             }))
-            .on(CampaignPlain.conquestParty, inSave((c, ch, p) -> ch.send(c.game().party())))
+            .on(ConquestPlain.conquestParty, inSave((c, ch, p) -> ch.send(c.game().party())))
             .on(ConquestAetherQuery.class, inSave((c, ch, q) -> {
                 ch.send(c.game().aether(q));
                 if (q.pull()) {
                     ch.send(c.game().bar());
                 }
             }))
-            .on(CampaignPlain.conquestPlanes, inSave((c, ch, p) -> ch.send(c.game().planes())))
+            .on(ConquestPlain.conquestPlanes, inSave((c, ch, p) -> ch.send(c.game().planes())))
             .on(ConquestPlaneswalk.class, inSave((c, ch, go) -> {
                 final String problem = c.game().planeswalk(go.plane(), go.unlock());
                 if (problem != null) {

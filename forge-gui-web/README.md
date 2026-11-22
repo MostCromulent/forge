@@ -89,11 +89,11 @@ The pages outside a match use Preact. The match screen is drawn by hand, because
 
 The card preview is shared by every page. Elements join it through data attributes rather than code, as `preview.ts` describes. The match's cards call `hoverable()` and carry `data-zoom`, `data-key` and `data-from` instead.
 
-The campaign modes are kept apart so a build can leave them out. On the server they sit behind `Campaigns`, made in `WebSession`'s constructor, and their messages are in `CampaignProtocol`. On the page, `campaign/register.tsx` adds their model fields, actions and pages through the hooks in `campaigns.tsx`.
+The campaign modes are kept apart so a build can leave them out. On the server they sit behind `Campaigns`, made in `WebSession`'s constructor, and their messages are in `CampaignProtocol` and a class for each mode. On the page, `campaign/register.tsx` adds their model fields, actions and pages through the hooks in `campaigns.tsx`.
 
 ## The protocol
 
-The messages are Java records in `ToBrowser` and `FromBrowser`, and the campaigns' in `CampaignProtocol`. Each build generates the page's TypeScript types from them, so a change to a record fails the build wherever the page uses it. A field may be null only when it is marked `@Nullable`.
+The messages are Java records in `ToBrowser` and `FromBrowser`, and the campaigns' in `CampaignProtocol` and a class for each mode. Each build generates the page's TypeScript types from them, so a change to a record fails the build wherever the page uses it. A field may be null only when it is marked `@Nullable`.
 
 Each command the page sends has one owner, which handles it from its `Commands` table: the session, the table (`TableCommands`), the deck editor, the Limited pages, the match or a campaign. The tests check that every `IGuiGame` method is answered and that every command has exactly one owner.
 

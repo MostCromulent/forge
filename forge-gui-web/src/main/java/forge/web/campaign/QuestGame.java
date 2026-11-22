@@ -59,6 +59,7 @@ import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.Commands;
 import forge.web.protocol.Commands.Handler;
 import forge.web.protocol.FromBrowser.*;
+import forge.web.protocol.QuestProtocol.*;
 import forge.web.protocol.ToBrowser.*;
 
 import java.io.File;

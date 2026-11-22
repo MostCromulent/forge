@@ -27,8 +27,9 @@ import java.util.stream.Stream;
 
 /** Turns the message records into JSON and back. A null component is left out of the JSON. Only components marked {@link Nullable} may be null. */
 public final class MessageJson {
-    /** The classes whose nested records make up the protocol. The campaign modes have their own class, so a build can leave them out. */
-    private static final List<Class<?>> HOLDERS = List.of(FromBrowser.class, ToBrowser.class, CampaignProtocol.class);
+    /** The classes whose nested records make up the protocol. Each campaign mode has its own class, so a build can leave it out. */
+    private static final List<Class<?>> HOLDERS = List.of(FromBrowser.class, ToBrowser.class, CampaignProtocol.class,
+            ConquestProtocol.class, QuestProtocol.class);
     private static final Gson GSON = new Gson();
     /** Writes every message to the browser. Nulls are kept, because a property sent as null has gone back to its default. */
     public static final Gson WRITER = new GsonBuilder().serializeNulls().create();

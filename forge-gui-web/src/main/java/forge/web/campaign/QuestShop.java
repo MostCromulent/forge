@@ -21,6 +21,7 @@ import forge.web.WebGuiBase;
 import forge.web.deck.CardCatalog;
 import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
+import forge.web.protocol.QuestProtocol.*;
 import forge.web.protocol.ToBrowser.*;
 
 import java.io.File;
