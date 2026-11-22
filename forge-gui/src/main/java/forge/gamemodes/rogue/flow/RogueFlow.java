@@ -11,7 +11,6 @@ import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueRunHistoryEntry;
-import forge.gamemodes.rogue.RogueRunTimer;
 import forge.gamemodes.rogue.RogueStats;
 import forge.gamemodes.rogue.RogueWinLoseController;
 import forge.gamemodes.rogue.TextHelper;
@@ -47,6 +46,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
 
 /** A client's current Rogue Commander run, and the steps of playing it. */
@@ -248,7 +248,7 @@ public final class RogueFlow {
         }
     }
 
-    public void completeSideNode(RoguePathNode node) {
+    void completeSideNode(RoguePathNode node) {
         node.setCompleted(true);
         currentRun.nextNode();
         RogueStats.fireOnSideNodeCompleted(currentRun, RogueMetaProgress.getInstance());
@@ -256,7 +256,7 @@ public final class RogueFlow {
         decisions.mapChanged(currentRun);
     }
 
-    public boolean checkSideNodeDefeat(String defeatedBy) {
+    boolean checkSideNodeDefeat(String defeatedBy) {
         if (currentRun == null || currentRun.getCurrentLife() > 0) {
             return false;
         }
@@ -317,8 +317,6 @@ public final class RogueFlow {
     }
 
     public void resultLeft(RogueWinLoseController controller, boolean endless) {
-        controller.actionOnQuit();
-
         // Clear hosted match so new matches can be started
         if (currentRun != null) {
             currentRun.setHostedMatch(null);
@@ -408,17 +406,16 @@ public final class RogueFlow {
         decisions.runEnded();
     }
 
+    /** The run timer is stopped, also when the save fails. */
     public boolean save() {
         if (currentRun == null || currentRun.getHostedMatch() != null) {
             return false;
         }
 
-        RogueRunTimer timer = currentRun.getRunTimer();
-        timer.stop();
+        currentRun.getRunTimer().stop();
         try {
             RogueIO.saveRun(currentRun);
         } catch (RuntimeException e) {
-            timer.start();
             Logger.error(e, "Could not save Rogue Commander run before returning home");
             return false;
         }
@@ -512,19 +509,31 @@ public final class RogueFlow {
     private RogueDeck createRunDeck(RogueDeck selectedDeck, List<CustomRunModification> modifications,
                                     List<PaperCard> chosenCommanders) {
         RogueDeck runDeck = selectedDeck;
+        RuntimeException[] fromPlayer = new RuntimeException[1];
         try {
             for (CustomRunModification modification : modifications) {
                 runDeck = modification.createRogueDeck(runDeck, chosenCommanders,
-                    (deck, ctx) -> decisions.chooseCards(new CardChoice(CardChoiceKind.STARTING_DECK,
-                        Localizer.getInstance().getMessage("lblRogueStartingDeck"), ctx.cardSelectionSubtitle,
-                        ctx.candidateCards, new RogueRun(deck), ctx.cardSelectionMinCount,
-                        ctx.cardSelectionMaxCount, ctx.buildDeckPreview)));
+                    (deck, ctx) -> {
+                        CardChoice choice = new CardChoice(CardChoiceKind.STARTING_DECK,
+                            Localizer.getInstance().getMessage("lblRogueStartingDeck"), ctx.cardSelectionSubtitle,
+                            ctx.candidateCards, new RogueRun(deck), ctx.cardSelectionMinCount,
+                            ctx.cardSelectionMaxCount, ctx.buildDeckPreview);
+                        try {
+                            return decisions.chooseCards(choice);
+                        } catch (RuntimeException e) {
+                            fromPlayer[0] = e;
+                            throw e;
+                        }
+                    });
                 if (runDeck == null) {
                     return null;
                 }
             }
             return runDeck;
         } catch (RuntimeException e) {
+            if (e == fromPlayer[0]) {
+                throw e;
+            }
             Logger.error(e, "Could not generate a custom Rogue Commander deck");
             return null;
         }
@@ -660,7 +669,7 @@ public final class RogueFlow {
         for (PreviewReference reference : effect.getPreviewReferences()) {
             if (reference.type() == PreviewReferenceType.CARD) {
                 String cardName = TextHelper.extractCardNameFromReference(reference.token());
-                if (!cardName.isBlank()) {
+                if (StringUtils.isNotBlank(cardName)) {
                     cardNames.add(cardName);
                 }
             }

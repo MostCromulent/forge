@@ -201,6 +201,20 @@ public class RogueStartTest {
     }
 
     @Test
+    public void leavingTheSealedQuestionChangesNothing() {
+        unlockCustomRuns();
+        final RogueRun old = unfinishedRun();
+        final IllegalStateException left = new IllegalStateException("the player left");
+        decisions.then("chooseCards", args -> {
+            throw left;
+        });
+        Assert.assertSame(Assert.expectThrows(IllegalStateException.class,
+                () -> flow.begin(custom(CustomRunModification.SEALED))), left);
+        Assert.assertEquals(decisions.asked, List.of("chooseCards"));
+        assertUntouched(old);
+    }
+
+    @Test
     public void refusingToReplaceChangesNothing() {
         final RogueRun old = unfinishedRun();
         decisions.then("confirmReplaceRun", false);

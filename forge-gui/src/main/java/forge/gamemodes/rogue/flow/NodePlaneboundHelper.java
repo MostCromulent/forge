@@ -22,6 +22,7 @@ import forge.player.GamePlayerUtil;
 import forge.util.Localizer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -47,7 +48,7 @@ class NodePlaneboundHelper {
             RoguePlanebound current = node.getRoguePlanebound();
             RoguePlanebound picked = flow.decisions().devPick(
                 Localizer.getInstance().getMessage("lblRogueDevPickPlanebound"), RogueConfig.loadPlanebounds(),
-                List.of(current), 1).get(0);
+                Collections.singletonList(current), 1).get(0);
             if (picked != current) {
                 node.setRoguePlanebound(picked);
             }
@@ -129,14 +130,12 @@ class NodePlaneboundHelper {
             return sharedPlaneDeck;
         }
 
-        String planeName = planebound.planeName();
-        for (PaperCard card : RogueConfig.getAllPlanes().toFlatList()) {
-            if (planeName.equalsIgnoreCase(card.getName())) {
-                sharedPlaneDeck.add(card);
-                return sharedPlaneDeck;
-            }
+        PaperCard plane = CodexHelper.getPlaneCard(planebound);
+        if (plane == null) {
+            Logger.warn("Could not find plane card: {}", planebound.planeName());
+        } else {
+            sharedPlaneDeck.add(plane);
         }
-        Logger.warn("Could not find plane card: {}", planeName);
         return sharedPlaneDeck;
     }
 

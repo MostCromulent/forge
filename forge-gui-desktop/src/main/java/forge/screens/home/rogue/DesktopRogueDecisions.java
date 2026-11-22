@@ -36,6 +36,7 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
+import java.util.Collections;
 import java.util.List;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -134,7 +135,7 @@ class DesktopRogueDecisions implements RogueDecisions {
     @Override
     public <T> List<T> devPick(String title, List<T> all, List<T> current, int count) {
         if (count == 1) {
-            return List.of(RogueUIHelper.chooseDevOverride(title, all, current.get(0)));
+            return Collections.singletonList(RogueUIHelper.chooseDevOverride(title, all, current.get(0)));
         }
         boolean chest = all.get(0) instanceof ChestEffect;
         List<T> selected = RogueUIHelper.chooseDevEffects(title,

@@ -272,7 +272,7 @@ public class RogueIO {
     static void setAside(final File file) {
         final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS"));
         try {
-            Files.move(file.toPath(), file.toPath().resolveSibling(file.getName() + "." + timestamp + ".broken"));
+            Files.move(file.toPath(), file.toPath().getParent().resolve(file.getName() + "." + timestamp + ".broken"));
         } catch (IOException | InvalidPathException | SecurityException e) {
             Logger.error(e, "Error setting aside Rogue save: {}", file);
         }

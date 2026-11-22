@@ -195,6 +195,7 @@ public enum CSubmenuRogueMap implements ICDoc {
     }
 
     if (!flow.save()) {
+      currentRun.getRunTimer().start();
       FOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblSavefailed"));
       return;
     }

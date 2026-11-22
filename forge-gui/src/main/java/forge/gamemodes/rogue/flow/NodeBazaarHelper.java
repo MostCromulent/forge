@@ -149,12 +149,7 @@ class NodeBazaarHelper {
     }
 
     private void spendRerollCostIfNeeded(RogueRun currentRun, int freeRerolls, int rerollCount) {
-        if (rerollCount < freeRerolls) {
-            return;
-        }
-
-        int cost = CardRewardHelper.getRerollCost(rerollCount - freeRerolls);
-        currentRun.spendGold(cost);
+        currentRun.spendGold(CardRewardHelper.getRerollCost(freeRerolls, rerollCount));
     }
 
     private void showNpcBazaarPurchaseDialogs(BazaarContext bazaarCtx) {

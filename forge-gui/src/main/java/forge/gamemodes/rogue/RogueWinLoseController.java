@@ -405,9 +405,4 @@ public class RogueWinLoseController {
             || human.getCardsIn(ZoneType.Stack).stream()
                 .anyMatch(c -> c.getName().equals(card.cardName()));
     }
-
-    public void actionOnQuit() {
-        // Any cleanup needed before quitting
-        // Currently handled by RogueWinLose.actionOnQuit()
-    }
 }
