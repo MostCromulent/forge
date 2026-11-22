@@ -2,6 +2,7 @@ package forge.gamemodes.rogue;
 
 import com.google.common.collect.ImmutableList;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
+import forge.card.MagicColor;
 import forge.deck.DeckFormat;
 import forge.deck.Deck;
 import forge.deck.DeckSection;
@@ -330,6 +331,17 @@ public class RogueRun {
         removalCredits += count;
     }
 
+    /** Basic lands are removed for free. */
+    public static int removalCost(Iterable<Map.Entry<PaperCard, Integer>> removed) {
+        int nonBasicLandsToRemove = 0;
+        for (Map.Entry<PaperCard, Integer> entry : removed) {
+            if (!entry.getKey().getRules().getType().isBasicLand()) {
+                nonBasicLandsToRemove += entry.getValue();
+            }
+        }
+        return nonBasicLandsToRemove;
+    }
+
     // Carry card management (items/fellows/scrolls in command zone)
     public void addCarryCard(PaperCard card, CarryCardType type, String sourceId) {
         if (card == null) {
@@ -457,6 +469,59 @@ public class RogueRun {
             colorIdentityMask |= commander.getRules().getColorIdentity().getColor();
         }
         return colorIdentityMask;
+    }
+
+    /** The basic lands that may be added to the deck, each print once. */
+    public List<PaperCard> basicLands() {
+        PaperCard commanderCard = selectedRogueDeck.getStartDeck().getCommanders().get(0);
+        String selectedEdition = RogueConfig.getBasicLandEdition(selectedRogueDeck.getLandEdition(), commanderCard);
+        List<PaperCard> basicLands = new ArrayList<>(
+            filterCardsByCommanderColorIdentity(RogueConfig.getBasicLandsFromEdition(selectedEdition)));
+        ensureRequiredBasicLandsPresent(basicLands);
+        return basicLands;
+    }
+
+    private void ensureRequiredBasicLandsPresent(List<PaperCard> basicLands) {
+        Set<String> presentBasicLandTypes = new LinkedHashSet<>();
+        for (PaperCard card : basicLands) {
+            presentBasicLandTypes.add(card.getName());
+        }
+
+        for (String requiredBasicLandType : getRequiredBasicLandTypes()) {
+            if (presentBasicLandTypes.contains(requiredBasicLandType)) {
+                continue;
+            }
+
+            PaperCard fallbackCard = RogueConfig.getFallbackBasicLandPrint(requiredBasicLandType);
+            if (fallbackCard != null) {
+                basicLands.add(fallbackCard);
+                presentBasicLandTypes.add(requiredBasicLandType);
+            }
+        }
+    }
+
+    private Set<String> getRequiredBasicLandTypes() {
+        Set<String> requiredBasicLandTypes = new LinkedHashSet<>(getCommanderColoredBasicLandTypes());
+        if (shouldRequireWastes()) {
+            requiredBasicLandTypes.add("Wastes");
+        }
+        return requiredBasicLandTypes;
+    }
+
+    private Set<String> getCommanderColoredBasicLandTypes() {
+        Set<String> coloredBasicLandTypes = new LinkedHashSet<>();
+        int colorIdentity = getCommanderColorIdentityMask();
+        if ((colorIdentity & MagicColor.WHITE) != 0) { coloredBasicLandTypes.add("Plains"); }
+        if ((colorIdentity & MagicColor.BLUE) != 0) { coloredBasicLandTypes.add("Island"); }
+        if ((colorIdentity & MagicColor.BLACK) != 0) { coloredBasicLandTypes.add("Swamp"); }
+        if ((colorIdentity & MagicColor.RED) != 0) { coloredBasicLandTypes.add("Mountain"); }
+        if ((colorIdentity & MagicColor.GREEN) != 0) { coloredBasicLandTypes.add("Forest"); }
+        return coloredBasicLandTypes;
+    }
+
+    private boolean shouldRequireWastes() {
+        return getCommanderColorIdentityMask() == 0 ||
+            selectedRogueDeck.shouldIncludeColorlessBasics();
     }
 
     public String getCurrentCommanderName() {

@@ -22,13 +22,11 @@ import forge.util.Localizer;
 import java.awt.event.ActionListener;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-import forge.card.MagicColor;
 import forge.Singletons;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckSection;
 import forge.game.GameType;
-import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gui.GuiBase;
@@ -75,7 +73,6 @@ import org.eclipse.jetty.util.StringUtil;
  */
 public final class CEditorRogue extends CDeckEditor<Deck> {
 
-    private static final String WASTES = "Wastes";
     private final DeckController<Deck> controller;
     private final List<DeckSection> allSections = new ArrayList<>();
     private final ItemPool<PaperCard> basicLandPool;
@@ -121,17 +118,7 @@ public final class CEditorRogue extends CDeckEditor<Deck> {
 
         // Create infinite pool of basic lands from the commander's edition
         basicLandPool = new ItemPool<>(PaperCard.class);
-
-        // Get commander's edition
-        PaperCard commanderCard = rogueRun0.getSelectedRogueDeck().getStartDeck().getCommanders().get(0);
-        String selectedEdition = RogueConfig.getBasicLandEdition(
-            rogueRun.getSelectedRogueDeck().getLandEdition(), commanderCard);
-
-        List<PaperCard> preferredSetBasics = RogueConfig.getBasicLandsFromEdition(selectedEdition);
-        List<PaperCard> filteredCandidates = new ArrayList<>(
-            rogueRun.filterCardsByCommanderColorIdentity(preferredSetBasics));
-        addBasicLandsToPool(filteredCandidates);
-        ensureRequiredBasicLandsPresent(filteredCandidates);
+        basicLandPool.addAllFlat(rogueRun.basicLands());
 
         // Create managers with empty catalog (no cards to add except basic lands)
         final CardManager catalogManager = new CardManager(cDetailPicture0, false, false, false);
@@ -212,13 +199,7 @@ public final class CEditorRogue extends CDeckEditor<Deck> {
     protected void onRemoveItems(Iterable<Entry<PaperCard, Integer>> items, boolean toAlternate) {
         if (toAlternate || sectionMode != DeckSection.Main || !isCurrentRun()) { return; }
 
-        // Count how many non-basic lands are being removed
-        int nonBasicLandsToRemove = 0;
-        for (Entry<PaperCard, Integer> entry : items) {
-            if (!entry.getKey().getRules().getType().isBasicLand()) {
-                nonBasicLandsToRemove += entry.getValue();
-            }
-        }
+        int nonBasicLandsToRemove = RogueRun.removalCost(items);
 
         // Check if player has enough removal credits
         if (nonBasicLandsToRemove > rogueRun.getRemovalCredits()) {
@@ -548,55 +529,6 @@ public final class CEditorRogue extends CDeckEditor<Deck> {
         this.sectionMode = sectionMode;
         updateRemovalCreditsLabel();
         this.getDeckController().updateCaptions();
-    }
-
-    private void addBasicLandsToPool(List<PaperCard> cards) {
-        for (PaperCard card : cards) {
-            basicLandPool.add(card);
-        }
-    }
-
-    private void ensureRequiredBasicLandsPresent(List<PaperCard> preferredCandidates) {
-        Set<String> presentBasicLandTypes = new LinkedHashSet<>();
-        for (PaperCard card : preferredCandidates) {
-            presentBasicLandTypes.add(card.getName());
-        }
-
-        for (String requiredBasicLandType : getRequiredBasicLandTypes()) {
-            if (presentBasicLandTypes.contains(requiredBasicLandType)) {
-                continue;
-            }
-
-            PaperCard fallbackCard = RogueConfig.getFallbackBasicLandPrint(requiredBasicLandType);
-            if (fallbackCard != null) {
-                basicLandPool.add(fallbackCard);
-                presentBasicLandTypes.add(requiredBasicLandType);
-            }
-        }
-    }
-
-    private Set<String> getRequiredBasicLandTypes() {
-        Set<String> requiredBasicLandTypes = new LinkedHashSet<>(getCommanderColoredBasicLandTypes());
-        if (shouldRequireWastes()) {
-            requiredBasicLandTypes.add(WASTES);
-        }
-        return requiredBasicLandTypes;
-    }
-
-    private Set<String> getCommanderColoredBasicLandTypes() {
-        Set<String> coloredBasicLandTypes = new LinkedHashSet<>();
-        int colorIdentity = rogueRun.getCommanderColorIdentityMask();
-        if ((colorIdentity & MagicColor.WHITE) != 0) { coloredBasicLandTypes.add("Plains"); }
-        if ((colorIdentity & MagicColor.BLUE) != 0) { coloredBasicLandTypes.add("Island"); }
-        if ((colorIdentity & MagicColor.BLACK) != 0) { coloredBasicLandTypes.add("Swamp"); }
-        if ((colorIdentity & MagicColor.RED) != 0) { coloredBasicLandTypes.add("Mountain"); }
-        if ((colorIdentity & MagicColor.GREEN) != 0) { coloredBasicLandTypes.add("Forest"); }
-        return coloredBasicLandTypes;
-    }
-
-    private boolean shouldRequireWastes() {
-        return rogueRun.getCommanderColorIdentityMask() == 0 ||
-            rogueRun.getSelectedRogueDeck().shouldIncludeColorlessBasics();
     }
 
     /**
