@@ -16,7 +16,7 @@ import { isPortrait } from '../form';
 
 /** The time the marker takes for one step, the same as mobile's token. */
 const STEP_MS = 500;
-/** When the counts go up after a win, and when the win animation ends. They match the .cq-map.won rules in conquest.css. */
+/** When the counts go up after a win, and when the win animation ends. They match the .camp-map.won rules in conquest.css. */
 const COUNT_MS = 2000;
 const WON_MS = 2600;
 const HOVER_W = 232;
@@ -152,7 +152,7 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
   const wonHere = showing && !won!.counted ? won!.tile : null;
   const sealAt = wonHere && l.at(wonHere.region, wonHere.row, wonHere.col);
   return (
-    <div class={showing ? 'cq-map won' : 'cq-map'}>
+    <div class={showing ? 'camp-map won' : 'camp-map'}>
       <div class="cq-stage" onPointerDown={skip}>
         <div class="cq-map-head"><h2>{state.plane}</h2>
           <span class="muted cq-count">{state.cells.filter(c => c.state === 'won').length - (wonHere ? 1 : 0)} / {state.cells.length}</span></div>
@@ -231,16 +231,16 @@ export function ConquestMap({ actions, state, held }: { actions: Actions; state:
 }
 
 function Record({ cell }: { cell: ConquestCell }) {
-  return cell.wins || cell.losses ? <span class="cq-chip">{cell.wins}W / {cell.losses}L</span> : null;
+  return cell.wins || cell.losses ? <span class="camp-chip">{cell.wins}W / {cell.losses}L</span> : null;
 }
 
 /** The reward for winning here: an emblem for a first conquest, and always a spin of the wheel. */
 function Reward({ cell }: { cell: ConquestCell }) {
   return (
     <div class="cq-reward-line">
-      <span class="cq-kicker">{t('lblWebConquestReward')}</span>
-      {cell.state !== 'won' && <span class="cq-chip"><img alt={t('lblPlaneswalkEmblems')} src={skinIconUrl('IMG_PW_BADGE_COMMON')} />1</span>}
-      <span class="cq-chip">{t('lblWebConquestChaosWheel')}</span>
+      <span class="camp-kicker">{t('lblWebConquestReward')}</span>
+      {cell.state !== 'won' && <span class="camp-chip"><img alt={t('lblPlaneswalkEmblems')} src={skinIconUrl('IMG_PW_BADGE_COMMON')} />1</span>}
+      <span class="camp-chip">{t('lblWebConquestChaosWheel')}</span>
     </div>
   );
 }
@@ -252,12 +252,12 @@ function Sections({ cell }: { cell: ConquestCell }) {
     <>
       {variants.length > 0 && (
         <div class="cq-sec">
-          <span class="cq-kicker">{t('lblFormat')}</span>
+          <span class="camp-kicker">{t('lblFormat')}</span>
           {variants.map(v => <SectionRow key={v} icon={VARIANT_ICONS[v]} name={variantName(v)} line={VARIANT_DESC[v] && t(VARIANT_DESC[v])} />)}
         </div>
       )}
       <div class="cq-sec">
-        <span class="cq-kicker">{t('lblWebConquestReward')}</span>
+        <span class="camp-kicker">{t('lblWebConquestReward')}</span>
         {cell.state !== 'won' && <SectionRow icon="IMG_PW_BADGE_COMMON" brass name={t('lblWebConquestEmblemReward')} tag={t('lblWebConquestFirstWin')} line={t('lblWebConquestEmblemLine')} />}
         <SectionRow icon="IMG_CHAOS" name={t('lblWebConquestWheelSpin')} line={t('lblWebConquestWheelLine')} />
       </div>
@@ -280,11 +280,11 @@ function SectionRow({ icon, name, line, tag, brass }: { icon?: string; name: str
 /** formats is false in the event panel, which lists the formats in their own section. */
 function Chips({ cell, formats = true }: { cell: ConquestCell; formats?: boolean }) {
   return (
-    <div class="cq-chips">
-      {formats && (cell.variants ?? []).map(v => <span key={v} class="cq-chip">{variantName(v)}</span>)}
-      {cell.state === 'won' && <span class="cq-chip brass"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestConquered')}</span>}
+    <div class="camp-chips">
+      {formats && (cell.variants ?? []).map(v => <span key={v} class="camp-chip">{variantName(v)}</span>)}
+      {cell.state === 'won' && <span class="camp-chip brass"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestConquered')}</span>}
       <Record cell={cell} />
-      {cell.opens && <span class="cq-chip brass">{t('lblWebConquestPortal')}: {cell.opens}</span>}
+      {cell.opens && <span class="camp-chip brass">{t('lblWebConquestPortal')}: {cell.opens}</span>}
     </div>
   );
 }
@@ -315,13 +315,13 @@ function EventPanel({ state, cell, busy, battle }: { state: ConquestState; cell:
         <DeckRow image={lead.image} name={lead.name} line={t('lblWebConquestDeckCards', lead.deckSize)} problem={!!lead.problem}
           zoom={setZoom} change={() => changeUi(u => { u.conquestTab = 'party'; })} />
         {(cell.variants ?? []).includes('Planeswalker') && (
-          <div class="cq-mine">
-            <button class="cq-face2 round" aria-label={state.walker} data-image={state.walkerImage} style={{ backgroundImage: `url("${artUrl(state.walkerImage)}")` }} onClick={() => setZoom(state.walkerImage)} />
+          <div class="camp-mine">
+            <button class="camp-face2 round" aria-label={state.walker} data-image={state.walkerImage} style={{ backgroundImage: `url("${artUrl(state.walkerImage)}")` }} onClick={() => setZoom(state.walkerImage)} />
             <div class="t"><b>{state.walker}</b><span>{t('lblPlaneswalker')}</span></div>
           </div>
         )}
-        {lead.problem && <p class="cq-warn">{lead.problem}</p>}
-        <button class="primary cq-big" disabled={!!lead.problem || busy} onClick={battle}>{t('lblBattle')}</button>
+        {lead.problem && <p class="camp-warn">{lead.problem}</p>}
+        <button class="primary camp-big" disabled={!!lead.problem || busy} onClick={battle}>{t('lblBattle')}</button>
       </>}>
       <Chips cell={cell} formats={false} />
       <Sections cell={cell} />

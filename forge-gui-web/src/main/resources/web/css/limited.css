@@ -49,7 +49,7 @@
 .ev-foot::before { left: -9px; }
 .ev-foot::after { right: -9px; clip-path: inset(0 50% 0 0); }
 .ev-foot .sp { flex: 1; }
-:is(.ev-foot, .qu-ask, .cq-two) .danger { color: var(--concede); border-color: color-mix(in srgb, var(--concede) 45%, var(--line)); }
+:is(.ev-foot, .qu-ask, .camp-two) .danger { color: var(--concede); border-color: color-mix(in srgb, var(--concede) 45%, var(--line)); }
 .ev-ask { font-size: 12.5px; color: var(--muted); }
 .ev-more { position: relative; }
 .ev-more .more { width: 32px; padding: 6px 0; text-align: center; }

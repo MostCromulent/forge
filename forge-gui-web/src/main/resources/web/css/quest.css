@@ -1,6 +1,6 @@
 /* Quest. The save shelf reuses the Limited shelf (limited.css). The bar, side panel and reveal reuse the campaign styles in campaign.css. */
 
-.qu-save .ev-line .cq-coin { margin-left: 6px; }
+.qu-save .ev-line .camp-coin { margin-left: 6px; }
 .qu-save.current { border-color: color-mix(in srgb, var(--accent-2) 60%, #000); }
 
 .qu-list { min-width: 0; overflow-y: auto; padding: 20px 28px 90px; display: grid; gap: 14px; align-content: start; background: radial-gradient(100% 80% at 50% 40%, #131a26 0%, #080b11 100%); }
@@ -8,7 +8,7 @@
 .qu-list-head h2 { margin: 0; font: 700 22px/1.2 Georgia, "Times New Roman", serif; letter-spacing: .02em; }
 .qu-list-head p { margin: 0 0 2px; color: var(--muted); font-size: 13.5px; }
 .qu-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
-.qu-status .cq-chip b { font-weight: 700; color: var(--text); }
+.qu-status .camp-chip b { font-weight: 700; color: var(--text); }
 
 .qu-events { display: grid; grid-template-columns: repeat(auto-fill, minmax(224px, 1fr)); gap: 14px; align-items: stretch; }
 .qu-ev { display: grid; grid-template-rows: 172px minmax(0, 1fr); padding: 0; overflow: hidden; border-radius: 12px; background: var(--surface); text-align: left; color: var(--text); }

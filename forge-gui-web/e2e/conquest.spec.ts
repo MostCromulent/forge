@@ -55,7 +55,7 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await page.locator('.cq-tile.open').first().click();
   await expect(page.locator('.cq-steps')).toHaveText('1 step away');
   // The opponent's picture previews on hover
-  await page.locator('.cq-side .cq-art').hover();
+  await page.locator('.camp-side .camp-art').hover();
   await expect(page.locator('#zoom')).toBeVisible();
   await page.mouse.move(0, 0);
   await expect(page.locator('#zoom')).toBeHidden();
@@ -78,38 +78,38 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await page.locator('#game-over button', { hasText: 'Great' }).click();
 
   // The bar does not count the first conquest's emblem until the reveal shows it, together with the wheel
-  const reveal = page.locator('.cq-reveal');
-  await expect(reveal.locator('.cq-wheel-first')).toBeVisible();
+  const reveal = page.locator('.camp-reveal');
+  await expect(reveal.locator('.camp-wheel-first')).toBeVisible();
   // Nothing behind the reveal can be used, so the player must go through the whole reward
-  const back = page.locator('.cq-purse button', { hasText: 'Back' });
+  const back = page.locator('.camp-purse button', { hasText: 'Back' });
   // The page behind is locked one frame after the reveal opens, so this check is retried
   await expect(async () => {
     await back.focus();
     expect(await back.evaluate(el => el === document.activeElement)).toBe(false);
   }).toPass({ timeout: 2000 });
   // The balances stay visible above the reveal, and they now include the first conquest's emblem
-  const emblems = page.locator('.cq-purse .cq-coin').nth(1);
+  const emblems = page.locator('.camp-purse .camp-coin').nth(1);
   await expect(emblems.locator('b')).toHaveText('2');
   const layer = (selector: string) => page.locator(selector).evaluate(el => Number(getComputedStyle(el).zIndex));
-  expect(await layer('.cq-purse')).toBeGreaterThan(await layer('.cq-reveal'));
+  expect(await layer('.camp-purse')).toBeGreaterThan(await layer('.camp-reveal'));
   // The OK key spins the wheel, and its button shows that key
   await expect(reveal.getByRole('button', { name: 'Spin' }).locator('kbd')).toHaveText('Space');
   await page.keyboard.press(' ');
-  await expect(reveal.locator('.cq-dl.done')).toBeVisible({ timeout: 15_000 });
+  await expect(reveal.locator('.camp-dl.done')).toBeVisible({ timeout: 15_000 });
   // The OK key also takes each step's default button after the spin
   await expect(reveal.getByRole('button', { name: 'Great Space', exact: true })).toBeVisible();
   await page.keyboard.press(' ');
 
   // The reward is a booster. The pack is opened and skipped, every card turns face up, and the reveal closes to the map
-  await reveal.locator('.cq-pk').click({ force: true });
+  await reveal.locator('.camp-pk').click({ force: true });
   await reveal.getByRole('button', { name: 'Skip' }).click();
   await expect(reveal.getByRole('button', { name: 'Great Space', exact: true })).toBeVisible({ timeout: 30_000 });
-  const cards = await reveal.locator('.cq-rv-card').count();
+  const cards = await reveal.locator('.camp-rv-card').count();
   expect(cards).toBeGreaterThan(0);
-  await expect(reveal.locator('.cq-rv-card.up')).toHaveCount(cards);
+  await expect(reveal.locator('.camp-rv-card.up')).toHaveCount(cards);
   // Fails if a card skipped into place keeps its finished flight, which blocks the hover preview
   await expect(page.locator('#zoom')).toBeHidden();
-  await reveal.locator('.cq-rv-card.up').first().hover();
+  await reveal.locator('.camp-rv-card.up').first().hover();
   await expect(page.locator('#zoom')).toBeVisible();
   await reveal.getByRole('button', { name: 'Great Space', exact: true }).click();
   await expect(reveal).toHaveCount(0);
@@ -120,7 +120,7 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await expect(page.locator('.cq-tile.won')).toHaveCount(2);
   // A pending reward is sent after the map, so wait long enough for it before checking it is absent
   await page.waitForTimeout(1500);
-  await expect(page.locator('.cq-reveal')).toHaveCount(0);
+  await expect(page.locator('.camp-reveal')).toHaveCount(0);
 });
 
 // Fails if a commander's deck cannot be edited with the conquest's cards, or a collection card cannot be exiled for its price
@@ -130,8 +130,8 @@ test('a deck is edited and a card is exiled', async ({ page }) => {
   await page.click('[data-mode=play]');
   await page.click('.chooser [data-kind=conquest]');
   await playFixture(page);
-  await page.locator('.cq-tab', { hasText: 'Commanders' }).click();
-  await expect(page.locator('.cq-cmd[aria-pressed=true]')).toContainText('40 cards');
+  await page.locator('.camp-tab', { hasText: 'Commanders' }).click();
+  await expect(page.locator('.camp-cmd[aria-pressed=true]')).toContainText('40 cards');
   await page.getByRole('button', { name: 'Edit Deck' }).click();
 
   await expect(page.locator('.editor-head .deck-owner')).toContainText('Fixture conquest');
@@ -139,17 +139,17 @@ test('a deck is edited and a card is exiled', async ({ page }) => {
   await page.locator('.catalogue .slot:not(.indeck) .tile').first().click();
   await expect(page.locator('.main-zone > h4 .count')).toHaveText('41');
   await page.getByRole('button', { name: 'Done' }).click();
-  await expect(page.locator('.cq-cmd[aria-pressed=true]')).toContainText('41 cards');
+  await expect(page.locator('.camp-cmd[aria-pressed=true]')).toContainText('41 cards');
 
-  await page.locator('.cq-tab', { hasText: 'Collection' }).click();
-  const free = page.locator('.cq-cc:not(.used)').first();
+  await page.locator('.camp-tab', { hasText: 'Collection' }).click();
+  const free = page.locator('.camp-cc:not(.used)').first();
   const value = Number((await free.locator('.val').innerText()).replace(/\D/g, ''));
   expect(value).toBeGreaterThan(0);
   await free.click();
-  await page.locator('.cq-sel-bar .primary').click();
-  await page.locator('.cq-exile').getByRole('button', { name: 'OK' }).click();
-  await expect(page.locator('.cq-coll-bar .seg button').nth(1)).toContainText('(1)');
-  await expect(page.locator('.cq-purse')).toContainText((3000 + value).toLocaleString('en-GB'));
+  await page.locator('.camp-sel-bar .primary').click();
+  await page.locator('.camp-exile').getByRole('button', { name: 'OK' }).click();
+  await expect(page.locator('.camp-coll-bar .seg button').nth(1)).toContainText('(1)');
+  await expect(page.locator('.camp-purse')).toContainText((3000 + value).toLocaleString('en-GB'));
 });
 
 // Fails if a conquest cannot be started from the form and opened on its map, or cannot then be renamed and deleted
@@ -167,7 +167,7 @@ test('a conquest is started, renamed and deleted', async ({ page }) => {
   await expect(page.locator('.ticket-foot .primary')).toBeDisabled();
   await page.locator('.stp-open input[type=text]').fill('Probe conquest');
   await page.locator('.ticket-foot .primary').click();
-  await expect(page.locator('.cq-id b')).toHaveText('Probe conquest', { timeout: 30_000 });
+  await expect(page.locator('.camp-id b')).toHaveText('Probe conquest', { timeout: 30_000 });
   await expect(page.locator('.cq-tile.open')).toHaveCount(1);
 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
@@ -193,15 +193,15 @@ test('the Aether, the planes, the statistics and the preferences open', async ({
   await page.click('.chooser [data-kind=conquest]');
   await playFixture(page);
 
-  const collection = page.locator('.cq-tab[data-tab="collection"]');
-  await page.locator('.cq-tab', { hasText: 'The Aether' }).click();
+  const collection = page.locator('.camp-tab[data-tab="collection"]');
+  await page.locator('.camp-tab', { hasText: 'The Aether' }).click();
   await expect(collection.locator('.new-card')).toHaveCount(0);
   const pull = page.locator('.cq-ae-pull');
   const cost = Number((await pull.innerText()).replace(/\D/g, ''));
   expect(cost).toBeGreaterThan(0);
   await pull.click();
   await expect(page.locator('.cq-ae-card b')).not.toBeEmpty();
-  await expect(page.locator('.cq-purse')).toContainText((3000 - cost).toLocaleString('en-GB'));
+  await expect(page.locator('.camp-purse')).toContainText((3000 - cost).toLocaleString('en-GB'));
   await expect(page.locator('.cq-ae-recent img')).toHaveCount(1);
   // The pulled card previews on hover. A click sends it to the collection and shows the orb again
   await page.locator('.cq-ae-face img').hover();
@@ -213,31 +213,31 @@ test('the Aether, the planes, the statistics and the preferences open', async ({
   await expect(collection.locator('.new-card')).toBeVisible();
   await collection.click();
   await expect(collection.locator('.new-card')).toHaveCount(0);
-  await page.locator('.cq-tab', { hasText: 'The Aether' }).click();
+  await page.locator('.camp-tab', { hasText: 'The Aether' }).click();
   await expect(collection.locator('.new-card')).toHaveCount(0);
 
   // A price changed in the preferences is shown on the page behind them once they close
   await page.getByRole('button', { name: 'Preferences' }).click();
-  await page.locator('.cq-pref', { hasText: 'Base Pull Cost' }).locator('input').fill(String(cost + 50));
-  await page.locator('.cq-pref', { hasText: 'Base Pull Cost' }).locator('input').blur();
-  await page.locator('.cq-prefs').getByRole('button', { name: 'OK' }).click();
+  await page.locator('.camp-pref', { hasText: 'Base Pull Cost' }).locator('input').fill(String(cost + 50));
+  await page.locator('.camp-pref', { hasText: 'Base Pull Cost' }).locator('input').blur();
+  await page.locator('.camp-prefs').getByRole('button', { name: 'OK' }).click();
   await expect(page.locator('.cq-ae-pull')).toContainText(String(cost + 50));
 
-  await page.locator('.cq-tab', { hasText: 'Planeswalk' }).click();
+  await page.locator('.camp-tab', { hasText: 'Planeswalk' }).click();
   await expect(page.locator('.cq-plane-card:not(.locked)')).toHaveCount(1);
   await expect(page.locator('.cq-plane-card:not(.locked)')).toContainText('Zendikar');
   await page.locator('.cq-plane-card.locked').first().click();
   // One emblem is not enough for a plane, so the button shows the balance against the cost and is disabled
-  await expect(page.locator('.cq-planes .cq-foot button')).toBeDisabled();
+  await expect(page.locator('.cq-planes .camp-foot button')).toBeDisabled();
 
-  await page.locator('.cq-tab', { hasText: 'Statistics' }).click();
-  await expect(page.locator('.cq-figure')).toHaveCount(8);
-  await expect(page.locator('.cq-tables table').first()).toContainText('1 / 9');
+  await page.locator('.camp-tab', { hasText: 'Statistics' }).click();
+  await expect(page.locator('.camp-figure')).toHaveCount(8);
+  await expect(page.locator('.camp-tables table').first()).toContainText('1 / 9');
 
   await page.getByRole('button', { name: 'Preferences' }).click();
-  await expect(page.locator('.cq-pref')).toHaveCount(20);
-  await page.locator('.cq-prefs').getByRole('button', { name: 'OK' }).click();
-  await expect(page.locator('.cq-prefs')).toHaveCount(0);
+  await expect(page.locator('.camp-pref')).toHaveCount(20);
+  await page.locator('.camp-prefs').getByRole('button', { name: 'OK' }).click();
+  await expect(page.locator('.camp-prefs')).toHaveCount(0);
 });
 
 // Fails if the phone header loses the balances, the chat or the menu's Options, the map's event card does not open from its title, or Back does not leave the save
@@ -251,7 +251,7 @@ test('an open conquest on a phone has one header and a folding event card', asyn
 
   const head = page.locator('.ph');
   await expect(head).toHaveCount(1);
-  await expect(head.locator('.ph-line .cq-coin')).toHaveCount(2);
+  await expect(head.locator('.ph-line .camp-coin')).toHaveCount(2);
   await expect(head.locator('.ph-chat .dock.folded')).toBeVisible();
   await head.getByRole('button', { name: 'More' }).click();
   await page.getByRole('menuitem', { name: 'Options' }).click();
@@ -260,9 +260,9 @@ test('an open conquest on a phone has one header and a folding event card', asyn
   await expect(page.locator('.options-dialog')).toHaveCount(0);
 
   await page.locator('.cq-tile.open').first().click();
-  const art = page.locator('.cq-side .cq-art');
+  const art = page.locator('.camp-side .camp-art');
   await expect(art).toBeHidden();
-  await page.locator('.cq-fold').click();
+  await page.locator('.camp-fold').click();
   await expect(art).toBeVisible();
 
   await head.getByRole('button', { name: 'Back' }).click();

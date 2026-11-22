@@ -61,44 +61,44 @@ export function mountPack(host: HTMLElement, spec: PackSpec, hooks: PackHooks): 
   const cards = spec.cards;
   const up = new Set<number>();
   const slots = cards.map((c, i) => {
-    const face = el('div.cq-rv-face');
+    const face = el('div.camp-rv-face');
     const img = document.createElement('img');
     img.alt = c.name;
     img.src = imageUrl(c.image);
     face.append(img);
-    const plus = c.shards ? el('span.cq-rv-plus', {}, '+') : null;
+    const plus = c.shards ? el('span.camp-rv-plus', {}, '+') : null;
     if (plus) {
       const shard = document.createElement('img');
       shard.alt = '';
       shard.src = skinIconUrl('IMG_AETHER_SHARD');
       plus.append(shard, String(c.shards));
     }
-    const cls = ['cq-rv-card', c.shards && 'dup', isRare(c.rarity) && 'rare', c.rarity === 'MythicRare' && 'mythic'].filter(Boolean).join('.');
-    const card = el(`div.${cls}`, {}, el('div.cq-rv-y', {}, el('i.rise'), el('div.cq-rv-in', {}, el('div.cq-rv-face.cq-rv-back'), face), plus));
+    const cls = ['camp-rv-card', c.shards && 'dup', isRare(c.rarity) && 'rare', c.rarity === 'MythicRare' && 'mythic'].filter(Boolean).join('.');
+    const card = el(`div.${cls}`, {}, el('div.camp-rv-y', {}, el('i.rise'), el('div.camp-rv-in', {}, el('div.camp-rv-face.camp-rv-back'), face), plus));
     card.setAttribute('role', 'img');
     card.setAttribute('aria-label', c.name);
-    return el('div.cq-rv-slot', {}, card);
+    return el('div.camp-rv-slot', {}, card);
   });
-  const grid = el('div.cq-rv-grid', {}, ...slots);
+  const grid = el('div.camp-rv-grid', {}, ...slots);
   grid.style.setProperty('--per-row', String(Math.min(8, Math.max(1, cards.length))));
 
   // The seal is cut into strips, so it can roll up behind the tear. Each strip paints only its own piece of the picture
-  const slices = Array.from({ length: SLICES }, (_, i) => el('div.cq-pk-slice', { left: `${i * PACK_W / SLICES}px`, width: `${PACK_W / SLICES + .6}px`,
+  const slices = Array.from({ length: SLICES }, (_, i) => el('div.camp-pk-slice', { left: `${i * PACK_W / SLICES}px`, width: `${PACK_W / SLICES + .6}px`,
     backgroundSize: `${PACK_W}px auto`, backgroundPosition: `${-i * PACK_W / SLICES}px 0` }));
-  const top = el('div.cq-pk-top', { height: `${SEAL}%` }, ...slices);
+  const top = el('div.camp-pk-top', { height: `${SEAL}%` }, ...slices);
   const body = document.createElement('img');
-  body.className = 'cq-pk-body';
+  body.className = 'camp-pk-body';
   body.alt = '';
   body.style.clipPath = `inset(${SEAL}% 0 0 0)`;
-  const whole = el('div.cq-pk-whole', {}, body, top);
-  const zip = el('div.cq-pk-zip', { top: `${SEAL}%` }), mouth = el('div.cq-pk-mouth', { top: `${SEAL}%` });
-  const glow = [el('div.cq-pk-glow.far', { clipPath: OUTLINE }), el('div.cq-pk-glow.near', { clipPath: OUTLINE }),
-    ...[20, 50, 78].map((x, i) => el('i.cq-pk-speck', { left: `${x}%`, animationDelay: `${-i * .9}s` }))];
-  const pk = el(spec.chaos ? 'button.cq-pk.chaos' : 'button.cq-pk', {}, ...glow, mouth, el('div.cq-pk-lit', {}, whole), zip);
+  const whole = el('div.camp-pk-whole', {}, body, top);
+  const zip = el('div.camp-pk-zip', { top: `${SEAL}%` }), mouth = el('div.camp-pk-mouth', { top: `${SEAL}%` });
+  const glow = [el('div.camp-pk-glow.far', { clipPath: OUTLINE }), el('div.camp-pk-glow.near', { clipPath: OUTLINE }),
+    ...[20, 50, 78].map((x, i) => el('i.camp-pk-speck', { left: `${x}%`, animationDelay: `${-i * .9}s` }))];
+  const pk = el(spec.chaos ? 'button.camp-pk.chaos' : 'button.camp-pk', {}, ...glow, mouth, el('div.camp-pk-lit', {}, whole), zip);
   pk.setAttribute('aria-label', spec.hint);
-  const hint = el('p.cq-pk-hint', {}, spec.hint);
-  const cell = el('div.cq-bp-cell', {}, pk, hint);
-  const stage = el('div.cq-bp-stage', {}, grid, cell);
+  const hint = el('p.camp-pk-hint', {}, spec.hint);
+  const cell = el('div.camp-bp-cell', {}, pk, hint);
+  const stage = el('div.camp-bp-stage', {}, grid, cell);
   host.replaceChildren(stage);
   // Hidden until its picture is ready, so it never opens empty
   cell.style.visibility = 'hidden';

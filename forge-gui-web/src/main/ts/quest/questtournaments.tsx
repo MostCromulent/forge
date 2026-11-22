@@ -41,8 +41,8 @@ function Offered({ page, credits, actions }: { page: QuestTournaments; credits: 
         <button disabled={page.tokens === 0} title={t('btnSpendTokenTT')} onClick={() => actions.questToken()}>{`${t('btnSpendToken')} (${page.tokens})`}</button>
       </div>
       <div class="qu-status">
-        <span class="cq-kicker">{t('lblPastResults')}</span>
-        {page.placings.map((n, i) => <span key={i} class="cq-chip">{t(PLACES[i])}:<b>{n === 1 ? t('lblWebQuestOneTime') : t('lblWebQuestTimes', n)}</b></span>)}
+        <span class="camp-kicker">{t('lblPastResults')}</span>
+        {page.placings.map((n, i) => <span key={i} class="camp-chip">{t(PLACES[i])}:<b>{n === 1 ? t('lblWebQuestOneTime') : t('lblWebQuestTimes', n)}</b></span>)}
       </div>
       {page.offered.length === 0 ? <p class="muted">{t('lblNoTournaments')}</p> : (
         <div class="qu-tourney-grid">
@@ -115,34 +115,34 @@ function Panel({ bracket, actions }: { bracket: QuestBracket; actions: Actions }
   const over = bracket.started && !playing;
   // A tournament whose draft never finished has no deck. Leaving it gives the entry fee back
   if (!bracket.drafted) return (
-    <aside class="cq-side">
-      <div class="cq-panel">
-        <div class="cq-where"><span class="cq-kicker">{bracket.title}</span></div>
+    <aside class="camp-side">
+      <div class="camp-panel">
+        <div class="camp-where"><span class="camp-kicker">{bracket.title}</span></div>
         <h3>{t('lblWebQuestDraftLostTitle')}</h3>
-        <p class="cq-desc">{t('lblWebQuestDraftLost')}</p>
+        <p class="camp-desc">{t('lblWebQuestDraftLost')}</p>
       </div>
-      <div class="cq-foot">
-        <button class="primary cq-big" onClick={() => actions.questTournamentLeave()}>{t('btnLeaveTournament')}</button>
+      <div class="camp-foot">
+        <button class="primary camp-big" onClick={() => actions.questTournamentLeave()}>{t('btnLeaveTournament')}</button>
       </div>
     </aside>
   );
   return (
-    <aside class="cq-side">
-      <div class="cq-panel">
-        <div class="cq-where"><span class="cq-kicker">{bracket.title}</span></div>
+    <aside class="camp-side">
+      <div class="camp-panel">
+        <div class="camp-where"><span class="camp-kicker">{bracket.title}</span></div>
         <h3>{!bracket.started ? t('lblWebQuestBuildDeck') : playing ? t('lblWebQuestNextMatch') : t('lblCollectPrizes')}</h3>
-        <div class="cq-chips"><span class="cq-chip">{t('lblWebLimitedBestOf', 3)}</span></div>
-        {!bracket.started && <p class="cq-desc">{t('lblWebQuestBuildDeckLine')}</p>}
+        <div class="camp-chips"><span class="camp-chip">{t('lblWebLimitedBestOf', 3)}</span></div>
+        {!bracket.started && <p class="camp-desc">{t('lblWebQuestBuildDeckLine')}</p>}
         <dl class="qu-facts">
           {playing && <><dt>{t('lblWebQuestOpponent')}</dt><dd>{bracket.next || t('lblUndetermined')}</dd></>}
           {bracket.started && <><dt>{t('lblWebQuestPlacing')}</dt><dd>{bracket.placing}</dd></>}
         </dl>
       </div>
-      <div class="cq-foot">
+      <div class="camp-foot">
         <button onClick={() => actions.questTournamentDeck()}>{t('btnEditDeck')}</button>
-        {!bracket.started ? <button class="primary cq-big" onClick={() => actions.questTournamentStart()}>{t('lblWebQuestStartTournament')}</button>
-          : playing ? <button class="primary cq-big" onClick={() => actions.questTournamentNext()}>{t('btnStartMatchSmall')}</button>
-          : <button class="primary cq-big" onClick={() => actions.questTournamentLeave()}>{t('lblCollectPrizes')}</button>}
+        {!bracket.started ? <button class="primary camp-big" onClick={() => actions.questTournamentStart()}>{t('lblWebQuestStartTournament')}</button>
+          : playing ? <button class="primary camp-big" onClick={() => actions.questTournamentNext()}>{t('btnStartMatchSmall')}</button>
+          : <button class="primary camp-big" onClick={() => actions.questTournamentLeave()}>{t('lblCollectPrizes')}</button>}
         {!over && <button onClick={() => setLeaving(true)}>{t('btnLeaveTournament')}</button>}
       </div>
       {leaving && <Confirm title={t('btnLeaveTournament')} text={t(bracket.started ? 'lblLeaveTournamentDraftWarning2' : 'lblLeaveTournamentDraftWarning1')}
@@ -155,7 +155,7 @@ function Panel({ bracket, actions }: { bracket: QuestBracket; actions: Actions }
 export function Tournaments({ model, page, actions }: { model: Model; page: QuestTournaments; actions: Actions }) {
   if (!page.bracket) return <Offered page={page} credits={balance(model.campaignBar, CREDITS)} actions={actions} />;
   return (
-    <div class="cq-map">
+    <div class="camp-map">
       <Bracket bracket={page.bracket} me={model.playerName} />
       <Panel bracket={page.bracket} actions={actions} />
     </div>

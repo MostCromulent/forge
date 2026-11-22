@@ -24,7 +24,7 @@ function Item({ item, stall, credits, actions }: { item: QuestItemRow; stall: st
         {item.now && <p class="qu-item-stats">{item.next && item.next !== 'N/A' ? `${item.now} → ${item.next}` : item.now}</p>}
         <div class="qu-item-foot">
           {item.maxLevel > 1 && <>
-            {item.maxLevel <= MOST_SQUARES && <span class="cq-owned">{Array.from({ length: item.maxLevel }, (_, i) => <i key={i} class={i < item.level ? 'on' : undefined} />)}</span>}
+            {item.maxLevel <= MOST_SQUARES && <span class="camp-owned">{Array.from({ length: item.maxLevel }, (_, i) => <i key={i} class={i < item.level ? 'on' : undefined} />)}</span>}
             <span class="muted">{t('lblWebQuestLevelOf', item.level, item.maxLevel)}</span>
           </>}
           <span class="sp" />
@@ -47,7 +47,7 @@ export function Bazaar({ model, actions }: { model: Model; actions: Actions }) {
   return (
     <div class="qu-bazaar">
       <nav class="qu-stalls">
-        <span class="cq-kicker">{t('lblBazaar')}</span>
+        <span class="camp-kicker">{t('lblBazaar')}</span>
         {bazaar.stalls.map(s => (
           <button key={s.name} class="qu-stall" aria-pressed={s.name === bazaar.stall} onClick={() => actions.questStall(s.name)}>
             <img alt="" src={skinIconUrl(s.icon)} />
@@ -59,7 +59,7 @@ export function Bazaar({ model, actions }: { model: Model; actions: Actions }) {
         <section class="qu-stall-page">
           <header class="qu-stall-head">
             <img alt="" src={skinIconUrl(stall.icon)} />
-            <div><span class="cq-kicker">{stall.name}</span><h2>{stall.displayName}</h2><p>{stall.fluff}</p></div>
+            <div><span class="camp-kicker">{stall.name}</span><h2>{stall.displayName}</h2><p>{stall.fluff}</p></div>
           </header>
           <div class="qu-items">
             {bazaar.items.map(item => <Item key={item.name} item={item} stall={stall.name} credits={credits} actions={actions} />)}

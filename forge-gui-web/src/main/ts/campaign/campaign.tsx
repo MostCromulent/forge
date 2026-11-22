@@ -19,7 +19,7 @@ export type Owed = Record<string, number>;
 export interface RevealProps { reward: Reward; onOwed: (owed: Owed) => void; done: () => void }
 
 export function Purse({ icon, n, label }: { icon: string; n: number; label: string }) {
-  return <span class="cq-coin" data-icon={icon} title={label}><img alt={label} src={skinIconUrl(icon)} /><b>{formatNumber(n)}</b></span>;
+  return <span class="camp-coin" data-icon={icon} title={label}><img alt={label} src={skinIconUrl(icon)} /><b>{formatNumber(n)}</b></span>;
 }
 
 export const balance = (bar: Bar | null, icon: string): number => bar?.balances.find(b => b.icon === icon)?.amount ?? 0;
@@ -37,12 +37,12 @@ export function capBalance(icon: string, most: number | null): void {
 
 /** Animates an amount from a card to the bar's balance with that icon. The bar counts the amount when it arrives. */
 export function flyShards(from: DOMRect, arrived: () => void, icon: string): void {
-  const to = document.querySelector(`.cq-purse .cq-coin[data-icon="${icon}"]`)?.getBoundingClientRect();
+  const to = document.querySelector(`.camp-purse .camp-coin[data-icon="${icon}"]`)?.getBoundingClientRect();
   if (!to || reducedMotion()) {
     arrived();
     return;
   }
-  const mote = make('img', 'cq-mote');
+  const mote = make('img', 'camp-mote');
   mote.alt = '';
   mote.src = skinIconUrl(icon);
   mote.dataset.icon = icon;
@@ -88,10 +88,10 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
   // A tab opened from a page, such as Change on the map, may be scrolled out of a narrow strip
   useEffect(() => { strip.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [tab]);
   const nav = (
-    <nav class="cq-tabs" ref={strip}>
+    <nav class="camp-tabs" ref={strip}>
       {tabs.map(([id, name]) => (
-        <button key={id} class="cq-tab" data-tab={id} aria-current={id === tab ? 'page' : undefined} onClick={() => setTab(id)}>
-          {t(name)}{unseen(bar, id, id === tab) && <span class="new-card">{t('lblNew')}</span>}{id === tab && <span class="cq-tab-line" />}
+        <button key={id} class="camp-tab" data-tab={id} aria-current={id === tab ? 'page' : undefined} onClick={() => setTab(id)}>
+          {t(name)}{unseen(bar, id, id === tab) && <span class="new-card">{t('lblNew')}</span>}{id === tab && <span class="camp-tab-line" />}
         </button>
       ))}
     </nav>
@@ -100,16 +100,16 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
   if (isPortrait()) {
     return (
       <PhoneHead back={{ label: t('lblBack'), go: leave }} title={bar.name} inert={under} tabs={nav}
-        line={<><span class="cq-purse">{balances}</span><span>{bar.line}</span></>}
+        line={<><span class="camp-purse">{balances}</span><span>{bar.line}</span></>}
         more={close => prefs && <button role="menuitem" onClick={() => { close(); prefs(); }}><Icon d={ICONS.sliders} />{t('Preferences')}</button>}
         dev={extra} />
     );
   }
   return (
-    <div class="cq-bar" inert={under}>
-      <div class="cq-id"><b>{bar.name}</b><span>{bar.line}</span></div>
+    <div class="camp-bar" inert={under}>
+      <div class="camp-id"><b>{bar.name}</b><span>{bar.line}</span></div>
       {nav}
-      <div class="cq-purse">
+      <div class="camp-purse">
         {balances}
         {prefs && <button onClick={prefs}>{t('Preferences')}</button>}
         {extra}
@@ -130,17 +130,17 @@ export function SidePanel({ kicker, where, title, art, zoom, setZoom, children, 
   fold?: { open: boolean; toggle: () => void };
 }) {
   return (
-    <aside class={fold?.open ? 'cq-side open' : 'cq-side'}>
-      <div class="cq-panel">
-        <div class={art ? 'cq-side-head' : 'cq-side-head bare'}>
-          <div class="cq-where"><span class="cq-kicker">{kicker}</span>{where}</div>
-          {fold ? <h3><button class="cq-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3> : <h3>{title}</h3>}
-          <div class="cq-art" data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }} />
+    <aside class={fold?.open ? 'camp-side open' : 'camp-side'}>
+      <div class="camp-panel">
+        <div class={art ? 'camp-side-head' : 'camp-side-head bare'}>
+          <div class="camp-where"><span class="camp-kicker">{kicker}</span>{where}</div>
+          {fold ? <h3><button class="camp-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3> : <h3>{title}</h3>}
+          <div class="camp-art" data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }} />
         </div>
         {children}
       </div>
-      <div class="cq-foot">{foot}</div>
-      {zoom && <div class="backdrop" onClick={() => setZoom(null)}><img class="cq-zoom" alt="" src={imageUrl(zoom)} /></div>}
+      <div class="camp-foot">{foot}</div>
+      {zoom && <div class="backdrop" onClick={() => setZoom(null)}><img class="camp-zoom" alt="" src={imageUrl(zoom)} /></div>}
     </aside>
   );
 }
@@ -149,11 +149,11 @@ export function DeckRow({ image, name, line, problem, zoom, change }: {
   image?: string | null; name: string; line: string; problem: boolean; zoom: (image: string) => void; change?: () => void;
 }) {
   return (
-    <div class="cq-mine">
-      {image && <button class="cq-face2" aria-label={name} data-image={image} style={{ backgroundImage: `url("${artUrl(image)}")` }} onClick={() => zoom(image)} />}
+    <div class="camp-mine">
+      {image && <button class="camp-face2" aria-label={name} data-image={image} style={{ backgroundImage: `url("${artUrl(image)}")` }} onClick={() => zoom(image)} />}
       <div class="t">
         <b>{name}</b>
-        {problem ? <span class="cq-warn">{t('lblInvalidDeck')}</span> : <span>{line}</span>}
+        {problem ? <span class="camp-warn">{t('lblInvalidDeck')}</span> : <span>{line}</span>}
       </div>
       {change && <button onClick={change}>{t('lblWebMenuChange')}</button>}
     </div>
@@ -166,8 +166,8 @@ export function Stats({ model, actions, first }: { model: Model; actions: Action
   useEffect(() => { actions.campaignStats(first); }, []);
   if (!s) return <p class="muted pools-wait">{t('lblLoadingEllipsis')}</p>;
   return (
-    <div class="cq-stats">
-      <div class="cq-stats-head">
+    <div class="camp-stats">
+      <div class="camp-stats-head">
         <div><span class="muted">{model.campaignBar?.name}</span><h2>{s.title}</h2></div>
         {s.scopes.length > 0 && (
           <span class="seg" role="group">
@@ -176,16 +176,16 @@ export function Stats({ model, actions, first }: { model: Model; actions: Action
           </span>
         )}
       </div>
-      <div class="cq-figures">
+      <div class="camp-figures">
         {s.figures.map(f => (
-          <div key={f.label} class="cq-figure">
-            <span class="cq-kicker">{f.label}</span>
+          <div key={f.label} class="camp-figure">
+            <span class="camp-kicker">{f.label}</span>
             <p><b>{formatNumber(f.amount)}</b>{f.of != null && <span> / {formatNumber(f.of)} ({f.of ? Math.round(100 * f.amount / f.of) : 0}%)</span>}</p>
-            {f.of != null && <div class="cq-pbar"><i style={{ width: `${f.of ? 100 * f.amount / f.of : 0}%` }} /></div>}
+            {f.of != null && <div class="camp-pbar"><i style={{ width: `${f.of ? 100 * f.amount / f.of : 0}%` }} /></div>}
           </div>
         ))}
       </div>
-      <div class="cq-tables">
+      <div class="camp-tables">
         {s.tables.map(table => (
           <table key={table.headers[0]}>
             <thead><tr>{table.headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
@@ -232,9 +232,9 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
   const bad = (r: PrefRow) => !!p.problem && last === r.key;
   return (
     <Backdrop dismiss={close}>
-      <div class="dialog cq-prefs">
+      <div class="dialog camp-prefs">
         <header><h3>{p.title}</h3><button aria-label={t('lblClose')} onClick={close}>×</button></header>
-        <div class="cq-prefs-body">
+        <div class="camp-prefs-body">
           {groups.map(g => {
             const rows = p.rows.filter(r => r.group === g);
             // Rows with a column are cells of a row that holds several values. They are drawn as a table with one column per name
@@ -244,7 +244,7 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
               <section key={g} class={columns.length ? 'wide' : undefined}>
                 <h4>{g}</h4>
                 {columns.length > 0 && (
-                  <table class="cq-pref-table">
+                  <table class="camp-pref-table">
                     <thead><tr><th />{columns.map(c => <th key={c}>{c}</th>)}</tr></thead>
                     <tbody>
                       {lines.map(label => (
@@ -260,7 +260,7 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
                   </table>
                 )}
                 {rows.filter(r => !r.column).map(r => (
-                  <label key={r.key} class={bad(r) ? 'cq-pref bad' : 'cq-pref'}>
+                  <label key={r.key} class={bad(r) ? 'camp-pref bad' : 'camp-pref'}>
                     <span>{r.label}</span>
                     {field(r)}
                   </label>
@@ -270,7 +270,7 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
           })}
         </div>
         <footer>
-          <span class={p.problem ? 'cq-warn' : 'muted'}>{p.problem ?? p.note}</span>
+          <span class={p.problem ? 'camp-warn' : 'muted'}>{p.problem ?? p.note}</span>
           {p.canReset && <button onClick={() => { setTyped({}); setLast(null); actions.campaignPrefsReset(); }}>{t('lblReset')}</button>}
           <button class="primary" onClick={close}>{t('lblOK')}</button>
         </footer>
@@ -293,7 +293,7 @@ export function CampaignShell({ model, actions, icons, shelf, open }: {
   const [creating, setCreating] = useState(false);
   useEffect(() => { if (inside) setCreating(false); }, [inside]);
   return (
-    <div key={inside ? 'open' : 'shelf'} class={inside ? 'cq-shell' : 'limited-page'}>
+    <div key={inside ? 'open' : 'shelf'} class={inside ? 'camp-shell' : 'limited-page'}>
       {/* An open save has its back button on its bar. On a phone the shelf's trail draws the header */}
       {!inside && !isPortrait() && (
         <PageHeader class="limited-head">
@@ -331,7 +331,7 @@ export function CampaignShelf({ model, actions, creating, setCreating, words, fo
 /** A tab change slides the page in the direction of the new tab in the tab order (dialogs.css). */
 export function slideTab<Tab extends string>(tabs: [Tab, TextKey][], from: Tab, to: Tab, set: (u: UiState) => void): void {
   const order = tabs.map(([id]) => id);
-  if (to !== from) eased(set, () => ({ way: order.indexOf(to) > order.indexOf(from) ? 'on' : 'back' }), () => !document.querySelector('.cq-main .pools-wait'));
+  if (to !== from) eased(set, () => ({ way: order.indexOf(to) > order.indexOf(from) ? 'on' : 'back' }), () => !document.querySelector('.camp-main .pools-wait'));
 }
 
 /**
@@ -355,7 +355,7 @@ export function CampaignPages<Tab extends string>({ model, actions, tabs, tab, s
       // Back returns to the first tab, the save's home page, before it leaves the save
       leave={() => (tab === tabs[0][0] ? actions.campaignLeave() : setTab(tabs[0][0]))} under={!!reward} extra={extra} />
     {model.error && <p class="limited-error">{model.error}</p>}
-    <div class="cq-main" inert={!!reward}>{page(priced)}</div>
+    <div class="camp-main" inert={!!reward}>{page(priced)}</div>
     {prefs && <Prefs model={model} actions={actions} close={() => { setPrefs(false); setPriced(priced + 1); }} />}
     {reward && Reveal && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.rewardClaim()} />}
   </>;

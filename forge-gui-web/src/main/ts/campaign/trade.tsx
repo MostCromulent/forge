@@ -45,14 +45,14 @@ export function PricedButton({ label, icon, iconLabel, size, cost, have, disable
 }) {
   return (
     <button class={cls ? `primary ${cls}` : 'primary'} disabled={disabled || cost > have} onClick={onClick}>
-      {label}<span class="cq-sep">·</span><img class="cq-shard" alt={iconLabel} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl(icon)} />{formatNumber(cost)}
+      {label}<span class="camp-sep">·</span><img class="camp-shard" alt={iconLabel} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl(icon)} />{formatNumber(cost)}
     </button>
   );
 }
 
 function Owned({ n }: { n: number }) {
   return (
-    <span class="cq-owned" title={t('lblWebTradeOwned', n)}>
+    <span class="camp-owned" title={t('lblWebTradeOwned', n)}>
       {[1, 2, 3, 4].map(i => <i key={i} class={i <= n ? 'on' : undefined} />)}
       <span>{t('lblWebTradeOwned', n)}</span>
     </span>
@@ -86,7 +86,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
   const sizes = info?.lists.map(l => l.count).join(',');
   const priced = (sentence: string) => {
     const [before, after] = sentence.split(token);
-    return <>{before}<img class="cq-shard" alt={iconLabel} src={skinIconUrl(icon)} />{after}</>;
+    return <>{before}<img class="camp-shard" alt={iconLabel} src={skinIconUrl(icon)} />{after}</>;
   };
 
   useEffect(() => { actions.trading(); }, []);
@@ -130,7 +130,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
       capBalance(icon, --flying ? shown : null);
     };
     chosen.forEach((c, i) => {
-      const el = document.querySelector<HTMLElement>(`.cq-coll-grid .cq-cc[data-pick="${CSS.escape(c.key)}"]`);
+      const el = document.querySelector<HTMLElement>(`.camp-coll-grid .camp-cc[data-pick="${CSS.escape(c.key)}"]`);
       const amount = c.value * c.count;
       flying++;
       if (!el || reducedMotion()) {
@@ -143,8 +143,8 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
     });
   };
   return (
-    <div class="cq-coll">
-      <div class="cq-coll-bar">
+    <div class="camp-coll">
+      <div class="camp-coll-bar">
         <span class="seg" role="group">
           {Object.entries(words).map(([id, w]) => {
             const size = info?.lists.find(l => l.source === id)?.count;
@@ -157,31 +157,31 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
         {groupLabel && (
           <Select label={groupLabel} value={group} change={setGroup} choices={[{ value: '', label: groupLabel }, ...(info?.groups ?? []).map(g => ({ value: g, label: g }))]} />
         )}
-        {info && <span class="cq-coll-note">{info.note}</span>}
+        {info && <span class="camp-coll-note">{info.note}</span>}
       </div>
       {top?.(source, picked, toggle, askAbout)}
-      <div class="cq-coll-grid" onScroll={more}>
+      <div class="camp-coll-grid" onScroll={more}>
         {page && page.total === 0 && <p class="none-found">{t('lblWebCatalogueNoMatchHint')}</p>}
         {rows.map(row => {
           const pick = picked.get(keyOf(row));
           const card = (
-              <button key={keyOf(row)} class={`cq-cc${pick ? ' sel' : ''}${row.problem ? ' used' : ''}`} data-pick={keyOf(row)} title={row.problem} data-image={row.image} data-act={t('lblChoose')}
+              <button key={keyOf(row)} class={`camp-cc${pick ? ' sel' : ''}${row.problem ? ' used' : ''}`} data-pick={keyOf(row)} title={row.problem} data-image={row.image} data-act={t('lblChoose')}
                 aria-pressed={!!pick} aria-disabled={!!row.problem}
                 onClick={() => (row.problem ? showNotice({ t: 'notice', title: row.problem, error: false }) : toggle(pickOf(row)))}>
-                <span class="cq-pic"><span class="nm">{row.name}</span><img loading="lazy" alt="" src={imageUrl(row.image)} onError={hideBroken} /></span>
+                <span class="camp-pic"><span class="nm">{row.name}</span><img loading="lazy" alt="" src={imageUrl(row.image)} onError={hideBroken} /></span>
                 {row.isNew && <span class="new-card">{t('lblNew')}</span>}
                 {row.problem && <span class="inuse">{blocked}</span>}
-                {said.count && row.count != null && <span class="cq-stock">{said.count(row.count)}</span>}
-                <span class="val">{priced(said.row(formatNumber(row.value ?? 0)))}{row.owned != null && <Owned n={row.owned} />}{row.note && <span class="cq-cc-note">{row.note}</span>}</span>
+                {said.count && row.count != null && <span class="camp-stock">{said.count(row.count)}</span>}
+                <span class="val">{priced(said.row(formatNumber(row.value ?? 0)))}{row.owned != null && <Owned n={row.owned} />}{row.note && <span class="camp-cc-note">{row.note}</span>}</span>
               </button>
           );
           // In a list that counts copies, a pick gets a count stepper under the card. Other lists show the card alone
           if (row.count == null) return card;
           return (
-            <div key={keyOf(row)} class="cq-cc-slot">
+            <div key={keyOf(row)} class="camp-cc-slot">
               {card}
               {pick && pick.most > 1 && (
-                <span class="cq-step">
+                <span class="camp-step">
                   <button aria-label={t('lblWebEditorOneFewer', row.name)} disabled={pick.count <= 1} onClick={() => recount(pick, -1)}>&minus;</button>
                   <b>{t('lblWebNOfM', pick.count, pick.most)}</b>
                   <button aria-label={t('lblWebEditorOneMore', row.name)} disabled={pick.count >= pick.most} onClick={() => recount(pick, 1)}>+</button>
@@ -192,19 +192,19 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
         })}
       </div>
       {chosen.length > 0 && (
-        <div class="cq-sel-bar">
+        <div class="camp-sel-bar">
           <button onClick={() => setPicked(new Map())}>{t('lblCancel')}</button>
           <button class="primary" onClick={() => setAsking(true)}>
-            {title}<img class="cq-shard" alt={iconLabel} src={skinIconUrl(icon)} />{formatNumber(total)}
+            {title}<img class="camp-shard" alt={iconLabel} src={skinIconUrl(icon)} />{formatNumber(total)}
           </button>
         </div>
       )}
       {asking && (
         <Backdrop dismiss={() => setAsking(false)}>
-          <div class="dialog cq-exile">
+          <div class="dialog camp-exile">
             <h3>{title}</h3>
-            <p class="cq-exile-total">{priced(said.confirm(n, formatNumber(total)))}</p>
-            <ul class="cq-cards-list">
+            <p class="camp-exile-total">{priced(said.confirm(n, formatNumber(total)))}</p>
+            <ul class="camp-cards-list">
               {chosen.map(c => <li key={c.key}>{c.count > 1 ? `${c.name} ×${c.count}` : c.name}<span>{priced(`${token} ${formatNumber(c.value * c.count)}`)}</span></li>)}
             </ul>
             <div class="actions">

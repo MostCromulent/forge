@@ -27,7 +27,7 @@ test('a quest duel is conceded and the loss is shown on the Duels page', async (
   await page.locator('.qu-save', { hasText: 'Fixture quest' }).getByRole('button', { name: 'Play' }).click();
 
   await expect(page.locator('.qu-ev')).toHaveCount(4);
-  await expect(page.locator('.qu-status .cq-chip').nth(1)).toHaveText('0 Losses');
+  await expect(page.locator('.qu-status .camp-chip').nth(1)).toHaveText('0 Losses');
   await page.getByRole('button', { name: 'Start Duel' }).click();
 
   await expect(page.locator('#match')).toBeVisible({ timeout: 60_000 });
@@ -40,13 +40,13 @@ test('a quest duel is conceded and the loss is shown on the Duels page', async (
   await page.locator('#game-over button', { hasText: 'OK' }).click();
 
   // The match results and then the booster are shown over the Duels page
-  const reveal = page.locator('.cq-reveal');
-  await expect(reveal.locator('.cq-gift h3')).toHaveText('Gameplay Results');
+  const reveal = page.locator('.camp-reveal');
+  await expect(reveal.locator('.camp-gift h3')).toHaveText('Gameplay Results');
   await reveal.getByRole('button', { name: 'OK Space', exact: true }).click();
-  await expect(reveal.locator('.cq-cards-card').first()).toBeVisible();
+  await expect(reveal.locator('.camp-cards-card').first()).toBeVisible();
   await reveal.getByRole('button', { name: 'OK Space', exact: true }).click();
   await expect(reveal).toHaveCount(0);
-  await expect(page.locator('.qu-status .cq-chip').nth(1)).toHaveText('1 Losses');
+  await expect(page.locator('.qu-status .camp-chip').nth(1)).toHaveText('1 Losses');
 });
 
 // Fails if a deck cannot be made, filled to forty cards and set as current from the Decks tab, or the editor does not accept every owned copy and no more
@@ -57,7 +57,7 @@ test('a quest deck is made, filled and chosen as current', async ({ page }) => {
   await page.click('.chooser [data-kind=quest]');
   await page.locator('.qu-save', { hasText: 'Fixture quest' }).getByRole('button', { name: 'Play' }).click();
 
-  await page.locator('.cq-tab', { hasText: 'Quest Decks' }).click();
+  await page.locator('.camp-tab', { hasText: 'Quest Decks' }).click();
   await page.getByRole('button', { name: 'New Deck' }).click();
   await page.getByRole('textbox', { name: 'Deck Name' }).fill('Ice deck');
   await page.getByRole('button', { name: 'Create' }).click();
@@ -75,13 +75,13 @@ test('a quest deck is made, filled and chosen as current', async ({ page }) => {
   await expect(page.locator('.main-zone > h4 .count')).toHaveText('40');
   await page.getByRole('button', { name: 'Done' }).click();
 
-  const plate = page.locator('.cq-cmd', { hasText: 'Ice deck' });
+  const plate = page.locator('.camp-cmd', { hasText: 'Ice deck' });
   await expect(plate).toContainText('40 cards');
   await plate.click();
-  await page.locator('.cq-side').getByRole('button', { name: 'Current Deck' }).click();
+  await page.locator('.camp-side').getByRole('button', { name: 'Current Deck' }).click();
   await expect(plate.locator('.tag')).toHaveText('Current Deck');
-  await page.locator('.cq-tab', { hasText: 'Duels' }).click();
-  await expect(page.locator('.cq-mine b')).toHaveText('Ice deck');
+  await page.locator('.camp-tab', { hasText: 'Duels' }).click();
+  await expect(page.locator('.camp-mine b')).toHaveText('Ice deck');
 });
 
 // Fails if a booster cannot be bought and opened from its pack, or the credits do not fall by its price
@@ -92,20 +92,20 @@ test('a booster is bought in the Spell Shop and its cards revealed', async ({ pa
   await page.click('.chooser [data-kind=quest]');
   await page.locator('.qu-save', { hasText: 'Fixture quest' }).getByRole('button', { name: 'Play' }).click();
 
-  const credits = page.locator('.cq-purse .cq-coin').first().locator('b');
+  const credits = page.locator('.camp-purse .camp-coin').first().locator('b');
   const before = Number((await credits.innerText()).replace(/\D/g, ''));
-  await page.locator('.cq-tab', { hasText: 'Spell Shop' }).click();
+  await page.locator('.camp-tab', { hasText: 'Spell Shop' }).click();
   const booster = page.locator('.qu-product', { hasText: 'Booster Pack' }).first();
   const price = Number((await booster.locator('.qu-price').innerText()).replace(/\D/g, ''));
   expect(price).toBeLessThanOrEqual(before);
   await booster.click();
-  await page.locator('.cq-sel-bar .primary').click();
-  await page.locator('.cq-exile').getByRole('button', { name: 'OK', exact: true }).click();
+  await page.locator('.camp-sel-bar .primary').click();
+  await page.locator('.camp-exile').getByRole('button', { name: 'OK', exact: true }).click();
 
-  const reveal = page.locator('.cq-reveal');
-  await reveal.locator('.cq-pk').click({ force: true });
+  const reveal = page.locator('.camp-reveal');
+  await reveal.locator('.camp-pk').click({ force: true });
   await reveal.getByRole('button', { name: 'Skip' }).click();
-  await expect(reveal.locator('.cq-rv-card.up').first()).toBeVisible({ timeout: 30_000 });
+  await expect(reveal.locator('.camp-rv-card.up').first()).toBeVisible({ timeout: 30_000 });
   await reveal.getByRole('button', { name: 'Great Space', exact: true }).click();
   await expect(reveal).toHaveCount(0);
   await expect(credits).toHaveText((before - price).toLocaleString('en-GB'));
@@ -130,8 +130,8 @@ test('a quest is started from the new-quest form', async ({ page }) => {
   await page.getByRole('button', { name: 'Embark!' }).click();
 
   await expect(page.locator('.qu-ev').first()).toBeVisible({ timeout: 60_000 });
-  await expect(page.locator('.cq-id b')).toHaveText('Form quest');
-  await expect(page.locator('.cq-purse .cq-coin').first().locator('b')).toHaveText('200');
+  await expect(page.locator('.camp-id b')).toHaveText('Form quest');
+  await expect(page.locator('.camp-purse .camp-coin').first().locator('b')).toHaveText('200');
 });
 
 // Fails if a world with its own sets still asks for a starting pool, which its sets replace
@@ -157,16 +157,16 @@ test('a bazaar item is bought from its stall', async ({ page }) => {
   await page.click('.chooser [data-kind=quest]');
   await page.locator('.qu-save', { hasText: 'Fixture quest' }).getByRole('button', { name: 'Play' }).click();
 
-  const credits = page.locator('.cq-purse .cq-coin').first().locator('b');
+  const credits = page.locator('.camp-purse .camp-coin').first().locator('b');
   await expect(credits).toHaveText('5,000');
-  await page.locator('.cq-tab', { hasText: 'Bazaar' }).click();
+  await page.locator('.camp-tab', { hasText: 'Bazaar' }).click();
   await page.locator('.qu-stall', { hasText: 'Pet Shop' }).click();
   const bird = page.locator('.qu-item', { hasText: 'Bird' });
   const price = Number((await bird.locator('button.primary').innerText()).replace(/\D/g, ''));
   await bird.locator('button.primary').click();
   await expect(credits).toHaveText((5000 - price).toLocaleString('en-GB'));
   // A bought pet is offered for duels. A level-0 quest cannot raise a pet past level 1, so the pet leaves the stall
-  await page.locator('.cq-tab', { hasText: 'Duels' }).click();
+  await page.locator('.camp-tab', { hasText: 'Duels' }).click();
   await expect(page.locator('.qu-row select option', { hasText: 'Bird' })).toHaveCount(1);
 });
 
@@ -179,7 +179,7 @@ test('a tournament is entered, drafted, built and its first match reached', asyn
   await page.click('.chooser [data-kind=quest]');
   await page.locator('.qu-save', { hasText: 'Fixture quest' }).getByRole('button', { name: 'Play' }).click();
 
-  await page.locator('.cq-tab', { hasText: 'Tournaments' }).click();
+  await page.locator('.camp-tab', { hasText: 'Tournaments' }).click();
   await page.locator('.qu-tourney').first().getByRole('button', { name: /^Enter/ }).click();
   await expect(page.locator('#drafting')).toBeVisible({ timeout: 60_000 });
 
@@ -222,13 +222,13 @@ test('the statistics show the record and the preferences open from the bar', asy
   await page.click('.chooser [data-kind=quest]');
   await page.locator('.qu-save', { hasText: 'Fixture quest' }).getByRole('button', { name: 'Play' }).click();
 
-  await page.locator('.cq-tab', { hasText: 'Statistics' }).click();
-  const figure = (label: string) => page.locator('.cq-figure', { has: page.locator('.cq-kicker', { hasText: new RegExp(`^${label}$`) }) }).locator('p b');
+  await page.locator('.camp-tab', { hasText: 'Statistics' }).click();
+  const figure = (label: string) => page.locator('.camp-figure', { has: page.locator('.camp-kicker', { hasText: new RegExp(`^${label}$`) }) }).locator('p b');
   await expect(figure('Wins')).toHaveText('0');
   await expect(figure('Credits')).toHaveText('5,000');
 
   await page.getByRole('button', { name: 'Preferences' }).click();
-  await expect(page.locator('.cq-pref-table thead th')).toHaveCount(5);
+  await expect(page.locator('.camp-pref-table thead th')).toHaveCount(5);
   await page.getByRole('button', { name: 'OK', exact: true }).click();
-  await expect(page.locator('.cq-prefs')).toHaveCount(0);
+  await expect(page.locator('.camp-prefs')).toHaveCount(0);
 });

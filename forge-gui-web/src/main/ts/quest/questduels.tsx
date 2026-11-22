@@ -75,8 +75,8 @@ export function Brings({ page, actions, zoom, start, label, fixedDeck }: {
         </span>
       </div>
     )}
-    {problem && <p class="cq-warn">{problem}</p>}
-    <button class="primary cq-big" disabled={!!problem} onClick={start}>{label}</button>
+    {problem && <p class="camp-warn">{problem}</p>}
+    <button class="primary camp-big" disabled={!!problem} onClick={start}>{label}</button>
   </>;
 }
 
@@ -94,13 +94,13 @@ export function Duels({ page, actions }: { page: QuestDuels; actions: Actions })
   // The list is new after every match, so a choice past its end falls back to the last duel
   const duel = page.duels[Math.min(chosen, page.duels.length - 1)];
   return (
-    <div class="cq-map">
+    <div class="camp-map">
       <div class="qu-list">
         <div class="qu-list-head"><h2>{t('lblDuels')}</h2><p>{t('lblSelectNextDuel')}</p><span class="sp" /><WorldButtons page={page} actions={actions} /></div>
         <div class="qu-status">
-          <span class="cq-chip"><b>{page.wins}</b> {t('lblWins')}</span>
-          <span class="cq-chip"><b>{page.losses}</b> {t('lblLosses')}</span>
-          <span class="cq-chip">{t('lblWinStreak')}: <b>{page.streak}</b> ({t('lblBest')}: {page.bestStreak})</span>
+          <span class="camp-chip"><b>{page.wins}</b> {t('lblWins')}</span>
+          <span class="camp-chip"><b>{page.losses}</b> {t('lblLosses')}</span>
+          <span class="camp-chip">{t('lblWinStreak')}: <b>{page.streak}</b> ({t('lblBest')}: {page.bestStreak})</span>
           {page.nextChallenge && <span>{page.nextChallenge}</span>}
         </div>
         <div class="qu-events">
@@ -110,8 +110,8 @@ export function Duels({ page, actions }: { page: QuestDuels; actions: Actions })
       {duel && (
         <SidePanel kicker={t('lblWebQuestDuel')} title={duel.title} art={duel.face} zoom={zoom} setZoom={setZoom}
           foot={<Brings page={page} actions={actions} zoom={setZoom} start={() => actions.questDuel(duel.index)} label={t('lblWebQuestStartDuel')} />}>
-          {duel.difficulty > 0 && <div class="cq-chips"><Difficulty n={duel.difficulty} /></div>}
-          <p class="cq-desc">{duel.description}</p>
+          {duel.difficulty > 0 && <div class="camp-chips"><Difficulty n={duel.difficulty} /></div>}
+          <p class="camp-desc">{duel.description}</p>
         </SidePanel>
       )}
     </div>

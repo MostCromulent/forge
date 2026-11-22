@@ -46,7 +46,7 @@ function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; cur
       )}
       sub={s => <span class="sub">{s.planeswalker} - {s.plane}</span>}
       mid={s => <>
-        <div class="cq-pbar"><i style={{ width: `${s.total ? 100 * s.conquered / s.total : 0}%` }} /></div>
+        <div class="camp-pbar"><i style={{ width: `${s.total ? 100 * s.conquered / s.total : 0}%` }} /></div>
         <span class="ev-line dim">
           <b class="pct">{s.conquered} / {s.total}</b>
           <span class="sp" />
@@ -96,13 +96,13 @@ function DevWheel({ actions }: { actions: Actions }) {
   const queued = ui.conquestWheel ? labels[ui.conquestWheel] : '';
   return (
     <Dropdown cls="menu-anchor" block button={(open, toggle) => (
-      <button class={queued ? 'cq-dev set' : 'cq-dev'} aria-expanded={open} title={tool} aria-label={queued ? `${tool}: ${queued}` : tool} onClick={toggle}>
+      <button class={queued ? 'camp-dev set' : 'camp-dev'} aria-expanded={open} title={tool} aria-label={queued ? `${tool}: ${queued}` : tool} onClick={toggle}>
         <Icon d={ICONS.dev} />{queued && <span>{queued}</span>}
       </button>
     )}>
       {close => (
         <div class="deck-menu" role="menu" aria-label={tool}>
-          <small class="cq-dev-head">{tool}</small>
+          <small class="camp-dev-head">{tool}</small>
           {['', ...DEV_WHEEL].map(o => (
             <button key={o} role="menuitemradio" aria-checked={o === ui.conquestWheel} onClick={() => {
               close();

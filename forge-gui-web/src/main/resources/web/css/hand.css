@@ -78,7 +78,7 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 #hand .card.elsewhere:not(.playable, .auto-tap):nth-child(3n) .halo { filter: url(#haze-c); }
 #hand .card.elsewhere:is(.playable, .auto-tap):hover .halo { --rise: color-mix(in srgb, var(--playable, #66ccff) 80%, #fff); }
 /* nth-child(n) outranks the rules that hand out the filter copies */
-html[data-motion="reduced"] :is(.cq-rv-slot:nth-child(n) .rise, #hand .card.elsewhere:nth-child(n) .halo) { filter: blur(4px); }
+html[data-motion="reduced"] :is(.camp-rv-slot:nth-child(n) .rise, #hand .card.elsewhere:nth-child(n) .halo) { filter: blur(4px); }
 #hand .card.elsewhere:is(.playable, .auto-tap):hover .haze { display: block; position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: var(--radius); pointer-events: none; }
 #hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after {
   content: ''; position: absolute; bottom: 26%; width: 4px; height: 4px; border-radius: 50%;

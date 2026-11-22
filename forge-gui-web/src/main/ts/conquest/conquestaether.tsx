@@ -16,7 +16,7 @@ const RARITIES: TextKey[] = ['lblCommon', 'lblUncommon', 'lblRare', 'lblMythic']
 /** The number of cards pulled this visit that stay in view. */
 const MOST_RECENT = 12;
 
-const shard = (size: number) => <img class="cq-shard" alt={t('lblAetherShards')} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl('IMG_AETHER_SHARD')} />;
+const shard = (size: number) => <img class="camp-shard" alt={t('lblAetherShards')} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl('IMG_AETHER_SHARD')} />;
 
 export function Aether({ model, actions }: { model: Model; actions: Actions }) {
   const a = model.conquestAether;
@@ -70,13 +70,13 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
           : (
             <div class="cq-ae-core">
               <span class="cq-ae-orb"><img alt="" src={skinIconUrl('IMG_MULTIVERSE')} /></span>
-              <div class="cq-chips">
-                {RARITIES.map((name, i) => <span key={name} class="cq-chip">{a.byRarity[i]} {t(name)}</span>)}
+              <div class="camp-chips">
+                {RARITIES.map((name, i) => <span key={name} class="camp-chip">{a.byRarity[i]} {t(name)}</span>)}
               </div>
               {pull}
             </div>
           )}
-        {(a.problem || (short && a.cost > 0)) && <p class="cq-warn">{a.problem ?? t('lblWebConquestTooFewShards')}</p>}
+        {(a.problem || (short && a.cost > 0)) && <p class="camp-warn">{a.problem ?? t('lblWebConquestTooFewShards')}</p>}
         <div class="cq-ae-count">{formatNumber(a.matching)} / {formatNumber(a.locked)}</div>
         <div class="cq-ae-recent">
           {recent.map((c, i) => <img key={`${c.image}:${recent.length - i}`} alt={c.name} src={imageUrl(c.image)} data-image={c.image} />)}
@@ -88,7 +88,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
 
 /** Flies a copy of the pulled card into the Collection tab, which then lights up as the card arrives. */
 function toCollection(img: HTMLImageElement): void {
-  const tab = document.querySelector<HTMLElement>('.cq-tab[data-tab="collection"]');
+  const tab = document.querySelector<HTMLElement>('.camp-tab[data-tab="collection"]');
   if (!tab || reducedMotion()) return;
   const from = img.getBoundingClientRect(), to = tab.getBoundingClientRect();
   const face = new Image();

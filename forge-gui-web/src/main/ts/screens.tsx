@@ -72,7 +72,7 @@ export function renderScreens(model: Model, actions: Actions): void {
     {page === 'match' && <StackMenu model={model} actions={actions} />}
     {/* A phone has no speaker among the tools. Its volume is opened from the game menu, so it opens by that menu's button */}
     {page === 'match' && ui.volumeOpen && <Volume anchor={isPortrait() ? '#match .tools .more' : '#match .tools .volume'} close={() => changeUi(u => { u.volumeOpen = false; })} />}
-    {page !== 'match' && ui.volumeOpen && <Volume anchor=":is(.page-head, .cq-purse) .volume, .ph-more" close={() => changeUi(u => { u.volumeOpen = false; })} />}
+    {page !== 'match' && ui.volumeOpen && <Volume anchor=":is(.page-head, .camp-purse) .volume, .ph-more" close={() => changeUi(u => { u.volumeOpen = false; })} />}
     {page !== 'name' && ui.optionsOpen && <Options close={() => changeUi(u => { u.optionsOpen = false; })} />}
     {page === 'match' && (ui.gameMenu === 'menu' || ui.gameMenu === 'dev') && (
       <GameMenu model={model} actions={actions} close={() => changeUi(u => { u.gameMenu = null; })}

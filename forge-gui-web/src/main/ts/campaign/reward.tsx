@@ -66,7 +66,7 @@ export function Reveal({ reward, onOwed, done }: RevealProps) {
 
   if (!step) return null;
   return (
-    <Backdrop cls="cq-reveal">
+    <Backdrop cls="camp-reveal">
       {step.kind === 'WHEEL' && <WheelStop key={at} step={step} emblem={first === 1 && at === 1 ? steps[0].amount : 0} next={next} />}
       {step.kind === 'BOOSTER' && <PackStop key={at} step={step} release={n => setReleased(r => r + n)} next={next} />}
       {step.kind === 'CONQUER_EMBLEMS' && <Gift icon="IMG_PW_BADGE_COMMON" amount={step.amount} title={t('lblWebConquestFirstConquest')} button={t('lblGreat')} next={next} />}
@@ -76,7 +76,7 @@ export function Reveal({ reward, onOwed, done }: RevealProps) {
       {step.kind === 'CHAOS_BATTLE' && <Gift icon="IMG_MULTIVERSE" title={t('lblChaosApproaching')} text={t('lblWebConquestNoRefusal')} button={t('lblOK')} next={next} />}
       {step.kind === 'MESSAGE' && <Gift icon={step.icon} title={step.title ?? ''} text={step.text} lines={step.lines} button={t('lblOK')} next={next} />}
       {(step.kind === 'CARDS' || step.kind === 'REGION_COMMANDER') && <CardsStop key={at} step={step} zoom={setZoom} next={next} />}
-      {zoom && <div class="backdrop cq-zoom-layer" onClick={e => { e.stopPropagation(); setZoom(null); }}><img class="cq-zoom" alt="" src={imageUrl(zoom)} /></div>}
+      {zoom && <div class="backdrop camp-zoom-layer" onClick={e => { e.stopPropagation(); setZoom(null); }}><img class="camp-zoom" alt="" src={imageUrl(zoom)} /></div>}
     </Backdrop>
   );
 }
@@ -88,7 +88,7 @@ function useOkKey(run: (() => void) | null): string {
     if (!run) return;
     const onKey = (e: KeyboardEvent) => {
       // A held key would run through every step. A zoomed card takes the key first
-      if (e.key !== key || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.target instanceof HTMLInputElement || document.querySelector('.cq-zoom-layer')) return;
+      if (e.key !== key || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.target instanceof HTMLInputElement || document.querySelector('.camp-zoom-layer')) return;
       // Space would also press a focused button, so the button is not pressed twice
       e.preventDefault();
       run();
@@ -107,12 +107,12 @@ function Gift({ icon, amount, title, text, lines, button, next }: {
   icon?: string; amount?: number; title: string; text?: string; lines?: string[]; button: string; next: () => void;
 }) {
   return (
-    <div class="dialog cq-gift">
+    <div class="dialog camp-gift">
       <h3>{title}</h3>
-      {icon && <div class="cq-gift-what"><img alt="" src={skinIconUrl(icon)} />{amount !== undefined && <b>{formatNumber(amount)}</b>}</div>}
+      {icon && <div class="camp-gift-what"><img alt="" src={skinIconUrl(icon)} />{amount !== undefined && <b>{formatNumber(amount)}</b>}</div>}
       {text && <p>{text}</p>}
       {lines && (
-        <ul class="cq-gift-lines">
+        <ul class="camp-gift-lines">
           {lines.map((line, i) => {
             const credit = CREDIT_LINE.exec(line);
             return <li key={i}>{credit ? <><span>{credit[1]}</span><b>{credit[2]}</b></> : <span>{line}</span>}</li>;
@@ -129,18 +129,18 @@ function CardsStop({ step, zoom, next }: { step: RewardStep; zoom: (image: strin
   const cards = step.cards ?? [];
   const duplicates = cards.reduce((sum, c) => sum + c.shards, 0);
   return (
-    <div class="cq-pack-stop">
+    <div class="camp-pack-stop">
       <h3>{step.title}</h3>
-      <div class={lost ? 'cq-cards lost' : 'cq-cards'}>
+      <div class={lost ? 'camp-cards lost' : 'camp-cards'}>
         {cards.map((c, i) => (
-          <button key={i} class="cq-cards-card" aria-label={c.name} onClick={() => zoom(c.image)}><img alt={c.name} src={imageUrl(c.image)} /></button>
+          <button key={i} class="camp-cards-card" aria-label={c.name} onClick={() => zoom(c.image)}><img alt={c.name} src={imageUrl(c.image)} /></button>
         ))}
       </div>
-      <div class="cq-reveal-foot">
+      <div class="camp-reveal-foot">
         {duplicates > 0 && (
-          <span class="cq-dup-line">{t('lblReceivedAetherShardsForDuplicateCards')}<img alt="" src={skinIconUrl('IMG_AETHER_SHARD')} /><b>{formatNumber(duplicates)}</b></span>
+          <span class="camp-dup-line">{t('lblReceivedAetherShardsForDuplicateCards')}<img alt="" src={skinIconUrl('IMG_AETHER_SHARD')} /><b>{formatNumber(duplicates)}</b></span>
         )}
-        <button class="primary cq-big" onClick={next}>{t('lblOK')} <kbd>{useOkKey(next)}</kbd></button>
+        <button class="primary camp-big" onClick={next}>{t('lblOK')} <kbd>{useOkKey(next)}</kbd></button>
       </div>
     </div>
   );
@@ -158,15 +158,15 @@ function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; n
   };
   const key = useOkKey(phase === 'ready' ? spin : phase === 'stopped' ? next : null);
   return (
-    <div class="cq-wheel-stop">
-      {emblem > 0 && <p class="cq-wheel-first"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestFirstConquest')}</p>}
-      <div class="cq-wheel-host" ref={host} />
+    <div class="camp-wheel-stop">
+      {emblem > 0 && <p class="camp-wheel-first"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestFirstConquest')}</p>}
+      <div class="camp-wheel-host" ref={host} />
       {/* The name fades in under the dial once it stops (conquest.css) */}
-      <p class="cq-wheel-name">{phase === 'stopped' ? wheelLabels()[step.outcome as WheelOutcome] : ''}</p>
-      <div class="cq-reveal-foot">
+      <p class="camp-wheel-name">{phase === 'stopped' ? wheelLabels()[step.outcome as WheelOutcome] : ''}</p>
+      <div class="camp-reveal-foot">
         {phase === 'stopped'
-          ? <button class="primary cq-big" onClick={next}>{t('lblGreat')} <kbd>{key}</kbd></button>
-          : <button class="primary cq-big" disabled={phase === 'spinning'} onClick={spin}>{t('lblWebConquestSpin')} <kbd>{key}</kbd></button>}
+          ? <button class="primary camp-big" onClick={next}>{t('lblGreat')} <kbd>{key}</kbd></button>
+          : <button class="primary camp-big" disabled={phase === 'spinning'} onClick={spin}>{t('lblWebConquestSpin')} <kbd>{key}</kbd></button>}
       </div>
     </div>
   );
@@ -195,15 +195,15 @@ function PackStop({ step, release, next }: { step: RewardStep; release: (shards:
   const title = step.total > 1 ? t('lblReceivedBoosterPackNOfTotal', step.number, step.total).replace('\n', ' ') : t('lblReceivedBoosterPack');
   return (
     // A click anywhere while the cards are moving or flipping shows them all at once
-    <div class="cq-pack-stop" onClick={() => { if (phase === 'opening') pack.current?.finish(); }}>
+    <div class="camp-pack-stop" onClick={() => { if (phase === 'opening') pack.current?.finish(); }}>
       <h3>{title}</h3>
-      <div class="cq-pack-host" ref={host} />
-      <div class="cq-reveal-foot">
+      <div class="camp-pack-host" ref={host} />
+      <div class="camp-reveal-foot">
         {phase === 'shown' && duplicates > 0 && (
-          <span class="cq-dup-line">{t('lblReceivedAetherShardsForDuplicateCards')}<img alt="" src={skinIconUrl('IMG_AETHER_SHARD')} /><b>{formatNumber(duplicates)}</b></span>
+          <span class="camp-dup-line">{t('lblReceivedAetherShardsForDuplicateCards')}<img alt="" src={skinIconUrl('IMG_AETHER_SHARD')} /><b>{formatNumber(duplicates)}</b></span>
         )}
         {phase === 'shown'
-          ? <button class="primary cq-big" onClick={e => { e.stopPropagation(); next(); }}>{t('lblGreat')} <kbd>{key}</kbd></button>
+          ? <button class="primary camp-big" onClick={e => { e.stopPropagation(); next(); }}>{t('lblGreat')} <kbd>{key}</kbd></button>
           : <button onClick={e => { e.stopPropagation(); pack.current?.finish(); }}>{t('lblSkip')}</button>}
       </div>
     </div>

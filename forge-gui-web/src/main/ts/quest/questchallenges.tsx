@@ -15,7 +15,7 @@ function Tile({ challenge, chosen, choose }: { challenge: QuestChallengeRow; cho
         <b>{challenge.title}</b>
         <span class="l">
           {challenge.difficulty > 0 && <Difficulty n={challenge.difficulty} />}
-          {challenge.repeatable && <span class="cq-chip">{t('lblWebQuestRepeatable')}</span>}
+          {challenge.repeatable && <span class="camp-chip">{t('lblWebQuestRepeatable')}</span>}
         </span>
         <p>{challenge.description}</p>
         <span class="f"><Price n={challenge.credits} />{challenge.cardReward.length > 0 && <span>{t('lblWebNCards', challenge.cardReward.length)}</span>}</span>
@@ -29,8 +29,8 @@ function Starting({ title, cards }: { title: string; cards: string[] }) {
   if (!cards.length) return null;
   return (
     <div class="qu-extras">
-      <span class="cq-kicker">{title}</span>
-      <div class="cq-chips">{cards.map((c, i) => <span key={i} class="cq-chip">{c}</span>)}</div>
+      <span class="camp-kicker">{title}</span>
+      <div class="camp-chips">{cards.map((c, i) => <span key={i} class="camp-chip">{c}</span>)}</div>
     </div>
   );
 }
@@ -40,7 +40,7 @@ export function Challenges({ page, duels, actions }: { page: QuestChallenges; du
   const [zoom, setZoom] = useState<string | null>(null);
   const challenge = page.challenges.find(c => c.id === chosen) ?? page.challenges[0];
   return (
-    <div class="cq-map">
+    <div class="camp-map">
       <div class="qu-list">
         <div class="qu-list-head">
           <h2>{t('lblChallenges')}</h2><p>{t('lblWhichChallenge')}</p>
@@ -49,7 +49,7 @@ export function Challenges({ page, duels, actions }: { page: QuestChallenges; du
           <WorldButtons page={duels} actions={actions} />
         </div>
         <div class="qu-status">
-          <span class="cq-chip">{t('lblWebQuestOpenOf', page.open, page.max)}</span>
+          <span class="camp-chip">{t('lblWebQuestOpenOf', page.open, page.max)}</span>
           {page.nextIn && <span>{page.nextIn}</span>}
         </div>
         <div class="qu-events">
@@ -60,8 +60,8 @@ export function Challenges({ page, duels, actions }: { page: QuestChallenges; du
         <SidePanel kicker={t('lblWebQuestChallenge')} title={challenge.title} art={challenge.face} zoom={zoom} setZoom={setZoom}
           foot={<Brings page={duels} actions={actions} zoom={setZoom} start={() => actions.questChallenge(challenge.id)} label={t('lblWebQuestStartChallenge')}
             fixedDeck={challenge.fixedDeck} />}>
-          {challenge.difficulty > 0 && <div class="cq-chips"><Difficulty n={challenge.difficulty} /></div>}
-          <p class="cq-desc">{challenge.description}</p>
+          {challenge.difficulty > 0 && <div class="camp-chips"><Difficulty n={challenge.difficulty} /></div>}
+          <p class="camp-desc">{challenge.description}</p>
           <dl class="qu-facts">
             <dt>{t('lblWebQuestOpponentLife')}</dt><dd>{challenge.aiLife}</dd>
             {challenge.humanLife != null && <><dt>{t('lblWebQuestYourLife')}</dt><dd>{challenge.humanLife}</dd></>}

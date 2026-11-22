@@ -10,9 +10,9 @@ export function Plate({ name, image, colors, selected, pressed, pick, choose, li
   tag?: string;
 }) {
   return (
-    <button class={selected ? 'cq-cmd in-use' : 'cq-cmd'} aria-pressed={pressed} onClick={pick} onDblClick={() => { if (!selected) choose(); }}>
+    <button class={selected ? 'camp-cmd in-use' : 'camp-cmd'} aria-pressed={pressed} onClick={pick} onDblClick={() => { if (!selected) choose(); }}>
       <div class="a" style={{ backgroundImage: image ? `url("${artUrl(image)}")` : undefined }} />
-      {selected && <span class="cq-chip brass tag">{tag ?? t('lblSelected')}</span>}
+      {selected && <span class="camp-chip brass tag">{tag ?? t('lblSelected')}</span>}
       <div class="t">
         <b>{name}</b>
         <span class="l"><span class="pips">{colors ? <Pips colors={colors} /> : <Pip letter="C" />}</span>{lines[0]}</span>
@@ -26,19 +26,19 @@ export function DeckPanel({ image, title, chips, problem, details, children }: {
   image?: string | null; title: string; chips: ComponentChildren; problem?: string | null; details?: ComponentChildren; children: ComponentChildren;
 }) {
   return (
-    <aside class="cq-side">
-      <div class="cq-cmd-detail">
-        <div class="cq-cmd-top">
-          {image && <img class="cq-card" alt={title} src={imageUrl(image)} data-image={image} />}
-          <div class="cq-cmd-about">
+    <aside class="camp-side">
+      <div class="camp-cmd-detail">
+        <div class="camp-cmd-top">
+          {image && <img class="camp-card" alt={title} src={imageUrl(image)} data-image={image} />}
+          <div class="camp-cmd-about">
             <h3>{title}</h3>
-            <div class="cq-chips">{chips}</div>
-            {problem && <p class="cq-warn">{problem}</p>}
+            <div class="camp-chips">{chips}</div>
+            {problem && <p class="camp-warn">{problem}</p>}
           </div>
         </div>
         {details}
       </div>
-      <div class="cq-foot">{children}</div>
+      <div class="camp-foot">{children}</div>
     </aside>
   );
 }

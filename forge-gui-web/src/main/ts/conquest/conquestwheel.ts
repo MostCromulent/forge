@@ -52,24 +52,24 @@ export interface Wheel {
 /** Draws the dial into host. labels names each outcome, in the player's language. */
 export function mountWheel(host: HTMLElement, labels: Record<WheelOutcome, string>): Wheel {
   const stops = WHEEL_SPOTS.map((o, i) => `${TONES[o]} ${i * 45}deg ${(i + 1) * 45}deg`).join(', ');
-  host.innerHTML = `<div class="cq-dl">
-    <div class="cq-dl-glow"></div><div class="cq-dl-rim"></div>
-    <div class="cq-dl-pegs">${WHEEL_SPOTS.map((_, i) => `<i style="rotate: ${45 * i + 22.5}deg"></i>`).join('')}</div>
-    <div class="cq-dl-spin"><div class="cq-dl-disc" style="background: conic-gradient(from -22.5deg, ${stops})"></div>${
-      WHEEL_SPOTS.map((o, i) => `<div class="cq-dl-wedge" style="transform: rotate(${45 * i}deg)"><div class="cq-dl-face"><div class="cq-dl-ic">${ICONS[o]}</div></div><div class="cq-dl-word"></div></div>`).join('')
+  host.innerHTML = `<div class="camp-dl">
+    <div class="camp-dl-glow"></div><div class="camp-dl-rim"></div>
+    <div class="camp-dl-pegs">${WHEEL_SPOTS.map((_, i) => `<i style="rotate: ${45 * i + 22.5}deg"></i>`).join('')}</div>
+    <div class="camp-dl-spin"><div class="camp-dl-disc" style="background: conic-gradient(from -22.5deg, ${stops})"></div>${
+      WHEEL_SPOTS.map((o, i) => `<div class="camp-dl-wedge" style="transform: rotate(${45 * i}deg)"><div class="camp-dl-face"><div class="camp-dl-ic">${ICONS[o]}</div></div><div class="camp-dl-word"></div></div>`).join('')
     }</div>
-    <div class="cq-dl-flare"></div><div class="cq-dl-hub">${LINES.chaos}</div><div class="cq-dl-wave"></div><div class="cq-dl-needle"></div>
+    <div class="camp-dl-flare"></div><div class="camp-dl-hub">${LINES.chaos}</div><div class="camp-dl-wave"></div><div class="camp-dl-needle"></div>
   </div>`;
   const root = host.firstElementChild as HTMLElement;
-  const spin = root.querySelector<HTMLElement>('.cq-dl-spin')!;
-  const needle = root.querySelector<HTMLElement>('.cq-dl-needle')!;
+  const spin = root.querySelector<HTMLElement>('.camp-dl-spin')!;
+  const needle = root.querySelector<HTMLElement>('.camp-dl-needle')!;
   // The labels are laid out again when the dial changes size, because they are placed in pixels
-  const curve = () => root.querySelectorAll<HTMLElement>('.cq-dl-wedge').forEach((wedge, i) => curveLabel(wedge, labels[WHEEL_SPOTS[i]]));
+  const curve = () => root.querySelectorAll<HTMLElement>('.camp-dl-wedge').forEach((wedge, i) => curveLabel(wedge, labels[WHEEL_SPOTS[i]]));
   // The observer also lays the labels out once when it starts
   new ResizeObserver(curve).observe(root);
   const show = (spot: number) => {
     spin.style.transform = `rotate(${-45 * spot}deg)`;
-    root.querySelectorAll('.cq-dl-wedge').forEach((wedge, i) => wedge.classList.toggle('hit', i === spot));
+    root.querySelectorAll('.camp-dl-wedge').forEach((wedge, i) => wedge.classList.toggle('hit', i === spot));
     root.classList.add('done');
   };
   return {
@@ -115,8 +115,8 @@ let measurer: CanvasRenderingContext2D | null = null;
  * words onto a second arc further in, and a word that still does not fit is drawn smaller.
  */
 function curveLabel(wedge: HTMLElement, text: string): void {
-  const word = wedge.querySelector<HTMLElement>('.cq-dl-word')!;
-  const face = wedge.querySelector<HTMLElement>('.cq-dl-face')!;
+  const word = wedge.querySelector<HTMLElement>('.camp-dl-word')!;
+  const face = wedge.querySelector<HTMLElement>('.camp-dl-face')!;
   const across = wedge.offsetWidth, centre = wedge.offsetHeight;
   if (!centre) return;
   const style = getComputedStyle(wedge);

@@ -54,15 +54,15 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
   const commanders = party.commanders.filter(c => shown(c.name, c.colors, c.origin));
   const walkers = party.planeswalkers.filter(w => shown(w.name, w.colors));
   return (
-    <div class="cq-party">
-      <div class="cq-party-list">
+    <div class="camp-party">
+      <div class="camp-party-list">
         <FilterBar kinds={kinds} filter={filter} set={setFilter} narrowed={!!typed || filter.colours.length > 0 || !!filter.plane}
           clearAll={() => { setTyped(''); setFilter(NO_FILTER); }}>
           <input class="find" type="search" placeholder={t('lblSearch')} autocomplete="off" value={typed} onInput={e => setTyped(e.currentTarget.value)} />
         </FilterBar>
         <section>
           <h4>{t('lblCommanders')}<span>{party.commanders.length}</span></h4>
-          <div class="cq-cmd-grid">
+          <div class="camp-cmd-grid">
             {commanders.map(c => <Plate key={c.name} name={c.name} image={c.image} colors={c.colors} selected={c.selected}
               pressed={c === commander} pick={() => setChosen({ walker: false, name: c.name })} choose={() => actions.conquestLead(c.name)}
               lines={[`${c.origin} (${c.wins}W / ${c.losses}L)`, <DeckLine commander={c} />]} />)}
@@ -70,7 +70,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
         </section>
         <section>
           <h4>{t('lblPlaneswalkers')}<span>{party.planeswalkers.length}</span></h4>
-          <div class="cq-cmd-grid">
+          <div class="camp-cmd-grid">
             {walkers.map(w => <Plate key={w.name} name={w.name} image={w.image} colors={w.colors} selected={w.selected}
               pressed={w === walker} pick={() => setChosen({ walker: true, name: w.name })} choose={() => actions.conquestWalker(w.name)} lines={[t('lblPlaneswalker')]} />)}
           </div>
@@ -80,16 +80,16 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
         : commander && (
           <DeckPanel image={commander.image} title={commander.name} problem={commander.deckSize > 0 ? commander.problem : null}
             chips={<>
-              {commander.origin && <span class="cq-chip">{commander.origin}</span>}
-              <span class="cq-chip">{commander.wins}W / {commander.losses}L</span>
-              <span class="cq-chip"><DeckLine commander={commander} /></span>
+              {commander.origin && <span class="camp-chip">{commander.origin}</span>}
+              <span class="camp-chip">{commander.wins}W / {commander.losses}L</span>
+              <span class="camp-chip"><DeckLine commander={commander} /></span>
             </>}
             details={details && commander.deckSize > 0 && <>
               <Curve curve={details.stats.curve} spells={details.stats.spells} px={44} />
               <div class="dk-cards" data-list>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
             </>}>
               <button onClick={() => actions.conquestEditDeck(commander.name)}>{t('btnEditDeck')}</button>
-              <button class="primary cq-big" disabled={commander.selected} onClick={() => actions.conquestLead(commander.name)}>
+              <button class="primary camp-big" disabled={commander.selected} onClick={() => actions.conquestLead(commander.name)}>
                 {commander.selected ? t('lblSelected') : t('lblSelectCommander')}
               </button>
           </DeckPanel>
@@ -101,24 +101,24 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
 function DeckLine({ commander }: { commander: ConquestCommanderRow }) {
   if (!commander.deckSize) return <>{t('lblNoDeck')}</>;
   return commander.problem
-    ? <span class="cq-warn" title={commander.problem}>{t('lblInvalidDeck')} · {commander.deckSize}</span>
+    ? <span class="camp-warn" title={commander.problem}>{t('lblInvalidDeck')} · {commander.deckSize}</span>
     : <>{t('lblWebNCards', commander.deckSize)}</>;
 }
 
 function WalkerPanel({ walker, actions }: { walker: ConquestWalkerRow; actions: Actions }) {
   return (
-    <aside class="cq-side">
-      <div class="cq-cmd-detail">
-        <div class="cq-cmd-top">
-          <img class="cq-card" alt={walker.name} src={imageUrl(walker.image)} data-image={walker.image} />
-          <div class="cq-cmd-about">
+    <aside class="camp-side">
+      <div class="camp-cmd-detail">
+        <div class="camp-cmd-top">
+          <img class="camp-card" alt={walker.name} src={imageUrl(walker.image)} data-image={walker.image} />
+          <div class="camp-cmd-about">
             <h3>{walker.name}</h3>
-            <div class="cq-chips"><span class="cq-chip">{t('lblPlaneswalker')}</span></div>
+            <div class="camp-chips"><span class="camp-chip">{t('lblPlaneswalker')}</span></div>
           </div>
         </div>
       </div>
-      <div class="cq-foot">
-        <button class="primary cq-big" disabled={walker.selected} onClick={() => actions.conquestWalker(walker.name)}>
+      <div class="camp-foot">
+        <button class="primary camp-big" disabled={walker.selected} onClick={() => actions.conquestWalker(walker.name)}>
           {walker.selected ? t('lblSelected') : t('lblWebConquestSelectWalker')}
         </button>
       </div>
