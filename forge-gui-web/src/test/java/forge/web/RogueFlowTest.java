@@ -6,6 +6,7 @@ import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueEvent;
 import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueMetaProgress;
+import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueRunHistoryEntry;
 import forge.gamemodes.rogue.RogueRunState;
@@ -14,6 +15,7 @@ import forge.gamemodes.rogue.effect.BazaarItem;
 import forge.gamemodes.rogue.effect.ChestEffect;
 import forge.gamemodes.rogue.effect.CustomRunModification;
 import forge.gamemodes.rogue.effect.EventEffect;
+import forge.gamemodes.rogue.effect.NPCEffect;
 import forge.gamemodes.rogue.effect.WoundEffect;
 import forge.gamemodes.rogue.effect.WrathfulEffect;
 import forge.gamemodes.rogue.flow.RogueDecisions.Pick;
@@ -449,5 +451,76 @@ public class RogueFlowTest {
         Assert.assertEquals(((NodePlanebound) flow.run().getCurrentNode()).getCursedCount(), 0);
 
         Assert.assertSame(startedMatch().run(), flow.run());
+    }
+
+    @Test
+    public void onlyReachableNodesCanBeSelected() {
+        start(NodeSanctum.class);
+        Assert.assertFalse(flow.select(5));
+        Assert.assertEquals(run.getCurrentNodeIndex(), 6);
+
+        run.addChestEffect(ChestEffect.RELIC_OF_PATHFINDING);
+        Assert.assertTrue(flow.select(5));
+        Assert.assertEquals(run.getCurrentNodeIndex(), 5);
+        Assert.assertFalse(flow.select(10), "a node in the next row");
+        Assert.assertFalse(flow.select(-1));
+        Assert.assertEquals(run.getCurrentNodeIndex(), 5);
+    }
+
+    @Test
+    public void rerollingChangesThePlaneAndSaves() {
+        final NodePlanebound plane = (NodePlanebound) start(NodePlanebound.class);
+        final RoguePlanebound before = plane.getRoguePlanebound();
+        Assert.assertEquals(flow.rerollsLeft(), 0);
+        Assert.assertFalse(flow.rerollPlane());
+        Assert.assertSame(plane.getRoguePlanebound(), before);
+
+        aetherwork(AetherEffect.PLANEBENDER);
+        Assert.assertEquals(flow.rerollsLeft(), 1);
+        final List<RoguePlanebound> candidates = flow.rerollCandidates();
+        Assert.assertTrue(flow.rerollPlane());
+        final RoguePlanebound after = plane.getRoguePlanebound();
+        Assert.assertNotEquals(after, before);
+        Assert.assertEquals(after.type(), before.type());
+        Assert.assertTrue(candidates.contains(after));
+        Assert.assertEquals(flow.rerollsLeft(), 0);
+
+        final RogueRun saved = saved();
+        Assert.assertEquals(((NodePlanebound) saved.getCurrentNode()).getRoguePlanebound(), after);
+        Assert.assertEquals(saved.getRunEffectCharges(AetherEffect.PLANEBENDER.getId()), 0);
+    }
+
+    @Test
+    public void abandoningRecordsAndDeletes() {
+        start(NodeSanctum.class);
+        flow.abandon();
+        final List<RogueRunHistoryEntry> history = RogueMetaProgress.getInstance().getRunHistory();
+        Assert.assertEquals(history.size(), 1);
+        Assert.assertEquals(history.get(0).getOutcome(), "ABANDONED");
+        Assert.assertFalse(RogueIO.getRogueFile(run).exists());
+        Assert.assertEquals(decisions.asked, List.of("runEnded"));
+        Assert.assertTrue(flow.load().isEmpty());
+    }
+
+    @Test
+    public void goingEndlessRaisesTheLevelAndAsksForABoon() {
+        start(NodeSanctum.class);
+        run.setCurrentNodeIndex(15);
+        run.getCurrentNode().setCompleted(true);
+        final RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        progress.setNPCLevel(NPC.TYVAR.id, 3);
+        Assert.assertFalse(flow.goEndless());
+        Assert.assertEquals(run.getEndlessLevel(), 0);
+        Assert.assertEquals(run.getCurrentNodeIndex(), 15);
+
+        progress.unlockEndlessMode();
+        decisions.then("chooseBoon", new Pick<>(false, NPCEffect.TYVAR_BRAWLER));
+        Assert.assertTrue(flow.goEndless());
+        Assert.assertEquals(decisions.asked, List.of("chooseBoon"));
+        final RogueRun saved = saved();
+        Assert.assertEquals(saved.getEndlessLevel(), 1);
+        Assert.assertEquals(saved.getCurrentNodeIndex(), 0);
+        Assert.assertEquals(saved.getPath().getCompletedCount(), 0);
+        Assert.assertEquals(saved.getActiveNPCEffects(), List.of(NPCEffect.TYVAR_BRAWLER));
     }
 }

@@ -131,7 +131,7 @@ public class RogueWinLose extends ControlWinLose {
 
         if (controller.hasWonRun() && currentRun != null && !currentRun.isRunFailed()) {
             if (goEndless) {
-                CSubmenuRogueMap.SINGLETON_INSTANCE.continueEndlessly();
+                CSubmenuRogueMap.SINGLETON_INSTANCE.getFlow().goEndless();
             } else if (RogueWinLoseController.finalizeRunVictory(currentRun, null)) {
                 FOptionPane.showMessageDialog(localizer.getMessage("lblRogueSparkWon"), localizer.getMessage("lblRogueSparkReward"));
             }

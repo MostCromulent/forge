@@ -14,12 +14,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public final class EffectResultHelper {
+final class EffectResultHelper {
 
     private EffectResultHelper() {
     }
 
-    public static boolean handleTrigger(EffectResultContext ctx, RogueRun currentRun, RogueDecisions decisions) {
+    static boolean handleTrigger(EffectResultContext ctx, RogueRun currentRun, RogueDecisions decisions) {
         if (ctx.trigger == null) {
             return true;
         }

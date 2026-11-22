@@ -6,11 +6,7 @@ import forge.ImageCache;
 import forge.ImageKeys;
 import forge.gamemodes.rogue.*;
 import forge.gamemodes.rogue.effect.*;
-import forge.gamemodes.rogue.flow.EffectResultHelper;
 import forge.gamemodes.rogue.flow.RogueDecisions;
-import forge.gamemodes.rogue.flow.RogueDecisions.Pick;
-import forge.gamemodes.rogue.flow.RogueDecisions.ResultKind;
-import forge.gamemodes.rogue.flow.RogueDecisions.Section;
 import forge.gamemodes.rogue.npc.NPCContext;
 import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.npc.NPCEncounterComposite;
@@ -24,11 +20,9 @@ import forge.screens.home.CHomeUI;
 import forge.toolbox.FOptionPane;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javax.swing.SwingUtilities;
 import org.tinylog.Logger;
 
@@ -571,7 +565,7 @@ public enum CSubmenuRogueStart implements ICDoc {
 
     // Generate path and apply run start effects
     RoguePathGenerator.generateRandomPath(newRun);
-    applyRunStartEffectsAndNpcBoon(newRun, progress);
+    CSubmenuRogueMap.SINGLETON_INSTANCE.getFlow().runStartBoon(newRun, progress);
 
     // Generate unique name for the run (used as filename)
     // Format: DeckName_Timestamp (e.g., "MeriaRogueCommander_12-11-25_143022")
@@ -657,27 +651,6 @@ public enum CSubmenuRogueStart implements ICDoc {
     return true;
   }
 
-  void applyRunStartEffectsAndNpcBoon(RogueRun newRun, RogueMetaProgress progress) {
-    RogueEffectComposite.INSTANCE.onRunStart(newRun, ctx -> EffectResultHelper.handleTrigger(ctx, newRun, decisions));
-
-    // Show NPC encounter dialogs (e.g. Tyvar offering npcEffect choices)
-    for (NPCContext ctx : NPCEncounterComposite.INSTANCE.onRunStart(progress, newRun)) {
-      NPCEffect chosen = showRunStartNpcDialog(progress, newRun, ctx);
-      if (chosen == null) {
-        continue;
-      }
-
-      EffectResultContext effectCtx = new EffectResultContext();
-      chosen.applyEffect(newRun, effectCtx);
-      if (chosen.getEffectType() != RogueEffect.EffectType.ONESHOT) {
-        newRun.addNPCEffect(chosen);
-      } else if (EffectResultHelper.handleTrigger(effectCtx, newRun, decisions)) {
-        CodexHelper.recordAcquiredCards(newRun, effectCtx.addedCards);
-        showNpcResultIfNeeded(chosen, effectCtx);
-      }
-    }
-  }
-
   private List<RogueRun> getContinuableRunsToAbandon() {
     Map<String, RogueRun> runsByName = new LinkedHashMap<>();
     addContinuableRun(runsByName, CSubmenuRogueMap.SINGLETON_INSTANCE.getCurrentRun());
@@ -693,121 +666,5 @@ public enum CSubmenuRogueStart implements ICDoc {
     }
     String key = run.getName() != null ? run.getName() : "run@" + System.identityHashCode(run);
     runsByName.putIfAbsent(key, run);
-  }
-
-  private NPCEffect showRunStartNpcDialog(RogueMetaProgress progress, RogueRun newRun, NPCContext ctx) {
-    NPCContext effectiveCtx = maybeOverrideNpcChoices(ctx);
-    Pick<NPCEffect> result;
-    boolean rerollRequested;
-    do {
-      ChoiceRerollContext rerollCtx = new ChoiceRerollContext();
-      RogueEffectComposite.INSTANCE.onBeforeNpcBoons(rerollCtx, newRun);
-      CodexHelper.recordTraitChoices(effectiveCtx.choices().stream()
-          .map(NPCContext.NPCChoice::npcEffect)
-          .toList());
-      result = decisions.chooseBoon(effectiveCtx, rerollCtx);
-      rerollRequested = result.reroll();
-
-      if (rerollRequested) {
-        RogueEffectComposite.INSTANCE.onChoiceReroll(rerollCtx, newRun);
-        List<NPCContext> rerolledContexts = NPCEncounterComposite.INSTANCE.onRunStart(progress, newRun);
-        if (!rerolledContexts.isEmpty()) {
-          effectiveCtx = maybeOverrideNpcChoices(rerolledContexts.get(0));
-        }
-      }
-    } while (rerollRequested);
-
-    NPCEffect choice = result.choice();
-    CodexHelper.recordTraitAcquired(choice);
-    return choice;
-  }
-
-  private NPCContext maybeOverrideNpcChoices(NPCContext ctx) {
-    if (!ForgePreferences.DEV_MODE || ctx == null || ctx.choices().size() != 3) {
-      return ctx;
-    }
-    if (ctx.choices().stream().anyMatch(choice -> choice == null || choice.npcEffect() == null)) {
-      return ctx;
-    }
-    List<NPCEffect> preselectedEffects = ctx.choices().stream()
-        .map(NPCContext.NPCChoice::npcEffect)
-        .toList();
-    List<NPCEffect> selected = decisions.devPick(Localizer.getInstance().getMessage("lblRogueDevNpcChoiceOverride"),
-        NPCEffect.getEffectsForNpc(ctx.npc(), null), preselectedEffects, 3);
-
-    List<NPCContext.NPCChoice> choices = new ArrayList<>(selected.size());
-    for (NPCEffect effect : selected) {
-      choices.add(new NPCContext.NPCChoice(effect.getDisplayName(), effect));
-    }
-    return new NPCContext(ctx.npc(), ctx.flavorTextChunks(), choices,
-        ctx.displayNameOverride(), ctx.avatarIndexOverride());
-  }
-
-  private void showNpcResultIfNeeded(NPCEffect effect, EffectResultContext ctx) {
-    List<Section> sections = buildNpcResultSections(effect, ctx);
-    if (sections.isEmpty()) {
-      return;
-    }
-
-    decisions.showResult(ResultKind.BOON,
-        Localizer.getInstance().getMessage("lblRogueNpcRewardGained"), Localizer.getInstance().getMessage("lblRogueGainedNpcReward", effect.getDisplayName()), sections);
-  }
-
-  private List<Section> buildNpcResultSections(NPCEffect effect, EffectResultContext ctx) {
-    Set<String> excludedNames = new HashSet<>(getPreviewedCardNames(effect));
-    excludedNames.addAll(getCardNames(ctx.candidateCards));
-
-    List<Section> sections = new ArrayList<>();
-    List<PaperCard> removedCards = filterResultCards(ctx.removedCards, excludedNames);
-    if (!removedCards.isEmpty()) {
-      sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsRemoved"), null, removedCards));
-    }
-
-    List<PaperCard> addedCards = filterResultCards(ctx.addedCards, excludedNames);
-    if (!addedCards.isEmpty()) {
-      sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsAdded"), null, addedCards));
-    }
-    return sections;
-  }
-
-  private Set<String> getPreviewedCardNames(NPCEffect effect) {
-    Set<String> cardNames = new HashSet<>();
-    for (PreviewReference reference : effect.getPreviewReferences()) {
-      if (reference.type() == PreviewReferenceType.CARD) {
-        String cardName = TextHelper.extractCardNameFromReference(reference.token());
-        if (!cardName.isBlank()) {
-          cardNames.add(cardName);
-        }
-      }
-    }
-    return cardNames;
-  }
-
-  private Set<String> getCardNames(List<PaperCard> cards) {
-    Set<String> cardNames = new HashSet<>();
-    if (cards == null) {
-      return cardNames;
-    }
-
-    for (PaperCard card : cards) {
-      if (card != null) {
-        cardNames.add(card.getName());
-      }
-    }
-    return cardNames;
-  }
-
-  private List<PaperCard> filterResultCards(List<PaperCard> cards, Set<String> excludedNames) {
-    if (cards == null || cards.isEmpty()) {
-      return List.of();
-    }
-
-    List<PaperCard> resultCards = new ArrayList<>();
-    for (PaperCard card : cards) {
-      if (card != null && !excludedNames.contains(card.getName())) {
-        resultCards.add(card);
-      }
-    }
-    return resultCards;
   }
 }

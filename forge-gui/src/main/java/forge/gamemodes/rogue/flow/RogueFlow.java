@@ -1,21 +1,46 @@
 package forge.gamemodes.rogue.flow;
 
+import forge.gamemodes.rogue.CodexHelper;
+import forge.gamemodes.rogue.PreviewReference;
+import forge.gamemodes.rogue.PreviewReferenceType;
+import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueMetaProgress;
+import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.RogueRunHistoryEntry;
+import forge.gamemodes.rogue.RogueRunTimer;
 import forge.gamemodes.rogue.RogueStats;
 import forge.gamemodes.rogue.RogueWinLoseController;
-import forge.gamemodes.rogue.effect.DefeatContext;
-import forge.gamemodes.rogue.effect.RogueEffectComposite;
+import forge.gamemodes.rogue.TextHelper;
+import forge.gamemodes.rogue.effect.*;
+import forge.gamemodes.rogue.flow.RogueDecisions.Pick;
 import forge.gamemodes.rogue.flow.RogueDecisions.ResultKind;
+import forge.gamemodes.rogue.flow.RogueDecisions.Section;
+import forge.gamemodes.rogue.npc.NPCContext;
+import forge.gamemodes.rogue.npc.NPCEncounterComposite;
 import forge.gamemodes.rogue.path.NodeBazaar;
 import forge.gamemodes.rogue.path.NodeChest;
 import forge.gamemodes.rogue.path.NodeEvent;
 import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.NodeSanctum;
+import forge.gamemodes.rogue.path.RoguePathGenerator;
 import forge.gamemodes.rogue.path.RoguePathNode;
+import forge.item.PaperCard;
+import forge.localinstance.achievements.RogueCommanderAchievements;
+import forge.localinstance.properties.ForgePreferences;
+import forge.sound.SoundEffectType;
+import forge.sound.SoundSystem;
 import forge.util.Localizer;
+import forge.util.MyRandom;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.tinylog.Logger;
 
 /** A client's current Rogue Commander run, and the steps of playing it. */
 public final class RogueFlow {
@@ -50,6 +75,137 @@ public final class RogueFlow {
 
     public void clearRun() {
         currentRun = null;
+    }
+
+    /** The run in memory, else the most recent one that can be continued. */
+    public Optional<RogueRun> load() {
+        if (currentRun == null) {
+            currentRun = RogueIO.loadMostRecentContinuableRun().orElse(null);
+        }
+        return Optional.ofNullable(currentRun);
+    }
+
+    public boolean select(int nodeIndex) {
+        if (currentRun == null) {
+            return false;
+        }
+
+        RoguePathNode clickedNode = currentRun.getPath().getNode(nodeIndex);
+        if (clickedNode == null) {
+            return false;
+        }
+
+        RoguePathNode currentNode = currentRun.getCurrentNode();
+        if (currentNode == null) {
+            return false;
+        }
+
+        // Only allow selecting nodes in the current row
+        if (clickedNode.getRowIndex() != currentNode.getRowIndex()) {
+            return false;
+        }
+
+        // Only allow selecting reachable nodes in the current row
+        List<Integer> visibleInCurrentRow = currentRun.getPath()
+            .getVisibleNodesInCurrentRow(currentNode.getRowIndex(), pathContext());
+        if (!visibleInCurrentRow.contains(nodeIndex)) {
+            return false; // Not reachable, ignore click
+        }
+
+        // Check if this is a multi-node row - only allow selection changes if multiple nodes
+        List<RoguePathNode> currentRowNodes = currentRun.getPath()
+            .getNodesInRow(currentNode.getRowIndex());
+        if (currentRowNodes.size() == 1) {
+            return false; // Single node row - no selection needed, already auto-selected
+        }
+
+        currentRun.setCurrentNodeIndex(nodeIndex);
+        return true;
+    }
+
+    private PathUpdateContext pathContext() {
+        PathUpdateContext pathCtx = new PathUpdateContext();
+        RogueEffectComposite.INSTANCE.onPathUpdate(pathCtx, currentRun);
+        return pathCtx;
+    }
+
+    public String enterText() {
+        RoguePathNode node = currentRun.getCurrentNode();
+        if (node == null) {
+            return Localizer.getInstance().getMessage("lblRogueNoNodeAvailable");
+        } else if (node instanceof NodePlanebound nodePlanebound) {
+            String planeName = pathContext().hidePlanes && !nodePlanebound.isRevealed()
+                ? "???" : nodePlanebound.getRoguePlanebound().planeName();
+            return Localizer.getInstance().getMessage("lblRogueEnterPlane", planeName);
+        } else if (node instanceof NodeSanctum) {
+            return Localizer.getInstance().getMessage("lblRogueEnterSanctum");
+        } else if (node instanceof NodeBazaar) {
+            return Localizer.getInstance().getMessage("lblRogueEnterBazaar");
+        } else if (node instanceof NodeEvent) {
+            return Localizer.getInstance().getMessage("lblRogueEnterEvent");
+        } else if (node instanceof NodeChest) {
+            return Localizer.getInstance().getMessage("lblRogueOpenChest");
+        } else {
+            return Localizer.getInstance().getMessage("lblRogueEnterNode");
+        }
+    }
+
+    /** 0 when the current node is not a plane or a match is on. */
+    public int rerollsLeft() {
+        if (currentRun == null || currentRun.getHostedMatch() != null
+            || !(currentRun.getCurrentNode() instanceof NodePlanebound)) {
+            return 0;
+        }
+        return pathContext().remainingPlaneboundRerolls;
+    }
+
+    public boolean rerollPlane() {
+        if (rerollsLeft() <= 0) {
+            return false;
+        }
+
+        List<RoguePlanebound> candidates = rerollCandidates();
+        if (candidates.isEmpty()) {
+            return false;
+        }
+
+        NodePlanebound nodePlanebound = (NodePlanebound) currentRun.getCurrentNode();
+        PathUpdateContext pathCtx = pathContext();
+        Collections.shuffle(candidates, MyRandom.getRandom());
+        nodePlanebound.setRoguePlanebound(candidates.get(0));
+        nodePlanebound.setRevealed(false);
+        RogueEffectComposite.INSTANCE.onPathNodeReroll(pathCtx, currentRun);
+        RogueIO.saveRun(currentRun);
+        return true;
+    }
+
+    public List<RoguePlanebound> rerollCandidates() {
+        if (currentRun == null || currentRun.getPath() == null
+            || !(currentRun.getCurrentNode() instanceof NodePlanebound selectedNode)) {
+            return List.of();
+        }
+
+        int currentRow = selectedNode.getRowIndex();
+        Set<RoguePlanebound> excludedPlanebounds = new HashSet<>();
+        for (RoguePathNode node : currentRun.getPath().getNodes()) {
+            if (!(node instanceof NodePlanebound planebound)) {
+                continue;
+            }
+
+            boolean isCurrentRow = node.getRowIndex() == currentRow;
+            boolean isFutureRow = node.getRowIndex() > currentRow;
+            boolean isRevealedPreviousRow = node.getRowIndex() < currentRow && planebound.isRevealed();
+            if (isCurrentRow || isFutureRow || isRevealedPreviousRow) {
+                excludedPlanebounds.add(planebound.getRoguePlanebound());
+            }
+        }
+
+        int planeboundRow = currentRun.getPath().countPlaneboundRowsUpTo(currentRow);
+        List<RoguePlanebound> candidates = new ArrayList<>(RogueConfig.loadPlanebounds());
+        candidates.removeIf(planebound -> planebound.type() != selectedNode.getPlaneboundType()
+            || planebound.minRow() > planeboundRow
+            || excludedPlanebounds.contains(planebound));
+        return candidates;
     }
 
     public void enter() {
@@ -129,5 +285,232 @@ public final class RogueFlow {
             : Localizer.getInstance().getMessage("lblRogueDefeatedBy", defeatedBy);
         decisions.showResult(ResultKind.DEFEAT, Localizer.getInstance().getMessage("lblRogueDefeat"),
             message, List.of());
+    }
+
+    public boolean goEndless() {
+        if (currentRun == null || !currentRun.isRunComplete() || currentRun.isRunFailed()
+            || currentRun.isRunWon()
+            || !RogueMetaProgress.getInstance().isEndlessModeUnlocked()) {
+            return false;
+        }
+
+        RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        currentRun.setEndlessLevel(currentRun.getEndlessLevel() + 1);
+        currentRun.setCurrentNodeIndex(0);
+        RoguePathGenerator.generateRandomPath(currentRun);
+        runStartBoon(currentRun, progress);
+        RogueIO.saveRun(currentRun);
+        return true;
+    }
+
+    public void devNextNode() {
+        if (currentRun == null) return;
+        RoguePathNode node = currentRun.getCurrentNode();
+        if (node == null) return;
+
+        node.setCompleted(true);
+        var progress = RogueMetaProgress.getInstance();
+        if (node instanceof NodePlanebound nodePlanebound) {
+            RogueStats.fireOnMatchCompleted(currentRun, progress, true);
+            currentRun.addGold(nodePlanebound.getGoldReward());
+            progress.addEchoes(nodePlanebound.getEchoReward());
+        } else {
+            RogueStats.fireOnSideNodeCompleted(currentRun, progress);
+        }
+        // Last node — treat as win
+        if (currentRun.getCurrentNodeIndex() >= currentRun.getPath().getNodeCount() - 1) {
+            devWinRun();
+            return;
+        }
+
+        currentRun.nextNode();
+        RogueIO.saveRun(currentRun);
+        decisions.mapChanged(currentRun);
+    }
+
+    public void devWinRun() {
+        if (currentRun == null) return;
+        String commanderName = currentRun.getCurrentCommanderName();
+        currentRun.setRunWon(true);
+        currentRun.getRunTimer().stop();
+        RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        progress.addEchoes(20);
+        progress.addRunHistoryEntry(RogueRunHistoryEntry.fromRun(currentRun, "VICTORY", "[DEV]"));
+        RogueStats.fireOnRunCompleted(currentRun, progress, true);
+        RogueCommanderAchievements.getInstance().recordRunWon(commanderName);
+        progress.recordDescensionWin(currentRun);
+        RogueCommanderAchievements.getInstance().evaluateRunAchievements(currentRun);
+        progress.notifyDescensionL1IfFirstWin(currentRun);
+        RogueIO.saveRun(currentRun);
+        currentRun = null;
+        decisions.runEnded();
+    }
+
+    public boolean save() {
+        if (currentRun == null || currentRun.getHostedMatch() != null) {
+            return false;
+        }
+
+        RogueRunTimer timer = currentRun.getRunTimer();
+        timer.stop();
+        try {
+            RogueIO.saveRun(currentRun);
+        } catch (RuntimeException e) {
+            timer.start();
+            Logger.error(e, "Could not save Rogue Commander run before returning home");
+            return false;
+        }
+        return true;
+    }
+
+    public void abandon() {
+        if (currentRun == null || currentRun.getHostedMatch() != null) {
+            return;
+        }
+
+        currentRun.getRunTimer().stop();
+        RogueMetaProgress.getInstance().addRunHistoryEntry(
+            RogueRunHistoryEntry.fromRun(currentRun, "ABANDONED", ""));
+        RogueIO.deleteRun(currentRun);
+        SoundSystem.instance.play(SoundEffectType.LoseDuel, SoundEffectType.LoseDuel.isSynced());
+        currentRun = null;
+        decisions.runEnded();
+    }
+
+    public void runStartBoon(RogueRun newRun, RogueMetaProgress progress) {
+        RogueEffectComposite.INSTANCE.onRunStart(newRun, ctx -> EffectResultHelper.handleTrigger(ctx, newRun, decisions));
+
+        // Show NPC encounter dialogs (e.g. Tyvar offering npcEffect choices)
+        for (NPCContext ctx : NPCEncounterComposite.INSTANCE.onRunStart(progress, newRun)) {
+            NPCEffect chosen = showRunStartNpcDialog(progress, newRun, ctx);
+            if (chosen == null) {
+                continue;
+            }
+
+            EffectResultContext effectCtx = new EffectResultContext();
+            chosen.applyEffect(newRun, effectCtx);
+            if (chosen.getEffectType() != RogueEffect.EffectType.ONESHOT) {
+                newRun.addNPCEffect(chosen);
+            } else if (EffectResultHelper.handleTrigger(effectCtx, newRun, decisions)) {
+                CodexHelper.recordAcquiredCards(newRun, effectCtx.addedCards);
+                showNpcResultIfNeeded(chosen, effectCtx);
+            }
+        }
+    }
+
+    private NPCEffect showRunStartNpcDialog(RogueMetaProgress progress, RogueRun newRun, NPCContext ctx) {
+        NPCContext effectiveCtx = maybeOverrideNpcChoices(ctx);
+        Pick<NPCEffect> result;
+        boolean rerollRequested;
+        do {
+            ChoiceRerollContext rerollCtx = new ChoiceRerollContext();
+            RogueEffectComposite.INSTANCE.onBeforeNpcBoons(rerollCtx, newRun);
+            CodexHelper.recordTraitChoices(effectiveCtx.choices().stream()
+                .map(NPCContext.NPCChoice::npcEffect)
+                .collect(Collectors.toList()));
+            result = decisions.chooseBoon(effectiveCtx, rerollCtx);
+            rerollRequested = result.reroll();
+
+            if (rerollRequested) {
+                RogueEffectComposite.INSTANCE.onChoiceReroll(rerollCtx, newRun);
+                List<NPCContext> rerolledContexts = NPCEncounterComposite.INSTANCE.onRunStart(progress, newRun);
+                if (!rerolledContexts.isEmpty()) {
+                    effectiveCtx = maybeOverrideNpcChoices(rerolledContexts.get(0));
+                }
+            }
+        } while (rerollRequested);
+
+        NPCEffect choice = result.choice();
+        CodexHelper.recordTraitAcquired(choice);
+        return choice;
+    }
+
+    private NPCContext maybeOverrideNpcChoices(NPCContext ctx) {
+        if (!ForgePreferences.DEV_MODE || ctx == null || ctx.choices().size() != 3) {
+            return ctx;
+        }
+        if (ctx.choices().stream().anyMatch(choice -> choice == null || choice.npcEffect() == null)) {
+            return ctx;
+        }
+        List<NPCEffect> preselectedEffects = ctx.choices().stream()
+            .map(NPCContext.NPCChoice::npcEffect)
+            .collect(Collectors.toList());
+        List<NPCEffect> selected = decisions.devPick(Localizer.getInstance().getMessage("lblRogueDevNpcChoiceOverride"),
+            NPCEffect.getEffectsForNpc(ctx.npc(), null), preselectedEffects, 3);
+
+        List<NPCContext.NPCChoice> choices = new ArrayList<>(selected.size());
+        for (NPCEffect effect : selected) {
+            choices.add(new NPCContext.NPCChoice(effect.getDisplayName(), effect));
+        }
+        return new NPCContext(ctx.npc(), ctx.flavorTextChunks(), choices,
+            ctx.displayNameOverride(), ctx.avatarIndexOverride());
+    }
+
+    private void showNpcResultIfNeeded(NPCEffect effect, EffectResultContext ctx) {
+        List<Section> sections = buildNpcResultSections(effect, ctx);
+        if (sections.isEmpty()) {
+            return;
+        }
+
+        decisions.showResult(ResultKind.BOON,
+            Localizer.getInstance().getMessage("lblRogueNpcRewardGained"), Localizer.getInstance().getMessage("lblRogueGainedNpcReward", effect.getDisplayName()), sections);
+    }
+
+    private List<Section> buildNpcResultSections(NPCEffect effect, EffectResultContext ctx) {
+        Set<String> excludedNames = new HashSet<>(getPreviewedCardNames(effect));
+        excludedNames.addAll(getCardNames(ctx.candidateCards));
+
+        List<Section> sections = new ArrayList<>();
+        List<PaperCard> removedCards = filterResultCards(ctx.removedCards, excludedNames);
+        if (!removedCards.isEmpty()) {
+            sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsRemoved"), null, removedCards));
+        }
+
+        List<PaperCard> addedCards = filterResultCards(ctx.addedCards, excludedNames);
+        if (!addedCards.isEmpty()) {
+            sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsAdded"), null, addedCards));
+        }
+        return sections;
+    }
+
+    private Set<String> getPreviewedCardNames(NPCEffect effect) {
+        Set<String> cardNames = new HashSet<>();
+        for (PreviewReference reference : effect.getPreviewReferences()) {
+            if (reference.type() == PreviewReferenceType.CARD) {
+                String cardName = TextHelper.extractCardNameFromReference(reference.token());
+                if (!cardName.isBlank()) {
+                    cardNames.add(cardName);
+                }
+            }
+        }
+        return cardNames;
+    }
+
+    private Set<String> getCardNames(List<PaperCard> cards) {
+        Set<String> cardNames = new HashSet<>();
+        if (cards == null) {
+            return cardNames;
+        }
+
+        for (PaperCard card : cards) {
+            if (card != null) {
+                cardNames.add(card.getName());
+            }
+        }
+        return cardNames;
+    }
+
+    private List<PaperCard> filterResultCards(List<PaperCard> cards, Set<String> excludedNames) {
+        if (cards == null || cards.isEmpty()) {
+            return List.of();
+        }
+
+        List<PaperCard> resultCards = new ArrayList<>();
+        for (PaperCard card : cards) {
+            if (card != null && !excludedNames.contains(card.getName())) {
+                resultCards.add(card);
+            }
+        }
+        return resultCards;
     }
 }
