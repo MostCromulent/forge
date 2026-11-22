@@ -4,7 +4,9 @@ import forge.deck.Deck;
 import forge.game.GameType;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.HostedMatch;
+import forge.gamemodes.rogue.BazaarPricing;
 import forge.gamemodes.rogue.CardRewardHelper;
+import forge.gamemodes.rogue.RogueCustomDeckGenerator;
 import forge.gamemodes.rogue.RogueEvent;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueTutorial;
@@ -18,6 +20,7 @@ import forge.gamemodes.rogue.effect.WrathfulEffect;
 import forge.gamemodes.rogue.npc.NPCContext;
 import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.item.PaperCard;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -33,19 +36,46 @@ public interface RogueDecisions extends CardRewardHelper.RewardDialog {
     /** choice is null when the player skips. */
     record Pick<T>(boolean reroll, T choice) { }
     record SanctumOffer(String restDescription, boolean restEnabled, String restDisabledReason,
-                        SanctumContext context, RogueRun run) { }
+                        SanctumContext context, RogueRun run) {
+        public boolean accepts(SanctumAnswer answer) {
+            return switch (answer.action()) {
+                case HEAL -> restEnabled;
+                case CUSTOM -> context.extraChoices.contains(answer.custom());
+                case COOK, REFLECT, SKIP -> true;
+            };
+        }
+    }
     record SanctumAnswer(SanctumAction action, SanctumContext.SanctumChoice custom) { }
     /** rerollLabel is null in a shop that has no reroll. */
     record ShopOffer(List<BazaarItem> items, RogueRun run, int gold, String title, String rerollLabel,
-                     int rerollCost, boolean rerollEnabled, int tab) { }
+                     int rerollCost, boolean rerollEnabled, int tab) {
+        public boolean accepts(ShopAnswer answer) {
+            return items.containsAll(answer.selected())
+                && BazaarPricing.calculateItemsTotalCost(answer.selected()) <= gold
+                && (!answer.reroll() || rerollEnabled && rerollCost <= gold);
+        }
+    }
     record ShopAnswer(boolean reroll, Set<BazaarItem> selected, int tab) { }
     /** preview makes a deck of the cards picked so far, and is null when the deck to view is the run's. */
     record CardChoice(CardChoiceKind kind, String title, String subtitle, List<PaperCard> candidates, RogueRun run,
-                      int min, int max, Function<List<PaperCard>, Deck> preview) { }
+                      int min, int max, Function<List<PaperCard>, Deck> preview) {
+        public boolean accepts(List<PaperCard> picked) {
+            if (picked.size() < min || picked.size() > max) {
+                return false;
+            }
+            List<PaperCard> left = new ArrayList<>(candidates);
+            return picked.stream().allMatch(left::remove);
+        }
+    }
     record Section(String label, String text, List<PaperCard> cards) { }
     /** recordPublicCards is for the end of the game. */
     record RogueMatch(RogueRun run, NodePlanebound node, Set<GameType> variants, List<RegisteredPlayer> players,
                       RegisteredPlayer human, Consumer<HostedMatch> recordPublicCards) { }
+
+    /** Whether they are one eligible commander, or two that partner. */
+    static boolean commanders(List<PaperCard> picked) {
+        return !RogueCustomDeckGenerator.findChosenCommanders(picked).isEmpty();
+    }
 
     /** Empty when the player cancels. */
     List<PaperCard> chooseCommanders();
