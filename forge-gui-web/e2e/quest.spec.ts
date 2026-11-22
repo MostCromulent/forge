@@ -167,7 +167,8 @@ test('a bazaar item is bought from its stall', async ({ page }) => {
   await expect(credits).toHaveText((5000 - price).toLocaleString('en-GB'));
   // A bought pet is offered for duels. A level-0 quest cannot raise a pet past level 1, so the pet leaves the stall
   await page.locator('.cq-tab', { hasText: 'Duels' }).click();
-  await expect(page.locator('.qu-row select option', { hasText: 'Bird' })).toHaveCount(1);
+  await page.locator('.qu-row .select-button').click();
+  await expect(page.locator('.select-menu .opt', { hasText: 'Bird' })).toHaveCount(1);
 });
 
 // Fails if a tournament cannot be entered, drafted, built and its first match reached, or a game lost there forfeits it without asking
