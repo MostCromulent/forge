@@ -1,4 +1,5 @@
-/* Planar Conquest. The bar, side panel and reveal reuse the campaign styles in campaign.css, and the shelves the Limited shelf (limited.css). */
+/* Planar Conquest. The bar, side panel and reveal reuse the campaign styles in campaign.css, and the shelves the Limited shelf (limited.css).
+   The rules for camp- classes are shared too: Quest also uses the pack, the card lists and the deck pages. */
 
 .cq-save .ev-line .camp-coin { margin-left: 6px; }
 
@@ -142,7 +143,7 @@ html[data-motion="reduced"] .cq-trail-in.moving * { transition: none; }
 .camp-dl-disc::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(from -22.7deg, #c9a544aa 0 .4deg, transparent .4deg 45deg); }
 .camp-dl-disc::after { content: ''; position: absolute; inset: 0; border-radius: 50%;
   background: radial-gradient(circle at 32% 22%, #ffffff14 0, transparent 40%), radial-gradient(circle, transparent 0 27%, #c9a54433 27.4% 27.8%, transparent 28.2% 62%, #00000066 100%); }
-/* Each wedge's icon and label scale with the dial and sit in from its edge. The label's letters follow the dial's curve (conquestwheel.ts) */
+/* Each wedge's icon and label scale with the dial and sit in from its edge. The label's letters follow the dial's curve (rewardwheel.ts) */
 .camp-dl-wedge { position: absolute; left: 50%; top: 0; width: 34%; margin-left: -17%; height: 50%; transform-origin: 50% 100%; display: grid; justify-items: center; align-content: start; padding-top: calc(var(--d) * .075);
   font: 600 calc(var(--d) * .025)/1.15 Georgia, "Times New Roman", serif; letter-spacing: .14em; text-transform: uppercase; color: #dfe5ee; text-align: center; transition: opacity .8s .15s; }
 .camp-dl-face { display: grid; justify-items: center; }

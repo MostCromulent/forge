@@ -163,7 +163,7 @@ button.outline:hover { background: var(--accent-soft); }
 .pi-slice { position: absolute; top: 0; height: 100%; background-repeat: no-repeat; will-change: transform; }
 .pi-zip { position: absolute; left: 0; width: 12px; height: 12px; margin: -6px 0 0 -6px; z-index: 6; border-radius: 50%; background: #fff; box-shadow: 0 0 16px 7px #ffe2a0; opacity: 0; }
 .pi-mouth { position: absolute; left: 0; right: 0; height: 6px; border-radius: 50%; background: #fff3d2; box-shadow: 0 0 34px 18px #ffdf9ccc; opacity: 0; }
-/* Flecks of foil from a tearing pack, here and in Planar Conquest (packopen.ts) */
+/* Flecks of foil from a tearing pack, here and in a campaign's reveal (packopen.ts) */
 .pk-fleck { position: absolute; width: 6px; height: 3px; margin: -1px 0 0 -3px; background: linear-gradient(90deg, #fff, #f0c05a); opacity: 0; pointer-events: none; z-index: 7; }
 .pi-card { position: absolute; perspective: 900px; will-change: transform, opacity; }
 .pi-card-y, .pi-card-turn { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }

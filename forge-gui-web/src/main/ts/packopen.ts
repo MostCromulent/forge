@@ -1,4 +1,4 @@
-// The tear and the card flight of an opening booster pack. Planar Conquest's pack and a limited event's opening both use them
+// The tear and the card flight of an opening booster pack. A campaign's pack and a limited event's opening both use them
 
 export const SLICES = 16;
 /** How long a card takes from the pack's mouth to its place. */

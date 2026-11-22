@@ -2,7 +2,7 @@
 
 import { skinIconUrl, imageUrl } from '../images';
 import { artUrl } from '../sleeves';
-import { CHAOS_MARK } from './conquestwheel';
+import { CHAOS_MARK } from './rewardwheel';
 import type { PackCard } from '../protocol';
 import { reducedMotion } from '../dom';
 import { SEAL, packPicture } from '../boosterprint';

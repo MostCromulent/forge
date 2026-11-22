@@ -2,9 +2,9 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { skinIconUrl, imageUrl } from '../images';
-import { mountPack, type Pack } from '../conquest/conquestpack';
-import { mountWheel, spotFor, type Wheel, type WheelOutcome } from '../conquest/conquestwheel';
-import { pendingAmounts } from '../conquest/conquestpending';
+import { mountPack, type Pack } from './rewardpack';
+import { mountWheel, spotFor, type Wheel, type WheelOutcome } from './rewardwheel';
+import { pendingAmounts } from './rewardpending';
 import type { RewardStep } from '../protocol';
 import { t, formatNumber } from '../text';
 import { byId } from '../dom';
@@ -14,8 +14,8 @@ import { keyName } from '../keys';
 import { flyShards, type RevealProps } from './campaign';
 
 export const wheelLabels = (): Record<WheelOutcome, string> => ({
-  CHAOS: t('lblChaos'), BOOSTER: t('lblWebConquestWheelBooster'), DOUBLE_BOOSTER: t('lblWebConquestWheelBoosters'),
-  SHARDS: t('lblWebConquestWheelShards'), DOUBLE_SHARDS: t('lblWebConquestWheelDoubleShards'), PLANESWALK: t('lblWebConquestWheelEmblems'),
+  CHAOS: t('lblChaos'), BOOSTER: t('lblWebCampaignWheelBooster'), DOUBLE_BOOSTER: t('lblWebCampaignWheelBoosters'),
+  SHARDS: t('lblWebCampaignWheelShards'), DOUBLE_SHARDS: t('lblWebCampaignWheelDoubleShards'), PLANESWALK: t('lblWebCampaignWheelEmblems'),
 });
 
 /** A step with nothing of its own to show. The packs before it have already shown the shards their duplicates became. */
@@ -69,11 +69,11 @@ export function Reveal({ reward, onOwed, done }: RevealProps) {
     <Backdrop cls="camp-reveal">
       {step.kind === 'WHEEL' && <WheelStop key={at} step={step} emblem={first === 1 && at === 1 ? steps[0].amount : 0} next={next} />}
       {step.kind === 'BOOSTER' && <PackStop key={at} step={step} release={n => setReleased(r => r + n)} next={next} />}
-      {step.kind === 'CONQUER_EMBLEMS' && <Gift icon="IMG_PW_BADGE_COMMON" amount={step.amount} title={t('lblWebConquestFirstConquest')} button={t('lblGreat')} next={next} />}
+      {step.kind === 'CONQUER_EMBLEMS' && <Gift icon="IMG_PW_BADGE_COMMON" amount={step.amount} title={t('lblWebCampaignFirstConquest')} button={t('lblGreat')} next={next} />}
       {step.kind === 'SHARDS' && <Gift icon="IMG_AETHER_SHARD" amount={step.amount} title={t('lblReceivedAetherShards')} button={t('lblGreat')} next={next} />}
       {step.kind === 'EMBLEMS' && <Gift icon="IMG_PW_BADGE_COMMON" amount={step.amount} title={t('lblReceivedBonusPlaneswalkEmblems')} button={t('lblGreat')} next={next} />}
       {step.kind === 'ALL_PLANES_UNLOCKED' && <Gift icon="IMG_PW_BADGE_COMMON" title={t('lblAllPlanesUnlocked')} text={t('lblAllPlanesUnlockedNotify')} button={t('lblOK')} next={next} />}
-      {step.kind === 'CHAOS_BATTLE' && <Gift icon="IMG_MULTIVERSE" title={t('lblChaosApproaching')} text={t('lblWebConquestNoRefusal')} button={t('lblOK')} next={next} />}
+      {step.kind === 'CHAOS_BATTLE' && <Gift icon="IMG_MULTIVERSE" title={t('lblChaosApproaching')} text={t('lblWebCampaignNoRefusal')} button={t('lblOK')} next={next} />}
       {step.kind === 'MESSAGE' && <Gift icon={step.icon} title={step.title ?? ''} text={step.text} lines={step.lines} button={t('lblOK')} next={next} />}
       {(step.kind === 'CARDS' || step.kind === 'REGION_COMMANDER') && <CardsStop key={at} step={step} zoom={setZoom} next={next} />}
       {zoom && <div class="backdrop camp-zoom-layer" onClick={e => { e.stopPropagation(); setZoom(null); }}><img class="camp-zoom" alt="" src={imageUrl(zoom)} /></div>}
@@ -159,14 +159,14 @@ function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; n
   const key = useOkKey(phase === 'ready' ? spin : phase === 'stopped' ? next : null);
   return (
     <div class="camp-wheel-stop">
-      {emblem > 0 && <p class="camp-wheel-first"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestFirstConquest')}</p>}
+      {emblem > 0 && <p class="camp-wheel-first"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebCampaignFirstConquest')}</p>}
       <div class="camp-wheel-host" ref={host} />
       {/* The name fades in under the dial once it stops (conquest.css) */}
       <p class="camp-wheel-name">{phase === 'stopped' ? wheelLabels()[step.outcome as WheelOutcome] : ''}</p>
       <div class="camp-reveal-foot">
         {phase === 'stopped'
           ? <button class="primary camp-big" onClick={next}>{t('lblGreat')} <kbd>{key}</kbd></button>
-          : <button class="primary camp-big" disabled={phase === 'spinning'} onClick={spin}>{t('lblWebConquestSpin')} <kbd>{key}</kbd></button>}
+          : <button class="primary camp-big" disabled={phase === 'spinning'} onClick={spin}>{t('lblWebCampaignSpin')} <kbd>{key}</kbd></button>}
       </div>
     </div>
   );
@@ -184,7 +184,7 @@ function PackStop({ step, release, next }: { step: RewardStep; release: (shards:
   useEffect(() => {
     pack.current = mountPack(host.current!, {
       name: step.chaos ? t('lblChaos') : step.pack ?? '', sub: step.chaos ? step.pack ?? '' : t('lblBoosterPack'),
-      art: step.chaos ? null : step.art ?? null, chaos: step.chaos, booster: step.packImage ?? null, cards, hint: t('lblWebConquestClickToOpen'),
+      art: step.chaos ? null : step.art ?? null, chaos: step.chaos, booster: step.packImage ?? null, cards, hint: t('lblWebCampaignClickToOpen'),
     }, {
       flipped: (card, rect) => { if (card.shards) flyShards(rect, () => { if (here.current) release(card.shards); }, 'IMG_AETHER_SHARD'); },
       opening: () => setPhase('opening'),

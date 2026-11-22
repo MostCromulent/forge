@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { skinIconUrl, imageUrl } from '../images';
-import { isRare } from './conquestpack';
+import { isRare } from '../campaign/rewardpack';
 import { balance } from '../campaign/campaign';
 import { PricedButton } from '../campaign/trade';
 import { ColourToggles, Pip, Pips } from '../symbols';

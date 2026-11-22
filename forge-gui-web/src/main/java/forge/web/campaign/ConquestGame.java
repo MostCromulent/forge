@@ -305,7 +305,7 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
         }
         final String event = battle.getEventName();
         result = new CampaignResult(won, over,
-                !won || chaos ? null : first ? event + " \u00b7 " + text.getMessage("lblWebConquestFirstConquest") : event, buttons);
+                !won || chaos ? null : first ? event + " \u00b7 " + text.getMessage("lblWebCampaignFirstConquest") : event, buttons);
         return result;
     }
 

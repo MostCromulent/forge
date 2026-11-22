@@ -34,7 +34,7 @@ html:has(.to-match) { overflow: hidden; }
 @keyframes match-arrive { from { opacity: 0; } }
 /* Going back to an earlier screen shows it at once (screens.tsx) */
 html[data-back] :is(#menu, #lobby, #editor, #limited, #drafting, #campaign) > *, html[data-back] :is(.modes .mode, .kind-card).plaque { animation: none; }
-/* A move to another page (main.ts render), or through an ordered set such as a Conquest tab or a step of the start menu (ui.ts eased), slides in the direction of the order, deeper pages to the left. The header has its own name, so it stays in place while the page under it slides */
+/* A move to another page (main.ts render), or through an ordered set such as a campaign's tabs or a step of the start menu (ui.ts eased), slides in the direction of the order, deeper pages to the left. The header has its own name, so it stays in place while the page under it slides */
 :is(#menu, #lobby, #limited, #drafting, #campaign) { view-transition-name: screen; }
 :is(#menu, #lobby, #limited, #drafting, #campaign) :is(.page-head, .ph) { view-transition-name: head; }
 /* The links fixed at the foot of the start menu stay in place too, so they do not slide with the page */
