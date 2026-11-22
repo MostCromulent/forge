@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 /**
  * Shared card reward logic used by RogueWinLoseController (post-match rewards)
- * and CSubmenuRogueMap (chest node rewards).
+ * and EffectResultHelper (chest and event rewards).
  */
 public class CardRewardHelper {
 

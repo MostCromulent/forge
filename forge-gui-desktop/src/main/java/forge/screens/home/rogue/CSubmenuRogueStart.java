@@ -6,19 +6,21 @@ import forge.ImageCache;
 import forge.ImageKeys;
 import forge.gamemodes.rogue.*;
 import forge.gamemodes.rogue.effect.*;
+import forge.gamemodes.rogue.flow.EffectResultHelper;
+import forge.gamemodes.rogue.flow.RogueDecisions;
+import forge.gamemodes.rogue.flow.RogueDecisions.Pick;
+import forge.gamemodes.rogue.flow.RogueDecisions.ResultKind;
+import forge.gamemodes.rogue.flow.RogueDecisions.Section;
 import forge.gamemodes.rogue.npc.NPCContext;
 import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.npc.NPCEncounterComposite;
 import forge.gamemodes.rogue.path.RoguePathGenerator;
 import forge.gui.GuiBase;
-import forge.gui.UiCommand;
 import forge.gui.framework.EDocID;
 import forge.gui.framework.ICDoc;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
 import forge.screens.home.CHomeUI;
-import forge.screens.home.sanctioned.AvatarSelector;
-import forge.toolbox.FLabel;
 import forge.toolbox.FOptionPane;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -39,6 +41,7 @@ public enum CSubmenuRogueStart implements ICDoc {
   private static final String HIDDEN_CARD_KEY = ImageKeys.getTokenKey(ImageKeys.HIDDEN_CARD);
 
   private final VSubmenuRogueStart view = VSubmenuRogueStart.SINGLETON_INSTANCE;
+  private final RogueDecisions decisions = new DesktopRogueDecisions();
   private RogueDeck selectedDeck;
   private int selectedDescensionLevel = 0;
   private boolean updatingDescensionUi;
@@ -138,7 +141,7 @@ public enum CSubmenuRogueStart implements ICDoc {
   private void showBetweenRunNpcDialogs() {
     RogueMetaProgress progress = RogueMetaProgress.getInstance();
     for (NPCContext ctx : NPCEncounterComposite.INSTANCE.onBetweenRuns(progress)) {
-      new NPCDialog(ctx, new ChoiceRerollContext()).show();
+      decisions.chooseBoon(ctx, new ChoiceRerollContext());
     }
   }
 
@@ -538,7 +541,7 @@ public enum CSubmenuRogueStart implements ICDoc {
 
     boolean chosenOne = modifications.contains(CustomRunModification.CHOSEN_ONE);
     List<PaperCard> chosenCommanders = chosenOne
-        ? new CommanderSelectionDialog().show() : List.of();
+        ? decisions.chooseCommanders() : List.of();
     if (chosenOne && chosenCommanders.isEmpty()) {
       return;
     }
@@ -549,7 +552,7 @@ public enum CSubmenuRogueStart implements ICDoc {
       return;
     }
     if (chosenOne) {
-      chooseCommanderAvatar(runDeck, chosenCommanders.get(0));
+      runDeck.setAvatarIndex(decisions.choosePortrait(chosenCommanders.get(0), runDeck.getAvatarIndex()));
     }
 
     RogueMetaProgress progress = RogueMetaProgress.getInstance();
@@ -635,36 +638,10 @@ public enum CSubmenuRogueStart implements ICDoc {
     }
   }
 
-  private void chooseCommanderAvatar(RogueDeck runDeck, PaperCard chosenCommander) {
-    AvatarSelector avatarSelector = new AvatarSelector(chosenCommander.getName(),
-        RogueUIHelper.getAvailableAvatarIndex(runDeck.getAvatarIndex()), List.of());
-    for (FLabel avatar : avatarSelector.getSelectables()) {
-      int avatarIndex = Integer.parseInt(avatar.getName().substring(11));
-      if (RogueUIHelper.getAvailableAvatarIndex(avatarIndex) != avatarIndex) {
-        avatar.setVisible(false);
-        continue;
-      }
-      avatar.setCommand((UiCommand) () -> {
-        runDeck.setAvatarIndex(avatarIndex);
-        avatarSelector.setVisible(false);
-      });
-    }
-    avatarSelector.setVisible(true);
-    avatarSelector.dispose();
-  }
-
   private boolean abandonPreviousRuns(RogueMetaProgress progress) {
     List<RogueRun> runsToAbandon = getContinuableRunsToAbandon();
     if (!runsToAbandon.isEmpty()) {
-      Localizer localizer = Localizer.getInstance();
-      boolean confirmed = FOptionPane.showConfirmDialog(
-          localizer.getMessage("lblRogueAbandonForNewRun"),
-          localizer.getMessage("lblRogueAbandonCurrentRun"),
-          localizer.getMessage("lblRogueStartNewRun"),
-          localizer.getMessage("lblCancel"),
-          false
-      );
-      if (!confirmed) {
+      if (!decisions.confirmReplaceRun()) {
         return false;
       }
 
@@ -681,7 +658,7 @@ public enum CSubmenuRogueStart implements ICDoc {
   }
 
   void applyRunStartEffectsAndNpcBoon(RogueRun newRun, RogueMetaProgress progress) {
-    RogueEffectComposite.INSTANCE.onRunStart(newRun, ctx -> EffectResultHelper.handleTrigger(ctx, newRun));
+    RogueEffectComposite.INSTANCE.onRunStart(newRun, ctx -> EffectResultHelper.handleTrigger(ctx, newRun, decisions));
 
     // Show NPC encounter dialogs (e.g. Tyvar offering npcEffect choices)
     for (NPCContext ctx : NPCEncounterComposite.INSTANCE.onRunStart(progress, newRun)) {
@@ -694,7 +671,7 @@ public enum CSubmenuRogueStart implements ICDoc {
       chosen.applyEffect(newRun, effectCtx);
       if (chosen.getEffectType() != RogueEffect.EffectType.ONESHOT) {
         newRun.addNPCEffect(chosen);
-      } else if (EffectResultHelper.handleTrigger(effectCtx, newRun)) {
+      } else if (EffectResultHelper.handleTrigger(effectCtx, newRun, decisions)) {
         CodexHelper.recordAcquiredCards(newRun, effectCtx.addedCards);
         showNpcResultIfNeeded(chosen, effectCtx);
       }
@@ -720,7 +697,7 @@ public enum CSubmenuRogueStart implements ICDoc {
 
   private NPCEffect showRunStartNpcDialog(RogueMetaProgress progress, RogueRun newRun, NPCContext ctx) {
     NPCContext effectiveCtx = maybeOverrideNpcChoices(ctx);
-    NPCDialog.DialogResult result;
+    Pick<NPCEffect> result;
     boolean rerollRequested;
     do {
       ChoiceRerollContext rerollCtx = new ChoiceRerollContext();
@@ -728,8 +705,8 @@ public enum CSubmenuRogueStart implements ICDoc {
       CodexHelper.recordTraitChoices(effectiveCtx.choices().stream()
           .map(NPCContext.NPCChoice::npcEffect)
           .toList());
-      result = new NPCDialog(effectiveCtx, rerollCtx).show();
-      rerollRequested = result.rerollRequested();
+      result = decisions.chooseBoon(effectiveCtx, rerollCtx);
+      rerollRequested = result.reroll();
 
       if (rerollRequested) {
         RogueEffectComposite.INSTANCE.onChoiceReroll(rerollCtx, newRun);
@@ -752,32 +729,43 @@ public enum CSubmenuRogueStart implements ICDoc {
     if (ctx.choices().stream().anyMatch(choice -> choice == null || choice.npcEffect() == null)) {
       return ctx;
     }
-    return new NPCChoiceOverrideDialog(ctx).show();
+    List<NPCEffect> preselectedEffects = ctx.choices().stream()
+        .map(NPCContext.NPCChoice::npcEffect)
+        .toList();
+    List<NPCEffect> selected = decisions.devPick(Localizer.getInstance().getMessage("lblRogueDevNpcChoiceOverride"),
+        NPCEffect.getEffectsForNpc(ctx.npc(), null), preselectedEffects, 3);
+
+    List<NPCContext.NPCChoice> choices = new ArrayList<>(selected.size());
+    for (NPCEffect effect : selected) {
+      choices.add(new NPCContext.NPCChoice(effect.getDisplayName(), effect));
+    }
+    return new NPCContext(ctx.npc(), ctx.flavorTextChunks(), choices,
+        ctx.displayNameOverride(), ctx.avatarIndexOverride());
   }
 
   private void showNpcResultIfNeeded(NPCEffect effect, EffectResultContext ctx) {
-    List<NodeResultPanel.CardSection> sections = buildNpcResultSections(effect, ctx);
+    List<Section> sections = buildNpcResultSections(effect, ctx);
     if (sections.isEmpty()) {
       return;
     }
 
-    CSubmenuRogueMap.SINGLETON_INSTANCE.showNodeResultDialog(
+    decisions.showResult(ResultKind.BOON,
         Localizer.getInstance().getMessage("lblRogueNpcRewardGained"), Localizer.getInstance().getMessage("lblRogueGainedNpcReward", effect.getDisplayName()), sections);
   }
 
-  private List<NodeResultPanel.CardSection> buildNpcResultSections(NPCEffect effect, EffectResultContext ctx) {
+  private List<Section> buildNpcResultSections(NPCEffect effect, EffectResultContext ctx) {
     Set<String> excludedNames = new HashSet<>(getPreviewedCardNames(effect));
     excludedNames.addAll(getCardNames(ctx.candidateCards));
 
-    List<NodeResultPanel.CardSection> sections = new ArrayList<>();
+    List<Section> sections = new ArrayList<>();
     List<PaperCard> removedCards = filterResultCards(ctx.removedCards, excludedNames);
     if (!removedCards.isEmpty()) {
-      sections.add(new NodeResultPanel.CardSection(Localizer.getInstance().getMessage("lblRogueCardsRemoved"), removedCards));
+      sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsRemoved"), null, removedCards));
     }
 
     List<PaperCard> addedCards = filterResultCards(ctx.addedCards, excludedNames);
     if (!addedCards.isEmpty()) {
-      sections.add(new NodeResultPanel.CardSection(Localizer.getInstance().getMessage("lblRogueCardsAdded"), addedCards));
+      sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsAdded"), null, addedCards));
     }
     return sections;
   }

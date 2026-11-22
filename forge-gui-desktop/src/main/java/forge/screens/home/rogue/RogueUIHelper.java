@@ -182,14 +182,14 @@ public final class RogueUIHelper {
     return selected == null || selected.isEmpty() ? currentChoice : selected.get(0);
   }
 
-  static <T extends RogueEffect> List<T> chooseDevEffects(String title, String heading,
+  static <T> List<T> chooseDevEffects(String title, String heading,
       String selectionMessageKey, List<T> choices, List<T> preselected, int requiredSelections) {
     SkinnedPanel checkBoxPanel = new SkinnedPanel();
     checkBoxPanel.setOpaque(false);
     checkBoxPanel.setLayout(new BoxLayout(checkBoxPanel, BoxLayout.Y_AXIS));
     Map<FCheckBox, T> effectsByCheckBox = new LinkedHashMap<>();
     for (T effect : choices) {
-      FCheckBox checkBox = new FCheckBox(effect.getDisplayName(), preselected.contains(effect));
+      FCheckBox checkBox = new FCheckBox(((RogueEffect) effect).getDisplayName(), preselected.contains(effect));
       effectsByCheckBox.put(checkBox, effect);
       checkBoxPanel.add(checkBox);
     }

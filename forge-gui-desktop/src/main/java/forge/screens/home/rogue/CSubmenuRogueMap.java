@@ -6,6 +6,7 @@ import forge.util.Localizer;
 import forge.Singletons;
 import forge.gamemodes.rogue.*;
 import forge.gamemodes.rogue.effect.*;
+import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.path.*;
 import forge.gui.framework.EDocID;
 import forge.gui.framework.FScreen;
@@ -19,16 +20,7 @@ import forge.screens.home.VHomeUI;
 import forge.sound.SoundEffectType;
 import forge.sound.SoundSystem;
 import forge.toolbox.FOptionPane;
-import forge.toolbox.FScrollPane;
-import forge.toolbox.FSkin;
 import forge.util.MyRandom;
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.GraphicsConfiguration;
-import java.awt.GraphicsEnvironment;
-import java.awt.Insets;
-import java.awt.Rectangle;
-import java.awt.Toolkit;
 import java.awt.event.ActionListener;
 import java.util.*;
 import javax.swing.*;
@@ -42,25 +34,12 @@ import org.tinylog.Logger;
 public enum CSubmenuRogueMap implements ICDoc {
   SINGLETON_INSTANCE;
 
-  private final ActionListener actEnterNode = arg0 -> enterNode();
+  private final RogueFlow flow = new RogueFlow(new DesktopRogueDecisions());
+  private final ActionListener actEnterNode = arg0 -> flow.enter();
   private final ActionListener actEditDeck = arg0 -> editDeck();
   private final ActionListener actRerollPlane = arg0 -> rerollSelectedPlanebound();
   private final ActionListener actAbandonRun = arg0 -> abandonRun();
   private final VSubmenuRogueMap view = VSubmenuRogueMap.SINGLETON_INSTANCE;
-  private final NodeBazaarHelper nodeBazaarHelper = new NodeBazaarHelper(this);
-  private final NodeChestHelper nodeChestHelper = new NodeChestHelper(this);
-  private final NodePlaneboundHelper nodePlaneboundHelper = new NodePlaneboundHelper();
-  private final NodeSanctumHelper nodeSanctumHelper = new NodeSanctumHelper(this);
-  private final NodeEffectResultHelper nodeEffectResultHelper =
-      new NodeEffectResultHelper(this, nodeBazaarHelper, nodeChestHelper, nodeSanctumHelper, nodePlaneboundHelper);
-  private final NodeEventHelper nodeEventHelper = new NodeEventHelper(this, nodeEffectResultHelper);
-
-  CSubmenuRogueMap() {
-    nodeChestHelper.setEffectResultHelper(nodeEffectResultHelper);
-  }
-
-  // Test run data (for MVP - will be replaced with proper loading later)
-  private RogueRun currentRun;
 
   @Override
   public void update() {
@@ -70,9 +49,10 @@ public enum CSubmenuRogueMap implements ICDoc {
       return;
     }
     // If no run exists in memory, try to load from saved runs
-    if (currentRun == null) {
-      currentRun = RogueIO.loadMostRecentContinuableRun().orElse(null);
+    if (flow.run() == null) {
+      flow.setRun(RogueIO.loadMostRecentContinuableRun().orElse(null));
     }
+    RogueRun currentRun = flow.run();
 
     // If still no run (no saved runs or all completed/failed), navigate to start screen
     if (currentRun == null) {
@@ -89,6 +69,7 @@ public enum CSubmenuRogueMap implements ICDoc {
   }
 
   private void showTutorials() {
+    RogueRun currentRun = flow.run();
     RogueTutorialHelper.showIfNotSeen(RogueTutorial.MAP_NAVIGATION);
     if (currentRun != null && currentRun.getEndlessLevel() > 0) {
       RogueTutorialHelper.showIfNotSeen(RogueTutorial.ENDLESS_MODE);
@@ -139,6 +120,7 @@ public enum CSubmenuRogueMap implements ICDoc {
    * Handle click on a node panel.
    */
   private void handleNodeClick(NodePanel panel) {
+    RogueRun currentRun = flow.run();
     if (currentRun == null) {
       return;
     }
@@ -187,8 +169,8 @@ public enum CSubmenuRogueMap implements ICDoc {
     updateViewWithSelection();
   }
 
-  void updateView() {
-    view.updateDisplay(currentRun);
+  private void updateView() {
+    view.updateDisplay(flow.run());
     updateViewWithSelection();
   }
 
@@ -196,6 +178,7 @@ public enum CSubmenuRogueMap implements ICDoc {
    * Update the view with selection state and button text.
    */
   private void updateViewWithSelection() {
+    RogueRun currentRun = flow.run();
     if (currentRun == null) {
       return;
     }
@@ -269,6 +252,7 @@ public enum CSubmenuRogueMap implements ICDoc {
   }
 
   private void rerollSelectedPlanebound() {
+    RogueRun currentRun = flow.run();
     if (currentRun == null || currentRun.getHostedMatch() != null) {
       return;
     }
@@ -300,6 +284,7 @@ public enum CSubmenuRogueMap implements ICDoc {
   }
 
   private List<RoguePlanebound> getPlaneboundRerollCandidates(NodePlanebound selectedNode) {
+    RogueRun currentRun = flow.run();
     if (currentRun == null || currentRun.getPath() == null || selectedNode == null) {
       return List.of();
     }
@@ -332,65 +317,8 @@ public enum CSubmenuRogueMap implements ICDoc {
     return candidates;
   }
 
-  void enterNode() {
-    if (currentRun == null) {
-      return;
-    }
-
-    // Use current node
-    RoguePathNode node = currentRun.getCurrentNode();
-
-    if (node == null) {
-      return;
-    }
-
-    // Handle different node types
-    if (node instanceof NodePlanebound nodePlanebound) {
-      nodePlaneboundHelper.handlePlaneboundNode(nodePlanebound, currentRun);
-    } else if (node instanceof NodeSanctum nodeSanctum) {
-      nodeSanctumHelper.handleSanctumNode(nodeSanctum, currentRun);
-    } else if (node instanceof NodeBazaar nodeBazaar) {
-      nodeBazaarHelper.handleBazaarNode(nodeBazaar, currentRun);
-    } else if (node instanceof NodeEvent nodeEvent) {
-      nodeEventHelper.handleEventNode(nodeEvent, currentRun);
-    } else if (node instanceof NodeChest nodeChest) {
-      nodeChestHelper.handleChestNode(nodeChest, currentRun);
-    }
-  }
-
-  void completeSideNode(RoguePathNode node) {
-    node.setCompleted(true);
-    currentRun.nextNode();
-    RogueStats.fireOnSideNodeCompleted(currentRun, RogueMetaProgress.getInstance());
-    RogueIO.saveRun(currentRun);
-    update();
-  }
-
-  boolean checkSideNodeDefeat(String defeatedBy) {
-    if (currentRun == null || currentRun.getCurrentLife() > 0) {
-      return false;
-    }
-
-    DefeatContext defeatCtx = new DefeatContext();
-    RogueEffectComposite.INSTANCE.onDefeat(defeatCtx, currentRun);
-    if (defeatCtx.revived) {
-      currentRun.setCurrentLife(defeatCtx.reviveLife);
-      FOptionPane.showMessageDialog(
-          Localizer.getInstance().getMessage("lblRogueContinuumRevive", defeatCtx.reviveLife),
-          Localizer.getInstance().getMessage("lblRogueContinuumEngine"));
-      return false;
-    }
-
-    if (RogueWinLoseController.finalizeRunDefeat(currentRun, defeatedBy)) {
-      FOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblRogueSparkWon"), Localizer.getInstance().getMessage("lblRogueSparkReward"));
-    }
-    showSideNodeDefeatDialog(defeatedBy);
-    currentRun = null;
-    CHomeUI.SINGLETON_INSTANCE.itemClick(EDocID.HOME_ROGUESTART);
-    return true;
-  }
-
   public void continueEndlessly() {
+    RogueRun currentRun = flow.run();
     if (currentRun == null || !currentRun.isRunComplete() || currentRun.isRunFailed()
         || currentRun.isRunWon()
         || !RogueMetaProgress.getInstance().isEndlessModeUnlocked()) {
@@ -405,91 +333,20 @@ public enum CSubmenuRogueMap implements ICDoc {
     RogueIO.saveRun(currentRun);
   }
 
-  private void showSideNodeDefeatDialog(String defeatedBy) {
-    String message = defeatedBy == null || defeatedBy.isEmpty()
-        ? Localizer.getInstance().getMessage("lblRogueDefeated")
-        : Localizer.getInstance().getMessage("lblRogueDefeatedBy", defeatedBy);
-    NodeResultPanel resultPanel = new NodeResultPanel(message, List.of());
-    FOptionPane optionPane = new FOptionPane(null, Localizer.getInstance().getMessage("lblRogueDefeat"), null, resultPanel, List.of(Localizer.getInstance().getMessage("lblOK")), 0);
-    resultPanel.initZoom(optionPane);
-    optionPane.setVisible(true);
-    optionPane.dispose();
-  }
-
-  void showNodeResultDialog(String title, String message,
-                                    List<NodeResultPanel.CardSection> sections) {
-    showDefaultNodeResultDialog(title, message, sections, false);
-  }
-
-  void showEventResultDialog(String message, List<NodeResultPanel.CardSection> sections) {
-    showDefaultNodeResultDialog(Localizer.getInstance().getMessage("lblRogueEventCompleted"), message, sections, true);
-  }
-
-  private void showDefaultNodeResultDialog(String title, String message,
-                                           List<NodeResultPanel.CardSection> sections,
-                                           boolean typewriterMessage) {
-    boolean hasCardSections = sections.stream().anyMatch(
-        section -> section.cards() != null && !section.cards().isEmpty());
-    int minHeight = hasCardSections ? 700 : 0;
-    showResultDialog(title, message, sections, 650, minHeight,
-        NodeResultPanel.MessageAlignment.LEFT, typewriterMessage);
-  }
-
-  void showNodeResultDialog(String title, String message,
-                            List<NodeResultPanel.CardSection> sections,
-                            int minWidth, int minHeight,
-                            NodeResultPanel.MessageAlignment messageAlignment) {
-    showResultDialog(title, message, sections, minWidth, minHeight, messageAlignment, false);
-  }
-
-  private void showResultDialog(String title, String message,
-                                List<NodeResultPanel.CardSection> sections,
-                                int minWidth, int minHeight,
-                                NodeResultPanel.MessageAlignment messageAlignment,
-                                boolean typewriterMessage) {
-    NodeResultPanel resultPanel = new NodeResultPanel(
-        message, sections, minWidth, minHeight, messageAlignment, typewriterMessage);
-    FScrollPane scrollPane = new FScrollPane(resultPanel, false,
-        ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-    Dimension resultSize = resultPanel.getPreferredSize();
-    GraphicsConfiguration gc = GraphicsEnvironment.getLocalGraphicsEnvironment()
-        .getDefaultScreenDevice().getDefaultConfiguration();
-    Rectangle screenBounds = gc.getBounds();
-    Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(gc);
-    int maxDialogWidth = (int) ((screenBounds.width - screenInsets.left - screenInsets.right) * 0.9) - 50;
-    int maxDialogHeight = (int) ((screenBounds.height - screenInsets.top - screenInsets.bottom) * 0.9) - 80;
-    Dimension dialogSize = new Dimension(
-        Math.min(resultSize.width + 30, maxDialogWidth),
-        Math.min(resultSize.height, maxDialogHeight));
-
-    FSkin.SkinnedPanel wrapper = new FSkin.SkinnedPanel(new BorderLayout());
-    wrapper.setOpaque(false);
-    wrapper.add(scrollPane, BorderLayout.CENTER);
-    wrapper.setPreferredSize(dialogSize);
-    wrapper.setMinimumSize(dialogSize);
-
-    FOptionPane optionPane = new FOptionPane(null, title, null, wrapper, List.of(Localizer.getInstance().getMessage("lblOK")), 0);
-    resultPanel.initZoom(optionPane);
-    resultPanel.startTypewriter();
-    optionPane.setVisible(true);
-    resultPanel.stopTypewriter();
-    optionPane.dispose();
-  }
-
   public RogueRun getCurrentRun() {
-    return currentRun;
+    return flow.run();
   }
 
   void setCurrentRun(RogueRun run) {
-    this.currentRun = run;
+    flow.setRun(run);
   }
 
   public void clearCurrentRun() {
-    currentRun = null;
+    flow.clearRun();
   }
 
   private void devNextNode() {
+    RogueRun currentRun = flow.run();
     if (currentRun == null) return;
     RoguePathNode node = currentRun.getCurrentNode();
     if (node == null) return;
@@ -515,6 +372,7 @@ public enum CSubmenuRogueMap implements ICDoc {
   }
 
   private void devWinRun() {
+    RogueRun currentRun = flow.run();
     if (currentRun == null) return;
     String commanderName = currentRun.getCurrentCommanderName();
     currentRun.setRunWon(true);
@@ -528,11 +386,12 @@ public enum CSubmenuRogueMap implements ICDoc {
     RogueCommanderAchievements.getInstance().evaluateRunAchievements(currentRun);
     progress.notifyDescensionL1IfFirstWin(currentRun);
     RogueIO.saveRun(currentRun);
-    currentRun = null;
+    flow.clearRun();
     CHomeUI.SINGLETON_INSTANCE.itemClick(EDocID.HOME_ROGUESTART);
   }
 
   private void backToHome() {
+    RogueRun currentRun = flow.run();
     if (currentRun == null || currentRun.getHostedMatch() != null) {
       return;
     }
@@ -551,6 +410,7 @@ public enum CSubmenuRogueMap implements ICDoc {
   }
 
   private void abandonRun() {
+    RogueRun currentRun = flow.run();
     if (currentRun == null || currentRun.getHostedMatch() != null) {
       return;
     }
@@ -570,11 +430,12 @@ public enum CSubmenuRogueMap implements ICDoc {
         RogueRunHistoryEntry.fromRun(currentRun, "ABANDONED", ""));
     RogueIO.deleteRun(currentRun);
     SoundSystem.instance.play(SoundEffectType.LoseDuel, SoundEffectType.LoseDuel.isSynced());
-    currentRun = null;
+    flow.clearRun();
     CHomeUI.SINGLETON_INSTANCE.itemClick(EDocID.HOME_ROGUESTART);
   }
 
   public void editDeck() {
+    RogueRun currentRun = flow.run();
     if (currentRun == null || currentRun.getHostedMatch() != null) {
       return;
     }

@@ -1,4 +1,4 @@
-package forge.screens.home.rogue;
+package forge.gamemodes.rogue.flow;
 
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.effect.EffectResultContext;
@@ -10,16 +10,16 @@ import forge.gamemodes.rogue.path.RoguePathNode;
 
 class NodeEffectResultHelper {
 
-    private final CSubmenuRogueMap map;
+    private final RogueFlow flow;
     private final NodeBazaarHelper bazaarHelper;
     private final NodeChestHelper chestHelper;
     private final NodeSanctumHelper sanctumHelper;
     private final NodePlaneboundHelper planeboundHelper;
 
-    NodeEffectResultHelper(CSubmenuRogueMap map, NodeBazaarHelper bazaarHelper,
+    NodeEffectResultHelper(RogueFlow flow, NodeBazaarHelper bazaarHelper,
                            NodeChestHelper chestHelper, NodeSanctumHelper sanctumHelper,
                            NodePlaneboundHelper planeboundHelper) {
-        this.map = map;
+        this.flow = flow;
         this.bazaarHelper = bazaarHelper;
         this.chestHelper = chestHelper;
         this.sanctumHelper = sanctumHelper;
@@ -41,12 +41,12 @@ class NodeEffectResultHelper {
                 return handleChestTrigger(sourceNode, currentRun);
             case SANCTUM:
                 sanctumHelper.resolveSanctum(currentRun, new NodeSanctum());
-                map.completeSideNode(sourceNode);
+                flow.completeSideNode(sourceNode);
                 return NodeFlowOutcome.NODE_ALREADY_COMPLETED;
             case MOVE:
                 return handleMoveTrigger(ctx, currentRun);
             case CARD_REMOVAL, CARD_ADDITION, CARD_REWARD, MYTHIC_CARD_REWARD:
-                return EffectResultHelper.handleTrigger(ctx, currentRun)
+                return EffectResultHelper.handleTrigger(ctx, currentRun, flow.decisions())
                     ? NodeFlowOutcome.COMPLETE_NODE
                     : NodeFlowOutcome.DO_NOT_COMPLETE_NODE;
             default:
@@ -57,7 +57,7 @@ class NodeEffectResultHelper {
     private NodeFlowOutcome handleChestTrigger(RoguePathNode sourceNode, RogueRun currentRun) {
         NodeFlowOutcome chestOutcome = chestHelper.resolveChest(currentRun, new NodeChest());
         if (chestOutcome == NodeFlowOutcome.COMPLETE_NODE) {
-            map.completeSideNode(sourceNode);
+            flow.completeSideNode(sourceNode);
             return NodeFlowOutcome.NODE_ALREADY_COMPLETED;
         }
         return chestOutcome;
@@ -82,7 +82,7 @@ class NodeEffectResultHelper {
             node -> node.getRowIndex() >= resetFromRow,
             node -> node.setCompleted(false));
         currentRun.setCurrentNodeIndex(ctx.moveNodeIndex);
-        map.enterNode();
+        flow.enter();
         return NodeFlowOutcome.DO_NOT_COMPLETE_NODE;
     }
 

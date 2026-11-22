@@ -4,6 +4,8 @@ import forge.util.Localizer;
 
 import forge.gamemodes.rogue.TextHelper;
 import forge.gamemodes.rogue.effect.SanctumContext;
+import forge.gamemodes.rogue.flow.RogueDecisions.SanctumAction;
+import forge.gamemodes.rogue.flow.RogueDecisions.SanctumAnswer;
 import forge.sound.SoundEffectType;
 import forge.sound.SoundSystem;
 import forge.screens.home.rogue.RogueUIHelper.PreviewTarget;
@@ -28,19 +30,11 @@ public class SanctumDialog {
   private static final int PANEL_INSETS = 20;
   private static final int CHOICE_RESULT = 1;
 
-  public enum SanctumChoice {
-    HEAL,
-    COOK,
-    REFLECT,
-    CUSTOM,
-    SKIP
-  }
-
   private final MainPanel panel;
   private final List<PreviewTarget> previewTargets = new ArrayList<>();
   private FOptionPane optionPane;
   private RoguePreviewPopup previewPopup;
-  private SanctumChoice choice = SanctumChoice.SKIP;
+  private SanctumAction choice = SanctumAction.SKIP;
   private SanctumContext.SanctumChoice customChoice;
 
   /**
@@ -74,7 +68,7 @@ public class SanctumDialog {
     RogueButtonHelper.setChoiceButtonSizeHint(btnRest, choiceButtonWidth);
     btnRest.addActionListener(e -> {
       hidePreview();
-      choice = SanctumChoice.HEAL;
+      choice = SanctumAction.HEAL;
       optionPane.setResult(CHOICE_RESULT);
       optionPane.setVisible(false);
     });
@@ -91,7 +85,7 @@ public class SanctumDialog {
     RogueButtonHelper.setChoiceButtonSizeHint(btnCook, choiceButtonWidth);
     btnCook.addActionListener(e -> {
       hidePreview();
-      choice = SanctumChoice.COOK;
+      choice = SanctumAction.COOK;
       optionPane.setResult(CHOICE_RESULT);
       optionPane.setVisible(false);
     });
@@ -104,7 +98,7 @@ public class SanctumDialog {
     RogueButtonHelper.setChoiceButtonSizeHint(btnReflect, choiceButtonWidth);
     btnReflect.addActionListener(e -> {
       hidePreview();
-      choice = SanctumChoice.REFLECT;
+      choice = SanctumAction.REFLECT;
       optionPane.setResult(CHOICE_RESULT);
       optionPane.setVisible(false);
     });
@@ -129,7 +123,7 @@ public class SanctumDialog {
       RogueButtonHelper.setChoiceButtonSizeHint(btnExtraChoice, choiceButtonWidth);
       btnExtraChoice.addActionListener(e -> {
         hidePreview();
-        choice = SanctumChoice.CUSTOM;
+        choice = SanctumAction.CUSTOM;
         customChoice = extraChoice;
         optionPane.setResult(CHOICE_RESULT);
         optionPane.setVisible(false);
@@ -150,9 +144,9 @@ public class SanctumDialog {
   /**
    * Show the dialog and return the player's choice.
    *
-   * @return The selected choice (HEAL, COOK, REFLECT, or SKIP)
+   * @return The selected action, with the choice if it is CUSTOM
    */
-  public SanctumChoice show() {
+  public SanctumAnswer show() {
     SoundSystem.instance.play(SoundEffectType.Enchantment,
         SoundEffectType.Enchantment.isSynced());
     optionPane = new FOptionPane(
@@ -170,13 +164,9 @@ public class SanctumDialog {
     optionPane.dispose();
 
     if (optionPane.getResult() == 0) {
-      choice = SanctumChoice.SKIP;
+      choice = SanctumAction.SKIP;
     }
-    return choice;
-  }
-
-  public SanctumContext.SanctumChoice getCustomChoice() {
-    return customChoice;
+    return new SanctumAnswer(choice, customChoice);
   }
 
   private void hidePreview() {
