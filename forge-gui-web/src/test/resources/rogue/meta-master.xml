@@ -1,0 +1,44 @@
+<forge.gamemodes.rogue.RogueMetaProgress>
+  <runsStartedPerCommander>
+    <entry>
+      <string>Aragorn, the Uniter</string>
+      <int>1</int>
+    </entry>
+  </runsStartedPerCommander>
+  <runsWonPerCommander/>
+  <planeboundStats/>
+  <statValues>
+    <entry>
+      <string>RunsStarted</string>
+      <int>1</int>
+    </entry>
+  </statValues>
+  <customStatValues/>
+  <codexProgress>
+    <commanderRewardCards/>
+    <planeboundCards/>
+    <encounteredPlanebounds/>
+    <traits>
+      <seen/>
+      <acquired/>
+    </traits>
+  </codexProgress>
+  <maxDescensionWonPerCommander/>
+  <endlessModeUnlocked>false</endlessModeUnlocked>
+  <maxEndlessCompletedPerCommander/>
+  <totalEchoes>25</totalEchoes>
+  <totalSparks>0</totalSparks>
+  <aetherUpgradeLevel>0</aetherUpgradeLevel>
+  <aetherEffectRanks/>
+  <activeAetherEffects/>
+  <npcLevels>
+    <entry>
+      <string>tyvar</string>
+      <int>3</int>
+    </entry>
+  </npcLevels>
+  <seenNPCEncounters/>
+  <notifiedCommanderUnlocks/>
+  <seenTutorials/>
+  <totalPlaytimeMillis>0</totalPlaytimeMillis>
+</forge.gamemodes.rogue.RogueMetaProgress>

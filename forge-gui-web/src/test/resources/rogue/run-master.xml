@@ -1,0 +1,753 @@
+<forge.gamemodes.rogue.RogueRun>
+  <selectedRogueDeck>
+    <name>Aragorn, the Uniter</name>
+    <commanderCardName>Aragorn, the Uniter</commanderCardName>
+    <startDeck>
+      <name>Aragorn, the Uniter</name>
+      <parts class="enum-map" enum-type="forge.deck.DeckSection">
+        <entry>
+          <forge.deck.DeckSection>Main</forge.deck.DeckSection>
+          <forge.deck.CardPool>
+            <card c="Deserted Beach" s="INR" i="1" n="1"/>
+            <card c="Swords to Plowshares" s="LTC" i="1" n="1"/>
+            <card c="Brokers Charm" s="SNC" i="1" n="1"/>
+            <card c="Celeborn the Wise" s="LTR" i="1" n="1"/>
+            <card c="Sundown Pass" s="INR" i="1" n="1"/>
+            <card c="Éowyn, Fearless Knight" s="LTR" i="1" n="1"/>
+            <card c="Naya Charm" s="DMC" i="1" n="1"/>
+            <card c="Riders of Rohan" s="LTC" i="1" n="1"/>
+            <card c="Island" s="LTR" i="1" n="1"/>
+            <card c="Forest" s="LTR" i="2" n="1"/>
+            <card c="Friendly Rivalry" s="LTR" i="1" n="1"/>
+            <card c="Jetmir&apos;s Garden" s="SNC" i="1" n="1"/>
+            <card c="Lossarnach Captain" s="LTC" i="1" n="1"/>
+            <card c="Delighted Halfling" s="LTR" i="1" n="1"/>
+            <card c="Overgrown Farmland" s="TDC" i="1" n="1"/>
+            <card c="Paradise Druid" s="LTC" i="1" n="1"/>
+            <card c="Rockfall Vale" s="TDC" i="1" n="1"/>
+            <card c="Mirror of Galadriel" s="LTR" i="1" n="1"/>
+            <card c="Path of Ancestry" s="LTC" i="1" n="1"/>
+            <card c="Command Tower" s="LTC" i="1" n="1"/>
+            <card c="Evolving Wilds" s="LTC" i="1" n="1"/>
+            <card c="Plains" s="LTR" i="1" n="1"/>
+            <card c="Cultivate" s="LTC" i="1" n="1"/>
+            <card c="Arwen Undómiel" s="LTR" i="1" n="1"/>
+            <card c="Mountain" s="LTR" i="2" n="1"/>
+            <card c="Growth Spiral" s="LTC" i="1" n="1"/>
+            <card c="Pippin, Guard of the Citadel" s="LTR" i="1" n="1"/>
+            <card c="Spara&apos;s Headquarters" s="SNC" i="1" n="1"/>
+            <card c="Elvish Mariner" s="LTR" i="1" n="1"/>
+            <card c="Boromir, Warden of the Tower" s="LTR" i="1" n="1"/>
+            <card c="Dreamroot Cascade" s="TDC" i="1" n="1"/>
+            <card c="Théoden, King of Rohan" s="LTR" i="1" n="1"/>
+          </forge.deck.CardPool>
+        </entry>
+        <entry>
+          <forge.deck.DeckSection>Commander</forge.deck.DeckSection>
+          <forge.deck.CardPool>
+            <card c="Aragorn, the Uniter" s="LTR" i="3" n="1"/>
+          </forge.deck.CardPool>
+        </entry>
+      </parts>
+      <tags class="sorted-set">
+        <comparator class="java.lang.String$CaseInsensitiveComparator"/>
+      </tags>
+      <aiHints class="sorted-set"/>
+      <keyCards/>
+      <altCommanders/>
+      <draftNotes/>
+      <loadedSections>
+        <entry>
+          <string>metadata</string>
+          <list>
+            <string>Name=Aragorn, the Uniter</string>
+          </list>
+        </entry>
+        <entry>
+          <string>Commander</string>
+          <list>
+            <string>1 Aragorn, the Uniter|LTR|[434]</string>
+          </list>
+        </entry>
+        <entry>
+          <string>Main</string>
+          <list>
+            <string>1 Deserted Beach|INR|[276]</string>
+            <string>1 Swords to Plowshares|LTC|[178]</string>
+            <string>1 Brokers Charm|SNC|[171]</string>
+            <string>1 Celeborn the Wise|LTR|[156]</string>
+            <string>1 Sundown Pass|INR|[286]</string>
+            <string>1 Éowyn, Fearless Knight|LTR|[201]</string>
+            <string>1 Naya Charm|DMC|[162]</string>
+            <string>1 Riders of Rohan|LTC|[67]</string>
+            <string>1 Island|LTR|[264]</string>
+            <string>1 Forest|LTR|[271]</string>
+            <string>1 Friendly Rivalry|LTR|[204]</string>
+            <string>1 Jetmir&apos;s Garden|SNC|[250]</string>
+            <string>1 Lossarnach Captain|LTC|[16]</string>
+            <string>1 Delighted Halfling|LTR|[158]</string>
+            <string>1 Overgrown Farmland|TDC|[381]</string>
+            <string>1 Paradise Druid|LTC|[255]</string>
+            <string>1 Rockfall Vale|TDC|[387]</string>
+            <string>1 Mirror of Galadriel|LTR|[244]</string>
+            <string>1 Path of Ancestry|LTC|[322]</string>
+            <string>1 Command Tower|LTC|[301]</string>
+            <string>1 Evolving Wilds|LTC|[306]</string>
+            <string>1 Plains|LTR|[262]</string>
+            <string>1 Cultivate|LTC|[236]</string>
+            <string>1 Arwen Undómiel|LTR|[194]</string>
+            <string>1 Mountain|LTR|[269]</string>
+            <string>1 Growth Spiral|LTC|[267]</string>
+            <string>1 Pippin, Guard of the Citadel|LTR|[218]</string>
+            <string>1 Spara&apos;s Headquarters|SNC|[257]</string>
+            <string>1 Elvish Mariner|LTR|[283]</string>
+            <string>1 Boromir, Warden of the Tower|LTR|[4]</string>
+            <string>1 Dreamroot Cascade|TDC|[358]</string>
+            <string>1 Théoden, King of Rohan|LTR|[233]</string>
+          </list>
+        </entry>
+      </loadedSections>
+      <deckFormat>Constructed</deckFormat>
+      <lastCardArtPreferenceUsed>LATEST_ART_ALL_EDITIONS</lastCardArtPreferenceUsed>
+      <lastCardArtOptimisationOptionUsed>true</lastCardArtOptimisationOptionUsed>
+      <includeCardsFromUnspecifiedSet>false</includeCardsFromUnspecifiedSet>
+      <sleeveArtKey></sleeveArtKey>
+      <sleeveArtOffset>500</sleeveArtOffset>
+    </startDeck>
+    <rewardPool>
+      <card c="Gandalf, White Rider" s="LTR" i="1" n="1"/>
+      <card c="Merry, Esquire of Rohan" s="LTR" i="1" n="1"/>
+      <card c="Serah Farron" s="FIN" i="1" n="1"/>
+      <card c="Denzilore Fatehold" s="FRA" i="2" n="1"/>
+      <card c="Galadriel, Light of Valinor" s="LTC" i="1" n="1"/>
+      <card c="The Shire" s="LTR" i="1" n="1"/>
+      <card c="Matoya, Archon Elder" s="FIN" i="1" n="1"/>
+      <card c="Stomping Ground" s="EOE" i="1" n="1"/>
+      <card c="Fallaji Wayfarer" s="DMC" i="1" n="1"/>
+      <card c="Legolas, Master Archer" s="LTR" i="1" n="1"/>
+      <card c="Overwhelming Stampede" s="LTC" i="1" n="1"/>
+      <card c="Jedit Ojanen, Mercenary" s="DMC" i="1" n="1"/>
+      <card c="Artificer&apos;s Assistant" s="DOM" i="1" n="1"/>
+      <card c="Council&apos;s Deliberation" s="LTR" i="1" n="1"/>
+      <card c="Warleader&apos;s Call" s="MKM" i="1" n="1"/>
+      <card c="Knight of New Alara" s="DMC" i="1" n="1"/>
+      <card c="The One Ring" s="LTR" i="4" n="1"/>
+      <card c="Jetmir, Nexus of Revels" s="SNC" i="1" n="1"/>
+      <card c="Forth Eorlingas!" s="LTC" i="1" n="1"/>
+      <card c="Oath of Eorl" s="LTC" i="1" n="1"/>
+      <card c="Elven Farsight" s="LTR" i="1" n="1"/>
+      <card c="Preordain" s="LTC" i="1" n="1"/>
+      <card c="Dawn of a New Age" s="LTR" i="2" n="1"/>
+      <card c="Kellan Joins Up" s="OTJ" i="1" n="1"/>
+      <card c="Rishkar, Peema Renegade" s="SCD" i="1" n="1"/>
+      <card c="Harbin, Vanguard Aviator" s="BRO" i="1" n="1"/>
+      <card c="Prince Imrahil the Fair" s="LTR" i="1" n="1"/>
+      <card c="The Ring Goes South" s="LTR" i="1" n="1"/>
+      <card c="Aragorn, King of Gondor" s="LTC" i="2" n="1"/>
+      <card c="Boros Charm" s="CMR" i="1" n="1"/>
+      <card c="Mithril Coat" s="LTR" i="1" n="1"/>
+      <card c="Dovin&apos;s Veto" s="WAR" i="1" n="1"/>
+      <card c="Jeskai Charm" s="2X2" i="1" n="1"/>
+      <card c="Lothlórien Blade" s="LTC" i="1" n="1"/>
+      <card c="Breeding Pool" s="EOE" i="1" n="1"/>
+      <card c="Soul Warden" s="PLST" i="1" n="1"/>
+      <card c="Éomer, King of Rohan" s="LTC" i="1" n="1"/>
+      <card c="Surrak Dragonclaw" s="DMC" i="1" n="1"/>
+      <card c="Bloom Tender" s="ECL" i="2" n="1"/>
+      <card c="Elvish Warmaster" s="LTC" i="1" n="1"/>
+      <card c="Pillar of the Paruns" s="LTC" i="1" n="1"/>
+      <card c="Faeburrow Elder" s="TDC" i="1" n="1"/>
+      <card c="Minas Tirith" s="LTR" i="1" n="1"/>
+      <card c="Frodo Baggins" s="LTR" i="1" n="1"/>
+      <card c="Legolas, Counter of Kills" s="LTR" i="1" n="1"/>
+      <card c="Yoshimaru, Ever Faithful" s="NEC" i="2" n="1"/>
+      <card c="Rising of the Day" s="LTR" i="1" n="1"/>
+      <card c="Chance-Met Elves" s="LTR" i="1" n="1"/>
+      <card c="Supreme Verdict" s="LTC" i="1" n="1"/>
+      <card c="Aragorn and Arwen, Wed" s="LTR" i="2" n="1"/>
+      <card c="Faramir, Steward of Gondor" s="LTC" i="1" n="1"/>
+      <card c="Minamo, School at Water&apos;s Edge" s="LTC" i="1" n="1"/>
+      <card c="Arwen&apos;s Gift" s="LTR" i="1" n="1"/>
+      <card c="Goldnight Commander" s="ONC" i="1" n="1"/>
+      <card c="Boromir, Gondor&apos;s Hope" s="LTC" i="1" n="1"/>
+      <card c="Doors of Durin" s="LTR" i="1" n="1"/>
+      <card c="Bard Class" s="AFR" i="1" n="1"/>
+      <card c="Éowyn, Shieldmaiden" s="LTC" i="3" n="1"/>
+      <card c="Last March of the Ents" s="LTR" i="2" n="1"/>
+      <card c="Aragorn, Hornburg Hero" s="LTC" i="1" n="1"/>
+      <card c="Arwen, Mortal Queen" s="LTR" i="2" n="1"/>
+      <card c="Bant Charm" s="2X2" i="1" n="1"/>
+      <card c="Plaza of Heroes" s="DMU" i="1" n="1"/>
+      <card c="Elspeth, Storm Slayer" s="TDM" i="2" n="1"/>
+      <card c="Adeline, Resplendent Cathar" s="MOC" i="1" n="1"/>
+      <card c="Combat Celebrant" s="LTC" i="1" n="1"/>
+      <card c="Shinka, the Bloodsoaked Keep" s="LTC" i="1" n="1"/>
+      <card c="Mass Appeal" s="AVR" i="1" n="1"/>
+      <card c="Proft, Consulting Detective" s="FRA" i="1" n="1"/>
+      <card c="Elvish Harbinger" s="LTC" i="1" n="1"/>
+      <card c="Visions of Glory" s="LTC" i="1" n="1"/>
+      <card c="Erkenbrand, Lord of Westfold" s="LTR" i="1" n="1"/>
+      <card c="Captain Sisay" s="SLD" i="2" n="1"/>
+      <card c="Neyali, Suns&apos; Vanguard" s="ONC" i="3" n="1"/>
+      <card c="Glóin, Dwarf Emissary" s="LTR" i="1" n="1"/>
+      <card c="Rienne, Angel of Rebirth" s="DMC" i="1" n="1"/>
+      <card c="General Ferrous Rokiric" s="MH2" i="1" n="1"/>
+      <card c="Horn of the Mark" s="LTR" i="1" n="1"/>
+      <card c="Andúril, Flame of the West" s="LTR" i="2" n="1"/>
+      <card c="Lothlórien Lookout" s="LTR" i="1" n="1"/>
+      <card c="Lost Isle Calling" s="LTR" i="1" n="1"/>
+      <card c="Flawless Maneuver" s="CMM" i="1" n="1"/>
+      <card c="Intangible Virtue" s="CMM" i="1" n="1"/>
+      <card c="Urza&apos;s Ruinous Blast" s="CMM" i="1" n="1"/>
+      <card c="Sigarda, Font of Blessings" s="MAT" i="1" n="1"/>
+      <card c="Gimli&apos;s Axe" s="LTR" i="1" n="1"/>
+      <card c="Inga and Esika" s="MOM" i="1" n="1"/>
+      <card c="Hajar, Loyal Bodyguard" s="BRO" i="1" n="1"/>
+      <card c="Entish Restoration" s="LTR" i="1" n="1"/>
+      <card c="Path to Exile" s="LTC" i="1" n="1"/>
+      <card c="Loyal Retainers" s="CMM" i="1" n="1"/>
+      <card c="Arwen, Weaver of Hope" s="LTC" i="1" n="1"/>
+      <card c="Legolas Greenleaf" s="LTC" i="1" n="1"/>
+      <card c="Mox Amber" s="DOM" i="1" n="1"/>
+      <card c="Blasphemous Act" s="LTC" i="1" n="1"/>
+      <card c="Faramir, Prince of Ithilien" s="LTR" i="1" n="1"/>
+      <card c="Galadriel of Lothlórien" s="LTR" i="1" n="1"/>
+      <card c="Annie Joins Up" s="OTJ" i="1" n="1"/>
+      <card c="Shared Animosity" s="LTC" i="1" n="1"/>
+      <card c="Elven Chorus" s="LTR" i="1" n="1"/>
+      <card c="You Cannot Pass!" s="LTR" i="1" n="1"/>
+      <card c="Eligeth, Crossroads Augur" s="CMR" i="1" n="1"/>
+      <card c="War of the Last Alliance" s="LTR" i="1" n="1"/>
+      <card c="Sacred Foundry" s="EOE" i="1" n="1"/>
+      <card c="Hero of Precinct One" s="DMC" i="1" n="1"/>
+      <card c="Lightning Greaves" s="LTC" i="1" n="1"/>
+      <card c="The Grey Havens" s="LTR" i="1" n="1"/>
+      <card c="The Great Henge" s="LTC" i="1" n="1"/>
+      <card c="Nimrodel Watcher" s="LTR" i="1" n="1"/>
+      <card c="Elrond, Master of Healing" s="LTR" i="1" n="1"/>
+      <card c="Arcane Signet" s="LTC" i="1" n="1"/>
+      <card c="Kutzil, Malamet Exemplar" s="LCI" i="1" n="1"/>
+      <card c="Thassa, God of the Sea" s="LCC" i="1" n="1"/>
+      <card c="Frontline Medic" s="LTC" i="1" n="1"/>
+      <card c="Galadriel, Gift-Giver" s="LTR" i="1" n="1"/>
+      <card c="Andúril, Narsil Reforged" s="LTC" i="1" n="1"/>
+      <card c="Elrond, Lord of Rivendell" s="LTR" i="1" n="1"/>
+      <card c="Hallowed Fountain" s="ECL" i="1" n="1"/>
+      <card c="Song of Eärendil" s="LTC" i="1" n="1"/>
+      <card c="Flowering of the White Tree" s="LTR" i="1" n="1"/>
+      <card c="Beregond of the Guard" s="LTC" i="1" n="1"/>
+      <card c="Cabaretti Charm" s="SNC" i="1" n="1"/>
+      <card c="Horn of Gondor" s="LTR" i="1" n="1"/>
+      <card c="Havi, the All-Father" s="ACR" i="1" n="1"/>
+      <card c="Katilda, Dawnhart Prime" s="MID" i="1" n="1"/>
+      <card c="Gimli of the Glittering Caves" s="LTC" i="1" n="1"/>
+      <card c="Nature&apos;s Lore" s="CMM" i="1" n="1"/>
+      <card c="Crown of Gondor" s="LTC" i="1" n="1"/>
+      <card c="Mentor of the Meek" s="FDN" i="1" n="1"/>
+      <card c="Sol Ring" s="LTC" i="1" n="1"/>
+      <card c="Rumor Gatherer" s="SNC" i="1" n="1"/>
+      <card c="Ioreth of the Healing House" s="LTR" i="1" n="1"/>
+      <card c="Glorfindel, Dauntless Rescuer" s="LTR" i="1" n="1"/>
+      <card c="Gandalf the White" s="LTR" i="4" n="1"/>
+      <card c="Heroic Intervention" s="LTC" i="1" n="1"/>
+      <card c="The Temporal Anchor" s="BRO" i="1" n="1"/>
+      <card c="Chulane, Teller of Tales" s="MKC" i="1" n="1"/>
+      <card c="Jhoira, Weatherlight Captain" s="EOC" i="1" n="1"/>
+      <card c="Fall of Gil-galad" s="LTR" i="1" n="1"/>
+      <card c="Rivendell" s="LTR" i="1" n="1"/>
+      <card c="Riders of the Mark" s="LTR" i="1" n="1"/>
+      <card c="Avacyn&apos;s Memorial" s="MIC" i="2" n="1"/>
+      <card c="Knowledge and Power" s="JOU" i="1" n="1"/>
+      <card c="Rogue&apos;s Passage" s="LTC" i="1" n="1"/>
+      <card c="Kyler, Sigardian Emissary" s="MIC" i="2" n="1"/>
+      <card c="Planetarium of Wan Shi Tong" s="TLA" i="2" n="1"/>
+      <card c="Éomer, Marshal of Rohan" s="LTR" i="1" n="1"/>
+      <card c="Bard, King of Dale" s="HOB" i="1" n="1"/>
+      <card c="Tam, Mindful First-Year" s="ECL" i="1" n="1"/>
+      <card c="Temple Garden" s="ECL" i="1" n="1"/>
+      <card c="Great Hall of the Citadel" s="LTR" i="1" n="1"/>
+      <card c="Relic of Legends" s="DMU" i="1" n="1"/>
+      <card c="Torens, Fist of the Angels" s="INR" i="1" n="1"/>
+      <card c="Haldir, Lórien Lieutenant" s="LTC" i="1" n="1"/>
+      <card c="Doubling Season" s="FDN" i="1" n="1"/>
+      <card c="Swiftfoot Boots" s="LCC" i="1" n="1"/>
+      <card c="Mines of Moria" s="LTR" i="1" n="1"/>
+    </rewardPool>
+    <discardedRewardPool/>
+    <description>Unleash an army of human soldiers, scry with all-seeing elves, or rule with legends.</description>
+    <themeDescription>Colors, Legendary, Tokens, Scry, Counters</themeDescription>
+    <avatarIndex>97</avatarIndex>
+    <sleeveIndex>0</sleeveIndex>
+    <landEdition>LTR</landEdition>
+    <includeColorlessBasics>false</includeColorlessBasics>
+    <experimental>false</experimental>
+  </selectedRogueDeck>
+  <timestamp>11-23-26, 4:53</timestamp>
+  <currentDeck>
+    <name>Aragorn, the Uniter</name>
+    <parts class="enum-map" enum-type="forge.deck.DeckSection">
+      <entry>
+        <forge.deck.DeckSection>Main</forge.deck.DeckSection>
+        <forge.deck.CardPool>
+          <card c="Deserted Beach" s="INR" i="1" n="1"/>
+          <card c="Swords to Plowshares" s="LTC" i="1" n="1"/>
+          <card c="Brokers Charm" s="SNC" i="1" n="1"/>
+          <card c="Celeborn the Wise" s="LTR" i="1" n="1"/>
+          <card c="Sundown Pass" s="INR" i="1" n="1"/>
+          <card c="Éowyn, Fearless Knight" s="LTR" i="1" n="1"/>
+          <card c="Naya Charm" s="DMC" i="1" n="1"/>
+          <card c="Riders of Rohan" s="LTC" i="1" n="1"/>
+          <card c="Island" s="LTR" i="1" n="1"/>
+          <card c="Forest" s="LTR" i="2" n="1"/>
+          <card c="Friendly Rivalry" s="LTR" i="1" n="1"/>
+          <card c="Jetmir&apos;s Garden" s="SNC" i="1" n="1"/>
+          <card c="Lossarnach Captain" s="LTC" i="1" n="1"/>
+          <card c="Delighted Halfling" s="LTR" i="1" n="1"/>
+          <card c="Overgrown Farmland" s="TDC" i="1" n="1"/>
+          <card c="Paradise Druid" s="LTC" i="1" n="1"/>
+          <card c="Rockfall Vale" s="TDC" i="1" n="1"/>
+          <card c="Mirror of Galadriel" s="LTR" i="1" n="1"/>
+          <card c="Path of Ancestry" s="LTC" i="1" n="1"/>
+          <card c="Command Tower" s="LTC" i="1" n="1"/>
+          <card c="Evolving Wilds" s="LTC" i="1" n="1"/>
+          <card c="Plains" s="LTR" i="1" n="1"/>
+          <card c="Cultivate" s="LTC" i="1" n="1"/>
+          <card c="Arwen Undómiel" s="LTR" i="1" n="1"/>
+          <card c="Mountain" s="LTR" i="2" n="1"/>
+          <card c="Growth Spiral" s="LTC" i="1" n="1"/>
+          <card c="Pippin, Guard of the Citadel" s="LTR" i="1" n="1"/>
+          <card c="Spara&apos;s Headquarters" s="SNC" i="1" n="1"/>
+          <card c="Elvish Mariner" s="LTR" i="1" n="1"/>
+          <card c="Boromir, Warden of the Tower" s="LTR" i="1" n="1"/>
+          <card c="Dreamroot Cascade" s="TDC" i="1" n="1"/>
+          <card c="Théoden, King of Rohan" s="LTR" i="1" n="1"/>
+        </forge.deck.CardPool>
+      </entry>
+      <entry>
+        <forge.deck.DeckSection>Commander</forge.deck.DeckSection>
+        <forge.deck.CardPool>
+          <card c="Aragorn, the Uniter" s="LTR" i="3" n="1"/>
+        </forge.deck.CardPool>
+      </entry>
+    </parts>
+    <tags class="sorted-set">
+      <comparator class="java.lang.String$CaseInsensitiveComparator"/>
+    </tags>
+    <aiHints class="sorted-set"/>
+    <keyCards/>
+    <altCommanders/>
+    <draftNotes/>
+    <deckFormat>Constructed</deckFormat>
+    <lastCardArtPreferenceUsed></lastCardArtPreferenceUsed>
+    <includeCardsFromUnspecifiedSet>false</includeCardsFromUnspecifiedSet>
+    <sleeveArtKey></sleeveArtKey>
+    <sleeveArtOffset>500</sleeveArtOffset>
+  </currentDeck>
+  <currentLife>20</currentLife>
+  <maxLife>20</maxLife>
+  <currentGold>8</currentGold>
+  <path>
+    <nodes>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>true</completed>
+        <rowIndex>0</rowIndex>
+        <columnIndex>0</columnIndex>
+        <roguePlanebound>
+          <planeName>The Great Forest</planeName>
+          <planeboundName>Felothar the Steadfast</planeboundName>
+          <deckPath>rogue/planebounds/felothar.dck</deckPath>
+          <avatarIndex>11</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>1</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>true</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>0</rowIndex>
+        <columnIndex>1</columnIndex>
+        <roguePlanebound>
+          <planeName>Undercity Reaches</planeName>
+          <planeboundName>Etrata, the Silencer</planeboundName>
+          <deckPath>rogue/planebounds/etrata.dck</deckPath>
+          <avatarIndex>75</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>0</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>0</rowIndex>
+        <columnIndex>2</columnIndex>
+        <roguePlanebound>
+          <planeName>The Wilds</planeName>
+          <planeboundName>Ygra, Eater of All</planeboundName>
+          <deckPath>rogue/planebounds/ygra.dck</deckPath>
+          <avatarIndex>53</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>1</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodeEvent>
+        <completed>true</completed>
+        <rowIndex>1</rowIndex>
+        <columnIndex>0</columnIndex>
+        <event>AMBUSH</event>
+      </forge.gamemodes.rogue.path.NodeEvent>
+      <forge.gamemodes.rogue.path.NodeSanctum>
+        <completed>false</completed>
+        <rowIndex>1</rowIndex>
+        <columnIndex>1</columnIndex>
+        <healAmount>5</healAmount>
+      </forge.gamemodes.rogue.path.NodeSanctum>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>true</completed>
+        <rowIndex>2</rowIndex>
+        <columnIndex>0</columnIndex>
+        <roguePlanebound>
+          <planeName>Naya</planeName>
+          <planeboundName>Pantlaza, Sun-Favored</planeboundName>
+          <deckPath>rogue/planebounds/pantlaza.dck</deckPath>
+          <avatarIndex>85</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>1</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>2</rowIndex>
+        <columnIndex>1</columnIndex>
+        <roguePlanebound>
+          <planeName>Velis Vel</planeName>
+          <planeboundName>Morophon, the Boundless</planeboundName>
+          <deckPath>rogue/planebounds/morophon.dck</deckPath>
+          <avatarIndex>94</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>2</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>2</rowIndex>
+        <columnIndex>2</columnIndex>
+        <roguePlanebound>
+          <planeName>Izzet Steam Maze</planeName>
+          <planeboundName>Niv-Mizzet, Visionary</planeboundName>
+          <deckPath>rogue/planebounds/niv_mizzet.dck</deckPath>
+          <avatarIndex>58</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>1</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>2</rowIndex>
+        <columnIndex>3</columnIndex>
+        <roguePlanebound>
+          <planeName>Grand Ossuary</planeName>
+          <planeboundName>Slimefoot, the Stowaway</planeboundName>
+          <deckPath>rogue/planebounds/slimefoot.dck</deckPath>
+          <avatarIndex>15</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>2</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodeSanctum>
+        <completed>false</completed>
+        <rowIndex>3</rowIndex>
+        <columnIndex>0</columnIndex>
+        <healAmount>5</healAmount>
+      </forge.gamemodes.rogue.path.NodeSanctum>
+      <forge.gamemodes.rogue.path.NodeEvent>
+        <completed>false</completed>
+        <rowIndex>3</rowIndex>
+        <columnIndex>1</columnIndex>
+        <event>MERCHANT_CARAVAN</event>
+      </forge.gamemodes.rogue.path.NodeEvent>
+      <forge.gamemodes.rogue.path.NodeChest>
+        <completed>false</completed>
+        <rowIndex>3</rowIndex>
+        <columnIndex>2</columnIndex>
+        <chestEffects>
+          <forge.gamemodes.rogue.effect.ChestEffect>RELIC_OF_INSIGHT</forge.gamemodes.rogue.effect.ChestEffect>
+          <forge.gamemodes.rogue.effect.ChestEffect>BANNER_OF_WAR</forge.gamemodes.rogue.effect.ChestEffect>
+        </chestEffects>
+      </forge.gamemodes.rogue.path.NodeChest>
+      <forge.gamemodes.rogue.path.NodeBazaar>
+        <completed>false</completed>
+        <rowIndex>3</rowIndex>
+        <columnIndex>3</columnIndex>
+      </forge.gamemodes.rogue.path.NodeBazaar>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>4</rowIndex>
+        <columnIndex>0</columnIndex>
+        <roguePlanebound>
+          <planeName>Bloodhill Bastion</planeName>
+          <planeboundName>Aurelia, the Warleader</planeboundName>
+          <deckPath>rogue/planebounds/aurelia.dck</deckPath>
+          <avatarIndex>40</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>3</minRow>
+        </roguePlanebound>
+        <wrathfulCount>2</wrathfulCount>
+        <cursedCount>1</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>4</rowIndex>
+        <columnIndex>1</columnIndex>
+        <roguePlanebound>
+          <planeName>Selesnya Loft Gardens</planeName>
+          <planeboundName>Trostani, Selesnya&apos;s Voice</planeboundName>
+          <deckPath>rogue/planebounds/trostani.dck</deckPath>
+          <avatarIndex>74</avatarIndex>
+          <type>ELITE</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>1</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>4</rowIndex>
+        <columnIndex>2</columnIndex>
+        <roguePlanebound>
+          <planeName>Nyx</planeName>
+          <planeboundName>Anikthea, Hand of Erebos</planeboundName>
+          <deckPath>rogue/planebounds/anikthea.dck</deckPath>
+          <avatarIndex>91</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>1</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodeChest>
+        <completed>false</completed>
+        <rowIndex>5</rowIndex>
+        <columnIndex>0</columnIndex>
+        <chestEffects>
+          <forge.gamemodes.rogue.effect.ChestEffect>TREASURE</forge.gamemodes.rogue.effect.ChestEffect>
+          <forge.gamemodes.rogue.effect.ChestEffect>SHIELD_OF_THE_GODS</forge.gamemodes.rogue.effect.ChestEffect>
+        </chestEffects>
+      </forge.gamemodes.rogue.path.NodeChest>
+      <forge.gamemodes.rogue.path.NodeSanctum>
+        <completed>false</completed>
+        <rowIndex>5</rowIndex>
+        <columnIndex>1</columnIndex>
+        <healAmount>5</healAmount>
+      </forge.gamemodes.rogue.path.NodeSanctum>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>6</rowIndex>
+        <columnIndex>0</columnIndex>
+        <roguePlanebound>
+          <planeName>Towashi</planeName>
+          <planeboundName>Cloud, Midgar Mercenary</planeboundName>
+          <deckPath>rogue/planebounds/cloud.dck</deckPath>
+          <avatarIndex>3</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>3</minRow>
+        </roguePlanebound>
+        <wrathfulCount>2</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>6</rowIndex>
+        <columnIndex>1</columnIndex>
+        <roguePlanebound>
+          <planeName>Llanowar</planeName>
+          <planeboundName>Ezuri, Renegade Leader</planeboundName>
+          <deckPath>rogue/planebounds/ezuri.dck</deckPath>
+          <avatarIndex>14</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>3</minRow>
+        </roguePlanebound>
+        <wrathfulCount>0</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodeEvent>
+        <completed>false</completed>
+        <rowIndex>7</rowIndex>
+        <columnIndex>0</columnIndex>
+        <event>STREET_OF_GREED</event>
+      </forge.gamemodes.rogue.path.NodeEvent>
+      <forge.gamemodes.rogue.path.NodeEvent>
+        <completed>false</completed>
+        <rowIndex>7</rowIndex>
+        <columnIndex>1</columnIndex>
+        <event>SHRINE</event>
+      </forge.gamemodes.rogue.path.NodeEvent>
+      <forge.gamemodes.rogue.path.NodeBazaar>
+        <completed>false</completed>
+        <rowIndex>7</rowIndex>
+        <columnIndex>2</columnIndex>
+      </forge.gamemodes.rogue.path.NodeBazaar>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>8</rowIndex>
+        <columnIndex>0</columnIndex>
+        <roguePlanebound>
+          <planeName>Akoum</planeName>
+          <planeboundName>Ellivere of the Wild Court</planeboundName>
+          <deckPath>rogue/planebounds/ellivere.dck</deckPath>
+          <avatarIndex>24</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>0</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>8</rowIndex>
+        <columnIndex>1</columnIndex>
+        <roguePlanebound>
+          <planeName>Shiv</planeName>
+          <planeboundName>Lathliss, Dragon Queen</planeboundName>
+          <deckPath>rogue/planebounds/lathliss.dck</deckPath>
+          <avatarIndex>85</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>1</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>8</rowIndex>
+        <columnIndex>2</columnIndex>
+        <roguePlanebound>
+          <planeName>Orzhova</planeName>
+          <planeboundName>Teysa Karlov</planeboundName>
+          <deckPath>rogue/planebounds/teysa.dck</deckPath>
+          <avatarIndex>55</avatarIndex>
+          <type>NORMAL</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>0</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+      <forge.gamemodes.rogue.path.NodeBazaar>
+        <completed>false</completed>
+        <rowIndex>9</rowIndex>
+        <columnIndex>0</columnIndex>
+      </forge.gamemodes.rogue.path.NodeBazaar>
+      <forge.gamemodes.rogue.path.NodeChest>
+        <completed>false</completed>
+        <rowIndex>9</rowIndex>
+        <columnIndex>1</columnIndex>
+        <chestEffects>
+          <forge.gamemodes.rogue.effect.ChestEffect>SHIELD_OF_CONVALESCENCE</forge.gamemodes.rogue.effect.ChestEffect>
+          <forge.gamemodes.rogue.effect.ChestEffect>CHARM_OF_THE_WASTELAND</forge.gamemodes.rogue.effect.ChestEffect>
+        </chestEffects>
+      </forge.gamemodes.rogue.path.NodeChest>
+      <forge.gamemodes.rogue.path.NodeSanctum>
+        <completed>false</completed>
+        <rowIndex>9</rowIndex>
+        <columnIndex>2</columnIndex>
+        <healAmount>5</healAmount>
+      </forge.gamemodes.rogue.path.NodeSanctum>
+      <forge.gamemodes.rogue.path.NodePlanebound>
+        <completed>false</completed>
+        <rowIndex>10</rowIndex>
+        <columnIndex>0</columnIndex>
+        <roguePlanebound>
+          <planeName>The Dark Barony</planeName>
+          <planeboundName>Lazav, Dimir Mastermind</planeboundName>
+          <deckPath>rogue/planebounds/lazav.dck</deckPath>
+          <avatarIndex>9</avatarIndex>
+          <type>BOSS</type>
+          <minRow>0</minRow>
+        </roguePlanebound>
+        <wrathfulCount>0</wrathfulCount>
+        <cursedCount>0</cursedCount>
+        <startingLifeModification>5</startingLifeModification>
+        <revealed>false</revealed>
+      </forge.gamemodes.rogue.path.NodePlanebound>
+    </nodes>
+  </path>
+  <currentNodeIndex>11</currentNodeIndex>
+  <runState>STARTED</runState>
+  <descensionLevel>1</descensionLevel>
+  <endlessLevel>1</endlessLevel>
+  <activeAetherEffects/>
+  <activeWounds>
+    <forge.gamemodes.rogue.RogueRunEffect>
+      <id>left_leg</id>
+      <rank>0</rank>
+      <charges>-1</charges>
+    </forge.gamemodes.rogue.RogueRunEffect>
+  </activeWounds>
+  <matchesWon>0</matchesWon>
+  <matchesLost>0</matchesLost>
+  <removalCredits>3</removalCredits>
+  <runTimer>
+    <elapsedMillis>0</elapsedMillis>
+  </runTimer>
+  <carryCards>
+    <forge.gamemodes.rogue.RogueRun_-CarryCard>
+      <cardName>Sol Ring</cardName>
+      <setCode>TRC</setCode>
+      <artIndex>1</artIndex>
+      <type>ITEM</type>
+    </forge.gamemodes.rogue.RogueRun_-CarryCard>
+    <forge.gamemodes.rogue.RogueRun_-CarryCard>
+      <cardName>Llanowar Elves</cardName>
+      <setCode>SLZ</setCode>
+      <artIndex>1</artIndex>
+      <type>FELLOW</type>
+    </forge.gamemodes.rogue.RogueRun_-CarryCard>
+    <forge.gamemodes.rogue.RogueRun_-CarryCard>
+      <cardName>Lightning Bolt</cardName>
+      <setCode>SLZ</setCode>
+      <artIndex>1</artIndex>
+      <type>SCROLL</type>
+    </forge.gamemodes.rogue.RogueRun_-CarryCard>
+  </carryCards>
+</forge.gamemodes.rogue.RogueRun>
