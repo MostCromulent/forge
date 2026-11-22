@@ -29,7 +29,9 @@ import forge.gamemodes.planarconquest.ConquestUtil.TypeFilter;
 import forge.gamemodes.quest.QuestUtil;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
+import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
@@ -54,7 +56,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 /** Planar Conquest as one session plays it: the saves, the map, the party and its decks, the Aether, planeswalking and the battles. The conquest itself is Forge's, with one per process, so this class holds only what the session knows that the save does not. */
-public final class ConquestGame implements Campaign {
+public final class ConquestGame implements Campaign, IHasForgeLog {
     private ConquestLocation selection;
     /** The result of the game just ended, while its match is still open. */
     private volatile CampaignResult result;
@@ -256,10 +258,6 @@ public final class ConquestGame implements Campaign {
         reward = null;
         chaosOwed = false;
         nextWheel = null;
-    }
-
-    public void setNextWheel(final ChaosWheelOutcome outcome) {
-        nextWheel = outcome;
     }
 
     @Override
@@ -951,7 +949,28 @@ public final class ConquestGame implements Campaign {
                     case conquestEditDeck -> c.host().decks().openCollectionDeck(commander.getDeck(), FModel.getConquest().getDecks(),
                             GameType.PlanarConquest, collection(commander), true, ch);
                 }
-            }));
+            }))
+            // The wheel belongs to the conquest, not to a game, so this cheat is not one of DevMode's
+            .on(DevConquestWheel.class, (c, ch, w) -> {
+                if (c.host().session().hosting() && FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {
+                    try {
+                        c.game().nextWheel = w.outcome() == null || w.outcome().isEmpty() ? null : ChaosWheelOutcome.valueOf(w.outcome());
+                    } catch (final IllegalArgumentException e) {
+                        netLog.warn("Not a wheel outcome: {}", w.outcome());
+                    }
+                }
+            });
+
+    @Override
+    public boolean handles(final Record command) {
+        return COMMANDS.handles(command);
+    }
+
+    /** The wheel is set during the battle it is spun for. */
+    @Override
+    public boolean anywhere(final Record command) {
+        return command instanceof DevConquestWheel;
+    }
 
     @Override
     public void handle(final BrowserChannel channel, final Record command, final String save, final Host host) {

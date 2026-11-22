@@ -10,6 +10,7 @@ import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.game.GameView;
+import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.quest.NewQuestRules;
 import forge.gamemodes.quest.QuestController;
@@ -52,6 +53,7 @@ import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckFacts;
 import forge.web.deck.DeckEditor;
 import forge.web.deck.DeckStore;
+import forge.web.limited.DraftOwner;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.*;
 import forge.web.protocol.Commands;
@@ -451,8 +453,36 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                 quest.getAssets().getItemLevel(QuestItemType.ZEPPELIN) == 2);
     }
 
+    /** Opens the draft of the tournament just entered, whose packs are already dealt. */
+    void startDraft(final BoosterDraft draft, final Host host) {
+        host.session().startDraft(draft, new DraftOwner() {
+            @Override
+            public String deckName() {
+                return QuestEventDraft.DECK_NAME;
+            }
+
+            @Override
+            public void saved(final DeckGroup decks) {
+                host.run(() -> {
+                    final IStorage<DeckGroup> pools = drafted(decks);
+                    host.show();
+                    host.decks().openPool(decks.getHumanDeck(), pools, GameType.QuestDraft, host.session().browser());
+                });
+            }
+
+            @Override
+            public void discarded() {
+                // Left as desktop leaves it, with the fee refunded
+                host.run(() -> {
+                    cancelDraft();
+                    host.show();
+                });
+            }
+        });
+    }
+
     /** Leaves a tournament whose draft was not finished, as desktop does. The fee is refunded and the tournament is no longer offered. */
-    public void cancelDraft() {
+    private void cancelDraft() {
         final QuestEventDraft draft = quest().getAchievements().getCurrentDraft();
         if (draft == null) {
             return;
@@ -463,7 +493,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
     }
 
     /** Keeps a tournament's finished draft the way Quest does, and returns the storage its deck is built in. */
-    public IStorage<DeckGroup> drafted(final DeckGroup group) {
+    private IStorage<DeckGroup> drafted(final DeckGroup group) {
         QuestDraftUtils.completeDraft(group);
         return quest().getDraftDecks();
     }
@@ -646,8 +676,14 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         duels = null;
     }
 
+    @Override
+    public void becameHost(final Host host) {
+        // The cards Forge shows the host outside a match are the ones a quest purchase or prize opened
+        host.session().ui().setCardsSink(this::shown);
+    }
+
     /** Cards Forge showed the host, such as a booster just bought. They are added to what the reveal has not shown yet. A product the shop sold opens as a pack. */
-    public void shown(final String title, final List<PaperCard> cards) {
+    private void shown(final String title, final List<PaperCard> cards) {
         final List<RewardStep> steps = new ArrayList<>(reward == null ? List.of() : reward.steps());
         steps.add(WebGuiBase.isProductName(title) ? WebQuestView.packStep(title, cards, WebGuiBase.boosterImageNamed(title)) : WebQuestView.cardsStep(title, cards, false));
         reward = new Reward(steps);
@@ -822,10 +858,6 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         return null;
     }
 
-    @Override
-    public void resetPrefs() {
-    }
-
     /** A command to this quest. save is the open save, or null when the command comes from the list of saves. */
     private record Call(QuestGame game, String save, Host host) {
     }
@@ -932,7 +964,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                     c.game().fight(quest().getChallenges().get(id), c.host());
                 }
             }))
-            .on(QuestEnter.class, tournament((c, e) -> QuestDraftTournaments.enter(e.title(), c.host())))
+            .on(QuestEnter.class, tournament((c, e) -> QuestDraftTournaments.enter(e.title(), c.game(), c.host())))
             .on(QuestTournamentStart.class, tournament((c, s) -> QuestDraftTournaments.startTournament()))
             .on(QuestTournamentNext.class, tournament((c, n) -> c.game().nextMatch(c.host())))
             .on(QuestToken.class, tournament((c, t) -> {
@@ -1030,6 +1062,11 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         // The Duels page names the deck duels use
         channel.send(c.game().duelsPage());
         channel.send(c.game().decksPage());
+    }
+
+    @Override
+    public boolean handles(final Record command) {
+        return COMMANDS.handles(command);
     }
 
     @Override

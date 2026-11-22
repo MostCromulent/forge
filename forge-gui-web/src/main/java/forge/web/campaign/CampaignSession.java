@@ -1,15 +1,7 @@
 package forge.web.campaign;
 
-import forge.deck.DeckGroup;
-import forge.game.GameType;
-import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.PreparedMatch;
-import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
-import forge.gamemodes.quest.QuestEventDraft;
 import forge.localinstance.properties.ForgePreferences.FPref;
-import forge.model.FModel;
-import forge.util.IHasForgeLog;
-import forge.util.storage.IStorage;
 import forge.web.Campaigns;
 import forge.web.WebGuiBase;
 import forge.web.WebSession;
@@ -18,7 +10,6 @@ import forge.web.WebSession.Menu;
 import forge.web.WebSession.Playing;
 import forge.web.WebSession.Stage;
 import forge.web.deck.DeckWorkspace;
-import forge.web.limited.DraftOwner;
 import forge.web.match.NetplaySeat;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.*;
@@ -36,20 +27,16 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /** One session's campaign modes. It holds the commands their pages share, the thread they run on, and what they show as the browser moves between pages. */
-public final class CampaignSession implements Campaigns, IHasForgeLog {
+public final class CampaignSession implements Campaigns {
     private final Campaigns.Host session;
-    /** The open conquest's state that only this session holds: its selection and the last move. */
-    private final ConquestGame conquest = new ConquestGame();
-    private final QuestGame quest = new QuestGame();
-    /** One thread for all campaign work, because the campaign model is Forge's own and has no locking. */
+    /** The modes by the name the browser opens them by. */
+    private final Map<String, Campaign> modes;
+    /** One thread for the work of every mode that has none of its own, because the campaign model is Forge's own and has no locking. */
     private final Executor work = WebGuiBase.worker("WebCampaign");
 
-    public CampaignSession(final Campaigns.Host session) {
+    public CampaignSession(final Campaigns.Host session, final Map<String, Campaign> modes) {
         this.session = session;
-    }
-
-    private Campaign campaign(final String mode) {
-        return "quest".equals(mode) ? quest : "conquest".equals(mode) ? conquest : null;
+        this.modes = modes;
     }
 
     private final Campaign.Host host = new Campaign.Host() {
@@ -77,7 +64,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
                 return;
             }
             // A game's result belongs to the campaign that started it, wherever the browser is when the result is recorded
-            final Campaign campaign = campaign(back.mode());
+            final Campaign campaign = modes.get(back.mode());
             session.startMatch(back, gui -> {
                 final PreparedMatch prepared = prepare.get();
                 if (prepared == null) {
@@ -100,31 +87,18 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         }
 
         @Override
-        public void startDraft(final BoosterDraft draft) {
-            session.startDraft(draft, new DraftOwner() {
-                @Override
-                public String deckName() {
-                    return QuestEventDraft.DECK_NAME;
-                }
+        public Campaigns.Host session() {
+            return session;
+        }
 
-                @Override
-                public void saved(final DeckGroup decks) {
-                    run(() -> {
-                        final IStorage<DeckGroup> pools = quest.drafted(decks);
-                        show();
-                        session.decks().openPool(decks.getHumanDeck(), pools, GameType.QuestDraft, session.browser());
-                    });
-                }
+        @Override
+        public void run(final Runnable job) {
+            CampaignSession.this.run(job);
+        }
 
-                @Override
-                public void discarded() {
-                    // Left as desktop leaves it, with the fee refunded
-                    run(() -> {
-                        quest.cancelDraft();
-                        show();
-                    });
-                }
-            });
+        @Override
+        public void show() {
+            CampaignSession.this.show();
         }
     };
 
@@ -141,7 +115,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
     private static <T extends Record> Handler<CampaignSession, T> inOpen(final OpenHandler<T> handler) {
         return (s, ch, command) -> s.run(() -> {
             if (s.session.stage() instanceof InCampaign c && c.save() != null) {
-                handler.run(s, ch, s.campaign(c.mode()), command);
+                handler.run(s, ch, s.modes.get(c.mode()), command);
             }
         });
     }
@@ -150,7 +124,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
     private static <T extends Record> Handler<CampaignSession, T> inMode(final OpenHandler<T> handler) {
         return (s, ch, command) -> s.run(() -> {
             if (s.session.stage() instanceof InCampaign c) {
-                handler.run(s, ch, s.campaign(c.mode()), command);
+                handler.run(s, ch, s.modes.get(c.mode()), command);
             }
         });
     }
@@ -159,7 +133,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
     public static final Commands<CampaignSession> COMMANDS = new Commands<CampaignSession>()
             // A campaign is Forge's own, with one per process, so only the host may open it
             .on(CampaignOpen.class, (s, ch, o) -> {
-                final Campaign campaign = s.campaign(o.mode());
+                final Campaign campaign = s.modes.get(o.mode());
                 if (s.session.hosting() && campaign != null) {
                     s.run(() -> s.open(o.mode(), o.resume() ? campaign.current() : null));
                 }
@@ -171,7 +145,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
             }))
             .on(CampaignPlain.campaignLeave, (s, ch, l) -> s.run(() -> {
                 final Stage now = s.session.stage();
-                if (now instanceof InCampaign c) {
+                if (now instanceof InCampaign c && s.modes.get(c.mode()).mayLeave(c.save())) {
                     if (c.save() == null) {
                         s.session.move(now, new Menu());
                     } else {
@@ -205,21 +179,11 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
                     ch.send(opened);
                 }
                 ch.send(campaign.trading());
-            }))
-            // The wheel belongs to the conquest, not to a game, so this cheat is not one of DevMode's
-            .on(DevConquestWheel.class, (s, ch, w) -> {
-                if (s.session.hosting() && FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {
-                    try {
-                        s.conquest.setNextWheel(w.outcome() == null || w.outcome().isEmpty() ? null : ChaosWheelOutcome.valueOf(w.outcome()));
-                    } catch (final IllegalArgumentException e) {
-                        netLog.warn("Not a wheel outcome: {}", w.outcome());
-                    }
-                }
-            });
+            }));
 
     @Override
     public boolean handles(final Record command) {
-        return COMMANDS.handles(command) || ConquestGame.COMMANDS.handles(command) || QuestGame.COMMANDS.handles(command);
+        return COMMANDS.handles(command) || modes.values().stream().anyMatch(m -> m.handles(command));
     }
 
     @Override
@@ -227,16 +191,37 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         if (COMMANDS.run(this, channel, command)) {
             return;
         }
+        for (final Campaign campaign : modes.values()) {
+            if (campaign.anywhere(command)) {
+                run(() -> campaign.handle(channel, command, null, host));
+                return;
+            }
+        }
         // Every other command from a campaign's pages belongs to the open mode
+        if (ranItself(channel, command)) {
+            return;
+        }
         run(() -> {
             if (session.stage() instanceof InCampaign c) {
-                campaign(c.mode()).handle(channel, command, c.save(), host);
+                modes.get(c.mode()).handle(channel, command, c.save(), host);
             }
         });
     }
 
+    /** Passes a command to the open mode at once when the mode has a thread of its own. Returns whether it was passed. */
+    private boolean ranItself(final BrowserChannel channel, final Record command) {
+        if (!(session.stage() instanceof InCampaign c) || !modes.get(c.mode()).runsItself()) {
+            return false;
+        }
+        modes.get(c.mode()).handle(channel, command, c.save(), host);
+        return true;
+    }
+
     @Override
     public boolean deckCommand(final BrowserChannel channel, final Record command) {
+        if (ranItself(channel, command)) {
+            return true;
+        }
         if (command instanceof CatalogueQuery q && q.source() != null) {
             // A campaign's own cards, which do not need an open deck
             inOpen((s, ch, campaign, c) -> ch.send(campaign.cards(q))).run(this, channel, command);
@@ -257,10 +242,12 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
     @Override
     public void reconnected(final BrowserChannel channel, final Stage now) {
         if (now instanceof Playing p && p.back() instanceof InCampaign c) {
-            final Record result = campaign(c.mode()).result();
+            final Record result = modes.get(c.mode()).result();
             if (result != null) {
                 channel.send(result);
             }
+        } else if (now instanceof InCampaign c && modes.get(c.mode()).runsItself()) {
+            show();
         } else if (now instanceof InCampaign) {
             run(this::show);
         }
@@ -269,27 +256,29 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
     @Override
     public Map<String, String> resume() {
         final Map<String, String> saves = new LinkedHashMap<>();
-        final String conquestSave = conquest.current();
-        if (conquestSave != null) {
-            saves.put("conquest", conquestSave);
-        }
-        final String questSave = quest.current();
-        if (questSave != null) {
-            saves.put("quest", questSave);
-        }
+        modes.forEach((mode, campaign) -> {
+            final String save = campaign.current();
+            if (save != null) {
+                saves.put(mode, save);
+            }
+        });
         return saves;
     }
 
     @Override
     public void becameHost() {
-        // The cards Forge shows the host outside a match are the ones a quest purchase or prize opened
-        session.ui().setCardsSink(quest::shown);
+        modes.values().forEach(m -> m.becameHost(host));
+    }
+
+    @Override
+    public void leavingMatch(final InCampaign back) {
+        modes.get(back.mode()).leavingMatch();
     }
 
     @Override
     public void left(final Playing from, final InCampaign back) {
         // Queued after the last game's result, so the campaign records the game before it is told the match was left
-        final Campaign campaign = campaign(back.mode());
+        final Campaign campaign = modes.get(back.mode());
         run(() -> {
             if (session.stage() == from) {
                 campaign.left();
@@ -300,15 +289,15 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         });
     }
 
-    /** Sends what the campaign stage draws: the saved games, or the open save's pages and any reward not yet shown. */
+    /** Sends what the campaign stage draws: the pages shown with no save open, or the open save's pages and any reward not yet shown. */
     @Override
     public void show() {
         if (!(session.stage() instanceof InCampaign c)) {
             return;
         }
-        final Campaign campaign = campaign(c.mode());
+        final Campaign campaign = modes.get(c.mode());
         if (c.save() == null) {
-            session.tell(campaign.saves());
+            campaign.home().forEach(session::tell);
         } else {
             campaign.page().forEach(session::tell);
             final Reward pending = campaign.reward();
@@ -318,18 +307,27 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         }
     }
 
-    /** Opens a campaign's list of saved games, or one save. Reading a save is slow, so this runs as campaign work. */
+    /** Opens the pages a campaign shows with no save open, or one save. Reading a save is slow, so this runs as campaign work. */
     private void open(final String mode, final String save) {
         final Stage from = session.stage();
-        final Campaign campaign = campaign(mode);
+        final Campaign campaign = modes.get(mode);
         if (!session.hosting() || campaign == null || !(from instanceof Menu || from instanceof InCampaign)) {
             return;
         }
-        // A deck from the campaign being left can no longer be built
-        session.decks().closeCollectionDeck(session.browser());
-        if (session.move(from, new InCampaign(mode, save == null ? null : campaign.open(save)))) {
-            show();
+        if (from instanceof InCampaign c && !c.mode().equals(mode) && !modes.get(c.mode()).mayLeave(c.save())) {
+            return;
         }
+        campaign.opening(save, () -> {
+            // The mode may have kept this until the player had gone elsewhere
+            if (session.stage() != from) {
+                return;
+            }
+            // A deck from the campaign being left can no longer be built
+            session.decks().closeCollectionDeck(session.browser());
+            if (session.move(from, new InCampaign(mode, save == null ? null : campaign.open(save)))) {
+                show();
+            }
+        });
     }
 
     /** Applies a change from the menu of a saved game in the saves list. change returns why it could not be made, or null. */
@@ -337,7 +335,7 @@ public final class CampaignSession implements Campaigns, IHasForgeLog {
         if (!session.hosting() || !(session.stage() instanceof InCampaign c) || c.save() != null) {
             return;
         }
-        final Campaign campaign = campaign(c.mode());
+        final Campaign campaign = modes.get(c.mode());
         final String problem = change.apply(campaign);
         channel.send(campaign.saves());
         // The start page's Resume button names the save played last

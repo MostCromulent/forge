@@ -87,7 +87,7 @@ final class QuestDraftTournaments {
     }
 
     /** Enters a tournament on offer, as desktop's Enter does. It pays the fee, deals the packs and opens the draft. Returns why it cannot, or null. */
-    static String enter(final String title, final Campaign.Host host) {
+    static String enter(final String title, final QuestGame game, final Campaign.Host host) {
         final QuestAchievements record = QuestGame.quest().getAchievements();
         if (title == null || record.getCurrentDraft() != null || record.getDraftEvents() == null) {
             return null;
@@ -99,7 +99,7 @@ final class QuestDraftTournaments {
                 }
                 final BoosterDraft draft = offered.enter();
                 QuestGame.quest().save();
-                host.startDraft(draft);
+                game.startDraft(draft, host);
                 return null;
             }
         }

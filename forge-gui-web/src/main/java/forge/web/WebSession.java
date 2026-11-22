@@ -15,7 +15,10 @@ import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.util.LogSafe;
 import forge.util.storage.IStorage;
+import forge.web.campaign.Campaign;
 import forge.web.campaign.CampaignSession;
+import forge.web.campaign.ConquestGame;
+import forge.web.campaign.QuestGame;
 import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckWorkspace;
@@ -38,6 +41,7 @@ import forge.web.protocol.ToBrowser.*;
 import forge.web.protocol.MessageJson;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -209,7 +213,10 @@ public final class WebSession implements IHasForgeLog {
         this.limited = new OfflineLimited(this, ui, lobby, decks, local);
         this.eventSeat = new EventSeat(this, ui, lobby, decks, local, sessions::hostLobby, sessions::seatsChanged);
         this.table = new TableCommands(this, lobby, decks, limited, ui, sessions);
-        this.campaigns = new CampaignSession(new CampaignHost());
+        final Map<String, Campaign> modes = new LinkedHashMap<>();
+        modes.put("conquest", new ConquestGame());
+        modes.put("quest", new QuestGame());
+        this.campaigns = new CampaignSession(new CampaignHost(), modes);
     }
 
     /** Takes the host's seat. Host dialogs go to whoever holds the seat, so they are sent to this session. */
@@ -862,6 +869,9 @@ public final class WebSession implements IHasForgeLog {
         final BrowserChannel b = browser;
         if (playing.back() != null) {
             limited.stopGauntlet();
+            if (playing.back() instanceof InCampaign c) {
+                campaigns.leavingMatch(c);
+            }
             local.endMatch();
             if (playing.back() instanceof InCampaign c) {
                 campaigns.left(playing, c);

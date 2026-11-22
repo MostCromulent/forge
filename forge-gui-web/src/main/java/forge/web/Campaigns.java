@@ -79,6 +79,10 @@ public interface Campaigns {
     default void becameHost() {
     }
 
+    /** The player is leaving the match that was started from back, and its table is still open. */
+    default void leavingMatch(final InCampaign back) {
+    }
+
     /** The player left the match that was started from back. */
     default void left(final Playing from, final InCampaign back) {
     }
