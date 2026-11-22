@@ -302,4 +302,8 @@ button.land-set[aria-expanded="true"] { border-color: var(--accent-2); box-shado
 .set-tile .meta small { flex: none; color: var(--muted); font-size: 10.5px; }
 /* A deck built from a game mode's own cards shows its owner before its name. Cards not yet played with are marked as new. */
 .editor-head .deck-owner { color: var(--muted); font-size: 14px; }
+/* What a collection's rules count, such as the removals left. With none left it is drawn muted. */
+.deck-counter { display: inline-flex; align-items: center; gap: 8px; padding: 5px 13px; border: 1px solid color-mix(in srgb, var(--accent-2) 50%, #000); border-radius: 999px; background: var(--accent-soft); color: var(--accent-2); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.deck-counter.spent { border: 1px dashed var(--line-bright); background: none; color: var(--muted); }
+.deck-counter svg { flex: none; width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .new-card { position: absolute; left: -4px; top: 10px; padding: 2px 7px; border-radius: 999px; background: var(--accent-2); color: #1a1405; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; box-shadow: 0 2px 6px #000a; }

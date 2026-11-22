@@ -140,6 +140,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
         {check}
         <div class="head-right">
           <span class="save-state">{saveState(state)}</span>
+          {state.counter && <span class={state.counterSpent ? 'deck-counter spent' : 'deck-counter'}><Icon d={ICONS.cut} />{state.counter}</span>}
           <button disabled={!state.canUndo} onClick={() => actions.editorUndo()} title={`${t('lblUndo')} (Ctrl+Z)`} aria-label={t('lblUndo')}>&#8630;<span class="word"> {t('lblUndo')}</span></button>
           <HeadControls />
           <button class="primary" onClick={() => actions.closeEditor()}>{t('lblDone')}</button>

@@ -119,6 +119,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   const [secondary, primary]: [[ImportAction, string], [ImportAction, string]] = from === 'editor'
     ? [['replace', t('lblWebImportReplaceDeck')], ['add', t('lblWebImportAddToDeck')]]
     : [['edit', t('lblWebImportAndEdit')], from === 'seat' ? ['use', t('lblWebImportAndUse')] : ['save', t('lblImport')]];
+  const fixed = from === 'editor' && !!model.editor && !model.editor.canReplace;
   return (
     <Backdrop cls="importer-back" dismiss={close}>
       <div class="importer">
@@ -218,7 +219,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
         <footer class="imp-foot">
           <span class="grow" />
           <button onClick={close}>{t('lblCancel')}</button>
-          <button disabled={!cards || fetching} onClick={() => commit(secondary[0])}>{secondary[1]}</button>
+          <button disabled={!cards || fetching || fixed} title={fixed ? t('lblWebCollectionNoReplace') : undefined} onClick={() => commit(secondary[0])}>{secondary[1]}</button>
           <button class="primary" disabled={!cards || fetching} onClick={() => commit(primary[0])}>{primary[1]}</button>
         </footer>
         {model.nameTaken && sent && (

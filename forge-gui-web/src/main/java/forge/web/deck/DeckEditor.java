@@ -30,6 +30,7 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -43,6 +44,7 @@ public final class DeckEditor {
     /** The message keys for the replies to changing what a collection's deck keeps fixed. */
     private static final String DECK_FIXED = "lblWebCollectionDeckFixed";
     private static final String MAIN_ONLY = "lblWebCollectionMainOnly";
+    private static final String NO_REPLACE = "lblWebCollectionNoReplace";
     static final String NOT_OWNED = "lblWebCollectionNotOwned";
     /** The basics the land row offers, with the colour each makes. */
     private static final Map<String, MagicColor.Color> BASICS = new LinkedHashMap<>();
@@ -51,6 +53,8 @@ public final class DeckEditor {
     private final DeviceSink sink;
     /** The cards the deck is built from, or null when it is built from every card. */
     private final Collection collection;
+    /** The collection's rules, or null when it has none. */
+    private final Rules rules;
     private final Deque<Snapshot> undo = new ArrayDeque<>();
     private Deck deck;
     private Target target;
@@ -89,6 +93,7 @@ public final class DeckEditor {
         this.guest = guest;
         this.sink = sink;
         this.collection = collection;
+        this.rules = collection == null ? null : collection.rules();
         this.copyOf = readOnly ? deck.getName() : null;
         this.saved = saved && !readOnly;
         this.owned = this.saved && target instanceof Stored ? deck.getName() : null;
@@ -183,7 +188,7 @@ public final class DeckEditor {
         if (fixedSection(to)) {
             return Localizer.getInstance().getMessage(MAIN_ONLY);
         }
-        final PaperCard card = collection == null || BASICS.containsKey(name) ? printingFor(name) : ownedByName().get(name);
+        final PaperCard card = collection == null || freeBasic(name) ? printingFor(name) : ownedByName().get(name);
         if (card == null) {
             return Localizer.getInstance().getMessage(collection == null ? "lblWebEditorNoSuchCard" : NOT_OWNED, String.valueOf(name));
         }
@@ -333,7 +338,7 @@ public final class DeckEditor {
             wanted.merge(printing, e.getValue(), Integer::sum);
         }
         // With a collection, each printing may be used only as many times as it is owned and not used elsewhere in the deck
-        if (collection != null && !BASICS.containsKey(name)) {
+        if (collection != null && !freeBasic(name)) {
             for (final Map.Entry<PaperCard, Integer> e : wanted.entrySet()) {
                 final int here = pool == null ? 0 : pool.count(e.getKey());
                 if (e.getValue() > spare(e.getKey()) + here) {
@@ -426,10 +431,15 @@ public final class DeckEditor {
     }
 
     String undo() {
-        final Snapshot previous = undo.poll();
+        final Snapshot previous = undo.peek();
         if (previous == null) {
             return Localizer.getInstance().getMessage("lblWebEditorNothingToUndo");
         }
+        final String refused = obey(deck.getMain(), previous.deck().getMain(), true);
+        if (refused != null) {
+            return refused;
+        }
+        undo.pop();
         landed = null;
         moveTo(previous.check());
         if (!previous.deck().getName().equals(deck.getName())) {
@@ -520,6 +530,9 @@ public final class DeckEditor {
 
     /** Replaces the deck's cards with another deck's cards. The deck keeps its name and save location. */
     String replaceAll(final Deck other) {
+        if (rules != null) {
+            return Localizer.getInstance().getMessage(NO_REPLACE);
+        }
         if (collection != null) {
             // Only the sections the collection allows to change are replaced, and only with cards it can supply
             return change(null, () -> {
@@ -537,7 +550,7 @@ public final class DeckEditor {
         final DeckFormat df = check.deckFormat();
         // A collection's deck has a commander that its format does not know about. The catalogue starts filtered to that commander's colours
         final List<PaperCard> leaders = collection != null ? deck.getCommanders() : Legality.commanders(deck, check);
-        final Legality.Result legality = Legality.check(deck, check);
+        final Legality.Result legality = rules != null ? Legality.Result.NOT_CHECKED : Legality.check(deck, check);
         final boolean wanted = df.hasCommander() && (leaders.isEmpty() || (df.hasSignatureSpell() && deck.getSignatureSpell() == null));
         return new EditorState(deck.getName(), check.label(), check.format().name(),
                 check.pool() == null ? null : check.pool().getName(), check.unrestricted(),
@@ -548,7 +561,8 @@ public final class DeckEditor {
                 DeckFacts.stats(deck), legality.verdict(), !undo.isEmpty(), landed,
                 limited(), landSet, limited() || collection == null ? LandSets.ALL
                         : collection.landSets().apply(deck).stream().map(e -> new LandSet(e.getCode(), e.getName())).toList(),
-                collection == null ? null : collection.owner(), collection != null && collection.mainOnly(), sections(legality));
+                collection == null ? null : collection.owner(), collection != null && collection.mainOnly(), sections(legality),
+                rules == null ? null : rules.counter(), rules != null && rules.spent(), rules == null);
     }
 
     /** Every section beyond the main deck that a constructed deck can have, as desktop's editor offers them. A pool or a collection has none. */
@@ -566,6 +580,11 @@ public final class DeckEditor {
     private String change(final String cardName, final Runnable op) {
         final Snapshot before = new Snapshot(new Deck(deck, deck.getName()), check);
         op.run();
+        final String refused = obey(before.deck().getMain(), deck.getMain(), false);
+        if (refused != null) {
+            replaceCards(before.deck(), List.of(DeckSection.values()));
+            return refused;
+        }
         undo.push(before);
         if (undo.size() > MOST_UNDO) {
             undo.removeLast();
@@ -575,6 +594,26 @@ public final class DeckEditor {
             becomeCopy();
         }
         return save();
+    }
+
+    /** Asks the collection's rules whether the main deck may change so, and tells them when it does. Returns why they refused it, or null. */
+    private String obey(final CardPool before, final CardPool after, final boolean undoing) {
+        if (rules == null) {
+            return null;
+        }
+        final CardPool removed = missing(before, after);
+        final String refused = removed.isEmpty() ? null : rules.refuse(removed);
+        if (refused == null) {
+            rules.changed(removed, undoing ? missing(after, before) : new CardPool());
+        }
+        return refused;
+    }
+
+    /** The cards of one pool that another does not hold. */
+    private static CardPool missing(final CardPool from, final CardPool in) {
+        final CardPool missing = new CardPool(from);
+        missing.removeAll(in);
+        return missing;
     }
 
     /** The first change to a deck that cannot be changed in place. From now on the editor works on its own copy. */
@@ -816,7 +855,7 @@ public final class DeckEditor {
         final int byLimit = most == Integer.MAX_VALUE ? Integer.MAX_VALUE
                 : most - deck.getAllCardsInASinglePool(df.hasCommander(), false).countByName(card.getName());
         // A basic land is unlimited. Any other card is limited to the number owned, however many the rules allow
-        if (collection == null || BASICS.containsKey(card.getName())) {
+        if (collection == null || freeBasic(card.getName())) {
             return byLimit;
         }
         // Copies in the Commander section are owned copies too
@@ -832,7 +871,7 @@ public final class DeckEditor {
 
     /** Adds copies of a card. Without a collection, or for a basic land, the card is added as given. Otherwise the owned printings are used, the requested one first. */
     private void addOwned(final CardPool to, final PaperCard card, final int count) {
-        if (collection == null || BASICS.containsKey(card.getName())) {
+        if (collection == null || freeBasic(card.getName())) {
             to.add(card, count);
             return;
         }
@@ -857,6 +896,11 @@ public final class DeckEditor {
     /** Whether a collection's deck keeps this section unchanged, or does not have it. */
     private boolean fixedSection(final DeckSection section) {
         return collection != null && collection.mainOnly() && section != DeckSection.Main;
+    }
+
+    /** Whether this is a basic land that a collection's deck takes without owning it. */
+    private boolean freeBasic(final String name) {
+        return BASICS.containsKey(name) && (rules == null || rules.basics().contains(name));
     }
 
     /** The collection's cards by name, one printing each. */
@@ -886,6 +930,9 @@ public final class DeckEditor {
     }
 
     private boolean landAllowed(final String land) {
+        if (!freeBasic(land)) {
+            return false;
+        }
         final List<PaperCard> leaders = Legality.commanders(deck, check);
         if (leaders.isEmpty()) {
             return true;
@@ -917,9 +964,30 @@ public final class DeckEditor {
     /**
      * A game mode's own cards, which a deck of that mode is built from. cards is read at each use, and saved runs after each save.
      * seen runs when the editor closes, because the player has now seen the new cards. mainOnly keeps every section except the main deck unchanged.
+     * rules, or null, limits what may be taken out. Such a deck is not checked against its format, and its cards cannot all be replaced.
      */
     public record Collection(String owner, Supplier<CardPool> cards, Predicate<PaperCard> isNew, Runnable seen,
-            Function<Deck, List<CardEdition>> landSets, Runnable saved, boolean mainOnly) {
+            Function<Deck, List<CardEdition>> landSets, Runnable saved, boolean mainOnly, Rules rules) {
+    }
+
+    /** A collection's rules for taking cards out of the main deck. */
+    public interface Rules {
+        /** Why these cards cannot be taken out, or null. */
+        String refuse(CardPool removed);
+
+        /** The main deck changed: the cards it lost, and those an undo put back. It runs before the deck is saved. */
+        void changed(CardPool removed, CardPool restored);
+
+        /** The counter's text, or null. */
+        String counter();
+
+        /** Whether the counter is at its end, so it is drawn muted. */
+        default boolean spent() {
+            return false;
+        }
+
+        /** The names of the basic lands that may be added. */
+        Set<String> basics();
     }
 
     /** Tells a guest's browser that its deck changed. text is the deck as .dck text, or null when it was deleted. */

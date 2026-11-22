@@ -140,7 +140,7 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
         return new DeckEditor.Collection(data.getName(), ConquestUtil::getAvailablePool, data::isNewCard, () -> {
             data.resetNewCards();
             data.saveData();
-        }, ConquestUtil::getBasicLandSets, commander::reloadDeck, true);
+        }, ConquestUtil::getBasicLandSets, commander::reloadDeck, true, null);
     }
 
     /** A plane has no picture of its own, so it uses its first region's picture. */

@@ -25,6 +25,7 @@ final class Legality {
 
     /** Each card's problem by name, and the deck's verdict or null when it is legal. */
     record Result(Map<String, String> flags, String verdict) {
+        static final Result NOT_CHECKED = new Result(Map.of(), null);
     }
 
     private static CardPool played(final Deck deck) {

@@ -54,6 +54,7 @@ public final class DeckImport {
 
     /** With a collection, a card that is not owned is a problem. A collection that keeps every section except the main deck unchanged imports only the main deck. */
     public static Read read(final String text, final LegalityScope check, final DeckEditor.Collection collection) {
+        final DeckEditor.Rules rules = collection == null ? null : collection.rules();
         final Set<String> owned = new HashSet<>();
         if (collection != null) {
             collection.cards().get().forEach(e -> owned.add(e.getKey().getName()));
@@ -153,7 +154,8 @@ public final class DeckImport {
             }
             final PaperCard first = listed.toFlatList().get(0);
             // The listed printing only identifies the card name. The editor uses the owned printings when the deck is made
-            final boolean taken = collection == null || first.getRules().getType().isBasicLand() || owned.contains(first.getName());
+            final boolean taken = collection == null || owned.contains(first.getName())
+                    || (rules == null ? first.getRules().getType().isBasicLand() : rules.basics().contains(first.getName()));
             if (!taken) {
                 kinds[i] = ImportLineKind.problem;
                 notImported++;
@@ -166,8 +168,8 @@ public final class DeckImport {
             deck.getOrCreate(to).addAll(listed);
             lineOf.putIfAbsent(first.getName(), i);
         }
-        final String chosen = chooseCommander(deck, check, problems);
-        final Legality.Result legality = Legality.check(deck, check);
+        final String chosen = rules != null ? null : chooseCommander(deck, check, problems);
+        final Legality.Result legality = rules != null ? Legality.Result.NOT_CHECKED : Legality.check(deck, check);
         final List<ImportProblem> cardProblems = new ArrayList<>();
         legality.flags().forEach((card, flag) -> {
             final Integer at = lineOf.get(card);
