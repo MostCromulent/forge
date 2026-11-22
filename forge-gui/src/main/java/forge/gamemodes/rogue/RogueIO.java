@@ -23,6 +23,8 @@ import forge.util.IgnoringXStream;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.zip.GZIPInputStream;
@@ -196,9 +198,9 @@ public class RogueIO {
         } catch (final ConversionException e) {
             BugReporter.reportException(e);
             return null;
-        } catch (final Exception e) { // If there's a non-IO exception, delete the corrupt file
+        } catch (final Exception e) { // If there's a non-IO exception, set the corrupt file aside
             Logger.error(e, "Error loading Rogue run save: {}", xmlSaveFile);
-            deleteRunFile(xmlSaveFile);
+            setAside(xmlSaveFile);
             return null;
         }
         return data;
@@ -236,6 +238,15 @@ public class RogueIO {
             Files.deleteIfExists(file.toPath());
         } catch (IOException | InvalidPathException | SecurityException e) {
             Logger.error(e, "Error deleting Rogue run save: {}", file);
+        }
+    }
+
+    static void setAside(final File file) {
+        final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS"));
+        try {
+            Files.move(file.toPath(), file.toPath().resolveSibling(file.getName() + "." + timestamp + ".broken"));
+        } catch (IOException | InvalidPathException | SecurityException e) {
+            Logger.error(e, "Error setting aside Rogue save: {}", file);
         }
     }
 
