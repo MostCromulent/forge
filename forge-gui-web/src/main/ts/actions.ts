@@ -8,7 +8,7 @@ import type {
 /** The seat fields its owner can change. */
 type SeatChange = Omit<SetSeat, 't' | 'index'>;
 
-/** The actions of the shared pages. A build with campaigns adds the campaign actions to Actions (campaign/register.tsx). */
+/** The actions of the shared pages. A build with campaigns adds the campaign actions to Actions (campaign/register.tsx and each mode's register.tsx). */
 export interface PageActions {
   /** A click on a card. menu means a right-click, which asks for all the card's options. x and y position that menu. */
   selectCard(key: number, menu: boolean, x: number, y: number): void;

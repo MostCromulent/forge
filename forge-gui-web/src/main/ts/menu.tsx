@@ -103,13 +103,10 @@ const MENU_ART: Record<string, string> = {
   constructed: 'c:Jace, the Mind Sculptor|WWK|1',
   draft: 'c:Cogwork Librarian|CNS|1',
   sealed: 'c:Booster Tutor|UND|1',
-  conquest: 'c:Portal of Sanctuary|M20|1',
-  quest: "c:Explorer's Scope|CMM|1",
 };
 
 /** A tile's art once it has loaded, as a CSS url. The tile keeps its drawn look until then, and for good when the server has no art. */
-function useArt(id: string): string | null {
-  const key = MENU_ART[id];
+function useArt(key: string | undefined): string | null {
   const [loaded, setLoaded] = useState<string | null>(null);
   // auto marks the download as the page's own idea, so the server skips it when online image fetching is off
   const src = key ? `${artUrl(key)}&auto=1` : '';
@@ -123,11 +120,11 @@ function useArt(id: string): string | null {
   return loaded;
 }
 
-/** A kind of game, drawn as a plaque like the start page's. It holds two buttons because a button cannot contain another. It is greyed when onClick is missing. icon replaces the kind's own icon. */
-export function Kind({ id, icon, name, blurb, resume, resumeLabel, onClick }: {
-  id: string; icon?: ComponentChildren; name: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
+/** A kind of game, drawn as a plaque like the start page's. It holds two buttons because a button cannot contain another. It is greyed when onClick is missing. icon and artKey replace the kind's own icon and art. */
+export function Kind({ id, icon, artKey, name, blurb, resume, resumeLabel, onClick }: {
+  id: string; icon?: ComponentChildren; artKey?: string; name: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
 }) {
-  const art = useArt(id);
+  const art = useArt(artKey ?? MENU_ART[id]);
   const drawn = <svg viewBox="0 0 48 48">{icon ?? KIND_ICONS[id]}</svg>;
   return (
     <div class={`kind-card plaque${art ? ' has-art' : ''}${resume ? ' has-resume' : ''}`} style={art ? { '--art': art } : undefined}>
@@ -161,7 +158,7 @@ const MODE_ICONS: Record<string, ComponentChildren> = {
 function Mode({ id, name, blurb, onClick }: {
   id: string; name: string; blurb: string; onClick?: () => void;
 }) {
-  const art = useArt(id);
+  const art = useArt(MENU_ART[id]);
   return (
     <button class={art ? 'mode plaque has-art' : 'mode plaque'} data-mode={id} disabled={!onClick} onClick={onClick} style={art ? { '--art': art } : undefined}>
       <span class="plaque-rim" aria-hidden="true" />

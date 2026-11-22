@@ -5,15 +5,13 @@ import { skinIconUrl, imageUrl } from '../images';
 import { mountPack, type Pack } from '../conquest/conquestpack';
 import { mountWheel, spotFor, type Wheel, type WheelOutcome } from '../conquest/conquestwheel';
 import { pendingAmounts } from '../conquest/conquestpending';
-import type { Reward, RewardStep } from '../protocol';
+import type { RewardStep } from '../protocol';
 import { t, formatNumber } from '../text';
-import { byId, make, reducedMotion } from '../dom';
+import { byId } from '../dom';
 import { Backdrop } from '../dialog';
 import { boundKeys } from '../settings';
 import { keyName } from '../keys';
-
-/** The amounts the reveal has not shown yet, by the icon of the balance they were paid into. */
-export type Owed = Record<string, number>;
+import { flyShards, type RevealProps } from './campaign';
 
 export const wheelLabels = (): Record<WheelOutcome, string> => ({
   CHAOS: t('lblChaos'), BOOSTER: t('lblWebConquestWheelBooster'), DOUBLE_BOOSTER: t('lblWebConquestWheelBoosters'),
@@ -23,7 +21,7 @@ export const wheelLabels = (): Record<WheelOutcome, string> => ({
 /** A step with nothing of its own to show. The packs before it have already shown the shards their duplicates became. */
 const silent = (step: RewardStep): boolean => step.kind === 'DUPLICATE_SHARDS';
 
-export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed: Owed) => void; done: () => void }) {
+export function Reveal({ reward, onOwed, done }: RevealProps) {
   const steps = reward.steps;
   // A first conquest's emblems are shown above the wheel that follows, so the two steps are shown as one
   const first = steps[0]?.kind === 'CONQUER_EMBLEMS' && steps[1]?.kind === 'WHEEL' ? 1 : 0;
@@ -174,24 +172,6 @@ function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; n
   );
 }
 
-/** Animates an amount from a card to the bar's balance with that icon. The bar counts the amount when it arrives. */
-export function flyShards(from: DOMRect, arrived: () => void, icon = 'IMG_AETHER_SHARD'): void {
-  const to = document.querySelector(`.cq-purse .cq-coin[data-icon="${icon}"]`)?.getBoundingClientRect();
-  if (!to || reducedMotion()) {
-    arrived();
-    return;
-  }
-  const mote = make('img', 'cq-mote');
-  mote.alt = '';
-  mote.src = skinIconUrl(icon);
-  mote.dataset.icon = icon;
-  document.body.append(mote);
-  const x0 = from.left + from.width / 2, y0 = from.top + from.height * .4;
-  mote.animate([{ transform: `translate(${x0}px, ${y0}px) scale(1.4)`, opacity: 1 },
-    { transform: `translate(${to.left + 14}px, ${to.top + to.height / 2}px) scale(.8)`, opacity: .9 }],
-    { duration: 600, easing: 'cubic-bezier(.5,0,.3,1)' }).finished.then(() => { mote.remove(); arrived(); }, () => mote.remove());
-}
-
 function PackStop({ step, release, next }: { step: RewardStep; release: (shards: number) => void; next: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const pack = useRef<Pack | null>(null);
@@ -206,7 +186,7 @@ function PackStop({ step, release, next }: { step: RewardStep; release: (shards:
       name: step.chaos ? t('lblChaos') : step.pack ?? '', sub: step.chaos ? step.pack ?? '' : t('lblBoosterPack'),
       art: step.chaos ? null : step.art ?? null, chaos: step.chaos, booster: step.packImage ?? null, cards, hint: t('lblWebConquestClickToOpen'),
     }, {
-      flipped: (card, rect) => { if (card.shards) flyShards(rect, () => { if (here.current) release(card.shards); }); },
+      flipped: (card, rect) => { if (card.shards) flyShards(rect, () => { if (here.current) release(card.shards); }, 'IMG_AETHER_SHARD'); },
       opening: () => setPhase('opening'),
       shown: () => setPhase('shown'),
     });

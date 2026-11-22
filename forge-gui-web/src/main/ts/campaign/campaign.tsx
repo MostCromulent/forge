@@ -1,17 +1,22 @@
-import type { ComponentChildren } from 'preact';
+import type { ComponentChildren, FunctionComponent } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl, skinIconUrl } from '../images';
 import { artUrl } from '../sleeves';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { CampaignBar as Bar, PrefRow } from '../protocol';
+import type { CampaignBar as Bar, PrefRow, Reward } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
 import { backStep, HeadControls, PageHeader, PhoneHead, SetupHead, WAY_NAMES } from '../header';
 import { isPortrait } from '../form';
 import { ICONS, Icon } from '../icons';
 import { changeUi, eased, type UiState } from '../ui';
-import { Reveal, type Owed } from './reward';
 import { Backdrop } from '../dialog';
+import { make, reducedMotion } from '../dom';
+
+/** The amounts a reveal has not shown yet, by the icon of the balance they were paid into. */
+export type Owed = Record<string, number>;
+
+export interface RevealProps { reward: Reward; onOwed: (owed: Owed) => void; done: () => void }
 
 export function Purse({ icon, n, label }: { icon: string; n: number; label: string }) {
   return <span class="cq-coin" data-icon={icon} title={label}><img alt={label} src={skinIconUrl(icon)} /><b>{formatNumber(n)}</b></span>;
@@ -28,6 +33,24 @@ export function capBalance(icon: string, most: number | null): void {
   if (most === null) ceilings.delete(icon);
   else ceilings.set(icon, most);
   redrawBar();
+}
+
+/** Animates an amount from a card to the bar's balance with that icon. The bar counts the amount when it arrives. */
+export function flyShards(from: DOMRect, arrived: () => void, icon: string): void {
+  const to = document.querySelector(`.cq-purse .cq-coin[data-icon="${icon}"]`)?.getBoundingClientRect();
+  if (!to || reducedMotion()) {
+    arrived();
+    return;
+  }
+  const mote = make('img', 'cq-mote');
+  mote.alt = '';
+  mote.src = skinIconUrl(icon);
+  mote.dataset.icon = icon;
+  document.body.append(mote);
+  const x0 = from.left + from.width / 2, y0 = from.top + from.height * .4;
+  mote.animate([{ transform: `translate(${x0}px, ${y0}px) scale(1.4)`, opacity: 1 },
+    { transform: `translate(${to.left + 14}px, ${to.top + to.height / 2}px) scale(.8)`, opacity: .9 }],
+    { duration: 600, easing: 'cubic-bezier(.5,0,.3,1)' }).finished.then(() => { mote.remove(); arrived(); }, () => mote.remove());
 }
 
 // The new items each tab has shown, by save and tab. A save's first bar counts as shown, so only what arrives while it is open is marked
@@ -312,11 +335,12 @@ export function slideTab<Tab extends string>(tabs: [Tab, TextKey][], from: Tab, 
 }
 
 /**
- * An open save: the bar, the open tab's page, the preferences and a reward reveal. page draws the tab's page under a key that
+ * An open save: the bar, the open tab's page, the preferences, and Reveal while there is a reward to show. page draws the tab's page under a key that
  * changes when the preferences close. The preferences set the prices the pages show, so the page must request its data again.
  */
-export function CampaignPages<Tab extends string>({ model, actions, tabs, tab, setTab, extra, page }: {
+export function CampaignPages<Tab extends string>({ model, actions, tabs, tab, setTab, extra, page, Reveal }: {
   model: Model; actions: Actions; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void; extra?: ComponentChildren;
+  Reveal?: FunctionComponent<RevealProps>;
   page: (key: number) => ComponentChildren;
 }) {
   // The amounts the reward reveal has not shown yet. The bar subtracts them from the server's balances
@@ -333,6 +357,6 @@ export function CampaignPages<Tab extends string>({ model, actions, tabs, tab, s
     {model.error && <p class="limited-error">{model.error}</p>}
     <div class="cq-main" inert={!!reward}>{page(priced)}</div>
     {prefs && <Prefs model={model} actions={actions} close={() => { setPrefs(false); setPriced(priced + 1); }} />}
-    {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.rewardClaim()} />}
+    {reward && Reveal && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.rewardClaim()} />}
   </>;
 }

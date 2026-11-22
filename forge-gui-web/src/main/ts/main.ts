@@ -2,8 +2,10 @@
 
 import { connect } from './net';
 import { createModel, applyState, cardMenu, concedingEndsGame, isLocal, oldestRequest, players, stackPick } from './model';
-// The campaign modes. A build without them removes this line
+// The campaigns and their modes. A build without a mode removes its line
 import './campaign/register';
+import './conquest/register';
+import './quest/register';
 import { campaigns } from './campaigns';
 import { asked, createActions, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, transition, ui } from './ui';

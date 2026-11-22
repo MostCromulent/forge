@@ -122,7 +122,7 @@ export const ui: UiState = {
   seatsOpen: false,
   seenOnField: new Map(),
   menuSheet: null,
-  // The campaigns add their own fields when they load (campaign/register.tsx)
+  // The campaign modes add their own fields when they load (each mode's register.tsx)
 } as UiState;
 
 let redraw: () => void = () => {};

@@ -89,7 +89,7 @@ The pages outside a match use Preact. The match screen is drawn by hand, because
 
 The card preview is shared by every page. Elements join it through data attributes rather than code, as `preview.ts` describes. The match's cards call `hoverable()` and carry `data-zoom`, `data-key` and `data-from` instead.
 
-The campaign modes are kept apart so a build can leave them out. On the server they sit behind `Campaigns`, made in `WebSession`'s constructor, and their messages are in `CampaignProtocol` and a class for each mode. On the page, `campaign/register.tsx` adds their model fields, actions and pages through the hooks in `campaigns.tsx`.
+The campaign modes are kept apart so a build can leave them out. On the server they sit behind `Campaigns`, made in `WebSession`'s constructor, and their messages are in `CampaignProtocol` and a class for each mode. On the page, `campaign/register.tsx` adds what the modes share through the hooks in `campaigns.tsx`, and each mode's `register.tsx` adds its own model fields, actions and pages through the hooks in `campaign/modes.ts`.
 
 ## The protocol
 

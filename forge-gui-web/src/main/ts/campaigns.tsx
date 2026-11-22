@@ -1,4 +1,4 @@
-// The hooks that connect the campaign modes to the page. campaign/register.tsx sets them, so a build can leave the campaigns out
+// The hooks that connect the campaign modes to the page. campaign/register.tsx sets them for the modes in campaign/modes.ts, so a build can leave the campaigns out
 
 import type { FunctionComponent, VNode } from 'preact';
 import type { Actions, PageActions } from './actions';

@@ -2,8 +2,8 @@ import { Shelf as Cards } from '../shelf';
 import { changeUi, ui } from '../ui';
 import { isPortrait } from '../form';
 import { ICONS, Icon } from '../icons';
-import type { ConquestTab } from '../campaign/register';
-import { CampaignPages, CampaignShelf, CampaignShell, Purse, Stats, slideTab } from '../campaign/campaign';
+import type { ConquestTab } from './register';
+import { CampaignPages, CampaignShelf, CampaignShell, Purse, Stats, slideTab, type RevealProps } from '../campaign/campaign';
 import { ConquestMap } from './conquestmap';
 import { Party } from './conquestparty';
 import { Collection } from './conquestcollection';
@@ -11,7 +11,7 @@ import { NewConquest } from './conquestnew';
 import { Aether } from './conquestaether';
 import { Planes } from './conquestplanes';
 import { artUrl } from '../sleeves';
-import { wheelLabels } from '../campaign/reward';
+import { Reveal, wheelLabels } from '../campaign/reward';
 import { setting } from '../settings';
 import { Dropdown } from '../dialog';
 import type { Actions } from '../actions';
@@ -56,7 +56,11 @@ function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; cur
         </span>
       </>}
       foot={s => <>
-        <button class="primary" onClick={() => actions.campaignLoad(s.name)}>{t('lblPlay')}</button>
+        <button class="primary" onClick={() => {
+          // The server forgets a queued Chaos Wheel result when a save opens
+          ui.conquestWheel = '';
+          actions.campaignLoad(s.name);
+        }}>{t('lblPlay')}</button>
         {s.saved && <span class="ev-ask">{t('lblWebLimitedSaved', shortDay(s.saved))}</span>}
       </>}
       rename={{ field: t('lblConquestName'), go: (s, to) => actions.campaignRename(s.name, to) }}
@@ -122,13 +126,23 @@ function Page({ tab, model, actions }: { tab: ConquestTab; model: Model; actions
   }
 }
 
+function ConquestReveal(props: RevealProps) {
+  return (
+    <Reveal {...props} done={() => {
+      // The server forgets a queued Chaos Wheel result once a won battle has used it
+      ui.conquestWheel = '';
+      props.done();
+    }} />
+  );
+}
+
 function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   if (!model.campaignBar || !model.conquestState) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   const plane = model.conquestState.plane;
   return (
     <CampaignPages model={model} actions={actions} tabs={TABS} tab={ui.conquestTab}
       setTab={tab => slideTab(TABS, ui.conquestTab, tab, u => { u.conquestTab = tab; })}
-      extra={setting('devMode') && <DevWheel actions={actions} />}
+      Reveal={ConquestReveal} extra={setting('devMode') && <DevWheel actions={actions} />}
       page={key => <Page key={`${key} ${plane}`} tab={ui.conquestTab} model={model} actions={actions} />} />
   );
 }

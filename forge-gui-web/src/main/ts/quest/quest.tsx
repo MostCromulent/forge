@@ -1,7 +1,8 @@
 import { Shelf as Cards } from '../shelf';
 import { ui } from '../ui';
-import type { QuestTab } from '../campaign/register';
+import type { QuestTab } from './register';
 import { CampaignPages, CampaignShelf, CampaignShell, Purse, Stats, slideTab } from '../campaign/campaign';
+import { Reveal } from '../campaign/reward';
 import { Duels } from './questduels';
 import { Decks } from './questdecks';
 import { Shop } from './questshop';
@@ -64,7 +65,7 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   const tabs = fantasy ? TABS : TABS.filter(([id]) => !FANTASY_ONLY.includes(id));
   return (
     <CampaignPages model={model} actions={actions} tabs={tabs} tab={ui.questTab}
-      setTab={tab => slideTab(tabs, ui.questTab, tab, u => { u.questTab = tab; })}
+      setTab={tab => slideTab(tabs, ui.questTab, tab, u => { u.questTab = tab; })} Reveal={Reveal}
       page={key => <Page key={key} tab={ui.questTab} fantasy={fantasy} model={model} actions={actions} />} />
   );
 }

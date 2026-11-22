@@ -13,8 +13,7 @@ import type { CatalogueRow } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
 import { Backdrop } from '../dialog';
 import { reducedMotion } from '../dom';
-import { balance, capBalance } from './campaign';
-import { flyShards } from './reward';
+import { balance, capBalance, flyShards } from './campaign';
 import { Select } from '../select';
 
 /** A mode's name for one of its lists, and the text it shows for trading from that list. */
