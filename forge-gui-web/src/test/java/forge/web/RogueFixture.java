@@ -1,5 +1,14 @@
 package forge.web;
 
+import forge.game.Game;
+import forge.game.GameEndReason;
+import forge.game.GameRules;
+import forge.game.GameType;
+import forge.game.GameView;
+import forge.game.Match;
+import forge.game.card.Card;
+import forge.game.player.Player;
+import forge.game.zone.ZoneType;
 import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueDeck;
 import forge.gamemodes.rogue.RogueEvent;
@@ -8,6 +17,7 @@ import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.effect.ChestEffect;
+import forge.gamemodes.rogue.flow.RogueDecisions.RogueMatch;
 import forge.gamemodes.rogue.path.NodeBazaar;
 import forge.gamemodes.rogue.path.NodeChest;
 import forge.gamemodes.rogue.path.NodeEvent;
@@ -15,6 +25,7 @@ import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.NodeSanctum;
 import forge.gamemodes.rogue.path.RoguePath;
 import forge.gamemodes.rogue.path.RoguePathNode;
+import forge.player.GamePlayerUtil;
 import forge.util.FileUtil;
 import forge.util.MyRandom;
 
@@ -110,6 +121,26 @@ public final class RogueFixture {
         run.setName("Aragorn_1");
         RogueIO.saveRun(run);
         return run;
+    }
+
+    /** The match's game, over by a concession before it starts. Starting life is the life it ends with. */
+    static GameView finished(final RogueMatch match, final boolean humanWins) {
+        final GameRules rules = new GameRules(GameType.RogueCommander);
+        rules.setAppliedVariants(match.variants());
+        final Game game = new Match(rules, match.players(), "Rogue").createGame();
+        for (final Player player : game.getRegisteredPlayers()) {
+            final boolean human = player.getLobbyPlayer() == GamePlayerUtil.getGuiPlayer();
+            if (human) {
+                // Zones are only filled when a game starts
+                match.run().getCarryCards().forEach(c ->
+                        player.getZone(ZoneType.Command).add(Card.fromPaperCard(c.toPaperCard(), player)));
+            }
+            if (human != humanWins) {
+                player.concede();
+            }
+        }
+        game.setGameOver(GameEndReason.AllOpponentsLost);
+        return game.getView();
     }
 
     private static void add(final List<RoguePathNode> nodes, final RoguePathNode node, final int row, final int column) {

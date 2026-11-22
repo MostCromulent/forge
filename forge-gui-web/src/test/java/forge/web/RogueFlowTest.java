@@ -8,8 +8,11 @@ import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.RogueRun.CarryCardType;
 import forge.gamemodes.rogue.RogueRunHistoryEntry;
 import forge.gamemodes.rogue.RogueRunState;
+import forge.gamemodes.rogue.RogueStats;
+import forge.gamemodes.rogue.RogueWinLoseController;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.BazaarItem;
 import forge.gamemodes.rogue.effect.ChestEffect;
@@ -28,14 +31,18 @@ import forge.gamemodes.rogue.flow.RogueDecisions.ShopAnswer;
 import forge.gamemodes.rogue.flow.RogueDecisions.ShopOffer;
 import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.npc.NPC;
+import forge.gamemodes.rogue.npc.NPCContext;
 import forge.gamemodes.rogue.path.NodeBazaar;
 import forge.gamemodes.rogue.path.NodeChest;
 import forge.gamemodes.rogue.path.NodeEvent;
 import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.NodeSanctum;
 import forge.gamemodes.rogue.path.RoguePathNode;
+import forge.gui.interfaces.IButton;
+import forge.gui.interfaces.IWinLoseView;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
+import forge.model.FModel;
 import forge.util.MyRandom;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -43,6 +50,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -522,5 +530,158 @@ public class RogueFlowTest {
         Assert.assertEquals(saved.getCurrentNodeIndex(), 0);
         Assert.assertEquals(saved.getPath().getCompletedCount(), 0);
         Assert.assertEquals(saved.getActiveNPCEffects(), List.of(NPCEffect.TYVAR_BRAWLER));
+    }
+
+    /** A result screen that runs the rewards at once and shows nothing. */
+    private static IWinLoseView<?> resultScreen() {
+        final ClassLoader loader = IWinLoseView.class.getClassLoader();
+        final Object button = Proxy.newProxyInstance(loader, new Class<?>[] {IButton.class}, (proxy, method, args) -> null);
+        return (IWinLoseView<?>) Proxy.newProxyInstance(loader, new Class<?>[] {IWinLoseView.class}, (proxy, method, args) -> {
+            if (method.getName().equals("showRewards")) {
+                ((Runnable) args[0]).run();
+            }
+            return method.getReturnType() == IButton.class ? button : null;
+        });
+    }
+
+    private RogueWinLoseController fight(final boolean win) {
+        final RogueMatch match = startedMatch();
+        run.setHostedMatch(new HostedMatch());
+        return flow.matchOver(RogueFixture.finished(match, win), resultScreen());
+    }
+
+    private void recordMapChanges() {
+        decisions.then("mapChanged", args -> {
+            Assert.assertSame(args[0], run);
+            decisions.asked.add("mapChanged");
+            return null;
+        });
+    }
+
+    private void startBoss() {
+        start(NodePlanebound.class);
+        run.setCurrentNodeIndex(15);
+    }
+
+    private static RogueRunHistoryEntry onlyHistoryEntry() {
+        final List<RogueRunHistoryEntry> history = RogueMetaProgress.getInstance().getRunHistory();
+        Assert.assertEquals(history.size(), 1);
+        return history.get(0);
+    }
+
+    @Test
+    public void aWonBattleGivesGoldEchoesAndCards() {
+        start(NodePlanebound.class);
+        run.setCurrentNodeIndex(10);
+        run.addCarryCard(FModel.getMagicDb().getCommonCards().getCard("Sol Ring"), CarryCardType.ITEM, "test");
+        final List<PaperCard> chosen = new ArrayList<>();
+        for (final int cards : new int[] {7, 3}) {
+            decisions.then("show", args -> {
+                final List<?> offered = (List<?>) args[1];
+                Assert.assertEquals(offered.size(), cards);
+                chosen.add((PaperCard) offered.get(0));
+                return List.of(offered.get(0));
+            });
+        }
+        final RogueWinLoseController result = fight(true);
+        Assert.assertEquals(decisions.asked, List.of("startMatch", "show", "show"));
+        Assert.assertEquals(flow.resultTitle(result), "Battle Won!");
+        Assert.assertFalse(flow.offersEnding(result));
+        Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 4);
+
+        final RogueRun saved = saved();
+        Assert.assertEquals(saved.getCurrentGold(), 12);
+        Assert.assertEquals(saved.getCurrentLife(), 14);
+        Assert.assertEquals(saved.getCarryCards().size(), 1);
+        chosen.forEach(card -> Assert.assertEquals(copies(saved, card), 1, card.getName()));
+        Assert.assertTrue(saved.getPath().getNode(10).isCompleted());
+        Assert.assertEquals(saved.getCurrentNodeIndex(), 15);
+
+        recordMapChanges();
+        flow.resultLeft(result, false);
+        Assert.assertEquals(decisions.asked, List.of("startMatch", "show", "show", "mapChanged"));
+        Assert.assertNull(run.getHostedMatch());
+    }
+
+    @Test
+    public void aLostBattleEndsTheRun() {
+        final NodePlanebound plane = (NodePlanebound) start(NodePlanebound.class);
+        final RogueWinLoseController result = fight(false);
+        Assert.assertEquals(flow.resultTitle(result), "Run Lost!");
+        Assert.assertEquals(run.getRunState(), RogueRunState.LOST);
+        Assert.assertEquals(onlyHistoryEntry().getOutcome(), "DEFEAT");
+        Assert.assertEquals(onlyHistoryEntry().getBossOrDefeatedBy(), plane.getRoguePlanebound().planeboundName());
+        flow.resultLeft(result, false);
+        Assert.assertEquals(decisions.asked, List.of("startMatch", "runEnded"));
+        Assert.assertNull(flow.run());
+        Assert.assertTrue(flow.load().isEmpty());
+    }
+
+    @Test
+    public void anEndlessDefeatCountsAsAWonRun() {
+        start(NodePlanebound.class);
+        run.setEndlessLevel(1);
+        final RogueWinLoseController result = fight(false);
+        Assert.assertEquals(flow.resultTitle(result), "Run Won!");
+        Assert.assertFalse(flow.offersEnding(result));
+        Assert.assertEquals(run.getRunState(), RogueRunState.WON);
+        Assert.assertEquals(onlyHistoryEntry().getOutcome(), "DEFEAT");
+        Assert.assertEquals(RogueMetaProgress.getInstance().getTotalRunsWon(), 1);
+        flow.resultLeft(result, false);
+        Assert.assertEquals(decisions.asked, List.of("startMatch", "runEnded"));
+    }
+
+    @Test
+    public void aRevivedBattleKeepsTheNode() {
+        final RoguePathNode plane = start(NodePlanebound.class);
+        aetherwork(AetherEffect.CONTINUUM_ENGINE);
+        final RogueWinLoseController result = fight(false);
+        Assert.assertEquals(flow.resultTitle(result), "Battle Lost!");
+        recordMapChanges();
+        flow.resultLeft(result, false);
+        Assert.assertEquals(decisions.asked, List.of("startMatch", "mapChanged"));
+        Assert.assertFalse(plane.isCompleted());
+        Assert.assertTrue(RogueMetaProgress.getInstance().getRunHistory().isEmpty());
+        Assert.assertEquals(saved().getCurrentLife(), 5);
+        Assert.assertEquals(saved().getCurrentNodeIndex(), 5);
+        Assert.assertEquals(saved().getRunEffectCharges(AetherEffect.CONTINUUM_ENGINE.getId()), 0);
+    }
+
+    @Test
+    public void theBossOffersAnEnding() {
+        startBoss();
+        RogueWinLoseController result = fight(true);
+        Assert.assertEquals(flow.resultTitle(result), "Run Completed!");
+        Assert.assertTrue(flow.offersEnding(result));
+        Assert.assertEquals(run.getRunState(), RogueRunState.STARTED, "the player has not chosen yet");
+        flow.resultLeft(result, false);
+        Assert.assertEquals(decisions.asked, List.of("startMatch", "runEnded"));
+        Assert.assertEquals(run.getRunState(), RogueRunState.WON);
+        Assert.assertEquals(onlyHistoryEntry().getOutcome(), "VICTORY");
+        Assert.assertNull(flow.run());
+
+        startBoss();
+        RogueMetaProgress.getInstance().unlockEndlessMode();
+        result = fight(true);
+        recordMapChanges();
+        flow.resultLeft(result, true);
+        Assert.assertEquals(decisions.asked, List.of("startMatch", "runEnded", "startMatch", "mapChanged"));
+        Assert.assertEquals(saved().getEndlessLevel(), 1);
+        Assert.assertEquals(saved().getCurrentNodeIndex(), 0);
+        onlyHistoryEntry();
+    }
+
+    @Test
+    public void aStoryAfterAWinComesBeforeTheMap() {
+        start(NodePlanebound.class);
+        // Narset tells her story after the fifth won battle
+        RogueMetaProgress.getInstance().updateStat(RogueStats.MATCHES_WON, 4, run);
+        decisions.then("show", List.of()).then("chooseBoon", args -> {
+            Assert.assertEquals(((NPCContext) args[0]).npc(), NPC.NARSET);
+            return new Pick<>(false, null);
+        });
+        recordMapChanges();
+        flow.resultLeft(fight(true), false);
+        Assert.assertEquals(decisions.asked, List.of("startMatch", "show", "chooseBoon", "mapChanged"));
     }
 }

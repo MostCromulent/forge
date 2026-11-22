@@ -1,5 +1,6 @@
 package forge.gamemodes.rogue.flow;
 
+import forge.game.GameView;
 import forge.gamemodes.rogue.CodexHelper;
 import forge.gamemodes.rogue.PreviewReference;
 import forge.gamemodes.rogue.PreviewReferenceType;
@@ -29,6 +30,7 @@ import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.NodeSanctum;
 import forge.gamemodes.rogue.path.RoguePathGenerator;
 import forge.gamemodes.rogue.path.RoguePathNode;
+import forge.gui.interfaces.IWinLoseView;
 import forge.item.PaperCard;
 import forge.localinstance.achievements.RogueCommanderAchievements;
 import forge.localinstance.properties.ForgePreferences;
@@ -76,10 +78,6 @@ public final class RogueFlow {
 
     public void setRun(RogueRun run) {
         this.currentRun = run;
-    }
-
-    public void clearRun() {
-        currentRun = null;
     }
 
     /** The run in memory, else the most recent one that can be continued. */
@@ -290,6 +288,65 @@ public final class RogueFlow {
             : Localizer.getInstance().getMessage("lblRogueDefeatedBy", defeatedBy);
         decisions.showResult(ResultKind.DEFEAT, Localizer.getInstance().getMessage("lblRogueDefeat"),
             message, List.of());
+    }
+
+    /** Gives the rewards, or ends a lost run. What follows the result screen is in {@link #resultLeft}. */
+    public RogueWinLoseController matchOver(GameView game, IWinLoseView<?> view) {
+        RogueWinLoseController controller = new RogueWinLoseController(game, view, currentRun, decisions);
+        controller.showRewards();
+        return controller;
+    }
+
+    public String resultTitle(RogueWinLoseController controller) {
+        Localizer localizer = Localizer.getInstance();
+        if (currentRun != null && currentRun.getEndlessLevel() > 0 && currentRun.isRunWon()) {
+            return localizer.getMessage("lblRogueRunWon");
+        }
+        if (controller.hasFailedRun()) {
+            return localizer.getMessage("lblRogueRunLost");
+        }
+        if (!controller.hasWonMatch()) {
+            return localizer.getMessage("lblRogueBattleLost");
+        }
+        return controller.hasWonRun() ? localizer.getMessage("lblRogueRunCompleted") : localizer.getMessage("lblRogueBattleWon");
+    }
+
+    /** Whether the player chooses between completing the run and Endless Mode. */
+    public boolean offersEnding(RogueWinLoseController controller) {
+        return controller.hasWonRun() && currentRun != null && !currentRun.isRunFailed();
+    }
+
+    public void resultLeft(RogueWinLoseController controller, boolean endless) {
+        controller.actionOnQuit();
+
+        // Clear hosted match so new matches can be started
+        if (currentRun != null) {
+            currentRun.setHostedMatch(null);
+        }
+
+        if (currentRun != null && controller.hasWonMatch()) {
+            for (NPCContext ctx : NPCEncounterComposite.INSTANCE.onAfterMatch(currentRun)) {
+                decisions.chooseBoon(ctx, new ChoiceRerollContext());
+            }
+        }
+
+        if (offersEnding(controller)) {
+            if (endless) {
+                goEndless();
+            } else if (RogueWinLoseController.finalizeRunVictory(currentRun, null)) {
+                decisions.showMessage(Localizer.getInstance().getMessage("lblRogueSparkReward"),
+                    Localizer.getInstance().getMessage("lblRogueSparkWon"));
+            }
+        }
+
+        if (currentRun != null && (currentRun.isRunFailed() || currentRun.isRunWon())) {
+            // Run is over (won or lost) - send player back to Commander selection
+            currentRun = null;
+            decisions.runEnded();
+        } else {
+            // Continue run - return to map
+            decisions.mapChanged(currentRun);
+        }
     }
 
     public boolean goEndless() {
