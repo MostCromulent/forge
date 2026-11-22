@@ -15,6 +15,7 @@ import forge.screens.deckeditor.CDeckEditorUI;
 import forge.screens.deckeditor.controllers.CEditorRogue;
 import forge.screens.deckeditor.views.VCardCatalog;
 import forge.screens.home.CHomeUI;
+import forge.screens.home.VHomeUI;
 import forge.sound.SoundEffectType;
 import forge.sound.SoundSystem;
 import forge.toolbox.FOptionPane;
@@ -63,6 +64,11 @@ public enum CSubmenuRogueMap implements ICDoc {
 
   @Override
   public void update() {
+    if (!RogueUIHelper.progressReadable()) {
+      // Without a run, Back does nothing and the sidebar is the only way out
+      VHomeUI.SINGLETON_INSTANCE.setSidebarVisible(true);
+      return;
+    }
     // If no run exists in memory, try to load from saved runs
     if (currentRun == null) {
       currentRun = RogueIO.loadMostRecentContinuableRun().orElse(null);

@@ -250,6 +250,14 @@ public class RogueIO {
         }
     }
 
+    static void pause(final long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     // Converter for CardPool serialization (same as Gauntlet)
     private static class DeckSectionToXml implements Converter {
         @SuppressWarnings("rawtypes")

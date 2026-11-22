@@ -10,6 +10,7 @@ import org.testng.annotations.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +22,7 @@ import java.util.zip.GZIPOutputStream;
 @Test(singleThreaded = true)
 public class RogueSavesTest {
     private static final String RUN = "Aragorn_1.dat";
+    private static final String PROGRESS = "meta_progress.dat";
     private Path dir;
 
     @BeforeClass
@@ -61,6 +63,49 @@ public class RogueSavesTest {
         Assert.assertTrue(RogueIO.loadAllRuns().isEmpty());
         Assert.assertTrue(Files.exists(dir.resolve(RUN)));
         Assert.assertEquals(filesEndingWith(".broken"), List.of());
+    }
+
+    @Test
+    public void anEmptyFileIsSetAsideAndProgressStartsEmpty() throws IOException {
+        Files.createFile(dir.resolve(PROGRESS));
+        Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 0);
+        Assert.assertEquals(filesEndingWith(".broken").size(), 1);
+        Assert.assertFalse(Files.exists(dir.resolve(PROGRESS)));
+    }
+
+    @Test
+    public void aFileCutShortIsSetAside() throws IOException {
+        final Path file = RogueFixture.install("/rogue/meta-master.xml", PROGRESS);
+        cutShort(file);
+        final byte[] bytes = Files.readAllBytes(file);
+        Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 0);
+        final List<Path> broken = filesEndingWith(".broken");
+        Assert.assertEquals(broken.size(), 1);
+        Assert.assertEquals(Files.readAllBytes(broken.get(0)), bytes);
+    }
+
+    @Test
+    public void anUnreadableFileIsNotTouched() throws IOException {
+        Files.createDirectory(dir.resolve(PROGRESS));
+        Assert.expectThrows(UncheckedIOException.class, RogueMetaProgress::getInstance);
+        Assert.assertEquals(filesEndingWith(""), List.of(dir.resolve(PROGRESS)));
+        Assert.assertTrue(Files.isDirectory(dir.resolve(PROGRESS)));
+    }
+
+    @Test
+    public void theNextOpenLoadsItOnceReadable() throws IOException {
+        Files.createDirectory(dir.resolve(PROGRESS));
+        Assert.expectThrows(UncheckedIOException.class, RogueMetaProgress::getInstance);
+        Files.delete(dir.resolve(PROGRESS));
+        RogueFixture.install("/rogue/meta-master.xml", PROGRESS);
+        Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 25);
+    }
+
+    @Test
+    public void reloadKeepsTheDevUnlock() {
+        RogueMetaProgress.getInstance().setDevUnlockAll(true);
+        RogueMetaProgress.reload();
+        Assert.assertTrue(RogueMetaProgress.getInstance().isDevUnlockAll());
     }
 
     private static byte[] nonsense() throws IOException {

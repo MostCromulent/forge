@@ -20,6 +20,7 @@ import forge.toolbox.FSkin;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.List;
 import java.util.function.Consumer;
@@ -136,7 +137,12 @@ public enum VSubmenuRogueAether implements IVSubmenu<CSubmenuRogueAether> {
     VHomeUI.SINGLETON_INSTANCE.getPnlDisplay().add(headerPanel, "w 98%!, gap 1% 0 10px 10px");
 
     // Aetherwork grid in a scroll pane — takes all remaining vertical space
-    RogueMetaProgress progress = RogueMetaProgress.getInstance();
+    RogueMetaProgress progress;
+    try {
+      progress = RogueMetaProgress.getInstance();
+    } catch (UncheckedIOException e) {
+      return; // The controller's update() runs next and says so
+    }
     int upgradeLevel = progress.getAetherUpgradeLevel();
     AetherUpgrade next = AetherUpgrade.forLevel(upgradeLevel + 1);
     JComponent cardToShow;

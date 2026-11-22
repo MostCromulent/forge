@@ -2,6 +2,7 @@ package forge.screens.home.rogue;
 
 import forge.toolbox.FSkin;
 import forge.gamemodes.rogue.PreviewReference;
+import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueRunHistoryEntry;
 import forge.gamemodes.rogue.effect.RogueEffect;
@@ -29,6 +30,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -46,6 +48,7 @@ import javax.swing.SwingConstants;
 import javax.swing.Timer;
 import javax.swing.WindowConstants;
 import net.miginfocom.swing.MigLayout;
+import org.tinylog.Logger;
 
 /**
  * Shared helper for Rogue UI widgets.
@@ -65,6 +68,17 @@ public final class RogueUIHelper {
   private static final int TYPEWRITER_CHARS_PER_TICK = 2;
 
   private RogueUIHelper() {
+  }
+
+  static boolean progressReadable() {
+    try {
+      RogueMetaProgress.getInstance();
+      return true;
+    } catch (UncheckedIOException e) {
+      Logger.error(e, "Could not read Rogue meta progress");
+      FOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblRogueProgressUnreadable"));
+      return false;
+    }
   }
 
   static Dimension getUsableDefaultScreenSize() {

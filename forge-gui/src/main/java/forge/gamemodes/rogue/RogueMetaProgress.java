@@ -22,9 +22,11 @@ import forge.sound.SoundEffectType;
 import forge.sound.SoundSystem;
 import forge.util.IgnoringXStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.function.Predicate;
@@ -113,6 +115,7 @@ public class RogueMetaProgress {
 
     /**
      * Get the singleton instance, loading from disk if needed.
+     * @throws UncheckedIOException if the file cannot be read. It is left as it is, and the next call tries again.
      */
     public static synchronized RogueMetaProgress getInstance() {
         if (instance == null) {
@@ -125,7 +128,11 @@ public class RogueMetaProgress {
      * Force reload from disk (useful after external changes).
      */
     public static synchronized void reload() {
-        instance = load();
+        RogueMetaProgress loaded = load();
+        if (instance != null) {
+            loaded.devUnlockAll = instance.devUnlockAll;
+        }
+        instance = loaded;
     }
 
     /**
@@ -1130,12 +1137,30 @@ public class RogueMetaProgress {
             return new RogueMetaProgress();
         }
 
-        try (GZIPInputStream zin = new GZIPInputStream(Files.newInputStream(file.toPath()));
+        byte[] bytes = readBytes(file);
+        try (GZIPInputStream zin = new GZIPInputStream(new ByteArrayInputStream(bytes));
              InputStreamReader reader = new InputStreamReader(zin)) {
             return (RogueMetaProgress) getSerializer().fromXML(reader);
         } catch (Exception e) {
             Logger.error(e, "Error loading Rogue meta progress from {}, starting fresh", file);
+            RogueIO.setAside(file);
+            if (file.exists()) { // The next save would overwrite it
+                throw new UncheckedIOException(new IOException("Could not set aside " + file, e));
+            }
             return new RogueMetaProgress();
+        }
+    }
+
+    private static byte[] readBytes(File file) {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                return Files.readAllBytes(file.toPath());
+            } catch (IOException e) {
+                if (attempt == 3) {
+                    throw new UncheckedIOException(e);
+                }
+                RogueIO.pause(100);
+            }
         }
     }
 
