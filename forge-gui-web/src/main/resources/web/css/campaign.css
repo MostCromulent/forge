@@ -7,6 +7,7 @@ html:not([data-form="portrait"]) .camp-shell { width: min(1500px, 94vw); height:
 .camp-shell > .limited-error { margin: 8px 20px 0; }
 .camp-coin { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px 3px 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-variant-numeric: tabular-nums; }
 .camp-coin img { width: 20px; height: 20px; }
+.camp-coin svg { flex: none; width: 17px; height: 17px; margin-left: 3px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .camp-coin b { font-size: 13.5px; }
 
 /* When the bar is too narrow for one row, the balances and the exit wrap under the tabs instead of running past the edge */

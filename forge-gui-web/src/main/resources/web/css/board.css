@@ -880,7 +880,8 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #game-over .rule { width: 240px; height: 1px; background: linear-gradient(90deg, transparent, var(--rule), transparent); }
 #game-over .sub { margin: 0; font-size: 13px; letter-spacing: .26em; text-transform: uppercase; color: #aeb8c6; }
 /* Which game of the match this was, shown above the result. A campaign's second line is drawn the same way under it */
-#game-over .stage { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; text-align: center; color: #aeb8c6; }
+#game-over .stage { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: #aeb8c6; }
+#game-over .sub + .stage { text-align: center; }
 #game-over .tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 #game-over .tally-player { display: flex; align-items: center; gap: 9px; padding: 5px 12px 5px 5px; border-radius: 999px;
   background: #0d1016d9; border: 1px solid var(--line-bright); }

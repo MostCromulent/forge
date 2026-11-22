@@ -4,13 +4,13 @@ import { imageUrl, skinIconUrl } from '../images';
 import { artUrl } from '../sleeves';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { CampaignBar as Bar, PrefRow, Reward } from '../protocol';
+import type { Balance, CampaignBar as Bar, Figure, PrefRow, Reward } from '../protocol';
 import { t, formatNumber, type TextKey } from '../text';
 import { backStep, HeadControls, PageHeader, PhoneHead, SetupHead, WAY_NAMES } from '../header';
 import { isPortrait } from '../form';
 import { ICONS, Icon } from '../icons';
 import { changeUi, eased, type UiState } from '../ui';
-import { Backdrop } from '../dialog';
+import { Backdrop, Dropdown } from '../dialog';
 import { make, reducedMotion } from '../dom';
 
 /** The amounts a reveal has not shown yet, by the icon of the balance they were paid into. */
@@ -18,8 +18,18 @@ export type Owed = Record<string, number>;
 
 export interface RevealProps { reward: Reward; onOwed: (owed: Owed) => void; done: () => void }
 
-export function Purse({ icon, n, label }: { icon: string; n: number; label: string }) {
-  return <span class="camp-coin" data-icon={icon} title={label}><img alt={label} src={skinIconUrl(icon)} /><b>{formatNumber(n)}</b></span>;
+/** The attributes of something a tooltip explains: the term's name and the tooltip's text. */
+const explained = (name: string, text?: string | null) => (text ? { 'data-term': name, 'data-tip': text, tabIndex: 0 } : {});
+
+export function Purse({ icon, n, label, text, glyph, term }: { icon: string; n: number; label: string } & Partial<Pick<Balance, 'text' | 'glyph' | 'term'>>) {
+  const amount = text ?? formatNumber(n);
+  return (
+    <span class="camp-coin" data-icon={icon} title={term ? undefined : label} role={glyph ? 'img' : undefined} aria-label={glyph ? `${label}: ${amount}` : undefined}
+      {...explained(label, term)}>
+      {glyph ? <Icon d={ICONS[glyph as keyof typeof ICONS]} /> : <img alt={label} src={skinIconUrl(icon)} />}
+      <b>{amount}</b>
+    </span>
+  );
 }
 
 export const balance = (bar: Bar | null, icon: string): number => bar?.balances.find(b => b.icon === icon)?.amount ?? 0;
@@ -71,13 +81,16 @@ ${tab}`;
 
 /**
  * The bar shared by every page of a campaign. It shows the save's name and line, the mode's tabs, the balances and the back button.
- * extra is a dev tool: a control beside the balances, or on a phone a row of the header's menu.
+ * extra is a dev tool: a control beside the balances, or on a phone a row of the header's menu. mark draws what follows a tab's name.
+ * disabledTabs holds the tabs that cannot be opened, with why. lineTerm is the text of the line's tooltip.
+ * more draws the mode's own menu in place of Preferences: the panel its button opens, or on a phone rows of the header's menu.
  */
-export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, extra, prefs, leave, under }: {
+export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, mark, disabledTabs, held, extra, prefs, more, leave, under, lineTerm }: {
   bar: Bar; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void;
+  mark?: (tab: Tab) => ComponentChildren; disabledTabs?: Partial<Record<Tab, string>>;
   /** The amounts a reward reveal has not shown yet, by balance icon. The server's balances already include them, so the bar subtracts them. */
   held: Record<string, number>;
-  extra?: ComponentChildren; prefs?: () => void; leave: () => void; under: boolean;
+  extra?: ComponentChildren; prefs?: () => void; more?: (close: () => void) => ComponentChildren; leave: () => void; under: boolean; lineTerm?: string;
 }) {
   const strip = useRef<HTMLElement>(null);
   const [, redraw] = useState(0);
@@ -90,29 +103,36 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
   const nav = (
     <nav class="camp-tabs" ref={strip}>
       {tabs.map(([id, name]) => (
-        <button key={id} class="camp-tab" data-tab={id} aria-current={id === tab ? 'page' : undefined} onClick={() => setTab(id)}>
-          {t(name)}{unseen(bar, id, id === tab) && <span class="new-card">{t('lblNew')}</span>}{id === tab && <span class="camp-tab-line" />}
+        <button key={id} class="camp-tab" data-tab={id} aria-current={id === tab ? 'page' : undefined} disabled={!!disabledTabs?.[id]} title={disabledTabs?.[id]}
+          onClick={() => setTab(id)}>
+          {t(name)}{mark?.(id)}{unseen(bar, id, id === tab) && <span class="new-card">{t('lblNew')}</span>}{id === tab && <span class="camp-tab-line" />}
         </button>
       ))}
     </nav>
   );
-  const balances = bar.balances.map(b => <Purse key={b.icon} icon={b.icon} n={Math.min(b.amount - (held[b.icon] ?? 0), ceilings.get(b.icon) ?? Infinity)} label={b.label} />);
+  const balances = bar.balances.map(b => <Purse key={b.icon} {...b} n={Math.min(b.amount - (held[b.icon] ?? 0), ceilings.get(b.icon) ?? Infinity)} />);
+  const line = <span {...explained(bar.line, lineTerm)}>{bar.line}</span>;
   if (isPortrait()) {
     return (
       <PhoneHead back={{ label: t('lblBack'), go: leave }} title={bar.name} inert={under} tabs={nav}
-        line={<><span class="camp-purse">{balances}</span><span>{bar.line}</span></>}
-        more={close => prefs && <button role="menuitem" onClick={() => { close(); prefs(); }}><Icon d={ICONS.sliders} />{t('Preferences')}</button>}
+        line={<><span class="camp-purse">{balances}</span>{line}</>}
+        more={more ?? (close => prefs && <button role="menuitem" onClick={() => { close(); prefs(); }}><Icon d={ICONS.sliders} />{t('Preferences')}</button>)}
         dev={extra} />
     );
   }
   return (
     <div class="camp-bar" inert={under}>
-      <div class="camp-id"><b>{bar.name}</b><span>{bar.line}</span></div>
+      <div class="camp-id"><b>{bar.name}</b>{line}</div>
       {nav}
       <div class="camp-purse">
         {balances}
-        {prefs && <button onClick={prefs}>{t('Preferences')}</button>}
+        {prefs && !more && <button onClick={prefs}>{t('Preferences')}</button>}
         {extra}
+        {more && (
+          <Dropdown cls="camp-more" button={(open, toggle) => (
+            <button class="icon-button" title={t('lblMore')} aria-label={t('lblMore')} aria-expanded={open} onClick={toggle}><Icon d={ICONS.ellipsis} /></button>
+          )}>{more}</Dropdown>
+        )}
         <HeadControls />
         <button onClick={leave}>{t('lblBack')}</button>
       </div>
@@ -160,6 +180,20 @@ export function DeckRow({ image, name, line, problem, zoom, change }: {
   );
 }
 
+export function Figures({ figures }: { figures: Figure[] }) {
+  return (
+    <div class="camp-figures">
+      {figures.map(f => (
+        <div key={f.label} class="camp-figure">
+          <span class="camp-kicker">{f.label}</span>
+          <p><b>{f.text ?? formatNumber(f.amount)}</b>{f.of != null && <span> / {formatNumber(f.of)}{f.text == null && <> ({f.of ? Math.round(100 * f.amount / f.of) : 0}%)</>}</span>}</p>
+          {f.of != null && <div class="camp-pbar"><i style={{ width: `${f.of ? 100 * f.amount / f.of : 0}%` }} /></div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** A campaign's statistics. It shows figures and any tables the mode sends. first is the scope requested when the page opens. */
 export function Stats({ model, actions, first }: { model: Model; actions: Actions; first?: string }) {
   const s = model.campaignStats;
@@ -176,15 +210,7 @@ export function Stats({ model, actions, first }: { model: Model; actions: Action
           </span>
         )}
       </div>
-      <div class="camp-figures">
-        {s.figures.map(f => (
-          <div key={f.label} class="camp-figure">
-            <span class="camp-kicker">{f.label}</span>
-            <p><b>{formatNumber(f.amount)}</b>{f.of != null && <span> / {formatNumber(f.of)} ({f.of ? Math.round(100 * f.amount / f.of) : 0}%)</span>}</p>
-            {f.of != null && <div class="camp-pbar"><i style={{ width: `${f.of ? 100 * f.amount / f.of : 0}%` }} /></div>}
-          </div>
-        ))}
-      </div>
+      <Figures figures={s.figures} />
       <div class="camp-tables">
         {s.tables.map(table => (
           <table key={table.headers[0]}>
@@ -282,18 +308,20 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
 /**
  * A campaign mode's page. It shows the saved games, the form that starts a new one in their place, or an open save's pages.
  * icons are the balance icons. They are loaded when the mode opens, because on a first visit they would otherwise load after every picture on the first page.
+ * always is for a mode that has no shelf of saved games: open draws its pages also while no save is open.
  */
-export function CampaignShell({ model, actions, icons, shelf, open }: {
+export function CampaignShell({ model, actions, icons, shelf, open, always, class: cls }: {
   model: Model; actions: Actions; icons: string[];
-  shelf: (creating: boolean, setCreating: (on: boolean) => void) => ComponentChildren; open: () => ComponentChildren;
+  shelf?: (creating: boolean, setCreating: (on: boolean) => void) => ComponentChildren; open: () => ComponentChildren;
+  always?: boolean; class?: string;
 }) {
-  const inside = model.campaignSave !== null;
+  const inside = always || model.campaignSave !== null;
   useEffect(() => { for (const icon of icons) new Image().src = skinIconUrl(icon); }, []);
   // The new-save form closes and the saves list returns when the player goes back or the new save opens
   const [creating, setCreating] = useState(false);
   useEffect(() => { if (inside) setCreating(false); }, [inside]);
   return (
-    <div key={inside ? 'open' : 'shelf'} class={inside ? 'camp-shell' : 'limited-page'}>
+    <div key={inside ? 'open' : 'shelf'} class={!inside ? 'limited-page' : cls ? `camp-shell ${cls}` : 'camp-shell'}>
       {/* An open save has its back button on its bar. On a phone the shelf's trail draws the header */}
       {!inside && !isPortrait() && (
         <PageHeader class="limited-head">
@@ -303,7 +331,7 @@ export function CampaignShell({ model, actions, icons, shelf, open }: {
           </div>
         </PageHeader>
       )}
-      {inside ? open() : shelf(creating, setCreating)}
+      {inside ? open() : shelf?.(creating, setCreating)}
     </div>
   );
 }

@@ -56,8 +56,11 @@ public final class CampaignProtocol {
     public record Trade(String source, List<TradePick> picks) {
     }
 
-    /** One of a campaign's currencies: its skin icon's name, the amount the player has, and a text name for a reader who cannot see the icon. */
-    public record Balance(String icon, int amount, String label) {
+    /**
+     * One of a campaign's currencies: its skin icon's name, the amount the player has, and a text name for a reader who cannot see the icon.
+     * text is drawn in place of the amount, and glyph, one of the page's own icons, in place of the skin's. term is the text of its tooltip.
+     */
+    public record Balance(String icon, int amount, String label, @Nullable String text, @Nullable String glyph, @Nullable String term) {
     }
 
     /** What the bar above every campaign page shows: the save's name, a line under it, and its balances. fresh names the new items on each tab, by tab. */
@@ -78,8 +81,8 @@ public final class CampaignProtocol {
     public record CampaignResult(boolean won, boolean matchOver, @Nullable String line, @Nullable String detail, List<ResultButton> buttons) {
     }
 
-    /** A statistics figure: its amount, and the total it is out of when it is a share. */
-    public record Figure(String label, int amount, @Nullable Integer of) {
+    /** A statistics figure: its amount, and the total it is out of when it is a share. text is drawn in place of the amount and of a share's percentage. */
+    public record Figure(String label, int amount, @Nullable Integer of, @Nullable String text) {
     }
 
     public record StatTable(List<String> headers, List<List<String>> rows) {

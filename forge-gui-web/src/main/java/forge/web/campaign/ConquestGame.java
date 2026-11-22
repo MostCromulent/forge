@@ -377,8 +377,8 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
         }
         return new CampaignBar(data.getName(),
                 planeName(plane) + " \u00b7 " + data.getCurrentPlaneData().getConqueredCount() + " / " + plane.getEventCount(),
-                List.of(new Balance("IMG_AETHER_SHARD", data.getAEtherShards(), text.getMessage("lblAetherShards")),
-                        new Balance("IMG_PW_BADGE_COMMON", data.getPlaneswalkEmblems(), text.getMessage("lblPlaneswalkEmblems"))),
+                List.of(new Balance("IMG_AETHER_SHARD", data.getAEtherShards(), text.getMessage("lblAetherShards"), null, null, null),
+                        new Balance("IMG_PW_BADGE_COMMON", data.getPlaneswalkEmblems(), text.getMessage("lblPlaneswalkEmblems"), null, null, null)),
                 Map.of("collection", cards, "party", commanders));
     }
 
@@ -594,14 +594,14 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
         final ConquestData.Stats s = data.getStats(plane);
         final Localizer l = Localizer.getInstance();
         final List<Figure> figures = List.of(
-                new Figure(l.getMessage("lblAetherShards"), s.shards(), null),
-                new Figure(l.getMessage("lblPlaneswalkEmblems"), s.emblems(), null),
-                new Figure(l.getMessage("lblTotalWins"), s.wins(), null),
-                new Figure(l.getMessage("lblTotalLosses"), s.losses(), null),
-                new Figure(l.getMessage("lblConqueredEvents"), s.conquered(), s.events()),
-                new Figure(l.getMessage("lblUnlockedCards"), s.unlockedCards(), s.cards()),
-                new Figure(l.getMessage("lblCommanders"), s.commanders(), s.allCommanders()),
-                new Figure(l.getMessage("lblPlaneswalkers"), s.planeswalkers(), s.allPlaneswalkers()));
+                new Figure(l.getMessage("lblAetherShards"), s.shards(), null, null),
+                new Figure(l.getMessage("lblPlaneswalkEmblems"), s.emblems(), null, null),
+                new Figure(l.getMessage("lblTotalWins"), s.wins(), null, null),
+                new Figure(l.getMessage("lblTotalLosses"), s.losses(), null, null),
+                new Figure(l.getMessage("lblConqueredEvents"), s.conquered(), s.events(), null),
+                new Figure(l.getMessage("lblUnlockedCards"), s.unlockedCards(), s.cards(), null),
+                new Figure(l.getMessage("lblCommanders"), s.commanders(), s.allCommanders(), null),
+                new Figure(l.getMessage("lblPlaneswalkers"), s.planeswalkers(), s.allPlaneswalkers(), null));
         final List<String> planes = new ArrayList<>();
         for (final ConquestPlane p : FModel.getPlanes()) {
             if (data.isPlaneUnlocked(p)) {

@@ -401,10 +401,10 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         final QuestController quest = quest();
         final Localizer text = Localizer.getInstance();
         final List<Balance> balances = new ArrayList<>();
-        balances.add(new Balance("ICO_QUEST_COINSTACK", (int) quest.getAssets().getCredits(), text.getMessage("lblCredits")));
+        balances.add(new Balance("ICO_QUEST_COINSTACK", (int) quest.getAssets().getCredits(), text.getMessage("lblCredits"), null, null, null));
         // Life is bought and lost only in Fantasy mode
         if (quest.getMode() == QuestMode.Fantasy) {
-            balances.add(new Balance("ICO_QUEST_LIFE", quest.getAssets().getLife(quest.getMode()), text.getMessage("lblLife")));
+            balances.add(new Balance("ICO_QUEST_LIFE", quest.getAssets().getLife(quest.getMode()), text.getMessage("lblLife"), null, null, null));
         }
         return new CampaignBar(quest.getName(), quest.getRank() + " · " + world(quest.getWorld() == null ? null : quest.getWorld().getName()), balances, Map.of());
     }
@@ -714,17 +714,17 @@ public final class QuestGame implements Campaign, IHasForgeLog {
         final Localizer l = Localizer.getInstance();
         final boolean fantasy = quest.getMode() == QuestMode.Fantasy;
         final List<Figure> figures = new ArrayList<>(List.of(
-                new Figure(l.getMessage("lblWins"), record.getWin(), null),
-                new Figure(l.getMessage("lblLosses"), record.getLost(), null),
-                new Figure(l.getMessage("lblWinStreak"), record.getWinStreakCurrent(), null),
-                new Figure(l.getMessage("lblWebQuestBestStreak"), record.getWinStreakBest(), null),
-                new Figure(l.getMessage("lblCredits"), (int) Math.min(Integer.MAX_VALUE, assets.getCredits()), null)));
+                new Figure(l.getMessage("lblWins"), record.getWin(), null, null),
+                new Figure(l.getMessage("lblLosses"), record.getLost(), null, null),
+                new Figure(l.getMessage("lblWinStreak"), record.getWinStreakCurrent(), null, null),
+                new Figure(l.getMessage("lblWebQuestBestStreak"), record.getWinStreakBest(), null, null),
+                new Figure(l.getMessage("lblCredits"), (int) Math.min(Integer.MAX_VALUE, assets.getCredits()), null, null)));
         if (fantasy) {
-            figures.add(new Figure(l.getMessage("lblLife"), assets.getLife(quest.getMode()), null));
+            figures.add(new Figure(l.getMessage("lblLife"), assets.getLife(quest.getMode()), null, null));
         }
-        figures.add(new Figure(l.getMessage("lblCards"), assets.getCardPool().countAll(), null));
+        figures.add(new Figure(l.getMessage("lblCards"), assets.getCardPool().countAll(), null, null));
         final int rankUp = FModel.getQuestPreferences().getPrefInt(DifficultyPrefs.WINS_RANKUP, record.getDifficulty());
-        figures.add(new Figure(l.getMessage("lblWebQuestWinsToLevel"), rankUp - record.getWin() % rankUp, null));
+        figures.add(new Figure(l.getMessage("lblWebQuestWinsToLevel"), rankUp - record.getWin() % rankUp, null, null));
         final List<StatTable> tables = new ArrayList<>();
         final List<List<String>> placings = new ArrayList<>();
         for (int place = 1; place <= PLACES.length; place++) {
