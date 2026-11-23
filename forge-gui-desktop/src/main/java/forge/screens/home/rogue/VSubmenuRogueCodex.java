@@ -17,7 +17,6 @@ import forge.gui.framework.DragTab;
 import forge.gui.framework.EDocID;
 import forge.item.PaperCard;
 import forge.item.PaperCardPredicates;
-import forge.itemmanager.GroupDef;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.skin.FSkinProp;
 import forge.screens.home.EMenuGroup;
@@ -817,18 +816,11 @@ public enum VSubmenuRogueCodex implements IVSubmenu<CSubmenuRogueCodex> {
 
   private void sortCodexCardEntries(List<CodexCardGrid.Entry> entries) {
     entries.sort(Comparator
-        .comparingInt((CodexCardGrid.Entry entry) -> getCodexCardTypeOrder(entry.card()))
+        .comparingInt((CodexCardGrid.Entry entry) -> CodexHelper.codexCardTypeOrder(entry.card()))
         .thenComparing(entry -> entry.card() == null ? entry.label() : entry.card().getName(),
             String.CASE_INSENSITIVE_ORDER));
   }
 
-  private int getCodexCardTypeOrder(PaperCard card) {
-    if (card == null) {
-      return 8;
-    }
-    int groupIndex = GroupDef.CARD_TYPE.getItemGroupIndex(card);
-    return groupIndex < 0 ? 8 : groupIndex;
-  }
 
   private FScrollPane createPanelScrollPane(JPanel panel) {
     return new FScrollPane(panel, false,
