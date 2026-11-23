@@ -42,7 +42,7 @@ final class WebHub implements WebServer.Endpoint, IHasForgeLog {
     /** Sessions by the id that their browser stores. A reload then returns to the seat it left instead of taking a new one. */
     private final Map<String, WebSession> byId = new ConcurrentHashMap<>();
     private final Map<BrowserChannel, WebSession> byChannel = new ConcurrentHashMap<>();
-    private volatile WebSession host;
+    volatile WebSession host;
     private volatile WebServer server;
     /** Set from the console's checkbox or the keepOpen launch flag. Without a console, nothing else shows that Forge is running. */
     private boolean quitWhenEmpty = true;
@@ -127,7 +127,7 @@ final class WebHub implements WebServer.Endpoint, IHasForgeLog {
     }
 
     /** Frees the host's seat once its browser has been gone for a while, unless the session holds a game. */
-    private synchronized void releaseHostIfAbandoned() {
+    synchronized void releaseHostIfAbandoned() {
         if (host == null || host.attached() || host.hasGame()) {
             return;
         }

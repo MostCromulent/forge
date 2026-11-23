@@ -155,6 +155,7 @@ public final class WebSession implements IHasForgeLog {
     private final TableCommands table;
     /** The campaign modes. A build without them uses Campaigns.NONE instead. */
     private final Campaigns campaigns;
+    private final Map<String, Campaign> modes = new LinkedHashMap<>();
     /**
      * Tells sessions apart. A browser that is moved to another session, such as a seat handed over, sees the number change. The log also uses it,
      * because the player may have no name yet, or the same name as another.
@@ -214,11 +215,17 @@ public final class WebSession implements IHasForgeLog {
         this.limited = new OfflineLimited(this, ui, lobby, decks, local);
         this.eventSeat = new EventSeat(this, ui, lobby, decks, local, sessions::hostLobby, sessions::seatsChanged);
         this.table = new TableCommands(this, lobby, decks, limited, ui, sessions);
-        final Map<String, Campaign> modes = new LinkedHashMap<>();
         modes.put("conquest", new ConquestGame());
         modes.put("quest", new QuestGame());
         modes.put(RogueGame.MODE, RogueGame.shared());
         this.campaigns = new CampaignSession(new CampaignHost(), modes);
+    }
+
+    /** Puts mode in the table in place of any mode of that name, so a test can open a mode it scripts. Returns the session the modes run on. */
+    CampaignSession addCampaign(final String name, final Campaign mode) {
+        modes.put(name, mode);
+        campaigns.becameHost();
+        return (CampaignSession) campaigns;
     }
 
     /** Takes the host's seat. Host dialogs go to whoever holds the seat, so they are sent to this session. */

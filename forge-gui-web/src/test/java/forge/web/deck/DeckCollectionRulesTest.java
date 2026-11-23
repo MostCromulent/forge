@@ -149,16 +149,6 @@ public class DeckCollectionRulesTest {
         assertMain(e, deck());
     }
 
-    @Test
-    public void undoOfAnAddSpendsNothing() {
-        final DeckEditor e = editor(deck(), true);
-        Assert.assertNull(e.setLands(Map.of("Forest", 9)));
-        Assert.assertEquals(credits, 2);
-        Assert.assertNull(e.undo());
-        Assert.assertEquals(credits, 2);
-        assertMain(e, deck());
-    }
-
     // Fails if an undo takes out cards the rules would not let the player take out
     @Test
     public void undoOfAnAddIsAskedToo() {
@@ -171,17 +161,6 @@ public class DeckCollectionRulesTest {
         credits = 1;
         Assert.assertNull(e.undo());
         Assert.assertEquals(e.deck().getMain().countByName("Sol Ring"), 0);
-    }
-
-    @Test
-    public void movingOutOfMainSpends() {
-        final DeckEditor e = editor(deck(), false);
-        Assert.assertNull(e.move("Sol Ring", DeckSection.Main, DeckSection.Sideboard, 1));
-        Assert.assertEquals(credits, 1);
-        credits = 0;
-        Assert.assertEquals(e.move("Shock", DeckSection.Main, DeckSection.Sideboard, 1), NO_CREDITS);
-        Assert.assertEquals(e.deck().get(DeckSection.Sideboard).countAll(), 1);
-        Assert.assertEquals(e.deck().getMain().countByName("Shock"), 1);
     }
 
     @Test

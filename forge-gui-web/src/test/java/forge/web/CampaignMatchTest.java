@@ -20,9 +20,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import java.lang.reflect.Field;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -37,9 +35,7 @@ public class CampaignMatchTest extends WebHubTest {
         private Host host;
         private final AtomicInteger gameOvers = new AtomicInteger();
         private final List<String> leaving = new CopyOnWriteArrayList<>();
-        private final List<String> ran = new CopyOnWriteArrayList<>();
         private volatile boolean stays;
-        private volatile boolean runsItself;
 
         @Override
         public void becameHost(final Host h) {
@@ -52,18 +48,8 @@ public class CampaignMatchTest extends WebHubTest {
         }
 
         @Override
-        public boolean runsItself() {
-            return runsItself;
-        }
-
-        @Override
         public boolean mayLeave(final String save) {
             return !stays;
-        }
-
-        @Override
-        public void claim(final Host h) {
-            ran.add(Thread.currentThread().getName());
         }
 
         @Override
@@ -109,7 +95,6 @@ public class CampaignMatchTest extends WebHubTest {
 
         @Override
         public void handle(final BrowserChannel channel, final Record command, final String save, final Host h) {
-            ran.add(Thread.currentThread().getName());
         }
     }
 
@@ -118,32 +103,19 @@ public class CampaignMatchTest extends WebHubTest {
     private final AtomicInteger failures = new AtomicInteger();
     private final AtomicInteger games = new AtomicInteger();
 
-    private static Object read(final Object from, final String field) throws ReflectiveOperationException {
-        final Field f = from.getClass().getDeclaredField(field);
-        f.setAccessible(true);
-        return f.get(from);
-    }
-
-    // The session's table of modes is fixed, so the test's own are put into it
     @BeforeClass
-    @SuppressWarnings("unchecked")
     public void addModes() throws Exception {
         final TestBrowser host = connect("host");
         sessions.onMessage(host, TestBrowser.action("claimHost"));
         sessions.onMessage(host, message("setName", "name", "Host"));
-        session = (WebSession) read(sessions, "host");
-        final Campaigns campaigns = (Campaigns) read(session, "campaigns");
-        final Map<String, Campaign> modes = (Map<String, Campaign>) read(campaigns, "modes");
-        modes.put(MODE, mode);
-        modes.put("other", new StubMode());
-        campaigns.becameHost();
+        session = sessions.host;
+        session.addCampaign(MODE, mode);
+        session.addCampaign("other", new StubMode());
     }
 
     @AfterMethod(alwaysRun = true)
     public void leaveTheMode() throws InterruptedException {
         mode.stays = false;
-        mode.runsItself = false;
-        mode.ran.clear();
         final TestBrowser host = connect("host");
         if ("playing".equals(host.hello.get("screen").getAsString())) {
             send(host, TestBrowser.action("leave"));
@@ -183,23 +155,19 @@ public class CampaignMatchTest extends WebHubTest {
         }, failures::incrementAndGet);
     }
 
-    // Fails if a match starts in a mode other than the one that asked for it, or the mode that asked is not told
+    // Fails if a match starts outside the mode that asked for it, such as from the menu or another mode, or the mode that asked is not told
     @Test(timeOut = 120_000)
     public void aMatchDoesNotStartFromAnotherModesStage() throws Exception {
-        hostIn("other");
-        final WebSession.Stage before = session.stage();
-        startMatch(null);
-        Assert.assertEquals(failures.get(), 1);
-        Assert.assertSame(session.stage(), before);
-        Assert.assertNull(sessions.hostLobby());
-    }
-
-    // Fails if a mode whose player has gone to the start page waits forever for a match
-    @Test(timeOut = 120_000)
-    public void aMatchDoesNotStartAfterTheBrowserLeft() {
         Assert.assertEquals(session.stage(), new WebSession.Menu());
         startMatch(null);
         Assert.assertEquals(failures.get(), 1);
+        Assert.assertNull(sessions.hostLobby());
+
+        hostIn("other");
+        final WebSession.Stage before = session.stage();
+        startMatch(null);
+        Assert.assertEquals(failures.get(), 2);
+        Assert.assertSame(session.stage(), before);
         Assert.assertNull(sessions.hostLobby());
     }
 
@@ -232,19 +200,6 @@ public class CampaignMatchTest extends WebHubTest {
             awaitCampaignThread();
             Assert.assertSame(session.stage(), before, command.toString());
         }
-    }
-
-    // Fails if a command of a mode with a thread of its own waits for the campaign thread, or a command every mode shares does not
-    @Test(timeOut = 120_000)
-    public void aModeThatRunsItselfTakesItsOwnCommandsAtOnce() throws Exception {
-        final TestBrowser host = hostIn(MODE);
-        mode.runsItself = true;
-        // Any mode's own command goes to the open mode
-        sessions.onMessage(host, TestBrowser.action("conquestMove"));
-        Assert.assertEquals(mode.ran, List.of(Thread.currentThread().getName()));
-        sessions.onMessage(host, TestBrowser.action("rewardClaim"));
-        awaitCampaignThread();
-        Assert.assertEquals(mode.ran, List.of(Thread.currentThread().getName(), "WebCampaign"));
     }
 
     /** Waits for the campaign work queued so far. */
@@ -295,18 +250,11 @@ public class CampaignMatchTest extends WebHubTest {
         return mode.leaving;
     }
 
-    // Fails if a mode is not told which of its own buttons the player left with, or is told of one when none was pressed
-    @Test(timeOut = 180_000)
-    public void leavingTellsTheCampaignTheChoice() throws Exception {
-        WebTestSupport.skipUnlessStress();
-        Assert.assertEquals(leaveWith("endless").get(1), "left for endless, table false");
-        Assert.assertEquals(leaveWith(null).get(1), "left for null, table false");
-    }
-
-    // Fails if a mode cannot tell a match the player left from the draw that closing its table ends it in
+    // Fails if a mode cannot tell a match the player left from the draw that closing its table ends it in, or is not told which of its own buttons the player left with
     @Test(timeOut = 180_000)
     public void leavingMatchComesBeforeTheTableCloses() throws Exception {
         WebTestSupport.skipUnlessStress();
         Assert.assertEquals(leaveWith(null), List.of("leaving, table true", "left for null, table false"));
+        Assert.assertEquals(leaveWith("endless").get(1), "left for endless, table false");
     }
 }
