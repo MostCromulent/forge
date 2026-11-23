@@ -112,8 +112,14 @@ public enum CSubmenuRogueAether implements ICDoc {
   }
 
   private void upgradeAetherwork(AetherEffect type) {
-    if (RogueMetaProgress.getInstance().upgradeAndActivateAetherEffect(type)) {
+    RogueMetaProgress progress = RogueMetaProgress.getInstance();
+    int rankBefore = progress.getAetherEffectRank(type);
+    if (progress.upgradeAetherEffect(type)) {
       SoundSystem.instance.play(SoundEffectType.Artifact, SoundEffectType.Artifact.isSynced());
+      // Auto-activate the Aetherwork when first built (rank goes from 0 to 1)
+      if (rankBefore == 0 && progress.getAetherEffectRank(type) == 1) {
+        progress.activateAetherEffect(type);
+      }
       refreshDisplay();
     }
   }

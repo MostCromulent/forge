@@ -55,6 +55,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -351,12 +352,25 @@ public enum VSubmenuRogueCodex implements IVSubmenu<CSubmenuRogueCodex> {
     JPanel sections = new CodexSectionsPanel(new MigLayout("insets 12, gap 0, wrap 1", GROW_AXIS));
     sections.setOpaque(false);
 
+    List<CodexCardGrid.Entry> chestEntries = createTraitEntries(
+        traitsByCategory.get(CodexHelper.TraitCategory.CHEST), progress);
+    List<CodexCardGrid.Entry> npcEntries = createTraitEntries(
+        traitsByCategory.get(CodexHelper.TraitCategory.NPC), progress);
+    List<CodexCardGrid.Entry> eventEntries = createTraitEntries(
+        traitsByCategory.get(CodexHelper.TraitCategory.EVENT), progress);
+    List<CodexCardGrid.Entry> woundEntries = createTraitEntries(
+        traitsByCategory.get(CodexHelper.TraitCategory.WOUND), progress);
+
     List<CodexCardGrid.Entry> traitEntries = new ArrayList<>();
-    for (CodexHelper.TraitCategory category : CodexHelper.TraitCategory.values()) {
-      List<CodexCardGrid.Entry> entries = createTraitEntries(traitsByCategory.get(category), progress);
-      traitEntries.addAll(entries);
-      addTraitSection(sections, category.label(), entries);
-    }
+    traitEntries.addAll(chestEntries);
+    traitEntries.addAll(npcEntries);
+    traitEntries.addAll(eventEntries);
+    traitEntries.addAll(woundEntries);
+
+    addTraitSection(sections, localizer.getMessage("lblRogueChest"), chestEntries);
+    addTraitSection(sections, localizer.getMessage("lblRogueNpc"), npcEntries);
+    addTraitSection(sections, localizer.getMessage("lblRogueEvent"), eventEntries);
+    addTraitSection(sections, localizer.getMessage("lblRogueWound"), woundEntries);
 
     pnlContent.add(createTraitStatsHeader(traitEntries), STATS_HEADER_CONSTRAINTS);
     pnlContent.add(createPanelScrollPane(sections), FILL_CONTENT);
@@ -708,8 +722,14 @@ public enum VSubmenuRogueCodex implements IVSubmenu<CSubmenuRogueCodex> {
   private static List<CodexCardGrid.Entry> createDeckEntries(List<PaperCard> cards,
       Function<PaperCard, CodexCardGrid.Entry> createEntry) {
     List<CodexCardGrid.Entry> entries = new ArrayList<>();
-    for (PaperCard card : CodexHelper.eachBasicOnce(cards)) {
-      entries.add(createEntry.apply(card));
+    Set<String> displayedBasicLandNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    for (PaperCard card : cards) {
+      if (card == null || card.getRules() == null) {
+        continue;
+      }
+      if (!card.getRules().getType().isBasicLand() || displayedBasicLandNames.add(card.getName())) {
+        entries.add(createEntry.apply(card));
+      }
     }
     return entries;
   }

@@ -78,7 +78,7 @@ class NodeSanctumHelper {
                 flow.decisions().showResult(ResultKind.SANCTUM,
                     Localizer.getInstance().getMessage("lblRogueSanctum"),
                     Localizer.getInstance().getMessage("lblRogueYouCooked"),
-                    List.of(new Section(null, null, List.of(craftedFood), false)));
+                    List.of(new Section(null, null, List.of(craftedFood))));
                 break;
 
             case REFLECT:

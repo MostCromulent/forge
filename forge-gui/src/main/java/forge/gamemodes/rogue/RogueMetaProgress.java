@@ -332,14 +332,14 @@ public class RogueMetaProgress {
         String key = stat.getConditionKey();
 
         boolean changed = false;
-        for (RogueDeck deck : RogueConfig.loadRogueDecks()) {
-            RogueUnlockCondition condition = deck.getUnlockCondition();
+        for (RogueConfig.CommanderUnlock unlock : RogueConfig.getCommanderUnlocks()) {
+            RogueUnlockCondition condition = unlock.condition();
             if (condition == null || condition.isDefault() || !condition.hasCondition(key)) {
                 continue;
             }
 
-            String name = deck.getCommanderCardName();
-            if (deck.isUnlocked() && !notifiedCommanderUnlocks.contains(name)) {
+            String name = unlock.commanderName();
+            if (unlock.isUnlocked() && !notifiedCommanderUnlocks.contains(name)) {
                 notifiedCommanderUnlocks.add(name);
                 changed = true;
 
@@ -734,18 +734,6 @@ public class RogueMetaProgress {
         totalEchoes -= cost;
         aetherEffectRanks.put(aetherEffect.getId(), currentRank + 1);
         save();
-        return true;
-    }
-
-    /** Upgrades the Aetherwork as upgradeAetherEffect does, and activates it when this upgrade first built it. */
-    public boolean upgradeAndActivateAetherEffect(AetherEffect aetherEffect) {
-        boolean built = getAetherEffectRank(aetherEffect) > 0;
-        if (!upgradeAetherEffect(aetherEffect)) {
-            return false;
-        }
-        if (!built) {
-            activateAetherEffect(aetherEffect);
-        }
         return true;
     }
 
