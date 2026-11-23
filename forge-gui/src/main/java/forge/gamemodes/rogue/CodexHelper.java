@@ -33,11 +33,21 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public final class CodexHelper {
+    /** In the order the Codex lists them. */
     public enum TraitCategory {
-        NPC,
         CHEST,
+        NPC,
         EVENT,
-        WOUND
+        WOUND;
+
+        public String label() {
+            return Localizer.getInstance().getMessage(switch (this) {
+                case CHEST -> "lblRogueChest";
+                case NPC -> "lblRogueNpc";
+                case EVENT -> "lblRogueEvent";
+                case WOUND -> "lblRogueWound";
+            });
+        }
     }
 
     public enum CodexState { UNKNOWN, SEEN, ACQUIRED }
@@ -522,6 +532,14 @@ public final class CodexHelper {
     public static List<RoguePlanebound> codexPlanebounds() {
         return RogueConfig.loadPlanebounds().stream()
             .sorted(Comparator.comparing(RoguePlanebound::planeboundName, String.CASE_INSENSITIVE_ORDER))
+            .collect(Collectors.toList());
+    }
+
+    /** The cards a Codex list shows: each basic land once, and no card without rules. */
+    public static List<PaperCard> eachBasicOnce(List<PaperCard> cards) {
+        Set<String> basics = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        return cards.stream()
+            .filter(card -> card != null && card.getRules() != null && (!card.getRules().getType().isBasicLand() || basics.add(card.getName())))
             .collect(Collectors.toList());
     }
 
