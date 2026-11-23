@@ -133,7 +133,8 @@ public final class RogueFlow {
         return true;
     }
 
-    private PathUpdateContext pathContext() {
+    /** The path rules the run's effects set, such as hidden planes or a free choice of node. */
+    public PathUpdateContext pathContext() {
         PathUpdateContext pathCtx = new PathUpdateContext();
         RogueEffectComposite.INSTANCE.onPathUpdate(pathCtx, currentRun);
         return pathCtx;
