@@ -676,12 +676,12 @@ public final class RogueFlow {
         List<Section> sections = new ArrayList<>();
         List<PaperCard> removedCards = filterResultCards(ctx.removedCards, excludedNames);
         if (!removedCards.isEmpty()) {
-            sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsRemoved"), null, removedCards));
+            sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsRemoved"), null, removedCards, true));
         }
 
         List<PaperCard> addedCards = filterResultCards(ctx.addedCards, excludedNames);
         if (!addedCards.isEmpty()) {
-            sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsAdded"), null, addedCards));
+            sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsAdded"), null, addedCards, false));
         }
         return sections;
     }

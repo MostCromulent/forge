@@ -156,13 +156,13 @@ class NodeEventHelper {
         List<Section> sections = new ArrayList<>();
         if (ctx.gainedWoundEffect != null) {
             sections.add(new Section(Localizer.getInstance().getMessage("lblRogueWoundGained"),
-                ctx.gainedWoundEffect.getDisplayName() + " - " + ctx.gainedWoundEffect.getDescription(), List.of()));
+                ctx.gainedWoundEffect.getDisplayName() + " - " + ctx.gainedWoundEffect.getDescription(), List.of(), false));
         }
         if (ctx.removedCards != null && !ctx.removedCards.isEmpty()) {
-            sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsRemoved"), null, ctx.removedCards));
+            sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsRemoved"), null, ctx.removedCards, true));
         }
         if (ctx.addedCards != null && !ctx.addedCards.isEmpty()) {
-            sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsAdded"), null, ctx.addedCards));
+            sections.add(new Section(Localizer.getInstance().getMessage("lblRogueCardsAdded"), null, ctx.addedCards, false));
         }
         return sections;
     }
