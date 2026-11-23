@@ -2,7 +2,7 @@
 
 import { SidePanel } from '../campaign/campaign';
 import { Icon } from '../icons';
-import { artUrl, skinIconUrl } from '../images';
+import { artUrl, hideBroken, skinIconUrl } from '../images';
 import { isPortrait } from '../form';
 import { playSound } from '../audio';
 import { changeUi, ui } from '../ui';
@@ -10,8 +10,8 @@ import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
 import type { AetherWork, RogueAether } from '../protocol';
 
-const echo = (cls?: string) => <img class={cls} alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />;
-const spark = <img alt="" src={skinIconUrl('ICO_QUEST_ELIXIR')} />;
+const echo = (cls?: string) => <img onError={hideBroken} class={cls} alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />;
+const spark = <img onError={hideBroken} alt="" src={skinIconUrl('ICO_QUEST_ELIXIR')} />;
 const built = (play: () => void) => () => {
   playSound({ t: 'sound', name: 'artifact', sync: false });
   play();

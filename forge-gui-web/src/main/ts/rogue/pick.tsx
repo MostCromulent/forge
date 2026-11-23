@@ -3,7 +3,7 @@
 import { Fragment } from 'preact';
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Backdrop } from '../dialog';
-import { imageUrl, skinIconUrl } from '../images';
+import { hideBroken, imageUrl, skinIconUrl } from '../images';
 import { reducedMotion } from '../dom';
 import { avatarUrl } from '../avatarsleeves';
 import { isPortrait } from '../form';
@@ -26,7 +26,7 @@ const COLOURS = ['W', 'U', 'B', 'R', 'G', 'C'];
 function Card({ name, image, at, toggle }: { name: string; image: string; at: string | null; toggle: () => void }) {
   return (
     <button class={`rg-card sm ${at ? 'on' : ''}`} aria-pressed={!!at} data-image={image} onClick={toggle}>
-      <img alt={name} src={imageUrl(image)} />
+      <img onError={hideBroken} alt={name} src={imageUrl(image)} />
       {at && <span class="no">{at}</span>}
     </button>
   );
@@ -135,7 +135,7 @@ export function RewardPick({ asked, answer, fold, viewDeck }: { asked: AskCards;
     {asked.rerollCost != null && (
       <button disabled={!asked.rerollEnabled} onClick={() => answer('reroll')}>
         <Icon d={ROGUE_ICONS.reroll} cls="rg-ic" />
-        {phone ? ` ${asked.rerollCost}` : <>{` ${t('lblWebRogueReroll')} `}<img class="camp-shard" alt="" src={skinIconUrl('ICO_QUEST_COIN')} />{asked.rerollCost}</>}
+        {phone ? ` ${asked.rerollCost}` : <>{` ${t('lblWebRogueReroll')} `}<img onError={hideBroken} class="camp-shard" alt="" src={skinIconUrl('ICO_QUEST_COIN')} />{asked.rerollCost}</>}
       </button>
     )}
     <button class="primary" onClick={() => answer(picked)}>
@@ -151,7 +151,7 @@ export function RewardPick({ asked, answer, fold, viewDeck }: { asked: AskCards;
             const at = picked.indexOf(c.id);
             return (
               <button key={c.id} class={at < 0 ? 'rg-card' : 'rg-card on'} aria-pressed={at >= 0} data-image={c.image} onClick={() => toggle(c.id)}>
-                <img alt={c.name} src={imageUrl(c.image)} />
+                <img onError={hideBroken} alt={c.name} src={imageUrl(c.image)} />
                 {marked && c.mythic && <span class="myth">{t('lblMythic')}</span>}
                 {at >= 0 && <span class="no">{at + 1}</span>}
               </button>
@@ -227,7 +227,7 @@ export function CommanderPick({ asked, model, actions, answer }: { asked: AskCom
     <div class="rg-sec">
       <h4>{t('lblWebRoguePortrait')}</h4>
       <div class="rg-avs">
-        {asked.avatars.map(a => <img key={a} class={a === avatar ? 'on' : ''} alt="" src={avatarUrl(a)} tabIndex={0} aria-pressed={a === avatar}
+        {asked.avatars.map(a => <img onError={hideBroken} key={a} class={a === avatar ? 'on' : ''} alt="" src={avatarUrl(a)} tabIndex={0} aria-pressed={a === avatar}
           onClick={() => setAvatar(a)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setAvatar(a); }} />)}
       </div>
     </div>

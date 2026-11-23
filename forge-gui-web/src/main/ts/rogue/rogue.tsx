@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { CampaignBar, CampaignShell } from '../campaign/campaign';
 import { Backdrop } from '../dialog';
 import { Icon } from '../icons';
-import { imageUrl, skinIconUrl } from '../images';
+import { hideBroken, imageUrl, skinIconUrl } from '../images';
 import { isPortrait } from '../form';
 import { playSound } from '../audio';
 import { useEscapeBack } from '../header';
@@ -294,8 +294,8 @@ function Announcement({ announced, ok }: { announced: RogueAnnounce; ok: () => v
     <Backdrop layer="rg-dialog">
       <div class="dialog trophy" role="alertdialog" aria-label={announced.title}>
         <span class="camp-chip brass"><Icon d={ROGUE_ICONS.trophy} cls="rg-ic" /> {announced.title}</span>
-        {announced.kind === 'spark' ? <img class="sparkpic" alt="" src={skinIconUrl('ICO_QUEST_ELIXIR')} />
-          : announced.image && <img alt="" data-image={announced.image} src={imageUrl(announced.image)} />}
+        {announced.kind === 'spark' ? <img onError={hideBroken} class="sparkpic" alt="" src={skinIconUrl('ICO_QUEST_ELIXIR')} />
+          : announced.image && <img onError={hideBroken} alt="" data-image={announced.image} src={imageUrl(announced.image)} />}
         <h3>{name}</h3>
         {rest.length > 0 && <p>{rest.join('\n')}</p>}
         <div class="actions"><button class="primary" ref={button} onClick={ok}>{t('lblContinue')}</button></div>

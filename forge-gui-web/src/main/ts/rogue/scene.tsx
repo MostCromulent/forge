@@ -3,7 +3,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from '../icons';
-import { artUrl, imageUrl } from '../images';
+import { artUrl, hideBroken, imageUrl } from '../images';
 import { avatarUrl } from '../avatarsleeves';
 import { playSound } from '../audio';
 import { isPortrait } from '../form';
@@ -198,7 +198,7 @@ function Choosing({ choice, answer, fold, viewDeck }: { choice: AskChoice; answe
   const tip = (terms.length > 0 || cards.length > 0) && (
     <div class="rg-tip">
       {terms.map(p => <div key={p.term} class="kw"><b>{p.term}</b>{p.tip}</div>)}
-      {cards.map(p => <img key={p.image} alt="" src={imageUrl(p.image!)} />)}
+      {cards.map(p => <img onError={hideBroken} key={p.image} alt="" src={imageUrl(p.image!)} />)}
     </div>
   );
   const buttons = [

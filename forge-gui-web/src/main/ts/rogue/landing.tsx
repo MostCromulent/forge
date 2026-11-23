@@ -1,6 +1,6 @@
 // Runs with an unfinished run: the run, which continues from here, beside Start New Run
 
-import { artUrl, imageUrl, skinIconUrl } from '../images';
+import { artUrl, hideBroken, imageUrl, skinIconUrl } from '../images';
 import { t } from '../text';
 import { Icon } from '../icons';
 import { ROGUE_ICONS } from './icons';
@@ -27,14 +27,14 @@ export function Landing({ home, run, go, deck, abandon, fresh }: {
               </div>
               <div class="figs">
                 <div><Icon d={ROGUE_ICONS.heart} cls="rg-ic" /><b>{`${run.life} / ${run.maxLife}`}</b><span>{t('lblLife')}</span></div>
-                <div><img alt="" src={skinIconUrl('ICO_QUEST_COIN')} /><b>{run.gold}</b><span>{t('lblWebRogueGold')}</span></div>
+                <div><img onError={hideBroken} alt="" src={skinIconUrl('ICO_QUEST_COIN')} /><b>{run.gold}</b><span>{t('lblWebRogueGold')}</span></div>
                 <div><Icon d={ROGUE_ICONS.deck} cls="rg-ic" /><b>{run.cards}</b><span>{t('lblCards')}</span></div>
                 <div><Icon d={ROGUE_ICONS.cut} cls="rg-ic" /><b>{run.credits}</b><span>{t('lblWebRogueRemovalCredits')}</span></div>
               </div>
               {run.carry.length > 0 && (
                 <div class="sec">
                   <span class="camp-kicker">{t('lblWebRogueCarryCards')}</span>
-                  <div class="held">{run.carry.map(c => <img key={c.name} alt={c.name} data-image={c.image} src={imageUrl(c.image)} />)}</div>
+                  <div class="held">{run.carry.map(c => <img onError={hideBroken} key={c.name} alt={c.name} data-image={c.image} src={imageUrl(c.image)} />)}</div>
                 </div>
               )}
               <div class="go">

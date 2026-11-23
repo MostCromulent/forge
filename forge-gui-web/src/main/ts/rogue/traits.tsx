@@ -1,7 +1,7 @@
 // The run's traits, each marked by where it came from, beside its carry cards
 
 import { Icon } from '../icons';
-import { artUrl, imageUrl } from '../images';
+import { artUrl, hideBroken, imageUrl } from '../images';
 import { avatarUrl } from '../avatarsleeves';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
@@ -63,7 +63,7 @@ export function TraitsPage({ traits, carry, haze }: { traits: Trait[]; carry: Ro
           <div class="pile">
             {carry.map((c, i) => (
               <figure key={i} style={{ '--i': i }}>
-                <img alt={c.name} data-image={c.image} src={imageUrl(c.image)} />
+                <img onError={hideBroken} alt={c.name} data-image={c.image} src={imageUrl(c.image)} />
                 <figcaption>{c.type && <Words parts={[c.type]} />}</figcaption>
               </figure>
             ))}

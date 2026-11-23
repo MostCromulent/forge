@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { Icon } from '../icons';
-import { imageUrl, skinIconUrl } from '../images';
+import { hideBroken, imageUrl, skinIconUrl } from '../images';
 import { isPortrait } from '../form';
 import { playSound } from '../audio';
 import { t } from '../text';
@@ -13,7 +13,7 @@ import { Seal, TraitCard } from './traits';
 import { shopTotal } from './shop';
 import type { AskShop, ShopItem } from '../protocol';
 
-const coin = (alt: string, cls?: string) => <img class={cls} alt={alt} src={skinIconUrl('ICO_QUEST_COIN')} />;
+const coin = (alt: string, cls?: string) => <img onError={hideBroken} class={cls} alt={alt} src={skinIconUrl('ICO_QUEST_COIN')} />;
 
 /** An item as a tile: a card with its carry type or Mythic over it, or a trait as a card, and its price. A struck price is a discount. */
 function Item({ item, on, no, toggle }: { item: ShopItem; on: boolean; no: boolean; toggle: () => void }) {
@@ -21,7 +21,7 @@ function Item({ item, on, no, toggle }: { item: ShopItem; on: boolean; no: boole
   return (
     <button class={['rg-item', on && 'on', no && 'no'].filter(Boolean).join(' ')} aria-pressed={on} aria-label={item.name} onClick={toggle}>
       {item.type ? <span class="ty">{icon && <Icon d={icon} cls="rg-ic" />}{item.type.text}</span> : item.mythic && <span class="ty">{t('lblMythic')}</span>}
-      {item.trait ? <TraitCard trait={item.trait} small /> : <img class="c" alt="" data-image={item.image} src={imageUrl(item.image!)} />}
+      {item.trait ? <TraitCard trait={item.trait} small /> : <img onError={hideBroken} class="c" alt="" data-image={item.image} src={imageUrl(item.image!)} />}
       <span class="pr">{coin('Gold')}{item.was > item.price && <s>{item.was}</s>}{item.price}</span>
     </button>
   );

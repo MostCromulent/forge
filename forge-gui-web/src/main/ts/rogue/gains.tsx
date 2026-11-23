@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { flyShards } from '../campaign/campaign';
 import { changeUi } from '../ui';
 import { Icon } from '../icons';
-import { imageUrl, skinIconUrl } from '../images';
+import { hideBroken, imageUrl, skinIconUrl } from '../images';
 import { isPortrait } from '../form';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
@@ -23,14 +23,14 @@ function Card({ card, small }: { card: RogueCard; small: boolean }) {
     const icon = TERM_ICONS[card.type.term!];
     return (
       <div class="rg-card" style={{ width: '214px' }} data-image={card.image}>
-        <img alt="" src={imageUrl(card.image)} />
+        <img onError={hideBroken} alt="" src={imageUrl(card.image)} />
         <span class="myth">{icon && <Icon d={icon} cls="rg-ic" />}{card.type.text}</span>
       </div>
     );
   }
   return (
     <button class={small ? 'rg-card sm' : 'rg-card'} type="button" data-image={card.image}>
-      <img alt={card.name} src={imageUrl(card.image)} />
+      <img onError={hideBroken} alt={card.name} src={imageUrl(card.image)} />
       {card.count > 1 && <span class="no" style={{ padding: '0 9px' }}>{t('lblWebRogueCopies', card.count)}</span>}
     </button>
   );
@@ -47,7 +47,7 @@ export const heldBack = (gains: TellGains | null | undefined, landed: string[]):
 /** The figures a won battle gave. One of 0 is left out, and a phone words removal credits shorter. Each flies to its balance in the bar, which counts it as it lands. */
 function Figures({ gains }: { gains: TellGains }) {
   const row = useRef<HTMLDivElement>(null);
-  const pictures = [<img alt="" src={skinIconUrl('ICO_QUEST_COIN')} />, <img alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />,
+  const pictures = [<img onError={hideBroken} alt="" src={skinIconUrl('ICO_QUEST_COIN')} />, <img onError={hideBroken} alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />,
     <Icon d={ROGUE_ICONS.heart} cls="rg-ic" />, <Icon d={ROGUE_ICONS.cut} cls="rg-ic" />];
   const labels = [t('lblWebRogueGold'), t('lblWebRogueEchoes'), t('lblLife'), t(isPortrait() ? 'lblCredits' : 'lblWebRogueRemovalCredits')];
   const figures = figureIcons(gains).map(([icon, n], i) => ({ icon, n, picture: pictures[i], label: labels[i] })).filter(f => f.n > 0);

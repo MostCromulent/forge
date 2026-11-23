@@ -2,7 +2,7 @@
 
 import { Fragment } from 'preact';
 import { Figures } from '../campaign/campaign';
-import { artUrl, imageUrl } from '../images';
+import { artUrl, hideBroken, imageUrl } from '../images';
 import { avatarUrl } from '../avatarsleeves';
 import { isPortrait } from '../form';
 import { t, type TextKey } from '../text';
@@ -35,7 +35,7 @@ function Facts({ facts, tab }: { facts: CodexFact[]; tab: CodexTab }) {
 /** An unknown card is a back, a seen one grey, an acquired one in full colour. */
 function Dex({ item }: { item: CodexItem }) {
   if (item.state === 'unknown') return <div><div class="unk" /></div>;
-  return <div class={item.state === 'seen' ? 'seen' : ''}><img alt="" data-image={item.image ?? undefined} src={imageUrl(item.image!)} /></div>;
+  return <div class={item.state === 'seen' ? 'seen' : ''}><img onError={hideBroken} alt="" data-image={item.image ?? undefined} src={imageUrl(item.image!)} /></div>;
 }
 
 function TraitItem({ item }: { item: CodexItem }) {
@@ -73,8 +73,8 @@ function Entry({ entry, tab, back }: { entry: CodexEntry; tab: CodexTab; back: (
   return (
     <div class="rg-scroll">
       <div class="rg-top">
-        {entry.image && <img alt="" data-image={entry.image} src={imageUrl(entry.image)} />}
-        {entry.plane && <span class="rg-plane pl"><img alt={entry.planeName ?? ''} data-image={entry.plane} src={imageUrl(entry.plane)} /></span>}
+        {entry.image && <img onError={hideBroken} alt="" data-image={entry.image} src={imageUrl(entry.image)} />}
+        {entry.plane && <span class="rg-plane pl"><img onError={hideBroken} alt={entry.planeName ?? ''} data-image={entry.plane} src={imageUrl(entry.plane)} /></span>}
         <div class="t">{link}<h2>{entry.title}</h2>{!phone && <Facts facts={entry.facts} tab={tab} />}</div>
       </div>
       {phone && <Facts facts={entry.facts} tab={tab} />}

@@ -4,7 +4,7 @@
 import { useState } from 'preact/hooks';
 import { DeckRow, SidePanel } from '../campaign/campaign';
 import { Icon } from '../icons';
-import { artUrl, imageUrl, skinIconUrl } from '../images';
+import { artUrl, hideBroken, imageUrl, skinIconUrl } from '../images';
 import { changeUi } from '../ui';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
@@ -45,8 +45,8 @@ function Chips({ map, n, cls }: { map: RogueMap; n: MapNode; cls: string }) {
 /** Gold and Echoes of the node's kind, and the card reward every plane but the boss's gives. */
 function Loot({ map, n }: { map: RogueMap; n: MapNode }) {
   return <>
-    {n.gold > 0 && <span><img alt={t('lblWebRogueGold')} src={skinIconUrl('ICO_QUEST_COIN')} />{n.gold}</span>}
-    <span><img alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />{n.echoes}</span>
+    {n.gold > 0 && <span><img onError={hideBroken} alt={t('lblWebRogueGold')} src={skinIconUrl('ICO_QUEST_COIN')} />{n.gold}</span>}
+    <span><img onError={hideBroken} alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />{n.echoes}</span>
     {!n.boss && <span {...explains(map.terms.CARD_REWARD)}>{glyph('deck')}{` ${map.terms.CARD_REWARD?.text}`}</span>}
     {!n.boss && <span>{glyph('star')}{` ${t('lblMythic')}`}</span>}
   </>;
@@ -85,7 +85,7 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
   return (
     <SidePanel kicker={<span {...explains(map.terms.PLANEBOUND)}>{kind(map, n)}</span>} title={n.name} art={n.art} zoom={zoom} setZoom={setZoom} foot={foot}>
       <div class="camp-chips"><Chips map={map} n={n} cls="camp-chip" /></div>
-      <div class="rg-sec"><h4>{t('lblPlane')}</h4><span class="rg-plane">{n.planeImage && <img alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} />}</span></div>
+      <div class="rg-sec"><h4>{t('lblPlane')}</h4><span class="rg-plane">{n.planeImage && <img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} />}</span></div>
       <div class="rg-sec">{paragraphs(n.text).map((p, i) => <p key={i}>{p}</p>)}</div>
       {reward}
     </SidePanel>
@@ -125,7 +125,7 @@ export function PlaneSheet({ model, actions }: { model: Model; actions: Actions 
           <div class="camp-kicker">{kind(map, n)}</div>
           <h3>{n.faceDown ? '???' : n.name}</h3>
           <div class="ln"><Chips map={map} n={n} cls="" /></div>
-          {n.planeImage && <span class="rg-plane"><img alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} /></span>}
+          {n.planeImage && <span class="rg-plane"><img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} /></span>}
           {n.faceDown && map.hidden && <p>{map.hidden}</p>}
           {paragraphs(n.text).map((p, i) => <p key={i}>{p}</p>)}
           <div class="camp-kicker">{t('lblWebRogueReward')}</div>
