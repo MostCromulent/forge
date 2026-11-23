@@ -105,6 +105,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     /** The pages last sent to the host's browser by type, so a publish leaves out those it already holds. Guarded by pages. */
     private final Map<Class<?>, Record> sent = new HashMap<>();
     private final RogueDecisions decisions;
+    /** The same decisions when they are the browser's, or null when a test scripts them: a battle then asks no summary and no ending. */
+    private final WebRogueDecisions web;
     private volatile Battle battle;
 
     /** A match from its start until what follows its result is done. */
@@ -139,6 +141,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     /** decisions is given the game, so tests can answer the flow's questions from a script. */
     public RogueGame(final Function<RogueGame, RogueDecisions> decisions) {
         this.decisions = decisions.apply(this);
+        web = this.decisions instanceof WebRogueDecisions w ? w : null;
         flow = new RogueFlow(this.decisions);
         worker.execute(job(this::loadSaves));
     }
@@ -246,6 +249,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
 
     /** The run in memory may be part-way through a step, so it is dropped for the one last saved. */
     private void reloadRun() {
+        closeEditor();
         flow.setRun(null);
         try {
             flow.load();
@@ -590,17 +594,17 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             }
             awaitLeaving(b);
             final String choice = b.left.join();
-            if (summarised(b)) {
+            if (summarised(b) && web != null) {
                 b.gainsShown = true;
-                ((WebRogueDecisions) decisions).showGains(b.controller.getGains());
+                web.showGains(b.controller.getGains());
             }
             boolean endless = false;
             if (flow.offersEnding(b.controller)) {
                 final boolean unlocked = RogueMetaProgress.getInstance().isEndlessModeUnlocked();
                 if (ENDLESS.equals(choice) && unlocked) {
                     endless = true;
-                } else if (!COMPLETE.equals(choice)) {
-                    endless = ((WebRogueDecisions) decisions).chooseEnding(unlocked);
+                } else if (!COMPLETE.equals(choice) && web != null) {
+                    endless = web.chooseEnding(unlocked);
                 }
             }
             flow.resultLeft(b.controller, endless);
@@ -744,26 +748,16 @@ public final class RogueGame implements Campaign, IHasForgeLog {
      * nothing, so the Codex is read at once and stays open over a decision.
      */
     private void codex(final BrowserChannel channel, final RogueCodex asked) {
-        final Runnable answer = () -> {
-            final RogueCodexPage page = RoguePages.codex(RogueMetaProgress.getInstance(), asked.tab(), asked.id());
-            if (page != null) {
-                channel.send(page);
-            }
-        };
-        if (question != null) {
-            answer.run();
-        } else if (asked.id() == null && busy.compareAndSet(false, true)) {
+        if (question == null && asked.id() == null && busy.compareAndSet(false, true)) {
             worker.execute(() -> {
                 try {
                     RogueCommanderAchievements.getInstance().evaluateCodexAchievements(RogueMetaProgress.getInstance());
-                    answer.run();
                 } finally {
                     busy.set(false);
                 }
             });
-        } else {
-            worker.execute(answer);
         }
+        read(channel, () -> RoguePages.codex(RogueMetaProgress.getInstance(), asked.tab(), asked.id()));
     }
 
     /**
@@ -891,12 +885,10 @@ public final class RogueGame implements Campaign, IHasForgeLog {
                 return details == null ? null : new DeckDetailsMessage(details);
             }))
             .on(RogueDev.class, (g, ch, d) -> g.submit(d.snapshot(), -1, () -> g.dev(d.tool())))
-            .on(RogueStartDeck.class, (g, ch, d) -> {
+            .on(RogueStartDeck.class, (g, ch, d) -> g.read(ch, () -> {
                 final DeckDetails details = RoguePages.startDeck(d.deck());
-                if (details != null) {
-                    ch.send(new DeckDetailsMessage(details));
-                }
-            })
+                return details == null ? null : new DeckDetailsMessage(details);
+            }))
             .on(RogueChoose.class, (g, ch, c) -> g.worker.execute(() -> {
                 final RogueChoice choice = choice(c);
                 if (choice != null) {
