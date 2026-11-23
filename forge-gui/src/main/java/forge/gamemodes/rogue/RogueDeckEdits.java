@@ -26,12 +26,18 @@ public final class RogueDeckEdits {
         RogueIO.saveRun(run);
     }
 
+    /** Why the cards cannot be removed, or null when they can. */
+    public String refusal(Iterable<Map.Entry<PaperCard, Integer>> cards) {
+        return RogueRun.removalCost(cards) > run.getRemovalCredits() ? Localizer.getInstance().getMessage("lblRogueRemovalLimitHint") : null;
+    }
+
     /** Null when the cards were removed; otherwise why not, and nothing changed. */
     public String remove(Iterable<Map.Entry<PaperCard, Integer>> cards, Runnable moveCards) {
-        int cost = RogueRun.removalCost(cards);
-        if (cost > run.getRemovalCredits()) {
-            return Localizer.getInstance().getMessage("lblRogueRemovalLimitHint");
+        String refusal = refusal(cards);
+        if (refusal != null) {
+            return refusal;
         }
+        int cost = RogueRun.removalCost(cards);
         moveCards.run();
         run.setRemovalCredits(run.getRemovalCredits() - cost);
         edits.push(new Edit(true, copy(cards), cost));
