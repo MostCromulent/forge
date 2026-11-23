@@ -263,9 +263,7 @@ public final class CampaignSession implements Campaigns {
 
     @Override
     public void disconnected(final Stage now) {
-        if (now instanceof InCampaign c) {
-            modes.get(c.mode()).disconnected();
-        } else if (now instanceof Playing p && p.back() instanceof InCampaign c) {
+        if ((now instanceof Playing p ? p.back() : now) instanceof InCampaign c) {
             modes.get(c.mode()).disconnected();
         }
     }

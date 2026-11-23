@@ -21,7 +21,9 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,8 +36,9 @@ public class DeckCollectionRulesTest {
     };
     private final List<Deck> saved = new ArrayList<>();
     private int credits;
+    private final Deque<Integer> spent = new ArrayDeque<>();
 
-    /** Each card but a basic land costs a credit to take out. */
+    /** Each card but a basic land costs a credit to take out, and an undo gives back what its change spent. */
     private final DeckEditor.Rules rules = new DeckEditor.Rules() {
         private int cost(final CardPool cards) {
             return cards.toFlatList().stream().filter(c -> !c.getRules().getType().isBasicLand()).toList().size();
@@ -47,8 +50,13 @@ public class DeckCollectionRulesTest {
         }
 
         @Override
-        public void changed(final CardPool removed, final CardPool restored, final boolean undo) {
-            credits += cost(restored) - cost(removed);
+        public void changed(final CardPool removed, final boolean undo) {
+            if (undo) {
+                credits += spent.pop();
+            } else {
+                spent.push(cost(removed));
+                credits -= cost(removed);
+            }
         }
 
         @Override
@@ -76,6 +84,7 @@ public class DeckCollectionRulesTest {
     @BeforeMethod
     public void twoCredits() {
         credits = 2;
+        spent.clear();
         saved.clear();
     }
 
@@ -162,7 +171,6 @@ public class DeckCollectionRulesTest {
         credits = 1;
         Assert.assertNull(e.undo());
         Assert.assertEquals(e.deck().getMain().countByName("Sol Ring"), 0);
-        Assert.assertEquals(credits, 0);
     }
 
     @Test

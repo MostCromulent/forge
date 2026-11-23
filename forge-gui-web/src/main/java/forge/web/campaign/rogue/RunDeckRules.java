@@ -35,7 +35,7 @@ final class RunDeckRules implements DeckEditor.Rules, IHasForgeLog {
     }
 
     @Override
-    public void changed(final CardPool removed, final CardPool restored, final boolean undo) {
+    public void changed(final CardPool removed, final boolean undo) {
         pending = undo ? () -> edits.undo(edit -> { }) : removed.isEmpty() ? () -> edits.added(List.of()) : () -> edits.remove(removed, () -> { });
     }
 

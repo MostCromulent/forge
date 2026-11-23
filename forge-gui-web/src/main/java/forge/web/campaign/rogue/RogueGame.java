@@ -6,15 +6,12 @@ import forge.StaticData;
 import forge.deck.CardPool;
 import forge.game.GameType;
 import forge.game.GameView;
-import forge.gamemodes.rogue.RogueConfig;
-import forge.gamemodes.rogue.RogueDeck;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.effect.CustomRunModification;
 import forge.gamemodes.rogue.flow.RogueDecisions;
 import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.flow.RogueStart;
-import forge.gui.FThreads;
 import forge.localinstance.achievements.RogueCommanderAchievements;
 import forge.localinstance.skin.ISkinImage;
 import forge.util.IHasForgeLog;
@@ -48,7 +45,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -64,8 +60,6 @@ public final class RogueGame implements Campaign, IHasForgeLog {
 
     private final Executor worker = WebGuiBase.worker("WebRogue");
     private final AtomicBoolean busy = new AtomicBoolean(true);
-    /** Counts ended jobs whose calls to the UI thread may not have run yet. Descension unlocks are announced there, after their job. */
-    private final AtomicInteger settling = new AtomicInteger();
     private final RogueFlow flow;
     /** Guards the latest snapshot and the sending of pages, so pages reach the browser in the order they were numbered. */
     private final Object pages = new Object();
@@ -177,8 +171,6 @@ public final class RogueGame implements Campaign, IHasForgeLog {
                 reloadRun();
             } finally {
                 try {
-                    settling.incrementAndGet();
-                    FThreads.invokeInEdtLater(settling::decrementAndGet);
                     publish();
                 } finally {
                     busy.set(false);
@@ -255,12 +247,9 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
     }
 
-    /**
-     * Only announcements made while a job runs, or by the UI thread before it has run what the job left it, are kept.
-     * So another mode's trophies are not shown on Rogue's pages. Called on any thread.
-     */
+    /** Only announcements made while a job runs are kept, so another mode's trophies are not shown on Rogue's pages. Called on any thread. */
     void announce(final RogueAnnounce announcement) {
-        if (!busy.get() && settling.get() == 0) {
+        if (!busy.get()) {
             return;
         }
         synchronized (pages) {
@@ -464,8 +453,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         if (modifications == null) {
             return null;
         }
-        final RogueDeck deck = RogueConfig.loadRogueDecks().stream().filter(d -> d.getName().equals(begin.deck())).findFirst().orElse(null);
-        return new RogueStart(deck, begin.custom(), modifications, begin.descension());
+        return new RogueStart(RoguePages.deck(begin.deck()), begin.custom(), modifications, begin.descension());
     }
 
     /** Runs on the flow thread, because it reads the progress. Null for an unknown modification. */

@@ -44,7 +44,6 @@ import forge.web.protocol.ToBrowser.DeckDetails;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,8 +58,6 @@ public final class RoguePages {
     /** Reading the decks takes longer than the rest of a snapshot, and they do not change while the server runs. */
     private static final class Decks {
         static final List<RogueDeck> ALL = RogueConfig.loadRogueDecks();
-        static final List<RogueDeck> OFFICIAL = ALL.stream().filter(d -> !d.isExperimental())
-                .sorted(Comparator.comparing(RogueDeck::getName)).collect(Collectors.toList());
     }
 
     private static final Map<String, Part> MAP_TERMS = Arrays.stream(new KeywordHint[] {KeywordHint.PLANEBOUND, KeywordHint.WRATHFUL, KeywordHint.CURSED,
@@ -105,7 +102,7 @@ public final class RoguePages {
         final CampaignBar bar = new CampaignBar(text.getMessage("lblRogueCommander"),
                 runs == 0 ? text.getMessage("lblWebRogueNoRuns") : record(runs, progress.getTotalRunsWon()), balances, Map.of());
         final String commander = run == null ? null : run.getCurrentCommanderName();
-        final List<String> fan = Decks.OFFICIAL.stream().filter(d -> d.isUnlocked() && !d.getCommanderCardName().equals(commander))
+        final List<String> fan = RogueStart.roster(Decks.ALL, false).stream().filter(d -> d.isUnlocked() && !d.getCommanderCardName().equals(commander))
                 .limit(3).map(d -> d.getStartDeck().getCommanders().get(0).getImageKey(false)).collect(Collectors.toList());
         return new RogueHome(number, bar, run == null ? null : runCard(run), RogueStart.tabsUnlocked(progress), fan);
     }
@@ -170,9 +167,12 @@ public final class RoguePages {
         if (deck == null || !deck.isUnlocked()) {
             return null;
         }
-        final Deck start = deck.getStartDeck();
-        return new DeckDetails("rogue:start:" + name, deck.getCommanderCardName(), null, DeckFacts.colors(start), DeckFacts.stats(start),
-                CardCatalog.groups(start.getMain(), DeckCatalog.NO_FLAGS), List.of(), null, 0, null);
+        return details("rogue:start:" + name, deck.getCommanderCardName(), deck.getStartDeck());
+    }
+
+    private static DeckDetails details(final String key, final String name, final Deck deck) {
+        return new DeckDetails(key, name, null, DeckFacts.colors(deck), DeckFacts.stats(deck), CardCatalog.groups(deck.getMain(), DeckCatalog.NO_FLAGS),
+                List.of(), null, 0, null);
     }
 
     private static RogueMap map(final RogueFlow flow, final RogueRun run, final RogueMetaProgress progress, final long number) {
@@ -200,7 +200,7 @@ public final class RoguePages {
             return context.hidePlanes;
         }).map(RogueEffect::getDescription).toList();
         return new RogueMap(number, rows, links, run.getCurrentNodeIndex(), runBar(run, progress), reroll.left(), reroll.enabled() ? null : reroll.reason(),
-                hiding.isEmpty() ? null : String.join("\n", hiding), MAP_TERMS, deck(run));
+                hiding.isEmpty() ? null : String.join("\n", hiding), MAP_TERMS, details("rogue:run", run.getCurrentCommanderName(), run.getCurrentDeck()));
     }
 
     private static MapNode node(final RogueFlow flow, final RogueRun run, final RoguePathNode node, final int index, final String state) {
@@ -292,11 +292,5 @@ public final class RoguePages {
         }
         return new RogueRunCard(run.getCurrentCommanderName(), commander.getImageKey(false), line(run), run.getCurrentLife(),
                 run.getMaxLife(), run.getCurrentGold(), run.getCurrentDeck().getMain().countAll(), run.getRemovalCredits(), carry);
-    }
-
-    private static DeckDetails deck(final RogueRun run) {
-        final Deck deck = run.getCurrentDeck();
-        return new DeckDetails("rogue:run", run.getCurrentCommanderName(), null, DeckFacts.colors(deck), DeckFacts.stats(deck),
-                CardCatalog.groups(deck.getMain(), DeckCatalog.NO_FLAGS), List.of(), null, 0, null);
     }
 }

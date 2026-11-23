@@ -605,7 +605,7 @@ public final class DeckEditor {
         final CardPool removed = missing(before, after);
         final String refused = removed.isEmpty() ? null : rules.refuse(removed);
         if (refused == null) {
-            rules.changed(removed, undoing ? missing(after, before) : new CardPool(), undoing);
+            rules.changed(removed, undoing);
         }
         return refused;
     }
@@ -987,8 +987,8 @@ public final class DeckEditor {
         /** Why these cards cannot be taken out, or null. */
         String refuse(CardPool removed);
 
-        /** The main deck changed, by undo or not: the cards it lost, and those an undo put back. It runs before the deck is saved. */
-        void changed(CardPool removed, CardPool restored, boolean undo);
+        /** The main deck changed, by undo or not, and lost these cards. It runs before the deck is saved. */
+        void changed(CardPool removed, boolean undo);
 
         /** The counter's text, or null. */
         String counter();

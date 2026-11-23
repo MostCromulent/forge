@@ -43,7 +43,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const scene = isScene(model.rogueQuestion);
   const folded = scene && ui.rogueFolded === model.rogueQuestion!.id;
   const tell = scene ? undefined : model.rogueQuestion?.tell;
-  const replace = model.rogueQuestion?.kind === 'replace' ? model.rogueQuestion.choice : undefined;
+  const replace = model.rogueQuestion?.choice?.kind === 'replace' ? model.rogueQuestion.choice : undefined;
   const announced = model.rogueAnnounced[0];
   const fresh = !inRun && tab === 'runs' && (!run || ui.rogueNewRun) && roster ? roster : null;
   const setTab = (to: RogueTab) => changeUi(u => { u.rogueTab = to; u.rogueNewRun = false; });

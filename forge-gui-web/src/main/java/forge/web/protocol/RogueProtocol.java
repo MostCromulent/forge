@@ -161,7 +161,7 @@ public final class RogueProtocol {
      * It is not a request of the match's, because those are cleared by every hello and a default answers an unknown one.
      */
     @Message("rogueQuestion")
-    public record RogueQuestion(int id, String kind, @Nullable AskChoice choice, @Nullable AskCards cards, @Nullable AskCommander commander,
+    public record RogueQuestion(int id, @Nullable AskChoice choice, @Nullable AskCards cards, @Nullable AskCommander commander,
             @Nullable AskShop shop, @Nullable TellOmen omen, @Nullable Tell tell) {
     }
 
@@ -176,12 +176,9 @@ public final class RogueProtocol {
     public record Option(String label, List<Part> text, boolean enabled, @Nullable String reason) {
     }
 
-    /**
-     * Answered with an option's index, "reroll" while rerolls is above 0, or "skip" where skip is true. face is an avatar, heading the name
-     * of the one telling a story, and art the picture behind them.
-     */
-    public record AskChoice(String kind, @Nullable Integer face, String title, @Nullable String heading, List<List<Part>> paragraphs, List<Option> options,
-            int rerolls, boolean skip, @Nullable String art) {
+    /** Answered with an option's index, "reroll" while rerolls is above 0, or "skip" where skip is true. face is an avatar, and art the picture behind it. */
+    public record AskChoice(String kind, @Nullable Integer face, String title, List<List<Part>> paragraphs, List<Option> options, int rerolls, boolean skip,
+            @Nullable String art) {
     }
 
     /**
@@ -224,8 +221,7 @@ public final class RogueProtocol {
     }
 
     /** A result or a message. kind is a ResultKind name, or "MESSAGE". art is the picture behind a result. */
-    public record Tell(String kind, @Nullable String icon, String title, List<Part> text, List<String> gains, List<TellSection> sections,
-            @Nullable String art) {
+    public record Tell(String kind, String title, List<Part> text, List<TellSection> sections, @Nullable String art) {
     }
 
     public record TellSection(String label, List<Part> text, List<RogueCard> cards) {

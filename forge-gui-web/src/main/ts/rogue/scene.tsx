@@ -213,7 +213,6 @@ function Choosing({ choice, answer, fold }: { choice: AskChoice; answer: (value:
           <b>{choice.title}</b>
         </div>
         <div class="rg-words">
-          {choice.heading && <h3>{choice.heading}</h3>}
           {typing && words.length > 0 ? <Typed key={part} text={words.map(line => line.map(p => p.text).join('')).join('\n')} done={() => setTyping(false)} />
             : words.map((line, i) => <p key={i} class="flav"><Words parts={line} /></p>)}
           {options.length > 0 && <Choices options={options} onPick={pick} hot={hot} setHot={setHot} />}
