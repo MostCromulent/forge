@@ -6,6 +6,7 @@ import { createModel, applyState, cardMenu, concedingEndsGame, isLocal, oldestRe
 import './campaign/register';
 import './conquest/register';
 import './quest/register';
+import './rogue/register';
 import { campaigns } from './campaigns';
 import { asked, createActions, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, transition, ui } from './ui';
