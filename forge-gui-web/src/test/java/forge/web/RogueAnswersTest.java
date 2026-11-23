@@ -50,15 +50,12 @@ public class RogueAnswersTest {
     }
 
     @Test
-    public void twoCopiesOfOneCandidateAreRefused() {
+    public void aCardAnswerMustFitTheChoice() {
         Assert.assertFalse(choice(0, 2, ring, elves).accepts(List.of(ring, ring)));
         Assert.assertTrue(choice(0, 2, ring, elves, ring).accepts(List.of(ring, ring)));
         Assert.assertTrue(choice(0, 2, ring, elves).accepts(List.of(elves, ring)));
         Assert.assertFalse(choice(0, 2, ring, elves).accepts(List.of(bolt)));
-    }
 
-    @Test
-    public void tooFewAndTooManyCardsAreRefused() {
         final CardChoice choice = choice(1, 2, ring, elves, bolt);
         Assert.assertFalse(choice.accepts(List.of()));
         Assert.assertTrue(choice.accepts(List.of(ring)));
@@ -67,7 +64,7 @@ public class RogueAnswersTest {
     }
 
     @Test
-    public void aShopAnswerBeyondTheGoldIsRefused() {
+    public void aShopAnswerMustBeAffordable() {
         final BazaarItem four = BazaarItem.forCard(ring, 4);
         final BazaarItem three = BazaarItem.forCard(elves, 3);
         final ShopOffer offer = shop(List.of(four, three), 6, 0, false);
@@ -76,10 +73,7 @@ public class RogueAnswersTest {
         Assert.assertTrue(shop(List.of(four, three), 7, 0, false).accepts(buy(four, three)));
         Assert.assertFalse(offer.accepts(buy(BazaarItem.forCard(ring, 1))), "the offer has it at another price");
         Assert.assertTrue(offer.accepts(buy()));
-    }
 
-    @Test
-    public void aRerollThatCannotBePaidIsRefused() {
         final ShopAnswer reroll = new ShopAnswer(true, Set.of(), 0);
         Assert.assertTrue(shop(List.of(), 2, 2, true).accepts(reroll));
         Assert.assertFalse(shop(List.of(), 1, 2, true).accepts(reroll));
@@ -87,16 +81,13 @@ public class RogueAnswersTest {
     }
 
     @Test
-    public void restingWhenItIsDisabledIsRefused() {
+    public void aSanctumAnswerMustBeOffered() {
         final SanctumAnswer rest = new SanctumAnswer(SanctumAction.HEAL, null);
         Assert.assertTrue(new SanctumOffer("", true, null, new SanctumContext(), null).accepts(rest));
         final SanctumOffer disabled = new SanctumOffer("", false, "", new SanctumContext(), null);
         Assert.assertFalse(disabled.accepts(rest));
         Assert.assertTrue(disabled.accepts(new SanctumAnswer(SanctumAction.COOK, null)));
-    }
 
-    @Test
-    public void aSanctumChoiceThatIsNotOfferedIsRefused() {
         final SanctumContext context = new SanctumContext();
         context.extraChoices.add(new SanctumContext.SanctumChoice("train", "Train", ""));
         final SanctumOffer offer = new SanctumOffer("", true, null, context, null);

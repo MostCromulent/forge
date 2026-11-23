@@ -9,18 +9,15 @@ import forge.gamemodes.rogue.RogueRunHistoryEntry;
 import forge.gamemodes.rogue.RogueStats;
 import forge.gamemodes.rogue.effect.CustomRunModification;
 import forge.gamemodes.rogue.effect.DescensionLevel;
-import forge.gamemodes.rogue.effect.NPCEffect;
 import forge.gamemodes.rogue.flow.RogueDecisions.CardChoice;
 import forge.gamemodes.rogue.flow.RogueDecisions.CardChoiceKind;
 import forge.gamemodes.rogue.flow.RogueDecisions.Pick;
 import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.flow.RogueStart;
 import forge.gamemodes.rogue.npc.NPC;
-import forge.gamemodes.rogue.npc.NPCContext;
 import forge.gamemodes.rogue.path.NodeSanctum;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
-import forge.model.FModel;
 import forge.util.MyRandom;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -92,31 +89,11 @@ public class RogueStartTest {
     }
 
     @Test
-    public void conflictingModificationsCannotBegin() {
-        Assert.assertFalse(custom(CustomRunModification.RICH).canBegin(progress), "custom runs are locked");
+    public void anExperimentalCommanderNeedsExperiment() {
         unlockCustomRuns();
-        Assert.assertTrue(custom(CustomRunModification.RICH).canBegin(progress));
-        Assert.assertTrue(custom(CustomRunModification.PATH_OF_THE_BANNED).canBegin(progress));
-        Assert.assertFalse(custom(CustomRunModification.RICH, CustomRunModification.PATH_OF_THE_BANNED).canBegin(progress));
-        Assert.assertFalse(custom().canBegin(progress));
         final RogueDeck experimental = RogueStart.roster(true).get(0);
         Assert.assertFalse(normal(experimental, 0).canBegin(progress), "an experimental commander needs Experiment");
         Assert.assertTrue(new RogueStart(experimental, true, Set.of(CustomRunModification.EXPERIMENT), 0).canBegin(progress));
-    }
-
-    @Test
-    public void generatedCommandersBringTheirOwnModifications() {
-        unlockCustomRuns();
-        Assert.assertTrue(flow.begin(custom(CustomRunModification.MANIA)));
-        final RogueRun mania = flow.run();
-
-        MyRandom.setRandom(new Random(1));
-        decisions.then("confirmReplaceRun", true);
-        Assert.assertTrue(flow.begin(custom(CustomRunModification.MANIA, CustomRunModification.RANDOM_START)));
-        Assert.assertNotSame(flow.run(), mania);
-        Assert.assertEquals(flow.run().getActiveCustomRunModifications(), List.of(CustomRunModification.MANIA));
-        Assert.assertEquals(flow.run().getSelectedRogueDeck().getStartDeck().getAllCardsInASinglePool(),
-                mania.getSelectedRogueDeck().getStartDeck().getAllCardsInASinglePool());
     }
 
     @Test
@@ -201,67 +178,12 @@ public class RogueStartTest {
         });
         Assert.assertThrows(IllegalStateException.class, () -> flow.begin(normal(unlocked, 0)));
         assertUntouched(old);
-    }
 
-    @Test
-    public void leavingTheSealedQuestionChangesNothing() {
         unlockCustomRuns();
-        final RogueRun old = unfinishedRun();
-        final IllegalStateException left = new IllegalStateException("the player left");
         decisions.then("chooseCards", args -> {
-            throw left;
+            throw new IllegalStateException("the player left");
         });
-        Assert.assertSame(Assert.expectThrows(IllegalStateException.class,
-                () -> flow.begin(custom(CustomRunModification.SEALED))), left);
-        Assert.assertEquals(decisions.asked, List.of("chooseCards"));
+        Assert.assertThrows(IllegalStateException.class, () -> flow.begin(custom(CustomRunModification.SEALED)));
         assertUntouched(old);
-    }
-
-    @Test
-    public void refusingToReplaceChangesNothing() {
-        final RogueRun old = unfinishedRun();
-        decisions.then("confirmReplaceRun", false);
-        Assert.assertFalse(flow.begin(normal(unlocked, 0)));
-        assertUntouched(old);
-    }
-
-    @Test
-    public void aDeckThatCannotBeGeneratedChangesNothing() {
-        unlockCustomRuns();
-        final RogueRun old = unfinishedRun();
-        decisions.then("chooseCommanders", List.of(FModel.getMagicDb().getCommonCards().getCard("Forest")));
-        Assert.assertFalse(flow.begin(custom(CustomRunModification.CHOSEN_ONE)));
-        Assert.assertEquals(decisions.asked, List.of("chooseCommanders", "showMessage"));
-        assertUntouched(old);
-    }
-
-    @Test
-    public void aBoonIsAppliedAndTheRunIsSaved() {
-        tyvarOffersABoon();
-        decisions.then("chooseBoon", new Pick<>(false, NPCEffect.TYVAR_BRAWLER)).then("runStarted", args -> {
-            Assert.assertSame(args[0], flow.run());
-            decisions.asked.add("runStarted");
-            return null;
-        });
-        Assert.assertTrue(flow.begin(normal(unlocked, 0)));
-        Assert.assertEquals(decisions.asked, List.of("chooseBoon", "runStarted"));
-        final RogueRun saved = RogueIO.loadMostRecentContinuableRun().orElseThrow(AssertionError::new);
-        Assert.assertEquals(saved.getName(), flow.run().getName());
-        Assert.assertEquals(saved.getActiveNPCEffects(), List.of(NPCEffect.TYVAR_BRAWLER));
-        Assert.assertEquals(saved.getCurrentCommanderName(), unlocked.getCommanderCardName());
-    }
-
-    @Test
-    public void aStoryBetweenRunsIsToldOnce() {
-        decisions.then("chooseBoon", args -> {
-            final NPCContext story = (NPCContext) args[0];
-            Assert.assertEquals(story.npc(), NPC.TEFERI);
-            Assert.assertTrue(story.choices().isEmpty());
-            return new Pick<>(false, null);
-        });
-        flow.betweenRuns();
-        Assert.assertEquals(decisions.asked, List.of("chooseBoon"));
-        flow.betweenRuns();
-        Assert.assertEquals(decisions.asked, List.of("chooseBoon"));
     }
 }

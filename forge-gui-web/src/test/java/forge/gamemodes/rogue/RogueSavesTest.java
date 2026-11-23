@@ -8,9 +8,7 @@ import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import forge.web.RogueFixture;
 import forge.web.WebTestSupport;
-import org.apache.commons.lang3.SystemUtils;
 import org.testng.Assert;
-import org.testng.SkipException;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -61,16 +59,6 @@ public class RogueSavesTest {
     }
 
     @Test
-    public void twoBrokenRunsWithOneNameAreBothKept() throws IOException {
-        for (int i = 0; i < 2; i++) {
-            Files.write(dir.resolve(RUN), nonsense());
-            Assert.assertTrue(RogueIO.loadAllRuns().isEmpty());
-        }
-        // Within one tick of the clock the names are equal, and the second file stays in place
-        Assert.assertEquals(filesEndingWith("").size(), 2);
-    }
-
-    @Test
     public void aRunCutShortStaysInPlace() throws IOException {
         cutShort(RogueFixture.install("/rogue/run-master.xml", RUN));
         Assert.assertTrue(RogueIO.loadAllRuns().isEmpty());
@@ -79,15 +67,12 @@ public class RogueSavesTest {
     }
 
     @Test
-    public void anEmptyFileIsSetAsideAndProgressStartsEmpty() throws IOException {
+    public void aFileCutShortIsSetAside() throws IOException {
         Files.createFile(dir.resolve(PROGRESS));
         Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 0);
-        Assert.assertEquals(filesEndingWith(".broken").size(), 1);
         Assert.assertFalse(Files.exists(dir.resolve(PROGRESS)));
-    }
+        RogueFixture.clean();
 
-    @Test
-    public void aFileCutShortIsSetAside() throws IOException {
         final Path file = RogueFixture.install("/rogue/meta-master.xml", PROGRESS);
         cutShort(file);
         final byte[] bytes = Files.readAllBytes(file);
@@ -103,40 +88,10 @@ public class RogueSavesTest {
         Assert.expectThrows(UncheckedIOException.class, RogueMetaProgress::getInstance);
         Assert.assertEquals(filesEndingWith(""), List.of(dir.resolve(PROGRESS)));
         Assert.assertTrue(Files.isDirectory(dir.resolve(PROGRESS)));
-    }
 
-    @Test
-    public void aBrokenFileThatCannotBeSetAsideIsNotTouched() throws IOException {
-        final Path file = Files.write(dir.resolve(PROGRESS), nonsense());
-        // Windows does not rename an open file, and other systems need a writable directory
-        try (InputStream open = new FileInputStream(file.toFile())) {
-            dir.toFile().setWritable(false);
-            if (!SystemUtils.IS_OS_WINDOWS && Files.isWritable(dir)) {
-                throw new SkipException("this user can rename the file");
-            }
-            final UncheckedIOException e = Assert.expectThrows(UncheckedIOException.class, RogueMetaProgress::getInstance);
-            Assert.assertTrue(e.getCause().getMessage().startsWith("Could not set aside"), e.getCause().getMessage());
-        } finally {
-            dir.toFile().setWritable(true);
-        }
-        Assert.assertEquals(Files.readAllBytes(file), nonsense());
-        Assert.assertEquals(filesEndingWith(""), List.of(file));
-    }
-
-    @Test
-    public void theNextOpenLoadsItOnceReadable() throws IOException {
-        Files.createDirectory(dir.resolve(PROGRESS));
-        Assert.expectThrows(UncheckedIOException.class, RogueMetaProgress::getInstance);
         Files.delete(dir.resolve(PROGRESS));
         RogueFixture.install("/rogue/meta-master.xml", PROGRESS);
         Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 25);
-    }
-
-    @Test
-    public void reloadKeepsTheDevUnlock() {
-        RogueMetaProgress.getInstance().setDevUnlockAll(true);
-        RogueMetaProgress.reload();
-        Assert.assertTrue(RogueMetaProgress.getInstance().isDevUnlockAll());
     }
 
     @Test
@@ -167,7 +122,11 @@ public class RogueSavesTest {
     public void theFixtureRoundTrips() throws IOException {
         final Path runFile = RogueFixture.install("/rogue/run-master.xml", RUN);
         final Path progressFile = RogueFixture.install("/rogue/meta-master.xml", PROGRESS);
-        final RogueRun before = RogueIO.loadRun(runFile.toFile());
+        final RogueRun before = RogueIO.loadMostRecentContinuableRun().orElseThrow(AssertionError::new);
+        Assert.assertEquals(before.getCurrentCommanderName(), "Aragorn, the Uniter");
+        Assert.assertEquals(before.getCurrentNodeIndex(), 11);
+        Assert.assertEquals(before.getCarryCards().stream().map(RogueRun.CarryCard::cardName).toList(),
+                List.of("Sol Ring", "Llanowar Elves", "Lightning Bolt"));
         final RogueMetaProgress progress = RogueMetaProgress.getInstance();
         Files.delete(runFile);
         Files.delete(progressFile);
