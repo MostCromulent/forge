@@ -12,9 +12,12 @@ import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.NodeSanctum;
 import forge.util.MyRandom;
 import forge.web.campaign.rogue.RoguePages;
+import forge.web.protocol.RogueProtocol.CodexItem;
+import forge.web.protocol.RogueProtocol.CodexRow;
 import forge.web.protocol.RogueProtocol.MapLink;
 import forge.web.protocol.RogueProtocol.MapNode;
 import forge.web.protocol.RogueProtocol.RogueAether;
+import forge.web.protocol.RogueProtocol.RogueCodexPage;
 import forge.web.protocol.RogueProtocol.RogueHome;
 import forge.web.protocol.RogueProtocol.RogueMap;
 import forge.web.protocol.RogueProtocol.RogueTraits;
@@ -152,6 +155,38 @@ public class RoguePagesTest {
         Assert.assertFalse(aether.descension());
         Assert.assertNull(aether.upgrade());
         Assert.assertTrue(aether.locked().isEmpty(), "works an upgrade unlocks are shown");
+    }
+
+    // Fails if the browser can learn a card or a planebound the player has not seen from the Codex
+    @Test
+    public void anUnknownCardSendsNoName() {
+        final RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        progress.updateStat(RogueStats.RUNS_COMPLETED, 1, run);
+        final List<CodexItem> pool = RoguePages.codex(progress, "commanders", null).entry().groups().get(0).items();
+        Assert.assertFalse(pool.isEmpty());
+        for (final CodexItem card : pool) {
+            Assert.assertEquals(card.state(), "unknown", "a new profile has seen no reward card");
+            Assert.assertNull(card.name());
+            Assert.assertNull(card.image());
+        }
+        final RogueCodexPage planebounds = RoguePages.codex(progress, "planebounds", null);
+        Assert.assertNull(planebounds.entry(), "no planebound has been met");
+        for (final CodexRow row : planebounds.rows()) {
+            Assert.assertNull(row.id());
+            Assert.assertNull(row.art());
+            Assert.assertEquals(row.line(), "");
+        }
+    }
+
+    // Fails if the Codex can be read before a run is completed
+    @Test
+    public void theCodexIsLockedBeforeTheFirstRun() {
+        final RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        for (final String tab : List.of("stats", "commanders", "planebounds", "traits", "journal")) {
+            Assert.assertNull(RoguePages.codex(progress, tab, null), tab);
+        }
+        progress.updateStat(RogueStats.RUNS_COMPLETED, 1, run);
+        Assert.assertNotNull(RoguePages.codex(progress, "stats", null));
     }
 
     // Fails if a trait is named by its card, whose name says where the trait came from

@@ -18,6 +18,7 @@ import { PlaneSheet } from './mapside';
 import { Terms } from './terms';
 import { TraitsPage } from './traits';
 import { AetherPage, aetherMenu } from './aether';
+import { CodexPage, type CodexTab } from './codex';
 import type { RogueTab } from './register';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -30,6 +31,9 @@ type RunTab = 'map' | 'traits' | 'deck' | 'codex';
 /** The title and question of each reset, by kind. */
 const RESETS: Record<string, [TextKey, TextKey]> = {
   aether: ['lblRogueResetAetherworks', 'lblRogueResetAetherworksConfirm'],
+  history: ['lblRogueResetRunHistory', 'lblRogueResetHistoryConfirm'],
+  tutorials: ['lblRogueResetTutorials', 'lblRogueResetTutorialsConfirm'],
+  progress: ['lblRogueResetGameProgression', 'lblRogueResetProgressConfirm'],
 };
 const glyph = (name: string) => <Icon d={ROGUE_ICONS[name as keyof typeof ROGUE_ICONS]} cls="rg-ic" />;
 
@@ -48,10 +52,11 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const inRun = model.campaignSave !== null;
   // Aether, Codex and History show only while they are unlocked
   const tab = inRun || home?.unlocked === false ? 'runs' : ui.rogueTab;
-  const traits = inRun && ui.rogueTraits;
+  const aside = inRun ? ui.roguePage : 'map';
+  const codex = inRun ? aside === 'codex' : tab === 'codex';
   const deciding = isScene(model.rogueQuestion);
-  // The Traits tab takes the decision's place until the Map tab brings it back
-  const scene = deciding && !traits;
+  // The Traits and Codex tabs take the decision's place until the Map tab brings it back
+  const scene = deciding && aside === 'map';
   const folded = scene && ui.rogueFolded === model.rogueQuestion!.id;
   const tell = deciding ? undefined : model.rogueQuestion?.tell;
   const replace = model.rogueQuestion?.choice?.kind === 'replace' ? model.rogueQuestion.choice : undefined;
@@ -65,7 +70,8 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     if (abandoning) setAbandoning(false);
     else if (resetting) setResetting(null);
     else if (inRun && ui.rogueSheet) changeUi(u => { u.rogueSheet = false; });
-    else if (traits) changeUi(u => { u.rogueTraits = false; });
+    else if (codex && isPortrait() && ui.rogueCodexId) changeUi(u => { u.rogueCodexId = null; });
+    else if (aside !== 'map') changeUi(u => { u.roguePage = 'map'; });
     else if (replace) answer(replace.options.length - 1);
     else if (tell || announced) return;
     else if (step) setChoice(step);
@@ -82,7 +88,9 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     editDeck();
   }, [inRun, home?.snapshot]);
   useEffect(() => { if (choice.deck) actions.rogueStartDeck(choice.deck); }, [choice.deck]);
-  useEffect(() => { if (!inRun) ui.rogueTraits = false; }, [inRun]);
+  useEffect(() => { if (!inRun) ui.roguePage = 'map'; }, [inRun]);
+  // The Codex is asked for again after each step, such as a reset
+  useEffect(() => { if (codex) actions.rogueCodex(ui.rogueCodexTab, ui.rogueCodexId); }, [codex, ui.rogueCodexTab, ui.rogueCodexId, home?.snapshot]);
   const deck = fresh ? chosenDeck(fresh, choice) : '';
   const asking = fresh && choice.custom ? `${deck}|${choice.level}|${choice.mods.join()}` : null;
   useEffect(() => { if (asking !== null) actions.rogueChoose(deck, choice.mods, choice.level); }, [asking]);
@@ -98,8 +106,12 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   }, [model.rogueChoice]);
   if (!home) return null;
   const locked = home.unlocked ? {} : { aether: t('lblRogueUnlockAetherHint'), codex: t('lblRogueUnlockCodexHint'), history: t('lblRogueUnlockHistoryHint') };
-  const page = traits ? model.rogueTraits && run && <TraitsPage traits={model.rogueTraits.traits} carry={model.rogueTraits.carry} haze={run.image} />
-    : inRun ? model.rogueMap && <MapPage model={model} actions={actions} /> : tab === 'runs' && run && !ui.rogueNewRun ? (
+  const page = aside === 'traits' ? model.rogueTraits && run && <TraitsPage traits={model.rogueTraits.traits} carry={model.rogueTraits.carry} haze={run.image} />
+    : codex ? (
+      <CodexPage page={model.rogueCodexPage} tab={ui.rogueCodexTab} id={ui.rogueCodexId}
+        setTab={(to: CodexTab) => changeUi(u => { u.rogueCodexTab = to; u.rogueCodexId = null; })}
+        choose={id => changeUi(u => { u.rogueCodexId = id; })} reset={inRun ? undefined : setResetting} />
+    ) : inRun ? model.rogueMap && <MapPage model={model} actions={actions} /> : tab === 'runs' && run && !ui.rogueNewRun ? (
     <Landing home={home} run={run} go={() => actions.campaignLoad('run')}
       deck={() => { ui.rogueRunTab = 'deck'; actions.campaignLoad('run'); }}
       abandon={() => setAbandoning(true)} fresh={() => changeUi(u => { u.rogueNewRun = true; })} />
@@ -118,6 +130,12 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const bar = alone ? { ...home.bar, name: t(choice.customOpen ? 'lblRogueCustomRun' : 'lblRogueStartNewRun') } : home.bar;
   const runBar = model.rogueMap?.bar;
   const abandon = (close: () => void) => { close(); setAbandoning(true); };
+  const resetRow = (close: () => void, kind: string, label: TextKey) => <button role="menuitem" onClick={() => { close(); setResetting(kind); }}>{t(label)}</button>;
+  // A phone has the resets and the Aether Upgrade in the header's menu, in place of the wide page's buttons
+  const phoneMenu = tab === 'aether' && model.rogueAether
+    ? (close: () => void) => aetherMenu(model.rogueAether!, close, () => actions.rogueAetherExpand(home.snapshot), () => setResetting('aether'))
+    : tab === 'codex' && ui.rogueCodexTab === 'stats'
+      ? (close: () => void) => <>{resetRow(close, 'tutorials', 'lblRogueResetTutorials')}{resetRow(close, 'progress', 'lblRogueResetProgress')}</> : undefined;
   const more = (close: () => void) => (isPortrait() ? <>
     <button role="menuitem" onClick={() => { close(); changeUi(u => { u.rogueWhole = !u.rogueWhole; }); }}>
       {t(ui.rogueWhole ? 'lblWebRogueBackToPlace' : 'lblWebRogueWholeMap')}
@@ -125,16 +143,15 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     <button role="menuitem" onClick={() => abandon(close)}>{t('lblRogueAbandonRun')}</button>
   </> : <div class="rg-menu"><button class="d" onClick={() => abandon(close)}>{t('lblRogueAbandonRun')}</button></div>);
   return <>
-    {inRun ? <CampaignBar bar={runBar?.bar ?? bar} tabs={RUN_TABS} tab={traits ? 'traits' : 'map'} setTab={to => {
+    {inRun ? <CampaignBar bar={runBar?.bar ?? bar} tabs={RUN_TABS} tab={aside} setTab={to => {
       // During a decision the deck is read only
       if (to === 'deck' && deciding) changeUi(u => { u.rogueDeckView = true; });
       else if (to === 'deck') editDeck();
-      else if (to === 'map' || to === 'traits') changeUi(u => { u.rogueTraits = to === 'traits'; });
+      else changeUi(u => { u.roguePage = to; });
     }} mark={id => id === 'traits' && runBar && <sup class="rg-count">{runBar.traits}</sup>} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
       held={{}} leave={back} under={dialog} lineTerm={runBar?.tip} glyph={glyph} moreIcon={glyph('dots')} more={more} />
       : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog}
-        more={isPortrait() && tab === 'aether' && model.rogueAether
-          ? close => aetherMenu(model.rogueAether!, close, () => actions.rogueAetherExpand(home.snapshot), () => setResetting('aether')) : undefined} />}
+        more={isPortrait() ? phoneMenu : undefined} />}
     {!isPortrait() ? <div class="rg-body">{main}{question}</div>
       // On a phone a scene takes the page's place, and the bar it folds to lies over the page
       : scene && !folded ? <div class="camp-main" inert={dialog}><div class="rg-pbody">{question}</div></div> : <>{main}{question}</>}
@@ -153,7 +170,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
           actions.rogueReset(home.snapshot, resetting);
         }} />
     )}
-    {inRun && isPortrait() && ui.rogueSheet && model.rogueMap && !deciding && !traits && <PlaneSheet model={model} actions={actions} />}
+    {inRun && isPortrait() && ui.rogueSheet && model.rogueMap && !deciding && aside === 'map' && <PlaneSheet model={model} actions={actions} />}
     {fresh && choice.sheet && <DescensionSheet roster={fresh} choice={choice} set={setChoice} />}
     {fresh && details && (
       <DeckView details={details} line={t('lblRogueStartingDeck')} button={t('lblClose')} close={() => setChoice(c => ({ ...c, deck: null }))} />

@@ -653,7 +653,38 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     private static void reset(final RogueMetaProgress progress, final String kind) {
         switch (kind) {
             case "aether" -> progress.resetAetherEffects();
+            case "history" -> progress.clearRunHistory();
+            case "tutorials" -> progress.resetTutorials();
+            case "progress" -> progress.reset();
             default -> { }
+        }
+    }
+
+    /**
+     * Answers with a tab of the Codex, on the flow thread after the job that runs, if any. Opening a tab evaluates the Codex achievement, as desktop does
+     * on opening the Codex. It publishes nothing, because the page asks again for each new snapshot. During a question the flow waits and changes
+     * nothing, so the Codex is read at once and stays open over a decision.
+     */
+    private void codex(final BrowserChannel channel, final RogueCodex asked) {
+        final Runnable answer = () -> {
+            final RogueCodexPage page = RoguePages.codex(RogueMetaProgress.getInstance(), asked.tab(), asked.id());
+            if (page != null) {
+                channel.send(page);
+            }
+        };
+        if (question != null) {
+            answer.run();
+        } else if (asked.id() == null && busy.compareAndSet(false, true)) {
+            worker.execute(() -> {
+                try {
+                    RogueCommanderAchievements.getInstance().evaluateCodexAchievements(RogueMetaProgress.getInstance());
+                    answer.run();
+                } finally {
+                    busy.set(false);
+                }
+            });
+        } else {
+            worker.execute(answer);
         }
     }
 
@@ -713,6 +744,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             }))
             .on(RogueAetherExpand.class, (g, ch, e) -> g.change(e.snapshot(), g::expand))
             .on(RogueReset.class, (g, ch, r) -> g.change(r.snapshot(), progress -> reset(progress, r.kind())))
+            .on(RogueCodex.class, (g, ch, c) -> g.codex(ch, c))
             .on(RogueStartDeck.class, (g, ch, d) -> {
                 final DeckDetails details = RoguePages.startDeck(d.deck());
                 if (details != null) {

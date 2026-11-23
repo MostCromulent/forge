@@ -2,6 +2,7 @@ package forge.web.protocol;
 
 import com.google.gson.JsonElement;
 import forge.web.protocol.CampaignProtocol.CampaignBar;
+import forge.web.protocol.CampaignProtocol.Figure;
 import forge.web.protocol.MessageJson.Command;
 import forge.web.protocol.MessageJson.Message;
 import forge.web.protocol.MessageJson.Nullable;
@@ -180,9 +181,54 @@ public final class RogueProtocol {
     public record RogueAetherExpand(long snapshot) {
     }
 
-    /** kind is "aether", which refunds the Echoes spent on Aetherworks. */
+    /**
+     * kind is "aether", which refunds the Echoes spent on Aetherworks, "history", "tutorials", or "progress", which keeps the run and the tutorials
+     * and resets everything else.
+     */
     @Command("rogueReset")
     public record RogueReset(long snapshot, String kind) {
+    }
+
+    /**
+     * Asks for one tab of the Codex: stats, commanders, planebounds, traits or journal. id names an entry of the tab's list, or is null for the first.
+     * Answered with a rogueCodexPage, and not at all while the Codex is locked.
+     */
+    @Command("rogueCodex")
+    public record RogueCodex(String tab, @Nullable String id) {
+    }
+
+    /**
+     * One tab of the Codex. id is the entry shown, or null with none. art is the picture behind it. rows are the tab's list, stats its figures
+     * by group, and entry the entry shown, or the traits on the traits tab.
+     */
+    @Message("rogueCodexPage")
+    public record RogueCodexPage(String tab, @Nullable String id, @Nullable String art, List<CodexRow> rows, List<CodexStats> stats,
+            @Nullable CodexEntry entry) {
+    }
+
+    /** id is null for a locked commander or a planebound not met yet. line is null where the row has none. group heads the rows from this one on. */
+    public record CodexRow(@Nullable String id, String name, @Nullable String art, @Nullable String line, @Nullable String group) {
+    }
+
+    public record CodexStats(String title, List<Figure> figures) {
+    }
+
+    /**
+     * image is its card, and plane its plane's card. face is the avatar of the one who tells it. facts are its figures by kind: runs, wins,
+     * descension, endless, seen, acquired, slain or defeats. groups are its cards or traits, and paragraphs its text.
+     */
+    public record CodexEntry(@Nullable String title, @Nullable String image, @Nullable String plane, @Nullable String planeName, @Nullable Integer face,
+            List<CodexFact> facts, List<CodexGroup> groups, List<String> paragraphs) {
+    }
+
+    public record CodexFact(String kind, String value) {
+    }
+
+    public record CodexGroup(String title, List<CodexItem> items) {
+    }
+
+    /** state is unknown, seen or acquired. An unknown card or trait has no name, image or trait. */
+    public record CodexItem(String state, @Nullable String name, @Nullable String image, @Nullable Trait trait) {
     }
 
     @Command("rogueSelect")

@@ -2,8 +2,9 @@ import { t } from '../text';
 import { ui } from '../ui';
 import { registerMode } from '../campaign/modes';
 import { RogueHub } from './rogue';
+import type { CodexTab } from './codex';
 import type { Model } from '../model';
-import type { RogueAether, RogueAnnounce, RogueChoice, RogueHome, RogueMap, RogueQuestion, RogueRoster, RogueRunDeck, RogueTraits } from '../protocol';
+import type { RogueAether, RogueAnnounce, RogueChoice, RogueCodexPage, RogueHome, RogueMap, RogueQuestion, RogueRoster, RogueRunDeck, RogueTraits } from '../protocol';
 
 export type RogueTab = 'runs' | 'aether' | 'codex' | 'history';
 
@@ -15,6 +16,8 @@ declare module '../model' {
     rogueRunDeck: RogueRunDeck | null;
     rogueTraits: RogueTraits | null;
     rogueAether: RogueAether | null;
+    /** The Codex's tab last asked for. */
+    rogueCodexPage: RogueCodexPage | null;
     /** The server's latest answer about a custom run before it starts. */
     rogueChoice: RogueChoice | null;
     /** The question the flow waits on. It is cleared here as soon as it is answered. */
@@ -41,10 +44,13 @@ declare module '../ui' {
     rogueWhole: boolean;
     /** The phone's sheet of the plane shown is open. */
     rogueSheet: boolean;
-    /** The run's traits are shown in place of its map, or of the decision drawn over the map. */
-    rogueTraits: boolean;
+    /** The run's page shown: its map, or its traits or the Codex in place of the map or of the decision drawn over it. */
+    roguePage: 'map' | 'traits' | 'codex';
     /** The Aetherwork whose ranks the Aether shows, by id, or null for the first. */
     rogueWork: string | null;
+    rogueCodexTab: CodexTab;
+    /** The Codex entry chosen, or null for the first, which a phone shows as the list. */
+    rogueCodexId: string | null;
   }
 }
 
@@ -66,6 +72,7 @@ interface RogueActions {
   rogueAetherExpand(snapshot: number): void;
   /** kind names what is reset, such as aether. */
   rogueReset(snapshot: number, kind: string): void;
+  rogueCodex(tab: string, id: string | null): void;
   /** The oldest announcement has been shown. */
   rogueAnnounced(): void;
 }
@@ -75,12 +82,12 @@ declare module '../actions' {
 }
 
 /** The pages' fields when Rogue is not open. Announcements not yet shown wait for the next visit. */
-const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueMap: null, rogueRunDeck: null, rogueTraits: null, rogueAether: null, rogueChoice: null, rogueQuestion: null } satisfies Partial<Model>;
+const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueMap: null, rogueRunDeck: null, rogueTraits: null, rogueAether: null, rogueCodexPage: null, rogueChoice: null, rogueQuestion: null } satisfies Partial<Model>;
 
 // A winding trail between two points
 const ICON = <><circle cx="12" cy="37" r="4" /><circle cx="36" cy="11" r="4" /><path d="M16 37h10a7 7 0 0 0 0-14h-4a7 7 0 0 1 0-12h10" /></>;
 
-Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, rogueTraits: false, rogueWork: null });
+Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null });
 
 registerMode({
   mode: 'rogue',
@@ -88,10 +95,10 @@ registerMode({
   hello: (model, msg) => {
     if (msg.campaign !== 'rogue') {
       Object.assign(model, NO_ROGUE);
-      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, rogueTraits: false, rogueWork: null });
+      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null });
     }
   },
-  stored: ['rogueHome', 'rogueRoster', 'rogueMap', 'rogueRunDeck', 'rogueTraits', 'rogueAether', 'rogueChoice', 'rogueQuestion'],
+  stored: ['rogueHome', 'rogueRoster', 'rogueMap', 'rogueRunDeck', 'rogueTraits', 'rogueAether', 'rogueCodexPage', 'rogueChoice', 'rogueQuestion'],
   message: (model, msg) => {
     if (msg.t !== 'rogueAnnounce') return false;
     model.rogueAnnounced = [...model.rogueAnnounced, msg];
@@ -110,6 +117,7 @@ registerMode({
     rogueAetherToggle: (snapshot, work, on) => send({ t: 'rogueAetherToggle', snapshot, work, on }),
     rogueAetherExpand: snapshot => send({ t: 'rogueAetherExpand', snapshot }),
     rogueReset: (snapshot, kind) => send({ t: 'rogueReset', snapshot, kind }),
+    rogueCodex: (tab, id) => send({ t: 'rogueCodex', tab, id: id ?? undefined }),
     rogueAnswer: (id, value) => {
       model.rogueQuestion = null;
       ui.rogueDeckView = false;

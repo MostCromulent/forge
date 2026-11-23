@@ -4,6 +4,9 @@ import forge.StaticData;
 import forge.deck.Deck;
 import forge.gamemodes.rogue.AetherUpgrade;
 import forge.gamemodes.rogue.CodexHelper;
+import forge.gamemodes.rogue.CodexHelper.CodexState;
+import forge.gamemodes.rogue.CodexHelper.JournalEntry;
+import forge.gamemodes.rogue.CodexHelper.TraitCategory;
 import forge.gamemodes.rogue.KeywordHint;
 import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueDeck;
@@ -11,6 +14,7 @@ import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RoguePlaneboundType;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.TextHelper;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.ChestEffect;
 import forge.gamemodes.rogue.effect.CursedEffect;
@@ -32,16 +36,24 @@ import forge.gamemodes.rogue.path.NodeType;
 import forge.gamemodes.rogue.path.RoguePath;
 import forge.gamemodes.rogue.path.RoguePathNode;
 import forge.item.PaperCard;
+import forge.item.PaperCardPredicates;
 import forge.util.Localizer;
 import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckFacts;
 import forge.web.protocol.CampaignProtocol.Balance;
 import forge.web.protocol.CampaignProtocol.CampaignBar;
+import forge.web.protocol.CampaignProtocol.Figure;
 import forge.web.protocol.RogueProtocol.AetherGroup;
 import forge.web.protocol.RogueProtocol.AetherOffer;
 import forge.web.protocol.RogueProtocol.AetherRank;
 import forge.web.protocol.RogueProtocol.AetherWork;
+import forge.web.protocol.RogueProtocol.CodexEntry;
+import forge.web.protocol.RogueProtocol.CodexFact;
+import forge.web.protocol.RogueProtocol.CodexGroup;
+import forge.web.protocol.RogueProtocol.CodexItem;
+import forge.web.protocol.RogueProtocol.CodexRow;
+import forge.web.protocol.RogueProtocol.CodexStats;
 import forge.web.protocol.RogueProtocol.DescensionStep;
 import forge.web.protocol.RogueProtocol.MapLink;
 import forge.web.protocol.RogueProtocol.MapNode;
@@ -49,6 +61,7 @@ import forge.web.protocol.RogueProtocol.Modification;
 import forge.web.protocol.RogueProtocol.Part;
 import forge.web.protocol.RogueProtocol.RogueAether;
 import forge.web.protocol.RogueProtocol.RogueCard;
+import forge.web.protocol.RogueProtocol.RogueCodexPage;
 import forge.web.protocol.RogueProtocol.RogueCommander;
 import forge.web.protocol.RogueProtocol.RogueHome;
 import forge.web.protocol.RogueProtocol.RogueMap;
@@ -64,10 +77,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /** Turns the flow's state into Rogue's page records. */
@@ -83,8 +99,12 @@ public final class RoguePages {
     private static final Map<String, Part> MAP_TERMS = Arrays.stream(new KeywordHint[] {KeywordHint.PLANEBOUND, KeywordHint.WRATHFUL, KeywordHint.CURSED,
             KeywordHint.CARD_REWARD}).collect(Collectors.toMap(KeywordHint::name, h -> new Part("term", h.getTitle(), null, h.getTitle(), h.getHintText())));
 
-    /** The card whose art is drawn behind the Aether, which has no subject of its own. */
+    /** The cards whose art is drawn behind the Aether, and behind the Codex where its tab has no subject of its own. */
     private static final String AETHER_ART = "Teferi, Temporal Archmage";
+    private static final String CODEX_ART = "The Maelstrom";
+
+    /** The Codex's trait groups in the order desktop lists them. */
+    private static final List<TraitCategory> TRAIT_GROUPS = List.of(TraitCategory.CHEST, TraitCategory.NPC, TraitCategory.EVENT, TraitCategory.WOUND);
 
     /** The picture of each planebound's commander by its deck's path, read from the deck file the first time it is drawn. */
     private static final Map<String, String> PLANEBOUND_ART = new ConcurrentHashMap<>();
@@ -214,6 +234,203 @@ public final class RoguePages {
         return new RogueAether(works, progress.getActiveAetherEffectCount(), progress.getActiveAetherEffectSlots(), descension,
                 next == null ? null : new AetherOffer(next.name, next.description, next.sparkCost, next.echoCost, progress.canAffordUpgrade(next)),
                 locked, picture(AETHER_ART));
+    }
+
+    /** One tab of the Codex, with the entry named by id where the tab lists entries. Null while the Codex is locked, or for an unknown tab. */
+    public static RogueCodexPage codex(final RogueMetaProgress progress, final String tab, final String id) {
+        if (!RogueStart.tabsUnlocked(progress)) {
+            return null;
+        }
+        final String art = picture(CODEX_ART);
+        return switch (tab) {
+            case "stats" -> new RogueCodexPage(tab, null, art, List.of(), stats(progress), null);
+            case "commanders" -> commanderCodex(progress, id, art);
+            case "planebounds" -> planeboundCodex(progress, id, art);
+            case "traits" -> new RogueCodexPage(tab, null, art, List.of(), List.of(), traitCodex(progress));
+            case "journal" -> journal(progress, id, art);
+            default -> null;
+        };
+    }
+
+    private static List<CodexStats> stats(final RogueMetaProgress progress) {
+        final Localizer text = Localizer.getInstance();
+        final int completed = progress.getTotalRunsCompleted();
+        final int won = progress.getTotalRunsWon();
+        final int matchesWon = progress.getTotalMatchesWon();
+        final int matchesLost = progress.getTotalMatchesLost();
+        return List.of(
+                new CodexStats(text.getMessage("lblRogueRunStatistics"), List.of(figure("lblWebRogueRunsStarted", progress.getTotalRunsStarted()),
+                        figure("lblWebRogueRunsCompleted", completed), new Figure(text.getMessage("lblWebRogueRunsWon"), won, completed, String.valueOf(won)),
+                        figure("lblWebRogueRunsLost", completed - won),
+                        new Figure(text.getMessage("lblWebRogueTotalPlaytime"), 0, null, TextHelper.formatHoursMinutesSeconds(progress.getTotalPlaytimeMillis())))),
+                new CodexStats(text.getMessage("lblRogueMatchStatistics"), List.of(
+                        new Figure(text.getMessage("lblWebRogueMatchesWon"), matchesWon, matchesWon + matchesLost, String.valueOf(matchesWon)),
+                        figure("lblWebRogueMatchesLost", matchesLost))),
+                new CodexStats(text.getMessage("lblRogueMilestones"), List.of(figure("lblWebRogueMaxLifeReached", progress.getMaxLifeInRun()),
+                        figure("lblWebRogueMaxGoldEarned", progress.getMaxGoldInRun()), figure("lblWebRogueMaxCreatureTypes", progress.getMaxCreatureTypesInDeck()),
+                        figure("lblWebRogueMaxArtifacts", progress.getMaxArtifactsInDeck()),
+                        figure("lblWebRogueMaxSharedCreatureType", progress.getMaxSharedCreatureTypeInDeck()),
+                        figure("lblWebRogueMaxLegendaryPermanents", progress.getMaxLegendaryPermanentsInDeck()),
+                        figure("lblWebRogueMaxNonbasicLands", progress.getMaxNonbasicLandsInDeck()))));
+    }
+
+    private static Figure figure(final String label, final int amount) {
+        return new Figure(Localizer.getInstance().getMessage(label), amount, null, null);
+    }
+
+    private static RogueCodexPage commanderCodex(final RogueMetaProgress progress, final String id, final String art) {
+        final Localizer text = Localizer.getInstance();
+        final List<RogueDeck> decks = CodexHelper.codexCommanders();
+        final List<CodexRow> rows = new ArrayList<>();
+        for (final RogueDeck deck : decks) {
+            if (!deck.isUnlocked()) {
+                rows.add(new CodexRow(null, text.getMessage("lblRogueLockedCommander"), null, "", null));
+                continue;
+            }
+            final List<CodexState> states = deck.getRewardPoolCards().stream().map(c -> CodexHelper.state(progress, deck, c)).toList();
+            final int acquired = CodexHelper.countAcquired(states);
+            rows.add(new CodexRow(deck.getName(), deck.getName(), commanderImage(deck), acquired == 0
+                    ? text.getMessage("lblWebRogueSeenCount", CodexHelper.countSeen(states))
+                    : text.getMessage("lblWebRogueSeenAcquiredCount", CodexHelper.countSeen(states), acquired), null));
+        }
+        final RogueDeck chosen = decks.stream().filter(d -> d.isUnlocked() && d.getName().equals(id)).findFirst()
+                .orElse(decks.stream().filter(RogueDeck::isUnlocked).findFirst().orElse(null));
+        if (chosen == null) {
+            return new RogueCodexPage("commanders", null, art, rows, List.of(), null);
+        }
+        final List<PaperCard> nonMythics = new ArrayList<>();
+        final List<PaperCard> mythics = new ArrayList<>();
+        chosen.getRewardPoolCards().forEach(c -> (PaperCardPredicates.IS_MYTHIC_RARE.test(c) ? mythics : nonMythics).add(c));
+        final List<CodexState> states = new ArrayList<>();
+        final List<CodexGroup> groups = List.of(
+                new CodexGroup(text.getMessage("lblRogueRewardPoolNonMythics"), items(nonMythics, c -> CodexHelper.state(progress, chosen, c), states)),
+                new CodexGroup(text.getMessage("lblRogueRewardPoolMythics"), items(mythics, c -> CodexHelper.state(progress, chosen, c), states)),
+                new CodexGroup(text.getMessage("lblRogueStartDeck"), items(eachBasicOnce(chosen.getStartDeck().getMain().toFlatList()), c -> CodexState.ACQUIRED,
+                        new ArrayList<>())));
+        final String name = chosen.getCommanderCardName();
+        final List<CodexFact> facts = List.of(new CodexFact("runs", String.valueOf(progress.getRunsStartedWithCommander(name))),
+                new CodexFact("wins", String.valueOf(progress.getRunsWonWithCommander(name))),
+                new CodexFact("descension", String.valueOf(progress.getMaxDescensionWon(name))),
+                new CodexFact("endless", String.valueOf(progress.getMaxEndlessCompleted(name))),
+                new CodexFact("seen", CodexHelper.countSeen(states) + " / " + states.size()),
+                new CodexFact("acquired", CodexHelper.countAcquired(states) + " / " + states.size()));
+        final String image = commanderImage(chosen);
+        return new RogueCodexPage("commanders", chosen.getName(), image, rows, List.of(),
+                new CodexEntry(chosen.getName(), image, null, null, null, facts, groups, List.of()));
+    }
+
+    private static String commanderImage(final RogueDeck deck) {
+        return deck.getStartDeck().getCommanders().get(0).getImageKey(false);
+    }
+
+    private static RogueCodexPage planeboundCodex(final RogueMetaProgress progress, final String id, final String art) {
+        final Localizer text = Localizer.getInstance();
+        final List<RoguePlanebound> planebounds = CodexHelper.codexPlanebounds();
+        final List<CodexRow> rows = new ArrayList<>();
+        for (final RoguePlaneboundType type : RoguePlaneboundType.values()) {
+            String group = switch (type) {
+                case NORMAL -> text.getMessage("lblNormal");
+                case ELITE -> text.getMessage("lblElite");
+                case BOSS -> text.getMessage("lblWebRogueBoss");
+            };
+            for (final RoguePlanebound planebound : planebounds.stream().filter(p -> p.type() == type).toList()) {
+                rows.add(progress.hasEncounteredPlanebound(planebound)
+                        ? new CodexRow(planebound.deckPath(), planebound.planeboundName(), planeboundArt(planebound), record(progress, planebound), group)
+                        : new CodexRow(null, text.getMessage("lblRogueUnknownPlanebound"), null, "", group));
+                group = null;
+            }
+        }
+        final RoguePlanebound chosen = planebounds.stream().filter(p -> progress.hasEncounteredPlanebound(p) && p.deckPath().equals(id)).findFirst()
+                .orElse(planebounds.stream().filter(progress::hasEncounteredPlanebound).findFirst().orElse(null));
+        if (chosen == null) {
+            return new RogueCodexPage("planebounds", null, art, rows, List.of(), null);
+        }
+        final Deck deck = RogueConfig.loadPlaneboundDeck(chosen);
+        final List<CodexState> states = new ArrayList<>();
+        final List<CodexItem> items = items(deck == null ? List.of() : eachBasicOnce(deck.getAllCardsInASinglePool(false, false).toFlatList()),
+                c -> CodexHelper.state(progress, chosen, c), states);
+        final PaperCard plane = CodexHelper.getPlaneCard(chosen);
+        final List<CodexFact> facts = List.of(new CodexFact("slain", String.valueOf(progress.getPlaneboundWins(chosen))),
+                new CodexFact("defeats", String.valueOf(progress.getPlaneboundLosses(chosen))), new CodexFact("seen", CodexHelper.countSeen(states) + " / " + states.size()));
+        final String image = planeboundArt(chosen);
+        return new RogueCodexPage("planebounds", chosen.deckPath(), image, rows, List.of(), new CodexEntry(chosen.planeboundName() + " - " + chosen.planeName(),
+                image, plane == null ? null : plane.getImageKey(false), chosen.planeName(), null, facts, List.of(new CodexGroup(text.getMessage("lblDeck"), items)),
+                List.of()));
+    }
+
+    /** "2 slain · 1 defeat", leaving out a count of none. */
+    private static String record(final RogueMetaProgress progress, final RoguePlanebound planebound) {
+        final Localizer text = Localizer.getInstance();
+        final List<String> line = new ArrayList<>();
+        final int wins = progress.getPlaneboundWins(planebound);
+        final int losses = progress.getPlaneboundLosses(planebound);
+        if (wins > 0) {
+            line.add(text.getMessage("lblWebRogueSlainCount", wins));
+        }
+        if (losses > 0) {
+            line.add(losses == 1 ? text.getMessage("lblWebRogueDefeatOne") : text.getMessage("lblWebRogueDefeatCount", losses));
+        }
+        return String.join(" · ", line);
+    }
+
+    /** The cards in the Codex's order, by type and then name, each as its state shows it. Each state is also added to states. */
+    private static List<CodexItem> items(final List<PaperCard> cards, final Function<PaperCard, CodexState> state, final List<CodexState> states) {
+        return cards.stream().sorted(Comparator.comparingInt(CodexHelper::codexCardTypeOrder).thenComparing(PaperCard::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(c -> {
+                    final CodexState s = state.apply(c);
+                    states.add(s);
+                    return s == CodexState.UNKNOWN ? new CodexItem("unknown", null, null, null)
+                            : new CodexItem(s.name().toLowerCase(Locale.ROOT), c.getName(), c.getImageKey(false), null);
+                }).toList();
+    }
+
+    private static List<PaperCard> eachBasicOnce(final List<PaperCard> cards) {
+        final Set<String> basics = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        return cards.stream().filter(c -> c.getRules() != null && (!c.getRules().getType().isBasicLand() || basics.add(c.getName()))).toList();
+    }
+
+    private static CodexEntry traitCodex(final RogueMetaProgress progress) {
+        final Localizer text = Localizer.getInstance();
+        final Map<TraitCategory, List<RogueEffect>> traits = CodexHelper.getCodexTraitsByCategory();
+        final List<CodexGroup> groups = new ArrayList<>();
+        final List<CodexState> states = new ArrayList<>();
+        for (final TraitCategory category : TRAIT_GROUPS) {
+            final List<CodexItem> items = new ArrayList<>();
+            for (final RogueEffect effect : traits.getOrDefault(category, List.of())) {
+                final CodexState state = CodexHelper.state(progress, effect);
+                states.add(state);
+                items.add(state == CodexState.UNKNOWN ? new CodexItem("unknown", null, null, null)
+                        : new CodexItem(state.name().toLowerCase(Locale.ROOT), null, null, trait(effect, null)));
+            }
+            groups.add(new CodexGroup(text.getMessage(switch (category) {
+                case CHEST -> "lblRogueChest";
+                case NPC -> "lblRogueNpc";
+                case EVENT -> "lblRogueEvent";
+                case WOUND -> "lblRogueWound";
+            }), items));
+        }
+        return new CodexEntry(null, null, null, null, null, List.of(new CodexFact("seen", CodexHelper.countSeen(states) + " / " + states.size()),
+                new CodexFact("acquired", CodexHelper.countAcquired(states) + " / " + states.size())), groups, List.of());
+    }
+
+    /** The tutorials already shown, then the story, each group headed. The art is that of the card named as the entry's teller, where there is one. */
+    private static RogueCodexPage journal(final RogueMetaProgress progress, final String id, final String art) {
+        final Localizer text = Localizer.getInstance();
+        final List<JournalEntry> journal = CodexHelper.journal(progress);
+        final List<CodexRow> rows = new ArrayList<>();
+        for (int i = 0; i < journal.size(); i++) {
+            final JournalEntry entry = journal.get(i);
+            final boolean starts = i == 0 || journal.get(i - 1).story() != entry.story();
+            rows.add(new CodexRow(entry.id(), entry.title(), null, entry.story() ? entry.speaker().name : null,
+                    starts ? text.getMessage(entry.story() ? "lblRogueJournalStory" : "lblRogueJournalTutorials") : null));
+        }
+        final JournalEntry chosen = journal.stream().filter(e -> e.id().equals(id)).findFirst().orElse(journal.isEmpty() ? null : journal.get(0));
+        if (chosen == null) {
+            return new RogueCodexPage("journal", null, art, rows, List.of(), null);
+        }
+        final String speaker = picture(chosen.speaker().name);
+        return new RogueCodexPage("journal", chosen.id(), speaker == null ? art : speaker, rows, List.of(), new CodexEntry(chosen.title(), null, null, null,
+                chosen.speaker().avatarIndex, List.of(), List.of(), List.of(chosen.text().split("\n\n"))));
     }
 
     /** A card's picture by its name, for the art behind a page with no subject of its own. Null when no card has that name. */
@@ -393,7 +610,10 @@ public final class RoguePages {
                 : effect instanceof EndlessMode ? Source.ENDLESS : Source.TRAIT;
     }
 
-    /** A trait as the traits page, a chest and a bazaar draw it: its name without the card's prefix, its text for the run, and its source. */
+    /**
+     * A trait as the traits page, a chest, a bazaar and the Codex draw it: its name without the card's prefix, its text for the run, and its source.
+     * The Codex has no run, and passes null, which only Aetherworks and Endless Mode need.
+     */
     static Trait trait(final RogueEffect effect, final RogueRun run) {
         final Localizer text = Localizer.getInstance();
         final String card = effect.getEffectCardDisplayName();

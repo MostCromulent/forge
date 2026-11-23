@@ -2,8 +2,10 @@ package forge.web;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueStats;
+import forge.gamemodes.rogue.RogueTutorial;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.path.NodeSanctum;
 import forge.web.campaign.rogue.RogueGame;
@@ -108,5 +110,21 @@ public class RogueBetweenRunsTest extends RogueSessionTest {
         Assert.assertEquals(progress.getAetherUpgradeLevel(), 1);
         Assert.assertEquals(progress.getAetherEffectRank(AetherEffect.ZHALFIRIN_SANCTUARY), 0);
         Assert.assertEquals(progress.getActiveAetherEffectCount(), 0);
+    }
+
+    // Fails if resetting the progress deletes the unfinished run or the tutorials seen, or keeps what it should reset
+    @Test(timeOut = 120_000)
+    public void resetProgressKeepsTheRunAndTheTutorials() throws Exception {
+        final TestBrowser host = hub(p -> {
+            p.setTotalEchoes(40);
+            p.markTutorialSeen(RogueTutorial.AETHER);
+        });
+        command(host, message("rogueReset", "kind", "progress"));
+        final RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        Assert.assertEquals(progress.getTotalEchoes(), 0);
+        Assert.assertEquals(progress.getTotalRunsCompleted(), 0);
+        Assert.assertTrue(progress.hasSeenTutorial(RogueTutorial.AETHER));
+        Assert.assertEquals(RogueIO.loadMostRecentContinuableRun().orElseThrow(AssertionError::new).getCurrentNodeIndex(), run.getCurrentNodeIndex());
+        Assert.assertFalse(host.last("rogueHome").get("unlocked").getAsBoolean(), "the Codex is still open");
     }
 }
