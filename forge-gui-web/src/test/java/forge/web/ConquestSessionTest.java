@@ -257,7 +257,7 @@ public class ConquestSessionTest extends WebHubTest {
         computerLoses(host);
         final JsonObject result = host.awaitMatching("campaignResult", r -> true, "no result was sent");
         Assert.assertTrue(result.get("won").getAsBoolean());
-        Assert.assertTrue(str(result, "line").endsWith(Localizer.getInstance().getMessage("lblWebCampaignFirstConquest")), "the result does not say the event is conquered");
+        Assert.assertTrue(str(result, "line").endsWith(Localizer.getInstance().getMessage("lblWebConquestFirstConquest")), "the result does not say the event is conquered");
         final ConquestData model = FModel.getConquest().getModel();
         Assert.assertTrue(model.getCurrentPlaneData().hasConquered(model.getCurrentLocation()));
         Assert.assertEquals(model.getPlaneswalkEmblems(), emblems);

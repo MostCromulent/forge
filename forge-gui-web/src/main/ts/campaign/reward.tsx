@@ -69,7 +69,7 @@ export function Reveal({ reward, onOwed, done }: RevealProps) {
     <Backdrop cls="camp-reveal">
       {step.kind === 'WHEEL' && <WheelStop key={at} step={step} emblem={first === 1 && at === 1 ? steps[0].amount : 0} next={next} />}
       {step.kind === 'BOOSTER' && <PackStop key={at} step={step} release={n => setReleased(r => r + n)} next={next} />}
-      {step.kind === 'CONQUER_EMBLEMS' && <Gift icon="IMG_PW_BADGE_COMMON" amount={step.amount} title={t('lblWebCampaignFirstConquest')} button={t('lblGreat')} next={next} />}
+      {step.kind === 'CONQUER_EMBLEMS' && <Gift icon="IMG_PW_BADGE_COMMON" amount={step.amount} title={t('lblWebConquestFirstConquest')} button={t('lblGreat')} next={next} />}
       {step.kind === 'SHARDS' && <Gift icon="IMG_AETHER_SHARD" amount={step.amount} title={t('lblReceivedAetherShards')} button={t('lblGreat')} next={next} />}
       {step.kind === 'EMBLEMS' && <Gift icon="IMG_PW_BADGE_COMMON" amount={step.amount} title={t('lblReceivedBonusPlaneswalkEmblems')} button={t('lblGreat')} next={next} />}
       {step.kind === 'ALL_PLANES_UNLOCKED' && <Gift icon="IMG_PW_BADGE_COMMON" title={t('lblAllPlanesUnlocked')} text={t('lblAllPlanesUnlockedNotify')} button={t('lblOK')} next={next} />}
@@ -159,9 +159,9 @@ function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; n
   const key = useOkKey(phase === 'ready' ? spin : phase === 'stopped' ? next : null);
   return (
     <div class="camp-wheel-stop">
-      {emblem > 0 && <p class="camp-wheel-first"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebCampaignFirstConquest')}</p>}
+      {emblem > 0 && <p class="camp-wheel-first"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestFirstConquest')}</p>}
       <div class="camp-wheel-host" ref={host} />
-      {/* The name fades in under the dial once it stops (conquest.css) */}
+      {/* The name fades in under the dial once it stops (campaign.css) */}
       <p class="camp-wheel-name">{phase === 'stopped' ? wheelLabels()[step.outcome as WheelOutcome] : ''}</p>
       <div class="camp-reveal-foot">
         {phase === 'stopped'
