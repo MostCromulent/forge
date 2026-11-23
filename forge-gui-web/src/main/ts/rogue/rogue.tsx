@@ -10,10 +10,11 @@ import { changeUi, ui } from '../ui';
 import { t, type TextKey } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { Landing } from './landing';
+import { DescensionSheet, NO_CHOICE, NewRun, StartDeck, backFrom, type Choice } from './newrun';
 import type { RogueTab } from './register';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { RogueAnnounce, Tell } from '../protocol';
+import type { AskChoice, RogueAnnounce, Tell } from '../protocol';
 
 const TABS: [RogueTab, TextKey][] = [['runs', 'lblWebRogueRuns'], ['aether', 'lblRogueAether'], ['codex', 'lblRogueCodex'], ['history', 'lblRogueHistory']];
 
@@ -24,33 +25,47 @@ export function RogueHub({ model, actions }: { model: Model; actions: Actions })
 
 function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const [abandoning, setAbandoning] = useState(false);
+  const [choice, setChoice] = useState<Choice>(NO_CHOICE);
   const home = model.rogueHome;
+  const roster = model.rogueRoster;
   const run = home?.run;
   const inRun = model.campaignSave !== null;
   const tab = inRun ? 'runs' : ui.rogueTab;
   const tell = model.rogueQuestion?.tell;
+  const replace = model.rogueQuestion?.kind === 'replace' ? model.rogueQuestion.choice : undefined;
   const announced = model.rogueAnnounced[0];
+  const fresh = !inRun && tab === 'runs' && (!run || ui.rogueNewRun) && roster ? roster : null;
   const setTab = (to: RogueTab) => changeUi(u => { u.rogueTab = to; u.rogueNewRun = false; });
+  const answer = (value: unknown) => actions.rogueAnswer(model.rogueQuestion!.id, value);
   // Back goes from the run to Runs, from another tab to Runs, from the commanders to the unfinished run, and from Runs to the play menu
   const back = () => {
+    const step = fresh && backFrom(fresh, choice);
     if (abandoning) setAbandoning(false);
+    else if (replace) answer(replace.options.length - 1);
     else if (tell || announced) return;
+    else if (step) setChoice(step);
     else if (!inRun && tab !== 'runs') setTab('runs');
     else if (!inRun && ui.rogueNewRun && run) changeUi(u => { u.rogueNewRun = false; });
     else actions.campaignLeave();
   };
   useEscapeBack(back);
+  useEffect(() => { if (choice.deck) actions.rogueStartDeck(choice.deck); }, [choice.deck]);
   if (!home) return null;
   const locked = home.unlocked ? {} : { aether: t('lblRogueUnlockAetherHint'), codex: t('lblRogueUnlockCodexHint'), history: t('lblRogueUnlockHistoryHint') };
   const page = !inRun && tab === 'runs' && run && !ui.rogueNewRun ? (
     <Landing home={home} run={run} go={() => actions.campaignLoad('run')}
       deck={() => { ui.rogueRunTab = 'deck'; actions.campaignLoad('run'); }}
       abandon={() => setAbandoning(true)} fresh={() => changeUi(u => { u.rogueNewRun = true; })} />
-  ) : null;
-  const dialog = abandoning || !!tell || !!announced;
+  ) : fresh && <NewRun roster={fresh} choice={choice} set={setChoice} runs={run ? () => changeUi(u => { u.rogueNewRun = false; }) : null}
+    begin={(deck, level) => actions.rogueBegin(fresh.snapshot, deck, choice.custom, choice.custom ? choice.mods : [], level)} />;
+  const details = choice.deck && model.deckDetails?.key === `rogue:start:${choice.deck}` ? model.deckDetails : null;
+  const dialog = abandoning || !!tell || !!replace || !!announced || !!fresh && (choice.sheet || !!details);
   const main = <div class="camp-main" inert={dialog}>{page}</div>;
+  // On a phone the commanders reached from a run, and Custom Run, are pages of their own with no tabs, as in the mockups
+  const alone = !!fresh && isPortrait() && (choice.customOpen || !!run);
+  const bar = alone ? { ...home.bar, name: t(choice.customOpen ? 'lblRogueCustomRun' : 'lblRogueStartNewRun') } : home.bar;
   return <>
-    <CampaignBar bar={home.bar} tabs={inRun ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog} />
+    <CampaignBar bar={bar} tabs={inRun || alone ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog} />
     {isPortrait() ? main : <div class="rg-body">{main}</div>}
     {abandoning && run && (
       <Backdrop layer="rg-dialog" dismiss={() => setAbandoning(false)}>
@@ -68,10 +83,31 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
         </div>
       </Backdrop>
     )}
+    {fresh && choice.sheet && <DescensionSheet roster={fresh} choice={choice} set={setChoice} />}
+    {fresh && details && <StartDeck details={details} close={() => setChoice(c => ({ ...c, deck: null }))} />}
+    {replace && <Replace choice={replace} answer={answer} />}
     {tell && model.rogueQuestion && <Message tell={tell} ok={() => actions.rogueAnswer(model.rogueQuestion!.id, null)} />}
     {!tell && announced && <Announcement key={`${announced.title}
 ${announced.text}`} announced={announced} ok={actions.rogueAnnounced} />}
   </>;
+}
+
+/** Asked when a new run would abandon the unfinished one. The first option starts the new run and the last cancels. */
+function Replace({ choice, answer }: { choice: AskChoice; answer: (value: number) => void }) {
+  const lines = choice.paragraphs.flat().map(p => p.text).join('').split('\n');
+  const last = choice.options.length - 1;
+  return (
+    <Backdrop layer="rg-dialog">
+      <div class="dialog" role="alertdialog" aria-label={choice.title}>
+        <h3>{choice.title}</h3>
+        <p>{lines.flatMap((line, i) => (i ? [<br key={i} />, line] : [line]))}</p>
+        <div class="actions">
+          <button onClick={() => answer(last)}>{choice.options[last].label}</button>
+          <button style={{ color: 'var(--concede)' }} onClick={() => answer(0)}>{choice.options[0].label}</button>
+        </div>
+      </div>
+    </Backdrop>
+  );
 }
 
 /** Focuses the dialog's button, so Enter and Space continue. */

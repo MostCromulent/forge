@@ -269,6 +269,28 @@ public class RogueQuestionsTest extends WebHubTest {
         settle(host);
     }
 
+    // Fails if a run begun from the commanders the page was sent does not open on the run's pages once its start-of-run question is answered
+    @Test(timeOut = 120_000)
+    public void beginStartsTheRunOnThePage() throws Exception {
+        final TestBrowser host = seat("host");
+        send(host, message("campaignOpen", "mode", RogueGame.MODE, "resume", false));
+        host.awaitMatching("hello", h -> RogueGame.MODE.equals(str(h, "campaign")), "Rogue did not open");
+        settle(host);
+        // Tyvar's third level offers a boon at the start of a run
+        RogueMetaProgress.getInstance().setNPCLevel(NPC.TYVAR.id, 3);
+        final JsonObject roster = host.awaitNewest("rogueRoster", "the commanders were not sent");
+        final JsonObject begin = message("rogueBegin", "snapshot", roster.get("snapshot").getAsLong(),
+                "deck", roster.getAsJsonArray("commanders").get(0).getAsJsonObject().get("deck").getAsString(), "custom", false, "descension", 0);
+        begin.add("modifications", new JsonArray());
+        sessions.onMessage(host, begin);
+        final JsonObject boon = host.awaitMatching("rogueQuestion", q -> q.has("choice") && !handled.contains(q.get("id").getAsInt()),
+                "the run asked nothing as it started");
+        handled.add(boon.get("id").getAsInt());
+        sessions.onMessage(host, answer(boon.get("id").getAsInt(), acceptable(boon)));
+        host.awaitMatching("hello", h -> RogueGame.RUN.equals(str(h, "campaignSave")), "the begun run did not open");
+        host.awaitMatching("rogueMap", m -> true, "the run's map was not sent");
+    }
+
     // Fails if the time spent in a new run's start-of-run question is not counted, as desktop counts it, or a disconnect does not stop it
     @Test(timeOut = 120_000)
     public void timeInAStartOfRunQuestionCountsUntilTheBrowserGoes() throws Exception {

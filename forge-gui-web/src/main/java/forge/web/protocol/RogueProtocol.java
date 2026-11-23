@@ -43,6 +43,40 @@ public final class RogueProtocol {
     public record RogueAnnounce(String kind, String title, String text, @Nullable String image) {
     }
 
+    /**
+     * What a new run can start with. commanders and experimental are the official roster and the one Experiment shows, in the shared order.
+     * custom and descension say whether Custom Run and Descension Mode are unlocked. levels are the Descension levels from level 1.
+     */
+    @Message("rogueRoster")
+    public record RogueRoster(long snapshot, List<RogueCommander> commanders, List<RogueCommander> experimental, boolean custom, boolean descension,
+            List<DescensionStep> levels, List<Modification> modifications) {
+    }
+
+    /**
+     * deck is the Rogue deck's name. A locked commander has no name, image, colours, text or themes, and unlock says how to unlock it.
+     * record is the line above the name. seen counts the reward pool's cards seen, as the Codex does. startable is the highest Descension level it may start, 0 for none.
+     */
+    public record RogueCommander(String deck, @Nullable String name, @Nullable String image, String colors, String text, List<String> themes, String record,
+            int runs, int wins, int maxDescension, int seen, int startable, @Nullable String unlock) {
+    }
+
+    public record DescensionStep(String name, String text) {
+    }
+
+    /**
+     * id is a CustomRunModification name, and group the heading it is listed under. excludes are the ids it cannot be chosen with.
+     * generatesCommander means the run's commander is not the one chosen; experimental means the experimental roster is shown.
+     * forcedByGenerated is chosen and cannot be changed while a modification that generates the commander is.
+     */
+    public record Modification(String id, String name, String text, String group, List<String> excludes, boolean generatesCommander, boolean experimental,
+            boolean forcedByGenerated) {
+    }
+
+    /** Answered with a DeckDetailsMessage of the deck's start deck. */
+    @Command("rogueStartDeck")
+    public record RogueStartDeck(String deck) {
+    }
+
     /** The open run's map. deck is the run's deck, read only. */
     @Message("rogueMap")
     public record RogueMap(long snapshot, int selected, int rerolls, DeckDetails deck) {

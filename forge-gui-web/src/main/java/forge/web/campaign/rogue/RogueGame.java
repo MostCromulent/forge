@@ -28,6 +28,8 @@ import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.CampaignResult;
 import forge.web.protocol.Commands;
 import forge.web.protocol.RogueProtocol.*;
+import forge.web.protocol.ToBrowser.DeckDetails;
+import forge.web.protocol.ToBrowser.DeckDetailsMessage;
 import org.apache.commons.lang3.EnumUtils;
 
 import java.io.UncheckedIOException;
@@ -402,6 +404,12 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             .on(RogueReroll.class, (g, ch, r) -> g.submit(r.snapshot(), r.node(), g.flow::rerollPlane))
             .on(RogueAbandon.class, (g, ch, a) -> g.submit(a.snapshot(), -1, g.flow::abandon))
             .on(RogueAnswer.class, (g, ch, a) -> g.answer(ch, a.id(), a.value()))
+            .on(RogueStartDeck.class, (g, ch, d) -> {
+                final DeckDetails details = RoguePages.startDeck(d.deck());
+                if (details != null) {
+                    ch.send(new DeckDetailsMessage(details));
+                }
+            })
             .on(RogueBegin.class, (g, ch, b) -> g.submit(b.snapshot(), -1, () -> {
                 final RogueStart start = start(b);
                 if (start != null) {

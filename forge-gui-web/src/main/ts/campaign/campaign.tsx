@@ -143,9 +143,10 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, mark, 
 /**
  * The panel beside a page's list. It shows the chosen item's title, picture and text, and the player's own items in the foot. A pressed picture in the foot is shown large.
  * fold makes the title a button that opens and closes the rest of the panel, for a panel drawn as a small card over the page.
+ * noArt leaves out the picture's place, for an item that never has one.
  */
-export function SidePanel({ kicker, where, title, art, zoom, setZoom, children, foot, fold }: {
-  kicker: string; where?: ComponentChildren; title?: string; art?: string | null;
+export function SidePanel({ kicker, where, title, art, noArt, zoom, setZoom, children, foot, fold }: {
+  kicker: string; where?: ComponentChildren; title?: string; art?: string | null; noArt?: boolean;
   zoom: string | null; setZoom: (image: string | null) => void; children: ComponentChildren; foot: ComponentChildren;
   fold?: { open: boolean; toggle: () => void };
 }) {
@@ -155,7 +156,7 @@ export function SidePanel({ kicker, where, title, art, zoom, setZoom, children, 
         <div class={art ? 'camp-side-head' : 'camp-side-head bare'}>
           <div class="camp-where"><span class="camp-kicker">{kicker}</span>{where}</div>
           {fold ? <h3><button class="camp-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3> : <h3>{title}</h3>}
-          <div class="camp-art" data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }} />
+          {!noArt && <div class="camp-art" data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }} />}
         </div>
         {children}
       </div>
