@@ -274,9 +274,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             netLog.error(e, "Could not read Rogue Commander's progress");
             return;
         }
-        final Snapshot next = RoguePages.build(flow, progress, latest.number() + 1, held());
         synchronized (pages) {
-            latest = next;
+            latest = RoguePages.build(flow, progress, latest.number() + 1, held());
             send();
         }
     }
