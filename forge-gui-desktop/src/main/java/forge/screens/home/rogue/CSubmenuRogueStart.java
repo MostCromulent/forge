@@ -110,18 +110,8 @@ public enum CSubmenuRogueStart implements ICDoc {
   }
 
   private void showTutorials() {
-
-    var progress = RogueMetaProgress.getInstance();
-
-    // Show Descension tutorial once when it becomes unlocked
-    if (progress.isDescensionModeUnlocked()) {
-      RogueTutorialHelper.showIfNotSeen(RogueTutorial.DESCENSION_UNLOCKED);
-    }
-
-    int highestDescensionWon = progress.getHighestDescensionWon();
-    if (highestDescensionWon >= 1) {
-      RogueTutorialHelper.showIfNotSeen(RogueTutorial.DESCENSION_LEVEL_1_WIN);
-    }
+    RogueTutorialHelper.showIfNotSeen(
+        RogueTutorialTriggers.onStartPage(RogueMetaProgress.getInstance()).toArray(new RogueTutorial[0]));
   }
 
   private void loadAvailableCommanders() {

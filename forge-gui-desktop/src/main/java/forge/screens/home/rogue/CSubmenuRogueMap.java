@@ -60,34 +60,7 @@ public enum CSubmenuRogueMap implements ICDoc {
   }
 
   private void showTutorials() {
-    RogueRun currentRun = flow.run();
-    RogueTutorialHelper.showIfNotSeen(RogueTutorial.MAP_NAVIGATION);
-    if (currentRun != null && currentRun.getEndlessLevel() > 0) {
-      RogueTutorialHelper.showIfNotSeen(RogueTutorial.ENDLESS_MODE);
-    }
-
-    if (currentRun == null || currentRun.getCurrentNode() == null) {
-      return;
-    }
-
-    // Check if player just won their first battle and show post-battle tutorial if so
-    List<RoguePathNode> completedNodes = currentRun.getPath().getNodes().stream()
-        .filter(n -> n instanceof NodePlanebound && n.isCompleted())
-        .toList();
-    if (!completedNodes.isEmpty()) {
-      RogueTutorialHelper.showIfNotSeen(RogueTutorial.POST_BATTLE);
-    }
-
-    // Check node types of current row and show battle tutorials if not seen yet
-    int currentRow = currentRun.getCurrentNode().getRowIndex();
-    for (RoguePathNode node : currentRun.getPath().getNodesInRow(currentRow)) {
-      if (node instanceof NodePlanebound planebound
-          && planebound.getPlaneboundType() == RoguePlaneboundType.ELITE) {
-        RogueTutorialHelper.showIfNotSeen(RogueTutorial.ELITE_PLANEBOUND);
-      } else if (node instanceof NodePlanebound) {
-        RogueTutorialHelper.showIfNotSeen(RogueTutorial.PRE_BATTLE);
-      }
-    }
+    RogueTutorialHelper.showIfNotSeen(RogueTutorialTriggers.onMap(flow.run()).toArray(new RogueTutorial[0]));
   }
 
   @Override
