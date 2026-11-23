@@ -7,6 +7,7 @@ import forge.web.protocol.MessageJson.Message;
 import forge.web.protocol.MessageJson.Nullable;
 import forge.web.protocol.MessageJson.Ts;
 import forge.web.protocol.ToBrowser.DeckDetails;
+import forge.web.protocol.ToBrowser.EditorGroup;
 
 import java.util.List;
 
@@ -132,7 +133,7 @@ public final class RogueProtocol {
      */
     @Message("rogueQuestion")
     public record RogueQuestion(int id, String kind, @Nullable AskChoice choice, @Nullable AskCards cards, @Nullable AskCommander commander,
-            @Nullable AskPortrait portrait, @Nullable AskShop shop, @Nullable TellOmen omen, @Nullable Tell tell) {
+            @Nullable AskShop shop, @Nullable TellOmen omen, @Nullable Tell tell) {
     }
 
     /** A piece of text. kind is "text", "card" or "term"; image is a card's picture, term a keyword's name and tip what the keyword means. */
@@ -154,17 +155,28 @@ public final class RogueProtocol {
             int rerolls, boolean skip, @Nullable String art) {
     }
 
-    /** Answered with the indexes of the cards picked, or "reroll" where rerollCost is set. */
-    public record AskCards(String kind, String title, @Nullable String subtitle, List<RogueCard> cards, int min, int max,
-            @Nullable Integer rerollCost, @Nullable Integer gold) {
+    /**
+     * Answered with the ids of the cards picked, or "reroll" where rerollCost is set. deck is the deck the picks go into or come out of,
+     * as it is before them, and is null when there is none to show. art is the picture behind them.
+     */
+    public record AskCards(String kind, String title, @Nullable String subtitle, List<PickCard> cards, int min, int max,
+            @Nullable Integer rerollCost, @Nullable Integer gold, @Nullable PickDeck deck, @Nullable String art) {
     }
 
-    /** Answered with the indexes of one commander or two that partner, or none to cancel. */
-    public record AskCommander(String title, List<RogueCard> commanders) {
+    /** id is the card's place in the offer, so two equal copies are told apart. cmc is its mana value. */
+    public record PickCard(int id, String name, String image, int cmc, boolean mythic) {
     }
 
-    /** Answered with one of the avatars. */
-    public record AskPortrait(String commander, int current, List<Integer> avatars) {
+    /** total counts the deck's cards, groups included. */
+    public record PickDeck(String title, int total, List<EditorGroup> groups) {
+    }
+
+    /**
+     * One of total commanders, read a page at a time from the catalogue with source "rogue-commanders", whose rows are keyed by index.
+     * Answered with {"commander": index, "avatar": one of avatars, or null when there are none}, "skip" where skip is true, or null to cancel.
+     * art is the picture behind them, or null for the picture of the commander picked.
+     */
+    public record AskCommander(String title, int total, List<Integer> avatars, boolean skip, @Nullable String art) {
     }
 
     /** Answered with {"selected": item ids, "reroll": boolean, "tab": number}. rerollCost is null in a shop with no reroll. */

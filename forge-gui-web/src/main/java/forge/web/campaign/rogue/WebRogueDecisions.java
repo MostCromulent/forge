@@ -2,6 +2,10 @@ package forge.web.campaign.rogue;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import forge.card.CardRarity;
+import forge.deck.CardPool;
+import forge.deck.Deck;
+import forge.deck.DeckSection;
 import forge.gamemodes.rogue.KeywordHint;
 import forge.gamemodes.rogue.PreviewReferenceType;
 import forge.gamemodes.rogue.RogueCustomDeckGenerator;
@@ -22,13 +26,20 @@ import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
 import forge.util.Localizer;
+import forge.web.deck.CardCatalog;
+import forge.web.deck.DeckCatalog;
 import forge.web.images.SkinSprites;
+import forge.web.protocol.FromBrowser.CatalogueQuery;
 import forge.web.protocol.RogueProtocol.*;
+import forge.web.protocol.ToBrowser.CataloguePage;
+import forge.web.protocol.ToBrowser.EditorGroup;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -41,9 +52,15 @@ import java.util.stream.IntStream;
  * Answers name the offered objects by index, and are checked against the offer, because they come from outside.
  */
 final class WebRogueDecisions implements RogueDecisions {
-    /** An open question: what was sent, the check an answer must pass, and the answer once one has passed. */
-    record Open(RogueQuestion message, Predicate<JsonElement> valid, CompletableFuture<JsonElement> answer) {
+    /**
+     * An open question: what was sent, the check an answer must pass, and the answer once one has passed.
+     * offer answers the catalogue's queries for the commanders it offers, or is null.
+     */
+    record Open(RogueQuestion message, Predicate<JsonElement> valid, CompletableFuture<JsonElement> answer, Function<CatalogueQuery, CataloguePage> offer) {
     }
+
+    /** The catalogue's source that reads the commanders the open question offers. */
+    static final String COMMANDERS = "rogue-commanders";
 
     private static final String REROLL = "reroll";
     private static final String SKIP = "skip";
@@ -54,14 +71,20 @@ final class WebRogueDecisions implements RogueDecisions {
     private int ids;
     /** The picture behind the last NPC's scene, which a boon's result is drawn over. */
     private String boonArt;
+    /** The portrait picked with the commander, which choosePortrait answers with. The page asks for both on one screen. */
+    private int portrait = -1;
 
     WebRogueDecisions(final RogueGame game) {
         this.game = game;
     }
 
     private JsonElement ask(final String kind, final Record shape, final Predicate<JsonElement> valid) {
+        return ask(kind, shape, valid, null);
+    }
+
+    private JsonElement ask(final String kind, final Record shape, final Predicate<JsonElement> valid, final List<PaperCard> offer) {
         final RogueQuestion question = new RogueQuestion(++ids, kind, shape instanceof AskChoice c ? c : null, shape instanceof AskCards c ? c : null,
-                shape instanceof AskCommander c ? c : null, shape instanceof AskPortrait p ? p : null, shape instanceof AskShop s ? s : null,
+                shape instanceof AskCommander c ? c : null, shape instanceof AskShop s ? s : null,
                 shape instanceof TellOmen o ? o : null, shape instanceof Tell t ? t : null);
         return game.ask(new Open(question, answer -> {
             try {
@@ -69,7 +92,18 @@ final class WebRogueDecisions implements RogueDecisions {
             } catch (final RuntimeException malformed) {
                 return false;
             }
-        }, new CompletableFuture<>()));
+        }, new CompletableFuture<>(), offer == null ? null : catalogue(offer)));
+    }
+
+    /** Pages through cards with the catalogue's search, each row keyed by the card's index in cards. */
+    private static Function<CatalogueQuery, CataloguePage> catalogue(final List<PaperCard> cards) {
+        final CardCatalog all = CardCatalog.of(cards);
+        final Map<PaperCard, Integer> ids = new HashMap<>();
+        for (int i = 0; i < cards.size(); i++) {
+            ids.putIfAbsent(cards.get(i), i);
+        }
+        return q -> all.query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(), q.offset(), true),
+                c -> null, null, name -> 0, c -> new CardCatalog.Extra(null, null, null, null, null, String.valueOf(ids.get(c)))).from(COMMANDERS);
     }
 
     private void tell(final String kind, final Record shape) {
@@ -128,6 +162,34 @@ final class WebRogueDecisions implements RogueDecisions {
         return cards.stream().map(c -> new RogueCard(c.getName(), c.getImageKey(false))).collect(Collectors.toList());
     }
 
+    private static List<PickCard> pickCards(final List<PaperCard> cards) {
+        return IntStream.range(0, cards.size()).mapToObj(i -> {
+            final PaperCard c = cards.get(i);
+            return new PickCard(i, c.getName(), c.getImageKey(false), c.getRules().getManaCost().getCMC(), c.getRarity() == CardRarity.MythicRare);
+        }).collect(Collectors.toList());
+    }
+
+    /** The cards an answer picks by their ids in shown, or null when it names others or the choice does not accept them. */
+    static List<PaperCard> picked(final CardChoice choice, final List<PaperCard> shown, final JsonElement answer) {
+        final List<Integer> ids = indexes(answer, shown.size());
+        if (ids == null) {
+            return null;
+        }
+        final List<PaperCard> picked = pick(shown, ids);
+        return choice.accepts(picked) ? picked : null;
+    }
+
+    /** The deck picks go into or come out of: the one a choice's preview starts from, which is the deck being started, or the run's. */
+    private static PickDeck pickDeck(final Deck deck, final boolean starting) {
+        final List<EditorGroup> groups = new ArrayList<>(CardCatalog.groups(deck.getMain(), DeckCatalog.NO_FLAGS));
+        final CardPool commanders = deck.get(DeckSection.Commander);
+        if (commanders != null && !commanders.isEmpty()) {
+            groups.add(new EditorGroup(text("lblCommander"), CardCatalog.cards(commanders, DeckCatalog.NO_FLAGS)));
+        }
+        return new PickDeck(text(starting ? "lblRogueStartingDeck" : "lblDeck"),
+                deck.getMain().countAll() + (commanders == null ? 0 : commanders.countAll()), groups);
+    }
+
     private static Option option(final RogueEffect effect) {
         return new Option(effect.getDisplayName(), parts(effect.getRawDescription()), true, null);
     }
@@ -144,6 +206,7 @@ final class WebRogueDecisions implements RogueDecisions {
         return is(answer, REROLL) ? -1 : is(answer, SKIP) ? -2 : index(answer, choice.options().size());
     }
 
+    /** Asks for a commander and its portrait, then for a partner when it can have one. Cancelling either question cancels both. */
     @Override
     public List<PaperCard> chooseCommanders() {
         final List<PaperCard> all = RogueCustomDeckGenerator.getEligibleCommanders();
@@ -151,30 +214,51 @@ final class WebRogueDecisions implements RogueDecisions {
             showMessage(text("lblRogueChooseAnyCommander"), text("lblRogueNoLegalCommanders"));
             return List.of();
         }
-        final JsonElement answer = ask("commander", new AskCommander(text("lblRogueChooseAnyCommander"), cards(all)), a -> {
-            final List<Integer> picked = indexes(a, all.size());
-            return picked != null && (picked.isEmpty() || RogueDecisions.commanders(pick(all, picked)));
-        });
-        return pick(all, indexes(answer, all.size()));
+        final List<Integer> avatars = IntStream.range(0, Math.min(AVATARS, SkinSprites.avatarCount())).boxed().collect(Collectors.toList());
+        final JsonElement first = ask("commander", new AskCommander(text("lblRogueChooseAnyCommander"), all.size(), avatars, false, null),
+                a -> a.isJsonNull() || commander(a, all.size()) >= 0 && (avatars.isEmpty() ? a.getAsJsonObject().get("avatar").isJsonNull()
+                        : avatars.contains(a.getAsJsonObject().get("avatar").getAsInt())), all);
+        if (first.isJsonNull()) {
+            return List.of();
+        }
+        final PaperCard commander = all.get(commander(first, all.size()));
+        portrait = avatars.isEmpty() ? -1 : first.getAsJsonObject().get("avatar").getAsInt();
+        final List<PaperCard> partners = RogueCustomDeckGenerator.getEligiblePartnerCommanders(commander);
+        if (partners.isEmpty()) {
+            return List.of(commander);
+        }
+        final JsonElement second = ask("partner", new AskCommander(text("lblChoosePartnerFor", commander.getName()), partners.size(), List.of(), true,
+                commander.getImageKey(false)),
+                a -> a.isJsonNull() || is(a, SKIP) || commander(a, partners.size()) >= 0
+                        && RogueDecisions.commanders(List.of(commander, partners.get(commander(a, partners.size())))), partners);
+        if (second.isJsonNull()) {
+            return List.of();
+        }
+        return is(second, SKIP) ? List.of(commander) : List.of(commander, partners.get(commander(second, partners.size())));
     }
 
+    /** The commander an answer names, or -1 when it names none of size. */
+    private static int commander(final JsonElement answer, final int size) {
+        return answer.isJsonObject() ? index(answer.getAsJsonObject().get("commander"), size) : -1;
+    }
+
+    /** The commander question asked for the portrait too. */
     @Override
     public int choosePortrait(final PaperCard commander, final int current) {
-        final List<Integer> avatars = IntStream.range(0, Math.min(AVATARS, SkinSprites.avatarCount())).boxed().collect(Collectors.toList());
-        final JsonElement answer = ask("portrait", new AskPortrait(commander.getName(), avatars.contains(current) ? current : 0, avatars),
-                a -> index(a, avatars.size()) >= 0);
-        return index(answer, avatars.size());
+        final int picked = portrait;
+        portrait = -1;
+        return picked >= 0 ? picked : current;
     }
 
     @Override
     public List<PaperCard> chooseCards(final CardChoice choice) {
-        final List<PaperCard> offered = choice.candidates();
-        final JsonElement answer = ask("cards", new AskCards(choice.kind().name(), choice.title(), choice.subtitle(), cards(offered),
-                choice.min(), choice.max(), null, null), a -> {
-            final List<Integer> picked = indexes(a, offered.size());
-            return picked != null && choice.accepts(pick(offered, picked));
-        });
-        return pick(offered, indexes(answer, offered.size()));
+        final List<PaperCard> shown = choice.shown();
+        final Deck deck = choice.preview() != null ? choice.preview().apply(List.of()) : choice.run() == null ? null : choice.run().getCurrentDeck();
+        final List<PaperCard> commanders = deck == null ? List.of() : deck.getCommanders();
+        final JsonElement answer = ask("cards", new AskCards(choice.kind().name(), choice.title(), choice.subtitle(), pickCards(shown),
+                choice.min(), choice.max(), null, null, deck == null ? null : pickDeck(deck, choice.preview() != null),
+                commanders.isEmpty() ? null : commanders.get(0).getImageKey(false)), a -> picked(choice, shown, a) != null);
+        return picked(choice, shown, answer);
     }
 
     @Override
@@ -257,8 +341,8 @@ final class WebRogueDecisions implements RogueDecisions {
     public List<PaperCard> show(final String title, final List<PaperCard> cards, final int maxSelections, final String rerollLabel,
             final int rerollCost, final boolean rerollEnabled, final int gold) {
         final boolean mayReroll = rerollLabel != null && rerollEnabled;
-        final JsonElement answer = ask("reward", new AskCards("REWARD", title, null, cards(cards), 0, maxSelections,
-                rerollLabel == null ? null : rerollCost, gold),
+        final JsonElement answer = ask("reward", new AskCards("REWARD", title, null, pickCards(cards), 0, maxSelections,
+                rerollLabel == null ? null : rerollCost, gold, null, null),
                 a -> is(a, REROLL) ? mayReroll : indexes(a, cards.size()) != null && indexes(a, cards.size()).size() <= maxSelections);
         return is(answer, REROLL) ? null : pick(cards, indexes(answer, cards.size()));
     }

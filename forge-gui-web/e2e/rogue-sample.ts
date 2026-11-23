@@ -1,7 +1,7 @@
 // What zz-rogue-match sends for one Rogue Commander mockup. Each screen has a file rogue-samples/<id>.ts, named by the mockup's id
 
 import type { Page } from '@playwright/test';
-import type { Modification, Part, RogueCommander, RogueHome, RogueQuestion, RogueRoster, ServerMessage } from '../src/main/ts/protocol';
+import type { CatalogueRow, Modification, Part, PickCard, RogueCommander, RogueHome, RogueQuestion, RogueRoster, ServerMessage } from '../src/main/ts/protocol';
 
 export interface Sample {
   /** Sent in order after the hello, with the mockup's own content. */
@@ -10,6 +10,8 @@ export interface Sample {
   steps?: (page: Page) => Promise<void>;
   /** Sent once the steps are taken, such as a question asked over the page they chose. */
   later?: ServerMessage[];
+  /** The clicks taken once the later messages are drawn, such as picking from a page of the catalogue. */
+  then?: (page: Page) => Promise<void>;
   /** Selectors of the parts the client owns (design section 8), left out of both comparisons. */
   owned?: string[];
   /**
@@ -183,3 +185,34 @@ export const story = (paragraphs: string[], heading?: string): RogueQuestion => 
   t: 'rogueQuestion', id: 2, kind: 'story',
   choice: { kind: 'story', face: 65, title: 'Teferi, Master of Time', heading, art: 'a-teferi-master-of-time', paragraphs: paragraphs.map(p => [text(p)]), options: [], rerolls: 0, skip: false },
 });
+
+/** A card offered by a pick, with the mockups' picture of it. */
+export const pick = (id: number, slug: string, name: string, cmc: number): PickCard => ({ id, name, image: `c-${slug}`, cmc, mythic: false });
+
+/** The cards of the mockups' Sealed pick, in their order. */
+export const SEALED: PickCard[] = ([
+  ['boromir-warden-of-the-tower', 'Boromir, Warden of the Tower', 3], ['eowyn-fearless-knight', '\u00c9owyn, Fearless Knight', 4], ['frodo-baggins', 'Frodo Baggins', 2],
+  ['arwen-undomiel', 'Arwen Und\u00f3miel', 2], ['growth-spiral', 'Growth Spiral', 2], ['cultivate', 'Cultivate', 3], ['paradise-druid', 'Paradise Druid', 2],
+  ['delighted-halfling', 'Delighted Halfling', 1], ['bant-charm', 'Bant Charm', 3], ['boros-charm', 'Boros Charm', 2], ['elvish-warmaster', 'Elvish Warmaster', 2],
+  ['artificer-s-assistant', "Artificer's Assistant", 1], ['faramir-prince-of-ithilien', 'Faramir, Prince of Ithilien', 3], ['mirror-of-galadriel', 'Mirror of Galadriel', 2],
+  ['lightning-helix', 'Lightning Helix', 2], ['swords-to-plowshares', 'Swords to Plowshares', 1], ['legolas-master-archer', 'Legolas, Master Archer', 3],
+  ['elven-chorus', 'Elven Chorus', 4],
+] as const).map(([slug, name, cmc], i) => pick(i, slug, name, cmc));
+
+/** Picks the scene's cards in order, by their place on the page. */
+export async function pickCards(page: Page, at: number[]): Promise<void> {
+  for (const i of at) await press(page, `#campaign .rg-scene .rg-card >> nth=${i}`);
+}
+
+/** A row of the commanders' catalogue, keyed by its place in the offer. */
+const commanderRow = ([slug, name]: readonly [string, string], i: number): CatalogueRow => ({
+  name, image: `c-${slug}`, cost: '', mv: 0, colors: '', type: 'Legendary Creature', heading: 'Creatures', inDeck: 0, key: String(i),
+});
+
+/** The commanders the mockups list, in their order. */
+export const COMMANDER_ROWS = ([['aragorn-the-uniter', 'Aragorn, the Uniter'], ['atraxa-praetors-voice', "Atraxa, Praetors' Voice"],
+  ['kaalia-of-the-vast', 'Kaalia of the Vast'], ['karador-ghost-chieftain', 'Karador, Ghost Chieftain'], ['korvold-fae-cursed-king', 'Korvold, Fae-Cursed King'],
+  ['lathliss-dragon-queen', 'Lathliss, Dragon Queen'], ['maelstrom-wanderer', 'Maelstrom Wanderer'], ['morophon-the-boundless', 'Morophon, the Boundless'],
+  ['muldrotha-the-gravetide', 'Muldrotha, the Gravetide'], ['niv-mizzet-visionary', 'Niv-Mizzet, Visionary'], ['pantlaza-sun-favored', 'Pantlaza, Sun-Favored'],
+  ['queen-marchesa', 'Queen Marchesa'], ['satya-aetherflux-genius', 'Satya, Aetherflux Genius'], ['teysa-karlov', 'Teysa Karlov'],
+  ['urza-chief-artificer', 'Urza, Chief Artificer'], ['yuriko-the-tiger-s-shadow', "Yuriko, the Tiger's Shadow"]] as const).map(commanderRow);

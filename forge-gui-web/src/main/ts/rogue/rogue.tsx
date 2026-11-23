@@ -11,8 +11,8 @@ import { t, type TextKey } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { Landing } from './landing';
 import { DescensionSheet, NO_CHOICE, NewRun, StartDeck, backFrom, chosenDeck, type Choice } from './newrun';
-import { sceneOptions } from './questions';
-import { Question } from './scene';
+import { isScene } from './questions';
+import { DeckView, Question } from './scene';
 import { Terms } from './terms';
 import type { RogueTab } from './register';
 import type { Actions } from '../actions';
@@ -34,7 +34,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const run = home?.run;
   const inRun = model.campaignSave !== null;
   const tab = inRun ? 'runs' : ui.rogueTab;
-  const scene = !!sceneOptions(model.rogueQuestion);
+  const scene = isScene(model.rogueQuestion);
   const folded = scene && ui.rogueFolded === model.rogueQuestion!.id;
   const tell = scene ? undefined : model.rogueQuestion?.tell;
   const replace = model.rogueQuestion?.kind === 'replace' ? model.rogueQuestion.choice : undefined;
@@ -108,6 +108,10 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     {fresh && choice.sheet && <DescensionSheet roster={fresh} choice={choice} set={setChoice} />}
     {fresh && details && <StartDeck details={details} close={() => setChoice(c => ({ ...c, deck: null }))} />}
     {replace && <Replace choice={replace} answer={answer} />}
+    {scene && ui.rogueDeckView && model.rogueMap && (
+      <DeckView details={model.rogueMap.deck} back={(model.rogueQuestion!.cards ?? model.rogueQuestion!.choice)?.title ?? ''}
+        close={() => changeUi(u => { u.rogueDeckView = false; })} />
+    )}
     {tell && model.rogueQuestion && <Message tell={tell} ok={() => actions.rogueAnswer(model.rogueQuestion!.id, null)} />}
     <Terms />
     {!tell && announced && <Announcement key={`${announced.title}

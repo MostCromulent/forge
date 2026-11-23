@@ -27,6 +27,7 @@ import forge.web.campaign.rogue.WebRogueDecisions.Open;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.CampaignResult;
 import forge.web.protocol.Commands;
+import forge.web.protocol.FromBrowser.CatalogueQuery;
 import forge.web.protocol.RogueProtocol.*;
 import forge.web.protocol.ToBrowser.DeckDetails;
 import forge.web.protocol.ToBrowser.DeckDetailsMessage;
@@ -453,6 +454,13 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     /** Runs on the web server's thread. Each command becomes a job, so it never waits. */
     @Override
     public void handle(final BrowserChannel channel, final Record command, final String save, final Host h) {
+        if (command instanceof CatalogueQuery q && WebRogueDecisions.COMMANDERS.equals(q.source())) {
+            final Open asked = question;
+            if (asked != null && asked.offer() != null) {
+                channel.send(asked.offer().apply(q));
+            }
+            return;
+        }
         COMMANDS.run(this, channel, command);
     }
 }

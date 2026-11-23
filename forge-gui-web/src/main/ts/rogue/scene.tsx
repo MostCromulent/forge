@@ -12,9 +12,12 @@ import { changeUi, ui } from '../ui';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { Words } from './terms';
+import { CardPick, CommanderPick } from './pick';
+import { Backdrop } from '../dialog';
+import { CardGroup, Curve } from '../deck/deckview';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { AskChoice, Option, Part, Tell } from '../protocol';
+import type { AskChoice, DeckDetails, Option, Part, Tell } from '../protocol';
 
 /** What the number keys and the OK key do in the scene on screen. */
 let keyed: { pick: (i: number) => void; ok: () => void } | null = null;
@@ -35,10 +38,16 @@ function useSceneKeys(pick: (i: number) => void, ok: () => void): void {
 
 /**
  * The scene that fills the body under the bar. Focus moves to it, to its main button if it has one, and back when it closes.
- * fold, when set, adds View Map, which folds the scene. tip is drawn beside the scene's text.
+ * fold, when set, adds View Map, which folds the scene, and viewDeck adds View Deck. tip is drawn beside the scene's text.
+ * onScroll is told when the scene's text and cards scroll.
  */
-export function Scene({ art, foot, children, fold, tip }: { art?: string | null; foot: ComponentChildren; children: ComponentChildren; fold?: () => void; tip?: ComponentChildren }) {
+export function Scene({ art, foot, children, fold, viewDeck, tip, onScroll }: {
+  art?: string | null; foot: ComponentChildren; children: ComponentChildren; fold?: () => void; viewDeck?: () => void; tip?: ComponentChildren;
+  onScroll?: (e: Event) => void;
+}) {
   const root = useRef<HTMLDivElement>(null);
+  // The phone's buttons are words only, as the mockups draw them
+  const phone = isPortrait();
   useEffect(() => {
     const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     (root.current!.querySelector<HTMLElement>('.ft .primary') ?? root.current!).focus({ preventScroll: true });
@@ -47,9 +56,12 @@ export function Scene({ art, foot, children, fold, tip }: { art?: string | null;
   return (
     <div class="rg-scene" ref={root} tabIndex={-1}>
       <div class="bg" style={art ? { backgroundImage: `url("${artUrl(art)}")` } : undefined} />
-      <div class={tip ? 'in tip' : 'in'}>{children}{tip}</div>
+      <div class={tip ? 'in tip' : 'in'} onScroll={onScroll}>{children}{tip}</div>
       <div class="ft">
-        {fold && <button onClick={fold}><Icon d={ROGUE_ICONS.trail} cls="rg-ic" />{` ${t('lblRogueViewMap')}`}</button>}
+        {fold && (phone ? <button onClick={fold}>{t('lblRogueViewMap')}</button>
+          : <button onClick={fold}><Icon d={ROGUE_ICONS.trail} cls="rg-ic" />{` ${t('lblRogueViewMap')}`}</button>)}
+        {viewDeck && (phone ? <button onClick={viewDeck}>{t('lblViewDeck')}</button>
+          : <button onClick={viewDeck}><Icon d={ROGUE_ICONS.deck} cls="rg-ic" />{` ${t('lblViewDeck')}`}</button>)}
         {fold && foot && <span class="sp" />}
         {foot}
       </div>
@@ -119,7 +131,7 @@ export function Typed({ text, done }: { text: string; done: () => void }) {
 export function Question({ model, actions }: { model: Model; actions: Actions }) {
   const asked = model.rogueQuestion!;
   const answer = (value: unknown) => actions.rogueAnswer(asked.id, value);
-  const title = asked.choice?.title ?? asked.tell!.title;
+  const title = asked.choice?.title ?? asked.cards?.title ?? asked.commander?.title ?? asked.tell!.title;
   if (ui.rogueFolded === asked.id) {
     return (
       <div class="rg-folded">
@@ -128,8 +140,28 @@ export function Question({ model, actions }: { model: Model; actions: Actions })
       </div>
     );
   }
-  const fold = model.campaignSave !== null && asked.choice?.options.length ? () => changeUi(u => { u.rogueFolded = asked.id; }) : undefined;
+  const inRun = model.campaignSave !== null;
+  const fold = inRun && (asked.choice?.options.length || asked.cards) ? () => changeUi(u => { u.rogueFolded = asked.id; }) : undefined;
+  if (asked.cards) {
+    return <CardPick key={asked.id} asked={asked.cards} answer={answer} fold={fold} viewDeck={() => changeUi(u => { u.rogueDeckView = true; })} />;
+  }
+  if (asked.commander) return <CommanderPick key={asked.id} asked={asked.commander} model={model} actions={actions} answer={answer} />;
   return asked.choice ? <Choosing key={asked.id} choice={asked.choice} answer={answer} fold={fold} /> : <Gains key={asked.id} tell={asked.tell!} ok={() => answer(null)} />;
+}
+
+/** The run's deck, read only, over a decision. back names the decision it returns to. */
+export function DeckView({ details, back, close }: { details: DeckDetails; back: string; close: () => void }) {
+  return (
+    <Backdrop layer="rg-dialog" dismiss={close}>
+      <div class="dialog" role="dialog" aria-label={details.name}>
+        <h3>{details.name}</h3>
+        <p>{t('lblWebNCards', details.stats.main)}</p>
+        <Curve curve={details.stats.curve} spells={details.stats.spells} px={44} />
+        <div class="dk-cards" data-list style={{ maxHeight: '55vh', overflowY: 'auto' }}>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
+        <div class="actions"><button class="primary" onClick={close}>{t('lblWebRogueBackTo', back)}</button></div>
+      </div>
+    </Backdrop>
+  );
 }
 
 /**

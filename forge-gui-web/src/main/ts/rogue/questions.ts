@@ -7,3 +7,8 @@ export function sceneOptions(asked: RogueQuestion | null): Option[] | null {
   if (asked?.choice) return asked.kind === 'replace' || asked.kind === 'dev' ? null : asked.choice.options;
   return asked?.tell?.kind === 'BOON' ? [] : null;
 }
+
+/** Whether a question is drawn as a scene over the page: those with options, results and card picks. */
+export function isScene(asked: RogueQuestion | null): boolean {
+  return sceneOptions(asked) !== null || !!asked?.cards || !!asked?.commander;
+}
