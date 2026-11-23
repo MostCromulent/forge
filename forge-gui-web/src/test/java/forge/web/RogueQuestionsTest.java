@@ -2,6 +2,7 @@ package forge.web;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import forge.deck.CardPool;
 import forge.gamemodes.rogue.RogueDeck;
@@ -13,18 +14,19 @@ import forge.gamemodes.rogue.flow.RogueStart;
 import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.path.NodeBazaar;
 import forge.gamemodes.rogue.path.NodeEvent;
+import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.NodeSanctum;
 import forge.item.PaperCard;
 import forge.localinstance.achievements.Achievement;
 import forge.localinstance.achievements.RogueCommanderAchievements;
 import forge.util.Localizer;
 import forge.web.campaign.rogue.RogueGame;
+import forge.web.protocol.MessageJson;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.w3c.dom.Element;
 
 import javax.xml.parsers.DocumentBuilderFactory;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -40,6 +42,7 @@ import java.util.stream.StreamSupport;
 public class RogueQuestionsTest extends RogueSessionTest {
     private static final int EVENT = 8;
     private static final int BAZAAR = 7;
+    private static final int PLANE = 5;
 
     /** The runs page asks its story again before it can be left. */
     private void toMenu(final TestBrowser browser) throws InterruptedException {
@@ -57,12 +60,6 @@ public class RogueQuestionsTest extends RogueSessionTest {
         send(browser, message("campaignOpen", "mode", RogueGame.MODE, "resume", true));
         browser.awaitMatching("hello", h -> RogueGame.RUN.equals(str(h, "campaignSave")), "Rogue did not go straight to the run");
         return browser.awaitMatching("rogueQuestion", q -> q.get("id").getAsInt() == question, "the question did not come back");
-    }
-
-    private void releaseHostSeat() throws ReflectiveOperationException {
-        final Method release = WebHub.class.getDeclaredMethod("releaseHostIfAbandoned");
-        release.setAccessible(true);
-        release.invoke(sessions);
     }
 
     // Fails if a reload loses the open question or sends it with other choices
@@ -100,7 +97,7 @@ public class RogueQuestionsTest extends RogueSessionTest {
         send(host, TestBrowser.action("campaignLeave"));
         host.awaitMatching("hello", h -> str(h, "campaign") == null, "Back during a question did not go to the menu");
         sessions.disconnected(host);
-        releaseHostSeat();
+        sessions.releaseHostIfAbandoned();
         final TestBrowser other = seat("other");
         try {
             Assert.assertTrue(other.hello.get("host").getAsBoolean(), "the second browser did not get the seat");
@@ -110,7 +107,7 @@ public class RogueQuestionsTest extends RogueSessionTest {
         } finally {
             toMenu(other);
             sessions.disconnected(other);
-            releaseHostSeat();
+            sessions.releaseHostIfAbandoned();
         }
     }
 
@@ -212,6 +209,31 @@ public class RogueQuestionsTest extends RogueSessionTest {
         Assert.assertTrue(answer.get("ready").getAsBoolean());
     }
 
+    // Fails if a battle that cannot start keeps the Wrathful effects spent on it, or the player is not told
+    @Test(timeOut = 120_000)
+    public void aMatchThatCannotStartReloadsTheSave() throws Exception {
+        run = RogueFixture.run(NodePlanebound.class);
+        ((NodePlanebound) run.getPath().getNode(PLANE)).setWrathfulCount(1);
+        final TestBrowser host = openRun();
+        sessions.onMessage(host, message("rogueEnter", "snapshot", snapshot(host), "node", PLANE));
+        final int omen = host.awaitMatching("rogueQuestion", q -> q.has("omen"), "no Wrathful effect was told").get("id").getAsInt();
+        handled.add(omen);
+        send(host, TestBrowser.action("campaignLeave"));
+        host.awaitMatching("hello", h -> str(h, "campaign") == null, "Back during the omen did not go to the menu");
+        // Answered from the play menu, so the battle has no page to start from
+        game().handle(host, MessageJson.decode(answer(omen, JsonNull.INSTANCE)), null, null);
+        // Opening Rogue before the battle is refused would give it a page to start from
+        awaitTrue(() -> !game().mayLeave(null), "the answer was not taken");
+        awaitTrue(() -> game().mayLeave(null), "the player was not asked anything after the battle was refused");
+        send(host, message("campaignOpen", "mode", RogueGame.MODE, "resume", true));
+        final JsonObject told = host.awaitMatching("rogueQuestion", q -> q.has("tell"), "the player was not told");
+        Assert.assertEquals(str(told.getAsJsonObject("tell").getAsJsonArray("text").get(0).getAsJsonObject(), "text"), Localizer.getInstance().getMessage("lblRogueMatchNotStarted"));
+        Assert.assertTrue(sessions.hostLobby() == null || sessions.hostLobby().getHostedMatch() == null, "a battle started");
+        settle(host);
+        Assert.assertTrue(StreamSupport.stream(host.awaitNewest("rogueTraits", "no traits were sent").getAsJsonArray("traits").spliterator(), false)
+                .noneMatch(trait -> "WRATHFUL".equals(str(trait.getAsJsonObject(), "source"))), "the Wrathful effect stayed");
+    }
+
     private static JsonArray array(final String... values) {
         final JsonArray array = new JsonArray();
         for (final String value : values) {
@@ -257,9 +279,9 @@ public class RogueQuestionsTest extends RogueSessionTest {
         return Localizer.getInstance().getMessage("lblWebRogueRemovalCreditCount", credits);
     }
 
-    // Fails if a removal is free, or the run on disk does not hold the smaller deck and the spent credit
+    // Fails if a removal is free, the run on disk does not hold the smaller deck and the spent credit, or undoing it does not give the credit back
     @Test(timeOut = 120_000)
-    public void removingACardSpendsACreditAndSaves() throws Exception {
+    public void undoRefunds() throws Exception {
         final TestBrowser host = atRun(NodeSanctum.class, 8);
         Assert.assertEquals(str(openEditor(host), "counter"), counter(3));
         final String card = nonbasic(0);
@@ -267,16 +289,6 @@ public class RogueQuestionsTest extends RogueSessionTest {
         Assert.assertEquals(str(edit(host, remove(card)), "counter"), counter(2));
         Assert.assertEquals(saved().getRemovalCredits(), 2);
         Assert.assertEquals(saved().getCurrentDeck().getMain().countByName(card), copies - 1);
-    }
-
-    // Fails if undoing a removal does not give its credit back, on the page and on disk
-    @Test(timeOut = 120_000)
-    public void undoRefunds() throws Exception {
-        final TestBrowser host = atRun(NodeSanctum.class, 8);
-        openEditor(host);
-        final String card = nonbasic(0);
-        final int copies = run.getCurrentDeck().getMain().countByName(card);
-        edit(host, remove(card));
         edit(host, landsTo("Forest", run.getCurrentDeck().getMain().countByName("Forest") + 1));
         edit(host, TestBrowser.action("editorUndo"));
         Assert.assertEquals(saved().getRemovalCredits(), 2, "undoing the added Forest gave a credit");
@@ -343,12 +355,11 @@ public class RogueQuestionsTest extends RogueSessionTest {
         sessions.onMessage(host, message("rogueEditDeck", "snapshot", now));
         sessions.onMessage(host, TestBrowser.action("editorClose"));
         sessions.onMessage(host, TestBrowser.action("editorUndo"));
-        Thread.sleep(500);
+        Assert.assertEquals(host.last("rogueQuestion").get("id"), question.get("id"));
+        settle(host);
         Assert.assertTrue(host.got.subList(before, host.got.size()).stream().map(m -> str(m, "t"))
                 .noneMatch(t -> "editor".equals(t) || "notice".equals(t)), "an editor command was taken during a question");
         Assert.assertEquals(saved().getRemovalCredits(), 3);
-        Assert.assertEquals(host.last("rogueQuestion").get("id"), question.get("id"));
-        settle(host);
         Assert.assertTrue(saved().getPath().getNode(EVENT).isCompleted(), "the question could not be answered after closing");
     }
 

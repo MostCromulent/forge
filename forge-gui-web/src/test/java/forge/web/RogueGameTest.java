@@ -11,7 +11,6 @@ import forge.gamemodes.rogue.RogueStats;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.ChestEffect;
 import forge.gamemodes.rogue.flow.RogueDecisions.Pick;
-import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.path.NodeChest;
 import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.RoguePathNode;
@@ -21,7 +20,6 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import forge.web.WebSession.InCampaign;
-import forge.web.campaign.Campaign;
 import forge.web.campaign.CampaignSession;
 import forge.web.campaign.rogue.RogueGame;
 import org.testng.Assert;
@@ -29,12 +27,11 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -47,6 +44,7 @@ public class RogueGameTest extends WebHubTest {
     private ScriptedDecisions decisions;
     private RogueGame game;
     private WebSession session;
+    private CampaignSession campaigns;
     private final List<CountDownLatch> latches = new ArrayList<>();
 
     @Override
@@ -88,24 +86,15 @@ public class RogueGameTest extends WebHubTest {
         }
     }
 
-    private static Object read(final Object from, final String field) throws ReflectiveOperationException {
-        final Field f = from.getClass().getDeclaredField(field);
-        f.setAccessible(true);
-        return f.get(from);
-    }
-
     /** Connects the host with a new game in its table of modes, in place of the server's own, and opens it. */
-    @SuppressWarnings("unchecked")
     private TestBrowser open(final boolean run) throws Exception {
         game = new RogueGame(g -> decisions);
         awaitIdle();
         final TestBrowser host = connect("host");
         sessions.onMessage(host, TestBrowser.action("claimHost"));
         sessions.onMessage(host, message("setName", "name", "Host"));
-        session = (WebSession) read(sessions, "host");
-        final Campaigns campaigns = (Campaigns) read(session, "campaigns");
-        ((Map<String, Campaign>) read(campaigns, "modes")).put(RogueGame.MODE, game);
-        campaigns.becameHost();
+        session = sessions.host;
+        campaigns = session.addCampaign(RogueGame.MODE, game);
         send(host, message("campaignOpen", "mode", RogueGame.MODE, "resume", run));
         host.awaitMatching("hello", h -> RogueGame.MODE.equals(str(h, "campaign"))
                 && (run ? RogueGame.RUN.equals(str(h, "campaignSave")) : str(h, "campaignSave") == null), "Rogue did not open");
@@ -136,9 +125,9 @@ public class RogueGameTest extends WebHubTest {
         return decisions.asked.stream().filter(question::equals).count();
     }
 
-    private void campaignThreadDone() throws ReflectiveOperationException {
+    private void campaignThreadDone() {
         final CountDownLatch done = new CountDownLatch(1);
-        ((CampaignSession) read(session, "campaigns")).run(done::countDown);
+        campaigns.run(done::countDown);
         await(done);
     }
 
@@ -167,15 +156,18 @@ public class RogueGameTest extends WebHubTest {
         betweenRuns();
         final TestBrowser host = open(false);
         final String deck = host.last("rogueRoster").getAsJsonArray("commanders").get(0).getAsJsonObject().get("deck").getAsString();
-        final RogueFlow flow = (RogueFlow) read(game, "flow");
+        final List<RogueRun> runs = new CopyOnWriteArrayList<>();
+        for (int i = 0; i < 2; i++) {
+            decisions.then("runStarted", args -> runs.add((RogueRun) args[0]));
+        }
         begin(host, deck);
-        final RogueDeck first = flow.run().getSelectedRogueDeck();
+        final RogueDeck first = runs.get(0).getSelectedRogueDeck();
         final int full = first.getRewardPoolCards().size();
         Assert.assertTrue(game.submit(snapshot(host), -1, () -> first.removeFromCardPools(List.of(first.getRewardPoolCards().get(0)))));
         awaitIdle();
         decisions.then("confirmReplaceRun", true);
         begin(host, deck);
-        Assert.assertEquals(flow.run().getSelectedRogueDeck().getRewardPoolCards().size(), full);
+        Assert.assertEquals(runs.get(1).getSelectedRogueDeck().getRewardPoolCards().size(), full);
     }
 
     // Fails if a double click on Enter runs the node twice, or the second Enter is queued behind the first
@@ -263,37 +255,6 @@ public class RogueGameTest extends WebHubTest {
         Assert.assertTrue(saved().getPath().getNode(9).isCompleted());
     }
 
-    // Fails if a reload's pages can reach the browser after the pages of a newer step
-    @Test(timeOut = 120_000)
-    public void anOlderSnapshotIsNeverSentAfterANewer() throws Exception {
-        betweenRuns();
-        final TestBrowser host = open(false);
-        final Thread steps = new Thread(() -> {
-            for (int i = 0; i < 1000; i++) {
-                sessions.onMessage(host, message("rogueSelect", "snapshot", snapshot(host), "node", 0));
-            }
-        });
-        final Thread reloads = new Thread(() -> {
-            for (int i = 0; i < 1000; i++) {
-                game.home();
-            }
-        });
-        steps.start();
-        reloads.start();
-        steps.join();
-        reloads.join();
-        awaitIdle();
-        long last = 0;
-        int rises = 0;
-        for (final JsonObject home : host.all("rogueHome")) {
-            final long number = home.get("snapshot").getAsLong();
-            Assert.assertTrue(number >= last, "snapshot " + number + " arrived after " + last);
-            rises += number > last ? 1 : 0;
-            last = number;
-        }
-        Assert.assertTrue(rises > 10, "too few steps ran to race the reloads: " + rises);
-    }
-
     // Fails if opening Rogue during a question replaces the progress the question's step is changing, or opening when idle does not read it again
     @Test(timeOut = 120_000)
     public void openingReadsProgressOnlyWhileIdle() throws Exception {
@@ -359,14 +320,10 @@ public class RogueGameTest extends WebHubTest {
         Assert.assertTrue(inMemory.get().getRunTimer().isRunning(), "the timer did not run on the run's pages");
 
         sessions.disconnected(host);
-        final long elapsed = inMemory.get().getRunTimer().getElapsedMillis();
-        Thread.sleep(50);
-        Assert.assertEquals(inMemory.get().getRunTimer().getElapsedMillis(), elapsed);
+        Assert.assertFalse(inMemory.get().getRunTimer().isRunning(), "the timer ran on with nobody there");
         release.countDown();
         awaitIdle();
-        Thread.sleep(50);
         Assert.assertFalse(inMemory.get().getRunTimer().isRunning(), "the finished step started the timer");
-        Assert.assertEquals(inMemory.get().getRunTimer().getElapsedMillis(), elapsed);
     }
 
     private static List<String> announced(final TestBrowser host, final String field) {

@@ -12,7 +12,6 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.web.campaign.rogue.RogueGame;
 import org.testng.annotations.BeforeMethod;
 
-import java.lang.reflect.Field;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,15 +26,9 @@ abstract class RogueSessionTest extends WebHubTest {
      */
     @Override
     void afterDisconnecting() {
-        try {
-            final Field field = WebHub.class.getDeclaredField("host");
-            field.setAccessible(true);
-            final WebSession host = (WebSession) field.get(sessions);
-            if (host != null && host.stage() instanceof WebSession.InCampaign c) {
-                host.move(c, new WebSession.Menu());
-            }
-        } catch (final ReflectiveOperationException e) {
-            throw new IllegalStateException(e);
+        final WebSession host = sessions.host;
+        if (host != null && host.stage() instanceof WebSession.InCampaign c) {
+            host.move(c, new WebSession.Menu());
         }
         RogueFixture.clean();
     }

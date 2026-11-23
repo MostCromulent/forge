@@ -1,5 +1,6 @@
 package forge.web;
 
+import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueRunHistoryEntry;
@@ -31,9 +32,16 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.lang.reflect.Field;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Random;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 @Test(singleThreaded = true)
 public class RoguePagesTest {
@@ -129,17 +137,12 @@ public class RoguePagesTest {
         Assert.assertTrue(map.links().contains(new MapLink(2, 7)));
     }
 
-    // Fails if a wound is listed among the other traits, or Descension and Endless before them
+    // Fails if a wound is listed among the other traits, Descension and Endless come before them, a trait is left out or listed twice, or a trait is named by its card, whose name says where the trait came from
     @Test
-    public void woundsComeAfterOtherTraits() {
+    public void traitsAreListedOnceInDesktopsOrder() {
         withTraits();
         Assert.assertEquals(traits().traits().stream().map(Trait::source).toList(), List.of("CHEST", "NPC", "WOUND", "DESCENSION", "ENDLESS"));
-    }
-
-    // Fails if a trait is left out or listed twice
-    @Test
-    public void everyActiveEffectIsListedOnce() {
-        withTraits();
+        Assert.assertEquals(traits().traits().get(0).name(), "Banner Of Champions");
         run.setDescensionLevel(2);
         Assert.assertEquals(traits().traits().size(), RogueEffectComposite.getAllEffects(run).size());
         Assert.assertEquals(traits().traits().stream().map(Trait::name).distinct().count(), 6);
@@ -193,13 +196,6 @@ public class RoguePagesTest {
         Assert.assertNotNull(RoguePages.codex(progress, "stats", null));
     }
 
-    // Fails if a trait is named by its card, whose name says where the trait came from
-    @Test
-    public void namesHaveNoCardPrefix() {
-        withTraits();
-        Assert.assertEquals(traits().traits().get(0).name(), "Banner Of Champions");
-    }
-
     /** The one run in the history, after the first run completed opens History. */
     private HistoryRun onlyRun(final RogueMetaProgress progress, final RogueRunHistoryEntry entry) {
         progress.addRunHistoryEntry(entry);
@@ -220,12 +216,23 @@ public class RoguePagesTest {
 
     // Fails if a path label that names no plane is dropped or breaks the page, or a plane's label loses its picture
     @Test
-    public void anOldPathStringWithNoPlaneStillShows() throws ReflectiveOperationException {
-        final RogueRunHistoryEntry entry = RogueRunHistoryEntry.fromRun(run, "ABANDONED", null);
-        final Field path = RogueRunHistoryEntry.class.getDeclaredField("path");
-        path.setAccessible(true);
-        path.set(entry, List.of("Trostani, Selesnya's Voice", "Sanctum", "Naya (Rafiq of the Many)"));
-        final List<HistoryStep> steps = onlyRun(RogueMetaProgress.getInstance(), entry).steps();
+    public void anOldPathStringWithNoPlaneStillShows() throws IOException {
+        onlyRun(RogueMetaProgress.getInstance(), RogueRunHistoryEntry.fromRun(run, "ABANDONED", null));
+        RogueMetaProgress.getInstance().save();
+        final Path file = Path.of(RogueIO.ROGUE_SAVE_DIR, "meta_progress.dat");
+        final String saved;
+        try (InputStream in = new GZIPInputStream(Files.newInputStream(file))) {
+            saved = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        // An older save labels a plane by its planebound alone
+        final String old = saved.replaceFirst("(?s)<path>.*?</path>",
+                "<path><string>Trostani, Selesnya's Voice</string><string>Sanctum</string><string>Naya (Rafiq of the Many)</string></path>");
+        Assert.assertNotEquals(old, saved);
+        try (OutputStream out = new GZIPOutputStream(Files.newOutputStream(file))) {
+            out.write(old.getBytes(StandardCharsets.UTF_8));
+        }
+        RogueMetaProgress.reload();
+        final List<HistoryStep> steps = RoguePages.history(RogueMetaProgress.getInstance()).runs().get(0).steps();
         Assert.assertEquals(steps.stream().map(HistoryStep::kind).toList(), List.of("PLANEBOUND", "SANCTUM", "PLANEBOUND"));
         Assert.assertNull(steps.get(0).image());
         Assert.assertEquals(steps.get(0).name(), "Trostani, Selesnya's Voice");

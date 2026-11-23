@@ -57,12 +57,18 @@ public class RogueBetweenRunsTest extends RogueSessionTest {
         }
     }
 
-    // Fails if a build does not spend its price, or a first build with Aether Energy to spare is not switched on
+    // Fails if a rank the Echoes do not pay for is built, a build does not spend its price, or a first build with Aether Energy to spare is not switched on
     @Test(timeOut = 120_000)
     public void anUpgradeSpendsItsEchoes() throws Exception {
-        final TestBrowser host = hub(p -> p.setTotalEchoes(10));
+        final TestBrowser host = hub(p -> p.setTotalEchoes(1));
+        Assert.assertFalse(work(host, AetherEffect.ZHALFIRIN_SANCTUARY).get("afford").getAsBoolean());
         command(host, message("rogueAetherUpgrade", "work", AetherEffect.ZHALFIRIN_SANCTUARY.name()));
         final RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        Assert.assertEquals(progress.getAetherEffectRank(AetherEffect.ZHALFIRIN_SANCTUARY), 0);
+        Assert.assertEquals(progress.getTotalEchoes(), 1);
+
+        progress.setTotalEchoes(10);
+        command(host, message("rogueAetherUpgrade", "work", AetherEffect.ZHALFIRIN_SANCTUARY.name()));
         Assert.assertEquals(progress.getAetherEffectRank(AetherEffect.ZHALFIRIN_SANCTUARY), 1);
         Assert.assertEquals(progress.getTotalEchoes(), 10 - AetherEffect.ZHALFIRIN_SANCTUARY.getEchoCostForRank(1));
         Assert.assertTrue(work(host, AetherEffect.ZHALFIRIN_SANCTUARY).get("on").getAsBoolean(), "the page does not show the new work switched on");
@@ -82,16 +88,6 @@ public class RogueBetweenRunsTest extends RogueSessionTest {
         Assert.assertFalse(progress.getActiveAetherEffects().contains(AetherEffect.SPECTRAL_EXPANDER));
         Assert.assertEquals(progress.getActiveAetherEffectCount(), 3);
         Assert.assertFalse(work(host, AetherEffect.SPECTRAL_EXPANDER).get("toggle").getAsBoolean(), "the page offers to switch it on");
-    }
-
-    // Fails if a rank the Echoes do not pay for is built
-    @Test(timeOut = 120_000)
-    public void anUpgradeTheEchoesDoNotCoverIsRefused() throws Exception {
-        final TestBrowser host = hub(p -> p.setTotalEchoes(1));
-        Assert.assertFalse(work(host, AetherEffect.ZHALFIRIN_SANCTUARY).get("afford").getAsBoolean());
-        command(host, message("rogueAetherUpgrade", "work", AetherEffect.ZHALFIRIN_SANCTUARY.name()));
-        Assert.assertEquals(RogueMetaProgress.getInstance().getAetherEffectRank(AetherEffect.ZHALFIRIN_SANCTUARY), 0);
-        Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 1);
     }
 
     // Fails if resetting the Aetherworks keeps a rank, misses Echoes spent on one, takes back Sparks or an Aether Upgrade, or does not say what it refunded
