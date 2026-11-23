@@ -122,3 +122,5 @@
 .qu-seat.empty { border-style: dashed; color: var(--muted); }
 .qu-seat.you { border: 2px solid #fff; }
 .qu-you { padding: 1px 7px; border-radius: 999px; background: #fff; color: #10131a; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+
+.camp-mote[data-icon="ICO_QUEST_COINSTACK"] { filter: drop-shadow(0 0 6px var(--accent-2)); }

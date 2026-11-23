@@ -1,4 +1,4 @@
-/* The pieces every campaign shares: the bar, the side panel, the reveal, the statistics and the preferences. */
+/* The pieces every campaign shares: the bar, the side panel, the reveal, the statistics, the preferences, the deck pages and the card lists. */
 
 .camp-shell { height: 100vh; display: flex; flex-direction: column; }
 /* In landscape, an open save is shown as a panel the same size as the deck editor. It sits one layer below the editor, which can be opened from it. */
@@ -134,7 +134,6 @@ html:not([data-form="portrait"]) .camp-foot { padding-bottom: 14px; }
 .camp-rv-card.dup.up .camp-rv-plus { display: flex; }
 /* An amount moving to the bar */
 .camp-mote { position: fixed; left: 0; top: 0; width: 22px; height: 22px; margin: -11px; z-index: 80; pointer-events: none; filter: drop-shadow(0 0 6px #7fe0ff); }
-.camp-mote[data-icon="ICO_QUEST_COINSTACK"] { filter: drop-shadow(0 0 6px var(--accent-2)); }
 
 @media (max-width: 900px) { .camp-side { border-left: 0; border-top: 1px solid var(--line); } }
 
@@ -181,3 +180,74 @@ html:not([data-form="portrait"]) .camp-foot { padding-bottom: 14px; }
 .camp-pref-table tbody th { border-top: 1px solid var(--line); }
 .camp-pref-table input { width: 72px; padding: 5px 8px; text-align: right; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
 .camp-pref-table td.bad input { border-color: var(--select); }
+
+.camp-map { display: grid; grid-template-columns: minmax(0, 1fr) 352px; min-height: 0; }
+@media (max-width: 900px) {
+  .camp-map { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+}
+
+/* The plates of a deck page. The selected one is shown in detail next to the list. */
+.camp-party { position: relative; display: grid; grid-template-columns: minmax(0, 2fr) minmax(372px, 1fr); min-height: 0; }
+.camp-party-list { padding: 18px 24px 80px; overflow-y: auto; display: grid; gap: 22px; align-content: start; }
+.camp-party-list h4 { margin: 0 0 10px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; gap: 10px; align-items: baseline; }
+.camp-party-list h4 span { letter-spacing: 0; text-transform: none; font-weight: 400; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.camp-party-list .find { width: 260px; }
+.camp-cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.camp-cmd { display: grid; grid-template-columns: 96px minmax(0, 1fr); padding: 0; overflow: hidden; border-radius: 11px; background: var(--surface); text-align: left; position: relative; }
+.camp-cmd .a { background: #111 center 20% / cover; min-height: 104px; }
+.camp-cmd .t { padding: 10px 12px; display: grid; gap: 4px; align-content: center; min-width: 0; }
+.camp-cmd .t b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.camp-cmd .t .l { font-size: 11.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.camp-cmd .t .l .camp-warn { font-size: 11.5px; }
+/* Gold marks the one in use. White marks the one shown in the panel */
+.camp-cmd.in-use { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
+.camp-cmd[aria-pressed="true"] { border-color: var(--text); box-shadow: 0 0 0 1px var(--text); }
+.camp-cmd.in-use[aria-pressed="true"] { box-shadow: 0 0 0 1px var(--accent-2), 0 0 0 3px var(--text); }
+.camp-cmd .tag { position: absolute; right: 8px; bottom: 8px; background: #0b0e14e6; text-transform: uppercase; letter-spacing: .06em; font-size: 10.5px; }
+.camp-cmd-detail { padding: 20px; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
+.camp-cmd-top { display: flex; gap: 18px; align-items: start; }
+.camp-cmd-about { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.camp-cmd-detail img.camp-card { width: 168px; flex: none; aspect-ratio: 63 / 88; border-radius: 9px; box-shadow: 0 12px 30px #000b; }
+.camp-cmd-detail h3 { margin: 0; font-size: 18px; }
+.camp-cmd-detail .dk-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 0; overflow: visible; }
+.camp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.camp-coll { position: relative; display: flex; flex-direction: column; min-height: 0; }
+.camp-coll-bar { display: flex; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.camp-coll-bar .find { width: 260px; }
+.camp-coll-bar .select-button { padding: 7px 10px 7px 12px; }
+.camp-coll-bar .colours { margin: 0; align-self: center; }
+.camp-coll-note { font-size: 12.5px; color: var(--muted); margin-left: auto; }
+.camp-coll-grid { flex: 1; overflow-y: auto; padding: 18px 24px 130px; display: grid; grid-template-columns: repeat(auto-fill, 148px); gap: 16px 14px; justify-content: center; align-content: start; }
+.camp-cc { position: relative; padding: 0; border: 0; background: none; border-radius: 8px; display: flex; flex-direction: column; gap: 5px; text-align: left; color: var(--text); }
+.camp-cc[aria-disabled="true"] { cursor: help; }
+/* The name is shown until the picture loads, and when there is no picture */
+.camp-cc .camp-pic { position: relative; display: block; flex: none; width: 100%; aspect-ratio: 63 / 88; border-radius: 7px; background: var(--surface-2); box-shadow: 0 4px 12px #0009; overflow: hidden; }
+.camp-cc .camp-pic .nm { position: absolute; left: 9px; right: 9px; top: 9px; font-size: 12px; color: var(--muted); }
+.camp-cc .camp-pic img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.camp-cc .val { font-size: 11.5px; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 4px; padding: 0 2px; font-variant-numeric: tabular-nums; }
+.camp-cc.sel .camp-pic { box-shadow: 0 0 0 3px var(--accent-2), 0 0 18px var(--accent-glow); }
+.camp-cc.sel::after { content: '\2713'; position: absolute; right: 6px; top: 6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-2); color: #1a1405; font-weight: 800; font-size: 13px; box-shadow: 0 2px 6px #000c; }
+.camp-cc.used .camp-pic img { filter: brightness(.6); }
+/* A list that counts copies shows the card. When the card is picked, the number of copies is shown under it. */
+.camp-cc-slot { position: relative; display: grid; gap: 6px; align-content: start; }
+.camp-stock { position: absolute; right: 6px; top: 6px; padding: 2px 7px; border-radius: 999px; background: #0b0e14e6; border: 1px solid var(--line-bright); font-size: 11px; font-weight: 700; }
+.camp-cc.sel .camp-stock { right: 34px; }
+.camp-cc-note { margin-left: auto; }
+.camp-owned { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
+.camp-owned i { width: 7px; height: 9px; border-radius: 1.5px; box-shadow: inset 0 0 0 1px var(--line-bright); }
+.camp-owned i.on { background: var(--text); box-shadow: none; }
+.camp-owned span { margin-left: 4px; }
+.camp-step { justify-self: center; display: inline-flex; align-items: center; gap: 8px; padding: 2px 4px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--accent-2); font-size: 12px; }
+.camp-step button { width: 22px; height: 22px; padding: 0; border-radius: 50%; }
+.camp-cc .inuse { position: absolute; left: 6px; right: 6px; bottom: 30px; font-size: 10.5px; padding: 3px 6px; border-radius: 5px; background: #0b0e14e6; border: 1px solid var(--line-bright); text-align: center; }
+.camp-shard { width: 14px; height: 14px; vertical-align: -2px; margin: 0 3px; }
+.camp-sep { opacity: .5; margin: 0 8px; }
+.camp-sel-bar { position: absolute; left: 50%; bottom: 66px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 18px; border-radius: 12px; background: var(--surface-3); border: 1px solid var(--accent-2); box-shadow: 0 16px 44px #000d; font-size: 13.5px; }
+.camp-sel-bar .primary { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.camp-sel-bar .camp-shard { width: 16px; height: 16px; margin-left: 8px; }
+.camp-exile-total { margin: 0; font-size: 14px; }
+.camp-exile-total .camp-shard { width: 18px; height: 18px; vertical-align: -3px; }
+.camp-cards-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; max-height: 46vh; overflow-y: auto; }
+.camp-cards-list li { display: flex; gap: 10px; padding: 5px 10px; border-radius: 6px; background: var(--surface-2); }
+.camp-cards-list li span { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
