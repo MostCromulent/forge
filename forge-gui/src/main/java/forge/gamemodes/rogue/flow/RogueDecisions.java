@@ -32,7 +32,8 @@ public interface RogueDecisions extends CardRewardHelper.RewardDialog {
     /** REPLACE: the picked cards take the place of others in the deck. */
     enum CardChoiceKind { STARTING_DECK, ADD, REMOVE, REPLACE }
     enum SanctumAction { HEAL, COOK, REFLECT, CUSTOM, SKIP }
-    enum ResultKind { EVENT, BOON, SANCTUM, REVIVE, DEFEAT }
+    /** SPARK: a Spark won for a new highest Descension level. */
+    enum ResultKind { EVENT, BOON, SANCTUM, REVIVE, DEFEAT, SPARK }
 
     /** choice is null when the player skips. */
     record Pick<T>(boolean reroll, T choice) { }
