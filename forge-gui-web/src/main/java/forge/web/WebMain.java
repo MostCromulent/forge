@@ -87,7 +87,7 @@ public final class WebMain implements IHasForgeLog {
 
     /**
      * Lets a test harness run tests one after another in this process, so the cards stay loaded. Each line "reset" on standard
-     * input, followed by any preferences as key=value, drops every seat and match. It then resets the preferences to their
+     * input, followed by any preferences as key=value, drops every seat and match. It then resets the preferences, and the campaigns' own, to their
      * defaults, applies the given ones, and starts the server again on the same address.
      */
     private static void resetOnInput(final ServerControl service) {
@@ -103,6 +103,8 @@ public final class WebMain implements IHasForgeLog {
                     service.stop();
                     final ForgePreferences prefs = FModel.getPreferences();
                     prefs.reset();
+                    FModel.getQuestPreferences().reset();
+                    FModel.getConquestPreferences().reset();
                     for (int i = 1; i < words.length; i++) {
                         final String[] pair = words[i].split("=", 2);
                         prefs.setPref(FPref.valueOf(pair[0]), pair.length > 1 ? pair[1] : "");

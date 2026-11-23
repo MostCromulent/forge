@@ -2,21 +2,21 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
-import { expect, test } from '@playwright/test';
-import { PROBE_SEED, startServer, type Server } from './server';
+import { expect } from '@playwright/test';
+import { probeTest as test } from './probe';
+import { PROBE_SEED, type Server } from './server';
 import { answerDialogs, concede, enterName, gameStarted } from './steps';
 
 const fixture = join(dirname(fileURLToPath(import.meta.url)), '../src/test/resources/quest/Fixture_quest.xml');
 
+// Quest reads gzipped saves. One game per match lets a concession end the match. Three copies of one card test the owned-copy limit. The credits pay for a booster
+const xml = readFileSync(fixture, 'utf8').replace('<matchLength>3</matchLength>', '<matchLength>1</matchLength>')
+  .replace('<card c="Naya Hushblade" s="ARB" i="1" n="1"/>', '<card c="Naya Hushblade" s="ARB" i="1" n="3"/>')
+  .replace('<credits>250</credits>', '<credits>5000</credits>');
+test.use({ seed: { ...PROBE_SEED, files: { 'quest/saves/Fixture quest.dat': gzipSync(xml) } } });
+
 let server: Server;
-test.beforeEach(async () => {
-  // Quest reads gzipped saves. One game per match lets a concession end the match. Three copies of one card test the owned-copy limit. The credits pay for a booster
-  const xml = readFileSync(fixture, 'utf8').replace('<matchLength>3</matchLength>', '<matchLength>1</matchLength>')
-    .replace('<card c="Naya Hushblade" s="ARB" i="1" n="1"/>', '<card c="Naya Hushblade" s="ARB" i="1" n="3"/>')
-    .replace('<credits>250</credits>', '<credits>5000</credits>');
-  server = await startServer(undefined, { ...PROBE_SEED, files: { 'quest/saves/Fixture quest.dat': gzipSync(xml) } });
-});
-test.afterEach(async () => { await server.stop(); });
+test.beforeEach(({ server: own }) => { server = own; });
 
 // Fails if a quest cannot be opened and a duel fought and conceded, or the page does not return to the Duels page with the loss shown
 test('a quest duel is conceded and the loss is shown on the Duels page', async ({ page }) => {

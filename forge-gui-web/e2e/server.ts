@@ -15,7 +15,7 @@ export interface Server {
   /** The page's address, with the token a browser needs to connect. */
   url: string;
   port: number;
-  /** Drops every seat and match and restarts in the same process with only the seed's preferences. Works only on a server started as reusable. */
+  /** Drops every seat and match and restarts in the same process with the seed's preferences and files. Works only on a server started as reusable. */
   reset(seed: Seed): Promise<void>;
   stop(): Promise<void>;
 }
@@ -75,10 +75,13 @@ export async function startServer(onPort?: number, seed: Seed = {}, reusable = f
     mkdirSync(join(user, 'decks', 'constructed'), { recursive: true });
     writeFileSync(join(user, 'decks', 'constructed', `${name}.dck`), text);
   }
-  for (const [path, text] of Object.entries(seed.files ?? {})) {
-    mkdirSync(dirname(join(user, path)), { recursive: true });
-    writeFileSync(join(user, path), text);
-  }
+  const writeFiles = (files: Seed['files']) => {
+    for (const [path, text] of Object.entries(files ?? {})) {
+      mkdirSync(dirname(join(user, path)), { recursive: true });
+      writeFileSync(join(user, path), text);
+    }
+  };
+  writeFiles(seed.files);
   const port = onPort ?? await freePort();
   const java: ChildProcess = spawn('java', [
     // FORGE_E2E_JVM adds JVM options, such as a flight recording to profile the server during a test
@@ -128,6 +131,12 @@ export async function startServer(onPort?: number, seed: Seed = {}, reusable = f
       const after = log.length;
       java.stdin!.write(`reset ${Object.entries(again.prefs ?? {}).map(([k, v]) => `${k}=${v}`).join(' ')}\n`);
       await started(after);
+      // Campaign saves are read when a browser opens them, so they can be replaced while the server runs
+      for (const saves of ['quest/saves', 'conquest/saves']) {
+        rmSync(join(user, saves), { recursive: true, force: true });
+        mkdirSync(join(user, saves), { recursive: true });
+      }
+      writeFiles(again.files);
     },
     async stop() {
       process.off('exit', orphaned);

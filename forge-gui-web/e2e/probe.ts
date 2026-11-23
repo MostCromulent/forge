@@ -22,7 +22,7 @@
 import { expect, test, type Browser, type BrowserContextOptions, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { PROBE_DECK, PROBE_SEED, startServer, type Server } from './server';
+import { PROBE_DECK, PROBE_SEED, startServer, type Seed, type Server } from './server';
 import { enterName, gameStarted, hostTable } from './steps';
 import type { Actions } from '../src/main/ts/actions';
 import type { Model } from '../src/main/ts/model';
@@ -93,7 +93,15 @@ export function explain(page: Page): Promise<string> {
 // Loading the cards takes most of a server's start time. So each worker starts one server and resets it in the same
 // process before each probe. FORGE_E2E_REUSE=0 starts a new server for each probe instead.
 const reuse = process.env.FORGE_E2E_REUSE !== '0';
-const probeTest = test.extend<object, { shared: Server | null }>({
+export const probeTest = test.extend<{ seed: Seed; server: Server }, { shared: Server | null }>({
+  seed: [PROBE_SEED, { option: true }],
+  /** The worker's server, reset to the test's seed. */
+  server: async ({ shared, seed }, use) => {
+    if (shared) await shared.reset(seed);
+    const server = shared ?? await startServer(undefined, seed);
+    await use(server);
+    if (!shared) await server.stop();
+  },
   shared: [async ({}, use) => {
     if (!reuse) {
       await use(null);
