@@ -1,6 +1,8 @@
 package forge.web;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import forge.gamemodes.rogue.RogueDeck;
 import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RoguePlanebound;
@@ -9,6 +11,7 @@ import forge.gamemodes.rogue.RogueStats;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.ChestEffect;
 import forge.gamemodes.rogue.flow.RogueDecisions.Pick;
+import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.path.NodeChest;
 import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.RoguePathNode;
@@ -144,11 +147,35 @@ public class RogueGameTest extends WebHubTest {
         decisions.then("chooseBoon", new Pick<>(false, null));
     }
 
+    private void begin(final TestBrowser host, final String deck) {
+        final JsonObject begin = message("rogueBegin", "snapshot", snapshot(host), "deck", deck, "custom", false, "descension", 0);
+        begin.add("modifications", new JsonArray());
+        sessions.onMessage(host, begin);
+        awaitIdle();
+    }
+
     private static Function<Object[], Object> loot(final CountDownLatch release) {
         return args -> {
             await(release);
             return new Pick<>(false, ChestEffect.BANNER_OF_CHAMPIONS);
         };
+    }
+
+    // Fails if a run changes the deck the commanders were read from, so the next run with that commander lacks the cards the first one took
+    @Test(timeOut = 120_000)
+    public void eachRunStartsWithAFullRewardPool() throws Exception {
+        betweenRuns();
+        final TestBrowser host = open(false);
+        final String deck = host.last("rogueRoster").getAsJsonArray("commanders").get(0).getAsJsonObject().get("deck").getAsString();
+        final RogueFlow flow = (RogueFlow) read(game, "flow");
+        begin(host, deck);
+        final RogueDeck first = flow.run().getSelectedRogueDeck();
+        final int full = first.getRewardPoolCards().size();
+        Assert.assertTrue(game.submit(snapshot(host), -1, () -> first.removeFromCardPools(List.of(first.getRewardPoolCards().get(0)))));
+        awaitIdle();
+        decisions.then("confirmReplaceRun", true);
+        begin(host, deck);
+        Assert.assertEquals(flow.run().getSelectedRogueDeck().getRewardPoolCards().size(), full);
     }
 
     // Fails if a double click on Enter runs the node twice, or the second Enter is queued behind the first

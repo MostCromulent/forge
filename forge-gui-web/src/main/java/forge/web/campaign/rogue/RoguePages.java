@@ -96,7 +96,7 @@ public final class RoguePages {
     private RoguePages() {
     }
 
-    /** Reading the decks takes longer than the rest of a snapshot, and they do not change while the server runs. */
+    /** Reading the decks takes longer than the rest of a snapshot. They are only read, because a run changes its deck's reward pool. */
     private static final class Decks {
         static final List<RogueDeck> ALL = RogueConfig.loadRogueDecks();
     }

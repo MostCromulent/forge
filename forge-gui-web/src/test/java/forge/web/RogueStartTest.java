@@ -99,6 +99,9 @@ public class RogueStartTest {
         Assert.assertTrue(custom(CustomRunModification.PATH_OF_THE_BANNED).canBegin(progress));
         Assert.assertFalse(custom(CustomRunModification.RICH, CustomRunModification.PATH_OF_THE_BANNED).canBegin(progress));
         Assert.assertFalse(custom().canBegin(progress));
+        final RogueDeck experimental = RogueStart.roster(true).get(0);
+        Assert.assertFalse(normal(experimental, 0).canBegin(progress), "an experimental commander needs Experiment");
+        Assert.assertTrue(new RogueStart(experimental, true, Set.of(CustomRunModification.EXPERIMENT), 0).canBegin(progress));
     }
 
     @Test

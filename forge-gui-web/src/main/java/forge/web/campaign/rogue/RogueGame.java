@@ -12,6 +12,7 @@ import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.match.PreparedMatch.Looks;
 import forge.gamemodes.rogue.AetherUpgrade;
 import forge.gamemodes.rogue.CodexHelper;
+import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueWinLoseController;
@@ -828,12 +829,14 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         return modifications;
     }
 
+    /** The deck is read afresh, because a run changes its deck's reward pool. */
     private static RogueStart start(final RogueBegin begin) {
         final Set<CustomRunModification> modifications = modifications(begin.modifications());
         if (modifications == null) {
             return null;
         }
-        return new RogueStart(RoguePages.deck(begin.deck()), begin.custom(), modifications, begin.descension());
+        return new RogueStart(RogueConfig.loadRogueDecks().stream().filter(d -> d.getName().equals(begin.deck())).findFirst().orElse(null),
+                begin.custom(), modifications, begin.descension());
     }
 
     /** Runs on the flow thread, because it reads the progress. Null for an unknown modification. */
