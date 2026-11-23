@@ -309,8 +309,11 @@ public final class RogueFlow {
     /** Gives the rewards, or ends a lost run. What follows the result screen is in {@link #resultLeft}. */
     public RogueWinLoseController matchOver(GameView game, IWinLoseView<?> view) {
         RogueWinLoseController controller = new RogueWinLoseController(game, view, currentRun, decisions);
-        controller.showRewards();
-        nodePlaneboundHelper.restoreHuman();
+        try {
+            controller.showRewards();
+        } finally {
+            nodePlaneboundHelper.restoreHuman();
+        }
         return controller;
     }
 

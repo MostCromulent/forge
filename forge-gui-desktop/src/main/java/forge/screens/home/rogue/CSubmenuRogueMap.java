@@ -42,7 +42,6 @@ public enum CSubmenuRogueMap implements ICDoc {
       VHomeUI.SINGLETON_INSTANCE.setSidebarVisible(true);
       return;
     }
-    // If no run exists in memory, try to load from saved runs
     RogueRun currentRun = flow.load().orElse(null);
 
     // If still no run (no saved runs or all completed/failed), navigate to start screen
