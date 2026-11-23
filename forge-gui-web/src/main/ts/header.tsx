@@ -78,6 +78,15 @@ export function goBack(): boolean {
   return true;
 }
 
+/** Makes go what Escape does while the calling page is drawn, for a page with no trail. */
+export function useEscapeBack(go: () => void): void {
+  useEffect(() => {
+    const step = { label: '', go };
+    shownBack = step;
+    return () => { if (shownBack === step) shownBack = null; };
+  });
+}
+
 /** The step a phone header's back button returns to: the last earlier step of the trail, if any. */
 export const backStep = (trail: SetupStep[]): SetupStep | undefined => trail.findLast(step => step.go);
 

@@ -279,6 +279,10 @@ final class WebRogueDecisions implements RogueDecisions {
 
     @Override
     public void showResult(final ResultKind kind, final String title, final String text, final List<Section> sections) {
+        if (kind == ResultKind.SPARK) {
+            game.announce(new RogueAnnounce("spark", title, text, null));
+            return;
+        }
         tell("result", new Tell(kind.name(), null, title, parts(text), List.of(), sections.stream()
                 .map(s -> new TellSection(s.label(), parts(s.text()), s.cards() == null ? List.of() : cards(s.cards()))).collect(Collectors.toList())));
     }

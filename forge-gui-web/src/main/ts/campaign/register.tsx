@@ -63,6 +63,7 @@ registerCampaigns({
   },
 
   message: (model, msg) => {
+    if (modes().some(m => m.message?.(model, msg))) return true;
     if (!STORED.includes(msg.t) && !modes().some(m => m.stored.includes(msg.t))) return false;
     (model as unknown as Record<string, unknown>)[msg.t] = msg;
     return true;

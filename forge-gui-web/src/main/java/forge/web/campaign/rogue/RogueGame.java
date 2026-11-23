@@ -11,10 +11,13 @@ import forge.gamemodes.rogue.effect.CustomRunModification;
 import forge.gamemodes.rogue.flow.RogueDecisions;
 import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.flow.RogueStart;
+import forge.gui.FThreads;
+import forge.localinstance.skin.ISkinImage;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
 import forge.web.Campaigns;
 import forge.web.WebGuiBase;
+import forge.web.WebGuiBase.CardImage;
 import forge.web.WebSession.InCampaign;
 import forge.web.WebSession.Menu;
 import forge.web.WebSession.Stage;
@@ -28,11 +31,13 @@ import forge.web.protocol.RogueProtocol.*;
 import org.apache.commons.lang3.EnumUtils;
 
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 /**
@@ -47,6 +52,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
 
     private final Executor worker = WebGuiBase.worker("WebRogue");
     private final AtomicBoolean busy = new AtomicBoolean(true);
+    /** Counts ended jobs whose calls to the UI thread may not have run yet. Descension unlocks are announced there, after their job. */
+    private final AtomicInteger settling = new AtomicInteger();
     private final RogueFlow flow;
     /** Guards the latest snapshot and the sending of pages, so pages reach the browser in the order they were numbered. */
     private final Object pages = new Object();
@@ -56,6 +63,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     private volatile Host host;
     /** The question the flow thread waits on. It is set and sent while holding pages, so it always follows the pages it was asked over. */
     private volatile Open question;
+    /** What was won or unlocked and has not reached the host's browser on Rogue's pages yet. Guarded by pages. */
+    private final List<RogueAnnounce> announced = new ArrayList<>();
 
     private static final class Shared {
         static final RogueGame GAME = new RogueGame(WebRogueDecisions::new);
@@ -106,6 +115,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
                 reloadRun();
             } finally {
                 try {
+                    settling.incrementAndGet();
+                    FThreads.invokeInEdtLater(settling::decrementAndGet);
                     publish();
                 } finally {
                     busy.set(false);
@@ -156,6 +167,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             return;
         }
         latest.pages().forEach(h.session()::tell);
+        sendAnnounced(h);
         final Open asked = question;
         if (asked != null) {
             h.session().tell(asked.message());
@@ -171,6 +183,35 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         } else if (RUN.equals(c.save()) && latest.run() != null) {
             latest.run().getRunTimer().start();
         }
+    }
+
+    /** Sends what was announced while the host's browser is on Rogue's pages. Call it holding pages. */
+    private void sendAnnounced(final Host h) {
+        if (h.session().browser() != null && h.session().stage() instanceof InCampaign c && MODE.equals(c.mode())) {
+            announced.forEach(h.session()::tell);
+            announced.clear();
+        }
+    }
+
+    /**
+     * Only announcements made while a job runs, or by the UI thread before it has run what the job left it, are kept.
+     * So another mode's trophies are not shown on Rogue's pages. Called on any thread.
+     */
+    void announce(final RogueAnnounce announcement) {
+        if (!busy.get() && settling.get() == 0) {
+            return;
+        }
+        synchronized (pages) {
+            announced.add(announcement);
+            final Host h = host;
+            if (h != null) {
+                sendAnnounced(h);
+            }
+        }
+    }
+
+    private void announce(final ISkinImage image, final String message, final String title) {
+        announce(new RogueAnnounce("unlock", title, message, image instanceof CardImage c ? c.card().getImageKey(false) : null));
     }
 
     /** Call it holding pages. */
@@ -251,6 +292,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     public void becameHost(final Host h) {
         stopTimer();
         host = h;
+        h.session().ui().setAnnouncer(this::announce);
     }
 
     @Override

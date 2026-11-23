@@ -1,6 +1,7 @@
 package forge.web.protocol;
 
 import com.google.gson.JsonElement;
+import forge.web.protocol.CampaignProtocol.CampaignBar;
 import forge.web.protocol.MessageJson.Command;
 import forge.web.protocol.MessageJson.Message;
 import forge.web.protocol.MessageJson.Nullable;
@@ -17,13 +18,29 @@ public final class RogueProtocol {
     private RogueProtocol() {
     }
 
-    /** The pages shown with no run open. run is the unfinished run, if there is one. sparks is null until Descension is unlocked. */
+    /**
+     * The pages shown with no run open. run is the unfinished run, if there is one. unlocked says whether Aether, Codex and History can be opened.
+     * fan holds the pictures of the commanders drawn behind Start New Run.
+     */
     @Message("rogueHome")
-    public record RogueHome(long snapshot, @Nullable RogueRunCard run, boolean started, int runs, int won, boolean aether, boolean codex,
-            boolean history, int echoes, @Nullable Integer sparks) {
+    public record RogueHome(long snapshot, CampaignBar bar, @Nullable RogueRunCard run, boolean unlocked, List<String> fan) {
     }
 
-    public record RogueRunCard(String commander, int life, int maxLife, int gold, int cards) {
+    /** line gives the run's Descension and Endless levels, and is empty with neither. */
+    public record RogueRunCard(String commander, String image, String line, int life, int maxLife, int gold, int cards, int credits,
+            List<CarryCard> carry) {
+    }
+
+    /** type is a CarryCardType name. */
+    public record CarryCard(String name, String image, String type) {
+    }
+
+    /**
+     * Something won or unlocked, shown over whichever Rogue page is open. kind is "unlock" or "spark".
+     * The first line of text is its name. image is a card's picture, or null.
+     */
+    @Message("rogueAnnounce")
+    public record RogueAnnounce(String kind, String title, String text, @Nullable String image) {
     }
 
     /** The open run's map. deck is the run's deck, read only. */

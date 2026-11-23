@@ -4,7 +4,7 @@ import type { FunctionComponent, VNode } from 'preact';
 import type { Actions } from '../actions';
 import type { CampaignDraft, EndingPanel } from '../campaigns';
 import type { Model } from '../model';
-import type { CampaignResult, Hello, Send } from '../protocol';
+import type { CampaignResult, Hello, Send, ServerMessage } from '../protocol';
 import type { TextKey } from '../text';
 
 /** What a mode adds. The hooks with the names of CampaignHooks' do the same for this mode alone. */
@@ -15,6 +15,8 @@ export interface CampaignModeHooks {
   hello(model: Model, msg: Hello): void;
   /** The messages that are only stored in the mode's field of the same name. */
   stored: string[];
+  /** Takes a message of the mode's own that is not simply stored, such as one added to a queue. Returns false for any other message. */
+  message?(model: Model, msg: ServerMessage): boolean;
   actions(send: Send, model: Model, schedule: () => void): object;
   Page: FunctionComponent<{ model: Model; actions: Actions }>;
   /** The start page's entry. art is the card picture behind it. */

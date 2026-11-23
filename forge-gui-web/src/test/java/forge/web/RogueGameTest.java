@@ -5,13 +5,18 @@ import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.RogueStats;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.ChestEffect;
 import forge.gamemodes.rogue.flow.RogueDecisions.Pick;
 import forge.gamemodes.rogue.path.NodeChest;
 import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.RoguePathNode;
+import forge.gui.GuiBase;
+import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
+import forge.localinstance.skin.FSkinProp;
+import forge.model.FModel;
 import forge.web.WebSession.InCampaign;
 import forge.web.campaign.Campaign;
 import forge.web.campaign.CampaignSession;
@@ -31,6 +36,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /** Tests how Rogue's game runs the flow on its own thread, one job at a time, and publishes its pages. The flow's questions are answered from a script. */
 @Test(singleThreaded = true)
@@ -43,6 +49,12 @@ public class RogueGameTest extends WebHubTest {
     @Override
     void afterDisconnecting() {
         RogueFixture.clean();
+    }
+
+    /** Rogue's progress announces through Forge's own GUI, so the sessions run on it. */
+    @Override
+    WebGuiBase gui() {
+        return (WebGuiBase) GuiBase.getInterface();
     }
 
     @BeforeMethod
@@ -329,4 +341,58 @@ public class RogueGameTest extends WebHubTest {
         Assert.assertFalse(inMemory.get().getRunTimer().isRunning(), "the finished step started the timer");
         Assert.assertEquals(inMemory.get().getRunTimer().getElapsedMillis(), elapsed);
     }
+
+    private static List<String> announced(final TestBrowser host, final String field) {
+        return host.all("rogueAnnounce").stream().map(a -> str(a, field)).collect(Collectors.toList());
+    }
+
+    // Fails if an unlock Forge announces while Rogue's flow runs never reaches the page, or arrives without its card
+    @Test(timeOut = 120_000)
+    public void anUnlockIsAnnounced() throws Exception {
+        final TestBrowser host = openRun(NodeChest.class);
+        final RogueRun run = saved();
+        Assert.assertTrue(game.submit(snapshot(host), -1, () -> RogueMetaProgress.getInstance().updateStat(RogueStats.NONBASIC_LANDS, 15, run)));
+        final String muldrotha = FModel.getMagicDb().getCommonCards().getCard("Muldrotha, the Gravetide").getImageKey(false);
+        host.awaitMatching("rogueAnnounce", a -> muldrotha.equals(str(a, "image")), "Muldrotha's unlock was not announced");
+        awaitIdle();
+        Assert.assertEquals(announced(host, "image").stream().filter(muldrotha::equals).count(), 1);
+    }
+
+    // Fails if another mode's trophy, announced while Rogue's flow is idle, is shown on Rogue's pages
+    @Test(timeOut = 120_000)
+    public void anotherModesTrophyIsNotAnnounced() throws Exception {
+        final TestBrowser host = openRun(NodeChest.class);
+        final PaperCard card = FModel.getMagicDb().getCommonCards().getCard("Lightning Helix");
+        GuiBase.getInterface().showImageDialog(GuiBase.getInterface().createLayeredImage(card, FSkinProp.IMG_SPECIAL_TROPHY, "quest.png", 1f),
+                "A Quest trophy", "Achievement Earned");
+        Assert.assertTrue(game.submit(snapshot(host), -1, () -> GuiBase.getInterface().showImageDialog(null, "Rogue's own", "Rogue")));
+        host.awaitMatching("rogueAnnounce", a -> "Rogue".equals(str(a, "title")), "Rogue's own announcement did not arrive");
+        Assert.assertEquals(announced(host, "title"), List.of("Rogue"));
+    }
+
+    // Fails if announcements made at once on several threads are lost or garbled
+    @Test(timeOut = 120_000)
+    public void announcementsFromThreeThreadsAllArrive() throws Exception {
+        final TestBrowser host = openRun(NodeChest.class);
+        final CountDownLatch release = latch();
+        Assert.assertTrue(game.submit(snapshot(host), -1, () -> await(release)));
+        final CountDownLatch start = new CountDownLatch(1);
+        final List<Thread> threads = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            final String title = "Unlock " + i;
+            threads.add(new Thread(() -> {
+                await(start);
+                GuiBase.getInterface().showImageDialog(null, title, title);
+            }));
+        }
+        threads.forEach(Thread::start);
+        start.countDown();
+        for (final Thread t : threads) {
+            t.join();
+        }
+        release.countDown();
+        awaitIdle();
+        Assert.assertEquals(announced(host, "title").stream().sorted().collect(Collectors.toList()), List.of("Unlock 0", "Unlock 1", "Unlock 2"));
+    }
 }
+

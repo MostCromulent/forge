@@ -70,12 +70,22 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     private volatile Consumer<JsonObject> noticeSink = notice -> { };
     /** Where cards shown to the host are sent. The open campaign's reward screen shows them. */
     private volatile BiConsumer<String, List<PaperCard>> cardsSink = (title, cards) -> { };
+    private volatile Announcer announcer = (image, message, title) -> { };
     private final HostQuestions hostQuestions = new HostQuestions();
     /** Set while a core game mode, such as the limited gauntlet, starts a match for the host's browser. */
     private volatile SoloTable soloTable;
 
     public void setCardsSink(final BiConsumer<String, List<PaperCard>> sink) {
         cardsSink = sink;
+    }
+
+    /** What Forge announces with a picture, such as an unlocked commander. Nothing shows it unless a mode sets this. It is called on any thread. */
+    public interface Announcer {
+        void announce(ISkinImage image, String message, String title);
+    }
+
+    public void setAnnouncer(final Announcer announcer) {
+        this.announcer = announcer;
     }
 
     public void setNoticeSink(final Consumer<JsonObject> sink) {
@@ -307,7 +317,9 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     @Override public ISkinImage getSkinIcon(final FSkinProp skinProp) { return new WebSkinImage(skinProp, null); }
     @Override public ISkinImage getUnskinnedIcon(final String path) { return new WebSkinImage(null, path); }
     @Override public ISkinImage getCardArt(final PaperCard card, final boolean backFace) { return null; }
-    @Override public ISkinImage createLayeredImage(final PaperCard card, final FSkinProp background, final String overlayFilename, final float opacity) { return null; }
+    @Override public ISkinImage createLayeredImage(final PaperCard card, final FSkinProp background, final String overlayFilename, final float opacity) {
+        return card == null ? null : new CardImage(card);
+    }
     @Override public void clearImageCache() { }
     @Override public String encodeSymbols(final String str, final boolean formatReminderText) { return str; }
     @Override public int getAvatarCount() { return 0; }
@@ -325,7 +337,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
         return true;
     }
     @Override public void showBugReportDialog(final String title, final String text, final boolean showExitAppBtn) { netLog.error("{}: {}", title, text); }
-    @Override public void showImageDialog(final ISkinImage image, final String message, final String title) { }
+    @Override public void showImageDialog(final ISkinImage image, final String message, final String title) { announcer.announce(image, message, title); }
     @Override public String showFileDialog(final String title, final String defaultDir) { return null; }
     @Override public File getSaveFile(final File defaultFile) { return null; }
     // The browser plays the audio, so this client supports the formats that the browser understands
@@ -371,5 +383,9 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
 
     /** A picture named by its skin icon's FSkinProp, or by a file's path, which the Quest shop reads to show an item's picture. */
     public record WebSkinImage(FSkinProp prop, String path) implements ISkinImage {
+    }
+
+    /** The picture of an announcement, which the browser draws from the card. */
+    public record CardImage(PaperCard card) implements ISkinImage {
     }
 }
