@@ -2,6 +2,9 @@ package forge.web.campaign.rogue;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
+import forge.StaticData;
+import forge.deck.CardPool;
+import forge.game.GameType;
 import forge.game.GameView;
 import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueDeck;
@@ -12,6 +15,7 @@ import forge.gamemodes.rogue.flow.RogueDecisions;
 import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.flow.RogueStart;
 import forge.gui.FThreads;
+import forge.localinstance.achievements.RogueCommanderAchievements;
 import forge.localinstance.skin.ISkinImage;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
@@ -24,10 +28,14 @@ import forge.web.WebSession.Stage;
 import forge.web.campaign.Campaign;
 import forge.web.campaign.rogue.RoguePages.Snapshot;
 import forge.web.campaign.rogue.WebRogueDecisions.Open;
+import forge.web.deck.DeckEditor;
+import forge.web.deck.DeckWorkspace;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.CampaignResult;
 import forge.web.protocol.Commands;
+import forge.web.protocol.FromBrowser.Bare;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
+import forge.web.protocol.FromBrowser.Plain;
 import forge.web.protocol.RogueProtocol.*;
 import forge.web.protocol.ToBrowser.DeckDetails;
 import forge.web.protocol.ToBrowser.DeckDetailsMessage;
@@ -42,6 +50,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Rogue Commander. There is one per server, because the run and the progress are one per profile, and the host's session attaches to it.
@@ -91,7 +100,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
 
     /**
      * Runs step as a job on the flow thread. It is refused while another job runs, when snapshot is not the latest,
-     * or when node is not negative and is not the current node.
+     * or when node is not negative and is not the current node. The run's deck editor is closed first, because the step may change the deck.
      */
     public boolean submit(final long snapshot, final int node, final Runnable step) {
         if (!busy.compareAndSet(false, true)) {
@@ -103,8 +112,58 @@ public final class RogueGame implements Campaign, IHasForgeLog {
                 return false;
             }
         }
-        worker.execute(job(step));
+        worker.execute(job(() -> {
+            closeEditor();
+            step.run();
+        }));
         return true;
+    }
+
+    /** Closes the run's deck editor, which drops its undo. Only the flow thread calls this. */
+    private void closeEditor() {
+        final Host h = host;
+        if (h != null) {
+            h.decks().closeCollectionDeck(h.session().browser());
+        }
+    }
+
+    /** Opens the run's deck in the editor, with the run's rules. Each change writes the deck back to the run and saves it, and a failed save is told. */
+    private void openEditor(final BrowserChannel channel) {
+        final RogueRun run = flow.run();
+        final Host h = host;
+        if (run == null || h == null) {
+            return;
+        }
+        final RunDeckRules rules = new RunDeckRules(run);
+        final DeckEditor.Collection collection = new DeckEditor.Collection(Localizer.getInstance().getMessage("lblRogueCommander"), CardPool::new,
+                c -> false, () -> { }, deck -> run.basicLands().stream().map(c -> StaticData.instance().getEditions().get(c.getEdition()))
+                .distinct().collect(Collectors.toList()), () -> { }, true, rules);
+        h.decks().openCollectionDeck(run.getCurrentDeck(), new DeckEditor.Run(deck -> {
+            final String failed = rules.save(deck);
+            if (failed != null) {
+                tell(failed);
+            }
+        }), GameType.RogueCommander, collection, true, channel);
+    }
+
+    /**
+     * Runs a deck editor command as a job, refused while another job runs. Closing is never refused: during a job it only closes,
+     * and otherwise leaving the editor evaluates the run's achievements, as desktop does.
+     */
+    private void deckCommand(final BrowserChannel channel, final Record command, final Host h) {
+        final boolean closing = command instanceof Bare b && b.t() == Plain.editorClose;
+        if (!busy.compareAndSet(false, true)) {
+            if (closing) {
+                DeckWorkspace.COMMANDS.run(h.decks(), channel, command);
+            }
+            return;
+        }
+        worker.execute(job(() -> {
+            DeckWorkspace.COMMANDS.run(h.decks(), channel, command);
+            if (closing && flow.run() != null) {
+                RogueCommanderAchievements.getInstance().evaluateRunAchievements(flow.run());
+            }
+        }));
     }
 
     /** The pages are published before the next command is accepted, so that command is checked against the state this step left. */
@@ -343,6 +402,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             return;
         }
         worker.execute(job(() -> {
+            closeEditor();
             try {
                 loadSaves();
             } catch (final UncheckedIOException e) {
@@ -426,6 +486,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             .on(RogueEnter.class, (g, ch, e) -> g.submit(e.snapshot(), e.node(), g.flow::enter))
             .on(RogueReroll.class, (g, ch, r) -> g.submit(r.snapshot(), r.node(), g.flow::rerollPlane))
             .on(RogueAbandon.class, (g, ch, a) -> g.submit(a.snapshot(), -1, g.flow::abandon))
+            .on(RogueEditDeck.class, (g, ch, d) -> g.submit(d.snapshot(), -1, () -> g.openEditor(ch)))
             .on(RogueAnswer.class, (g, ch, a) -> g.answer(ch, a.id(), a.value()))
             .on(RogueStartDeck.class, (g, ch, d) -> {
                 final DeckDetails details = RoguePages.startDeck(d.deck());
@@ -461,6 +522,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             }
             return;
         }
-        COMMANDS.run(this, channel, command);
+        if (!COMMANDS.run(this, channel, command) && DeckWorkspace.COMMANDS.handles(command)) {
+            deckCommand(channel, command, h);
+        }
     }
 }

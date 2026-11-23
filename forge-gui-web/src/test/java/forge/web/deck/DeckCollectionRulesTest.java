@@ -47,7 +47,7 @@ public class DeckCollectionRulesTest {
         }
 
         @Override
-        public void changed(final CardPool removed, final CardPool restored) {
+        public void changed(final CardPool removed, final CardPool restored, final boolean undo) {
             credits += cost(restored) - cost(removed);
         }
 

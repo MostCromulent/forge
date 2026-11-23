@@ -20,6 +20,9 @@ import type { Model } from '../model';
 import type { AskChoice, RogueAnnounce, Tell } from '../protocol';
 
 const TABS: [RogueTab, TextKey][] = [['runs', 'lblWebRogueRuns'], ['aether', 'lblRogueAether'], ['codex', 'lblRogueCodex'], ['history', 'lblRogueHistory']];
+/** The run's tabs. Deck opens the deck editor over the map, so the map stays the tab shown. */
+const RUN_TABS: [RunTab, TextKey][] = [['map', 'lblWebRogueMap'], ['deck', 'lblDeck']];
+type RunTab = 'map' | 'deck';
 
 /** Rogue Commander's page. The mode has no shelf of saved games, so the shell is always open. */
 export function RogueHub({ model, actions }: { model: Model; actions: Actions }) {
@@ -54,6 +57,13 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     else actions.campaignLeave();
   };
   useEscapeBack(back);
+  const editDeck = () => { if (home) actions.rogueEditDeck(home.snapshot); };
+  // Deck on Runs opens the run with its deck
+  useEffect(() => {
+    if (!inRun || ui.rogueRunTab !== 'deck' || !home) return;
+    ui.rogueRunTab = null;
+    editDeck();
+  }, [inRun, home?.snapshot]);
   useEffect(() => { if (choice.deck) actions.rogueStartDeck(choice.deck); }, [choice.deck]);
   const deck = fresh ? chosenDeck(fresh, choice) : '';
   const asking = fresh && choice.custom ? `${deck}|${choice.level}|${choice.mods.join()}` : null;
@@ -85,7 +95,12 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const alone = !!fresh && isPortrait() && (choice.customOpen || !!run);
   const bar = alone ? { ...home.bar, name: t(choice.customOpen ? 'lblRogueCustomRun' : 'lblRogueStartNewRun') } : home.bar;
   return <>
-    <CampaignBar bar={bar} tabs={inRun || alone ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog} />
+    {inRun ? <CampaignBar bar={bar} tabs={RUN_TABS} tab="map" setTab={to => {
+      // During a decision the deck is read only
+      if (to === 'deck' && scene) changeUi(u => { u.rogueDeckView = true; });
+      else if (to === 'deck') editDeck();
+    }} held={{}} leave={back} under={dialog} />
+      : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog} />}
     {!isPortrait() ? <div class="rg-body">{main}{question}</div>
       // On a phone a scene takes the page's place, and the bar it folds to lies over the page
       : scene && !folded ? <div class="camp-main" inert={dialog}><div class="rg-pbody">{question}</div></div> : <>{main}{question}</>}

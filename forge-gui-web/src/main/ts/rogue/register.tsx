@@ -38,6 +38,8 @@ declare module '../ui' {
 
 interface RogueActions {
   rogueAbandon(snapshot: number): void;
+  /** Opens the run's deck in the deck editor. */
+  rogueEditDeck(snapshot: number): void;
   /** deck is empty when a custom run generates its commander. */
   rogueBegin(snapshot: number, deck: string, custom: boolean, modifications: string[], descension: number): void;
   rogueStartDeck(deck: string): void;
@@ -77,6 +79,7 @@ registerMode({
   },
   actions: (send, model, schedule): RogueActions => ({
     rogueAbandon: snapshot => send({ t: 'rogueAbandon', snapshot }),
+    rogueEditDeck: snapshot => send({ t: 'rogueEditDeck', snapshot }),
     rogueBegin: (snapshot, deck, custom, modifications, descension) => send({ t: 'rogueBegin', snapshot, deck, custom, modifications, descension }),
     rogueStartDeck: deck => send({ t: 'rogueStartDeck', deck }),
     rogueChoose: (deck, modifications, descension, toggle) => send({ t: 'rogueChoose', deck, modifications, descension, toggle }),

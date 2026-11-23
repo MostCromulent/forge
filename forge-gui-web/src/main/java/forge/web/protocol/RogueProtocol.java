@@ -117,6 +117,11 @@ public final class RogueProtocol {
     public record RogueAbandon(long snapshot) {
     }
 
+    /** Opens the run's deck in the deck editor. */
+    @Command("rogueEditDeck")
+    public record RogueEditDeck(long snapshot) {
+    }
+
     /** deck is a Rogue deck's name, or empty when a custom run generates its commander. modifications are CustomRunModification names. */
     @Command("rogueBegin")
     public record RogueBegin(long snapshot, String deck, boolean custom, List<String> modifications, int descension) {
