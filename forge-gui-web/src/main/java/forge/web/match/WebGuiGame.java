@@ -193,7 +193,7 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     /** Refuses another game of this match. The host would start one when asked, even after the match is over. */
-    public void allowOneGame() {
+    public void oneGameOnly() {
         oneGame = true;
     }
 

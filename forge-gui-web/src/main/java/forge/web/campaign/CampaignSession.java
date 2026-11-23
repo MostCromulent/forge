@@ -80,7 +80,7 @@ public final class CampaignSession implements Campaigns {
                 prepared.human().getPlayer().setAvatarIndex(looks.avatar());
                 prepared.human().getPlayer().setSleeveIndex(looks.sleeve());
                 if (campaign.oneGame()) {
-                    gui.allowOneGame();
+                    gui.oneGameOnly();
                 }
                 final NetplaySeat local = session.local();
                 local.openAlone(session.playerName(), gui).startPrepared(prepared, local.webSeat());
@@ -136,6 +136,13 @@ public final class CampaignSession implements Campaigns {
         });
     }
 
+    /** Sends a mode's answer. A mode without that page has none. */
+    private static void send(final BrowserChannel channel, final Record answer) {
+        if (answer != null) {
+            channel.send(answer);
+        }
+    }
+
     /** The commands every mode's pages share. Each mode's own are in its table. */
     public static final Commands<CampaignSession> COMMANDS = new Commands<CampaignSession>()
             // A campaign is Forge's own, with one per process, so only the host may open it
@@ -152,11 +159,11 @@ public final class CampaignSession implements Campaigns {
             }))
             .on(CampaignPlain.campaignLeave, (s, ch, l) -> s.run(() -> {
                 final Stage now = s.session.stage();
-                if (now instanceof InCampaign c && s.modes.get(c.mode()).mayLeave(c.save())) {
-                    if (c.save() == null) {
-                        s.session.move(now, new Menu());
-                    } else {
+                if (now instanceof InCampaign c) {
+                    if (c.save() != null) {
                         s.open(c.mode(), null);
+                    } else if (s.modes.get(c.mode()).mayLeave(null)) {
+                        s.session.move(now, new Menu());
                     }
                 }
             }))
@@ -166,14 +173,14 @@ public final class CampaignSession implements Campaigns {
                 return null;
             })))
             .on(CampaignPlain.rewardClaim, inOpen((s, ch, campaign, c) -> campaign.claim(s.host)))
-            .on(CampaignStatsQuery.class, inOpen((s, ch, campaign, q) -> ch.send(campaign.stats(q.scope()))))
-            .on(CampaignPlain.campaignPrefs, inMode((s, ch, campaign, c) -> ch.send(campaign.prefs(null))))
-            .on(CampaignPref.class, inMode((s, ch, campaign, p) -> ch.send(campaign.prefs(campaign.setPref(p.key(), p.value())))))
+            .on(CampaignStatsQuery.class, inOpen((s, ch, campaign, q) -> send(ch, campaign.stats(q.scope()))))
+            .on(CampaignPlain.campaignPrefs, inMode((s, ch, campaign, c) -> send(ch, campaign.prefs(null))))
+            .on(CampaignPref.class, inMode((s, ch, campaign, p) -> send(ch, campaign.prefs(campaign.setPref(p.key(), p.value())))))
             .on(CampaignPlain.campaignPrefsReset, inMode((s, ch, campaign, c) -> {
                 campaign.resetPrefs();
-                ch.send(campaign.prefs(null));
+                send(ch, campaign.prefs(null));
             }))
-            .on(CampaignPlain.trading, inOpen((s, ch, campaign, c) -> ch.send(campaign.trading())))
+            .on(CampaignPlain.trading, inOpen((s, ch, campaign, c) -> send(ch, campaign.trading())))
             .on(Trade.class, inOpen((s, ch, campaign, trade) -> {
                 final String problem = campaign.trade(trade.source(), trade.picks());
                 if (problem != null) {
@@ -181,11 +188,8 @@ public final class CampaignSession implements Campaigns {
                 }
                 // The traded cards may have been on any of the campaign's pages
                 campaign.page().forEach(m -> ch.send(m));
-                final Reward opened = campaign.reward();
-                if (opened != null) {
-                    ch.send(opened);
-                }
-                ch.send(campaign.trading());
+                send(ch, campaign.reward());
+                send(ch, campaign.trading());
             }));
 
     @Override
@@ -231,7 +235,7 @@ public final class CampaignSession implements Campaigns {
         }
         if (command instanceof CatalogueQuery q && q.source() != null) {
             // A campaign's own cards, which do not need an open deck
-            inOpen((s, ch, campaign, c) -> ch.send(campaign.cards(q))).run(this, channel, command);
+            inOpen((s, ch, campaign, c) -> send(ch, campaign.cards(q))).run(this, channel, command);
             return true;
         }
         if (!(session.stage() instanceof InCampaign)) {
@@ -249,10 +253,7 @@ public final class CampaignSession implements Campaigns {
     @Override
     public void reconnected(final BrowserChannel channel, final Stage now) {
         if (now instanceof Playing p && p.back() instanceof InCampaign c) {
-            final Record result = modes.get(c.mode()).result();
-            if (result != null) {
-                channel.send(result);
-            }
+            send(channel, modes.get(c.mode()).result());
         } else if (now instanceof InCampaign c && modes.get(c.mode()).runsItself()) {
             show();
         } else if (now instanceof InCampaign) {
@@ -321,7 +322,7 @@ public final class CampaignSession implements Campaigns {
         if (!session.hosting() || campaign == null || !(from instanceof Menu || from instanceof InCampaign)) {
             return;
         }
-        if (from instanceof InCampaign c && !c.mode().equals(mode) && !modes.get(c.mode()).mayLeave(c.save())) {
+        if (from instanceof InCampaign c && !modes.get(c.mode()).mayLeave(c.save())) {
             return;
         }
         campaign.opening(save, () -> {
@@ -344,7 +345,7 @@ public final class CampaignSession implements Campaigns {
         }
         final Campaign campaign = modes.get(c.mode());
         final String problem = change.apply(campaign);
-        channel.send(campaign.saves());
+        campaign.home().forEach(m -> channel.send(m));
         // The start page's Resume button names the save played last
         channel.send(session.hello());
         // Sent last, because the browser clears any error on each hello

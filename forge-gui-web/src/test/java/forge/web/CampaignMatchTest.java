@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.gson.JsonObject;
 import forge.LobbyPlayer;
 import forge.game.Game;
 import forge.game.GameRules;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** Tests how a campaign mode starts and leaves a match, with a mode that has no pages. */
@@ -35,6 +37,9 @@ public class CampaignMatchTest extends WebHubTest {
         private Host host;
         private final AtomicInteger gameOvers = new AtomicInteger();
         private final List<String> leaving = new CopyOnWriteArrayList<>();
+        private final List<String> ran = new CopyOnWriteArrayList<>();
+        private volatile boolean stays;
+        private volatile boolean runsItself;
 
         @Override
         public void becameHost(final Host h) {
@@ -44,6 +49,21 @@ public class CampaignMatchTest extends WebHubTest {
         @Override
         public boolean handles(final Record command) {
             return false;
+        }
+
+        @Override
+        public boolean runsItself() {
+            return runsItself;
+        }
+
+        @Override
+        public boolean mayLeave(final String save) {
+            return !stays;
+        }
+
+        @Override
+        public void claim(final Host h) {
+            ran.add(Thread.currentThread().getName());
         }
 
         @Override
@@ -89,6 +109,7 @@ public class CampaignMatchTest extends WebHubTest {
 
         @Override
         public void handle(final BrowserChannel channel, final Record command, final String save, final Host h) {
+            ran.add(Thread.currentThread().getName());
         }
     }
 
@@ -120,6 +141,9 @@ public class CampaignMatchTest extends WebHubTest {
 
     @AfterMethod(alwaysRun = true)
     public void leaveTheMode() throws InterruptedException {
+        mode.stays = false;
+        mode.runsItself = false;
+        mode.ran.clear();
         final TestBrowser host = connect("host");
         if ("playing".equals(host.hello.get("screen").getAsString())) {
             send(host, TestBrowser.action("leave"));
@@ -177,6 +201,57 @@ public class CampaignMatchTest extends WebHubTest {
         startMatch(null);
         Assert.assertEquals(failures.get(), 1);
         Assert.assertNull(sessions.hostLobby());
+    }
+
+    // Fails if a match that cannot be built, or whose undoing fails as well, leaves the player in no match, or is undone twice or before the player is back
+    @Test(timeOut = 120_000)
+    public void aMatchThatCannotBeBuiltGoesBackToItsMode() throws Exception {
+        final TestBrowser host = hostIn(MODE);
+        final WebSession.Stage before = session.stage();
+        final List<WebSession.Stage> undone = new CopyOnWriteArrayList<>();
+        Assert.assertThrows(RuntimeException.class, () -> mode.host.startMatch(MODE, SAVE, () -> {
+            throw new NoClassDefFoundError("a card");
+        }, () -> {
+            undone.add(session.stage());
+            throw new IllegalStateException("cannot be undone");
+        }));
+        Assert.assertEquals(undone, List.of(before));
+        Assert.assertEquals(session.stage(), before);
+        host.awaitMatching("error", e -> str(e, "message").contains("a card"), "the player was not told");
+    }
+
+    // Fails if a mode that does not let its save be left loses it to its own home, another save, another mode or the start page
+    @Test(timeOut = 120_000)
+    public void aSaveThatMayNotBeLeftStaysOpen() throws Exception {
+        final TestBrowser host = hostIn(MODE);
+        final WebSession.Stage before = session.stage();
+        mode.stays = true;
+        for (final JsonObject command : List.of(message("campaignOpen", "mode", MODE, "resume", false), message("campaignLoad", "name", "another"),
+                message("campaignOpen", "mode", "other", "resume", false), TestBrowser.action("campaignLeave"))) {
+            sessions.onMessage(host, command);
+            awaitCampaignThread();
+            Assert.assertSame(session.stage(), before, command.toString());
+        }
+    }
+
+    // Fails if a command of a mode with a thread of its own waits for the campaign thread, or a command every mode shares does not
+    @Test(timeOut = 120_000)
+    public void aModeThatRunsItselfTakesItsOwnCommandsAtOnce() throws Exception {
+        final TestBrowser host = hostIn(MODE);
+        mode.runsItself = true;
+        // Any mode's own command goes to the open mode
+        sessions.onMessage(host, TestBrowser.action("conquestMove"));
+        Assert.assertEquals(mode.ran, List.of(Thread.currentThread().getName()));
+        sessions.onMessage(host, TestBrowser.action("rewardClaim"));
+        awaitCampaignThread();
+        Assert.assertEquals(mode.ran, List.of(Thread.currentThread().getName(), "WebCampaign"));
+    }
+
+    /** Waits for the campaign work queued so far. */
+    private void awaitCampaignThread() throws InterruptedException {
+        final CountDownLatch done = new CountDownLatch(1);
+        mode.host.run(done::countDown);
+        done.await();
     }
 
     // Fails if the human plays with the player's own avatar and sleeve, or under a name the board cannot find the seat by

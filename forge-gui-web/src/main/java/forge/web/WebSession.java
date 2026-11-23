@@ -787,13 +787,16 @@ public final class WebSession implements IHasForgeLog {
         });
         try {
             start.accept(playing.gui());
-        } catch (final RuntimeException ex) {
+        } catch (final RuntimeException | Error ex) {
             netLog.error(ex, "Could not start the match");
-            failed.run();
             local.endMatch();
             move(playing, back);
-            tell(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
-            campaigns.show();
+            try {
+                failed.run();
+            } finally {
+                tell(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
+                campaigns.show();
+            }
         }
     }
 

@@ -8,6 +8,7 @@ import forge.game.GameType;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.util.Localizer;
 import forge.web.WebTestSupport;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.FromBrowser.Bare;
@@ -208,7 +209,7 @@ public class DeckCollectionRulesTest {
     public void wastesAreRefusedWhenNotListed() {
         final DeckEditor e = editor(deck(), true);
         Assert.assertNotNull(e.add("Wastes", DeckSection.Main, 1));
-        Assert.assertNotNull(e.setLands(Map.of("Wastes", 1)));
+        Assert.assertEquals(e.setLands(Map.of("Wastes", 1)), Localizer.getInstance().getMessage(DeckEditor.NOT_OWNED));
         assertMain(e, deck());
         e.state().lands().forEach(l -> Assert.assertEquals(l.allowed(), l.name().equals("Forest"), l.name()));
         Assert.assertNull(e.add("Forest", DeckSection.Main, 1));

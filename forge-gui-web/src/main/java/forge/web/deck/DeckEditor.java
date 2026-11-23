@@ -358,8 +358,13 @@ public final class DeckEditor {
             if (!BASICS.containsKey(e.getKey())) {
                 return Localizer.getInstance().getMessage("lblWebEditorNotBasic", String.valueOf(e.getKey()));
             }
-            if (e.getValue() > deck.getMain().countByName(e.getKey()) && !landAllowed(e.getKey())) {
-                return Localizer.getInstance().getMessage("lblWebEditorOutsideColours", e.getKey());
+            if (e.getValue() > deck.getMain().countByName(e.getKey())) {
+                if (!freeBasic(e.getKey())) {
+                    return Localizer.getInstance().getMessage(NOT_OWNED);
+                }
+                if (!landAllowed(e.getKey())) {
+                    return Localizer.getInstance().getMessage("lblWebEditorOutsideColours", e.getKey());
+                }
             }
         }
         return change(countsByLand.keySet().iterator().next(), () -> {
