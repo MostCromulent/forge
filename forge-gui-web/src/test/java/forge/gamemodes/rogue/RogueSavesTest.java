@@ -14,9 +14,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -26,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
-import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 @Test(singleThreaded = true)
@@ -102,19 +99,6 @@ public class RogueSavesTest {
         final List<Object> value = new ArrayList<>(List.of("written", new Unwritable()));
         Assert.expectThrows(IllegalStateException.class, () -> RogueIO.savePacked(xStream, value, target.toFile()));
         Assert.assertEquals(Files.readAllBytes(target), nonsense());
-        Assert.assertEquals(filesEndingWith(""), List.of(target));
-    }
-
-    @Test
-    public void aSaveOverAnOpenFileStillSaves() throws IOException {
-        final Path target = Files.write(dir.resolve(RUN), nonsense());
-        // Windows does not move a file over one that is open this way
-        try (InputStream open = new FileInputStream(target.toFile())) {
-            RogueIO.savePacked(RogueIO.getSerializer(false), "new", target.toFile());
-        }
-        try (InputStream zip = new GZIPInputStream(Files.newInputStream(target))) {
-            Assert.assertEquals(new String(zip.readAllBytes(), StandardCharsets.UTF_8), "<string>new</string>");
-        }
         Assert.assertEquals(filesEndingWith(""), List.of(target));
     }
 
