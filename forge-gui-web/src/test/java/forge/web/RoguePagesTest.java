@@ -2,6 +2,7 @@ package forge.web;
 
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.RogueStats;
 import forge.gamemodes.rogue.effect.ChestEffect;
 import forge.gamemodes.rogue.effect.NPCEffect;
 import forge.gamemodes.rogue.effect.RogueEffectComposite;
@@ -13,6 +14,8 @@ import forge.util.MyRandom;
 import forge.web.campaign.rogue.RoguePages;
 import forge.web.protocol.RogueProtocol.MapLink;
 import forge.web.protocol.RogueProtocol.MapNode;
+import forge.web.protocol.RogueProtocol.RogueAether;
+import forge.web.protocol.RogueProtocol.RogueHome;
 import forge.web.protocol.RogueProtocol.RogueMap;
 import forge.web.protocol.RogueProtocol.RogueTraits;
 import forge.web.protocol.RogueProtocol.Trait;
@@ -133,6 +136,22 @@ public class RoguePagesTest {
         run.setDescensionLevel(2);
         Assert.assertEquals(traits().traits().size(), RogueEffectComposite.getAllEffects(run).size());
         Assert.assertEquals(traits().traits().stream().map(Trait::name).distinct().count(), 6);
+    }
+
+    // Fails if Sparks or an Aether Upgrade are shown before Descension Mode is unlocked
+    @Test
+    public void sparksAreHiddenBeforeDescension() {
+        final RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        progress.updateStat(RogueStats.RUNS_COMPLETED, 1, run);
+        progress.addSparks(3);
+        Assert.assertFalse(progress.isDescensionModeUnlocked());
+        final List<Record> pages = RoguePages.build(flow, progress, 1).pages();
+        final RogueHome home = pages.stream().filter(RogueHome.class::isInstance).map(RogueHome.class::cast).findFirst().orElseThrow();
+        Assert.assertTrue(home.bar().balances().stream().noneMatch(b -> "ICO_QUEST_ELIXIR".equals(b.icon())), "the bar shows Sparks");
+        final RogueAether aether = pages.stream().filter(RogueAether.class::isInstance).map(RogueAether.class::cast).findFirst().orElseThrow();
+        Assert.assertFalse(aether.descension());
+        Assert.assertNull(aether.upgrade());
+        Assert.assertTrue(aether.locked().isEmpty(), "works an upgrade unlocks are shown");
     }
 
     // Fails if a trait is named by its card, whose name says where the trait came from

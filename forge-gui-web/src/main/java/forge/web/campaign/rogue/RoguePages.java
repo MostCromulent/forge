@@ -1,6 +1,8 @@
 package forge.web.campaign.rogue;
 
+import forge.StaticData;
 import forge.deck.Deck;
+import forge.gamemodes.rogue.AetherUpgrade;
 import forge.gamemodes.rogue.CodexHelper;
 import forge.gamemodes.rogue.KeywordHint;
 import forge.gamemodes.rogue.RogueConfig;
@@ -36,11 +38,16 @@ import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckFacts;
 import forge.web.protocol.CampaignProtocol.Balance;
 import forge.web.protocol.CampaignProtocol.CampaignBar;
+import forge.web.protocol.RogueProtocol.AetherGroup;
+import forge.web.protocol.RogueProtocol.AetherOffer;
+import forge.web.protocol.RogueProtocol.AetherRank;
+import forge.web.protocol.RogueProtocol.AetherWork;
 import forge.web.protocol.RogueProtocol.DescensionStep;
 import forge.web.protocol.RogueProtocol.MapLink;
 import forge.web.protocol.RogueProtocol.MapNode;
 import forge.web.protocol.RogueProtocol.Modification;
 import forge.web.protocol.RogueProtocol.Part;
+import forge.web.protocol.RogueProtocol.RogueAether;
 import forge.web.protocol.RogueProtocol.RogueCard;
 import forge.web.protocol.RogueProtocol.RogueCommander;
 import forge.web.protocol.RogueProtocol.RogueHome;
@@ -76,6 +83,9 @@ public final class RoguePages {
     private static final Map<String, Part> MAP_TERMS = Arrays.stream(new KeywordHint[] {KeywordHint.PLANEBOUND, KeywordHint.WRATHFUL, KeywordHint.CURSED,
             KeywordHint.CARD_REWARD}).collect(Collectors.toMap(KeywordHint::name, h -> new Part("term", h.getTitle(), null, h.getTitle(), h.getHintText())));
 
+    /** The card whose art is drawn behind the Aether, which has no subject of its own. */
+    private static final String AETHER_ART = "Teferi, Temporal Archmage";
+
     /** The picture of each planebound's commander by its deck's path, read from the deck file the first time it is drawn. */
     private static final Map<String, String> PLANEBOUND_ART = new ConcurrentHashMap<>();
 
@@ -93,11 +103,13 @@ public final class RoguePages {
         if (run == null) {
             pages.add(home(null, progress, number));
             pages.add(roster(progress));
+            pages.add(aether(progress));
             return new Snapshot(number, null, flow.timedRun(), -1, pages);
         }
         run.getPath().revealVisible(run);
         pages.add(home(run, progress, number));
         pages.add(roster(progress));
+        pages.add(aether(progress));
         pages.add(map(flow, run, progress, number));
         pages.add(new RogueRunDeck(details("rogue:run", run.getCurrentCommanderName(), run.getCurrentDeck())));
         pages.add(new RogueTraits(RogueEffectComposite.getAllEffects(run).stream().map(e -> trait(e, run))
@@ -168,6 +180,49 @@ public final class RoguePages {
                     runs, wins, progress.getMaxDescensionWon(name), seen, startable, lock, next, null));
         }
         return commanders;
+    }
+
+    private static RogueAether aether(final RogueMetaProgress progress) {
+        final int level = progress.getAetherUpgradeLevel();
+        final Set<AetherEffect> active = progress.getActiveAetherEffects();
+        final List<AetherWork> works = new ArrayList<>();
+        for (final AetherEffect work : AetherEffect.values()) {
+            if (!work.isAccessibleAt(level)) {
+                continue;
+            }
+            final int rank = progress.getAetherEffectRank(work);
+            final List<AetherRank> ranks = new ArrayList<>();
+            for (int r = 1; r <= work.getEffectiveMaxRank(level); r++) {
+                ranks.add(new AetherRank(work.getDescriptionForRank(r), work.getEchoCostForRank(r)));
+            }
+            works.add(new AetherWork(work.name(), work.getDisplayName(), work.getDescriptionWithAllRanks(rank, level), work.getRankValues(level), rank,
+                    active.contains(work), progress.canToggleAether(work), progress.nextRankCost(work), progress.canAffordNextRank(work), ranks));
+        }
+        final boolean descension = progress.isDescensionModeUnlocked();
+        final AetherUpgrade next = descension ? AetherUpgrade.forLevel(level + 1) : null;
+        final List<AetherGroup> locked = new ArrayList<>();
+        for (final AetherUpgrade upgrade : AetherUpgrade.values()) {
+            if (!descension || upgrade.level <= level) {
+                continue;
+            }
+            final List<String> names = Arrays.stream(AetherEffect.values()).filter(w -> w.isAccessibleAt(upgrade.level) && !w.isAccessibleAt(upgrade.level - 1))
+                    .map(AetherEffect::getDisplayName).toList();
+            if (!names.isEmpty()) {
+                locked.add(new AetherGroup(Localizer.getInstance().getMessage("lblWebRogueUnlocks", upgrade.name), names));
+            }
+        }
+        return new RogueAether(works, progress.getActiveAetherEffectCount(), progress.getActiveAetherEffectSlots(), descension,
+                next == null ? null : new AetherOffer(next.name, next.description, next.sparkCost, next.echoCost, progress.canAffordUpgrade(next)),
+                locked, picture(AETHER_ART));
+    }
+
+    /** A card's picture by its name, for the art behind a page with no subject of its own. Null when no card has that name. */
+    static String picture(final String name) {
+        PaperCard card = StaticData.instance().getCommonCards().getCard(name);
+        if (card == null) {
+            card = StaticData.instance().getVariantCards().getCard(name);
+        }
+        return card == null ? null : card.getImageKey(false);
     }
 
     /** The Rogue deck of that name, or null for an unknown one. */

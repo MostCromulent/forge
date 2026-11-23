@@ -9,9 +9,11 @@ import forge.game.GameType;
 import forge.game.GameView;
 import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.match.PreparedMatch.Looks;
+import forge.gamemodes.rogue.AetherUpgrade;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueWinLoseController;
+import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.CustomRunModification;
 import forge.gamemodes.rogue.flow.RogueDecisions;
 import forge.gamemodes.rogue.flow.RogueDecisions.RogueMatch;
@@ -55,6 +57,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -617,6 +621,42 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
     }
 
+    /** Runs a change to the progress as a job, as submit does. Nothing changes while Aether, Codex and History are locked. */
+    private boolean change(final long snapshot, final Consumer<RogueMetaProgress> change) {
+        return submit(snapshot, -1, () -> {
+            final RogueMetaProgress progress = RogueMetaProgress.getInstance();
+            if (RogueStart.tabsUnlocked(progress)) {
+                change.accept(progress);
+            }
+        });
+    }
+
+    /** As change, for an Aetherwork named by the browser. An unknown name changes nothing. */
+    private boolean work(final long snapshot, final String name, final BiConsumer<RogueMetaProgress, AetherEffect> change) {
+        return change(snapshot, progress -> {
+            final AetherEffect work = EnumUtils.getEnum(AetherEffect.class, name);
+            if (work != null) {
+                change.accept(progress, work);
+            }
+        });
+    }
+
+    private void expand(final RogueMetaProgress progress) {
+        final AetherUpgrade next = AetherUpgrade.forLevel(progress.getAetherUpgradeLevel() + 1);
+        if (progress.isDescensionModeUnlocked() && next != null && progress.purchaseAetherUpgrade(next.level)) {
+            final Localizer text = Localizer.getInstance();
+            announce(new RogueAnnounce("unlock", text.getMessage("lblRogueAetherUpgradeUnlocked"),
+                    text.getMessage("lblRogueUnlockedAetherUpgrade", next.name, next.description), null));
+        }
+    }
+
+    private static void reset(final RogueMetaProgress progress, final String kind) {
+        switch (kind) {
+            case "aether" -> progress.resetAetherEffects();
+            default -> { }
+        }
+    }
+
     /** Null when a name is not a modification. */
     private static Set<CustomRunModification> modifications(final List<String> names) {
         final Set<CustomRunModification> modifications = EnumSet.noneOf(CustomRunModification.class);
@@ -658,6 +698,21 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             .on(RogueAbandon.class, (g, ch, a) -> g.submit(a.snapshot(), -1, g.flow::abandon))
             .on(RogueEditDeck.class, (g, ch, d) -> g.submit(d.snapshot(), -1, () -> g.openEditor(ch)))
             .on(RogueAnswer.class, (g, ch, a) -> g.answer(ch, a.id(), a.value()))
+            .on(RogueAetherUpgrade.class, (g, ch, u) -> g.work(u.snapshot(), u.work(), (progress, work) -> {
+                final boolean built = progress.getAetherEffectRank(work) > 0;
+                if (progress.upgradeAetherEffect(work) && !built) {
+                    progress.activateAetherEffect(work);
+                }
+            }))
+            .on(RogueAetherToggle.class, (g, ch, a) -> g.work(a.snapshot(), a.work(), (progress, work) -> {
+                if (a.on()) {
+                    progress.activateAetherEffect(work);
+                } else {
+                    progress.deactivateAetherEffect(work);
+                }
+            }))
+            .on(RogueAetherExpand.class, (g, ch, e) -> g.change(e.snapshot(), g::expand))
+            .on(RogueReset.class, (g, ch, r) -> g.change(r.snapshot(), progress -> reset(progress, r.kind())))
             .on(RogueStartDeck.class, (g, ch, d) -> {
                 final DeckDetails details = RoguePages.startDeck(d.deck());
                 if (details != null) {

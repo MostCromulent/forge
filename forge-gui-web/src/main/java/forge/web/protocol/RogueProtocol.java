@@ -137,6 +137,54 @@ public final class RogueProtocol {
             boolean loot) {
     }
 
+    /**
+     * The Aether. works are the Aetherworks the upgrade level reaches, and used and slots count the Aether Energy in use and in all.
+     * descension says whether Descension Mode is unlocked, before which there are no Sparks and no upgrades. upgrade is the next Aether Upgrade,
+     * or null with none left or before Descension. locked are the Aetherworks later upgrades unlock. art is the picture behind the page.
+     */
+    @Message("rogueAether")
+    public record RogueAether(List<AetherWork> works, int used, int slots, boolean descension, @Nullable AetherOffer upgrade, List<AetherGroup> locked,
+            @Nullable String art) {
+    }
+
+    /**
+     * id is an AetherEffect name. text is its description with the value of every rank, values those values, and rank the rank built, 0 for none.
+     * ranks give each rank's sentence and price. cost is the next rank's price, or -1 at the highest. toggle says whether it can be switched now,
+     * and afford whether the Echoes pay for the next rank.
+     */
+    public record AetherWork(String id, String name, String text, List<Integer> values, int rank, boolean on, boolean toggle, int cost, boolean afford,
+            List<AetherRank> ranks) {
+    }
+
+    public record AetherRank(String text, int cost) {
+    }
+
+    public record AetherOffer(String name, String text, int sparks, int echoes, boolean afford) {
+    }
+
+    /** title names the upgrade that unlocks the works. */
+    public record AetherGroup(String title, List<String> works) {
+    }
+
+    /** Builds an Aetherwork or raises its rank. One built first is switched on when there is Aether Energy to spare. */
+    @Command("rogueAetherUpgrade")
+    public record RogueAetherUpgrade(long snapshot, String work) {
+    }
+
+    @Command("rogueAetherToggle")
+    public record RogueAetherToggle(long snapshot, String work, boolean on) {
+    }
+
+    /** Buys the next Aether Upgrade. */
+    @Command("rogueAetherExpand")
+    public record RogueAetherExpand(long snapshot) {
+    }
+
+    /** kind is "aether", which refunds the Echoes spent on Aetherworks. */
+    @Command("rogueReset")
+    public record RogueReset(long snapshot, String kind) {
+    }
+
     @Command("rogueSelect")
     public record RogueSelect(long snapshot, int node) {
     }
