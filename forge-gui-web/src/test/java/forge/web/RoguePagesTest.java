@@ -2,6 +2,7 @@ package forge.web;
 
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.RogueRunHistoryEntry;
 import forge.gamemodes.rogue.RogueStats;
 import forge.gamemodes.rogue.effect.ChestEffect;
 import forge.gamemodes.rogue.effect.NPCEffect;
@@ -14,6 +15,8 @@ import forge.util.MyRandom;
 import forge.web.campaign.rogue.RoguePages;
 import forge.web.protocol.RogueProtocol.CodexItem;
 import forge.web.protocol.RogueProtocol.CodexRow;
+import forge.web.protocol.RogueProtocol.HistoryRun;
+import forge.web.protocol.RogueProtocol.HistoryStep;
 import forge.web.protocol.RogueProtocol.MapLink;
 import forge.web.protocol.RogueProtocol.MapNode;
 import forge.web.protocol.RogueProtocol.RogueAether;
@@ -28,6 +31,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Random;
 
@@ -194,5 +198,38 @@ public class RoguePagesTest {
     public void namesHaveNoCardPrefix() {
         withTraits();
         Assert.assertEquals(traits().traits().get(0).name(), "Banner Of Champions");
+    }
+
+    /** The one run in the history, after the first run completed opens History. */
+    private HistoryRun onlyRun(final RogueMetaProgress progress, final RogueRunHistoryEntry entry) {
+        progress.addRunHistoryEntry(entry);
+        progress.updateStat(RogueStats.RUNS_COMPLETED, 1, run);
+        final List<HistoryRun> runs = RoguePages.history(progress).runs();
+        Assert.assertEquals(runs.size(), 1);
+        return runs.get(0);
+    }
+
+    // Fails if an Endless run's defeat shows as a defeat, or loses who defeated it
+    @Test
+    public void anEndlessDefeatShowsAsVictoryWithWhoDefeatedIt() {
+        run.setEndlessLevel(2);
+        final HistoryRun shown = onlyRun(RogueMetaProgress.getInstance(), RogueRunHistoryEntry.fromRun(run, "DEFEAT", "Trostani, Selesnya's Voice"));
+        Assert.assertEquals(shown.outcome(), "VICTORY");
+        Assert.assertEquals(shown.line(), "Defeated by: Trostani, Selesnya's Voice · Endless Level 2");
+    }
+
+    // Fails if a path label that names no plane is dropped or breaks the page, or a plane's label loses its picture
+    @Test
+    public void anOldPathStringWithNoPlaneStillShows() throws ReflectiveOperationException {
+        final RogueRunHistoryEntry entry = RogueRunHistoryEntry.fromRun(run, "ABANDONED", null);
+        final Field path = RogueRunHistoryEntry.class.getDeclaredField("path");
+        path.setAccessible(true);
+        path.set(entry, List.of("Trostani, Selesnya's Voice", "Sanctum", "Naya (Rafiq of the Many)"));
+        final List<HistoryStep> steps = onlyRun(RogueMetaProgress.getInstance(), entry).steps();
+        Assert.assertEquals(steps.stream().map(HistoryStep::kind).toList(), List.of("PLANEBOUND", "SANCTUM", "PLANEBOUND"));
+        Assert.assertNull(steps.get(0).image());
+        Assert.assertEquals(steps.get(0).name(), "Trostani, Selesnya's Voice");
+        Assert.assertNotNull(steps.get(2).image(), "Naya has no picture");
+        Assert.assertEquals(steps.get(2).name(), "Rafiq of the Many");
     }
 }

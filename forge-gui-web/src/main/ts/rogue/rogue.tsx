@@ -6,6 +6,8 @@ import { imageUrl, skinIconUrl } from '../images';
 import { isPortrait } from '../form';
 import { playSound } from '../audio';
 import { useEscapeBack } from '../header';
+import { useDismiss } from '../hooks';
+import { setting } from '../settings';
 import { changeUi, ui } from '../ui';
 import { t, type TextKey } from '../text';
 import { ROGUE_ICONS } from './icons';
@@ -19,10 +21,11 @@ import { Terms } from './terms';
 import { TraitsPage } from './traits';
 import { AetherPage, aetherMenu } from './aether';
 import { CodexPage, type CodexTab } from './codex';
+import { HistoryPage } from './history';
 import type { RogueTab } from './register';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { RogueAnnounce, Tell } from '../protocol';
+import type { RogueAnnounce, RogueHome, Tell } from '../protocol';
 
 const TABS: [RogueTab, TextKey][] = [['runs', 'lblWebRogueRuns'], ['aether', 'lblRogueAether'], ['codex', 'lblRogueCodex'], ['history', 'lblRogueHistory']];
 /** The run's tabs. Deck opens the deck editor over the map, so the map stays the tab shown. */
@@ -35,6 +38,13 @@ const RESETS: Record<string, [TextKey, TextKey]> = {
   tutorials: ['lblRogueResetTutorials', 'lblRogueResetTutorialsConfirm'],
   progress: ['lblRogueResetGameProgression', 'lblRogueResetProgressConfirm'],
 };
+/** The dev mode tools, as desktop's dev buttons. Two of them switch, and their names say what the next press does. */
+const devTools = (home: RogueHome): [string, TextKey][] => [
+  ['unlockAll', home.devUnlockAll ? 'lblRogueDevLockCommanders' : 'lblRogueDevUnlockAll'], ['npcProgress', 'lblRogueDevNpcProgress'],
+  ['maxAether', home.aetherMaxed ? 'lblRogueDevResetAether' : 'lblRogueDevMaxAether'], ['echoes', 'lblRogueDevGainEchoes'],
+  ['sparks', 'lblRogueDevGainSparks'], ['codex', 'lblRogueDevUnlockCodex'],
+];
+const RUN_TOOLS: [string, TextKey][] = [['nextNode', 'lblRogueDevNextNode'], ['winRun', 'lblRogueDevWinRun']];
 const glyph = (name: string) => <Icon d={ROGUE_ICONS[name as keyof typeof ROGUE_ICONS]} cls="rg-ic" />;
 
 /** Rogue Commander's page. The mode has no shelf of saved games, so the shell is always open. */
@@ -45,6 +55,10 @@ export function RogueHub({ model, actions }: { model: Model; actions: Actions })
 function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const [abandoning, setAbandoning] = useState(false);
   const [resetting, setResetting] = useState<string | null>(null);
+  const [devOpen, setDevOpen] = useState(false);
+  const devMenu = useRef<HTMLDivElement>(null);
+  useDismiss(devOpen, devMenu, () => setDevOpen(false));
+  const [historyDeck, setHistoryDeck] = useState<number | null>(null);
   const [choice, setChoice] = useState<Choice>(NO_CHOICE);
   const home = model.rogueHome;
   const roster = model.rogueRoster;
@@ -67,7 +81,9 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   // Back goes from the run to Runs, from another tab to Runs, from the commanders to the unfinished run, and from Runs to the play menu
   const back = () => {
     const step = fresh && backFrom(fresh, choice);
-    if (abandoning) setAbandoning(false);
+    if (devOpen) setDevOpen(false);
+    else if (historyDeck !== null) setHistoryDeck(null);
+    else if (abandoning) setAbandoning(false);
     else if (resetting) setResetting(null);
     else if (inRun && ui.rogueSheet) changeUi(u => { u.rogueSheet = false; });
     else if (codex && isPortrait() && ui.rogueCodexId) changeUi(u => { u.rogueCodexId = null; });
@@ -91,6 +107,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   useEffect(() => { if (!inRun) ui.roguePage = 'map'; }, [inRun]);
   // The Codex is asked for again after each step, such as a reset
   useEffect(() => { if (codex) actions.rogueCodex(ui.rogueCodexTab, ui.rogueCodexId); }, [codex, ui.rogueCodexTab, ui.rogueCodexId, home?.snapshot]);
+  useEffect(() => { if (!inRun && tab === 'history') actions.rogueHistory(); }, [inRun, tab, home?.snapshot]);
   const deck = fresh ? chosenDeck(fresh, choice) : '';
   const asking = fresh && choice.custom ? `${deck}|${choice.level}|${choice.mods.join()}` : null;
   useEffect(() => { if (asking !== null) actions.rogueChoose(deck, choice.mods, choice.level); }, [asking]);
@@ -115,6 +132,8 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     <Landing home={home} run={run} go={() => actions.campaignLoad('run')}
       deck={() => { ui.rogueRunTab = 'deck'; actions.campaignLoad('run'); }}
       abandon={() => setAbandoning(true)} fresh={() => changeUi(u => { u.rogueNewRun = true; })} />
+  ) : tab === 'history' ? (
+    <HistoryPage page={model.rogueHistoryPage} reset={() => setResetting('history')} deck={id => { setHistoryDeck(id); actions.rogueHistoryDeck(id); }} />
   ) : tab === 'aether' ? model.rogueAether && (
     <AetherPage aether={model.rogueAether} raise={id => actions.rogueAetherUpgrade(home.snapshot, id)} toggle={(id, on) => actions.rogueAetherToggle(home.snapshot, id, on)}
       expand={() => actions.rogueAetherExpand(home.snapshot)} reset={() => setResetting('aether')} />
@@ -122,7 +141,9 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     begin={(deck, level) => actions.rogueBegin(home.snapshot, deck, choice.custom, choice.custom ? choice.mods : [], level)}
     answer={model.rogueChoice} toggle={id => actions.rogueChoose(deck, choice.mods, choice.level, id)} />;
   const details = choice.deck && model.deckDetails?.key === `rogue:start:${choice.deck}` ? model.deckDetails : null;
-  const dialog = abandoning || !!resetting || !!tell || !!replace || !!announced || !!fresh && (choice.sheet || !!details) || inRun && ui.rogueSheet && isPortrait();
+  const pastDeck = historyDeck !== null && model.deckDetails?.key === `rogue:history:${historyDeck}` ? model.deckDetails : null;
+  const dialog = abandoning || !!resetting || !!tell || !!replace || !!announced || !!fresh && (choice.sheet || !!details) || !!pastDeck
+    || inRun && ui.rogueSheet && isPortrait();
   const main = <div class="camp-main" inert={dialog || scene && !folded}>{page}</div>;
   const question = scene && <Question model={model} actions={actions} />;
   // On a phone the commanders reached from a run, and Custom Run, are pages of their own with no tabs, as in the mockups
@@ -135,13 +156,32 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const phoneMenu = tab === 'aether' && model.rogueAether
     ? (close: () => void) => aetherMenu(model.rogueAether!, close, () => actions.rogueAetherExpand(home.snapshot), () => setResetting('aether'))
     : tab === 'codex' && ui.rogueCodexTab === 'stats'
-      ? (close: () => void) => <>{resetRow(close, 'tutorials', 'lblRogueResetTutorials')}{resetRow(close, 'progress', 'lblRogueResetProgress')}</> : undefined;
+      ? (close: () => void) => <>{resetRow(close, 'tutorials', 'lblRogueResetTutorials')}{resetRow(close, 'progress', 'lblRogueResetProgress')}</>
+      : tab === 'history' && model.rogueHistoryPage?.runs.length ? (close: () => void) => resetRow(close, 'history', 'lblRogueResetHistory') : undefined;
+  const dev = (tool: string) => actions.rogueDev(home.snapshot, tool);
+  // A wide screen opens the tools from a button beside the balances, and a phone lists them at the end of its header's menu
+  const devTool = setting('devMode') && (isPortrait() ? <>
+    <hr class="ph-menu-sep" />
+    <small class="ph-menu-head">{t('lblDevMode')}</small>
+    {[...devTools(home), ...(inRun ? RUN_TOOLS : [])].map(([tool, label]) => <button key={tool} role="menuitem" onClick={() => dev(tool)}>{t(label)}</button>)}
+  </> : (
+    <button class="camp-dev" title={t('lblDevMode')} aria-label={t('lblDevMode')} aria-expanded={devOpen} onPointerDown={e => e.stopPropagation()}
+      onClick={() => setDevOpen(!devOpen)}><Icon d={ROGUE_ICONS.code} cls="rg-ic" /></button>
+  ));
   const more = (close: () => void) => (isPortrait() ? <>
     <button role="menuitem" onClick={() => { close(); changeUi(u => { u.rogueWhole = !u.rogueWhole; }); }}>
       {t(ui.rogueWhole ? 'lblWebRogueBackToPlace' : 'lblWebRogueWholeMap')}
     </button>
     <button role="menuitem" onClick={() => abandon(close)}>{t('lblRogueAbandonRun')}</button>
-  </> : <div class="rg-menu"><button class="d" onClick={() => abandon(close)}>{t('lblRogueAbandonRun')}</button></div>);
+  </> : (
+    <div class="rg-menu">
+      <button class="d" onClick={() => abandon(close)}>{t('lblRogueAbandonRun')}</button>
+      {setting('devMode') && <>
+        <h6>{t('lblDev')}</h6>
+        {RUN_TOOLS.map(([tool, label]) => <button key={tool} onClick={() => { close(); dev(tool); }}>{t(label)}</button>)}
+      </>}
+    </div>
+  ));
   return <>
     {inRun ? <CampaignBar bar={runBar?.bar ?? bar} tabs={RUN_TABS} tab={aside} setTab={to => {
       // During a decision the deck is read only
@@ -149,12 +189,18 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       else if (to === 'deck') editDeck();
       else changeUi(u => { u.roguePage = to; });
     }} mark={id => id === 'traits' && runBar && <sup class="rg-count">{runBar.traits}</sup>} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
-      held={{}} leave={back} under={dialog} lineTerm={runBar?.tip} glyph={glyph} moreIcon={glyph('dots')} more={more} />
+      held={{}} leave={back} under={dialog} lineTerm={runBar?.tip} glyph={glyph} moreIcon={glyph('dots')} more={more} extra={devTool} />
       : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog}
-        more={isPortrait() ? phoneMenu : undefined} />}
+        more={isPortrait() ? phoneMenu : undefined} extra={devTool} />}
     {!isPortrait() ? <div class="rg-body">{main}{question}</div>
       // On a phone a scene takes the page's place, and the bar it folds to lies over the page
       : scene && !folded ? <div class="camp-main" inert={dialog}><div class="rg-pbody">{question}</div></div> : <>{main}{question}</>}
+    {devOpen && !isPortrait() && (
+      <div class="rg-menu" ref={devMenu}>
+        <h6 style={{ border: 0, paddingTop: '4px' }}>{t('lblDev')}</h6>
+        {devTools(home).map(([tool, label]) => <button key={tool} onClick={() => { setDevOpen(false); dev(tool); }}>{t(label)}</button>)}
+      </div>
+    )}
     {abandoning && run && (
       <Confirm title={t('lblRogueAbandonRun')} text={t('lblRogueAbandonRunConfirm')} back={t('lblCancel')} go={t('lblRogueAbandonRun')} danger
         onBack={() => setAbandoning(false)} dismiss={() => setAbandoning(false)} onGo={() => {
@@ -172,6 +218,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     )}
     {inRun && isPortrait() && ui.rogueSheet && model.rogueMap && !deciding && aside === 'map' && <PlaneSheet model={model} actions={actions} />}
     {fresh && choice.sheet && <DescensionSheet roster={fresh} choice={choice} set={setChoice} />}
+    {pastDeck && <DeckView details={pastDeck} line={t('lblWebNCards', pastDeck.stats.main)} button={t('lblClose')} close={() => setHistoryDeck(null)} />}
     {fresh && details && (
       <DeckView details={details} line={t('lblRogueStartingDeck')} button={t('lblClose')} close={() => setChoice(c => ({ ...c, deck: null }))} />
     )}

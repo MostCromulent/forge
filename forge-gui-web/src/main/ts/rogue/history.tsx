@@ -1,0 +1,69 @@
+// The finished runs, each drawn with the planes and nodes its path went through
+
+import { Icon } from '../icons';
+import { artUrl } from '../images';
+import { isPortrait } from '../form';
+import { t, textLanguage, type TextKey } from '../text';
+import { ROGUE_ICONS } from './icons';
+import type { HistoryRun, RogueHistoryPage } from '../protocol';
+
+/** Each outcome's frame, icon and word. An unknown outcome is drawn plain, with the word it was saved as. */
+const OUTCOMES: Record<string, [string, string, TextKey]> = {
+  VICTORY: ['win', ROGUE_ICONS.trophy, 'lblWebRogueVictory'],
+  DEFEAT: ['loss', ROGUE_ICONS.skull, 'lblRogueDefeat'],
+  ABANDONED: ['left', ROGUE_ICONS.flag, 'lblWebRogueAbandoned'],
+};
+/** The icon of each side node by its kind. An unknown kind is an empty mark. */
+const SIDES: Record<string, string> = { SANCTUM: ROGUE_ICONS.sanctum, BAZAAR: ROGUE_ICONS.bazaar, EVENT: ROGUE_ICONS.event, CHEST: ROGUE_ICONS.chest };
+const background = (key: string | null | undefined) => (key ? { backgroundImage: `url("${artUrl(key)}")` } : undefined);
+
+/** iso is yyyy-mm-dd, as the run's history keeps it. */
+function day(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(textLanguage(), { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/** A phone leaves out the date, and the traits by its stylesheet. */
+function Run({ run, deck }: { run: HistoryRun; deck: (id: number) => void }) {
+  const outcome = OUTCOMES[run.outcome];
+  return (
+    <div class={run.outcome === 'VICTORY' ? 'rg-run' : 'rg-run lost'}>
+      <div class="a" style={background(run.image)} />
+      <div class="t">
+        <b>{run.commander}</b>
+        <span>{run.line}</span>
+        <div class="rg-steps">
+          {run.steps.map((s, i) => (s.kind === 'PLANEBOUND' ? <i key={i} title={s.name ?? undefined} style={background(s.image)} />
+            : <i key={i} class="s">{SIDES[s.kind] && <Icon d={SIDES[s.kind]} cls="rg-ic" />}</i>))}
+        </div>
+      </div>
+      <div class="traits">{run.traits.map((tr, i) => <span key={i} class="tn" title={tr.tip ?? undefined}>{tr.name}</span>)}</div>
+      <div class="end">
+        {outcome ? <span class={`rg-out ${outcome[0]}`}><Icon d={outcome[1]} cls="rg-ic" />{t(outcome[2])}</span> : <span class="rg-out">{run.outcome}</span>}
+        <span>{isPortrait() ? run.time : `${day(run.date)} · ${run.time}`}</span>
+        {run.deck && <button onClick={() => deck(run.id)}>{t('lblViewDeck')}</button>}
+      </div>
+    </div>
+  );
+}
+
+/** History's page. reset asks before the history is cleared, which a phone offers in its header's menu instead. */
+export function HistoryPage({ page, reset, deck }: { page: RogueHistoryPage | null; reset: () => void; deck: (id: number) => void }) {
+  const runs = page?.runs ?? [];
+  return (
+    <div class="rg-hpage">
+      <span class="rg-haze" style={background(page?.art)} />
+      <div class="rg-scroll">
+        {!isPortrait() && (
+          <div class="rg-head">
+            <h2>{t('lblRogueRunHistory')}</h2>
+            <span class="sp" />
+            <button disabled={!runs.length} onClick={reset}>{t('lblRogueResetHistory')}</button>
+          </div>
+        )}
+        {page && (runs.length ? <div class="rg-hist">{runs.map(r => <Run key={r.id} run={r} deck={deck} />)}</div>
+          : <p class="rg-none">{t('lblRogueNoCompletedRunsYet')}</p>)}
+      </div>
+    </div>
+  );
+}

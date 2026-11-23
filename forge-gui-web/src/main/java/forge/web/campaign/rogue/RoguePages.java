@@ -14,6 +14,7 @@ import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RoguePlaneboundType;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.RogueRunHistoryEntry;
 import forge.gamemodes.rogue.TextHelper;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.ChestEffect;
@@ -55,6 +56,9 @@ import forge.web.protocol.RogueProtocol.CodexItem;
 import forge.web.protocol.RogueProtocol.CodexRow;
 import forge.web.protocol.RogueProtocol.CodexStats;
 import forge.web.protocol.RogueProtocol.DescensionStep;
+import forge.web.protocol.RogueProtocol.HistoryRun;
+import forge.web.protocol.RogueProtocol.HistoryStep;
+import forge.web.protocol.RogueProtocol.HistoryTrait;
 import forge.web.protocol.RogueProtocol.MapLink;
 import forge.web.protocol.RogueProtocol.MapNode;
 import forge.web.protocol.RogueProtocol.Modification;
@@ -63,6 +67,7 @@ import forge.web.protocol.RogueProtocol.RogueAether;
 import forge.web.protocol.RogueProtocol.RogueCard;
 import forge.web.protocol.RogueProtocol.RogueCodexPage;
 import forge.web.protocol.RogueProtocol.RogueCommander;
+import forge.web.protocol.RogueProtocol.RogueHistoryPage;
 import forge.web.protocol.RogueProtocol.RogueHome;
 import forge.web.protocol.RogueProtocol.RogueMap;
 import forge.web.protocol.RogueProtocol.RogueRoster;
@@ -150,7 +155,8 @@ public final class RoguePages {
         final String commander = run == null ? null : run.getCurrentCommanderName();
         final List<String> fan = RogueStart.roster(Decks.ALL, false).stream().filter(d -> d.isUnlocked() && !d.getCommanderCardName().equals(commander))
                 .limit(3).map(d -> d.getStartDeck().getCommanders().get(0).getImageKey(false)).collect(Collectors.toList());
-        return new RogueHome(number, bar, run == null ? null : runCard(run), RogueStart.tabsUnlocked(progress), fan);
+        return new RogueHome(number, bar, run == null ? null : runCard(run), RogueStart.tabsUnlocked(progress), fan, progress.isDevUnlockAll(),
+                progress.getAetherUpgradeLevel() >= AetherUpgrade.getMaxLevel());
     }
 
     /** Localizer passes its arguments as text, so a choice format cannot pick the singular. */
@@ -433,6 +439,38 @@ public final class RoguePages {
                 chosen.speaker().avatarIndex, List.of(), List.of(), List.of(chosen.text().split("\n\n"))));
     }
 
+    /** The finished runs, newest first, behind the latest run's commander. Null while History is locked. */
+    public static RogueHistoryPage history(final RogueMetaProgress progress) {
+        if (!RogueStart.tabsUnlocked(progress)) {
+            return null;
+        }
+        final List<RogueRunHistoryEntry> entries = progress.getRunHistory();
+        final List<HistoryRun> runs = new ArrayList<>();
+        for (int i = entries.size() - 1; i >= 0; i--) {
+            final RogueRunHistoryEntry entry = entries.get(i);
+            final List<String> detail = new ArrayList<>();
+            if (!entry.getOutcomeDetail().isEmpty()) {
+                detail.add(entry.getOutcomeDetail());
+            }
+            final List<HistoryStep> steps = entry.getPathSteps().stream().map(step -> new HistoryStep(step.type().name(),
+                    step.planeName() == null ? null : picture(step.planeName()), step.planeboundName())).toList();
+            final List<HistoryTrait> traits = entry.getActiveEffects().stream().map(e -> new HistoryTrait(e.getDisplayText(), e.getTooltipText())).toList();
+            runs.add(new HistoryRun(i, entry.getCommanderName(), picture(entry.getCommanderName()), entry.getShownOutcome(),
+                    line(detail, entry.getDescensionLevel(), entry.getEndlessLevel()), steps, traits, entry.getTimestamp(), entry.getFormattedRunTime(),
+                    entry.getDeckSnapshot() != null));
+        }
+        return new RogueHistoryPage(runs, runs.isEmpty() ? null : runs.get(0).image());
+    }
+
+    /** The deck a finished run ended with, read only, or null for one not kept or while History is locked. */
+    public static DeckDetails historyDeck(final RogueMetaProgress progress, final int run) {
+        final List<RogueRunHistoryEntry> entries = progress.getRunHistory();
+        if (!RogueStart.tabsUnlocked(progress) || run < 0 || run >= entries.size() || entries.get(run).getDeckSnapshot() == null) {
+            return null;
+        }
+        return details("rogue:history:" + run, entries.get(run).getCommanderName(), entries.get(run).getDeckSnapshot());
+    }
+
     /** A card's picture by its name, for the art behind a page with no subject of its own. Null when no card has that name. */
     static String picture(final String name) {
         PaperCard card = StaticData.instance().getCommonCards().getCard(name);
@@ -561,14 +599,18 @@ public final class RoguePages {
 
     /** The run's Descension and Endless levels, or an empty line with neither. */
     private static String line(final RogueRun run) {
+        return line(new ArrayList<>(), run.getDescensionLevel(), run.getEndlessLevel());
+    }
+
+    /** line followed by the Descension and Endless levels, joined. It is empty with none of them. */
+    private static String line(final List<String> line, final int descensionLevel, final int endlessLevel) {
         final Localizer text = Localizer.getInstance();
-        final List<String> line = new ArrayList<>();
-        final DescensionLevel descension = DescensionLevel.forLevel(run.getDescensionLevel());
-        if (run.getDescensionLevel() > 0 && descension != null) {
+        final DescensionLevel descension = DescensionLevel.forLevel(descensionLevel);
+        if (descensionLevel > 0 && descension != null) {
             line.add(text.getMessage("lblRogueHistoryDescension", descension.level, descension.name));
         }
-        if (run.getEndlessLevel() > 0) {
-            line.add(text.getMessage("lblRogueEndlessLevel", run.getEndlessLevel()));
+        if (endlessLevel > 0) {
+            line.add(text.getMessage("lblRogueEndlessLevel", endlessLevel));
         }
         return String.join(" · ", line);
     }

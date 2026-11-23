@@ -24,10 +24,19 @@ public final class RogueProtocol {
 
     /**
      * The pages shown with no run open. run is the unfinished run, if there is one. unlocked says whether Aether, Codex and History can be opened.
-     * fan holds the pictures of the commanders drawn behind Start New Run.
+     * fan holds the pictures of the commanders drawn behind Start New Run. devUnlockAll and aetherMaxed are the states the dev tools switch.
      */
     @Message("rogueHome")
-    public record RogueHome(long snapshot, CampaignBar bar, @Nullable RogueRunCard run, boolean unlocked, List<String> fan) {
+    public record RogueHome(long snapshot, CampaignBar bar, @Nullable RogueRunCard run, boolean unlocked, List<String> fan, boolean devUnlockAll,
+            boolean aetherMaxed) {
+    }
+
+    /**
+     * A dev mode tool, refused when dev mode is off: unlockAll and maxAether switch, npcProgress asks each NPC's level, echoes and sparks add 10,
+     * codex unlocks the whole Codex, and nextNode and winRun move the open run on.
+     */
+    @Command("rogueDev")
+    public record RogueDev(long snapshot, String tool) {
     }
 
     /** line gives the run's Descension and Endless levels, and is empty with neither. */
@@ -229,6 +238,37 @@ public final class RogueProtocol {
 
     /** state is unknown, seen or acquired. An unknown card or trait has no name, image or trait. */
     public record CodexItem(String state, @Nullable String name, @Nullable String image, @Nullable Trait trait) {
+    }
+
+    /** Asks for the finished runs. Answered with a rogueHistoryPage, and not at all while History is locked. */
+    @Command("rogueHistory")
+    public record RogueHistory() {
+    }
+
+    /** The finished runs, newest first, and the picture behind them. */
+    @Message("rogueHistoryPage")
+    public record RogueHistoryPage(List<HistoryRun> runs, @Nullable String art) {
+    }
+
+    /**
+     * id is the run's place in the history, for its deck. outcome is VICTORY, DEFEAT or ABANDONED, as History shows it. line says who was beaten
+     * or won, and the Descension and Endless levels. date is yyyy-mm-dd and time how long the run took. deck says whether its deck was kept.
+     */
+    public record HistoryRun(int id, String commander, @Nullable String image, String outcome, String line, List<HistoryStep> steps,
+            List<HistoryTrait> traits, String date, String time, boolean deck) {
+    }
+
+    /** kind is a NodeType name. image is the plane's picture, null for a side node or a plane not known, and name the planebound's. */
+    public record HistoryStep(String kind, @Nullable String image, @Nullable String name) {
+    }
+
+    /** tip explains the trait, or is null. */
+    public record HistoryTrait(String name, @Nullable String tip) {
+    }
+
+    /** Answered with a DeckDetailsMessage of the deck a finished run ended with. */
+    @Command("rogueHistoryDeck")
+    public record RogueHistoryDeck(int run) {
     }
 
     @Command("rogueSelect")

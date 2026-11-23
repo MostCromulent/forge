@@ -8,6 +8,7 @@ import forge.gamemodes.rogue.RogueStats;
 import forge.gamemodes.rogue.RogueTutorial;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.path.NodeSanctum;
+import forge.localinstance.properties.ForgePreferences;
 import forge.web.campaign.rogue.RogueGame;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -126,5 +127,20 @@ public class RogueBetweenRunsTest extends RogueSessionTest {
         Assert.assertTrue(progress.hasSeenTutorial(RogueTutorial.AETHER));
         Assert.assertEquals(RogueIO.loadMostRecentContinuableRun().orElseThrow(AssertionError::new).getCurrentNodeIndex(), run.getCurrentNodeIndex());
         Assert.assertFalse(host.last("rogueHome").get("unlocked").getAsBoolean(), "the Codex is still open");
+    }
+
+    // Fails if a dev tool changes the progress while dev mode is off, or does nothing while it is on
+    @Test(timeOut = 120_000)
+    public void devCommandsAreRefusedOutsideDevMode() throws Exception {
+        final TestBrowser host = hub(p -> p.setTotalEchoes(5));
+        command(host, message("rogueDev", "tool", "echoes"));
+        command(host, message("rogueDev", "tool", "unlockAll"));
+        Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 5);
+        Assert.assertFalse(RogueMetaProgress.getInstance().isDevUnlockAll());
+        ForgePreferences.DEV_MODE = true;
+        command(host, message("rogueDev", "tool", "echoes"));
+        command(host, message("rogueDev", "tool", "unlockAll"));
+        Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 15);
+        Assert.assertTrue(host.last("rogueHome").get("devUnlockAll").getAsBoolean(), "the page does not show every commander unlocked");
     }
 }

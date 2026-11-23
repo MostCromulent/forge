@@ -10,6 +10,7 @@ import forge.game.GameView;
 import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.match.PreparedMatch.Looks;
 import forge.gamemodes.rogue.AetherUpgrade;
+import forge.gamemodes.rogue.CodexHelper;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueWinLoseController;
@@ -19,7 +20,11 @@ import forge.gamemodes.rogue.flow.RogueDecisions;
 import forge.gamemodes.rogue.flow.RogueDecisions.RogueMatch;
 import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.flow.RogueStart;
+import forge.gamemodes.rogue.npc.NPC;
+import forge.gamemodes.rogue.npc.NPCEncounterComposite;
+import forge.gamemodes.rogue.npc.NPCEncounterComposite.LevelChoice;
 import forge.localinstance.achievements.RogueCommanderAchievements;
+import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.skin.ISkinImage;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
@@ -60,6 +65,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -688,6 +694,62 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
     }
 
+    /**
+     * Answers with what read returns, after any job that runs, or at once during a question, when the flow waits and changes nothing.
+     * Null answers nothing.
+     */
+    private void read(final BrowserChannel channel, final Supplier<Record> read) {
+        final Runnable answer = () -> {
+            final Record page = read.get();
+            if (page != null) {
+                channel.send(page);
+            }
+        };
+        if (question != null) {
+            answer.run();
+        } else {
+            worker.execute(answer);
+        }
+    }
+
+    /** Runs a dev mode tool as desktop's dev buttons do. Nothing happens while dev mode is off. Only the flow thread calls this. */
+    private void dev(final String tool) {
+        if (!ForgePreferences.DEV_MODE) {
+            return;
+        }
+        final RogueMetaProgress progress = RogueMetaProgress.getInstance();
+        switch (tool) {
+            case "unlockAll" -> progress.setDevUnlockAll(!progress.isDevUnlockAll());
+            case "npcProgress" -> npcProgress(progress);
+            case "maxAether" -> progress.setAetherUpgradeLevel(progress.getAetherUpgradeLevel() >= AetherUpgrade.getMaxLevel() ? 0 : AetherUpgrade.getMaxLevel());
+            case "echoes" -> progress.addEchoes(10);
+            case "sparks" -> progress.addSparks(10);
+            case "codex" -> {
+                CodexHelper.unlockCodex();
+                RogueCommanderAchievements.getInstance().evaluateCodexAchievements(progress);
+            }
+            case "nextNode" -> flow.devNextNode();
+            case "winRun" -> flow.devWinRun();
+            default -> { }
+        }
+    }
+
+    /** Asks each NPC's level in turn, as desktop's NPC progress dialog lists them. Skipping one keeps its level. */
+    private void npcProgress(final RogueMetaProgress progress) {
+        for (final NPC npc : NPC.values()) {
+            final List<LevelChoice> choices = NPCEncounterComposite.levelChoices(npc, progress.getNPCLevel(npc.id));
+            if (choices.isEmpty()) {
+                continue;
+            }
+            final int level = decisions.devPick(npc.name, choices, List.of(choices.get(0)), 1).get(0).level();
+            if (level != progress.getNPCLevel(npc.id)) {
+                progress.setNPCLevel(npc.id, level);
+            }
+        }
+        final Localizer text = Localizer.getInstance();
+        decisions.showMessage(text.getMessage("lblRogueDevNpcProgressTitle"), text.getMessage("lblRogueNpcProgressUpdated"));
+    }
+
     /** Null when a name is not a modification. */
     private static Set<CustomRunModification> modifications(final List<String> names) {
         final Set<CustomRunModification> modifications = EnumSet.noneOf(CustomRunModification.class);
@@ -745,6 +807,12 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             .on(RogueAetherExpand.class, (g, ch, e) -> g.change(e.snapshot(), g::expand))
             .on(RogueReset.class, (g, ch, r) -> g.change(r.snapshot(), progress -> reset(progress, r.kind())))
             .on(RogueCodex.class, (g, ch, c) -> g.codex(ch, c))
+            .on(RogueHistory.class, (g, ch, h) -> g.read(ch, () -> RoguePages.history(RogueMetaProgress.getInstance())))
+            .on(RogueHistoryDeck.class, (g, ch, d) -> g.read(ch, () -> {
+                final DeckDetails details = RoguePages.historyDeck(RogueMetaProgress.getInstance(), d.run());
+                return details == null ? null : new DeckDetailsMessage(details);
+            }))
+            .on(RogueDev.class, (g, ch, d) -> g.submit(d.snapshot(), -1, () -> g.dev(d.tool())))
             .on(RogueStartDeck.class, (g, ch, d) -> {
                 final DeckDetails details = RoguePages.startDeck(d.deck());
                 if (details != null) {

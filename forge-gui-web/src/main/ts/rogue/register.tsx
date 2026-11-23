@@ -4,7 +4,7 @@ import { registerMode } from '../campaign/modes';
 import { RogueHub } from './rogue';
 import type { CodexTab } from './codex';
 import type { Model } from '../model';
-import type { RogueAether, RogueAnnounce, RogueChoice, RogueCodexPage, RogueHome, RogueMap, RogueQuestion, RogueRoster, RogueRunDeck, RogueTraits } from '../protocol';
+import type { RogueAether, RogueAnnounce, RogueChoice, RogueCodexPage, RogueHistoryPage, RogueHome, RogueMap, RogueQuestion, RogueRoster, RogueRunDeck, RogueTraits } from '../protocol';
 
 export type RogueTab = 'runs' | 'aether' | 'codex' | 'history';
 
@@ -18,6 +18,7 @@ declare module '../model' {
     rogueAether: RogueAether | null;
     /** The Codex's tab last asked for. */
     rogueCodexPage: RogueCodexPage | null;
+    rogueHistoryPage: RogueHistoryPage | null;
     /** The server's latest answer about a custom run before it starts. */
     rogueChoice: RogueChoice | null;
     /** The question the flow waits on. It is cleared here as soon as it is answered. */
@@ -73,6 +74,11 @@ interface RogueActions {
   /** kind names what is reset, such as aether. */
   rogueReset(snapshot: number, kind: string): void;
   rogueCodex(tab: string, id: string | null): void;
+  rogueHistory(): void;
+  /** Shows the deck a finished run ended with, by its id. */
+  rogueHistoryDeck(run: number): void;
+  /** tool names a dev mode tool, such as echoes. */
+  rogueDev(snapshot: number, tool: string): void;
   /** The oldest announcement has been shown. */
   rogueAnnounced(): void;
 }
@@ -82,7 +88,7 @@ declare module '../actions' {
 }
 
 /** The pages' fields when Rogue is not open. Announcements not yet shown wait for the next visit. */
-const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueMap: null, rogueRunDeck: null, rogueTraits: null, rogueAether: null, rogueCodexPage: null, rogueChoice: null, rogueQuestion: null } satisfies Partial<Model>;
+const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueMap: null, rogueRunDeck: null, rogueTraits: null, rogueAether: null, rogueCodexPage: null, rogueHistoryPage: null, rogueChoice: null, rogueQuestion: null } satisfies Partial<Model>;
 
 // A winding trail between two points
 const ICON = <><circle cx="12" cy="37" r="4" /><circle cx="36" cy="11" r="4" /><path d="M16 37h10a7 7 0 0 0 0-14h-4a7 7 0 0 1 0-12h10" /></>;
@@ -98,7 +104,7 @@ registerMode({
       Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null });
     }
   },
-  stored: ['rogueHome', 'rogueRoster', 'rogueMap', 'rogueRunDeck', 'rogueTraits', 'rogueAether', 'rogueCodexPage', 'rogueChoice', 'rogueQuestion'],
+  stored: ['rogueHome', 'rogueRoster', 'rogueMap', 'rogueRunDeck', 'rogueTraits', 'rogueAether', 'rogueCodexPage', 'rogueHistoryPage', 'rogueChoice', 'rogueQuestion'],
   message: (model, msg) => {
     if (msg.t !== 'rogueAnnounce') return false;
     model.rogueAnnounced = [...model.rogueAnnounced, msg];
@@ -118,6 +124,9 @@ registerMode({
     rogueAetherExpand: snapshot => send({ t: 'rogueAetherExpand', snapshot }),
     rogueReset: (snapshot, kind) => send({ t: 'rogueReset', snapshot, kind }),
     rogueCodex: (tab, id) => send({ t: 'rogueCodex', tab, id: id ?? undefined }),
+    rogueHistory: () => send({ t: 'rogueHistory' }),
+    rogueHistoryDeck: run => send({ t: 'rogueHistoryDeck', run }),
+    rogueDev: (snapshot, tool) => send({ t: 'rogueDev', snapshot, tool }),
     rogueAnswer: (id, value) => {
       model.rogueQuestion = null;
       ui.rogueDeckView = false;
