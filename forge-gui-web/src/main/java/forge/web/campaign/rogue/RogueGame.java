@@ -1,5 +1,7 @@
 package forge.web.campaign.rogue;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import forge.game.GameView;
 import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueDeck;
@@ -10,10 +12,14 @@ import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.flow.RogueStart;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
+import forge.web.Campaigns;
 import forge.web.WebGuiBase;
 import forge.web.WebSession.InCampaign;
+import forge.web.WebSession.Menu;
+import forge.web.WebSession.Stage;
 import forge.web.campaign.Campaign;
 import forge.web.campaign.rogue.RoguePages.Snapshot;
+import forge.web.campaign.rogue.WebRogueDecisions.Open;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.CampaignResult;
 import forge.web.protocol.Commands;
@@ -45,6 +51,16 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     private final Object pages = new Object();
     private Snapshot latest = new Snapshot(0, null, -1, List.of());
     private volatile Host host;
+    /** The question the flow thread waits on. It is set and sent while holding pages, so it always follows the pages it was asked over. */
+    private volatile Open question;
+
+    private static final class Shared {
+        static final RogueGame GAME = new RogueGame(WebRogueDecisions::new);
+    }
+
+    public static RogueGame shared() {
+        return Shared.GAME;
+    }
 
     /** decisions is given the game, so tests can answer the flow's questions from a script. */
     public RogueGame(final Function<RogueGame, RogueDecisions> decisions) {
@@ -134,8 +150,58 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             return;
         }
         latest.pages().forEach(h.session()::tell);
+        final Open asked = question;
+        if (asked != null) {
+            h.session().tell(asked.message());
+        }
         if (RUN.equals(c.save()) && latest.run() != null && h.session().browser() != null) {
             latest.run().getRunTimer().start();
+        }
+    }
+
+    /** Waits on the flow thread, with no timeout, for an answer the question's check accepts. */
+    JsonElement ask(final Open asked) {
+        synchronized (pages) {
+            question = asked;
+        }
+        publish();
+        try {
+            return asked.answer().join();
+        } finally {
+            synchronized (pages) {
+                question = null;
+            }
+        }
+    }
+
+    /** A refused answer leaves the question open, and the browser is sent it again. */
+    private void answer(final BrowserChannel channel, final int id, final JsonElement value) {
+        final Open asked = question;
+        if (asked == null) {
+            return;
+        }
+        final JsonElement answer = value == null ? JsonNull.INSTANCE : value;
+        if (asked.message().id() != id || !asked.valid().test(answer)) {
+            channel.send(asked.message());
+            return;
+        }
+        asked.answer().complete(answer);
+    }
+
+    void runStarted() {
+        publish();
+        final Host h = host;
+        if (h != null) {
+            h.opened(RUN);
+        }
+    }
+
+    void runEnded() {
+        publish();
+        final Host h = host;
+        final Stage now = h == null ? null : h.session().stage();
+        if (now instanceof InCampaign c && MODE.equals(c.mode()) && RUN.equals(c.save()) && h.session().move(now, new InCampaign(MODE, null))) {
+            h.show();
         }
     }
 
@@ -177,13 +243,30 @@ public final class RogueGame implements Campaign, IHasForgeLog {
 
     @Override
     public boolean mayLeave(final String save) {
-        return !busy.get();
+        return !busy.get() || question != null;
     }
 
-    /** Opening reads the saves again only when no job runs, because a job's run in memory is newer than its save. */
+    /**
+     * Opening reads the saves again only when no job runs, because a job's run in memory is newer than its save.
+     * During a question, Back from the run goes to the play menu, and opening the pages with no run open goes on to the run.
+     */
     @Override
     public void opening(final String save, final Runnable then) {
         stopTimer();
+        final Host h = host;
+        if (question != null && save == null && h != null) {
+            final Campaigns.Host session = h.session();
+            final Stage now = session.stage();
+            if (now instanceof InCampaign c && c.save() != null) {
+                session.move(now, new Menu());
+                return;
+            }
+            then.run();
+            if (current() != null) {
+                h.opened(RUN);
+            }
+            return;
+        }
         if (!busy.compareAndSet(false, true)) {
             then.run();
             return;
@@ -250,6 +333,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             .on(RogueEnter.class, (g, ch, e) -> g.submit(e.snapshot(), e.node(), g.flow::enter))
             .on(RogueReroll.class, (g, ch, r) -> g.submit(r.snapshot(), r.node(), g.flow::rerollPlane))
             .on(RogueAbandon.class, (g, ch, a) -> g.submit(a.snapshot(), -1, g.flow::abandon))
+            .on(RogueAnswer.class, (g, ch, a) -> g.answer(ch, a.id(), a.value()))
             .on(RogueBegin.class, (g, ch, b) -> g.submit(b.snapshot(), -1, () -> {
                 final RogueStart start = start(b);
                 if (start != null) {

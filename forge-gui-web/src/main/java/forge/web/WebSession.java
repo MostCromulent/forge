@@ -19,6 +19,7 @@ import forge.web.campaign.Campaign;
 import forge.web.campaign.CampaignSession;
 import forge.web.campaign.ConquestGame;
 import forge.web.campaign.QuestGame;
+import forge.web.campaign.rogue.RogueGame;
 import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckWorkspace;
@@ -216,6 +217,7 @@ public final class WebSession implements IHasForgeLog {
         final Map<String, Campaign> modes = new LinkedHashMap<>();
         modes.put("conquest", new ConquestGame());
         modes.put("quest", new QuestGame());
+        modes.put(RogueGame.MODE, RogueGame.shared());
         this.campaigns = new CampaignSession(new CampaignHost(), modes);
     }
 
