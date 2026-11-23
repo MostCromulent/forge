@@ -144,7 +144,7 @@ public final class RogueProtocol {
     }
 
     /**
-     * source is where the trait came from: AETHER, CUSTOM, EVENT, CHEST, NPC, WRATHFUL, CURSED, WOUND, DESCENSION or ENDLESS.
+     * source is where the trait came from: AETHER, CUSTOM, EVENT, CHEST, NPC, WRATHFUL, CURSED, TRAIT, WOUND, DESCENSION or ENDLESS, TRAIT being any other.
      * avatar is the face of the NPC who gave it, and mark the text drawn in place of an icon, such as a Descension level.
      * term and tip explain the source. loot means a reward taken once, not a lasting trait.
      */
