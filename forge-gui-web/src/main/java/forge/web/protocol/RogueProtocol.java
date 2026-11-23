@@ -13,8 +13,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Rogue Commander's messages in both directions. Each page carries the number of the snapshot it was taken from,
+ * Rogue Commander's messages in both directions. The home page and the map carry the number of the snapshot they were taken from,
  * and each command names the snapshot it was made from, so a command made from a page the player no longer sees is refused.
+ * The other pages are sent only when they change, so they carry no number.
  */
 public final class RogueProtocol {
     private RogueProtocol() {
@@ -51,7 +52,7 @@ public final class RogueProtocol {
      * and is null when it can. levels are the Descension levels from level 1.
      */
     @Message("rogueRoster")
-    public record RogueRoster(long snapshot, List<RogueCommander> commanders, List<RogueCommander> experimental, boolean custom, boolean descension,
+    public record RogueRoster(List<RogueCommander> commanders, List<RogueCommander> experimental, boolean custom, boolean descension,
             @Nullable String customLock, List<DescensionStep> levels, List<Modification> modifications) {
     }
 
@@ -122,7 +123,7 @@ public final class RogueProtocol {
     }
 
     @Message("rogueTraits")
-    public record RogueTraits(long snapshot, List<String> traits) {
+    public record RogueTraits(List<String> traits) {
     }
 
     @Command("rogueSelect")

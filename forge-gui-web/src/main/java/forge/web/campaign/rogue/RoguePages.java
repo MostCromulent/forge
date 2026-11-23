@@ -79,14 +79,14 @@ public final class RoguePages {
         final List<Record> pages = new ArrayList<>();
         if (run == null) {
             pages.add(home(null, progress, number));
-            pages.add(roster(progress, number));
+            pages.add(roster(progress));
             return new Snapshot(number, null, flow.timedRun(), -1, pages);
         }
         run.getPath().revealVisible(run);
         pages.add(home(run, progress, number));
-        pages.add(roster(progress, number));
+        pages.add(roster(progress));
         pages.add(map(flow, run, progress, number));
-        pages.add(new RogueTraits(number, RogueEffectComposite.getAllEffects(run).stream()
+        pages.add(new RogueTraits(RogueEffectComposite.getAllEffects(run).stream()
                 .map(RogueEffect::getEffectCardDisplayName).collect(Collectors.toList())));
         return new Snapshot(number, run, flow.timedRun(), run.getCurrentNodeIndex(), pages);
     }
@@ -112,7 +112,7 @@ public final class RoguePages {
         return runs == 1 ? Localizer.getInstance().getMessage("lblWebRogueRecordOne", won) : Localizer.getInstance().getMessage("lblWebRogueRecord", runs, won);
     }
 
-    private static RogueRoster roster(final RogueMetaProgress progress, final long number) {
+    private static RogueRoster roster(final RogueMetaProgress progress) {
         final List<DescensionStep> levels = Arrays.stream(DescensionLevel.values()).map(l -> new DescensionStep(l.name, l.description)).toList();
         final List<Modification> modifications = new ArrayList<>();
         for (final CustomRunModification m : CustomRunModification.values()) {
@@ -120,7 +120,7 @@ public final class RoguePages {
             modifications.add(new Modification(m.name(), m.getDisplayName(), m.getRawDescription(), m.getGroup().getDisplayName(),
                     m.isGeneratedCommander(), m == CustomRunModification.EXPERIMENT));
         }
-        return new RogueRoster(number, commanders(progress, false), commanders(progress, true), progress.isCustomRunsUnlocked(),
+        return new RogueRoster(commanders(progress, false), commanders(progress, true), progress.isCustomRunsUnlocked(),
                 progress.isDescensionModeUnlocked(), RogueStart.descensionLockText(progress, null, 0, true), levels, modifications);
     }
 

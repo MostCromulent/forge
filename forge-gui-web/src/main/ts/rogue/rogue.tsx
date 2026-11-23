@@ -89,7 +89,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       deck={() => { ui.rogueRunTab = 'deck'; actions.campaignLoad('run'); }}
       abandon={() => setAbandoning(true)} fresh={() => changeUi(u => { u.rogueNewRun = true; })} />
   ) : fresh && <NewRun roster={fresh} choice={choice} set={setChoice} runs={run ? () => changeUi(u => { u.rogueNewRun = false; }) : null}
-    begin={(deck, level) => actions.rogueBegin(fresh.snapshot, deck, choice.custom, choice.custom ? choice.mods : [], level)}
+    begin={(deck, level) => actions.rogueBegin(home.snapshot, deck, choice.custom, choice.custom ? choice.mods : [], level)}
     answer={model.rogueChoice} toggle={id => actions.rogueChoose(deck, choice.mods, choice.level, id)} />;
   const details = choice.deck && model.deckDetails?.key === `rogue:start:${choice.deck}` ? model.deckDetails : null;
   const dialog = abandoning || !!tell || !!replace || !!announced || !!fresh && (choice.sheet || !!details) || inRun && ui.rogueSheet && isPortrait();

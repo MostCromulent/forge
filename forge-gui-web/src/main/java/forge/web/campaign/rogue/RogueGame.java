@@ -41,7 +41,9 @@ import org.apache.commons.lang3.EnumUtils;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -71,6 +73,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     private volatile Open question;
     /** What was won or unlocked and has not reached the host's browser on Rogue's pages yet. Guarded by pages. */
     private final List<RogueAnnounce> announced = new ArrayList<>();
+    /** The pages last sent to the host's browser by type, so a publish leaves out those it already holds. Guarded by pages. */
+    private final Map<Class<?>, Record> sent = new HashMap<>();
 
     private static final class Shared {
         static final RogueGame GAME = new RogueGame(WebRogueDecisions::new);
@@ -220,7 +224,11 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         if (h == null || !(h.session().stage() instanceof InCampaign c) || !MODE.equals(c.mode())) {
             return;
         }
-        latest.pages().forEach(h.session()::tell);
+        for (final Record page : latest.pages()) {
+            if (!page.equals(sent.put(page.getClass(), page))) {
+                h.session().tell(page);
+            }
+        }
         sendAnnounced(h);
         final Open asked = question;
         if (asked != null) {
@@ -412,10 +420,14 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         return RUN.equals(save) ? current() : null;
     }
 
-    /** The pages are sent here instead of returned, so a reload's pages cannot reach the browser after a newer snapshot. */
+    /**
+     * The pages are sent here instead of returned, so a reload's pages cannot reach the browser after a newer snapshot.
+     * All of them are sent, because the browser may hold none.
+     */
     @Override
     public List<Record> home() {
         synchronized (pages) {
+            sent.clear();
             send();
         }
         return List.of();
