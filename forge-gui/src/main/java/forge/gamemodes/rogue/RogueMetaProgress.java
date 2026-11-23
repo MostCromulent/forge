@@ -10,7 +10,6 @@ import com.thoughtworks.xstream.security.PrimitiveTypePermission;
 import forge.gamemodes.rogue.effect.DescensionLevel;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.RogueEffect;
-import forge.gui.FThreads;
 import forge.gui.GuiBase;
 import forge.item.PaperCard;
 import forge.localinstance.achievements.RogueCommanderAchievements;
@@ -571,7 +570,7 @@ public class RogueMetaProgress {
             .createLayeredImage(card, forge.localinstance.skin.FSkinProp.IMG_SPECIAL_TROPHY,
                 forge.localinstance.properties.ForgeConstants.CACHE_ACHIEVEMENTS_DIR
                     + "/descension_" + commanderName.replace(" ", "_") + "_1.png", 1f);
-        showDescensionUnlockDialog(image,
+        GuiBase.getInterface().showImageDialog(image,
             "You unlocked Descension Mode for " + commanderName + "!",
             "Descension Level 1 Unlocked!");
     }
@@ -594,7 +593,7 @@ public class RogueMetaProgress {
                         forge.localinstance.properties.ForgeConstants.CACHE_ACHIEVEMENTS_DIR
                             + "/descension_" + commanderName.replace(" ", "_") + "_" + unlockedLevel + ".png", 1f);
               if (descensionLevel == null) return false;
-              showDescensionUnlockDialog(image,
+              GuiBase.getInterface().showImageDialog(image,
                     "You unlocked Descension Level " + unlockedLevel + ": " + descensionLevel.name + " for " + commanderName + "!",
                     "Descension Level " + unlockedLevel + " Unlocked!");
             }
@@ -602,10 +601,6 @@ public class RogueMetaProgress {
             return true;
         }
         return false;
-    }
-
-    private static void showDescensionUnlockDialog(ISkinImage image, String message, String title) {
-        FThreads.invokeInEdtLater(() -> GuiBase.getInterface().showImageDialog(image, message, title));
     }
 
     public boolean isDescensionModeUnlocked() {

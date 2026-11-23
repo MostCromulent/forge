@@ -28,27 +28,24 @@ class NodeEffectResultHelper {
             return NodeFlowOutcome.COMPLETE_NODE;
         }
 
-        switch (ctx.trigger) {
-            case BAZAAR:
+        return switch (ctx.trigger) {
+            case BAZAAR -> {
                 ctx.addedCards = bazaarHelper.runBazaarShopping(currentRun, ctx.bazaarContext);
-                return NodeFlowOutcome.COMPLETE_NODE;
-            case PLANEBOUND:
-                return handlePlaneboundTrigger(sourceNode, ctx);
-            case CHEST:
-                return handleChestTrigger(sourceNode, currentRun);
-            case SANCTUM:
+                yield NodeFlowOutcome.COMPLETE_NODE;
+            }
+            case PLANEBOUND -> handlePlaneboundTrigger(sourceNode, ctx);
+            case CHEST -> handleChestTrigger(sourceNode, currentRun);
+            case SANCTUM -> {
                 sanctumHelper.resolveSanctum(currentRun, new NodeSanctum());
                 flow.completeSideNode(sourceNode);
-                return NodeFlowOutcome.NODE_ALREADY_COMPLETED;
-            case MOVE:
-                return handleMoveTrigger(ctx, currentRun);
-            case CARD_REMOVAL, CARD_ADDITION, CARD_REWARD, MYTHIC_CARD_REWARD:
-                return EffectResultHelper.handleTrigger(ctx, currentRun, flow.decisions())
+                yield NodeFlowOutcome.NODE_ALREADY_COMPLETED;
+            }
+            case MOVE -> handleMoveTrigger(ctx, currentRun);
+            case CARD_REMOVAL, CARD_ADDITION, CARD_REWARD, MYTHIC_CARD_REWARD ->
+                EffectResultHelper.handleTrigger(ctx, currentRun, flow.decisions())
                     ? NodeFlowOutcome.COMPLETE_NODE
                     : NodeFlowOutcome.DO_NOT_COMPLETE_NODE;
-            default:
-                return NodeFlowOutcome.COMPLETE_NODE;
-        }
+        };
     }
 
     private NodeFlowOutcome handleChestTrigger(RoguePathNode sourceNode, RogueRun currentRun) {

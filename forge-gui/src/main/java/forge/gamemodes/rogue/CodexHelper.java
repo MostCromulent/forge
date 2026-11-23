@@ -18,6 +18,7 @@ import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.npc.TeferiEncounter;
 import forge.gamemodes.rogue.npc.TeferiOptionalEncounter;
 import forge.item.PaperCard;
+import forge.itemmanager.GroupDef;
 import forge.util.Localizer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -487,5 +488,28 @@ public final class CodexHelper {
 
     private static String normalize(PaperCard card) {
         return card == null || card.getRules() == null ? null : card.getRules().getNormalizedName();
+    }
+
+    /** The official commanders by name; locked ones keep their place. */
+    public static List<RogueDeck> codexCommanders() {
+        return RogueConfig.loadRogueDecks().stream()
+            .filter(deck -> !deck.isExperimental())
+            .sorted(Comparator.comparing(RogueDeck::getName, String.CASE_INSENSITIVE_ORDER))
+            .collect(Collectors.toList());
+    }
+
+    public static List<RoguePlanebound> codexPlanebounds() {
+        return RogueConfig.loadPlanebounds().stream()
+            .sorted(Comparator.comparing(RoguePlanebound::planeboundName, String.CASE_INSENSITIVE_ORDER))
+            .collect(Collectors.toList());
+    }
+
+    /** Codex card lists group by card type, then sort by name; a missing card goes last. */
+    public static int codexCardTypeOrder(PaperCard card) {
+        if (card == null) {
+            return 8;
+        }
+        int groupIndex = GroupDef.CARD_TYPE.getItemGroupIndex(card);
+        return groupIndex < 0 ? 8 : groupIndex;
     }
 }

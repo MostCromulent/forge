@@ -143,21 +143,19 @@ public final class RogueFlow {
         RoguePathNode node = currentRun.getCurrentNode();
         if (node == null) {
             return Localizer.getInstance().getMessage("lblRogueNoNodeAvailable");
-        } else if (node instanceof NodePlanebound nodePlanebound) {
-            String planeName = pathContext().hidePlanes && !nodePlanebound.isRevealed()
-                ? "???" : nodePlanebound.getRoguePlanebound().planeName();
-            return Localizer.getInstance().getMessage("lblRogueEnterPlane", planeName);
-        } else if (node instanceof NodeSanctum) {
-            return Localizer.getInstance().getMessage("lblRogueEnterSanctum");
-        } else if (node instanceof NodeBazaar) {
-            return Localizer.getInstance().getMessage("lblRogueEnterBazaar");
-        } else if (node instanceof NodeEvent) {
-            return Localizer.getInstance().getMessage("lblRogueEnterEvent");
-        } else if (node instanceof NodeChest) {
-            return Localizer.getInstance().getMessage("lblRogueOpenChest");
-        } else {
-            return Localizer.getInstance().getMessage("lblRogueEnterNode");
         }
+        return switch (node.getType()) {
+            case PLANEBOUND -> {
+                NodePlanebound nodePlanebound = (NodePlanebound) node;
+                String planeName = pathContext().hidePlanes && !nodePlanebound.isRevealed()
+                    ? "???" : nodePlanebound.getRoguePlanebound().planeName();
+                yield Localizer.getInstance().getMessage("lblRogueEnterPlane", planeName);
+            }
+            case SANCTUM -> Localizer.getInstance().getMessage("lblRogueEnterSanctum");
+            case BAZAAR -> Localizer.getInstance().getMessage("lblRogueEnterBazaar");
+            case EVENT -> Localizer.getInstance().getMessage("lblRogueEnterEvent");
+            case CHEST -> Localizer.getInstance().getMessage("lblRogueOpenChest");
+        };
     }
 
     /** 0 when the current node is not a plane or a match is on. */
@@ -242,16 +240,12 @@ public final class RogueFlow {
             return;
         }
 
-        if (node instanceof NodePlanebound nodePlanebound) {
-            battle(nodePlanebound);
-        } else if (node instanceof NodeSanctum nodeSanctum) {
-            nodeSanctumHelper.handleSanctumNode(nodeSanctum, currentRun);
-        } else if (node instanceof NodeBazaar nodeBazaar) {
-            nodeBazaarHelper.handleBazaarNode(nodeBazaar, currentRun);
-        } else if (node instanceof NodeEvent nodeEvent) {
-            nodeEventHelper.handleEventNode(nodeEvent, currentRun);
-        } else if (node instanceof NodeChest nodeChest) {
-            nodeChestHelper.handleChestNode(nodeChest, currentRun);
+        switch (node.getType()) {
+            case PLANEBOUND -> battle((NodePlanebound) node);
+            case SANCTUM -> nodeSanctumHelper.handleSanctumNode((NodeSanctum) node, currentRun);
+            case BAZAAR -> nodeBazaarHelper.handleBazaarNode((NodeBazaar) node, currentRun);
+            case EVENT -> nodeEventHelper.handleEventNode((NodeEvent) node, currentRun);
+            case CHEST -> nodeChestHelper.handleChestNode((NodeChest) node, currentRun);
         }
     }
 

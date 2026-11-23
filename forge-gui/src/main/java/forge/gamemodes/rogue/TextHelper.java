@@ -25,6 +25,8 @@ public final class TextHelper {
     private static final Pattern CARD_MARKER_PATTERN = Pattern.compile("(!)?\\[\\[(.+?)]]");
     private static final Pattern KEYWORD_MARKER_PATTERN = Pattern.compile("(!)?\\{\\{(.+?)}}");
     private static final Pattern PREVIEW_MARKER_PATTERN = Pattern.compile("(!)?\\[\\[(.+?)]]|(!)?\\{\\{(.+?)}}");
+    private static final int PART_EMPHASIS_GROUP = 5;
+    private static final Pattern PART_PATTERN = Pattern.compile(PREVIEW_MARKER_PATTERN.pattern() + "|\\*\\*(.+?)\\*\\*");
 
     /** A piece of a description. Type and token are null for plain text, and the text of a hidden reference is empty. */
     public record Part(PreviewReferenceType type, String text, String token) { }
@@ -69,7 +71,10 @@ public final class TextHelper {
         return sb.toString();
     }
 
-    /** The text of the parts together is what {@link #stripPreviewMarkers} gives. */
+    /**
+     * The text of the parts together is what {@link #stripPreviewMarkers} gives, without the asterisks of a
+     * {@code **name**} mark. Such a mark is a card part when the name is a card, and plain text otherwise.
+     */
     public static List<Part> parts(String raw) {
         List<Part> parts = new ArrayList<>();
         if (raw == null || raw.isEmpty()) {
@@ -80,10 +85,23 @@ public final class TextHelper {
         StringBuilder text = new StringBuilder();
         boolean atStart = true;
         int end = 0;
-        Matcher matcher = PREVIEW_MARKER_PATTERN.matcher(raw);
+        Matcher matcher = PART_PATTERN.matcher(raw);
         while (matcher.find()) {
             text.append(raw, end, matcher.start());
             end = matcher.end();
+            String emphasis = matcher.group(PART_EMPHASIS_GROUP);
+            if (emphasis != null) {
+                String name = emphasis.trim();
+                if (resolveCard(name) == null) {
+                    text.append(emphasis);
+                    continue;
+                }
+                addText(parts, text.toString(), atStart, false);
+                atStart = false;
+                text.setLength(0);
+                parts.add(new Part(PreviewReferenceType.CARD, name, name));
+                continue;
+            }
             boolean isCard = matcher.group(PREVIEW_CARD_TOKEN_GROUP) != null;
             PreviewReferenceType type = isCard ? PreviewReferenceType.CARD : PreviewReferenceType.KEYWORD;
             String token = matcher.group(isCard ? PREVIEW_CARD_TOKEN_GROUP : PREVIEW_KEYWORD_TOKEN_GROUP).trim();

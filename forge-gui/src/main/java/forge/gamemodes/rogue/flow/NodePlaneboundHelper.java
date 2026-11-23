@@ -16,6 +16,7 @@ import forge.gamemodes.rogue.RogueRun.CarryCard;
 import forge.gamemodes.rogue.effect.*;
 import forge.gamemodes.rogue.flow.RogueDecisions.RogueMatch;
 import forge.gamemodes.rogue.path.NodePlanebound;
+import forge.gui.GuiBase;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
 import forge.player.GamePlayerUtil;
@@ -72,7 +73,11 @@ class NodePlaneboundHelper {
             human.setStartingLife(currentRun.getCurrentLife());
 
             // RogueWinLoseController recognises the winner by this player
-            human.setPlayer(GamePlayerUtil.getGuiPlayer());
+            LobbyPlayer humanLobbyPlayer = GamePlayerUtil.getGuiPlayer();
+            humanLobbyPlayer.setName(currentRun.getCurrentCommanderName());
+            humanLobbyPlayer.setAvatarIndex(availableAvatar(currentRun.getSelectedRogueDeck().getAvatarIndex()));
+            humanLobbyPlayer.setSleeveIndex(currentRun.getSelectedRogueDeck().getSleeveIndex());
+            human.setPlayer(humanLobbyPlayer);
 
             if (!currentRun.getCarryCards().isEmpty()) {
                 RogueEffect.addCardToCommandZone("Rogue - Carry Card Enabler", human);
@@ -94,7 +99,7 @@ class NodePlaneboundHelper {
             );
             LobbyPlayer aiLobbyPlayer = GamePlayerUtil.createAiPlayer(
                 planebound.planeboundName(),
-                planebound.avatarIndex(),
+                availableAvatar(planebound.avatarIndex()),
                 0);
             ai.setPlayer(aiLobbyPlayer);
 
@@ -122,6 +127,11 @@ class NodePlaneboundHelper {
                 Localizer.getInstance().getMessage("lblRogueMatchNotStarted"));
             flow.decisions().mapChanged(flow.run());
         }
+    }
+
+    /** The avatar tiles end with the question mark at 125, and a skin may have fewer. */
+    private static int availableAvatar(int index) {
+        return index >= 0 && index < Math.min(126, GuiBase.getInterface().getAvatarCount()) ? index : 0;
     }
 
     private static List<PaperCard> getSharedPlaneDeck(RoguePlanebound planebound, boolean includePlanes) {

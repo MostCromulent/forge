@@ -1,8 +1,5 @@
 package forge.screens.home.rogue;
 
-import forge.LobbyPlayer;
-import forge.game.GameType;
-import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.rogue.RogueEvent;
 import forge.gamemodes.rogue.RogueRun;
@@ -261,15 +258,6 @@ class DesktopRogueDecisions implements RogueDecisions {
             if (!run.getCarryCards().isEmpty()) {
                 showTutorial(RogueTutorial.CARRY_CARDS);
             }
-            LobbyPlayer lobbyPlayer = match.human().getPlayer();
-            lobbyPlayer.setName(run.getCurrentCommanderName());
-            lobbyPlayer.setAvatarIndex(run.getSelectedRogueDeck().getAvatarIndex());
-            lobbyPlayer.setSleeveIndex(run.getSelectedRogueDeck().getSleeveIndex());
-            for (RegisteredPlayer player : match.players()) {
-                player.getPlayer().setAvatarIndex(
-                    RogueUIHelper.getAvailableAvatarIndex(player.getPlayer().getAvatarIndex()));
-            }
-
             HostedMatch hostedMatch = GuiBase.getInterface().hostMatch();
             if (!RogueTutorialHelper.hasSeenTutorial(RogueTutorial.MATCH_UI)
                     || !RogueTutorialHelper.hasSeenTutorial(RogueTutorial.MATCH_CARD_HIGHLIGHTING)
@@ -284,7 +272,7 @@ class DesktopRogueDecisions implements RogueDecisions {
             run.setHostedMatch(hostedMatch);
 
             hostedMatch.startMatch(
-                GameType.RogueCommander,
+                match.rules(),
                 match.variants(),
                 match.players(),
                 match.human(),

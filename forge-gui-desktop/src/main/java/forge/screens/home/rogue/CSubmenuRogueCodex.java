@@ -2,7 +2,6 @@ package forge.screens.home.rogue;
 
 import forge.gamemodes.rogue.CodexHelper;
 import forge.gamemodes.rogue.CodexHelper.JournalEntry;
-import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueDeck;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RoguePlanebound;
@@ -15,7 +14,6 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.screens.home.CHomeUI;
 import forge.toolbox.FOptionPane;
 import forge.util.Localizer;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -74,7 +72,7 @@ public enum CSubmenuRogueCodex implements ICDoc {
     switch (activeTab) {
       case GLOBAL_STATS -> view.showGlobalStats();
       case COMMANDERS -> {
-        List<RogueDeck> commanders = loadCommanders();
+        List<RogueDeck> commanders = CodexHelper.codexCommanders();
         selectedCommander = resolveSelectedCommander(commanders);
         view.showCommanders(commanders, selectedCommander, progress, commander -> {
           selectedCommander = commander;
@@ -83,7 +81,7 @@ public enum CSubmenuRogueCodex implements ICDoc {
         });
       }
       case PLANEBOUNDS -> {
-        List<RoguePlanebound> planebounds = loadPlanebounds();
+        List<RoguePlanebound> planebounds = CodexHelper.codexPlanebounds();
         selectedPlanebound = resolveSelectedPlanebound(planebounds, progress);
         view.showPlanebounds(planebounds, selectedPlanebound, progress, planebound -> {
           selectedPlanebound = planebound;
@@ -102,13 +100,6 @@ public enum CSubmenuRogueCodex implements ICDoc {
         journal.stream().filter(JournalEntry::story).toList());
   }
 
-  private List<RogueDeck> loadCommanders() {
-    return RogueConfig.loadRogueDecks().stream()
-        .filter(deck -> !deck.isExperimental())
-        .sorted(Comparator.comparing(RogueDeck::getName, String.CASE_INSENSITIVE_ORDER))
-        .toList();
-  }
-
   private RogueDeck resolveSelectedCommander(List<RogueDeck> commanders) {
     if (selectedCommander != null) {
       for (RogueDeck commander : commanders) {
@@ -119,12 +110,6 @@ public enum CSubmenuRogueCodex implements ICDoc {
       }
     }
     return commanders.stream().filter(RogueDeck::isUnlocked).findFirst().orElse(null);
-  }
-
-  private List<RoguePlanebound> loadPlanebounds() {
-    return RogueConfig.loadPlanebounds().stream()
-        .sorted(Comparator.comparing(RoguePlanebound::planeboundName, String.CASE_INSENSITIVE_ORDER))
-        .toList();
   }
 
   private RoguePlanebound resolveSelectedPlanebound(List<RoguePlanebound> planebounds,

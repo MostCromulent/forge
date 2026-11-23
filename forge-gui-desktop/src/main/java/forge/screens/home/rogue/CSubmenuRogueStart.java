@@ -110,18 +110,8 @@ public enum CSubmenuRogueStart implements ICDoc {
   }
 
   private void showTutorials() {
-
-    var progress = RogueMetaProgress.getInstance();
-
-    // Show Descension tutorial once when it becomes unlocked
-    if (progress.isDescensionModeUnlocked()) {
-      RogueTutorialHelper.showIfNotSeen(RogueTutorial.DESCENSION_UNLOCKED);
-    }
-
-    int highestDescensionWon = progress.getHighestDescensionWon();
-    if (highestDescensionWon >= 1) {
-      RogueTutorialHelper.showIfNotSeen(RogueTutorial.DESCENSION_LEVEL_1_WIN);
-    }
+    RogueTutorialHelper.showIfNotSeen(
+        RogueTutorialTriggers.onStartPage(RogueMetaProgress.getInstance()).toArray(new RogueTutorial[0]));
   }
 
   private void loadAvailableCommanders() {
@@ -154,7 +144,7 @@ public enum CSubmenuRogueStart implements ICDoc {
     updateStartButtonState();
 
     // Update button states - locked until first run completed
-    boolean hasCompletedRuns = RogueMetaProgress.getInstance().getTotalRunsCompleted() > 0;
+    boolean hasCompletedRuns = RogueStart.tabsUnlocked(RogueMetaProgress.getInstance());
     view.getBtnAether().setEnabled(hasCompletedRuns);
     view.getBtnAether()
         .setToolTipText(hasCompletedRuns ? null : Localizer.getInstance().getMessage("lblRogueUnlockAetherHint"));
@@ -295,18 +285,14 @@ public enum CSubmenuRogueStart implements ICDoc {
     }
     boolean wasExperimental = view.getChkCustomModification(
         CustomRunModification.EXPERIMENT).isSelected();
-    boolean wasGeneratedCommander = isGeneratedCommanderSelected();
+    Set<CustomRunModification> on = RogueStart.toggle(selectedModifications(), modification,
+        view.getChkCustomModification(modification).isSelected());
     updatingCustomModUi = true;
-    clearConflictingModifications(modification);
-    boolean generatedCommander = isGeneratedCommanderSelected();
-    for (CustomRunModification deckMod : CustomRunModification.values()) {
-      if (!deckMod.isIncludedWithGeneratedCommander()) {
-        continue;
+    for (CustomRunModification other : CustomRunModification.values()) {
+      view.getChkCustomModification(other).setSelected(on.contains(other));
+      if (other.isIncludedWithGeneratedCommander()) {
+        view.getChkCustomModification(other).setEnabled(!RogueStart.isForced(on, other));
       }
-      if (generatedCommander || wasGeneratedCommander || modification.isGeneratedCommander()) {
-        view.getChkCustomModification(deckMod).setSelected(generatedCommander);
-      }
-      view.getChkCustomModification(deckMod).setEnabled(!generatedCommander);
     }
     boolean experimental = view.getChkCustomModification(
         CustomRunModification.EXPERIMENT).isSelected();
@@ -316,17 +302,6 @@ public enum CSubmenuRogueStart implements ICDoc {
       loadAvailableCommanders();
     } else {
       updateStartButtonState();
-    }
-  }
-
-  private void clearConflictingModifications(CustomRunModification modification) {
-    if (!view.getChkCustomModification(modification).isSelected()) {
-      return;
-    }
-    for (CustomRunModification other : CustomRunModification.values()) {
-      if (modification.conflictsWith(other)) {
-        view.getChkCustomModification(other).setSelected(false);
-      }
     }
   }
 
@@ -396,48 +371,27 @@ public enum CSubmenuRogueStart implements ICDoc {
     }
 
     RogueMetaProgress progress = RogueMetaProgress.getInstance();
-    if (!progress.isDescensionModeUnlocked()) {
-      view.getLblDescensionLockText().setText(
-          Localizer.getInstance().getMessage("lblRogueUnlockDescensionHint"));
+    RogueDeck deck = custom ? null : panel.getCommander();
+    String lockText = RogueStart.descensionLockText(progress, deck, 0, custom);
+    if (lockText != null) {
+      view.getLblDescensionLockText().setText(lockText);
       view.getPnlDescensionLock().setVisible(true);
       view.getChkDescension().setVisible(false);
       return;
     }
 
-    if (custom) {
-      view.getPnlDescensionLock().setVisible(false);
-      view.getChkDescension().setVisible(true);
-      if (previousDescensionLevel > 0) {
-        selectedDescensionLevel = Math.min(previousDescensionLevel, DescensionLevel.getMaxLevel());
-        updatingDescensionUi = true;
-        view.getChkDescension().setSelected(true);
-        updatingDescensionUi = false;
-        view.getPnlDescensionLevel().setVisible(true);
-        updateDescensionDisplay();
-      }
-      return;
-    }
-
-    String commanderName = panel.getCommander().getCommanderCardName();
-
-    int maxUnlocked = progress.getMaxDescensionUnlocked(commanderName);
-    if (maxUnlocked == 0) {
-      view.getLblDescensionLockText().setText(
-          Localizer.getInstance().getMessage("lblRogueUnlockCommanderDescensionHint", commanderName));
-      view.getPnlDescensionLock().setVisible(true);
-      view.getChkDescension().setVisible(false);
-    } else {
-      view.getPnlDescensionLock().setVisible(false);
-      view.getChkDescension().setVisible(true);
-      if (previousDescensionLevel > 0) {
-        selectedDescensionLevel = Math.min(previousDescensionLevel,
-            Math.min(maxUnlocked, DescensionLevel.getMaxLevel()));
-        updatingDescensionUi = true;
-        view.getChkDescension().setSelected(true);
-        updatingDescensionUi = false;
-        view.getPnlDescensionLevel().setVisible(true);
-        updateDescensionDisplay();
-      }
+    view.getPnlDescensionLock().setVisible(false);
+    view.getChkDescension().setVisible(true);
+    if (previousDescensionLevel > 0) {
+      int maxUnlocked = custom ? DescensionLevel.getMaxLevel()
+          : progress.getMaxDescensionUnlocked(deck.getCommanderCardName());
+      selectedDescensionLevel = Math.min(previousDescensionLevel,
+          Math.min(maxUnlocked, DescensionLevel.getMaxLevel()));
+      updatingDescensionUi = true;
+      view.getChkDescension().setSelected(true);
+      updatingDescensionUi = false;
+      view.getPnlDescensionLevel().setVisible(true);
+      updateDescensionDisplay();
     }
   }
 
@@ -467,11 +421,10 @@ public enum CSubmenuRogueStart implements ICDoc {
   private void updateDescensionDisplay() {
     boolean custom = view.getChkCustomRuns().isSelected();
     if (!custom && selectedDeck == null) return;
-    String commanderName = selectedDeck != null ? selectedDeck.getCommanderCardName() : "";
-    int maxUnlocked = custom ? DescensionLevel.getMaxLevel()
-        : RogueMetaProgress.getInstance().getMaxDescensionUnlocked(commanderName);
+    String lockText = RogueStart.descensionLockText(RogueMetaProgress.getInstance(), selectedDeck,
+        selectedDescensionLevel, custom);
     DescensionLevel dl = DescensionLevel.forLevel(selectedDescensionLevel);
-    boolean locked = selectedDescensionLevel > maxUnlocked;
+    boolean locked = lockText != null;
 
     String levelName = dl != null
         ? Localizer.getInstance().getMessage("lblRogueNamedLevel", selectedDescensionLevel, dl.name)
@@ -481,13 +434,8 @@ public enum CSubmenuRogueStart implements ICDoc {
     view.getBtnDescensionDown().setVisible(selectedDescensionLevel > 1);
     view.getBtnDescensionUp().setVisible(!locked && selectedDescensionLevel < DescensionLevel.getMaxLevel());
 
-    if (!locked) {
-      view.getLblDescensionDesc().setText(dl != null ? dl.description : "");
-      updateStartButtonState();
-    } else {
-      view.getLblDescensionDesc().setText(Localizer.getInstance().getMessage("lblRogueUnlockNextDescensionHint", commanderName, selectedDescensionLevel - 1, selectedDescensionLevel));
-      updateStartButtonState();
-    }
+    view.getLblDescensionDesc().setText(locked ? lockText : dl != null ? dl.description : "");
+    updateStartButtonState();
   }
 
   private void beginNewRun() {
@@ -495,13 +443,17 @@ public enum CSubmenuRogueStart implements ICDoc {
   }
 
   private RogueStart selectedStart() {
+    return new RogueStart(selectedDeck, view.getChkCustomRuns().isSelected(), selectedModifications(),
+        selectedDescensionLevel);
+  }
+
+  private Set<CustomRunModification> selectedModifications() {
     Set<CustomRunModification> modifications = EnumSet.noneOf(CustomRunModification.class);
     for (CustomRunModification modification : CustomRunModification.values()) {
       if (view.getChkCustomModification(modification).isSelected()) {
         modifications.add(modification);
       }
     }
-    return new RogueStart(selectedDeck, view.getChkCustomRuns().isSelected(), modifications,
-        selectedDescensionLevel);
+    return modifications;
   }
 }
