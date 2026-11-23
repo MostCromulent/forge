@@ -23,6 +23,7 @@ public final class RogueDeckEdits {
 
     public void added(Iterable<Map.Entry<PaperCard, Integer>> cards) {
         edits.push(new Edit(false, copy(cards), 0));
+        RogueIO.saveRun(run);
     }
 
     /** Null when the cards were removed; otherwise why not, and nothing changed. */
