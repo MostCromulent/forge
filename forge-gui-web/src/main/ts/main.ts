@@ -33,6 +33,7 @@ import { behindItsBoard, passingFor } from './match/pauserules';
 import { createPacer } from './match/pacer';
 import { setVersion } from './links';
 import { goBack } from './header';
+import { pressScene } from './rogue/scene';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { rememberStops, restoreStops } from './match/stopmemory';
 import { byId, isTyping, relayout, saveText } from './dom';
@@ -180,6 +181,9 @@ document.addEventListener('keydown', e => {
   runKey(command);
 });
 
+/** Whether a dialog, menu or popup lies over the page. */
+const covered = (): boolean => !!document.querySelector('.backdrop, [role=menu], .popup');
+
 function runKey(command: KeyCommand): void {
   switch (command) {
     case 'closeOptions': changeUi(u => { u.optionsOpen = false; }); break;
@@ -216,7 +220,8 @@ function runKey(command: KeyCommand): void {
     case 'closeImporter': changeUi(u => { u.importer = null; }); break;
     case 'closeBrowse': changeUi(u => { u.browse = null; }); break;
     // An open dialog or popup hears the same press and closes itself, so the page stays where it is
-    case 'back': if (!ui.volumeOpen && !document.querySelector('.backdrop, [role=menu], .popup')) goBack(); break;
+    case 'back': if (!ui.volumeOpen && !covered()) goBack(); break;
+    case 'continueScene': if (!covered()) pressScene(null); break;
     case 'editorUndo': actions.editorUndo(); break;
     case 'declineHostChoice': if (model.hostChoice) actions.answerHostChoice(model.hostChoice.id, []); break;
     case 'ok': pressPromptButton('ok'); actions.ok(); break;
@@ -246,6 +251,7 @@ function runKey(command: KeyCommand): void {
     default: {
       const menu = cardMenu(model);
       if (menu && command.startsWith('pickCardMenu')) actions.answer(menu.id, [Number(command.slice(-1)) - 1]);
+      if (command.startsWith('pickChoice') && !covered()) pressScene(Number(command.slice(-1)) - 1);
     }
   }
 }

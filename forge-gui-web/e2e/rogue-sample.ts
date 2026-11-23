@@ -1,7 +1,7 @@
 // What zz-rogue-match sends for one Rogue Commander mockup. Each screen has a file rogue-samples/<id>.ts, named by the mockup's id
 
 import type { Page } from '@playwright/test';
-import type { Modification, RogueCommander, RogueHome, RogueRoster, ServerMessage } from '../src/main/ts/protocol';
+import type { Modification, Part, RogueCommander, RogueHome, RogueQuestion, RogueRoster, ServerMessage } from '../src/main/ts/protocol';
 
 export interface Sample {
   /** Sent in order after the hello, with the mockup's own content. */
@@ -17,6 +17,10 @@ export interface Sample {
    * so the dialog is compared over the page it was drawn over.
    */
   under?: boolean;
+  /** The stage the hello opens the mode at, such as "run". */
+  save?: string;
+  /** An element tapped once the page is drawn and the pointer has left it, such as a term to explain. */
+  tap?: string;
 }
 
 /** The Runs page of the mockups, which several screens draw beneath a dialog. */
@@ -123,3 +127,59 @@ export const answer = (modifications: string[], descension: number, forced: stri
 
 /** Clicks without scrolling first: a click scrolls the page's clipped boxes, which no player can do, to bring the button to their middle. */
 export const press = (page: Page, selector: string) => page.locator(selector).dispatchEvent('click');
+
+const text = (words: string): Part => ({ kind: 'text', text: words });
+const card = (name: string, image?: string): Part => ({ kind: 'card', text: name, image });
+/** The terms as the server explains them, from KeywordHint. */
+const TIPS = {
+  Item: 'An Artifact added to your command zone as a carry card. It persists between matches unless it ends a match neither in the command zone nor on the battlefield.',
+  Fellow: 'A Creature added to your command zone as a carry card. It persists between matches unless it ends a match neither in the command zone nor on the battlefield.',
+  Trait: 'A permanent effect that lasts for the rest of the Run, or until its last charge is consumed.',
+};
+const term = (shown: string, name: keyof typeof TIPS): Part => ({ kind: 'term', text: shown, term: name, tip: TIPS[name] });
+
+/** Henzie's boon of the mockups, with one reroll left. */
+export const BOON: RogueQuestion = {
+  t: 'rogueQuestion', id: 1, kind: 'boon',
+  choice: {
+    kind: 'boon', face: 59, title: 'Henzie "Toolbox" Torre', art: 'a-the-dark-barony', rerolls: 1, skip: false,
+    paragraphs: [[text(`Henzie pulls up a chair. "What do you need, Commander? Let me guess...Illegal stuff the whole goddamn Multiverse is after? Well, you're in luck. Best offers since a long time."`)]],
+    options: [
+      {
+        label: "Henzie's Containment", enabled: true,
+        text: [text('Gain the '), term('Item', 'Item'), text(' '), card('Mana Vault'), text(' and the '), term('Fellow', 'Fellow'), text(' '), card('Emrakul, the Aeons Torn'), text('.')],
+      },
+      { label: "Henzie's Precious", enabled: true, text: [text('Gain the '), term('Item', 'Item'), text(' '), card('The One Ring', 'c-the-one-ring'), text('.')] },
+      { label: 'Exquisite Traits', enabled: true, text: [text('Gain 2 random Chest '), term('Traits', 'Trait'), text('.')] },
+    ],
+  },
+};
+
+/** The event of the mockups, asked on the map. */
+export const EVENT: RogueQuestion = {
+  t: 'rogueQuestion', id: 3, kind: 'event',
+  choice: {
+    kind: 'event', title: 'Crooked Counsel', rerolls: 0, skip: false,
+    paragraphs: [[text(`An old wizard, once a cherished friend, blocks the road beneath a black stone tower. "The shadow rises in the east," he murmurs. "Stand against it if you must... but it wouldn't be wise, my friend."`)]],
+    options: [
+      { label: 'Rally the Free Peoples', enabled: true,
+        text: [text('Remove all black cards from your deck. Choose up to 9 creatures from a set of legendary Halflings, Humans, Elves, Dwarves, and Wizards to add to your deck.')] },
+      { label: 'Join with the Dark Lord', enabled: true, text: [text('Remove 9 random creatures from your deck. When you do, add 9 copies of '), card('Nazgûl'), text(' to your deck.')] },
+      { label: 'Keep to your own path', enabled: true, text: [text('Lose 5 Life. Gain the legendary artifact '), term('Item', 'Item'), text(' '), card('The One Ring', 'c-the-one-ring'), text('.')] },
+    ],
+  },
+};
+
+/** The first two parts of Teferi's first story. The mockups show the second. */
+export const MEETING_TEFERI = [
+  `A dark-skinned man in blue robes looks up from a dismantled machine, slightly surprised. He sets down his tool and comes to meet you, smiling.
+"Commander. You came." He offers his hand. "I'm Teferi. Forgive me, I keep forgetting we haven't met."`,
+  `"Come in. Welcome to the Aether." He leads you past a broken archway, keeping to the cleared side of the passage. "I built it outside ordinary space and time. Thought I could give people somewhere the Phyrexian invasion wouldn't reach them." He stops beside a scar in the stone.
+"Well, I was wrong. The invasion is over, but the Aether was heavily damaged despite fighting the Phyrexians off from here. Don't worry. I think we can put the place back together."`,
+];
+
+/** Teferi telling a story, a part per paragraph. */
+export const story = (paragraphs: string[], heading?: string): RogueQuestion => ({
+  t: 'rogueQuestion', id: 2, kind: 'story',
+  choice: { kind: 'story', face: 65, title: 'Teferi, Master of Time', heading, art: 'a-teferi-master-of-time', paragraphs: paragraphs.map(p => [text(p)]), options: [], rerolls: 0, skip: false },
+});

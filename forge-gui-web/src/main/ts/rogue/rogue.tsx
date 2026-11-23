@@ -11,6 +11,9 @@ import { t, type TextKey } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { Landing } from './landing';
 import { DescensionSheet, NO_CHOICE, NewRun, StartDeck, backFrom, chosenDeck, type Choice } from './newrun';
+import { sceneOptions } from './questions';
+import { Question } from './scene';
+import { Terms } from './terms';
 import type { RogueTab } from './register';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -31,7 +34,9 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const run = home?.run;
   const inRun = model.campaignSave !== null;
   const tab = inRun ? 'runs' : ui.rogueTab;
-  const tell = model.rogueQuestion?.tell;
+  const scene = !!sceneOptions(model.rogueQuestion);
+  const folded = scene && ui.rogueFolded === model.rogueQuestion!.id;
+  const tell = scene ? undefined : model.rogueQuestion?.tell;
   const replace = model.rogueQuestion?.kind === 'replace' ? model.rogueQuestion.choice : undefined;
   const announced = model.rogueAnnounced[0];
   const fresh = !inRun && tab === 'runs' && (!run || ui.rogueNewRun) && roster ? roster : null;
@@ -74,13 +79,16 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     answer={model.rogueChoice} toggle={id => actions.rogueChoose(deck, choice.mods, choice.level, id)} />;
   const details = choice.deck && model.deckDetails?.key === `rogue:start:${choice.deck}` ? model.deckDetails : null;
   const dialog = abandoning || !!tell || !!replace || !!announced || !!fresh && (choice.sheet || !!details);
-  const main = <div class="camp-main" inert={dialog}>{page}</div>;
+  const main = <div class="camp-main" inert={dialog || scene && !folded}>{page}</div>;
+  const question = scene && <Question model={model} actions={actions} />;
   // On a phone the commanders reached from a run, and Custom Run, are pages of their own with no tabs, as in the mockups
   const alone = !!fresh && isPortrait() && (choice.customOpen || !!run);
   const bar = alone ? { ...home.bar, name: t(choice.customOpen ? 'lblRogueCustomRun' : 'lblRogueStartNewRun') } : home.bar;
   return <>
     <CampaignBar bar={bar} tabs={inRun || alone ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog} />
-    {isPortrait() ? main : <div class="rg-body">{main}</div>}
+    {!isPortrait() ? <div class="rg-body">{main}{question}</div>
+      // On a phone a scene takes the page's place, and the bar it folds to lies over the page
+      : scene && !folded ? <div class="camp-main" inert={dialog}><div class="rg-pbody">{question}</div></div> : <>{main}{question}</>}
     {abandoning && run && (
       <Backdrop layer="rg-dialog" dismiss={() => setAbandoning(false)}>
         <div class="dialog" role="alertdialog" aria-label={t('lblRogueAbandonRun')}>
@@ -101,6 +109,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     {fresh && details && <StartDeck details={details} close={() => setChoice(c => ({ ...c, deck: null }))} />}
     {replace && <Replace choice={replace} answer={answer} />}
     {tell && model.rogueQuestion && <Message tell={tell} ok={() => actions.rogueAnswer(model.rogueQuestion!.id, null)} />}
+    <Terms />
     {!tell && announced && <Announcement key={`${announced.title}
 ${announced.text}`} announced={announced} ok={actions.rogueAnnounced} />}
   </>;

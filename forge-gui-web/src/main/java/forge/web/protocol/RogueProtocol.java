@@ -135,8 +135,8 @@ public final class RogueProtocol {
             @Nullable AskPortrait portrait, @Nullable AskShop shop, @Nullable TellOmen omen, @Nullable Tell tell) {
     }
 
-    /** A piece of text. kind is "text", "card" or "term"; image is a card's picture and term a keyword's name. */
-    public record Part(String kind, String text, @Nullable String image, @Nullable String term) {
+    /** A piece of text. kind is "text", "card" or "term"; image is a card's picture, term a keyword's name and tip what the keyword means. */
+    public record Part(String kind, String text, @Nullable String image, @Nullable String term, @Nullable String tip) {
     }
 
     public record RogueCard(String name, String image) {
@@ -146,9 +146,12 @@ public final class RogueProtocol {
     public record Option(String label, List<Part> text, boolean enabled, @Nullable String reason) {
     }
 
-    /** Answered with an option's index, "reroll" while rerolls is above 0, or "skip" where skip is true. face is an avatar. */
-    public record AskChoice(String kind, @Nullable Integer face, String title, List<List<Part>> paragraphs, List<Option> options, int rerolls,
-            boolean skip) {
+    /**
+     * Answered with an option's index, "reroll" while rerolls is above 0, or "skip" where skip is true. face is an avatar, heading the name
+     * of the story the paragraphs tell, and art the picture behind them.
+     */
+    public record AskChoice(String kind, @Nullable Integer face, String title, @Nullable String heading, List<List<Part>> paragraphs, List<Option> options,
+            int rerolls, boolean skip, @Nullable String art) {
     }
 
     /** Answered with the indexes of the cards picked, or "reroll" where rerollCost is set. */
@@ -179,8 +182,9 @@ public final class RogueProtocol {
     public record Omen(String kind, String name, List<Part> text) {
     }
 
-    /** A result or a message. kind is a ResultKind name, or "MESSAGE". */
-    public record Tell(String kind, @Nullable String icon, String title, List<Part> text, List<String> gains, List<TellSection> sections) {
+    /** A result or a message. kind is a ResultKind name, or "MESSAGE". art is the picture behind a result. */
+    public record Tell(String kind, @Nullable String icon, String title, List<Part> text, List<String> gains, List<TellSection> sections,
+            @Nullable String art) {
     }
 
     public record TellSection(String label, List<Part> text, List<RogueCard> cards) {

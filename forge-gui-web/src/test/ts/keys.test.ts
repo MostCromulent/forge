@@ -28,6 +28,38 @@ describe('keyCommand', () => {
   });
 });
 
+describe('a Rogue Commander scene', () => {
+  const press = (key: string, typing = false) => ({ ...ESCAPE, key, code: key.charCodeAt(0), typing });
+  const boon = () => {
+    const model = createModel();
+    model.screen = 'campaign';
+    model.rogueAnnounced = [];
+    model.rogueQuestion = {
+      t: 'rogueQuestion', id: 4, kind: 'boon',
+      choice: { kind: 'boon', title: '', paragraphs: [], rerolls: 0, skip: false, options: [
+        { label: 'a', text: [], enabled: true }, { label: 'b', text: [], enabled: false, reason: 'Not enough Gold.' }] },
+    };
+    return model;
+  };
+  const rogueUi = { ...ui, rogueFolded: null } as UiState;
+
+  // Fails if a number picks a locked choice, or one past the last
+  it('a number key picks only an enabled choice', () => {
+    expect(keyCommand(press('1'), boon(), rogueUi, KEYS, {})).toBe('pickChoice1');
+    expect(keyCommand(press('2'), boon(), rogueUi, KEYS, {})).toBeNull();
+    expect(keyCommand(press('3'), boon(), rogueUi, KEYS, {})).toBeNull();
+  });
+
+  // Fails if a key typed into a field, or pressed under an announcement or with the scene folded, answers the scene
+  it('keys are ignored while typing or while a dialog is open', () => {
+    expect(keyCommand(press('1', true), boon(), rogueUi, KEYS, {})).toBeNull();
+    const announced = boon();
+    announced.rogueAnnounced = [{ t: 'rogueAnnounce', kind: 'unlock', title: '', text: '' }];
+    expect(keyCommand(press('1'), announced, rogueUi, KEYS, {})).toBeNull();
+    expect(keyCommand(press('1'), boon(), { ...rogueUi, rogueFolded: 4 } as UiState, KEYS, {})).toBeNull();
+  });
+});
+
 describe('rebind', () => {
   it('swaps the keys of two actions so no key does two things, and refuses a reserved key', () => {
     expect(rebind(KEYS, 'ok', 'F')).toEqual({ ok: 'f', nextFace: ' ', cardText: 'c' });

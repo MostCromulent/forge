@@ -27,6 +27,8 @@ declare module '../ui' {
     rogueNewRun: boolean;
     /** The run's page that opens next, such as its deck after Deck on Runs. */
     rogueRunTab: string | null;
+    /** The question whose scene View Map folded, so the page beneath can be read. */
+    rogueFolded: number | null;
   }
 }
 
@@ -52,7 +54,7 @@ const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueChoice: null, rogueQ
 // A winding trail between two points
 const ICON = <><circle cx="12" cy="37" r="4" /><circle cx="36" cy="11" r="4" /><path d="M16 37h10a7 7 0 0 0 0-14h-4a7 7 0 0 1 0-12h10" /></>;
 
-Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null });
+Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null });
 
 registerMode({
   mode: 'rogue',
@@ -60,7 +62,7 @@ registerMode({
   hello: (model, msg) => {
     if (msg.campaign !== 'rogue') {
       Object.assign(model, NO_ROGUE);
-      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null });
+      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null });
     }
   },
   stored: ['rogueHome', 'rogueRoster', 'rogueChoice', 'rogueQuestion'],

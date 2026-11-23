@@ -1,12 +1,13 @@
 // Decides what each key does, checking the top layer first, so a key does exactly one thing. Escape is the exception: a Preact dialog or menu closes on it by itself
 
 import { cardMenu, cardPrompt, oldestRequest, stackPick, type Model } from './model';
+import { sceneOptions } from './rogue/questions';
 import type { UiState } from './ui';
 
 export type KeyCommand =
   | 'closeOptions' | 'closeConcede' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closeZones' | 'closePicker' | 'declineHostChoice'
   | 'ok' | 'cancel' | 'nextFace' | 'cardText' | 'startMatch'
-  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'castWithoutCost' | 'castWithCost' | 'closeReveal' | 'confirmRequest' | 'foldRequest' | 'unfoldRequest' | 'editorUndo' | 'closeImporter' | 'closeBrowse' | 'back'
+  | 'closeCardMenu' | `pickCardMenu${Digit}` | `pickChoice${Digit}` | 'continueScene' | 'castWithoutCost' | 'castWithCost' | 'closeReveal' | 'confirmRequest' | 'foldRequest' | 'unfoldRequest' | 'editorUndo' | 'closeImporter' | 'closeBrowse' | 'back'
   | ShortcutCommand;
 
 /** What each of Forge's shortcut preferences does on the web. Alpha strike is a prompt button, so it is handled with the prompt's keys. */
@@ -158,6 +159,12 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
     // Escape outside a match goes back one step of the page's trail, as its Back button does
     if (escape && !press.typing) {
       return 'back';
+    }
+    // A Rogue Commander scene takes the number keys and OK, unless it is folded away or something lies over it
+    const options = sceneOptions(model.rogueQuestion);
+    if (options && !press.typing && !ui.volumeOpen && !model.rogueAnnounced.length && ui.rogueFolded !== model.rogueQuestion!.id) {
+      if (/^[1-9]$/.test(key)) return options[Number(key) - 1]?.enabled ? `pickChoice${key as Digit}` : null;
+      if (ok && !options.length) return 'continueScene';
     }
     const table = model.lobby;
     return !press.typing && model.screen === 'setup' && key === 'Enter' && table?.host && table.canStart
