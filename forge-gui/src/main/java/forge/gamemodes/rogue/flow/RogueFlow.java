@@ -358,7 +358,7 @@ public final class RogueFlow {
         }
 
         if (currentRun != null && (currentRun.isRunFailed() || currentRun.isRunWon())) {
-            // Run is over (won or lost) - send player back to Commander selection
+            // Run is over (won or lost); the client shows where the player goes next
             currentRun = null;
             decisions.runEnded();
         } else {
@@ -510,7 +510,7 @@ public final class RogueFlow {
         runStartBoon(newRun, progress);
 
         // Generate unique name for the run (used as filename)
-        // Format: DeckName_Timestamp (e.g., "MeriaRogueCommander_12-11-25_143022")
+        // Format: DeckName_EpochMillis; a custom run keeps only letters, digits, _ and - of its deck name
         String runName = (start.custom() ? runDeck.getName().replaceAll("[^a-zA-Z0-9_-]", "_")
             : runDeck.getName()) + "_" + System.currentTimeMillis();
         newRun.setName(runName);
