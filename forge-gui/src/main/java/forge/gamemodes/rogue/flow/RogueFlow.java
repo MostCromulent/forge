@@ -141,14 +141,18 @@ public final class RogueFlow {
     }
 
     public String enterText() {
-        RoguePathNode node = currentRun.getCurrentNode();
+        return enterText(currentRun.getCurrentNode());
+    }
+
+    /** The label of the button that enters the node, whichever node is current. A face-down plane is not named. */
+    public String enterText(RoguePathNode node) {
         if (node == null) {
             return Localizer.getInstance().getMessage("lblRogueNoNodeAvailable");
         }
         return switch (node.getType()) {
             case PLANEBOUND -> {
                 NodePlanebound nodePlanebound = (NodePlanebound) node;
-                String planeName = pathContext().hidePlanes && !nodePlanebound.isRevealed()
+                String planeName = currentRun.getPath().isFaceDown(currentRun, nodePlanebound)
                     ? "???" : nodePlanebound.getRoguePlanebound().planeName();
                 yield Localizer.getInstance().getMessage("lblRogueEnterPlane", planeName);
             }
