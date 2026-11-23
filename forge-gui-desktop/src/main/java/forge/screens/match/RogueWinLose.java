@@ -8,6 +8,7 @@ import forge.gui.framework.EDocID;
 import forge.localinstance.skin.FSkinProp;
 import forge.screens.home.CHomeUI;
 import forge.screens.home.rogue.CSubmenuRogueMap;
+import forge.screens.home.rogue.RogueUIHelper;
 import forge.util.Localizer;
 
 /**
@@ -46,7 +47,7 @@ public class RogueWinLose extends ControlWinLose {
             getView().getBtnQuit().setText(localizer.getMessage("lblRogueGoEndless"));
             getView().getBtnQuit().setEnabled(unlocked);
             if (!unlocked) {
-                getView().showQuitButtonHint(localizer.getMessage("lblRogueUnlockEndlessHint"),
+                getView().showQuitButtonHint(RogueUIHelper.html(localizer.getMessage("lblRogueUnlockEndlessHint"), true),
                     FSkinProp.ICO_LOCK);
             }
         }

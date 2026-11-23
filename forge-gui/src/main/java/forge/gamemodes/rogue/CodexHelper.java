@@ -263,6 +263,27 @@ public final class CodexHelper {
         return state(progress.hasAcquiredTrait(trait), progress.hasSeenTrait(trait));
     }
 
+    /** Seen includes acquired. */
+    public static int countSeen(Collection<CodexState> states) {
+        int count = 0;
+        for (CodexState state : states) {
+            if (state != CodexState.UNKNOWN) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public static int countAcquired(Collection<CodexState> states) {
+        int count = 0;
+        for (CodexState state : states) {
+            if (state == CodexState.ACQUIRED) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private static CodexState state(boolean acquired, boolean seen) {
         if (acquired) {
             return CodexState.ACQUIRED;

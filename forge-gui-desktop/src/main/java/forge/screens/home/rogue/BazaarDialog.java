@@ -177,7 +177,7 @@ public class BazaarDialog {
 
   private void splitItems() {
     for (BazaarItem item : availableItems) {
-      if (item.type() == BazaarItem.Type.TRAIT || item.type() == BazaarItem.Type.CARRY_CARD) {
+      if (item.isSpecial()) {
         specialItems.add(item);
       } else {
         cardItems.add(item);

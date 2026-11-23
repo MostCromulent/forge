@@ -131,17 +131,15 @@ public enum CSubmenuRogueMap implements ICDoc {
 
   private void updatePlaneboundRerollButton() {
     JButton button = view.getBtnRerollPlane();
-    int rerollsLeft = flow.rerollsLeft();
-    if (rerollsLeft <= 0) {
+    RogueFlow.Reroll reroll = flow.reroll();
+    if (reroll.left() <= 0) {
       button.setVisible(false);
       button.setToolTipText(null);
     } else {
       button.setVisible(true);
-      button.setText(Localizer.getInstance().getMessage("lblRogueRerollPlaneCount", rerollsLeft));
-      boolean hasCandidates = !flow.rerollCandidates().isEmpty();
-      button.setEnabled(hasCandidates);
-      button.setToolTipText(Localizer.getInstance().getMessage(
-          hasCandidates ? "lblRogueRerollPlanebound" : "lblRogueNoAlternativePlanebound"));
+      button.setText(Localizer.getInstance().getMessage("lblRogueRerollPlaneCount", reroll.left()));
+      button.setEnabled(reroll.enabled());
+      button.setToolTipText(reroll.reason());
     }
   }
 

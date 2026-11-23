@@ -12,6 +12,7 @@ import forge.gamemodes.rogue.effect.*;
 import forge.gamemodes.rogue.path.RoguePath;
 import forge.gamemodes.rogue.path.RoguePathNode;
 import forge.item.PaperCard;
+import forge.util.Localizer;
 import forge.util.MyRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -76,7 +77,17 @@ public class RogueRun {
     private RogueRunTimer runTimer;             // Active play time for this run
 
     /** Type of card carried between matches in the command zone. */
-    public enum CarryCardType { ITEM, FELLOW, SCROLL}
+    public enum CarryCardType {
+        ITEM, FELLOW, SCROLL;
+
+        public String label() {
+            return Localizer.getInstance().getMessage(switch (this) {
+                case ITEM -> "lblRogueCarryItem";
+                case FELLOW -> "lblRogueCarryFellow";
+                case SCROLL -> "lblRogueCarryScroll";
+            });
+        }
+    }
 
     /** A card the player carries between matches (castable from command zone).
      *  sourceId links to the effect that granted it (null if purchased/rewarded). */

@@ -64,6 +64,15 @@ public final class RogueUIHelper {
   }
 
 
+  /** Shared texts are plain, with line breaks; Swing labels need HTML to break lines. */
+  public static String html(String plain, boolean centered) {
+    if (plain == null || plain.startsWith("<html>")) {
+      return plain;
+    }
+    String body = plain.replace("\n", "<br>");
+    return centered ? "<html><center>" + body + "</center></html>" : "<html>" + body + "</html>";
+  }
+
   private static final int TYPEWRITER_DELAY_MS = 15;
   private static final int TYPEWRITER_CHARS_PER_TICK = 2;
 
@@ -326,7 +335,7 @@ public final class RogueUIHelper {
         .text(displayText)
         .fontSize(11)
         .build();
-    effectLabel.setToolTipText(tooltipText);
+    effectLabel.setToolTipText(html(tooltipText, false));
     panel.add(effectLabel, "cell " + col + " " + row);
   }
 

@@ -663,6 +663,27 @@ public class RogueMetaProgress {
         return slots;
     }
 
+    /** Built, and either on already or with Aether Energy to spare. */
+    public boolean canToggleAether(AetherEffect aetherEffect) {
+        return getAetherEffectRank(aetherEffect) > 0
+            && (getActiveAetherEffects().contains(aetherEffect) || getActiveAetherEffectCount() < getActiveAetherEffectSlots());
+    }
+
+    /** The Echoes the next rank costs, or -1 at the highest rank. */
+    public int nextRankCost(AetherEffect aetherEffect) {
+        int rank = getAetherEffectRank(aetherEffect);
+        return rank >= aetherEffect.getEffectiveMaxRank(aetherUpgradeLevel) ? -1 : aetherEffect.getEchoCostForRank(rank + 1);
+    }
+
+    public boolean canAffordNextRank(AetherEffect aetherEffect) {
+        int cost = nextRankCost(aetherEffect);
+        return cost >= 0 && totalEchoes >= cost;
+    }
+
+    public boolean canAffordUpgrade(AetherUpgrade upgrade) {
+        return totalSparks >= upgrade.sparkCost && totalEchoes >= upgrade.echoCost;
+    }
+
     public void addEchoes(int amount) {
         if (amount > 0) {
             totalEchoes += amount;

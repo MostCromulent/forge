@@ -158,6 +158,16 @@ public final class RogueFlow {
         };
     }
 
+    /** The Reroll Plane button: hidden when none are left, disabled with its reason when no other plane can come. */
+    public record Reroll(int left, boolean enabled, String reason) { }
+
+    public Reroll reroll() {
+        int left = rerollsLeft();
+        boolean enabled = left > 0 && !rerollCandidates().isEmpty();
+        return new Reroll(left, enabled, Localizer.getInstance().getMessage(
+            enabled ? "lblRogueRerollPlanebound" : "lblRogueNoAlternativePlanebound"));
+    }
+
     /** 0 when the current node is not a plane or a match is on. */
     public int rerollsLeft() {
         if (currentRun == null || currentRun.getHostedMatch() != null
