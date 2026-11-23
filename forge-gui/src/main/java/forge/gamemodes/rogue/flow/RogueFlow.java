@@ -295,6 +295,7 @@ public final class RogueFlow {
     public RogueWinLoseController matchOver(GameView game, IWinLoseView<?> view) {
         RogueWinLoseController controller = new RogueWinLoseController(game, view, currentRun, decisions);
         controller.showRewards();
+        nodePlaneboundHelper.restoreHuman();
         return controller;
     }
 

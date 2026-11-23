@@ -31,8 +31,8 @@ import java.util.Set;
 import org.tinylog.Logger;
 
 class NodePlaneboundHelper {
-
     private final RogueFlow flow;
+    private Runnable restoreHuman;
 
     NodePlaneboundHelper(RogueFlow flow) {
         this.flow = flow;
@@ -74,6 +74,14 @@ class NodePlaneboundHelper {
 
             // RogueWinLoseController recognises the winner by this player
             LobbyPlayer humanLobbyPlayer = GamePlayerUtil.getGuiPlayer();
+            String name = humanLobbyPlayer.getName();
+            int avatar = humanLobbyPlayer.getAvatarIndex();
+            int sleeve = humanLobbyPlayer.getSleeveIndex();
+            restoreHuman = () -> {
+                humanLobbyPlayer.setName(name);
+                humanLobbyPlayer.setAvatarIndex(avatar);
+                humanLobbyPlayer.setSleeveIndex(sleeve);
+            };
             humanLobbyPlayer.setName(currentRun.getCurrentCommanderName());
             humanLobbyPlayer.setAvatarIndex(availableAvatar(currentRun.getSelectedRogueDeck().getAvatarIndex()));
             humanLobbyPlayer.setSleeveIndex(currentRun.getSelectedRogueDeck().getSleeveIndex());
@@ -119,6 +127,7 @@ class NodePlaneboundHelper {
             ));
         } catch (Exception e) {
             Logger.error(e, "Could not start Rogue match for Planebound {}", node.getRoguePlanebound());
+            restoreHuman();
             // Charges and event effects are spent before a match exists, so the last save is the only state to return to
             currentRun.setHostedMatch(null);
             flow.setRun(RogueIO.loadRun(RogueIO.getRogueFile(currentRun)));
@@ -126,6 +135,14 @@ class NodePlaneboundHelper {
                 Localizer.getInstance().getMessage("lblRogueRogueCommanderMap"),
                 Localizer.getInstance().getMessage("lblRogueMatchNotStarted"));
             flow.decisions().mapChanged(flow.run());
+        }
+    }
+
+    /** The human plays as the commander only during the match. */
+    void restoreHuman() {
+        if (restoreHuman != null) {
+            restoreHuman.run();
+            restoreHuman = null;
         }
     }
 
