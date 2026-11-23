@@ -331,6 +331,29 @@ public final class RogueFlow {
         return controller.hasWonRun() ? localizer.getMessage("lblRogueRunCompleted") : localizer.getMessage("lblRogueBattleWon");
     }
 
+    /** A line under the result's title for a client that has room for one, or null. */
+    public String resultDetail(RogueWinLoseController controller) {
+        Localizer localizer = Localizer.getInstance();
+        if (currentRun == null) {
+            return null;
+        }
+        if (currentRun.getEndlessLevel() > 0 && currentRun.isRunWon()) {
+            return localizer.getMessage("lblRogueEndlessLevel", currentRun.getEndlessLevel());
+        }
+        if (controller.hasFailedRun()) {
+            List<RogueRunHistoryEntry> history = RogueMetaProgress.getInstance().getRunHistory();
+            String by = history.isEmpty() ? "" : history.get(history.size() - 1).getBossOrDefeatedBy();
+            return by.isEmpty() ? null : localizer.getMessage("lblRogueHistoryDefeatedBy", by);
+        }
+        if (!controller.hasWonMatch()) {
+            return localizer.getMessage("lblRogueContinuumRevive", currentRun.getCurrentLife());
+        }
+        if (controller.hasWonRun() && currentRun.getCurrentNode() instanceof NodePlanebound boss) {
+            return localizer.getMessage("lblRogueHistoryBossSlain", boss.getRoguePlanebound().planeboundName());
+        }
+        return null;
+    }
+
     /** Whether the player chooses between completing the run and Endless Mode. */
     public boolean offersEnding(RogueWinLoseController controller) {
         return controller.hasWonRun() && currentRun != null && !currentRun.isRunFailed();
