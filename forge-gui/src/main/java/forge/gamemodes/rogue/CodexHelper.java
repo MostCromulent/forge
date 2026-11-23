@@ -42,8 +42,8 @@ public final class CodexHelper {
 
     public enum CodexState { UNKNOWN, SEEN, ACQUIRED }
 
-    /** A tutorial, or a chapter of the story. */
-    public record JournalEntry(String id, String title, String text, boolean story) {
+    /** A tutorial, or a chapter of the story. speaker is the NPC who tells it. */
+    public record JournalEntry(String id, String title, String text, boolean story, NPC speaker) {
         @Override
         public String toString() {
             return title;
@@ -224,7 +224,7 @@ public final class CodexHelper {
         List<JournalEntry> journal = Arrays.stream(RogueTutorial.values())
             .filter(progress::hasSeenTutorial)
             .map(tutorial -> new JournalEntry(tutorial.getId(), tutorial.getTitle(),
-                String.join("\n\n", tutorial.getMessageChunks()), false))
+                String.join("\n\n", tutorial.getMessageChunks()), false, NPC.TEFERI))
             .collect(Collectors.toCollection(ArrayList::new));
 
         int storyLevel = progress.getNPCLevel(NPC.TEFERI.id);
@@ -235,14 +235,14 @@ public final class CodexHelper {
             List<String> text = chapter.getJournalText();
             if (!text.isEmpty()) {
                 journal.add(new JournalEntry("teferi:" + chapter.name(), chapter.getTitle(),
-                    String.join("\n\n", text), true));
+                    String.join("\n\n", text), true, NPC.TEFERI));
             }
         }
         TeferiOptionalEncounter anchor = TeferiOptionalEncounter.TEMPORAL_ANCHOR;
         if (progress.hasSeenNPCEncounter(anchor.getId())) {
             journal.add(new JournalEntry(anchor.getId(),
                 Localizer.getInstance().getMessage("lblRogueJournalTemporalAnchor"),
-                String.join("\n\n", anchor.getStoryTextChunks()), true));
+                String.join("\n\n", anchor.getStoryTextChunks()), true, NPC.TEFERI));
         }
         return journal;
     }
