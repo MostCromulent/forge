@@ -58,6 +58,16 @@ export async function gameStarted(page: Page): Promise<void> {
   }).toPass({ timeout: 60_000 });
 }
 
+/** Plays up to the player's first priority. It keeps the opening hand and gives any other question its first answer. */
+export async function toPriority(page: Page): Promise<void> {
+  await expect(async () => {
+    await answerDialogs(page);
+    const prompt = await page.evaluate(() => (window as any).forge.model.prompt);
+    if (prompt && !prompt.priority && prompt.ok?.enabled) await page.evaluate(() => (window as any).forge.actions.ok());
+    expect(prompt?.priority).toBe(true);
+  }).toPass({ timeout: 90_000, intervals: [500] });
+}
+
 /** Concedes from the game menu and confirms the question it asks. */
 export async function concede(page: Page): Promise<void> {
   await answerDialogs(page);

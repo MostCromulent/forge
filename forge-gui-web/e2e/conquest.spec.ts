@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { PROBE_SEED, startServer, type Server } from './server';
-import { answerDialogs, enterName } from './steps';
+import { enterName, toPriority } from './steps';
 
 const fixture = join(dirname(fileURLToPath(import.meta.url)), '../src/test/resources/conquest/Fixture_conquest');
 const deck = readdirSync(join(fixture, 'decks'))[0];
@@ -28,16 +28,6 @@ test.afterEach(async () => { await server.stop(); });
 /** Opens the fixture's conquest from the shelf. */
 async function playFixture(page: Page): Promise<void> {
   await page.locator('.cq-save', { hasText: 'Fixture conquest' }).getByRole('button', { name: 'Play' }).click();
-}
-
-/** Plays up to the player's first priority. It keeps the opening hand and gives any other question its first answer. */
-async function toPriority(page: Page): Promise<void> {
-  await expect(async () => {
-    await answerDialogs(page);
-    const prompt = await page.evaluate(() => (window as any).forge.model.prompt);
-    if (prompt && !prompt.priority && prompt.ok?.enabled) await page.evaluate(() => (window as any).forge.actions.ok());
-    expect(prompt?.priority).toBe(true);
-  }).toPass({ timeout: 90_000, intervals: [500] });
 }
 
 // Fails if a battle cannot be reached from the map, its reward cannot be claimed to the end, or the win is not shown as conquered
