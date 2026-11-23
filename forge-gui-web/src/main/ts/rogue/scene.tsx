@@ -1,6 +1,6 @@
 // Questions drawn as a scene over the page: an NPC's boon or story, an event's choices, a result. View Map folds a scene to a bar
 
-import { Fragment, type ComponentChildren } from 'preact';
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from '../icons';
 import { artUrl, imageUrl } from '../images';
@@ -12,12 +12,13 @@ import { changeUi, ui } from '../ui';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { Words } from './terms';
-import { CardPick, CommanderPick } from './pick';
+import { CardPick, CommanderPick, LootPick } from './pick';
+import { Gains } from './gains';
 import { Backdrop } from '../dialog';
 import { CardGroup, Curve } from '../deck/deckview';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { AskChoice, DeckDetails, Option, Part, Tell } from '../protocol';
+import type { AskChoice, DeckDetails, Option, Part, TellOmen } from '../protocol';
 
 /** What the number keys and the OK key do in the scene on screen. */
 let keyed: { pick: (i: number) => void; ok: () => void } | null = null;
@@ -28,7 +29,7 @@ export function pressScene(choice: number | null): void {
   else keyed?.pick(choice);
 }
 
-function useSceneKeys(pick: (i: number) => void, ok: () => void): void {
+export function useSceneKeys(pick: (i: number) => void, ok: () => void): void {
   useEffect(() => {
     const own = { pick, ok };
     keyed = own;
@@ -62,20 +63,25 @@ export function Scene({ art, foot, children, fold, viewDeck, tip, onScroll }: {
           : <button onClick={fold}><Icon d={ROGUE_ICONS.trail} cls="rg-ic" />{` ${t('lblRogueViewMap')}`}</button>)}
         {viewDeck && (phone ? <button onClick={viewDeck}>{t('lblViewDeck')}</button>
           : <button onClick={viewDeck}><Icon d={ROGUE_ICONS.deck} cls="rg-ic" />{` ${t('lblViewDeck')}`}</button>)}
-        {fold && foot && <span class="sp" />}
+        {!phone && fold && foot && <span class="sp" />}
         {foot}
       </div>
     </div>
   );
 }
 
-/** The options, each a box with a button laid over it so a tap on a term in its text explains the term. hot is the option last pointed at or reached by keyboard. */
-export function Choices({ options, onPick, hot, setHot }: { options: Option[]; onPick: (i: number) => void; hot: number | null; setHot: (i: number) => void }) {
+/**
+ * The options, each a box with a button laid over it so a tap on a term in its text explains the term. hot is the option last pointed at or reached by keyboard.
+ * picked holds the options chosen so far where several are chosen, which are drawn as hot too.
+ */
+export function Choices({ options, onPick, hot, setHot, picked }: {
+  options: Option[]; onPick: (i: number) => void; hot: number | null; setHot: (i: number) => void; picked?: number[];
+}) {
   return (
     <div class="rg-opts">
       {options.map((o, i) => (
-        <div key={i} class={['rg-opt', i === hot && 'hot', !o.enabled && 'no'].filter(Boolean).join(' ')} onPointerEnter={() => setHot(i)}>
-          <button class="rg-opt-b" aria-label={o.label} disabled={!o.enabled} onClick={() => onPick(i)}
+        <div key={i} class={['rg-opt', (i === hot || picked?.includes(i)) && 'hot', !o.enabled && 'no'].filter(Boolean).join(' ')} onPointerEnter={() => setHot(i)}>
+          <button class="rg-opt-b" aria-label={o.label} aria-pressed={picked ? picked.includes(i) : undefined} disabled={!o.enabled} onClick={() => onPick(i)}
             onFocus={e => { if (e.currentTarget.matches(':focus-visible')) setHot(i); }} />
           <b>{o.label}</b>
           <span class="d"><Words parts={o.text} /></span>
@@ -131,7 +137,7 @@ export function Typed({ text, done }: { text: string; done: () => void }) {
 export function Question({ model, actions }: { model: Model; actions: Actions }) {
   const asked = model.rogueQuestion!;
   const answer = (value: unknown) => actions.rogueAnswer(asked.id, value);
-  const title = asked.choice?.title ?? asked.cards?.title ?? asked.commander?.title ?? asked.tell!.title;
+  const title = asked.choice?.title ?? asked.cards?.title ?? asked.commander?.title ?? asked.omen?.title ?? asked.tell!.title;
   if (ui.rogueFolded === asked.id) {
     return (
       <div class="rg-folded">
@@ -146,7 +152,13 @@ export function Question({ model, actions }: { model: Model; actions: Actions })
     return <CardPick key={asked.id} asked={asked.cards} answer={answer} fold={fold} viewDeck={() => changeUi(u => { u.rogueDeckView = true; })} />;
   }
   if (asked.commander) return <CommanderPick key={asked.id} asked={asked.commander} model={model} actions={actions} answer={answer} />;
-  return asked.choice ? <Choosing key={asked.id} choice={asked.choice} answer={answer} fold={fold} /> : <Gains key={asked.id} tell={asked.tell!} ok={() => answer(null)} />;
+  if (asked.omen) return <Omens key={asked.id} omen={asked.omen} ok={() => answer(null)} />;
+  if (!asked.choice) return <Gains key={asked.id} tell={asked.tell!} ok={() => answer(null)} />;
+  const viewDeck = fold && (() => changeUi(u => { u.rogueDeckView = true; }));
+  // Options that are traits or rewards to take are drawn as cards
+  return asked.choice.options.length > 0 && asked.choice.options.every(o => o.trait)
+    ? <LootPick key={asked.id} choice={asked.choice} answer={answer} fold={fold} viewDeck={viewDeck || undefined} />
+    : <Choosing key={asked.id} choice={asked.choice} answer={answer} fold={fold} viewDeck={viewDeck || undefined} />;
 }
 
 /** A deck, read only: a commander's start deck, or the run's deck over a decision. */
@@ -165,13 +177,16 @@ export function DeckView({ details, line, button, close }: { details: DeckDetail
 }
 
 /**
- * Someone speaking, or an event, with its text in parts that each end on Continue, and the options after the last. A story has no options,
- * and its last Continue answers it.
+ * Someone speaking, an event or a Sanctum, with its text in parts that each end on Continue, and the options after the last. A story has no options,
+ * and its last Continue answers it. Where count options are to be chosen, as the dev pickers ask, a pick toggles and more than one is confirmed.
+ * A phone names the scene by its title beside the face and leaves out the heading.
  */
-function Choosing({ choice, answer, fold }: { choice: AskChoice; answer: (value: unknown) => void; fold?: () => void }) {
+function Choosing({ choice, answer, fold, viewDeck }: { choice: AskChoice; answer: (value: unknown) => void; fold?: () => void; viewDeck?: () => void }) {
   const [part, setPart] = useState(0);
   const [typing, setTyping] = useState(!reducedMotion());
   const [hot, setHot] = useState<number | null>(null);
+  const [picked, setPicked] = useState<number[]>([]);
+  const phone = isPortrait();
   const last = part >= choice.paragraphs.length - 1;
   const options = last ? choice.options : [];
   const next = () => {
@@ -183,11 +198,14 @@ function Choosing({ choice, answer, fold }: { choice: AskChoice; answer: (value:
   };
   const pick = (i: number) => {
     playSound({ t: 'sound', name: 'token', sync: true });
-    answer(i);
+    if (!choice.count) answer(i);
+    else if (choice.count === 1) answer([i]);
+    else setPicked(p => (p.includes(i) ? p.filter(x => x !== i) : p.length < choice.count ? [...p, i] : p));
   };
+  const short = choice.count - picked.length;
   useSceneKeys(i => { if (options[i]?.enabled) pick(i); }, () => { if (!options.length) next(); });
   const words = lines(choice.paragraphs[part] ?? []);
-  const shown = hot === null || isPortrait() ? [] : options[hot]?.text ?? [];
+  const shown = hot === null || phone ? [] : options[hot]?.text ?? [];
   const terms = shown.filter((p, i) => p.kind === 'term' && shown.findIndex(q => q.term === p.term) === i);
   const cards = shown.filter((p, i) => p.kind === 'card' && p.image && shown.findIndex(q => q.image === p.image) === i);
   const tip = (terms.length > 0 || cards.length > 0) && (
@@ -196,47 +214,54 @@ function Choosing({ choice, answer, fold }: { choice: AskChoice; answer: (value:
       {cards.map(p => <img key={p.image} alt="" src={imageUrl(p.image!)} />)}
     </div>
   );
-  const foot = <>
-    {!options.length && <button class="primary" onClick={next}>{t('lblContinue')}</button>}
-    {options.length > 0 && choice.rerolls > 0 && (
-      <button onClick={() => answer('reroll')}><Icon d={ROGUE_ICONS.reroll} cls="rg-ic" />{` ${t('lblRogueRerollsRemaining', choice.rerolls)}`}</button>
-    )}
-    {options.length > 0 && choice.skip && <button onClick={() => answer('skip')}>{t('lblSkip')}</button>}
-  </>;
+  const buttons = [
+    !options.length && <button key="go" class="primary" onClick={next}>{t('lblContinue')}</button>,
+    options.length > 0 && choice.rerolls > 0 && (
+      <button key="reroll" onClick={() => answer('reroll')}><Icon d={ROGUE_ICONS.reroll} cls="rg-ic" />{` ${t('lblRogueRerollsRemaining', choice.rerolls)}`}</button>
+    ),
+    options.length > 0 && choice.skip && <button key="skip" onClick={() => answer('skip')}>{t('lblSkip')}</button>,
+    options.length > 0 && choice.count > 1 && (
+      <button key="pick" class="primary" disabled={short > 0} onClick={() => answer(picked)}>{short > 0 ? t('lblWebRogueChooseMore', short) : t('lblChoose')}</button>
+    ),
+  ].filter(Boolean);
   const face = choice.face ?? null;
   return (
-    <Scene art={choice.art} fold={fold} tip={tip} foot={foot}>
+    <Scene art={choice.art} fold={fold} viewDeck={viewDeck} tip={tip} foot={buttons.length ? buttons : null}>
       <div class="rg-tale" onClick={() => setTyping(false)}>
         <div class="rg-face">
           {face !== null ? <span class="pic" style={{ backgroundImage: `url("${avatarUrl(face)}")` }} />
             : <span class="pic icon">{choice.kind in ROGUE_ICONS && <Icon d={ROGUE_ICONS[choice.kind as keyof typeof ROGUE_ICONS]} cls="rg-ic" />}</span>}
-          <b>{choice.title}</b>
+          <b>{phone ? choice.title : choice.label ?? choice.title}</b>
         </div>
         <div class="rg-words">
+          {!phone && choice.heading && <h3>{choice.heading}</h3>}
           {typing && words.length > 0 ? <Typed key={part} text={words.map(line => line.map(p => p.text).join('')).join('\n')} done={() => setTyping(false)} />
             : words.map((line, i) => <p key={i} class="flav"><Words parts={line} /></p>)}
-          {options.length > 0 && <Choices options={options} onPick={pick} hot={hot} setHot={setHot} />}
+          {options.length > 0 && <Choices options={options} onPick={pick} hot={hot} setHot={setHot} picked={choice.count > 1 ? picked : undefined} />}
         </div>
       </div>
     </Scene>
   );
 }
 
-/** A result: what was gained, as text and groups of cards. */
-function Gains({ tell, ok }: { tell: Tell; ok: () => void }) {
+/** The Wrathful and Cursed effects of the battle about to start, over its plane. A flame or a pentagram marks each, and Cursed has a double border. */
+function Omens({ omen, ok }: { omen: TellOmen; ok: () => void }) {
   useSceneKeys(() => {}, ok);
   return (
-    <Scene art={tell.art} foot={<button class="primary" onClick={ok}>{t('lblContinue')}</button>}>
-      <div class="rg-gains">
-        <h3>{tell.title}</h3>
-        <p><Words parts={tell.text} /></p>
-        {tell.sections.map(s => <Fragment key={s.label}>
-          <span class="rg-sub">{s.label}</span>
-          {s.text.length > 0 && <p><Words parts={s.text} /></p>}
-          <div class="rg-cards">
-            {s.cards.map(c => <button key={c.image} class="rg-card" type="button" data-image={c.image}><img alt={c.name} src={imageUrl(c.image)} /></button>)}
-          </div>
-        </Fragment>)}
+    <Scene art={omen.plane} foot={<button class="primary" onClick={ok}>{t('lblBattle')}</button>}>
+      <div class="rg-omen">
+        <span class="opp" style={omen.art ? { backgroundImage: `url("${artUrl(omen.art)}")` } : undefined} />
+        <h3>{omen.title}</h3>
+        <ul>
+          {omen.omens.map((o, i) => (
+            <li key={i} class={o.kind === 'cursed' ? 'curse' : undefined}>
+              {o.kind === 'wrathful' && <Icon d={ROGUE_ICONS.flame} cls="rg-ic" />}
+              {o.kind === 'cursed' && <Icon d={ROGUE_ICONS.curse} cls="rg-ic" />}
+              <b><small>{o.label}</small>{o.name}</b>
+              <span><Words parts={o.text} /></span>
+            </li>
+          ))}
+        </ul>
       </div>
     </Scene>
   );

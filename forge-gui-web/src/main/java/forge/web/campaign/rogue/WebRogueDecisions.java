@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckSection;
+import forge.gamemodes.rogue.CodexHelper;
 import forge.gamemodes.rogue.KeywordHint;
 import forge.gamemodes.rogue.PreviewReferenceType;
 import forge.gamemodes.rogue.RogueCustomDeckGenerator;
@@ -36,6 +37,7 @@ import forge.web.protocol.ToBrowser.EditorGroup;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -157,8 +159,19 @@ final class WebRogueDecisions implements RogueDecisions {
         return parts;
     }
 
-    private static List<RogueCard> cards(final List<PaperCard> cards) {
-        return cards.stream().map(c -> new RogueCard(c.getName(), c.getImageKey(false), 1, null)).collect(Collectors.toList());
+    /** Equal cards merged by name, in the order they first appear. A card the run carries shows its carry type. */
+    private List<RogueCard> cards(final List<PaperCard> cards) {
+        final RogueRun run = game.run();
+        final Map<String, Part> carried = new HashMap<>();
+        if (run != null) {
+            run.getCarryCards().forEach(c -> carried.put(c.cardName(), RoguePages.carryType(c.type())));
+        }
+        final Map<String, RogueCard> merged = new LinkedHashMap<>();
+        for (final PaperCard c : cards) {
+            merged.merge(c.getName(), new RogueCard(c.getName(), c.getImageKey(false), 1, carried.get(c.getName())),
+                    (a, b) -> new RogueCard(a.name(), a.image(), a.count() + 1, a.type()));
+        }
+        return new ArrayList<>(merged.values());
     }
 
     private static List<PickCard> pickCards(final List<PaperCard> cards) {
@@ -190,7 +203,7 @@ final class WebRogueDecisions implements RogueDecisions {
     }
 
     private static Option option(final RogueEffect effect) {
-        return new Option(effect.getDisplayName(), parts(effect.getRawDescription()), true, null);
+        return new Option(effect.getDisplayName(), parts(effect.getRawDescription()), true, null, null);
     }
 
     private static String text(final String key, final Object... args) {
@@ -262,21 +275,21 @@ final class WebRogueDecisions implements RogueDecisions {
 
     @Override
     public boolean confirmReplaceRun() {
-        return choose(new AskChoice("replace", null, text("lblRogueAbandonCurrentRun"), List.of(parts(text("lblRogueAbandonForNewRun"))),
-                List.of(new Option(text("lblRogueStartNewRun"), List.of(), true, null), new Option(text("lblCancel"), List.of(), true, null)),
-                0, false, null)) == 0;
+        return choose(new AskChoice("replace", null, text("lblRogueAbandonCurrentRun"), null, null, List.of(parts(text("lblRogueAbandonForNewRun"))),
+                List.of(new Option(text("lblRogueStartNewRun"), List.of(), true, null, null), new Option(text("lblCancel"), List.of(), true, null, null)),
+                0, false, null, 0)) == 0;
     }
 
     @Override
     public Pick<NPCEffect> chooseBoon(final NPCContext context, final ChoiceRerollContext rerolls) {
         final List<NPCContext.NPCChoice> choices = context.choices();
         final List<Option> options = choices.stream().map(c -> new Option(c.label(),
-                c.npcEffect() == null ? List.of() : parts(c.npcEffect().getRawDescription()), true, null)).collect(Collectors.toList());
+                c.npcEffect() == null ? List.of() : parts(c.npcEffect().getRawDescription()), true, null, null)).collect(Collectors.toList());
         final PaperCard npc = TextHelper.resolveCard(context.displayName());
         boonArt = npc == null ? null : npc.getImageKey(false);
-        final AskChoice choice = new AskChoice(choices.isEmpty() ? "story" : "boon", context.avatarIndex(), context.displayName(),
+        final AskChoice choice = new AskChoice(choices.isEmpty() ? "story" : "boon", context.avatarIndex(), context.displayName(), null, null,
                 context.flavorTextChunks().stream().map(WebRogueDecisions::parts).collect(Collectors.toList()), options, rerolls.remainingRerolls, false,
-                boonArt);
+                boonArt, 0);
         if (choices.isEmpty()) {
             tell(choice);
             return new Pick<>(false, null);
@@ -287,8 +300,10 @@ final class WebRogueDecisions implements RogueDecisions {
 
     @Override
     public Pick<ChestEffect> chooseChest(final List<ChestEffect> loot, final RogueRun run, final ChoiceRerollContext rerolls) {
-        final int picked = choose(new AskChoice("chest", null, text("lblRogueChest"), List.of(parts(text("lblRogueChooseYourLoot"))),
-                loot.stream().map(WebRogueDecisions::option).collect(Collectors.toList()), rerolls.remainingRerolls, true, null));
+        final List<Option> options = loot.stream().map(l -> new Option(l.getDisplayName(), List.of(), true, null, RoguePages.trait(l, run)))
+                .collect(Collectors.toList());
+        final int picked = choose(new AskChoice("chest", null, text("lblRogueChest"), null, text("lblRogueChooseYourLoot"), List.of(), options,
+                rerolls.remainingRerolls, true, RoguePages.lastPlane(run), 0));
         return picked == -1 ? new Pick<>(true, null) : new Pick<>(false, picked == -2 ? null : loot.get(picked));
     }
 
@@ -297,10 +312,10 @@ final class WebRogueDecisions implements RogueDecisions {
         final List<RogueEvent.EventChoice> choices = event.getChoices();
         final List<Option> options = choices.stream().map(c -> {
             final boolean enabled = c.effect().isChoiceAvailable(run);
-            return new Option(c.label(), parts(c.effect().getRawDescription()), enabled, enabled ? null : c.effect().getUnavailableReason(run));
+            return new Option(c.label(), parts(c.effect().getRawDescription()), enabled, enabled ? null : c.effect().getUnavailableReason(run), null);
         }).collect(Collectors.toList());
-        final int picked = choose(new AskChoice("event", null, event.getDisplayName(), List.of(parts(event.getRawDescription())), options,
-                rerolls.remainingRerolls, false, null));
+        final int picked = choose(new AskChoice("event", null, event.getDisplayName(), text("lblRogueEvent"), event.getDisplayName(),
+                List.of(parts(event.getRawDescription())), options, rerolls.remainingRerolls, false, RoguePages.lastPlane(run), 0));
         return picked == -1 ? new Pick<>(true, null) : new Pick<>(false, choices.get(picked));
     }
 
@@ -308,8 +323,9 @@ final class WebRogueDecisions implements RogueDecisions {
     public SanctumAnswer chooseSanctum(final SanctumOffer offer) {
         final List<SanctumOption> offered = offer.options();
         final List<Option> options = offered.stream().map(o -> new Option(o.label(), parts(o.description()), o.enabled(),
-                o.enabled() ? null : o.disabledReason())).collect(Collectors.toList());
-        final int picked = choose(new AskChoice("sanctum", null, text("lblRogueSanctum"), List.of(parts(text("lblRogueChooseAction"))), options, 0, true, null));
+                o.enabled() ? null : o.disabledReason(), null)).collect(Collectors.toList());
+        final int picked = choose(new AskChoice("sanctum", null, text("lblRogueSanctum"), null, text("lblRogueChooseAction"), List.of(), options, 0, true,
+                RoguePages.lastPlane(offer.run()), 0));
         return picked == -2 ? new SanctumAnswer(SanctumAction.SKIP, null) : offered.get(picked).answer();
     }
 
@@ -351,9 +367,9 @@ final class WebRogueDecisions implements RogueDecisions {
         if (!ForgePreferences.DEV_MODE) {
             return current;
         }
-        final List<Option> options = all.stream().map(t -> t instanceof RogueEffect e ? option(e) : new Option(String.valueOf(t), List.of(), true, null))
+        final List<Option> options = all.stream().map(t -> t instanceof RogueEffect e ? option(e) : new Option(String.valueOf(t), List.of(), true, null, null))
                 .collect(Collectors.toList());
-        final JsonElement answer = ask(new AskChoice("dev", null, title, List.of(), options, 0, true, null),
+        final JsonElement answer = ask(new AskChoice("dev", null, title, null, null, List.of(), options, 0, true, null, count),
                 a -> is(a, SKIP) || indexes(a, all.size()) != null && indexes(a, all.size()).size() == count);
         return is(answer, SKIP) ? current : pick(all, indexes(answer, all.size()));
     }
@@ -361,10 +377,11 @@ final class WebRogueDecisions implements RogueDecisions {
     @Override
     public void showPlaneboundEffects(final NodePlanebound node, final List<WrathfulEffect> wrathful, final List<CursedEffect> cursed) {
         final List<Omen> omens = new ArrayList<>();
-        wrathful.forEach(w -> omens.add(new Omen("wrathful", w.getDisplayName(), parts(w.getRawDescription()))));
-        cursed.forEach(c -> omens.add(new Omen("cursed", c.getDisplayName(), parts(c.getRawDescription()))));
-        final Heading heading = RogueDecisions.planeboundEffects(wrathful, cursed);
-        tell(new TellOmen(heading.title(), heading.text(), omens));
+        wrathful.forEach(w -> omens.add(new Omen("wrathful", KeywordHint.WRATHFUL.getTitle(), w.getDisplayName(), parts(w.getRawDescription()))));
+        cursed.forEach(c -> omens.add(new Omen("cursed", KeywordHint.CURSED.getTitle(), c.getDisplayName(), parts(c.getRawDescription()))));
+        final PaperCard plane = CodexHelper.getPlaneCard(node.getRoguePlanebound());
+        tell(new TellOmen(RogueDecisions.planeboundEffects(wrathful, cursed).title(), RoguePages.planeboundArt(node.getRoguePlanebound()),
+                plane == null ? null : plane.getImageKey(false), omens));
     }
 
     @Override
@@ -373,9 +390,10 @@ final class WebRogueDecisions implements RogueDecisions {
             game.announce(new RogueAnnounce("spark", title, text, null));
             return;
         }
+        final RogueRun run = game.run();
         tell(new Tell(kind.name(), title, parts(text), sections.stream()
-                .map(s -> new TellSection(s.label(), parts(s.text()), s.cards() == null ? List.of() : cards(s.cards()))).collect(Collectors.toList()),
-                kind == ResultKind.BOON ? boonArt : null));
+                .map(s -> new TellSection(s.label(), parts(s.text()), s.cards() == null ? List.of() : cards(s.cards()), s.removed()))
+                .collect(Collectors.toList()), kind == ResultKind.BOON ? boonArt : run == null ? null : RoguePages.lastPlane(run)));
     }
 
     @Override

@@ -84,6 +84,11 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         return Shared.GAME;
     }
 
+    /** The open run, or null. Only the flow thread calls this. */
+    RogueRun run() {
+        return flow.run();
+    }
+
     /** decisions is given the game, so tests can answer the flow's questions from a script. */
     public RogueGame(final Function<RogueGame, RogueDecisions> decisions) {
         flow = new RogueFlow(decisions.apply(this));

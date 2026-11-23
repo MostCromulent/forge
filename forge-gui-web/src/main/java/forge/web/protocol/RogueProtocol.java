@@ -185,13 +185,17 @@ public final class RogueProtocol {
     public record RogueCard(String name, String image, int count, @Nullable Part type) {
     }
 
-    /** reason says why a choice that is not enabled cannot be taken. */
-    public record Option(String label, List<Part> text, boolean enabled, @Nullable String reason) {
+    /** reason says why a choice that is not enabled cannot be taken. trait is set when the option is a trait or a reward to take, drawn as a card. */
+    public record Option(String label, List<Part> text, boolean enabled, @Nullable String reason, @Nullable Trait trait) {
     }
 
-    /** Answered with an option's index, "reroll" while rerolls is above 0, or "skip" where skip is true. face is an avatar, and art the picture behind it. */
-    public record AskChoice(String kind, @Nullable Integer face, String title, List<List<Part>> paragraphs, List<Option> options, int rerolls, boolean skip,
-            @Nullable String art) {
+    /**
+     * Answered with an option's index, "reroll" while rerolls is above 0, or "skip" where skip is true; or, when count is above 0, with the indexes
+     * of count options. face is an avatar, and art the picture behind it. label names the kind of scene beside the face on a wide screen,
+     * where title is used when it is null, and heading heads the text there.
+     */
+    public record AskChoice(String kind, @Nullable Integer face, String title, @Nullable String label, @Nullable String heading,
+            List<List<Part>> paragraphs, List<Option> options, int rerolls, boolean skip, @Nullable String art, int count) {
     }
 
     /**
@@ -225,18 +229,19 @@ public final class RogueProtocol {
     public record ShopItem(int id, String name, @Nullable String image, List<Part> text, int price) {
     }
 
-    /** The Wrathful and Cursed effects of the battle about to start. */
-    public record TellOmen(String title, String text, List<Omen> omens) {
+    /** The Wrathful and Cursed effects of the battle about to start. art is the planebound's picture, and plane the plane's behind it. */
+    public record TellOmen(String title, @Nullable String art, @Nullable String plane, List<Omen> omens) {
     }
 
-    /** kind is "wrathful" or "cursed". */
-    public record Omen(String kind, String name, List<Part> text) {
+    /** kind is "wrathful" or "cursed", and label its name. */
+    public record Omen(String kind, String label, String name, List<Part> text) {
     }
 
     /** A result or a message. kind is a ResultKind name, or "MESSAGE". art is the picture behind a result. */
     public record Tell(String kind, String title, List<Part> text, List<TellSection> sections, @Nullable String art) {
     }
 
-    public record TellSection(String label, List<Part> text, List<RogueCard> cards) {
+    /** removed means the cards left the deck. */
+    public record TellSection(@Nullable String label, List<Part> text, List<RogueCard> cards, boolean removed) {
     }
 }

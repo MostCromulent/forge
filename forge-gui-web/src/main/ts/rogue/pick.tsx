@@ -9,10 +9,14 @@ import { isPortrait } from '../form';
 import { useDebounced } from '../hooks';
 import { useCataloguePages } from '../deck/catalogue';
 import { t, formatNumber } from '../text';
-import { Scene } from './scene';
+import { Icon } from '../icons';
+import { playSound } from '../audio';
+import { ROGUE_ICONS } from './icons';
+import { Scene, useSceneKeys } from './scene';
+import { TraitCard } from './traits';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { AskCards, AskCommander, PickCard, PickDeck } from '../protocol';
+import type { AskCards, AskChoice, AskCommander, PickCard, PickDeck } from '../protocol';
 
 /** The catalogue's source that reads the commanders the open question offers. */
 const COMMANDERS = 'rogue-commanders';
@@ -105,6 +109,36 @@ export function CardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; a
       </Backdrop>
     )}
   </>;
+}
+
+/** A chest's rewards, each a card to take, with Reroll and Skip. A phone words Reroll by its count alone. */
+export function LootPick({ choice, answer, fold, viewDeck }: { choice: AskChoice; answer: (value: unknown) => void; fold?: () => void; viewDeck?: () => void }) {
+  const phone = isPortrait();
+  const pick = (i: number) => {
+    playSound({ t: 'sound', name: 'token', sync: true });
+    answer(i);
+  };
+  useSceneKeys(i => { if (choice.options[i]?.enabled) pick(i); }, () => {});
+  const foot = <>
+    {choice.rerolls > 0 && (
+      <button onClick={() => answer('reroll')}><Icon d={ROGUE_ICONS.reroll} cls="rg-ic" />{` ${phone ? choice.rerolls : t('lblRogueRerollsRemaining', choice.rerolls)}`}</button>
+    )}
+    {choice.skip && <button onClick={() => answer('skip')}>{t(phone ? 'lblSkip' : 'lblRogueSkipLoot')}</button>}
+  </>;
+  return (
+    <Scene art={choice.art} fold={fold} viewDeck={viewDeck} foot={choice.rerolls > 0 || choice.skip ? foot : null}>
+      <div class="rg-pick">
+        <div class="rg-ask"><h3>{choice.heading ?? choice.title}</h3></div>
+        <div class={phone ? 'rg-cards rg-ploot' : 'rg-cards'} style={phone ? undefined : { gap: '26px' }}>
+          {choice.options.map((o, i) => (
+            <button key={i} class="rg-card" style={phone ? undefined : { width: '232px' }} disabled={!o.enabled} onClick={() => pick(i)}>
+              <TraitCard trait={o.trait!} />
+            </button>
+          ))}
+        </div>
+      </div>
+    </Scene>
+  );
 }
 
 /**

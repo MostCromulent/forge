@@ -26,6 +26,18 @@ export function Seal({ trait, explained }: { trait: Trait; explained?: boolean }
   );
 }
 
+/** A trait or a reward to take, drawn as a card, as a chest and a bazaar offer them. */
+export function TraitCard({ trait, small }: { trait: Trait; small?: boolean }) {
+  return (
+    <div class={['rg-tcard', small && 'sm', trait.source === 'WOUND' && 'wound'].filter(Boolean).join(' ')}>
+      <Seal trait={trait} />
+      <b>{trait.name}</b>
+      <small>{trait.loot ? t('lblWebRogueLoot') : <><Icon d={ROGUE_ICONS.trait} cls="rg-ic" />{t('lblWebRogueTrait')}</>}</small>
+      <p><Words parts={trait.text} /></p>
+    </div>
+  );
+}
+
 /** Your Traits as a page of the run. haze is the commander's picture behind it. */
 export function TraitsPage({ traits, carry, haze }: { traits: Trait[]; carry: RogueCard[]; haze: string }) {
   return (

@@ -36,7 +36,7 @@ describe('a Rogue Commander scene', () => {
     model.rogueAnnounced = [];
     model.rogueQuestion = {
       t: 'rogueQuestion', id: 4,
-      choice: { kind: 'boon', title: '', paragraphs: [], rerolls: 0, skip: false, options: [
+      choice: { kind: 'boon', title: '', paragraphs: [], rerolls: 0, skip: false, count: 0, options: [
         { label: 'a', text: [], enabled: true }, { label: 'b', text: [], enabled: false, reason: 'Not enough Gold.' }] },
     };
     return model;

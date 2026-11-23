@@ -26,6 +26,7 @@ import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.flow.RogueStart;
 import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.path.NodePlanebound;
+import forge.gamemodes.rogue.path.NodeType;
 import forge.gamemodes.rogue.path.RoguePath;
 import forge.gamemodes.rogue.path.RoguePathNode;
 import forge.item.PaperCard;
@@ -246,7 +247,14 @@ public final class RoguePages {
         return new MapNode(index, node.getType().name(), state, false, name, null, null, null, text, 0, false, false, 0, 0, 0, 0, enter);
     }
 
-    private static String planeboundArt(final RoguePlanebound planebound) {
+    /** The plane of the last battle the run won, which a side node's scene is drawn over, or null before the first. */
+    static String lastPlane(final RogueRun run) {
+        return run.getPath().getNodes().stream().filter(n -> n.isCompleted() && n.getType() == NodeType.PLANEBOUND)
+                .max(Comparator.comparingInt(RoguePathNode::getRowIndex)).map(n -> CodexHelper.getPlaneCard(((NodePlanebound) n).getRoguePlanebound()))
+                .map(c -> c.getImageKey(false)).orElse(null);
+    }
+
+    static String planeboundArt(final RoguePlanebound planebound) {
         return PLANEBOUND_ART.computeIfAbsent(planebound.deckPath(), path -> {
             final Deck deck = RogueConfig.loadPlaneboundDeck(planebound);
             return deck == null || deck.getCommanders().isEmpty() ? "" : deck.getCommanders().get(0).getImageKey(false);
