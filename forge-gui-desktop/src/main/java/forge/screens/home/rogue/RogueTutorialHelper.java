@@ -64,7 +64,6 @@ public class RogueTutorialHelper {
         tutorial.getMessageChunks(),
         List.of(),
         null,
-        null,
         null);
     NPCDialog.forTutorial(context, () -> confirmSkipTutorials(progress)).show();
   }
