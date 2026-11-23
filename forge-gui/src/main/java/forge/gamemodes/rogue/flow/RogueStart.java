@@ -102,7 +102,8 @@ public record RogueStart(RogueDeck deck, boolean custom, Set<CustomRunModificati
                 return false;
             }
         }
-        if (!isGeneratedCommander() && (deck == null || !deck.isUnlocked())) {
+        if (!isGeneratedCommander() && (deck == null || !deck.isUnlocked()
+            || deck.isExperimental() != runModifications.contains(CustomRunModification.EXPERIMENT))) {
             return false;
         }
         // The level after the last one counts as unlocked once the last one is won
