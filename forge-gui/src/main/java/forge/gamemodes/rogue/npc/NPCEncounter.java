@@ -28,12 +28,12 @@ public interface NPCEncounter {
 
     /** Builds an NPCContext using shared NPC identity and the given per-level data. */
     default NPCContext buildContext(List<String> flavorTextChunks, List<NPCContext.NPCChoice> choices) {
-        return new NPCContext(getNpc(), flavorTextChunks, choices, null, null);
+        return new NPCContext(getNpc(), flavorTextChunks, choices, null, null, null);
     }
 
     default NPCContext buildContext(String displayNameOverride, int avatarIndexOverride,
                                     List<String> flavorTextChunks, List<NPCContext.NPCChoice> choices) {
-        return new NPCContext(getNpc(), flavorTextChunks, choices, displayNameOverride, avatarIndexOverride);
+        return new NPCContext(getNpc(), flavorTextChunks, choices, displayNameOverride, avatarIndexOverride, null);
     }
 
     /** Run-start boon monologues for NPCs that offer choices. */

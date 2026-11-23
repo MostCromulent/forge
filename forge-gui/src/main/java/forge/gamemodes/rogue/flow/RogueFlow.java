@@ -649,7 +649,7 @@ public final class RogueFlow {
             choices.add(new NPCContext.NPCChoice(effect.getDisplayName(), effect));
         }
         return new NPCContext(ctx.npc(), ctx.flavorTextChunks(), choices,
-            ctx.displayNameOverride(), ctx.avatarIndexOverride());
+            ctx.displayNameOverride(), ctx.avatarIndexOverride(), ctx.title());
     }
 
     private void showNpcResultIfNeeded(NPCEffect effect, EffectResultContext ctx) {

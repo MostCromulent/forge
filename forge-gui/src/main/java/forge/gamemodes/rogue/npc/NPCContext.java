@@ -7,9 +7,10 @@ import java.util.stream.Collectors;
 
 /**
  * Data bag for NPC dialog display. Holds NPC identity, flavor text chunks, and available choices.
+ * title names the story the chunks tell, and is null when it has no name.
  */
 public record NPCContext(NPC npc, List<String> flavorTextChunks, List<NPCChoice> choices, String displayNameOverride,
-                         Integer avatarIndexOverride) {
+                         Integer avatarIndexOverride, String title) {
 
     public NPCContext {
         flavorTextChunks = flavorTextChunks == null || flavorTextChunks.isEmpty()

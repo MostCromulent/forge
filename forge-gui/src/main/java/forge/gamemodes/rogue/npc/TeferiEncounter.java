@@ -316,7 +316,7 @@ public enum TeferiEncounter implements NPCEncounter {
             }
 
             if (isTriggerConditionMet(progress)) {
-                NPCContext context = buildContext(storyTextChunks, ImmutableList.of());
+                NPCContext context = new NPCContext(getNpc(), storyTextChunks, ImmutableList.of(), null, null, title);
                 incrementNpcLevel();
                 return context;
             }
