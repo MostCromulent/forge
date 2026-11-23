@@ -95,6 +95,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     private volatile Host host;
     /** The question the flow thread waits on. It is set and sent while holding pages, so it always follows the pages it was asked over. */
     private volatile Open question;
+    /** The save the host was at when the question was asked, which returning during the question opens. */
+    private volatile String askedAt;
     /** What was won or unlocked and the browser has not shown yet, oldest first. Guarded by pages. */
     private final List<RogueAnnounce> announced = new ArrayList<>();
     /** How many of announced the browser was sent since it last asked for all the pages. Guarded by pages. */
@@ -365,8 +367,10 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         if (b != null && b.view != null) {
             awaitLeaving(b);
         }
+        final Host h = host;
         synchronized (pages) {
             question = asked;
+            askedAt = h != null && h.session().stage() instanceof InCampaign c ? c.save() : null;
         }
         publish();
         try {
@@ -464,23 +468,29 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     }
 
     /**
-     * Opening reads the saves again only when no job runs, because a job's run in memory is newer than its save.
-     * During a question, Back from the run goes to the play menu, and opening the pages with no run open goes on to the run.
+     * Opening reads the saves again only when no job runs, because a job's run in memory is newer than its save. Back from the run saves it first,
+     * and stays on the run if that fails, as desktop does. During a question, Back from the run goes to the play menu, and opening Rogue
+     * goes to where the question was asked: the run, or the pages with no save open.
      */
     @Override
     public void opening(final String save, final Runnable then) {
         stopTimer();
         final Host h = host;
-        if (question != null && save == null && h != null) {
+        final boolean fromRun = h != null && h.session().stage() instanceof InCampaign c && MODE.equals(c.mode()) && RUN.equals(c.save());
+        if (question != null && h != null) {
             final Campaigns.Host session = h.session();
             final Stage now = session.stage();
-            if (now instanceof InCampaign c && c.save() != null) {
+            if (save == null && now instanceof InCampaign c && c.save() != null) {
                 session.move(now, new Menu());
                 return;
             }
-            then.run();
-            if (current() != null) {
-                h.opened(RUN);
+            if (save == null || RUN.equals(askedAt)) {
+                then.run();
+                if (save == null && RUN.equals(askedAt) && current() != null) {
+                    h.opened(RUN);
+                }
+            } else if (session.move(now, new InCampaign(MODE, null))) {
+                h.show();
             }
             return;
         }
@@ -490,6 +500,10 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
         worker.execute(job(() -> {
             closeEditor();
+            if (fromRun && flow.run() != null && !flow.save()) {
+                tell(Localizer.getInstance().getMessage("lblSavefailed"));
+                return;
+            }
             try {
                 loadSaves();
             } catch (final UncheckedIOException e) {
