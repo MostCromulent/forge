@@ -56,7 +56,7 @@ Forge's models were written for a single UI thread, and most have no locks. The 
 - Browser messages arrive on the web server's threads. A handler that is slow, or that touches one of the models above, hands its work to the owning thread instead of running it there.
 - Deck lists, deck and card searches and the card catalogue run on each session's deck thread, in the order they were asked for, because the web server's threads also serve every picture.
 
-A campaign mode may have a thread of its own instead of the campaign session's (`Campaign.runsItself`). Its own commands and the deck commands of its pages then reach `handle` on the web server's thread, and a reload asks for its pages there. Its `gameOver`, `resultSent`, `left`, `claim`, `opening` and `mayLeave`, the commands every mode shares and those it takes `anywhere` still run on the campaign session's thread. For every mode, `leavingMatch` runs on the UI thread. So does a match's `failed`, or it runs on the thread that asked for the match when the browser has already left the mode. `home` and `page` may be asked for on any of these threads.
+A campaign mode may have a thread of its own instead of the campaign session's (`Campaign.runsItself`). Its own commands and the deck commands of its pages then reach `handle` on the web server's thread, and a reload asks for its pages there. Its `gameOver`, `resultSent`, `left`, `claim`, `opening` and `mayLeave`, the commands every mode shares and those it takes `anywhere` still run on the campaign session's thread. For every mode, `leavingMatch` runs on the UI thread. So does a match's `failed`, or it runs on the thread that asked for the match when the browser has already left the mode. `home` and `page` may be asked for on any of these threads. `disconnected` runs on the web server's thread, under the session's lock.
 
 Each seat's netplay client runs its calls on a thread of its own, so a game question waiting on a browser holds only that seat's thread, never a web server thread.
 
@@ -73,7 +73,7 @@ A few locks remain where several threads share one thing:
 - `Lobby`'s `sentLock` keeps the deck list and table messages to one browser in order.
 - `WebGuiGame`'s `mirrorLock` keeps the server's copy of the browser's game in step with what was sent. `PromptState` and `ShownZones` each lock themselves under it, and `PromptState` takes `ShownZones` when it sends.
 
-They are taken in that order: `WebHub`, the session's lock, then `DeckWorkspace`'s lock, then `sentLock`, then `DECKS`. `mirrorLock` comes after the session's lock, then `PromptState`, then `ShownZones`. A campaign mode's own lock comes after the session's lock too. A reload asks for the mode's pages under the session's lock, so a mode never holds its own lock across a call into the session, such as `startMatch` or `show`.
+They are taken in that order: `WebHub`, the session's lock, then `DeckWorkspace`'s lock, then `sentLock`, then `DECKS`. `mirrorLock` comes after the session's lock, then `PromptState`, then `ShownZones`. A campaign mode's own lock comes after the session's lock too. A reload asks for the mode's pages under the session's lock, so a mode never holds its own lock across a call into the session, such as `startMatch` or `show`. Sending with the session's `tell` takes no lock, so a mode may send while it holds its own.
 
 ### The page
 

@@ -59,6 +59,10 @@ public interface Campaign {
         return false;
     }
 
+    /** The host's browser went away from this mode's pages or its match. Called under the session's lock, so it must not wait. */
+    default void disconnected() {
+    }
+
     /** The session took the host's seat. */
     default void becameHost(final Host host) {
     }

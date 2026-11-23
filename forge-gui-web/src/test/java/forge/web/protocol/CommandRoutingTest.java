@@ -6,6 +6,7 @@ import forge.web.WebSession;
 import forge.web.campaign.CampaignSession;
 import forge.web.campaign.ConquestGame;
 import forge.web.campaign.QuestGame;
+import forge.web.campaign.rogue.RogueGame;
 import forge.web.deck.DeckWorkspace;
 import forge.web.limited.OfflineLimited;
 import forge.web.match.WebGuiGame;
@@ -18,7 +19,8 @@ import java.util.List;
 /** The session passes each command to the one of these that owns it, so each command must have exactly one owner. */
 public class CommandRoutingTest {
     private static final List<Commands<?>> OWNERS = List.of(WebSession.COMMANDS, TableCommands.COMMANDS, DeckWorkspace.COMMANDS, OfflineLimited.COMMANDS,
-            WebGuiGame.COMMANDS, CampaignSession.COMMANDS, ConquestGame.COMMANDS, QuestGame.COMMANDS);
+            WebGuiGame.COMMANDS, CampaignSession.COMMANDS, ConquestGame.COMMANDS, QuestGame.COMMANDS,
+            RogueGame.COMMANDS);
 
     // Fails if a command name is read by another record or does not survive a round trip, so one record takes another's messages, or a command has no owner or two, so it is dropped or handled by the first owner only
     @Test

@@ -419,6 +419,7 @@ public final class WebSession implements IHasForgeLog {
         if (stage instanceof Playing p) {
             p.gui().detach(channel);
         }
+        campaigns.disconnected(stage);
     }
 
     private static <T extends Record> Handler<WebSession, T> host(final Handler<WebSession, T> handler) {

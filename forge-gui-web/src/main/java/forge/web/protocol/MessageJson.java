@@ -29,7 +29,7 @@ import java.util.stream.Stream;
 public final class MessageJson {
     /** The classes whose nested records make up the protocol. Each campaign mode has its own class, so a build can leave it out. */
     private static final List<Class<?>> HOLDERS = List.of(FromBrowser.class, ToBrowser.class, CampaignProtocol.class,
-            ConquestProtocol.class, QuestProtocol.class);
+            ConquestProtocol.class, QuestProtocol.class, RogueProtocol.class);
     private static final Gson GSON = new Gson();
     /** Writes every message to the browser. Nulls are kept, because a property sent as null has gone back to its default. */
     public static final Gson WRITER = new GsonBuilder().serializeNulls().create();

@@ -76,6 +76,10 @@ public interface Campaigns {
         return Map.of();
     }
 
+    /** The browser went away while at stage now. */
+    default void disconnected(final Stage now) {
+    }
+
     /** The session took the host's seat. Only the host's seat can open a campaign. */
     default void becameHost() {
     }

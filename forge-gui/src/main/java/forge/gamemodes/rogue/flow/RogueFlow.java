@@ -480,7 +480,6 @@ public final class RogueFlow {
         for (CustomRunModification modification : modifications) {
             newRun.addCustomRunModification(modification);
         }
-        newRun.getRunTimer().start();
         newRun.setDescensionLevel(start.descension());
         newRun.snapshotAetherEffects(progress);
 

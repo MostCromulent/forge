@@ -262,6 +262,15 @@ public final class CampaignSession implements Campaigns {
     }
 
     @Override
+    public void disconnected(final Stage now) {
+        if (now instanceof InCampaign c) {
+            modes.get(c.mode()).disconnected();
+        } else if (now instanceof Playing p && p.back() instanceof InCampaign c) {
+            modes.get(c.mode()).disconnected();
+        }
+    }
+
+    @Override
     public Map<String, String> resume() {
         final Map<String, String> saves = new LinkedHashMap<>();
         modes.forEach((mode, campaign) -> {
