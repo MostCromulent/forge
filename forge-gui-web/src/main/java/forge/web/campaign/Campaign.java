@@ -51,7 +51,10 @@ public interface Campaign {
     /** Whether a command is one of the mode's own. */
     boolean handles(Record command);
 
-    /** Whether a command of the mode's own is taken wherever the browser is, and not only on the mode's pages. It is given no save. */
+    /**
+     * Whether a command of the mode's own is taken wherever the browser is, and not only on the mode's pages. It is given no save.
+     * It runs on the campaign thread, also in a mode that {@link #runsItself}, and the mode checks for itself that the host sent it.
+     */
     default boolean anywhere(final Record command) {
         return false;
     }
@@ -81,7 +84,7 @@ public interface Campaign {
     /** The save played last, or null. */
     String current();
 
-    /** Asked before the player leaves this mode or its open save. save is null on the pages shown with no save open. */
+    /** Asked before the player leaves this mode or its open save, and before this mode opens another save or its home. save is null on the pages shown with no save open. */
     default boolean mayLeave(final String save) {
         return true;
     }
@@ -131,11 +134,14 @@ public interface Campaign {
         return null;
     }
 
-    /** The player is leaving the match, whose table is still open. Called on the thread that closes it. */
+    /** The player is leaving the match, whose table is still open. Called on the thread that closes it. It may be called again before {@link #left}, with the table closed. */
     default void leavingMatch() {
     }
 
-    /** The match was left. Its result is dropped with it. choice is the action of the result's button that was pressed, if it was one of the mode's own, or null. */
+    /**
+     * The match was left. Its result is dropped with it. choice is the action of the result's button that was pressed, if it was one of the mode's own, or null.
+     * It comes unchecked from the browser, so the mode compares it with the buttons of its own result.
+     */
     void left(String choice);
 
     default CataloguePage cards(final CatalogueQuery q) {
