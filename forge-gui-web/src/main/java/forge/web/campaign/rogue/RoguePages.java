@@ -1,6 +1,7 @@
 package forge.web.campaign.rogue;
 
 import forge.deck.Deck;
+import forge.gamemodes.rogue.CodexHelper;
 import forge.gamemodes.rogue.KeywordHint;
 import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueDeck;
@@ -35,6 +36,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /** Turns the flow's state into Rogue's page records. */
@@ -87,8 +89,7 @@ public final class RoguePages {
         final String commander = run == null ? null : run.getCurrentCommanderName();
         final List<String> fan = Decks.OFFICIAL.stream().filter(d -> d.isUnlocked() && !d.getCommanderCardName().equals(commander))
                 .limit(3).map(d -> d.getStartDeck().getCommanders().get(0).getImageKey(false)).collect(Collectors.toList());
-        // Desktop opens Aether, History and Codex once a run is completed, in its own start page
-        return new RogueHome(number, bar, run == null ? null : runCard(run), runs > 0, fan);
+        return new RogueHome(number, bar, run == null ? null : runCard(run), RogueStart.tabsUnlocked(progress), fan);
     }
 
     /** Localizer passes its arguments as text, so a choice format cannot pick the singular. */
@@ -100,13 +101,12 @@ public final class RoguePages {
         final List<DescensionStep> levels = Arrays.stream(DescensionLevel.values()).map(l -> new DescensionStep(l.name, l.description)).toList();
         final List<Modification> modifications = new ArrayList<>();
         for (final CustomRunModification m : CustomRunModification.values()) {
-            final List<String> excludes = Arrays.stream(CustomRunModification.values()).filter(m::conflictsWith).map(Enum::name).toList();
             // Desktop names Experiment as the one that swaps the roster
-            modifications.add(new Modification(m.name(), m.getDisplayName(), m.getRawDescription(), m.getGroup().getDisplayName(), excludes,
-                    m.isGeneratedCommander(), m == CustomRunModification.EXPERIMENT, m.isIncludedWithGeneratedCommander()));
+            modifications.add(new Modification(m.name(), m.getDisplayName(), m.getRawDescription(), m.getGroup().getDisplayName(),
+                    m.isGeneratedCommander(), m == CustomRunModification.EXPERIMENT));
         }
         return new RogueRoster(number, commanders(progress, false), commanders(progress, true), progress.isCustomRunsUnlocked(),
-                progress.isDescensionModeUnlocked(), levels, modifications);
+                progress.isDescensionModeUnlocked(), RogueStart.descensionLockText(progress, null, 0, true), levels, modifications);
     }
 
     private static List<RogueCommander> commanders(final RogueMetaProgress progress, final boolean experimental) {
@@ -115,31 +115,41 @@ public final class RoguePages {
         for (final RogueDeck deck : RogueStart.roster(Decks.ALL, experimental)) {
             if (!deck.isUnlocked()) {
                 final String unlock = deck.getUnlockDescription();
-                commanders.add(new RogueCommander(deck.getName(), null, null, "", "", List.of(), text.getMessage("lblRogueLocked"), 0, 0, 0, 0, 0,
-                        unlock == null || unlock.isEmpty() ? text.getMessage("lblRogueLocked") : unlock));
+                commanders.add(new RogueCommander(deck.getName(), null, null, "", "", List.of(), text.getMessage("lblRogueLocked"), 0, 0, 0, 0, -1,
+                        null, null, unlock == null || unlock.isEmpty() ? text.getMessage("lblRogueLocked") : unlock));
                 continue;
             }
             final String name = deck.getCommanderCardName();
             final PaperCard card = deck.getStartDeck().getCommanders().get(0);
             final int runs = progress.getRunsStartedWithCommander(name);
             final int wins = progress.getRunsWonWithCommander(name);
-            // Replace with shared code from the mobile branch: the Codex counts a card as seen once it is seen or acquired
-            final int seen = (int) deck.getRewardPoolCards().stream()
-                    .filter(c -> progress.hasSeenCommanderRewardCard(name, c) || progress.hasAcquiredCommanderRewardCard(name, c)).count();
+            final int seen = CodexHelper.countSeen(deck.getRewardPoolCards().stream().map(c -> CodexHelper.state(progress, deck, c)).toList());
+            int startable = -1;
+            while (startable < DescensionLevel.getMaxLevel() && new RogueStart(deck, false, Set.of(), startable + 1).canBegin(progress)) {
+                startable++;
+            }
+            final String lock = RogueStart.descensionLockText(progress, deck, 0, false);
+            final String next = lock == null && startable < DescensionLevel.getMaxLevel()
+                    ? RogueStart.descensionLockText(progress, deck, startable + 1, false) : null;
             final String theme = deck.getThemeDescription();
             final List<String> themes = theme == null ? List.of() : Arrays.stream(theme.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
             commanders.add(new RogueCommander(deck.getName(), name, card.getImageKey(false), CardCatalog.letters(card.getRules().getColorIdentity()),
                     deck.getDescription() == null ? "" : deck.getDescription(), themes,
                     runs == 0 ? text.getMessage("lblWebRogueNotPlayed") : record(runs, wins),
-                    runs, wins, progress.getMaxDescensionWon(name), seen, progress.getMaxDescensionUnlocked(name), null));
+                    runs, wins, progress.getMaxDescensionWon(name), seen, startable, lock, next, null));
         }
         return commanders;
     }
 
+    /** The Rogue deck of that name, or null for an unknown one. */
+    static RogueDeck deck(final String name) {
+        return Decks.ALL.stream().filter(d -> d.getName().equals(name)).findFirst().orElse(null);
+    }
+
     /** A deck's start deck, read only, or null for a locked or unknown deck. */
     public static DeckDetails startDeck(final String name) {
-        final RogueDeck deck = Decks.ALL.stream().filter(d -> d.getName().equals(name) && d.isUnlocked()).findFirst().orElse(null);
-        if (deck == null) {
+        final RogueDeck deck = deck(name);
+        if (deck == null || !deck.isUnlocked()) {
             return null;
         }
         final Deck start = deck.getStartDeck();

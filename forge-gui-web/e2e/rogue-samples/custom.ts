@@ -1,4 +1,4 @@
-import { HOME, ROSTER, press, type Sample } from '../rogue-sample';
+import { HOME, ROSTER, answer, press, type Sample } from '../rogue-sample';
 import { pick } from './p-custom';
 
 /** The panel shows the commander's art where the carousel shows its card, so the sample names the art. */
@@ -12,5 +12,6 @@ export default {
     await pick(page, ['Rich', 'Sealed']);
     await press(page, '#campaign .camp-side .rgm-lv button >> nth=3');
   },
+  later: [answer(['RICH', 'SEALED'], 3)],
   owned: ['.icon-button'],
 } satisfies Sample;

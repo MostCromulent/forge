@@ -10,7 +10,7 @@ import { CardGroup, Curve } from '../deck/deckview';
 import { ROGUE_ICONS } from './icons';
 import { place, rolling } from './carousel';
 import { CustomRun } from './custom';
-import type { DeckDetails, DescensionStep, Modification, RogueCommander, RogueRoster } from '../protocol';
+import type { DeckDetails, DescensionStep, RogueChoice, RogueCommander, RogueRoster } from '../protocol';
 
 /** What the player has chosen so far. pick is the place of the commander in front, or null for the first unlocked one. */
 export interface Choice {
@@ -42,40 +42,28 @@ export function picked(list: RogueCommander[], c: Choice): number {
   return Math.max(0, list.findIndex(x => !x.unlock));
 }
 
-/** The level a run with the commander starts at: outside a custom run, the chosen one lowered to the highest the commander may start. */
-export const levelFor = (commander: RogueCommander | undefined, c: Choice) => (c.custom ? c.level : Math.min(c.level, commander?.startable ?? 0));
-
-/**
- * Whether Start Run may be pressed. Replace with shared code from the mobile branch: a copy of RogueStart.canBegin as desktop's start page
- * applies it, which the server checks again.
- */
-export function ready(roster: RogueRoster, c: Choice): boolean {
+/** The deck of the commander in front, or an empty name with none. */
+export function chosenDeck(roster: RogueRoster, c: Choice): string {
   const list = shown(roster, c);
-  const commander = list[picked(list, c)];
-  if (c.custom && (!roster.custom || c.mods.length === 0)) return false;
-  if (levelFor(commander, c) > 0 && !roster.descension) return false;
-  return generates(roster, c) || !!commander && !commander.unlock;
+  return list[picked(list, c)]?.deck ?? '';
 }
 
 /**
- * Ticks or unticks a modification. Replace with shared code from the mobile branch: a copy of desktop's start page, where ticking one
- * unticks those it excludes, and a modification that generates the commander ticks and locks those it forces.
+ * The level a run with the commander starts at: outside a custom run, the chosen one lowered to the highest the commander may start,
+ * as desktop does when Custom Run is turned off.
  */
-export function toggle(mods: Modification[], on: string[], id: string): string[] {
-  const m = mods.find(x => x.id === id);
-  if (!m) return on;
-  const next = new Set(on);
-  const wasGenerated = mods.some(x => x.generatesCommander && next.has(x.id));
-  if (next.has(id)) next.delete(id);
-  else {
-    next.add(id);
-    m.excludes.forEach(x => next.delete(x));
-  }
-  const generated = mods.some(x => x.generatesCommander && next.has(x.id));
-  if (generated || wasGenerated || m.generatesCommander) {
-    for (const x of mods) if (x.forcedByGenerated) { if (generated) next.add(x.id); else next.delete(x.id); }
-  }
-  return mods.filter(x => next.has(x.id)).map(x => x.id);
+export const levelFor = (commander: RogueCommander | undefined, c: Choice) => (c.custom ? c.level : Math.min(c.level, commander?.startable ?? 0));
+
+/** The server's answer when it is about these modifications, or null while it is on its way. */
+export const answerFor = (c: Choice, a: RogueChoice | null) => (a && a.modifications.join() === c.mods.join() ? a : null);
+
+/** Whether Start Run may be pressed. startable comes from RogueStart.canBegin, and a custom run waits for the server's answer. */
+export function ready(roster: RogueRoster, c: Choice, a: RogueChoice | null): boolean {
+  const list = shown(roster, c);
+  const commander = list[picked(list, c)];
+  if (!c.custom) return !!commander && commander.startable >= 0;
+  const answer = answerFor(c, a);
+  return !!answer && answer.ready && answer.deck === chosenDeck(roster, c) && answer.descension === c.level;
 }
 
 /** What Back does on these pages, or null when it leaves them. Leaving Custom Run unticks everything, as on desktop. */
@@ -88,20 +76,24 @@ export function backFrom(roster: RogueRoster, c: Choice): Choice | null {
 
 export const descensionLabel = (level: number) => t('lblRogueDescensionLevel', level ? String(level) : t('lblNone'));
 
-/** runs goes back to the unfinished run, and is null with none. begin is given the deck, or an empty name when the commander is generated, and the level. */
-export function NewRun({ roster, choice, set, runs, begin }: {
+/**
+ * runs goes back to the unfinished run, and is null with none. begin is given the deck, or an empty name when the commander is generated, and the level.
+ * answer is the server's latest about the custom run, and toggle asks it to tick or untick a modification.
+ */
+export function NewRun({ roster, choice, set, runs, begin, answer, toggle }: {
   roster: RogueRoster; choice: Choice; set: SetChoice; runs: (() => void) | null; begin: (deck: string, level: number) => void;
+  answer: RogueChoice | null; toggle: (id: string) => void;
 }) {
   const list = shown(roster, choice);
   const commander = list[picked(list, choice)];
   const go = () => begin(generates(roster, choice) ? '' : commander.deck, levelFor(commander, choice));
   return choice.customOpen
-    ? <CustomRun roster={roster} choice={choice} set={set} begin={go} />
-    : <Carousel roster={roster} choice={choice} set={set} runs={runs} begin={go} />;
+    ? <CustomRun roster={roster} choice={choice} set={set} begin={go} answer={answer} toggle={toggle} />
+    : <Carousel roster={roster} choice={choice} set={set} runs={runs} begin={go} answer={answer} />;
 }
 
-function Carousel({ roster, choice, set, runs, begin }: {
-  roster: RogueRoster; choice: Choice; set: SetChoice; runs: (() => void) | null; begin: () => void;
+function Carousel({ roster, choice, set, runs, begin, answer }: {
+  roster: RogueRoster; choice: Choice; set: SetChoice; runs: (() => void) | null; begin: () => void; answer: RogueChoice | null;
 }) {
   const list = shown(roster, choice);
   const n = list.length;
@@ -111,7 +103,8 @@ function Carousel({ roster, choice, set, runs, begin }: {
   const press = useRef<number | null>(null);
   const swiped = useRef(false);
   useEffect(() => () => stop?.(), [stop]);
-  const choose = (i: number) => set(c => ({ ...c, pick: i }));
+  // As on desktop, choosing another commander clears the Descension level outside Custom Run
+  const choose = (i: number) => set(c => (picked(list, c) === i ? c : { ...c, pick: i, level: c.custom ? c.level : 0 }));
   const step = (by: number) => choose((at + by + n) % n);
   const random = () => {
     if (stop) {
@@ -125,7 +118,7 @@ function Carousel({ roster, choice, set, runs, begin }: {
     setStop(() => end);
   };
   const hv = (i: number) => (i === at ? 'hv on' : 'hv');
-  const can = (i: number) => ready(roster, { ...choice, pick: i });
+  const can = (i: number) => ready(roster, { ...choice, pick: i }, answer);
   const commander = list[at];
   const go = phone && !choice.sheet && (
     <div class="go" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
@@ -208,6 +201,7 @@ function Carousel({ roster, choice, set, runs, begin }: {
 
 function Words({ roster, commander: c, choice, set }: { roster: RogueRoster; commander: RogueCommander; choice: Choice; set: SetChoice }) {
   const level = levelFor(c, choice);
+  const lock = choice.custom ? roster.customLock : c.lock;
   if (c.unlock) {
     return <div class="rgm-words"><span class="camp-kicker">{c.record}</span><h1>???</h1><p>{c.unlock}</p></div>;
   }
@@ -226,14 +220,14 @@ function Words({ roster, commander: c, choice, set }: { roster: RogueRoster; com
       </div>
       {!roster.descension ? (
         <div class="rg-sec">
-          <Lock text={t('lblRogueUnlockDescensionHint')} />
+          <Lock text={lock ?? ''} />
           {!roster.custom && <Lock text={t('lblRogueCustomRunWin2RunsWithAnyCommanderToUnlock')} />}
         </div>
       ) : (
         <div class="rg-sec">
           <h4>{t('lblRogueDescensionMode')}</h4>
-          {c.startable === 0 && !choice.custom ? <Lock text={t('lblRogueUnlockCommanderDescensionHint', c.name ?? '')} /> : <>
-            <Levels levels={roster.levels} level={level} startable={choice.custom ? roster.levels.length : c.startable} tipFor={c.name}
+          {lock ? <Lock text={lock} /> : <>
+            <Levels levels={roster.levels} level={level} startable={choice.custom ? roster.levels.length : c.startable} next={choice.custom ? null : c.next}
               choose={to => set(x => ({ ...x, level: to }))} />
             {level > 0 && <p>{roster.levels[level - 1].text}</p>}
           </>}
@@ -245,18 +239,15 @@ function Words({ roster, commander: c, choice, set }: { roster: RogueRoster; com
 
 export const Lock = ({ text }: { text: string }) => <div class="rg-lock"><Icon d={ROGUE_ICONS.lock} cls="rg-ic" /><span>{text}</span></div>;
 
-/**
- * None and the levels, those above startable locked. tipFor names the commander in the next level's lock text.
- * Replace with shared code from the mobile branch: the lock text and the levels a commander may start, as desktop's start page words them.
- */
-export function Levels({ levels, level, startable, tipFor, choose }: {
-  levels: DescensionStep[]; level: number; startable: number; tipFor?: string; choose: (level: number) => void;
+/** None and the levels, those above startable locked. next is the tip of the level after startable. */
+export function Levels({ levels, level, startable, next, choose }: {
+  levels: DescensionStep[]; level: number; startable: number; next?: string | null; choose: (level: number) => void;
 }) {
   return (
     <div class="rgm-lv">
       {[t('lblNone'), ...levels.map(l => l.name)].map((name, i) => {
         const locked = i > startable;
-        const tip = tipFor && i === startable + 1 ? { 'data-term': t('lblRogueLevel', i), 'data-tip': t('lblRogueUnlockNextDescensionHint', tipFor, i - 1, i) } : {};
+        const tip = next && i === startable + 1 ? { 'data-term': t('lblRogueLevel', i), 'data-tip': next } : {};
         return (
           <button key={i} aria-pressed={i === level} disabled={locked} {...tip} onClick={() => choose(i)}>
             <b>{i || '–'}</b>{name}{locked && <Icon d={ROGUE_ICONS.lock} cls="rg-ic" />}
@@ -274,14 +265,14 @@ export function DescensionSheet({ roster, choice, set }: { roster: RogueRoster; 
   const close = () => set(x => ({ ...x, sheet: false }));
   const startable = choice.custom ? roster.levels.length : c?.startable ?? 0;
   const level = levelFor(c, choice);
+  const lock = choice.custom ? roster.customLock : c?.lock;
   return (
     <Backdrop layer="rg-psheet" dismiss={close}>
       <div class="box">
         <i class="grab" />
         <div class="bd">
           <h3>{t('lblRogueDescensionMode')}</h3>
-          {!roster.descension ? <Lock text={t('lblRogueUnlockDescensionHint')} />
-            : startable === 0 ? <Lock text={t('lblRogueUnlockCommanderDescensionHint', c?.name ?? '')} />
+          {lock ? <Lock text={lock} />
             : <Levels levels={roster.levels} level={level} startable={startable} choose={to => set(x => ({ ...x, level: to }))} />}
           {roster.descension && level > 0 && <p>{roster.levels[level - 1].text}</p>}
         </div>

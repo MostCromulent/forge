@@ -5,9 +5,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import forge.gamemodes.rogue.RogueDeck;
 import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.RogueStats;
 import forge.gamemodes.rogue.flow.RogueStart;
 import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.path.NodeBazaar;
@@ -289,6 +291,37 @@ public class RogueQuestionsTest extends WebHubTest {
         sessions.onMessage(host, answer(boon.get("id").getAsInt(), acceptable(boon)));
         host.awaitMatching("hello", h -> RogueGame.RUN.equals(str(h, "campaignSave")), "the begun run did not open");
         host.awaitMatching("rogueMap", m -> true, "the run's map was not sent");
+    }
+
+    // Fails if a custom run asked about is not ticked by the shared rule, or may start before Custom Run is unlocked
+    @Test(timeOut = 120_000)
+    public void aCustomRunIsTickedAndCheckedOnTheServer() throws Exception {
+        final TestBrowser host = seat("host");
+        send(host, message("campaignOpen", "mode", RogueGame.MODE, "resume", false));
+        host.awaitMatching("hello", h -> RogueGame.MODE.equals(str(h, "campaign")), "Rogue did not open");
+        settle(host);
+        final RogueDeck deck = RogueStart.roster(false).get(0);
+        final JsonObject rich = message("rogueChoose", "deck", deck.getName(), "descension", 0);
+        rich.add("modifications", array("RICH"));
+        sessions.onMessage(host, rich);
+        Assert.assertFalse(host.awaitMatching("rogueChoice", c -> true, "the custom run was not answered").get("ready").getAsBoolean());
+
+        RogueMetaProgress.getInstance().updateStat(RogueStats.RUNS_WON, 2, new RogueRun(deck));
+        final JsonObject mania = message("rogueChoose", "deck", deck.getName(), "descension", 0, "toggle", "MANIA");
+        mania.add("modifications", array("RICH"));
+        sessions.onMessage(host, mania);
+        final JsonObject answer = host.awaitMatching("rogueChoice", c -> c.getAsJsonArray("modifications").size() > 1, "the toggle was not answered");
+        Assert.assertEquals(answer.getAsJsonArray("modifications"), array("MANIA", "RANDOM_START", "RANDOM_REWARDS", "RICH"));
+        Assert.assertEquals(answer.getAsJsonArray("forced"), array("RANDOM_START", "RANDOM_REWARDS"));
+        Assert.assertTrue(answer.get("ready").getAsBoolean());
+    }
+
+    private static JsonArray array(final String... values) {
+        final JsonArray array = new JsonArray();
+        for (final String value : values) {
+            array.add(value);
+        }
+        return array;
     }
 
     // Fails if the time spent in a new run's start-of-run question is not counted, as desktop counts it, or a disconnect does not stop it

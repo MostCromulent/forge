@@ -3,7 +3,7 @@ import { ui } from '../ui';
 import { registerMode } from '../campaign/modes';
 import { RogueHub } from './rogue';
 import type { Model } from '../model';
-import type { RogueAnnounce, RogueHome, RogueQuestion, RogueRoster } from '../protocol';
+import type { RogueAnnounce, RogueChoice, RogueHome, RogueQuestion, RogueRoster } from '../protocol';
 
 export type RogueTab = 'runs' | 'aether' | 'codex' | 'history';
 
@@ -11,6 +11,8 @@ declare module '../model' {
   interface Model {
     rogueHome: RogueHome | null;
     rogueRoster: RogueRoster | null;
+    /** The server's latest answer about a custom run before it starts. */
+    rogueChoice: RogueChoice | null;
     /** The question the flow waits on. It is cleared here as soon as it is answered. */
     rogueQuestion: RogueQuestion | null;
     /** What was won or unlocked and not yet shown, oldest first. */
@@ -33,6 +35,8 @@ interface RogueActions {
   /** deck is empty when a custom run generates its commander. */
   rogueBegin(snapshot: number, deck: string, custom: boolean, modifications: string[], descension: number): void;
   rogueStartDeck(deck: string): void;
+  /** Asks about a custom run, after ticking or unticking toggle when it is set. */
+  rogueChoose(deck: string, modifications: string[], descension: number, toggle?: string): void;
   rogueAnswer(id: number, value: unknown): void;
   /** The oldest announcement has been shown. */
   rogueAnnounced(): void;
@@ -43,7 +47,7 @@ declare module '../actions' {
 }
 
 /** The pages' fields when Rogue is not open. Announcements not yet shown wait for the next visit. */
-const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueQuestion: null } satisfies Partial<Model>;
+const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueChoice: null, rogueQuestion: null } satisfies Partial<Model>;
 
 // A winding trail between two points
 const ICON = <><circle cx="12" cy="37" r="4" /><circle cx="36" cy="11" r="4" /><path d="M16 37h10a7 7 0 0 0 0-14h-4a7 7 0 0 1 0-12h10" /></>;
@@ -59,7 +63,7 @@ registerMode({
       Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null });
     }
   },
-  stored: ['rogueHome', 'rogueRoster', 'rogueQuestion'],
+  stored: ['rogueHome', 'rogueRoster', 'rogueChoice', 'rogueQuestion'],
   message: (model, msg) => {
     if (msg.t !== 'rogueAnnounce') return false;
     model.rogueAnnounced = [...model.rogueAnnounced, msg];
@@ -69,6 +73,7 @@ registerMode({
     rogueAbandon: snapshot => send({ t: 'rogueAbandon', snapshot }),
     rogueBegin: (snapshot, deck, custom, modifications, descension) => send({ t: 'rogueBegin', snapshot, deck, custom, modifications, descension }),
     rogueStartDeck: deck => send({ t: 'rogueStartDeck', deck }),
+    rogueChoose: (deck, modifications, descension, toggle) => send({ t: 'rogueChoose', deck, modifications, descension, toggle }),
     rogueAnswer: (id, value) => {
       model.rogueQuestion = null;
       send({ t: 'rogueAnswer', id, value });

@@ -385,17 +385,39 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     public void left(final String choice) {
     }
 
-    private static RogueStart start(final RogueBegin begin) {
+    /** Null when a name is not a modification. */
+    private static Set<CustomRunModification> modifications(final List<String> names) {
         final Set<CustomRunModification> modifications = EnumSet.noneOf(CustomRunModification.class);
-        for (final String name : begin.modifications()) {
+        for (final String name : names) {
             final CustomRunModification modification = EnumUtils.getEnum(CustomRunModification.class, name);
             if (modification == null) {
                 return null;
             }
             modifications.add(modification);
         }
+        return modifications;
+    }
+
+    private static RogueStart start(final RogueBegin begin) {
+        final Set<CustomRunModification> modifications = modifications(begin.modifications());
+        if (modifications == null) {
+            return null;
+        }
         final RogueDeck deck = RogueConfig.loadRogueDecks().stream().filter(d -> d.getName().equals(begin.deck())).findFirst().orElse(null);
         return new RogueStart(deck, begin.custom(), modifications, begin.descension());
+    }
+
+    /** Runs on the flow thread, because it reads the progress. Null for an unknown modification. */
+    private static RogueChoice choice(final RogueChoose asked) {
+        final Set<CustomRunModification> asOn = modifications(asked.modifications());
+        final CustomRunModification toggle = asked.toggle() == null ? null : EnumUtils.getEnum(CustomRunModification.class, asked.toggle());
+        if (asOn == null || asked.toggle() != null && toggle == null) {
+            return null;
+        }
+        final Set<CustomRunModification> on = toggle == null ? asOn : RogueStart.toggle(asOn, toggle, !asOn.contains(toggle));
+        final RogueStart start = new RogueStart(RoguePages.deck(asked.deck()), true, on, asked.descension());
+        return new RogueChoice(asked.deck(), on.stream().map(Enum::name).toList(), asked.descension(),
+                on.stream().filter(m -> RogueStart.isForced(on, m)).map(Enum::name).toList(), start.canBegin(RogueMetaProgress.getInstance()));
     }
 
     public static final Commands<RogueGame> COMMANDS = new Commands<RogueGame>()
@@ -410,6 +432,12 @@ public final class RogueGame implements Campaign, IHasForgeLog {
                     ch.send(new DeckDetailsMessage(details));
                 }
             })
+            .on(RogueChoose.class, (g, ch, c) -> g.worker.execute(() -> {
+                final RogueChoice choice = choice(c);
+                if (choice != null) {
+                    ch.send(choice);
+                }
+            }))
             .on(RogueBegin.class, (g, ch, b) -> g.submit(b.snapshot(), -1, () -> {
                 final RogueStart start = start(b);
                 if (start != null) {

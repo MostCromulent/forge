@@ -4,25 +4,24 @@ import { SidePanel } from '../campaign/campaign';
 import { artUrl } from '../images';
 import { isPortrait } from '../form';
 import { t } from '../text';
-import { Levels, Lock, descensionLabel, picked, ready, shown, toggle, type Choice, type SetChoice } from './newrun';
-import type { RogueRoster } from '../protocol';
+import { Levels, Lock, answerFor, descensionLabel, picked, ready, shown, type Choice, type SetChoice } from './newrun';
+import type { RogueChoice, RogueRoster } from '../protocol';
 
 /** The art behind the page. Custom Run has no subject of its own, so it is always the same. */
 const HAZE = 'c:Maelstrom Wanderer|PC2|1';
 
-export function CustomRun({ roster, choice, set, begin }: { roster: RogueRoster; choice: Choice; set: SetChoice; begin: () => void }) {
+/** answer is the server's latest about the custom run, and toggle asks it to tick or untick a modification. */
+export function CustomRun({ roster, choice, set, begin, answer, toggle }: {
+  roster: RogueRoster; choice: Choice; set: SetChoice; begin: () => void; answer: RogueChoice | null; toggle: (id: string) => void;
+}) {
   const phone = isPortrait();
   const mods = roster.modifications;
   const generated = mods.find(m => m.generatesCommander && choice.mods.includes(m.id));
   const groups = [...new Set(mods.map(m => m.group))];
   const list = shown(roster, choice);
   const commander = list[picked(list, choice)];
-  const pick = (id: string) => set(c => {
-    const next = toggle(mods, c.mods, id);
-    const experimental = (on: string[]) => mods.some(m => m.experimental && on.includes(m.id));
-    return { ...c, mods: next, pick: experimental(next) === experimental(c.mods) ? c.pick : null };
-  });
-  const start = <button class={phone ? 'primary' : 'primary rg-go'} disabled={!ready(roster, choice)} onClick={begin}>{t('lblRogueStartRun')}</button>;
+  const forced = answerFor(choice, answer)?.forced ?? [];
+  const start = <button class={phone ? 'primary' : 'primary rg-go'} disabled={!ready(roster, choice, answer)} onClick={begin}>{t('lblRogueStartRun')}</button>;
   return (
     <div class="rg-start">
       <span class="rg-haze" style={{ backgroundImage: `url("${artUrl(HAZE)}")` }} />
@@ -37,7 +36,7 @@ export function CustomRun({ roster, choice, set, begin }: { roster: RogueRoster;
               {mods.filter(m => m.group === group).map(m => {
                 const on = choice.mods.includes(m.id);
                 return (
-                  <button key={m.id} class="rg-mod" aria-pressed={on} disabled={m.forcedByGenerated && !!generated} onClick={() => pick(m.id)}>
+                  <button key={m.id} class="rg-mod" aria-pressed={on} disabled={forced.includes(m.id)} onClick={() => toggle(m.id)}>
                     <span class="box">{on ? '✓' : ''}</span><b>{m.name}</b><span>{m.text}</span>
                   </button>
                 );
@@ -59,11 +58,11 @@ export function CustomRun({ roster, choice, set, begin }: { roster: RogueRoster;
           {generated ? <p class="camp-desc">{generated.text}</p>
             : <button onClick={() => set(c => ({ ...c, customOpen: false }))}>{t('lblWebRogueChangeCommander')}</button>}
           <div class="rg-sec">
-            {roster.descension ? <>
+            {roster.customLock ? <Lock text={roster.customLock} /> : <>
               <h4>{t('lblRogueDescensionMode')}</h4>
               <Levels levels={roster.levels} level={choice.level} startable={roster.levels.length} choose={level => set(c => ({ ...c, level }))} />
               {choice.level > 0 && <p>{roster.levels[choice.level - 1].text}</p>}
-            </> : <Lock text={t('lblRogueUnlockDescensionHint')} />}
+            </>}
           </div>
         </SidePanel>
       )}

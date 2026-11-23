@@ -24,6 +24,7 @@ import forge.util.FSerializableFunction;
 import forge.util.IHasForgeLog;
 import forge.util.ImageFetcher;
 import forge.web.images.Foil;
+import forge.web.images.SkinSprites;
 import forge.web.images.WebDownloads;
 import forge.web.images.WebImageFetcher;
 import forge.web.protocol.ToBrowser.HostChoiceKind;
@@ -322,7 +323,7 @@ public final class WebGuiBase implements IGuiBase, IHasForgeLog {
     }
     @Override public void clearImageCache() { }
     @Override public String encodeSymbols(final String str, final boolean formatReminderText) { return str; }
-    @Override public int getAvatarCount() { return 0; }
+    @Override public int getAvatarCount() { return SkinSprites.avatarCount(); }
     @Override public int getSleevesCount() { return 0; }
     @Override public float getScreenScale() { return 1f; }
     @Override public void preventSystemSleep(final boolean preventSleep) { }

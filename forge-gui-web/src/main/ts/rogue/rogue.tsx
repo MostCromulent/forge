@@ -10,7 +10,7 @@ import { changeUi, ui } from '../ui';
 import { t, type TextKey } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { Landing } from './landing';
-import { DescensionSheet, NO_CHOICE, NewRun, StartDeck, backFrom, type Choice } from './newrun';
+import { DescensionSheet, NO_CHOICE, NewRun, StartDeck, backFrom, chosenDeck, type Choice } from './newrun';
 import type { RogueTab } from './register';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -50,6 +50,19 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   };
   useEscapeBack(back);
   useEffect(() => { if (choice.deck) actions.rogueStartDeck(choice.deck); }, [choice.deck]);
+  const deck = fresh ? chosenDeck(fresh, choice) : '';
+  const asking = fresh && choice.custom ? `${deck}|${choice.level}|${choice.mods.join()}` : null;
+  useEffect(() => { if (asking !== null) actions.rogueChoose(deck, choice.mods, choice.level); }, [asking]);
+  // The server's ticking can change whether the experimental roster is shown, and then the commander in front is chosen again
+  useEffect(() => {
+    const a = model.rogueChoice;
+    if (!a || !fresh) return;
+    setChoice(c => {
+      if (!c.custom || a.modifications.join() === c.mods.join()) return c;
+      const experimental = (on: string[]) => fresh.modifications.some(m => m.experimental && on.includes(m.id));
+      return { ...c, mods: a.modifications, pick: experimental(a.modifications) === experimental(c.mods) ? c.pick : null };
+    });
+  }, [model.rogueChoice]);
   if (!home) return null;
   const locked = home.unlocked ? {} : { aether: t('lblRogueUnlockAetherHint'), codex: t('lblRogueUnlockCodexHint'), history: t('lblRogueUnlockHistoryHint') };
   const page = !inRun && tab === 'runs' && run && !ui.rogueNewRun ? (
@@ -57,7 +70,8 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       deck={() => { ui.rogueRunTab = 'deck'; actions.campaignLoad('run'); }}
       abandon={() => setAbandoning(true)} fresh={() => changeUi(u => { u.rogueNewRun = true; })} />
   ) : fresh && <NewRun roster={fresh} choice={choice} set={setChoice} runs={run ? () => changeUi(u => { u.rogueNewRun = false; }) : null}
-    begin={(deck, level) => actions.rogueBegin(fresh.snapshot, deck, choice.custom, choice.custom ? choice.mods : [], level)} />;
+    begin={(deck, level) => actions.rogueBegin(fresh.snapshot, deck, choice.custom, choice.custom ? choice.mods : [], level)}
+    answer={model.rogueChoice} toggle={id => actions.rogueChoose(deck, choice.mods, choice.level, id)} />;
   const details = choice.deck && model.deckDetails?.key === `rogue:start:${choice.deck}` ? model.deckDetails : null;
   const dialog = abandoning || !!tell || !!replace || !!announced || !!fresh && (choice.sheet || !!details);
   const main = <div class="camp-main" inert={dialog}>{page}</div>;

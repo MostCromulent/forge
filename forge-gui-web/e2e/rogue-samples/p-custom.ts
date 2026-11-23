@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { HOME, ROSTER, press, type Sample } from '../rogue-sample';
+import { HOME, ROSTER, answer, press, type Sample } from '../rogue-sample';
 
 /** Ticks the custom run's options by name. */
 export async function pick(page: Page, names: string[]): Promise<void> {
@@ -16,5 +16,6 @@ export default {
     await press(page, '#campaign .rg-psheet .rgm-lv button >> nth=3');
     await press(page, '#campaign .rg-psheet .ft2 button');
   },
+  later: [answer(['CHOSEN_ONE', 'RANDOM_START', 'RANDOM_REWARDS'], 3, ['RANDOM_START', 'RANDOM_REWARDS'])],
   owned: ['.ph'],
 } satisfies Sample;

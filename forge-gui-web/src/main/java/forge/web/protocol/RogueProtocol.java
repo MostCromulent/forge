@@ -45,36 +45,50 @@ public final class RogueProtocol {
 
     /**
      * What a new run can start with. commanders and experimental are the official roster and the one Experiment shows, in the shared order.
-     * custom and descension say whether Custom Run and Descension Mode are unlocked. levels are the Descension levels from level 1.
+     * custom and descension say whether Custom Run and Descension Mode are unlocked. customLock says why a custom run cannot have Descension,
+     * and is null when it can. levels are the Descension levels from level 1.
      */
     @Message("rogueRoster")
     public record RogueRoster(long snapshot, List<RogueCommander> commanders, List<RogueCommander> experimental, boolean custom, boolean descension,
-            List<DescensionStep> levels, List<Modification> modifications) {
+            @Nullable String customLock, List<DescensionStep> levels, List<Modification> modifications) {
     }
 
     /**
      * deck is the Rogue deck's name. A locked commander has no name, image, colours, text or themes, and unlock says how to unlock it.
-     * record is the line above the name. seen counts the reward pool's cards seen, as the Codex does. startable is the highest Descension level it may start, 0 for none.
+     * record is the line above the name. seen counts the reward pool's cards seen, as the Codex does.
+     * startable is the highest Descension level a run outside Custom Run may start with, 0 for none, and -1 when no run may start with it.
+     * lock says why it cannot have Descension, and is null when it can. next says how the level after startable is unlocked, and is null with none.
      */
     public record RogueCommander(String deck, @Nullable String name, @Nullable String image, String colors, String text, List<String> themes, String record,
-            int runs, int wins, int maxDescension, int seen, int startable, @Nullable String unlock) {
+            int runs, int wins, int maxDescension, int seen, int startable, @Nullable String lock, @Nullable String next, @Nullable String unlock) {
     }
 
     public record DescensionStep(String name, String text) {
     }
 
     /**
-     * id is a CustomRunModification name, and group the heading it is listed under. excludes are the ids it cannot be chosen with.
+     * id is a CustomRunModification name, and group the heading it is listed under.
      * generatesCommander means the run's commander is not the one chosen; experimental means the experimental roster is shown.
-     * forcedByGenerated is chosen and cannot be changed while a modification that generates the commander is.
      */
-    public record Modification(String id, String name, String text, String group, List<String> excludes, boolean generatesCommander, boolean experimental,
-            boolean forcedByGenerated) {
+    public record Modification(String id, String name, String text, String group, boolean generatesCommander, boolean experimental) {
     }
 
     /** Answered with a DeckDetailsMessage of the deck's start deck. */
     @Command("rogueStartDeck")
     public record RogueStartDeck(String deck) {
+    }
+
+    /**
+     * Asks about a custom run before it starts, after ticking or unticking toggle when it is set. deck is the commander in front.
+     * Answered with a rogueChoice.
+     */
+    @Command("rogueChoose")
+    public record RogueChoose(String deck, List<String> modifications, int descension, @Nullable String toggle) {
+    }
+
+    /** The custom run asked about, with modifications as they are after the toggle. forced are those that cannot be changed. */
+    @Message("rogueChoice")
+    public record RogueChoice(String deck, List<String> modifications, int descension, List<String> forced, boolean ready) {
     }
 
     /** The open run's map. deck is the run's deck, read only. */

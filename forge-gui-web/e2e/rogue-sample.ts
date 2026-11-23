@@ -41,12 +41,16 @@ export const HOME: RogueHome = {
 };
 
 
+/** The texts the server words from RogueStart.descensionLockText, with Descension Mode unlocked. */
 const commander = (name: string, slug: string, colors: string, text: string, themes: readonly string[], record: string, facts: number[], startable: number): RogueCommander => ({
   deck: name, name, image: `k-${slug}`, colors, text, themes: [...themes], record, runs: facts[0], wins: facts[1], maxDescension: facts[2], seen: facts[3], startable,
+  lock: startable ? undefined : `Win a Run with ${name} to unlock Descension Mode for this Commander.`,
+  next: startable ? `Win a Run with ${name} in Descension Level ${startable} to unlock Level ${startable + 1}.` : undefined,
 });
 const locked = (deck: string, unlock: string): RogueCommander => ({
-  deck, colors: '', text: '', themes: [], record: 'Locked', runs: 0, wins: 0, maxDescension: 0, seen: 0, startable: 0, unlock,
+  deck, colors: '', text: '', themes: [], record: 'Locked', runs: 0, wins: 0, maxDescension: 0, seen: 0, startable: -1, unlock,
 });
+const NO_DESCENSION = 'Descension Mode - Win a Run with 3 different Commanders to unlock.';
 const ARAGORN = ['Aragorn, the Uniter', 'aragorn-the-uniter', 'RGWU', 'Unleash an army of human soldiers, scry with all-seeing elves, or rule with legends.',
   ['Colors', 'Legendary', 'Tokens', 'Scry', 'Counters']] as const;
 const KAALIA = ['Kaalia of the Vast', 'kaalia-of-the-vast', 'RWB', 'Cheat lifebringing angels, sadistic demons, or annihilating dragons into combat.',
@@ -55,7 +59,7 @@ const LOCKED = [locked('Muldrotha', 'Have 15+ nonbasic lands in your deck.'), lo
   locked('Satya', 'Have 10+ artifacts in your deck.'), locked("Y'shtola", 'Have 50+ life at the end of any match.')];
 
 const mod = (id: string, name: string, text: string, group: string, more: Partial<Modification> = {}): Modification => ({
-  id, name, text, group, excludes: [], generatesCommander: false, experimental: false, forcedByGenerated: false, ...more,
+  id, name, text, group, generatesCommander: false, experimental: false, ...more,
 });
 
 /** The New Run page of the mockups: four commanders open and four locked, with Descension and Custom Run unlocked. */
@@ -81,36 +85,41 @@ export const ROSTER: RogueRoster = {
   ],
   modifications: [
     mod('EXPERIMENT', 'Experiment', 'Choose from Rogue Commanders that are not or not yet in the official roster.', 'Commander',
-      { excludes: ['CHOSEN_ONE', 'MANIA'], experimental: true }),
-    mod('CHOSEN_ONE', 'Chosen One', 'Choose any eligible Commander.', 'Commander', { excludes: ['EXPERIMENT', 'MANIA'], generatesCommander: true }),
-    mod('MANIA', 'Mania', 'A random eligible Commander will be chosen for you.', 'Commander', { excludes: ['EXPERIMENT', 'CHOSEN_ONE'], generatesCommander: true }),
+      { experimental: true }),
+    mod('CHOSEN_ONE', 'Chosen One', 'Choose any eligible Commander.', 'Commander', { generatesCommander: true }),
+    mod('MANIA', 'Mania', 'A random eligible Commander will be chosen for you.', 'Commander', { generatesCommander: true }),
     mod('RANDOM_START', 'Random Start', 'Start with an automatically created Start Deck according to synergy and color identity for the selected Commander instead of its default deck.',
-      'Deck', { forcedByGenerated: true }),
+      'Deck'),
     mod('RANDOM_REWARDS', 'Random Rewards', 'Start with an automatically created Reward Pool according to synergy and color identity for the selected Commander instead of its default pool.',
-      'Deck', { forcedByGenerated: true }),
+      'Deck'),
     mod('SEALED', 'Sealed', 'Choose 25 out of 60 non-mythic cards from the Start and Reward Pool as your Start Deck. (also works with automatically generated decks and pools)', 'Deck'),
     mod('PATHFINDER', 'Pathfinder', 'Ignore Paths when choosing the next Node.', 'Map'),
-    mod('RICH', 'Rich', 'Gain 5 additional Gold after each victorious match. All Side Nodes are Bazaars.', 'Map', { excludes: ['PATH_OF_THE_BANNED'] }),
+    mod('RICH', 'Rich', 'Gain 5 additional Gold after each victorious match. All Side Nodes are Bazaars.', 'Map'),
     mod('USURPER', 'Usurper', 'Start with 2 random Chest Traits. All Planebounds gain +1 Cursed.', 'Map'),
     mod('BORROWED_HEALTH', 'Borrowed Health', 'Resting at a Sanctum heals all Life but costs 3 Max. Life.', 'Map'),
     mod('VOID', 'Void', 'No Planes or Planar Die are added for any battle.', 'Map'),
-    mod('PATH_OF_THE_BANNED', 'Path of the Banned', 'All Side Nodes are Chests offering only cards from the Commander Banlist.', 'Map', { excludes: ['RICH'] }),
+    mod('PATH_OF_THE_BANNED', 'Path of the Banned', 'All Side Nodes are Chests offering only cards from the Commander Banlist.', 'Map'),
   ],
 };
 
 /** A new player's roster: the two commanders open from the start, unplayed, and nothing else unlocked. */
 export const FIRST: RogueRoster = {
-  ...ROSTER, custom: false, descension: false,
-  commanders: [commander(...ARAGORN, 'Not played', [0, 0, 0, 0], 0), commander(...KAALIA, 'Not played', [0, 0, 0, 0], 0),
+  ...ROSTER, custom: false, descension: false, customLock: NO_DESCENSION,
+  commanders: [{ ...commander(...ARAGORN, 'Not played', [0, 0, 0, 0], 0), lock: NO_DESCENSION }, { ...commander(...KAALIA, 'Not played', [0, 0, 0, 0], 0), lock: NO_DESCENSION },
     locked('Atraxa', 'Win a Run.'), locked('Morophon', 'Have 10+ creatures that share a creature type in your deck.'), ...LOCKED],
 };
 
-/** Opens the commanders from Runs and puts the one at index in front, at Descension level 1 when level is set. */
+/** Opens the commanders from Runs and puts the one at index in front, then chooses Descension level 1 when level is set. */
 export async function choose(page: Page, index: number, level = false): Promise<void> {
   await page.locator('#campaign .rgl-new').click();
-  if (level) await press(page, '#campaign .rgm-body .hv.on .rgm-lv button >> nth=1');
   if (index) await press(page, `#campaign .rgx-dots button[data-i="${index}"]`);
+  if (level) await press(page, '#campaign .rgm-body .hv.on .rgm-lv button >> nth=1');
 }
+
+/** The server's answer about a custom run with Aragorn in front, as the probe has no server to ask. */
+export const answer = (modifications: string[], descension: number, forced: string[] = []): ServerMessage => ({
+  t: 'rogueChoice', deck: 'Aragorn, the Uniter', modifications, descension, forced, ready: true,
+});
 
 /** Clicks without scrolling first: a click scrolls the page's clipped boxes, which no player can do, to bring the button to their middle. */
 export const press = (page: Page, selector: string) => page.locator(selector).dispatchEvent('click');
