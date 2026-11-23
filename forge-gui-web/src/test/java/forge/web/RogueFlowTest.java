@@ -1,5 +1,6 @@
 package forge.web;
 
+import forge.LobbyPlayer;
 import forge.game.GameType;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.rogue.RogueConfig;
@@ -43,6 +44,7 @@ import forge.gui.interfaces.IWinLoseView;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
+import forge.player.GamePlayerUtil;
 import forge.util.MyRandom;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -459,6 +461,22 @@ public class RogueFlowTest {
         Assert.assertEquals(((NodePlanebound) flow.run().getCurrentNode()).getCursedCount(), 0);
 
         Assert.assertSame(startedMatch().run(), flow.run());
+    }
+
+    @Test
+    public void aMatchLeftWithNoResultGivesThePlayerBackTheirLooks() {
+        final LobbyPlayer human = GamePlayerUtil.getGuiPlayer();
+        final String name = human.getName();
+        final int avatar = human.getAvatarIndex();
+        final int sleeve = human.getSleeveIndex();
+        start(NodePlanebound.class);
+        startedMatch();
+        Assert.assertEquals(human.getName(), run.getCurrentCommanderName());
+        flow.setRun(null);
+        flow.load();
+        Assert.assertEquals(human.getName(), name);
+        Assert.assertEquals(human.getAvatarIndex(), avatar);
+        Assert.assertEquals(human.getSleeveIndex(), sleeve);
     }
 
     @Test
