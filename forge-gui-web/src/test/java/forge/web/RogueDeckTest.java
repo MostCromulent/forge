@@ -276,14 +276,17 @@ public class RogueDeckTest extends WebHubTest {
         Assert.assertEquals(saved().getRemovalCredits(), 3);
     }
 
-    // Fails if a basic land outside the commander's colours can be added
+    // Fails if a basic land outside the commander's colours can be added, or a colourless one the run does not list is refused as off colour
     @Test(timeOut = 120_000)
     public void basicsAreTheCommandersOnly() throws Exception {
         final TestBrowser host = atRun(NodeSanctum.class, 3, 8);
         final JsonObject state = openEditor(host);
-        final Set<String> allowed = StreamSupport.stream(state.getAsJsonArray("lands").spliterator(), false).map(JsonElement::getAsJsonObject)
-                .filter(l -> l.get("allowed").getAsBoolean()).map(l -> str(l, "name")).collect(Collectors.toSet());
+        final List<JsonObject> lands = StreamSupport.stream(state.getAsJsonArray("lands").spliterator(), false).map(JsonElement::getAsJsonObject).toList();
+        final Set<String> allowed = lands.stream().filter(l -> !l.has("refusal") || l.get("refusal").isJsonNull()).map(l -> str(l, "name"))
+                .collect(Collectors.toSet());
         Assert.assertEquals(allowed, Set.of("Plains", "Island", "Mountain", "Forest"));
+        Assert.assertEquals(lands.stream().filter(l -> str(l, "name").equals("Wastes")).map(l -> str(l, "refusal")).findFirst().orElseThrow(),
+                Localizer.getInstance().getMessage("lblWebCollectionNotOwned"));
         edit(host, landsTo("Swamp", 1));
         edit(host, message("editorEdit", "op", "add", "name", "Wastes", "to", "Main", "count", 1));
         Assert.assertEquals(saved().getCurrentDeck().getMain().countByName("Swamp"), 0);

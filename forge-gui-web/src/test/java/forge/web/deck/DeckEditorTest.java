@@ -181,7 +181,7 @@ public class DeckEditorTest {
         final Deck deck = new Deck("Krenko");
         deck.getOrCreate(DeckSection.Commander).add(card("Krenko, Mob Boss"));
         final Map<String, Boolean> allowed = new HashMap<>();
-        editor(deck, GameType.Commander).state().lands().forEach(l -> allowed.put(l.name(), l.allowed()));
+        editor(deck, GameType.Commander).state().lands().forEach(l -> allowed.put(l.name(), l.refusal() == null));
         Assert.assertEquals(allowed.get("Mountain"), Boolean.TRUE);
         Assert.assertEquals(allowed.get("Plains"), Boolean.FALSE);
         Assert.assertEquals(allowed.get("Wastes"), Boolean.TRUE);

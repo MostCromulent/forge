@@ -211,7 +211,7 @@ public class DeckCollectionRulesTest {
         Assert.assertNotNull(e.add("Wastes", DeckSection.Main, 1));
         Assert.assertEquals(e.setLands(Map.of("Wastes", 1)), Localizer.getInstance().getMessage(DeckEditor.NOT_OWNED));
         assertMain(e, deck());
-        e.state().lands().forEach(l -> Assert.assertEquals(l.allowed(), l.name().equals("Forest"), l.name()));
+        e.state().lands().forEach(l -> Assert.assertEquals(l.refusal() == null, l.name().equals("Forest"), l.name()));
         Assert.assertNull(e.add("Forest", DeckSection.Main, 1));
     }
 

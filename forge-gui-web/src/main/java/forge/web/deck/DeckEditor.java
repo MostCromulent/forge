@@ -358,13 +358,8 @@ public final class DeckEditor {
             if (!BASICS.containsKey(e.getKey())) {
                 return Localizer.getInstance().getMessage("lblWebEditorNotBasic", String.valueOf(e.getKey()));
             }
-            if (e.getValue() > deck.getMain().countByName(e.getKey())) {
-                if (!freeBasic(e.getKey())) {
-                    return Localizer.getInstance().getMessage(NOT_OWNED);
-                }
-                if (!landAllowed(e.getKey())) {
-                    return Localizer.getInstance().getMessage("lblWebEditorOutsideColours", e.getKey());
-                }
+            if (e.getValue() > deck.getMain().countByName(e.getKey()) && landRefusal(e.getKey()) != null) {
+                return landRefusal(e.getKey());
             }
         }
         return change(countsByLand.keySet().iterator().next(), () -> {
@@ -941,20 +936,21 @@ public final class DeckEditor {
                 : Localizer.getInstance().getMessage("lblWebEditorCopiesAlready", most - room, most);
     }
 
-    private boolean landAllowed(final String land) {
+    /** Why the deck may not take another copy of this basic land, or null when it may. */
+    private String landRefusal(final String land) {
         if (!freeBasic(land)) {
-            return false;
+            return Localizer.getInstance().getMessage(NOT_OWNED);
         }
         final List<PaperCard> leaders = Legality.commanders(deck, check);
-        if (leaders.isEmpty()) {
-            return true;
-        }
         // The engine's own test, so a colourless basic such as Wastes is allowed under any commander
-        return check.deckFormat().isLegalCardForCommanderPredicate(leaders).test(newLand(land));
+        if (leaders.isEmpty() || check.deckFormat().isLegalCardForCommanderPredicate(leaders).test(newLand(land))) {
+            return null;
+        }
+        return Localizer.getInstance().getMessage("lblWebEditorOutsideColours", land);
     }
 
     private List<EditorLand> lands() {
-        return BASICS.keySet().stream().map(name -> new EditorLand(name, deck.getMain().countByName(name), landAllowed(name),
+        return BASICS.keySet().stream().map(name -> new EditorLand(name, deck.getMain().countByName(name), landRefusal(name),
                 newLand(name).getImageKey(false))).toList();
     }
 

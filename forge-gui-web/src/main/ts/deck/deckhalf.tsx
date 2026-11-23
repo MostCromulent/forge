@@ -124,13 +124,13 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
       <div class="land-row" role="group" aria-label={t('lblWebEditorBasicLands')}>
         <span class="band-lab">{t('lblWebEditorBasicLands')}</span>
         {/* A land the deck may not hold, or outside the commander's colours, is listed only while the deck holds some, so it can be taken out */}
-        {state.lands.filter(l => l.allowed || l.count).map(l => (
-          <span key={l.name} class={(l.allowed ? 'land' : 'land off') + (l.count ? '' : ' zero')} title={l.allowed ? undefined : t('lblWebEditorOutsideColours', l.name)}>
+        {state.lands.filter(l => !l.refusal || l.count).map(l => (
+          <span key={l.name} class={(l.refusal ? 'land off' : 'land') + (l.count ? '' : ' zero')} title={l.refusal ?? undefined}>
             <span class="land-card" data-image={l.image}>
               <img alt={l.name} draggable={false} src={smallImage(imageUrl(l.image))} onError={hideBroken} />
             </span>
             <span class="land-step">
-              <button class="step" disabled={!l.allowed} aria-label={t('lblWebEditorOneMore', l.name)}
+              <button class="step" disabled={!!l.refusal} aria-label={t('lblWebEditorOneMore', l.name)}
                 onClick={() => actions.edit({ op: 'lands', count: 0, lands: [{ name: l.name, count: l.count + 1 }] })}>+</button>
               <span class="n">{l.count}</span>
               <button class="step" disabled={!l.count} aria-label={t('lblWebEditorOneFewer', l.name)}

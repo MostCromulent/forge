@@ -288,8 +288,8 @@ public final class ToBrowser {
     public record EditorPrinting(String key, int count) {
     }
 
-    /** A basic land in the row under the main deck. allowed is false when the deck's commanders forbid it. image is the printing a new copy uses. */
-    public record EditorLand(String name, int count, boolean allowed, String image) {
+    /** A basic land in the row under the main deck. refusal says why the deck may not take another, and is null when it may. image is the printing a new copy uses. */
+    public record EditorLand(String name, int count, @Nullable String refusal, String image) {
     }
 
     /** What reading a pasted, fetched or dropped list found: a mark for each line, the problems with their fixes, and the resulting deck. */
