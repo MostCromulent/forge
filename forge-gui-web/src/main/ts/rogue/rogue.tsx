@@ -13,6 +13,8 @@ import { Landing } from './landing';
 import { DescensionSheet, NO_CHOICE, NewRun, StartDeck, backFrom, chosenDeck, type Choice } from './newrun';
 import { isScene } from './questions';
 import { DeckView, Question } from './scene';
+import { MapPage } from './map';
+import { PlaneSheet } from './mapside';
 import { Terms } from './terms';
 import type { RogueTab } from './register';
 import type { Actions } from '../actions';
@@ -21,8 +23,9 @@ import type { AskChoice, RogueAnnounce, Tell } from '../protocol';
 
 const TABS: [RogueTab, TextKey][] = [['runs', 'lblWebRogueRuns'], ['aether', 'lblRogueAether'], ['codex', 'lblRogueCodex'], ['history', 'lblRogueHistory']];
 /** The run's tabs. Deck opens the deck editor over the map, so the map stays the tab shown. */
-const RUN_TABS: [RunTab, TextKey][] = [['map', 'lblWebRogueMap'], ['deck', 'lblDeck']];
-type RunTab = 'map' | 'deck';
+const RUN_TABS: [RunTab, TextKey][] = [['map', 'lblWebRogueMap'], ['traits', 'lblRogueTraits'], ['deck', 'lblDeck'], ['codex', 'lblRogueCodex']];
+type RunTab = 'map' | 'traits' | 'deck' | 'codex';
+const glyph = (name: string) => <Icon d={ROGUE_ICONS[name as keyof typeof ROGUE_ICONS]} cls="rg-ic" />;
 
 /** Rogue Commander's page. The mode has no shelf of saved games, so the shell is always open. */
 export function RogueHub({ model, actions }: { model: Model; actions: Actions }) {
@@ -49,6 +52,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const back = () => {
     const step = fresh && backFrom(fresh, choice);
     if (abandoning) setAbandoning(false);
+    else if (inRun && ui.rogueSheet) changeUi(u => { u.rogueSheet = false; });
     else if (replace) answer(replace.options.length - 1);
     else if (tell || announced) return;
     else if (step) setChoice(step);
@@ -80,7 +84,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   }, [model.rogueChoice]);
   if (!home) return null;
   const locked = home.unlocked ? {} : { aether: t('lblRogueUnlockAetherHint'), codex: t('lblRogueUnlockCodexHint'), history: t('lblRogueUnlockHistoryHint') };
-  const page = !inRun && tab === 'runs' && run && !ui.rogueNewRun ? (
+  const page = inRun ? model.rogueMap && <MapPage model={model} actions={actions} /> : tab === 'runs' && run && !ui.rogueNewRun ? (
     <Landing home={home} run={run} go={() => actions.campaignLoad('run')}
       deck={() => { ui.rogueRunTab = 'deck'; actions.campaignLoad('run'); }}
       abandon={() => setAbandoning(true)} fresh={() => changeUi(u => { u.rogueNewRun = true; })} />
@@ -88,18 +92,27 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     begin={(deck, level) => actions.rogueBegin(fresh.snapshot, deck, choice.custom, choice.custom ? choice.mods : [], level)}
     answer={model.rogueChoice} toggle={id => actions.rogueChoose(deck, choice.mods, choice.level, id)} />;
   const details = choice.deck && model.deckDetails?.key === `rogue:start:${choice.deck}` ? model.deckDetails : null;
-  const dialog = abandoning || !!tell || !!replace || !!announced || !!fresh && (choice.sheet || !!details);
+  const dialog = abandoning || !!tell || !!replace || !!announced || !!fresh && (choice.sheet || !!details) || inRun && ui.rogueSheet && isPortrait();
   const main = <div class="camp-main" inert={dialog || scene && !folded}>{page}</div>;
   const question = scene && <Question model={model} actions={actions} />;
   // On a phone the commanders reached from a run, and Custom Run, are pages of their own with no tabs, as in the mockups
   const alone = !!fresh && isPortrait() && (choice.customOpen || !!run);
   const bar = alone ? { ...home.bar, name: t(choice.customOpen ? 'lblRogueCustomRun' : 'lblRogueStartNewRun') } : home.bar;
+  const runBar = model.rogueMap?.bar;
+  const abandon = (close: () => void) => { close(); setAbandoning(true); };
+  const more = (close: () => void) => (isPortrait() ? <>
+    <button role="menuitem" onClick={() => { close(); changeUi(u => { u.rogueWhole = !u.rogueWhole; }); }}>
+      {t(ui.rogueWhole ? 'lblWebRogueBackToPlace' : 'lblWebRogueWholeMap')}
+    </button>
+    <button role="menuitem" onClick={() => abandon(close)}>{t('lblRogueAbandonRun')}</button>
+  </> : <div class="rg-menu"><button class="d" onClick={() => abandon(close)}>{t('lblRogueAbandonRun')}</button></div>);
   return <>
-    {inRun ? <CampaignBar bar={bar} tabs={RUN_TABS} tab="map" setTab={to => {
+    {inRun ? <CampaignBar bar={runBar?.bar ?? bar} tabs={RUN_TABS} tab="map" setTab={to => {
       // During a decision the deck is read only
       if (to === 'deck' && scene) changeUi(u => { u.rogueDeckView = true; });
       else if (to === 'deck') editDeck();
-    }} held={{}} leave={back} under={dialog} />
+    }} mark={id => id === 'traits' && runBar && <sup class="rg-count">{runBar.traits}</sup>} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
+      held={{}} leave={back} under={dialog} lineTerm={runBar?.tip} glyph={glyph} moreIcon={glyph('dots')} more={more} />
       : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog} />}
     {!isPortrait() ? <div class="rg-body">{main}{question}</div>
       // On a phone a scene takes the page's place, and the bar it folds to lies over the page
@@ -120,6 +133,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
         </div>
       </Backdrop>
     )}
+    {inRun && isPortrait() && ui.rogueSheet && model.rogueMap && !scene && <PlaneSheet model={model} actions={actions} />}
     {fresh && choice.sheet && <DescensionSheet roster={fresh} choice={choice} set={setChoice} />}
     {fresh && details && <StartDeck details={details} close={() => setChoice(c => ({ ...c, deck: null }))} />}
     {replace && <Replace choice={replace} answer={answer} />}

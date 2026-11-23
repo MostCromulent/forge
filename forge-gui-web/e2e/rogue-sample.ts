@@ -1,7 +1,7 @@
 // What zz-rogue-match sends for one Rogue Commander mockup. Each screen has a file rogue-samples/<id>.ts, named by the mockup's id
 
 import type { Page } from '@playwright/test';
-import type { CatalogueRow, Modification, Part, PickCard, RogueCommander, RogueHome, RogueQuestion, RogueRoster, ServerMessage } from '../src/main/ts/protocol';
+import type { CatalogueRow, MapNode, Modification, Part, PickCard, RogueCommander, RogueHome, RogueMap, RogueQuestion, RogueRoster, RogueRunBar, ServerMessage } from '../src/main/ts/protocol';
 
 export interface Sample {
   /** Sent in order after the hello, with the mockup's own content. */
@@ -216,3 +216,103 @@ export const COMMANDER_ROWS = ([['aragorn-the-uniter', 'Aragorn, the Uniter'], [
   ['muldrotha-the-gravetide', 'Muldrotha, the Gravetide'], ['niv-mizzet-visionary', 'Niv-Mizzet, Visionary'], ['pantlaza-sun-favored', 'Pantlaza, Sun-Favored'],
   ['queen-marchesa', 'Queen Marchesa'], ['satya-aetherflux-genius', 'Satya, Aetherflux Genius'], ['teysa-karlov', 'Teysa Karlov'],
   ['urza-chief-artificer', 'Urza, Chief Artificer'], ['yuriko-the-tiger-s-shadow', "Yuriko, the Tiger's Shadow"]] as const).map(commanderRow);
+
+// ---- the map ----
+
+/** A node of the mockups' trail, as parts.mjs writes it: a plane, a face-down plane or a side node, with its state and marks. */
+export interface Mock { opp?: string; plane?: string; on?: string; pn?: string; kind?: string; hid?: boolean; life?: number; st: string; star?: boolean; boss?: boolean; w?: number; cu?: number }
+const B = (opp: string, plane: string, life: number, st: string, x: Partial<Mock> = {}): Mock => ({ opp, plane, life, st, ...x });
+const P = (kind: string, st: string): Mock => ({ kind, st });
+const H = (life: number, st: string, x: Partial<Mock> = {}): Mock => ({ hid: true, life, st, ...x });
+
+/** The mockups' trail (parts.mjs ROWS). */
+export const ROWS: Mock[][] = [
+  [B('talrand-sky-summoner', 'minamo', 5, 'past', { on: 'Talrand, Sky Summoner', pn: 'Minamo' }), B('acererak-the-archlich', 'onakke-catacomb', 5, 'walked', { on: 'Acererak the Archlich', pn: 'Onakke Catacomb' }), B('hakbal-of-the-surging-soul', 'ten-wizards-mountain', 5, 'past', { on: 'Hakbal of the Surging Soul', pn: 'Ten Wizards Mountain' })],
+  [P('event', 'past'), P('chest', 'walked'), P('sanctum', 'past'), P('bazaar', 'past')],
+  [B('niv-mizzet-visionary', 'izzet-steam-maze', 10, 'past', { on: 'Niv-Mizzet, Visionary', pn: 'Izzet Steam Maze' }), B('rafiq-of-the-many', 'bant', 10, 'walked', { on: 'Rafiq of the Many', pn: 'Bant' }), H(10, 'past')],
+  [P('sanctum', 'past'), P('event', 'walked'), P('bazaar', 'past')],
+  [H(15, 'dead'), B('trostani-selesnya-s-voice', 'selesnya-loft-gardens', 20, 'sel', { on: "Trostani, Selesnya's Voice", pn: 'Selesnya Loft Gardens', star: true, w: 1 }), B('aurelia-the-warleader', 'bloodhill-bastion', 15, 'open', { on: 'Aurelia, the Warleader', pn: 'Bloodhill Bastion', w: 2 }), H(20, 'dead', { star: true })],
+  [P('sanctum', 'far'), P('bazaar', 'far'), P('chest', 'far')],
+  [H(20, 'far'), H(25, 'far', { star: true }), H(20, 'far')],
+  [P('event', 'far'), P('sanctum', 'far'), P('bazaar', 'far'), P('event', 'far')],
+  [H(25, 'far'), H(25, 'far')],
+  [P('chest', 'far'), P('sanctum', 'far'), P('event', 'far')],
+  [H(30, 'far', { boss: true })],
+];
+
+/** The columns of the next row a node leads to, as RoguePath.getReachableNodes computes them (parts.mjs reach). */
+const reach = (n: number, m: number, i: number): number[] => {
+  const all = [...Array(m).keys()];
+  if (n === 1) return all;
+  if (i === 0) return m <= n ? [0] : [0, 1];
+  if (i === n - 1) return m <= n ? [m - 1] : [m - 2, m - 1];
+  if (m === n) return [i];
+  const shift = m >= n ? 0 : Math.round(n / 2 - m / 2);
+  return all.filter(c2 => c2 + shift === i || (n % 2 !== m % 2 && c2 + shift - i === 1));
+};
+
+const SIDES: Record<string, [string, string]> = {
+  sanctum: ['Sanctum', 'Rest to regain life and cure all wounds or cook a random food item.'],
+  bazaar: ['Bazaar', 'Spend your gold on cards and special offers.'],
+  chest: ['Chest', 'Contains a random reward, like gold, cards from your Reward Pool, or permanent buffs that last for the rest of the Run.'],
+  event: ['Event', 'A random encounter.'],
+};
+const STATES: Record<string, string> = { sel: 'selected' };
+const TERM = (name: string, tip: string): Part => ({ kind: 'term', text: name, term: name, tip });
+const MAP_TERMS: Record<string, Part> = {
+  PLANEBOUND: TERM('Planebound', 'The opponent you will face in a match dedicated to a specific Plane Node on the Map. Neither you nor the Planebound can planeswalk away from the Plane during the match.'),
+  WRATHFUL: TERM('Wrathful', 'For each instance of Wrathful, the Planebound gets a minor advantage for the match.'),
+  CURSED: TERM('Cursed', 'For each instance of Cursed, the Planebound gets a powerful advantage for the match.'),
+  CARD_REWARD: TERM('Card Reward', 'A reward you receive after winning a Match during the Run. A default Card Reward consists of 6 non-mythic and 1 mythic Card from your Reward Pool and you can add up to 3 Cards to your deck.'),
+};
+
+/** The mockups' plane texts by plane. They label the chaos ability, which the game's text does not. */
+export const PLANE_TEXT: Record<string, string> = {
+  'selesnya-loft-gardens': 'If an effect would create one or more tokens, it creates twice that many instead. The same is true of counters put on a permanent.\nChaos: until end of turn, a land tapped for mana adds one more mana of any type it produced.',
+  jund: 'Whenever a player casts a black, red, or green creature spell, it gains devour 5.\nChaos: create two 1/1 red Goblin creature tokens.',
+};
+
+export interface RunFigures { life: number; max: number; gold: number; echoes: number; credits: number }
+export const RUN: RunFigures = { life: 14, max: 23, gold: 8, echoes: 52, credits: 3 };
+
+/** The run's bar of the mockups, with the Descension line and its tip. */
+export function runBar(r: RunFigures = RUN, line = 'Descension: Level 1 - Wrathful'): RogueRunBar {
+  return {
+    traits: 4, tip: 'Level 1 - Wrathful: Some Planebounds on the path become Wrathful, gaining random buffs for the match.',
+    bar: {
+      t: 'campaignBar', name: 'Aragorn, the Uniter', line, fresh: {},
+      balances: [
+        { icon: 'rogueLife', amount: r.life, label: 'Max. Life', text: `${r.life} / ${r.max}`, glyph: 'heart', term: 'Your life can only exceed Max-Life during a match.' },
+        { icon: 'ICO_QUEST_COIN', amount: r.gold, label: 'Gold', term: 'Currency to spend during the Run, like for buying cards at a Bazaar or rerolling rewards.' },
+        { icon: 'ICO_QUEST_GOLD', amount: r.echoes, label: 'Echoes', term: 'Persistent memories of the Aether used to build and upgrade Aetherworks.' },
+        { icon: 'rogueCredits', amount: r.credits, label: 'Removal Credits', glyph: 'cut',
+          term: 'Earned for each card added to your deck from a Card Reward or Bazaar. Can be spent to remove cards from your Deck. Basic lands can always be removed.' },
+      ],
+    },
+  };
+}
+
+/** A copy of the trail to change one screen's nodes in. */
+export const copyRows = (): Mock[][] => ROWS.map(r => r.map(n => ({ ...n })));
+
+/** The pages of a run on its map, as the server sends them: the hub's, with the run's commander and deck size, and the map. */
+export function onMap(rows: Mock[][] = ROWS, o: { bar?: RogueRunBar; rerolls?: number; hidden?: string; text?: Record<string, string>; cards?: number } = {}): ServerMessage[] {
+  let index = 0;
+  const texts = o.text ?? PLANE_TEXT;
+  const nodes: MapNode[][] = rows.map(row => row.map((m): MapNode => {
+    const base = { index: index++, state: STATES[m.st] ?? m.st, life: m.life ?? 0, elite: !!m.star, boss: !!m.boss, wrathful: m.w ?? 0, cursed: m.cu ?? 0 };
+    if (m.kind) return { ...base, kind: m.kind.toUpperCase(), faceDown: false, name: SIDES[m.kind][0], text: SIDES[m.kind][1], gold: 0, echoes: 0, enter: `Enter ${SIDES[m.kind][0]}` };
+    const [gold, echoes] = m.boss ? [0, 10] : m.star ? [4, 4] : [2, 2];
+    if (m.hid) return { ...base, kind: 'PLANEBOUND', faceDown: true, gold, echoes, enter: 'Enter ???' };
+    return { ...base, kind: 'PLANEBOUND', faceDown: false, name: m.on, plane: m.pn, art: `o-${m.opp}`, planeImage: `p-${m.plane}`, text: texts[m.plane!] ?? '',
+      gold, echoes, enter: `Enter ${m.pn}` };
+  }));
+  const links = rows.slice(0, -1).flatMap((row, r) => row.flatMap((_, i) => reach(row.length, rows[r + 1].length, i).map(j => ({ from: nodes[r][i].index, to: nodes[r + 1][j].index }))));
+  const selected = nodes.flat().find(n => n.state === 'selected')!.index;
+  const home: RogueHome = { ...HOME, run: { ...HOME.run!, image: 'a-aragorn-the-uniter', cards: o.cards ?? 64 } };
+  const map: RogueMap = {
+    t: 'rogueMap', snapshot: 1, rows: nodes, links, selected, bar: o.bar ?? runBar(), rerolls: o.rerolls ?? 1, hidden: o.hidden, terms: MAP_TERMS,
+    deck: { key: 'rogue:run', name: 'Aragorn, the Uniter', colors: '', stats: [], main: [], sideboard: [], deckSize: 64 } as unknown as RogueMap['deck'],
+  };
+  return [home, map];
+}

@@ -10,6 +10,7 @@ import forge.web.protocol.ToBrowser.DeckDetails;
 import forge.web.protocol.ToBrowser.EditorGroup;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Rogue Commander's messages in both directions. Each page carries the number of the snapshot it was taken from,
@@ -92,9 +93,32 @@ public final class RogueProtocol {
     public record RogueChoice(String deck, List<String> modifications, int descension, List<String> forced, boolean ready) {
     }
 
-    /** The open run's map. deck is the run's deck, read only. */
+    /**
+     * The open run's map, its rows from the first to the boss's. links join each node to the nodes of the next row it leads to, by index.
+     * selected is the current node. rerolls counts the plane rerolls left, and rerollReason says why none can be made now, or is null when one can.
+     * hidden says why planes are not revealed when they are reached, and is null when they are. terms are the terms the map explains,
+     * by KeywordHint name. deck is the run's deck, read only.
+     */
     @Message("rogueMap")
-    public record RogueMap(long snapshot, int selected, int rerolls, DeckDetails deck) {
+    public record RogueMap(long snapshot, List<List<MapNode>> rows, List<MapLink> links, int selected, RogueRunBar bar, int rerolls,
+            @Nullable String rerollReason, @Nullable String hidden, Map<String, Part> terms, DeckDetails deck) {
+    }
+
+    /**
+     * kind is a NodeType name, and state one of walked, open, selected, past, far or dead. A face-down plane has no name, plane, art,
+     * planeImage or text, but its life and marks are known. name is the planebound's or the side node's. art is the planebound's card and
+     * planeImage the plane's. enter is the label of the button that enters the node.
+     */
+    public record MapNode(int index, String kind, String state, boolean faceDown, @Nullable String name, @Nullable String plane, @Nullable String art,
+            @Nullable String planeImage, @Nullable String text, int life, boolean elite, boolean boss, int wrathful, int cursed, int gold, int echoes,
+            String enter) {
+    }
+
+    public record MapLink(int from, int to) {
+    }
+
+    /** The bar over the run's pages. tip explains its line. traits counts the run's traits, Descension and Endless left out. */
+    public record RogueRunBar(CampaignBar bar, @Nullable String tip, int traits) {
     }
 
     @Message("rogueTraits")
@@ -154,7 +178,7 @@ public final class RogueProtocol {
 
     /**
      * Answered with an option's index, "reroll" while rerolls is above 0, or "skip" where skip is true. face is an avatar, heading the name
-     * of the story the paragraphs tell, and art the picture behind them.
+     * of the one telling a story, and art the picture behind them.
      */
     public record AskChoice(String kind, @Nullable Integer face, String title, @Nullable String heading, List<List<Part>> paragraphs, List<Option> options,
             int rerolls, boolean skip, @Nullable String art) {

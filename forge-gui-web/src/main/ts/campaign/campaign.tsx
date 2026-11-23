@@ -10,8 +10,9 @@ import { backStep, HeadControls, PageHeader, PhoneHead, SetupHead, WAY_NAMES } f
 import { isPortrait } from '../form';
 import { ICONS, Icon } from '../icons';
 import { changeUi, eased, type UiState } from '../ui';
-import { Backdrop, Dropdown } from '../dialog';
+import { Backdrop } from '../dialog';
 import { make, reducedMotion } from '../dom';
+import { useDismiss } from '../hooks';
 
 /** The amounts a reveal has not shown yet, by the icon of the balance they were paid into. */
 export type Owed = Record<string, number>;
@@ -21,12 +22,15 @@ export interface RevealProps { reward: Reward; onOwed: (owed: Owed) => void; don
 /** The attributes of something a tooltip explains: the term's name and the tooltip's text. */
 const explained = (name: string, text?: string | null) => (text ? { 'data-term': name, 'data-tip': text, tabIndex: 0 } : {});
 
-export function Purse({ icon, n, label, text, glyph, term }: { icon: string; n: number; label: string } & Partial<Pick<Balance, 'text' | 'glyph' | 'term'>>) {
+/** drawGlyph draws the glyph in place of the skin's icon, for a mode with icons of its own. */
+export function Purse({ icon, n, label, text, glyph, term, drawGlyph }: {
+  icon: string; n: number; label: string; drawGlyph?: (name: string) => ComponentChildren;
+} & Partial<Pick<Balance, 'text' | 'glyph' | 'term'>>) {
   const amount = text ?? formatNumber(n);
   return (
     <span class="camp-coin" data-icon={icon} title={term ? undefined : label} role={glyph ? 'img' : undefined} aria-label={glyph ? `${label}: ${amount}` : undefined}
       {...explained(label, term)}>
-      {glyph ? <Icon d={ICONS[glyph as keyof typeof ICONS]} /> : <img alt={label} src={skinIconUrl(icon)} />}
+      {glyph ? drawGlyph?.(glyph) ?? <Icon d={ICONS[glyph as keyof typeof ICONS]} /> : <img alt={label} src={skinIconUrl(icon)} />}
       <b>{amount}</b>
     </span>
   );
@@ -84,15 +88,20 @@ ${tab}`;
  * extra is a dev tool: a control beside the balances, or on a phone a row of the header's menu. mark draws what follows a tab's name.
  * disabledTabs holds the tabs that cannot be opened, with why. lineTerm is the text of the line's tooltip.
  * more draws the mode's own menu in place of Preferences: the panel its button opens, or on a phone rows of the header's menu.
+ * glyph draws a balance's glyph, and moreIcon the icon of the menu's button, for a mode with icons of its own.
  */
-export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, mark, disabledTabs, held, extra, prefs, more, leave, under, lineTerm }: {
+export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, mark, disabledTabs, held, extra, prefs, more, leave, under, lineTerm, glyph, moreIcon }: {
   bar: Bar; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void;
   mark?: (tab: Tab) => ComponentChildren; disabledTabs?: Partial<Record<Tab, string>>;
   /** The amounts a reward reveal has not shown yet, by balance icon. The server's balances already include them, so the bar subtracts them. */
   held: Record<string, number>;
   extra?: ComponentChildren; prefs?: () => void; more?: (close: () => void) => ComponentChildren; leave: () => void; under: boolean; lineTerm?: string;
+  glyph?: (name: string) => ComponentChildren; moreIcon?: ComponentChildren;
 }) {
   const strip = useRef<HTMLElement>(null);
+  const purse = useRef<HTMLDivElement>(null);
+  const [menu, setMenu] = useState(false);
+  useDismiss(menu, purse, () => setMenu(false));
   const [, redraw] = useState(0);
   useEffect(() => {
     redrawBar = () => redraw(n => n + 1);
@@ -110,7 +119,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, mark, 
       ))}
     </nav>
   );
-  const balances = bar.balances.map(b => <Purse key={b.icon} {...b} n={Math.min(b.amount - (held[b.icon] ?? 0), ceilings.get(b.icon) ?? Infinity)} />);
+  const balances = bar.balances.map(b => <Purse key={b.icon} {...b} n={Math.min(b.amount - (held[b.icon] ?? 0), ceilings.get(b.icon) ?? Infinity)} drawGlyph={glyph} />);
   const line = <span {...explained(bar.line, lineTerm)}>{bar.line}</span>;
   if (isPortrait()) {
     return (
@@ -124,17 +133,18 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, mark, 
     <div class="camp-bar" inert={under}>
       <div class="camp-id"><b>{bar.name}</b>{line}</div>
       {nav}
-      <div class="camp-purse">
+      <div class="camp-purse" ref={purse}>
         {balances}
         {prefs && !more && <button onClick={prefs}>{t('Preferences')}</button>}
         {extra}
         {more && (
-          <Dropdown cls="camp-more" button={(open, toggle) => (
-            <button class="icon-button" title={t('lblMore')} aria-label={t('lblMore')} aria-expanded={open} onClick={toggle}><Icon d={ICONS.ellipsis} /></button>
-          )}>{more}</Dropdown>
+          <button class="icon-button" title={t('lblMore')} aria-label={t('lblMore')} aria-expanded={menu} onClick={() => setMenu(!menu)}>
+            {moreIcon ?? <Icon d={ICONS.ellipsis} />}
+          </button>
         )}
         <HeadControls />
         <button onClick={leave}>{t('lblBack')}</button>
+        {menu && more?.(() => setMenu(false))}
       </div>
     </div>
   );
@@ -146,7 +156,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, mark, 
  * noArt leaves out the picture's place, for an item that never has one.
  */
 export function SidePanel({ kicker, where, title, art, noArt, zoom, setZoom, children, foot, fold }: {
-  kicker: string; where?: ComponentChildren; title?: string; art?: string | null; noArt?: boolean;
+  kicker: ComponentChildren; where?: ComponentChildren; title?: string; art?: string | null; noArt?: boolean;
   zoom: string | null; setZoom: (image: string | null) => void; children: ComponentChildren; foot: ComponentChildren;
   fold?: { open: boolean; toggle: () => void };
 }) {
@@ -166,8 +176,9 @@ export function SidePanel({ kicker, where, title, art, noArt, zoom, setZoom, chi
   );
 }
 
-export function DeckRow({ image, name, line, problem, zoom, change }: {
-  image?: string | null; name: string; line: string; problem: boolean; zoom: (image: string) => void; change?: () => void;
+/** changeLabel names the change button, which says Change unless it is given. */
+export function DeckRow({ image, name, line, problem, zoom, change, changeLabel }: {
+  image?: string | null; name: string; line: string; problem: boolean; zoom: (image: string) => void; change?: () => void; changeLabel?: string;
 }) {
   return (
     <div class="camp-mine">
@@ -176,7 +187,7 @@ export function DeckRow({ image, name, line, problem, zoom, change }: {
         <b>{name}</b>
         {problem ? <span class="camp-warn">{t('lblInvalidDeck')}</span> : <span>{line}</span>}
       </div>
-      {change && <button onClick={change}>{t('lblWebMenuChange')}</button>}
+      {change && <button onClick={change}>{changeLabel ?? t('lblWebMenuChange')}</button>}
     </div>
   );
 }

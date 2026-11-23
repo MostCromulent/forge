@@ -33,10 +33,19 @@ declare module '../ui' {
     rogueFolded: number | null;
     /** The run's deck is open, read only, over a decision. */
     rogueDeckView: boolean;
+    /** The map node whose panel is shown in place of the current node's, such as a plane ahead read before it can be entered. */
+    rogueViewing: number | null;
+    /** The map is shown whole, fitted to the page. */
+    rogueWhole: boolean;
+    /** The phone's sheet of the plane shown is open. */
+    rogueSheet: boolean;
   }
 }
 
 interface RogueActions {
+  rogueSelect(snapshot: number, node: number): void;
+  rogueEnter(snapshot: number, node: number): void;
+  rogueReroll(snapshot: number, node: number): void;
   rogueAbandon(snapshot: number): void;
   /** Opens the run's deck in the deck editor. */
   rogueEditDeck(snapshot: number): void;
@@ -60,7 +69,7 @@ const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueMap: null, rogueChoi
 // A winding trail between two points
 const ICON = <><circle cx="12" cy="37" r="4" /><circle cx="36" cy="11" r="4" /><path d="M16 37h10a7 7 0 0 0 0-14h-4a7 7 0 0 1 0-12h10" /></>;
 
-Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false });
+Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false });
 
 registerMode({
   mode: 'rogue',
@@ -68,7 +77,7 @@ registerMode({
   hello: (model, msg) => {
     if (msg.campaign !== 'rogue') {
       Object.assign(model, NO_ROGUE);
-      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false });
+      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false });
     }
   },
   stored: ['rogueHome', 'rogueRoster', 'rogueMap', 'rogueChoice', 'rogueQuestion'],
@@ -78,6 +87,9 @@ registerMode({
     return true;
   },
   actions: (send, model, schedule): RogueActions => ({
+    rogueSelect: (snapshot, node) => send({ t: 'rogueSelect', snapshot, node }),
+    rogueEnter: (snapshot, node) => send({ t: 'rogueEnter', snapshot, node }),
+    rogueReroll: (snapshot, node) => send({ t: 'rogueReroll', snapshot, node }),
     rogueAbandon: snapshot => send({ t: 'rogueAbandon', snapshot }),
     rogueEditDeck: snapshot => send({ t: 'rogueEditDeck', snapshot }),
     rogueBegin: (snapshot, deck, custom, modifications, descension) => send({ t: 'rogueBegin', snapshot, deck, custom, modifications, descension }),
