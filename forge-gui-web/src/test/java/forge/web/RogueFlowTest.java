@@ -2,6 +2,7 @@ package forge.web;
 
 import forge.LobbyPlayer;
 import forge.game.GameType;
+import forge.game.GameView;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueEvent;
@@ -620,6 +621,44 @@ public class RogueFlowTest {
         flow.resultLeft(result, false);
         Assert.assertEquals(decisions.asked, List.of("startMatch", "show", "show", "mapChanged"));
         Assert.assertNull(run.getHostedMatch());
+    }
+
+    @Test
+    public void theSummaryHoldsWhatTheRunGained() {
+        start(NodePlanebound.class);
+        run.setCurrentNodeIndex(10);
+        aetherwork(AetherEffect.RESTORATION_CHAMBER);
+        final List<PaperCard> chosen = new ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+            decisions.then("show", args -> {
+                chosen.add((PaperCard) ((List<?>) args[1]).get(0));
+                return List.of(chosen.get(chosen.size() - 1));
+            });
+        }
+        final RogueMatch match = startedMatch();
+        run.setHostedMatch(new HostedMatch());
+        final GameView game = RogueFixture.finished(match, true);
+        // Carried only after the match was dealt, so it is not on the battlefield at its end
+        run.addCarryCard(FModel.getMagicDb().getCommonCards().getCard("Gilded Goose"), CarryCardType.FELLOW, "test");
+        final RogueWinLoseController.Gains gains = flow.matchOver(game, resultScreen()).getGains();
+        Assert.assertSame(gains.planebound(), ((NodePlanebound) run.getPath().getNode(10)).getRoguePlanebound());
+        Assert.assertEquals(gains.gold(), 4);
+        Assert.assertEquals(gains.echoes(), 4);
+        Assert.assertEquals(gains.life(), 2);
+        Assert.assertEquals(gains.credits(), 2);
+        Assert.assertEquals(gains.cards(), chosen);
+        Assert.assertEquals(gains.lost().stream().map(RogueRun.CarryCard::cardName).toList(), List.of("Gilded Goose"));
+    }
+
+    @Test
+    public void aBossSummaryHoldsItsEchoes() {
+        startBoss();
+        final RogueWinLoseController.Gains gains = fight(true).getGains();
+        Assert.assertSame(gains.planebound(), ((NodePlanebound) run.getPath().getNode(15)).getRoguePlanebound());
+        Assert.assertEquals(gains.echoes(), 10);
+        Assert.assertEquals(gains.gold(), 0);
+        Assert.assertEquals(gains.life(), 0);
+        Assert.assertTrue(gains.cards().isEmpty());
     }
 
     @Test
