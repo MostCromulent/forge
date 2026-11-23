@@ -3,7 +3,7 @@ import { ui } from '../ui';
 import { registerMode } from '../campaign/modes';
 import { RogueHub } from './rogue';
 import type { Model } from '../model';
-import type { RogueAnnounce, RogueChoice, RogueHome, RogueMap, RogueQuestion, RogueRoster } from '../protocol';
+import type { RogueAnnounce, RogueChoice, RogueHome, RogueMap, RogueQuestion, RogueRoster, RogueRunDeck, RogueTraits } from '../protocol';
 
 export type RogueTab = 'runs' | 'aether' | 'codex' | 'history';
 
@@ -11,8 +11,9 @@ declare module '../model' {
   interface Model {
     rogueHome: RogueHome | null;
     rogueRoster: RogueRoster | null;
-    /** The open run's map and its deck. */
     rogueMap: RogueMap | null;
+    rogueRunDeck: RogueRunDeck | null;
+    rogueTraits: RogueTraits | null;
     /** The server's latest answer about a custom run before it starts. */
     rogueChoice: RogueChoice | null;
     /** The question the flow waits on. It is cleared here as soon as it is answered. */
@@ -39,6 +40,8 @@ declare module '../ui' {
     rogueWhole: boolean;
     /** The phone's sheet of the plane shown is open. */
     rogueSheet: boolean;
+    /** The run's traits are shown in place of its map, or of the decision drawn over the map. */
+    rogueTraits: boolean;
   }
 }
 
@@ -64,12 +67,12 @@ declare module '../actions' {
 }
 
 /** The pages' fields when Rogue is not open. Announcements not yet shown wait for the next visit. */
-const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueMap: null, rogueChoice: null, rogueQuestion: null } satisfies Partial<Model>;
+const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueMap: null, rogueRunDeck: null, rogueTraits: null, rogueChoice: null, rogueQuestion: null } satisfies Partial<Model>;
 
 // A winding trail between two points
 const ICON = <><circle cx="12" cy="37" r="4" /><circle cx="36" cy="11" r="4" /><path d="M16 37h10a7 7 0 0 0 0-14h-4a7 7 0 0 1 0-12h10" /></>;
 
-Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false });
+Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, rogueTraits: false });
 
 registerMode({
   mode: 'rogue',
@@ -77,10 +80,10 @@ registerMode({
   hello: (model, msg) => {
     if (msg.campaign !== 'rogue') {
       Object.assign(model, NO_ROGUE);
-      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false });
+      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, rogueTraits: false });
     }
   },
-  stored: ['rogueHome', 'rogueRoster', 'rogueMap', 'rogueChoice', 'rogueQuestion'],
+  stored: ['rogueHome', 'rogueRoster', 'rogueMap', 'rogueRunDeck', 'rogueTraits', 'rogueChoice', 'rogueQuestion'],
   message: (model, msg) => {
     if (msg.t !== 'rogueAnnounce') return false;
     model.rogueAnnounced = [...model.rogueAnnounced, msg];

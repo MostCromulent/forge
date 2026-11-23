@@ -2,7 +2,6 @@ package forge.web.campaign.rogue;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import forge.card.CardRarity;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckSection;
@@ -159,13 +158,13 @@ final class WebRogueDecisions implements RogueDecisions {
     }
 
     private static List<RogueCard> cards(final List<PaperCard> cards) {
-        return cards.stream().map(c -> new RogueCard(c.getName(), c.getImageKey(false))).collect(Collectors.toList());
+        return cards.stream().map(c -> new RogueCard(c.getName(), c.getImageKey(false), 1, null)).collect(Collectors.toList());
     }
 
     private static List<PickCard> pickCards(final List<PaperCard> cards) {
         return IntStream.range(0, cards.size()).mapToObj(i -> {
             final PaperCard c = cards.get(i);
-            return new PickCard(i, c.getName(), c.getImageKey(false), c.getRules().getManaCost().getCMC(), c.getRarity() == CardRarity.MythicRare);
+            return new PickCard(i, c.getName(), c.getImageKey(false), c.getRules().getManaCost().getCMC());
         }).collect(Collectors.toList());
     }
 

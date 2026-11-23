@@ -7,10 +7,15 @@ import { ROGUE_ICONS } from './icons';
 import type { Part } from '../protocol';
 
 /** The terms that are kinds of card or effect, which their icon leads. */
-const TERM_ICONS: Record<string, string> = { Trait: ROGUE_ICONS.trait, Item: ROGUE_ICONS.item, Fellow: ROGUE_ICONS.fellow, Scroll: ROGUE_ICONS.scroll };
+export const TERM_ICONS: Record<string, string> = { Trait: ROGUE_ICONS.trait, Item: ROGUE_ICONS.item, Fellow: ROGUE_ICONS.fellow, Scroll: ROGUE_ICONS.scroll };
+
+const TAP = '<path d="M7 5h10a3 3 0 0 1 3 3v8M16 13l4 4 3-4"/>';
+
+/** A line of plain text, with its one-character mana symbols such as {1} and {T} drawn as symbols. */
+const symbols = (line: string, at: number) => line.split(/\{(\w)\}/).map((s, i) => (i % 2 ? <i key={`${at}.${i}`} class="rg-sym">{s === 'T' ? <Icon d={TAP} /> : s}</i> : s));
 
 /** Plain text, with its line breaks. */
-const lines = (text: string) => text.split('\n').flatMap((line, i) => (i ? [<br key={i} />, line] : [line]));
+const lines = (text: string) => text.split('\n').flatMap((line, i) => (i ? [<br key={i} />, ...symbols(line, i)] : symbols(line, i)));
 
 /** Draws parts: a card's name previews the card, a term is explained by Terms. A part that only previews has no text and is left out. */
 export function Words({ parts }: { parts: Part[] }) {

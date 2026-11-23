@@ -16,6 +16,7 @@ import { DeckView, Question } from './scene';
 import { MapPage } from './map';
 import { PlaneSheet } from './mapside';
 import { Terms } from './terms';
+import { TraitsPage } from './traits';
 import type { RogueTab } from './register';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -40,9 +41,12 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const run = home?.run;
   const inRun = model.campaignSave !== null;
   const tab = inRun ? 'runs' : ui.rogueTab;
-  const scene = isScene(model.rogueQuestion);
+  const traits = inRun && ui.rogueTraits;
+  const deciding = isScene(model.rogueQuestion);
+  // The Traits tab takes the decision's place until the Map tab brings it back
+  const scene = deciding && !traits;
   const folded = scene && ui.rogueFolded === model.rogueQuestion!.id;
-  const tell = scene ? undefined : model.rogueQuestion?.tell;
+  const tell = deciding ? undefined : model.rogueQuestion?.tell;
   const replace = model.rogueQuestion?.choice?.kind === 'replace' ? model.rogueQuestion.choice : undefined;
   const announced = model.rogueAnnounced[0];
   const fresh = !inRun && tab === 'runs' && (!run || ui.rogueNewRun) && roster ? roster : null;
@@ -53,6 +57,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     const step = fresh && backFrom(fresh, choice);
     if (abandoning) setAbandoning(false);
     else if (inRun && ui.rogueSheet) changeUi(u => { u.rogueSheet = false; });
+    else if (traits) changeUi(u => { u.rogueTraits = false; });
     else if (replace) answer(replace.options.length - 1);
     else if (tell || announced) return;
     else if (step) setChoice(step);
@@ -69,6 +74,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     editDeck();
   }, [inRun, home?.snapshot]);
   useEffect(() => { if (choice.deck) actions.rogueStartDeck(choice.deck); }, [choice.deck]);
+  useEffect(() => { if (!inRun) ui.rogueTraits = false; }, [inRun]);
   const deck = fresh ? chosenDeck(fresh, choice) : '';
   const asking = fresh && choice.custom ? `${deck}|${choice.level}|${choice.mods.join()}` : null;
   useEffect(() => { if (asking !== null) actions.rogueChoose(deck, choice.mods, choice.level); }, [asking]);
@@ -84,7 +90,8 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   }, [model.rogueChoice]);
   if (!home) return null;
   const locked = home.unlocked ? {} : { aether: t('lblRogueUnlockAetherHint'), codex: t('lblRogueUnlockCodexHint'), history: t('lblRogueUnlockHistoryHint') };
-  const page = inRun ? model.rogueMap && <MapPage model={model} actions={actions} /> : tab === 'runs' && run && !ui.rogueNewRun ? (
+  const page = traits ? model.rogueTraits && run && <TraitsPage traits={model.rogueTraits.traits} carry={model.rogueTraits.carry} haze={run.image} />
+    : inRun ? model.rogueMap && <MapPage model={model} actions={actions} /> : tab === 'runs' && run && !ui.rogueNewRun ? (
     <Landing home={home} run={run} go={() => actions.campaignLoad('run')}
       deck={() => { ui.rogueRunTab = 'deck'; actions.campaignLoad('run'); }}
       abandon={() => setAbandoning(true)} fresh={() => changeUi(u => { u.rogueNewRun = true; })} />
@@ -107,10 +114,11 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     <button role="menuitem" onClick={() => abandon(close)}>{t('lblRogueAbandonRun')}</button>
   </> : <div class="rg-menu"><button class="d" onClick={() => abandon(close)}>{t('lblRogueAbandonRun')}</button></div>);
   return <>
-    {inRun ? <CampaignBar bar={runBar?.bar ?? bar} tabs={RUN_TABS} tab="map" setTab={to => {
+    {inRun ? <CampaignBar bar={runBar?.bar ?? bar} tabs={RUN_TABS} tab={traits ? 'traits' : 'map'} setTab={to => {
       // During a decision the deck is read only
-      if (to === 'deck' && scene) changeUi(u => { u.rogueDeckView = true; });
+      if (to === 'deck' && deciding) changeUi(u => { u.rogueDeckView = true; });
       else if (to === 'deck') editDeck();
+      else if (to === 'map' || to === 'traits') changeUi(u => { u.rogueTraits = to === 'traits'; });
     }} mark={id => id === 'traits' && runBar && <sup class="rg-count">{runBar.traits}</sup>} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
       held={{}} leave={back} under={dialog} lineTerm={runBar?.tip} glyph={glyph} moreIcon={glyph('dots')} more={more} />
       : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog} />}
@@ -125,7 +133,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
           actions.rogueAbandon(home.snapshot);
         }} />
     )}
-    {inRun && isPortrait() && ui.rogueSheet && model.rogueMap && !scene && <PlaneSheet model={model} actions={actions} />}
+    {inRun && isPortrait() && ui.rogueSheet && model.rogueMap && !deciding && !traits && <PlaneSheet model={model} actions={actions} />}
     {fresh && choice.sheet && <DescensionSheet roster={fresh} choice={choice} set={setChoice} />}
     {fresh && details && (
       <DeckView details={details} line={t('lblRogueStartingDeck')} button={t('lblClose')} close={() => setChoice(c => ({ ...c, deck: null }))} />
@@ -134,8 +142,8 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       <Confirm title={replace.title} text={replace.paragraphs.flat().map(p => p.text).join('')} back={replace.options[replace.options.length - 1].label}
         go={replace.options[0].label} onBack={() => answer(replace.options.length - 1)} onGo={() => answer(0)} />
     )}
-    {scene && ui.rogueDeckView && model.rogueMap && (
-      <DeckView details={model.rogueMap.deck} line={t('lblWebNCards', model.rogueMap.deck.stats.main)}
+    {deciding && ui.rogueDeckView && model.rogueRunDeck && (
+      <DeckView details={model.rogueRunDeck.deck} line={t('lblWebNCards', model.rogueRunDeck.deck.stats.main)}
         button={t('lblWebRogueBackTo', (model.rogueQuestion!.cards ?? model.rogueQuestion!.choice)?.title ?? '')}
         close={() => changeUi(u => { u.rogueDeckView = false; })} />
     )}

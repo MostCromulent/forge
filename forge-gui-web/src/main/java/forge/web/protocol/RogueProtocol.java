@@ -31,11 +31,7 @@ public final class RogueProtocol {
 
     /** line gives the run's Descension and Endless levels, and is empty with neither. */
     public record RogueRunCard(String commander, String image, String line, int life, int maxLife, int gold, int cards, int credits,
-            List<CarryCard> carry) {
-    }
-
-    /** type is a CarryCardType name. */
-    public record CarryCard(String name, String image, String type) {
+            List<RogueCard> carry) {
     }
 
     /**
@@ -98,11 +94,16 @@ public final class RogueProtocol {
      * The open run's map, its rows from the first to the boss's. links join each node to the nodes of the next row it leads to, by index.
      * selected is the current node. rerolls counts the plane rerolls left, and rerollReason says why none can be made now, or is null when one can.
      * hidden says why planes are not revealed when they are reached, and is null when they are. terms are the terms the map explains,
-     * by KeywordHint name. deck is the run's deck, read only.
+     * by KeywordHint name.
      */
     @Message("rogueMap")
     public record RogueMap(long snapshot, List<List<MapNode>> rows, List<MapLink> links, int selected, RogueRunBar bar, int rerolls,
-            @Nullable String rerollReason, @Nullable String hidden, Map<String, Part> terms, DeckDetails deck) {
+            @Nullable String rerollReason, @Nullable String hidden, Map<String, Part> terms) {
+    }
+
+    /** The open run's deck, read only. It is a page of its own, so it is sent only when it changes. */
+    @Message("rogueRunDeck")
+    public record RogueRunDeck(DeckDetails deck) {
     }
 
     /**
@@ -122,8 +123,18 @@ public final class RogueProtocol {
     public record RogueRunBar(CampaignBar bar, @Nullable String tip, int traits) {
     }
 
+    /** The run's traits, in the order they are listed, and its carry cards. */
     @Message("rogueTraits")
-    public record RogueTraits(List<String> traits) {
+    public record RogueTraits(List<Trait> traits, List<RogueCard> carry) {
+    }
+
+    /**
+     * source is where the trait came from: AETHER, CUSTOM, EVENT, CHEST, NPC, WRATHFUL, CURSED, WOUND, DESCENSION or ENDLESS.
+     * avatar is the face of the NPC who gave it, and mark the text drawn in place of an icon, such as a Descension level.
+     * term and tip explain the source. loot means a reward taken once, not a lasting trait.
+     */
+    public record Trait(String name, List<Part> text, String source, @Nullable Integer avatar, @Nullable String mark, String term, String tip,
+            boolean loot) {
     }
 
     @Command("rogueSelect")
@@ -170,7 +181,8 @@ public final class RogueProtocol {
     public record Part(String kind, String text, @Nullable String image, @Nullable String term, @Nullable String tip) {
     }
 
-    public record RogueCard(String name, String image) {
+    /** count is how many equal copies it stands for, and type the term of a carry card's type, or null for another card. */
+    public record RogueCard(String name, String image, int count, @Nullable Part type) {
     }
 
     /** reason says why a choice that is not enabled cannot be taken. */
@@ -191,7 +203,7 @@ public final class RogueProtocol {
     }
 
     /** id is the card's place in the offer, so two equal copies are told apart. cmc is its mana value. */
-    public record PickCard(int id, String name, String image, int cmc, boolean mythic) {
+    public record PickCard(int id, String name, String image, int cmc) {
     }
 
     /** total counts the deck's cards, groups included. */

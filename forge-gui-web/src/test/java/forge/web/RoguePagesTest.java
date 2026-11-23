@@ -2,6 +2,10 @@ package forge.web;
 
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.effect.ChestEffect;
+import forge.gamemodes.rogue.effect.NPCEffect;
+import forge.gamemodes.rogue.effect.RogueEffectComposite;
+import forge.gamemodes.rogue.effect.WoundEffect;
 import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.NodeSanctum;
@@ -10,12 +14,15 @@ import forge.web.campaign.rogue.RoguePages;
 import forge.web.protocol.RogueProtocol.MapLink;
 import forge.web.protocol.RogueProtocol.MapNode;
 import forge.web.protocol.RogueProtocol.RogueMap;
+import forge.web.protocol.RogueProtocol.RogueTraits;
+import forge.web.protocol.RogueProtocol.Trait;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.util.List;
 import java.util.Random;
 
 @Test(singleThreaded = true)
@@ -45,6 +52,20 @@ public class RoguePagesTest {
     private RogueMap map() {
         return RoguePages.build(flow, RogueMetaProgress.getInstance(), 1).pages().stream()
                 .filter(RogueMap.class::isInstance).map(RogueMap.class::cast).findFirst().orElseThrow();
+    }
+
+    private RogueTraits traits() {
+        return RoguePages.build(flow, RogueMetaProgress.getInstance(), 1).pages().stream()
+                .filter(RogueTraits.class::isInstance).map(RogueTraits.class::cast).findFirst().orElseThrow();
+    }
+
+    /** A wound, a chest trait, an NPC's trait, Descension 1 and Endless 1, which getAllEffects lists in another order. */
+    private void withTraits() {
+        run.addWound(WoundEffect.ARM);
+        run.addChestEffect(ChestEffect.BANNER_OF_CHAMPIONS);
+        run.addNPCEffect(NPCEffect.HENZIE_PRECIOUS);
+        run.setDescensionLevel(1);
+        run.setEndlessLevel(1);
     }
 
     private static MapNode node(final RogueMap map, final int index) {
@@ -96,5 +117,28 @@ public class RoguePagesTest {
         Assert.assertEquals(node(map, 2).state(), "walked");
         Assert.assertTrue(map.links().contains(new MapLink(1, 6)));
         Assert.assertTrue(map.links().contains(new MapLink(2, 7)));
+    }
+
+    // Fails if a wound is listed among the other traits, or Descension and Endless before them
+    @Test
+    public void woundsComeAfterOtherTraits() {
+        withTraits();
+        Assert.assertEquals(traits().traits().stream().map(Trait::source).toList(), List.of("CHEST", "NPC", "WOUND", "DESCENSION", "ENDLESS"));
+    }
+
+    // Fails if a trait is left out or listed twice
+    @Test
+    public void everyActiveEffectIsListedOnce() {
+        withTraits();
+        run.setDescensionLevel(2);
+        Assert.assertEquals(traits().traits().size(), RogueEffectComposite.getAllEffects(run).size());
+        Assert.assertEquals(traits().traits().stream().map(Trait::name).distinct().count(), 6);
+    }
+
+    // Fails if a trait is named by its card, whose name says where the trait came from
+    @Test
+    public void namesHaveNoCardPrefix() {
+        withTraits();
+        Assert.assertEquals(traits().traits().get(0).name(), "Banner Of Champions");
     }
 }

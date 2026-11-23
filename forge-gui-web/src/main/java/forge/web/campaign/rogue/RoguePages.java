@@ -9,14 +9,22 @@ import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RoguePlaneboundType;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.effect.AetherEffect;
+import forge.gamemodes.rogue.effect.ChestEffect;
+import forge.gamemodes.rogue.effect.CursedEffect;
 import forge.gamemodes.rogue.effect.CustomRunModification;
 import forge.gamemodes.rogue.effect.DescensionLevel;
 import forge.gamemodes.rogue.effect.EndlessMode;
+import forge.gamemodes.rogue.effect.EventEffect;
+import forge.gamemodes.rogue.effect.NPCEffect;
 import forge.gamemodes.rogue.effect.PathUpdateContext;
 import forge.gamemodes.rogue.effect.RogueEffect;
 import forge.gamemodes.rogue.effect.RogueEffectComposite;
+import forge.gamemodes.rogue.effect.WoundEffect;
+import forge.gamemodes.rogue.effect.WrathfulEffect;
 import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.flow.RogueStart;
+import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gamemodes.rogue.path.RoguePath;
 import forge.gamemodes.rogue.path.RoguePathNode;
@@ -27,25 +35,29 @@ import forge.web.deck.DeckCatalog;
 import forge.web.deck.DeckFacts;
 import forge.web.protocol.CampaignProtocol.Balance;
 import forge.web.protocol.CampaignProtocol.CampaignBar;
-import forge.web.protocol.RogueProtocol.CarryCard;
 import forge.web.protocol.RogueProtocol.DescensionStep;
 import forge.web.protocol.RogueProtocol.MapLink;
 import forge.web.protocol.RogueProtocol.MapNode;
 import forge.web.protocol.RogueProtocol.Modification;
 import forge.web.protocol.RogueProtocol.Part;
+import forge.web.protocol.RogueProtocol.RogueCard;
 import forge.web.protocol.RogueProtocol.RogueCommander;
 import forge.web.protocol.RogueProtocol.RogueHome;
 import forge.web.protocol.RogueProtocol.RogueMap;
 import forge.web.protocol.RogueProtocol.RogueRoster;
 import forge.web.protocol.RogueProtocol.RogueRunBar;
 import forge.web.protocol.RogueProtocol.RogueRunCard;
+import forge.web.protocol.RogueProtocol.RogueRunDeck;
 import forge.web.protocol.RogueProtocol.RogueTraits;
+import forge.web.protocol.RogueProtocol.Trait;
 import forge.web.protocol.ToBrowser.DeckDetails;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -86,8 +98,9 @@ public final class RoguePages {
         pages.add(home(run, progress, number));
         pages.add(roster(progress));
         pages.add(map(flow, run, progress, number));
-        pages.add(new RogueTraits(RogueEffectComposite.getAllEffects(run).stream()
-                .map(RogueEffect::getEffectCardDisplayName).collect(Collectors.toList())));
+        pages.add(new RogueRunDeck(details("rogue:run", run.getCurrentCommanderName(), run.getCurrentDeck())));
+        pages.add(new RogueTraits(RogueEffectComposite.getAllEffects(run).stream().map(e -> trait(e, run))
+                .sorted(Comparator.comparing(t -> Source.valueOf(t.source()))).toList(), carry(run)));
         return new Snapshot(number, run, flow.timedRun(), run.getCurrentNodeIndex(), pages);
     }
 
@@ -200,7 +213,7 @@ public final class RoguePages {
             return context.hidePlanes;
         }).map(RogueEffect::getDescription).toList();
         return new RogueMap(number, rows, links, run.getCurrentNodeIndex(), runBar(run, progress), reroll.left(), reroll.enabled() ? null : reroll.reason(),
-                hiding.isEmpty() ? null : String.join("\n", hiding), MAP_TERMS, details("rogue:run", run.getCurrentCommanderName(), run.getCurrentDeck()));
+                hiding.isEmpty() ? null : String.join("\n", hiding), MAP_TERMS);
     }
 
     private static MapNode node(final RogueFlow flow, final RogueRun run, final RoguePathNode node, final int index, final String state) {
@@ -283,14 +296,73 @@ public final class RoguePages {
     private static RogueRunCard runCard(final RogueRun run) {
         final List<PaperCard> commanders = run.getCurrentDeck().getCommanders();
         final PaperCard commander = commanders.isEmpty() ? run.getSelectedRogueDeck().getStartDeck().getCommanders().get(0) : commanders.get(0);
-        final List<CarryCard> carry = new ArrayList<>();
+        final List<RogueCard> carry = run.getCarryCards().stream().map(RogueRun.CarryCard::toPaperCard).filter(Objects::nonNull)
+                .map(c -> new RogueCard(c.getName(), c.getImageKey(false), 1, null)).toList();
+        return new RogueRunCard(run.getCurrentCommanderName(), commander.getImageKey(false), line(run), run.getCurrentLife(),
+                run.getMaxLife(), run.getCurrentGold(), run.getCurrentDeck().getMain().countAll(), run.getRemovalCredits(), carry);
+    }
+
+    /** The run's carry cards, each with the term of its type. */
+    private static List<RogueCard> carry(final RogueRun run) {
+        final List<RogueCard> carry = new ArrayList<>();
         for (final RogueRun.CarryCard c : run.getCarryCards()) {
             final PaperCard card = c.toPaperCard();
             if (card != null) {
-                carry.add(new CarryCard(card.getName(), card.getImageKey(false), c.type().name()));
+                carry.add(new RogueCard(card.getName(), card.getImageKey(false), 1, carryType(c.type())));
             }
         }
-        return new RogueRunCard(run.getCurrentCommanderName(), commander.getImageKey(false), line(run), run.getCurrentLife(),
-                run.getMaxLife(), run.getCurrentGold(), run.getCurrentDeck().getMain().countAll(), run.getRemovalCredits(), carry);
+        return carry;
+    }
+
+    /** A carry card's type as the term that explains it, or as plain text where the language names no term. */
+    static Part carryType(final RogueRun.CarryCardType type) {
+        return WebRogueDecisions.parts("{{" + type.label() + "}}").get(0);
+    }
+
+    /** Where a trait came from, in the order the traits page lists them. TRAIT is any other source, which the page draws without a mark. */
+    private enum Source { AETHER, CUSTOM, EVENT, CHEST, NPC, WRATHFUL, CURSED, TRAIT, WOUND, DESCENSION, ENDLESS }
+
+    private static Source source(final RogueEffect effect) {
+        return effect instanceof AetherEffect ? Source.AETHER : effect instanceof CustomRunModification ? Source.CUSTOM
+                : effect instanceof EventEffect ? Source.EVENT : effect instanceof ChestEffect ? Source.CHEST : effect instanceof NPCEffect ? Source.NPC
+                : effect instanceof WrathfulEffect ? Source.WRATHFUL : effect instanceof CursedEffect ? Source.CURSED
+                : effect instanceof WoundEffect ? Source.WOUND : effect instanceof DescensionLevel ? Source.DESCENSION
+                : effect instanceof EndlessMode ? Source.ENDLESS : Source.TRAIT;
+    }
+
+    /** A trait as the traits page, a chest and a bazaar draw it: its name without the card's prefix, its text for the run, and its source. */
+    static Trait trait(final RogueEffect effect, final RogueRun run) {
+        final Localizer text = Localizer.getInstance();
+        final String card = effect.getEffectCardDisplayName();
+        final String name = card.isEmpty() ? effect.getDisplayName() : card;
+        final List<Part> words = WebRogueDecisions.parts(effect.getActiveDescription(run).replace("\\n", "\n"));
+        final boolean loot = effect.getEffectType() == RogueEffect.EffectType.ONESHOT;
+        final Source source = source(effect);
+        return switch (source) {
+            case AETHER -> hinted(name, words, source, KeywordHint.AETHERWORK, loot);
+            case CHEST -> hinted(name, words, source, KeywordHint.CHEST, loot);
+            case WRATHFUL -> hinted(name, words, source, KeywordHint.WRATHFUL, loot);
+            case CURSED -> hinted(name, words, source, KeywordHint.CURSED, loot);
+            case WOUND -> hinted(name, words, source, KeywordHint.WOUND, loot);
+            case TRAIT -> hinted(name, words, source, KeywordHint.TRAIT, loot);
+            case CUSTOM -> new Trait(name, words, source.name(), null, null, text.getMessage("lblRogueCustomRun"),
+                    text.getMessage("lblWebRogueCustomTrait"), loot);
+            case EVENT -> new Trait(name, words, source.name(), null, null, text.getMessage("lblRogueEvent"), text.getMessage("lblWebRogueEventTrait"), loot);
+            case NPC -> {
+                final NPC npc = ((NPCEffect) effect).getOwnerNpc();
+                yield new Trait(name, words, source.name(), npc.avatarIndex, null, npc.name, text.getMessage("lblWebRogueGivenBy", npc.name), loot);
+            }
+            case DESCENSION -> {
+                final DescensionLevel level = (DescensionLevel) effect;
+                yield new Trait(level.name, words, source.name(), null, String.valueOf(level.level), text.getMessage("lblRogueDescensionLevel", level.level),
+                        text.getMessage("lblRogueDescensionTooltip", level.level, level.name, level.description), loot);
+            }
+            case ENDLESS -> new Trait(text.getMessage("lblRogueEndlessLevel", run.getEndlessLevel()), words, source.name(), null, null,
+                    effect.getDisplayName(), effect.getDescription(), loot);
+        };
+    }
+
+    private static Trait hinted(final String name, final List<Part> text, final Source source, final KeywordHint hint, final boolean loot) {
+        return new Trait(name, text, source.name(), null, null, hint.getTitle(), hint.getHintText(), loot);
     }
 }
