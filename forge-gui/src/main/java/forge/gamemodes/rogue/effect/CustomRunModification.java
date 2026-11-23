@@ -28,9 +28,9 @@ import java.util.function.Consumer;
 /** Optional run modifiers, including generated decks and persistent Rogue effects. */
 public enum CustomRunModification implements RogueEffect {
     EXPERIMENT("custom:experiment", "Experiment",
-        "Choose from Rogue Commanders that are not or not yet in the official roster.", false),
+        "Choose from Rogue Commanders that are not or not yet in the official roster.", Group.COMMANDER, false),
     CHOSEN_ONE("custom:choose_rogue_commander", "Chosen One",
-        "Choose any eligible Commander.", false) {
+        "Choose any eligible Commander.", Group.COMMANDER, false) {
         @Override
         public RogueDeck createRogueDeck(RogueDeck selectedDeck, List<PaperCard> chosenCommanders,
                 BiFunction<RogueDeck, EffectResultContext, List<PaperCard>> selectCards) {
@@ -38,7 +38,7 @@ public enum CustomRunModification implements RogueEffect {
         }
     },
     MANIA("custom:random_rogue_commander", "Mania",
-        "A random eligible Commander will be chosen for you.", false) {
+        "A random eligible Commander will be chosen for you.", Group.COMMANDER, false) {
         @Override
         public RogueDeck createRogueDeck(RogueDeck selectedDeck, List<PaperCard> chosenCommanders,
                 BiFunction<RogueDeck, EffectResultContext, List<PaperCard>> selectCards) {
@@ -46,7 +46,7 @@ public enum CustomRunModification implements RogueEffect {
         }
     },
     RANDOM_START("custom:random_start", "Random Start",
-        "Start with an automatically created Start Deck according to synergy and color identity for the selected Commander instead of its default deck.", true) {
+        "Start with an automatically created Start Deck according to synergy and color identity for the selected Commander instead of its default deck.", Group.DECK, true) {
         @Override
         public RogueDeck createRogueDeck(RogueDeck selectedDeck, List<PaperCard> chosenCommanders,
                 BiFunction<RogueDeck, EffectResultContext, List<PaperCard>> selectCards) {
@@ -54,7 +54,7 @@ public enum CustomRunModification implements RogueEffect {
         }
     },
     RANDOM_REWARDS("custom:random_rewards", "Random Rewards",
-        "Start with an automatically created Reward Pool according to synergy and color identity for the selected Commander instead of its default pool.", false) {
+        "Start with an automatically created Reward Pool according to synergy and color identity for the selected Commander instead of its default pool.", Group.DECK, false) {
         @Override
         public RogueDeck createRogueDeck(RogueDeck selectedDeck, List<PaperCard> chosenCommanders,
                 BiFunction<RogueDeck, EffectResultContext, List<PaperCard>> selectCards) {
@@ -63,7 +63,7 @@ public enum CustomRunModification implements RogueEffect {
     },
     SEALED("custom:sealed", "Sealed",
         "Choose 25 out of 60 non-mythic cards from the Start and Reward Pool as your Start Deck. "
-            + "(also works with automatically generated decks and pools)", true) {
+            + "(also works with automatically generated decks and pools)", Group.DECK, true) {
         @Override
         public RogueDeck createRogueDeck(RogueDeck selectedDeck, List<PaperCard> chosenCommanders,
                 BiFunction<RogueDeck, EffectResultContext, List<PaperCard>> selectCards) {
@@ -130,14 +130,14 @@ public enum CustomRunModification implements RogueEffect {
         }
     },
     PATHFINDER("custom:pathfinder", "Pathfinder",
-        "Ignore Paths when choosing the next Node.", true) {
+        "Ignore Paths when choosing the next Node.", Group.MAP, true) {
         @Override
         public void onPathUpdate(PathUpdateContext ctx, RogueRun run) {
             ChestEffect.RELIC_OF_PATHFINDING.onPathUpdate(ctx, run);
         }
     },
     RICH("custom:rich", "Rich",
-        "Gain 5 additional Gold after each victorious match. All Side Nodes are Bazaars.", true) {
+        "Gain 5 additional Gold after each victorious match. All Side Nodes are Bazaars.", Group.MAP, true) {
         @Override
         public void onBeforeRewards(MatchRewardContext ctx, RogueRun run) {
             ctx.goldRewardAdjustment += 5;
@@ -149,7 +149,7 @@ public enum CustomRunModification implements RogueEffect {
         }
     },
     USURPER("custom:usurper", "Usurper",
-        "Start with 2 random Chest Traits. All Planebounds gain +1 Cursed.", true) {
+        "Start with 2 random Chest Traits. All Planebounds gain +1 Cursed.", Group.MAP, true) {
         @Override
         public void onRunStart(RogueRun run, Consumer<EffectResultContext> handleResult) {
             List<ChestEffect> traits = ChestEffect.getAvailableEffects(run, EffectType.PERMANENT);
@@ -167,7 +167,7 @@ public enum CustomRunModification implements RogueEffect {
         }
     },
     BORROWED_HEALTH("custom:borrowed_health", "Borrowed Health",
-        "Resting at a Sanctum heals all Life but costs 3 Max. Life.", true) {
+        "Resting at a Sanctum heals all Life but costs 3 Max. Life.", Group.MAP, true) {
         @Override
         public void onBeforeSanctum(SanctumContext ctx, RogueRun run) {
             if (!ctx.restLifeGainDisabled) {
@@ -177,14 +177,14 @@ public enum CustomRunModification implements RogueEffect {
         }
     },
     VOID("custom:void", "Void",
-        "No Planes or Planar Die are added for any battle.", true) {
+        "No Planes or Planar Die are added for any battle.", Group.MAP, true) {
         @Override
         public void onBeforeMatchSetup(MatchSetupContext ctx, RogueRun run) {
             ctx.includePlanes = false;
         }
     },
     PATH_OF_THE_BANNED("custom:path_of_the_banned", "Path of the Banned",
-        "All Side Nodes are Chests offering only cards from the Commander Banlist.", true) {
+        "All Side Nodes are Chests offering only cards from the Commander Banlist.", Group.MAP, true) {
         @Override
         public void afterPathGeneration(RogueRun run) {
             run.getPath().replaceNodes(RoguePathNode::isSideNode, NodeChest::new);
@@ -197,16 +197,31 @@ public enum CustomRunModification implements RogueEffect {
         }
     };
 
+    /** What a modification changes. Start pages list the modifications under these headings, in this order. */
+    public enum Group {
+        COMMANDER("Commander"), DECK("Deck"), MAP("Map");
+
+        private final String displayName;
+
+        Group(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() { return displayName; }
+    }
+
     private final String id;
     private final String displayName;
     private final String description;
+    private final Group group;
     private final boolean recordsCuratedCommanderRewards;
 
-    CustomRunModification(String id, String displayName, String description,
+    CustomRunModification(String id, String displayName, String description, Group group,
             boolean recordsCuratedCommanderRewards) {
         this.id = id;
         this.displayName = displayName;
         this.description = description;
+        this.group = group;
         this.recordsCuratedCommanderRewards = recordsCuratedCommanderRewards;
     }
 
@@ -218,6 +233,8 @@ public enum CustomRunModification implements RogueEffect {
 
     @Override
     public String getRawDescription() { return description; }
+
+    public Group getGroup() { return group; }
 
     public RogueDeck createRogueDeck(RogueDeck selectedDeck, List<PaperCard> chosenCommanders,
             BiFunction<RogueDeck, EffectResultContext, List<PaperCard>> selectCards) {

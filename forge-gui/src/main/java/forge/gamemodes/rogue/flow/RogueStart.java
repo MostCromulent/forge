@@ -14,7 +14,12 @@ import java.util.Set;
 public record RogueStart(RogueDeck deck, boolean custom, Set<CustomRunModification> modifications, int descension) {
 
     public static List<RogueDeck> roster(boolean experimental) {
-        List<RogueDeck> availableDecks = RogueConfig.loadRogueDecks();
+        return roster(RogueConfig.loadRogueDecks(), experimental);
+    }
+
+    /** decks are all Rogue decks, as RogueConfig loads them. Reading them is slow, so a caller that asks often keeps them. */
+    public static List<RogueDeck> roster(List<RogueDeck> decks, boolean experimental) {
+        List<RogueDeck> availableDecks = new ArrayList<>(decks);
         availableDecks.removeIf(deck -> deck.isExperimental() != experimental);
 
         // Sort commanders: unlocked first (alphabetically), then locked (alphabetically)
