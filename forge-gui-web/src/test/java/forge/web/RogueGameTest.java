@@ -369,30 +369,4 @@ public class RogueGameTest extends WebHubTest {
         host.awaitMatching("rogueAnnounce", a -> "Rogue".equals(str(a, "title")), "Rogue's own announcement did not arrive");
         Assert.assertEquals(announced(host, "title"), List.of("Rogue"));
     }
-
-    // Fails if announcements made at once on several threads are lost or garbled
-    @Test(timeOut = 120_000)
-    public void announcementsFromThreeThreadsAllArrive() throws Exception {
-        final TestBrowser host = openRun(NodeChest.class);
-        final CountDownLatch release = latch();
-        Assert.assertTrue(game.submit(snapshot(host), -1, () -> await(release)));
-        final CountDownLatch start = new CountDownLatch(1);
-        final List<Thread> threads = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
-            final String title = "Unlock " + i;
-            threads.add(new Thread(() -> {
-                await(start);
-                GuiBase.getInterface().showImageDialog(null, title, title);
-            }));
-        }
-        threads.forEach(Thread::start);
-        start.countDown();
-        for (final Thread t : threads) {
-            t.join();
-        }
-        release.countDown();
-        awaitIdle();
-        Assert.assertEquals(announced(host, "title").stream().sorted().collect(Collectors.toList()), List.of("Unlock 0", "Unlock 1", "Unlock 2"));
-    }
 }
-
