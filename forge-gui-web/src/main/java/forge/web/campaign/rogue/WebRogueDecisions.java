@@ -275,7 +275,7 @@ final class WebRogueDecisions implements RogueDecisions {
                 c.npcEffect() == null ? List.of() : parts(c.npcEffect().getRawDescription()), true, null)).collect(Collectors.toList());
         final PaperCard npc = TextHelper.resolveCard(context.displayName());
         boonArt = npc == null ? null : npc.getImageKey(false);
-        final AskChoice choice = new AskChoice(choices.isEmpty() ? "story" : "boon", context.avatarIndex(), context.displayName(), context.title(),
+        final AskChoice choice = new AskChoice(choices.isEmpty() ? "story" : "boon", context.avatarIndex(), context.displayName(), choices.isEmpty() ? context.displayName() : null,
                 context.flavorTextChunks().stream().map(WebRogueDecisions::parts).collect(Collectors.toList()), options, rerolls.remainingRerolls, false,
                 boonArt);
         if (choices.isEmpty()) {

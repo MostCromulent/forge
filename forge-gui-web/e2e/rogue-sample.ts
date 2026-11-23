@@ -181,9 +181,9 @@ export const MEETING_TEFERI = [
 ];
 
 /** Teferi telling a story, a part per paragraph. */
-export const story = (paragraphs: string[], heading?: string): RogueQuestion => ({
+export const story = (paragraphs: string[]): RogueQuestion => ({
   t: 'rogueQuestion', id: 2, kind: 'story',
-  choice: { kind: 'story', face: 65, title: 'Teferi, Master of Time', heading, art: 'a-teferi-master-of-time', paragraphs: paragraphs.map(p => [text(p)]), options: [], rerolls: 0, skip: false },
+  choice: { kind: 'story', face: 65, title: 'Teferi, Master of Time', heading: 'Teferi, Master of Time', art: 'a-teferi-master-of-time', paragraphs: paragraphs.map(p => [text(p)]), options: [], rerolls: 0, skip: false },
 });
 
 /** A card offered by a pick, with the mockups' picture of it. */
