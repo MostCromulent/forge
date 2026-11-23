@@ -280,8 +280,8 @@ public final class RogueFlow {
         }
 
         if (RogueWinLoseController.finalizeRunDefeat(currentRun, defeatedBy)) {
-            decisions.showMessage(Localizer.getInstance().getMessage("lblRogueSparkReward"),
-                Localizer.getInstance().getMessage("lblRogueSparkWon"));
+            decisions.showResult(ResultKind.SPARK, Localizer.getInstance().getMessage("lblRogueSparkReward"),
+                Localizer.getInstance().getMessage("lblRogueSparkWon"), List.of());
         }
         showSideNodeDefeat(defeatedBy);
         currentRun = null;
@@ -339,8 +339,8 @@ public final class RogueFlow {
             if (endless) {
                 goEndless();
             } else if (RogueWinLoseController.finalizeRunVictory(currentRun, null)) {
-                decisions.showMessage(Localizer.getInstance().getMessage("lblRogueSparkReward"),
-                    Localizer.getInstance().getMessage("lblRogueSparkWon"));
+                decisions.showResult(ResultKind.SPARK, Localizer.getInstance().getMessage("lblRogueSparkReward"),
+                    Localizer.getInstance().getMessage("lblRogueSparkWon"), List.of());
             }
         }
 

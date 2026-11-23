@@ -181,7 +181,7 @@ class DesktopRogueDecisions implements RogueDecisions {
             case BOON -> showDefaultNodeResultDialog(title, text, sections, false);
             case SANCTUM -> showResultDialog(title, text, sections, 900, 700,
                 NodeResultPanel.MessageAlignment.CENTER, false);
-            case REVIVE -> showMessage(title, text);
+            case REVIVE, SPARK -> showMessage(title, text);
             case DEFEAT -> showSideNodeDefeatDialog(title, text);
         }
     }
