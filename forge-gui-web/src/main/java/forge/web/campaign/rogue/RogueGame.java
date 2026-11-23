@@ -531,6 +531,9 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             }
             awaitLeaving(b);
             final String choice = b.left.join();
+            if (b.controller.hasWonMatch() && !b.controller.hasFailedRun()) {
+                ((WebRogueDecisions) decisions).showGains(b.controller.getGains());
+            }
             boolean endless = false;
             if (flow.offersEnding(b.controller)) {
                 final boolean unlocked = RogueMetaProgress.getInstance().isEndlessModeUnlocked();

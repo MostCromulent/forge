@@ -199,15 +199,15 @@ public final class RogueProtocol {
     }
 
     /**
-     * Answered with the ids of the cards picked, or "reroll" where rerollCost is set. deck is the deck the picks go into or come out of,
-     * as it is before them, and is null when there is none to show. art is the picture behind them.
+     * Answered with the ids of the cards picked, or "reroll" where rerollCost is set and rerollEnabled is true. deck is the deck the picks go into
+     * or come out of, as it is before them, and is null when there is none to show. art is the picture behind them.
      */
     public record AskCards(String kind, String title, @Nullable String subtitle, List<PickCard> cards, int min, int max,
-            @Nullable Integer rerollCost, @Nullable Integer gold, @Nullable PickDeck deck, @Nullable String art) {
+            @Nullable Integer rerollCost, boolean rerollEnabled, @Nullable PickDeck deck, @Nullable String art) {
     }
 
     /** id is the card's place in the offer, so two equal copies are told apart. cmc is its mana value. */
-    public record PickCard(int id, String name, String image, int cmc) {
+    public record PickCard(int id, String name, String image, int cmc, boolean mythic) {
     }
 
     /** total counts the deck's cards, groups included. */
@@ -245,8 +245,15 @@ public final class RogueProtocol {
     public record Omen(String kind, String label, String name, List<Part> text) {
     }
 
-    /** A result or a message. kind is a ResultKind name, or "MESSAGE". art is the picture behind a result. */
-    public record Tell(String kind, String title, List<Part> text, List<TellSection> sections, @Nullable String art) {
+    /**
+     * A result or a message. kind is a ResultKind name, "MESSAGE", or "SUMMARY" for what a won battle gave, which alone has gains.
+     * art is the picture behind a result.
+     */
+    public record Tell(String kind, String title, List<Part> text, List<TellSection> sections, @Nullable TellGains gains, @Nullable String art) {
+    }
+
+    /** The gold, Echoes, life and removal credits a won battle gave. */
+    public record TellGains(int gold, int echoes, int life, int credits) {
     }
 
     /** removed means the cards left the deck. */

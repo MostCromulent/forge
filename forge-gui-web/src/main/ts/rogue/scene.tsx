@@ -12,7 +12,7 @@ import { changeUi, ui } from '../ui';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { Words } from './terms';
-import { CardPick, CommanderPick, LootPick } from './pick';
+import { CardPick, CommanderPick, LootPick, RewardPick } from './pick';
 import { Gains } from './gains';
 import { Bazaar } from './bazaar';
 import { Backdrop } from '../dialog';
@@ -150,7 +150,8 @@ export function Question({ model, actions }: { model: Model; actions: Actions })
   const inRun = model.campaignSave !== null;
   const fold = inRun && (asked.choice?.options.length || asked.cards || asked.shop) ? () => changeUi(u => { u.rogueFolded = asked.id; }) : undefined;
   if (asked.cards) {
-    return <CardPick key={asked.id} asked={asked.cards} answer={answer} fold={fold} viewDeck={() => changeUi(u => { u.rogueDeckView = true; })} />;
+    const Pick = asked.cards.kind === 'REWARD' ? RewardPick : CardPick;
+    return <Pick key={asked.id} asked={asked.cards} answer={answer} fold={fold} viewDeck={() => changeUi(u => { u.rogueDeckView = true; })} />;
   }
   if (asked.commander) return <CommanderPick key={asked.id} asked={asked.commander} model={model} actions={actions} answer={answer} />;
   if (asked.omen) return <Omens key={asked.id} omen={asked.omen} ok={() => answer(null)} />;

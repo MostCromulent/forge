@@ -100,6 +100,15 @@ public class RogueMatchTest extends RogueSessionTest {
         host.awaitMatching("hello", h -> RogueGame.MODE.equals(str(h, "campaign")) && !"playing".equals(str(h, "screen")), "the match was not left");
     }
 
+    /** Waits for what the won battle gave, and continues past it. */
+    private JsonObject summary(final TestBrowser host) throws InterruptedException {
+        final JsonObject asked = host.awaitMatching("rogueQuestion", q -> q.has("tell") && "SUMMARY".equals(str(q.getAsJsonObject("tell"), "kind")),
+                "what the battle gave was not told");
+        handled.add(asked.get("id").getAsInt());
+        sessions.onMessage(host, answer(asked.get("id").getAsInt(), JsonNull.INSTANCE));
+        return asked.getAsJsonObject("tell");
+    }
+
     private static RogueRunHistoryEntry lastRun() {
         final List<RogueRunHistoryEntry> history = RogueMetaProgress.getInstance().getRunHistory();
         return history.get(history.size() - 1);
@@ -167,6 +176,9 @@ public class RogueMatchTest extends RogueSessionTest {
         final JsonArray first = new JsonArray();
         first.add(0);
         sessions.onMessage(host, answer(reward.get("id").getAsInt(), first));
+        final JsonObject gains = summary(host);
+        Assert.assertEquals(gains.getAsJsonObject("gains").get("credits").getAsInt(), 1);
+        Assert.assertEquals(gains.getAsJsonArray("sections").get(0).getAsJsonObject().getAsJsonArray("cards").size(), 1);
         settle(host);
         Assert.assertTrue(RogueIO.loadRun(RogueIO.getRogueFile(run)).getPath().getNode(PLANE).isCompleted());
     }
@@ -185,6 +197,7 @@ public class RogueMatchTest extends RogueSessionTest {
         Assert.assertNull(str(button(result, 1), "disabled"));
         leave(host, null);
         host.awaitMatching("rogueAnnounce", a -> "Endless Mode Unlocked!".equals(str(a, "title")), "the unlock the battle earned was not announced");
+        Assert.assertEquals(summary(host).getAsJsonObject("gains").get("echoes").getAsInt(), 10);
         sessions.disconnected(host);
         final TestBrowser back = connect("host");
         final JsonObject ending = back.awaitMatching("rogueQuestion", q -> q.has("choice") && "ending".equals(str(q.getAsJsonObject("choice"), "kind")),
@@ -204,6 +217,7 @@ public class RogueMatchTest extends RogueSessionTest {
         final JsonObject endless = button(result(host), 1);
         Assert.assertEquals(str(endless, "disabled"), text("lblRogueUnlockEndlessHint"));
         leave(host, "endless");
+        summary(host);
         final JsonObject ending = host.awaitMatching("rogueQuestion", q -> q.has("choice"), "the ending was not asked");
         final int id = ending.get("id").getAsInt();
         Assert.assertFalse(ending.getAsJsonObject("choice").getAsJsonArray("options").get(1).getAsJsonObject().get("enabled").getAsBoolean());

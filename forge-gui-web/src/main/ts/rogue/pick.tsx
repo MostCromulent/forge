@@ -1,9 +1,10 @@
-// Card picks drawn as a scene: choosing n of a set of cards beside the deck they go into, and choosing any commander from the catalogue
+// Card picks drawn as a scene: choosing n of a set of cards beside the deck they go into, a battle's card reward, and choosing any commander from the catalogue
 
 import { Fragment } from 'preact';
-import { useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Backdrop } from '../dialog';
-import { imageUrl } from '../images';
+import { imageUrl, skinIconUrl } from '../images';
+import { reducedMotion } from '../dom';
 import { avatarUrl } from '../avatarsleeves';
 import { isPortrait } from '../form';
 import { useDebounced } from '../hooks';
@@ -109,6 +110,57 @@ export function CardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; a
       </Backdrop>
     )}
   </>;
+}
+
+/**
+ * A battle's card reward: up to max of the cards dealt, none allowed, or a reroll at the cost the server names. The cards are dealt face down
+ * and turn over one by one, as desktop turns them. Mythic is marked only among other cards, so a reward of mythics alone has no marks.
+ */
+export function RewardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; answer: (value: unknown) => void; fold?: () => void; viewDeck?: () => void }) {
+  const [picked, setPicked] = useState<number[]>([]);
+  const dealt = useRef<HTMLDivElement>(null);
+  const phone = isPortrait();
+  const n = picked.length;
+  const marked = !asked.cards.every(c => c.mythic);
+  const toggle = (id: number) => setPicked(p => (p.includes(id) ? p.filter(x => x !== id) : p.length < asked.max ? [...p, id] : p));
+  useLayoutEffect(() => {
+    playSound({ t: 'sound', name: 'flip_card', sync: false });
+    if (reducedMotion()) return;
+    // Desktop turns the first card 200 ms after the dialog opens, then one every 100 ms
+    dealt.current!.querySelectorAll('.rg-card').forEach((card, k) => card.animate(
+      [{ opacity: 0, transform: 'perspective(700px) rotateY(90deg)' }, { opacity: 1, transform: 'none' }],
+      { duration: 260, delay: 200 + k * 100, easing: 'ease-out', fill: 'backwards' }));
+  }, []);
+  const foot = <>
+    {asked.rerollCost != null && (
+      <button disabled={!asked.rerollEnabled} onClick={() => answer('reroll')}>
+        <Icon d={ROGUE_ICONS.reroll} cls="rg-ic" />
+        {phone ? ` ${asked.rerollCost}` : <>{` ${t('lblWebRogueReroll')} `}<img class="camp-shard" alt="" src={skinIconUrl('ICO_QUEST_COIN')} />{asked.rerollCost}</>}
+      </button>
+    )}
+    <button class="primary" onClick={() => answer(picked)}>
+      {!n ? t('lblWebRogueTakeNone') : phone ? t('lblWebRogueAdd', n) : t(n === 1 ? 'lblWebRogueAddCard' : 'lblWebRogueAddCards', n)}
+    </button>
+  </>;
+  return (
+    <Scene art={asked.art} fold={fold} viewDeck={viewDeck} foot={foot}>
+      <div class="rg-pick">
+        <div class="rg-ask"><h3>{t('lblRogueVictoryReward', asked.title)}</h3><span>{t('lblRogueCardRewardSelectionCount', asked.max, n)}</span></div>
+        <div class="rg-cards seven" ref={dealt}>
+          {asked.cards.map(c => {
+            const at = picked.indexOf(c.id);
+            return (
+              <button key={c.id} class={at < 0 ? 'rg-card' : 'rg-card on'} aria-pressed={at >= 0} data-image={c.image} onClick={() => toggle(c.id)}>
+                <img alt={c.name} src={imageUrl(c.image)} />
+                {marked && c.mythic && <span class="myth">{t('lblMythic')}</span>}
+                {at >= 0 && <span class="no">{at + 1}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </Scene>
+  );
 }
 
 /** A chest's rewards, each a card to take, with Reroll and Skip. A phone words Reroll by its count alone. */

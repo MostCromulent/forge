@@ -13,6 +13,7 @@ import forge.gamemodes.rogue.RogueCustomDeckGenerator;
 import forge.gamemodes.rogue.RogueEvent;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueTutorial;
+import forge.gamemodes.rogue.RogueWinLoseController;
 import forge.gamemodes.rogue.TextHelper;
 import forge.gamemodes.rogue.effect.BazaarItem;
 import forge.gamemodes.rogue.effect.ChestEffect;
@@ -178,7 +179,7 @@ final class WebRogueDecisions implements RogueDecisions {
     private static List<PickCard> pickCards(final List<PaperCard> cards) {
         return IntStream.range(0, cards.size()).mapToObj(i -> {
             final PaperCard c = cards.get(i);
-            return new PickCard(i, c.getName(), c.getImageKey(false), c.getRules().getManaCost().getCMC());
+            return new PickCard(i, c.getName(), c.getImageKey(false), c.getRules().getManaCost().getCMC(), c.getRarity() == CardRarity.MythicRare);
         }).collect(Collectors.toList());
     }
 
@@ -269,7 +270,7 @@ final class WebRogueDecisions implements RogueDecisions {
         final Deck deck = choice.preview() != null ? choice.preview().apply(List.of()) : choice.run() == null ? null : choice.run().getCurrentDeck();
         final List<PaperCard> commanders = deck == null ? List.of() : deck.getCommanders();
         final JsonElement answer = ask(new AskCards(choice.kind().name(), choice.title(), choice.subtitle(), pickCards(shown),
-                choice.min(), choice.max(), null, null, deck == null ? null : pickDeck(deck, choice.preview() != null),
+                choice.min(), choice.max(), null, false, deck == null ? null : pickDeck(deck, choice.preview() != null),
                 commanders.isEmpty() ? null : commanders.get(0).getImageKey(false)), a -> picked(choice, shown, a) != null);
         return picked(choice, shown, answer);
     }
@@ -359,8 +360,9 @@ final class WebRogueDecisions implements RogueDecisions {
     public List<PaperCard> show(final String title, final List<PaperCard> cards, final int maxSelections, final String rerollLabel,
             final int rerollCost, final boolean rerollEnabled, final int gold) {
         final boolean mayReroll = rerollLabel != null && rerollEnabled;
+        final RogueRun run = game.run();
         final JsonElement answer = ask(new AskCards("REWARD", title, null, pickCards(cards), 0, maxSelections,
-                rerollLabel == null ? null : rerollCost, gold, null, null),
+                rerollLabel == null ? null : rerollCost, mayReroll, null, run == null ? null : RoguePages.lastPlane(run)),
                 a -> is(a, REROLL) ? mayReroll : indexes(a, cards.size()) != null && indexes(a, cards.size()).size() <= maxSelections);
         return is(answer, REROLL) ? null : pick(cards, indexes(answer, cards.size()));
     }
@@ -396,12 +398,27 @@ final class WebRogueDecisions implements RogueDecisions {
         final RogueRun run = game.run();
         tell(new Tell(kind.name(), title, parts(text), sections.stream()
                 .map(s -> new TellSection(s.label(), parts(s.text()), s.cards() == null ? List.of() : cards(s.cards()), s.removed()))
-                .collect(Collectors.toList()), kind == ResultKind.BOON ? boonArt : run == null ? null : RoguePages.lastPlane(run)));
+                .collect(Collectors.toList()), null, kind == ResultKind.BOON ? boonArt : run == null ? null : RoguePages.lastPlane(run)));
     }
 
     @Override
     public void showMessage(final String title, final String text) {
-        tell(new Tell("MESSAGE", title, parts(text), List.of(), null));
+        tell(new Tell("MESSAGE", title, parts(text), List.of(), null, null));
+    }
+
+    /** What a won battle gave, over the plane it was won on. */
+    void showGains(final RogueWinLoseController.Gains gains) {
+        final List<TellSection> sections = new ArrayList<>();
+        if (!gains.cards().isEmpty()) {
+            sections.add(new TellSection(text("lblRogueCardsAdded"), List.of(), cards(gains.cards()), false));
+        }
+        if (!gains.lost().isEmpty()) {
+            sections.add(new TellSection(text("lblRogueLostCarryCards"), List.of(),
+                    cards(gains.lost().stream().map(RogueRun.CarryCard::toPaperCard).collect(Collectors.toList())), true));
+        }
+        final PaperCard plane = gains.planebound() == null ? null : CodexHelper.getPlaneCard(gains.planebound());
+        tell(new Tell("SUMMARY", gains.planebound() == null ? "" : gains.planebound().planeboundName(), List.of(), sections,
+                new TellGains(gains.gold(), gains.echoes(), gains.life(), gains.credits()), plane == null ? null : plane.getImageKey(false)));
     }
 
     /** Tutorials are not drawn on the web yet, so none is marked seen. */

@@ -1,12 +1,17 @@
-// What a node did, drawn as a scene: the text, then the cards lost and gained
+// What a node or a won battle did, drawn as a scene: the text or the figures, then the cards lost and gained
 
 import { Fragment } from 'preact';
 import { Icon } from '../icons';
-import { imageUrl } from '../images';
+import { imageUrl, skinIconUrl } from '../images';
+import { isPortrait } from '../form';
 import { t } from '../text';
+import { ROGUE_ICONS } from './icons';
 import { Scene, useSceneKeys } from './scene';
 import { TERM_ICONS, Words } from './terms';
-import type { RogueCard, Tell } from '../protocol';
+import type { RogueCard, Tell, TellGains } from '../protocol';
+
+/** The face over a revive or a defeat at a side node. */
+const FACES: Record<string, keyof typeof ROGUE_ICONS> = { REVIVE: 'gem', DEFEAT: 'skull' };
 
 /** A carry card stands large with its type. Another card is drawn small when the result has several sections, with its count when above one. */
 function Card({ card, small }: { card: RogueCard; small: boolean }) {
@@ -27,15 +32,33 @@ function Card({ card, small }: { card: RogueCard; small: boolean }) {
   );
 }
 
-/** A result. When its one section has no label, the result's text heads it in place of the title. */
+/** The figures a won battle gave. One of 0 is left out, and a phone words removal credits shorter. */
+function Figures({ gains }: { gains: TellGains }) {
+  const figures = [
+    [gains.gold, <img alt="" src={skinIconUrl('ICO_QUEST_COIN')} />, t('lblWebRogueGold')],
+    [gains.echoes, <img alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />, t('lblWebRogueEchoes')],
+    [gains.life, <Icon d={ROGUE_ICONS.heart} cls="rg-ic" />, t('lblLife')],
+    [gains.credits, <Icon d={ROGUE_ICONS.cut} cls="rg-ic" />, t(isPortrait() ? 'lblCredits' : 'lblWebRogueRemovalCredits')],
+  ] as const;
+  return (
+    <div class="rg-gain-row">
+      {figures.filter(([n]) => n > 0).map(([n, icon, label]) => <div key={label} class="rg-gain">{icon}<div><b>{`+${n}`}</b><span>{label}</span></div></div>)}
+    </div>
+  );
+}
+
+/** A result, or what a won battle gave. When its one section has no label, the result's text heads it in place of the title. */
 export function Gains({ tell, ok }: { tell: Tell; ok: () => void }) {
   useSceneKeys(() => {}, ok);
   const led = tell.sections.length === 1 && !tell.sections[0].label;
   const small = tell.sections.length > 1;
+  const face = FACES[tell.kind];
   return (
-    <Scene art={tell.art} foot={<button class="primary" onClick={ok}>{t('lblContinue')}</button>}>
+    <Scene art={tell.art} foot={<button class="primary" onClick={ok}>{t(tell.kind === 'DEFEAT' ? 'lblRogueEndRun' : 'lblContinue')}</button>}>
       <div class="rg-gains">
+        {face && <span class="rg-face"><span class="pic icon"><Icon d={ROGUE_ICONS[face]} cls="rg-ic" /></span></span>}
         <h3>{led ? <Words parts={tell.text} /> : tell.title}</h3>
+        {tell.gains && <Figures gains={tell.gains} />}
         {!led && tell.text.length > 0 && <p><Words parts={tell.text} /></p>}
         {tell.sections.map((s, i) => <Fragment key={i}>
           {s.label && <span class="rg-sub">{s.label}</span>}
