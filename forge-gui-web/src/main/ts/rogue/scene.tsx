@@ -14,6 +14,7 @@ import { ROGUE_ICONS } from './icons';
 import { Words } from './terms';
 import { CardPick, CommanderPick, LootPick } from './pick';
 import { Gains } from './gains';
+import { Bazaar } from './bazaar';
 import { Backdrop } from '../dialog';
 import { CardGroup, Curve } from '../deck/deckview';
 import type { Actions } from '../actions';
@@ -137,7 +138,7 @@ export function Typed({ text, done }: { text: string; done: () => void }) {
 export function Question({ model, actions }: { model: Model; actions: Actions }) {
   const asked = model.rogueQuestion!;
   const answer = (value: unknown) => actions.rogueAnswer(asked.id, value);
-  const title = asked.choice?.title ?? asked.cards?.title ?? asked.commander?.title ?? asked.omen?.title ?? asked.tell!.title;
+  const title = asked.choice?.title ?? asked.cards?.title ?? asked.commander?.title ?? asked.omen?.title ?? asked.shop?.title ?? asked.tell!.title;
   if (ui.rogueFolded === asked.id) {
     return (
       <div class="rg-folded">
@@ -147,14 +148,15 @@ export function Question({ model, actions }: { model: Model; actions: Actions })
     );
   }
   const inRun = model.campaignSave !== null;
-  const fold = inRun && (asked.choice?.options.length || asked.cards) ? () => changeUi(u => { u.rogueFolded = asked.id; }) : undefined;
+  const fold = inRun && (asked.choice?.options.length || asked.cards || asked.shop) ? () => changeUi(u => { u.rogueFolded = asked.id; }) : undefined;
   if (asked.cards) {
     return <CardPick key={asked.id} asked={asked.cards} answer={answer} fold={fold} viewDeck={() => changeUi(u => { u.rogueDeckView = true; })} />;
   }
   if (asked.commander) return <CommanderPick key={asked.id} asked={asked.commander} model={model} actions={actions} answer={answer} />;
   if (asked.omen) return <Omens key={asked.id} omen={asked.omen} ok={() => answer(null)} />;
-  if (!asked.choice) return <Gains key={asked.id} tell={asked.tell!} ok={() => answer(null)} />;
   const viewDeck = fold && (() => changeUi(u => { u.rogueDeckView = true; }));
+  if (asked.shop) return <Bazaar key={asked.id} asked={asked.shop} answer={answer} fold={fold} viewDeck={viewDeck || undefined} />;
+  if (!asked.choice) return <Gains key={asked.id} tell={asked.tell!} ok={() => answer(null)} />;
   // Options that are traits or rewards to take are drawn as cards
   return asked.choice.options.length > 0 && asked.choice.options.every(o => o.trait)
     ? <LootPick key={asked.id} choice={asked.choice} answer={answer} fold={fold} viewDeck={viewDeck || undefined} />

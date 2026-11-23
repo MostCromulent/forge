@@ -222,11 +222,19 @@ public final class RogueProtocol {
     public record AskCommander(String title, int total, List<Integer> avatars, boolean skip, @Nullable String art) {
     }
 
-    /** Answered with {"selected": item ids, "reroll": boolean, "tab": number}. rerollCost is null in a shop with no reroll. */
-    public record AskShop(String title, List<ShopItem> items, int gold, @Nullable Integer rerollCost, boolean rerollEnabled, int tab) {
+    /**
+     * Answered with {"selected": item ids, "reroll": boolean, "tab": number}. rerollCost is null in a shop with no reroll. tab is the tab shown first:
+     * 0 for the cards, 1 for the traits and carry cards. art is the picture behind it.
+     */
+    public record AskShop(String title, List<ShopItem> items, int gold, @Nullable Integer rerollCost, boolean rerollEnabled, int tab, @Nullable String art) {
     }
 
-    public record ShopItem(int id, String name, @Nullable String image, List<Part> text, int price) {
+    /**
+     * id is the item's place in the offer. trait is set for a trait, and type, the term of a carry card's type, for a carry card. was is the price before
+     * any discount. special means it is offered with the traits and carry cards, apart from the cards.
+     */
+    public record ShopItem(int id, String name, @Nullable String image, @Nullable Trait trait, int price, int was, boolean mythic, @Nullable Part type,
+            boolean special) {
     }
 
     /** The Wrathful and Cursed effects of the battle about to start. art is the planebound's picture, and plane the plane's behind it. */

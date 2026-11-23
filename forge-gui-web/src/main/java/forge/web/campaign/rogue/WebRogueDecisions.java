@@ -2,6 +2,7 @@ package forge.web.campaign.rogue;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import forge.card.CardRarity;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckSection;
@@ -335,9 +336,11 @@ final class WebRogueDecisions implements RogueDecisions {
         final List<ShopItem> shown = new ArrayList<>();
         for (int i = 0; i < items.size(); i++) {
             final BazaarItem item = items.get(i);
-            final RogueEffect trait = item.traitEffect();
-            shown.add(new ShopItem(i, trait != null ? trait.getDisplayName() : item.card().getName(), item.card() == null ? null : item.card().getImageKey(false),
-                    trait != null ? parts(trait.getRawDescription()) : List.of(), item.getPrice()));
+            final PaperCard card = item.card();
+            final Trait trait = item.traitEffect() == null ? null : RoguePages.trait(item.traitEffect(), offer.run());
+            shown.add(new ShopItem(i, trait != null ? trait.name() : card.getName(), card == null ? null : card.getImageKey(false), trait, item.getPrice(),
+                    item.getBasePrice(), card != null && card.getRarity() == CardRarity.MythicRare,
+                    item.carryCardType() == null ? null : RoguePages.carryType(item.carryCardType()), item.isSpecial()));
         }
         final Function<JsonElement, ShopAnswer> read = a -> {
             final JsonObject o = a.getAsJsonObject();
@@ -345,7 +348,7 @@ final class WebRogueDecisions implements RogueDecisions {
             return picked == null ? null : new ShopAnswer(o.get("reroll").getAsBoolean(), new HashSet<>(pick(items, picked)), o.get("tab").getAsInt());
         };
         final JsonElement answer = ask(new AskShop(offer.title(), shown, offer.gold(), offer.rerollLabel() == null ? null : offer.rerollCost(),
-                offer.rerollEnabled(), offer.tab()), a -> {
+                offer.rerollEnabled(), offer.tab(), RoguePages.lastPlane(offer.run())), a -> {
             final ShopAnswer parsed = read.apply(a);
             return parsed != null && offer.accepts(parsed);
         });

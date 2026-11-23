@@ -8,7 +8,7 @@ export function sceneOptions(asked: RogueQuestion | null): Option[] | null {
   return asked?.omen || asked?.tell && asked.tell.kind !== 'MESSAGE' ? [] : null;
 }
 
-/** Whether a question is drawn as a scene over the page: those with options, results and card picks. */
+/** Whether a question is drawn as a scene over the page: those with options, results, card picks and bazaars. */
 export function isScene(asked: RogueQuestion | null): boolean {
-  return sceneOptions(asked) !== null || !!asked?.cards || !!asked?.commander;
+  return sceneOptions(asked) !== null || !!asked?.cards || !!asked?.commander || !!asked?.shop;
 }
