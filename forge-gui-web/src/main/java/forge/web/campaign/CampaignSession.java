@@ -253,6 +253,7 @@ public final class CampaignSession implements Campaigns {
     @Override
     public void reconnected(final BrowserChannel channel, final Stage now) {
         if (now instanceof Playing p && p.back() instanceof InCampaign c) {
+            modes.get(c.mode()).reconnectedToMatch();
             send(channel, modes.get(c.mode()).result());
         } else if (now instanceof InCampaign c && modes.get(c.mode()).runsItself()) {
             show();

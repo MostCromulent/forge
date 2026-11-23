@@ -3,7 +3,7 @@
 import { Icon } from '../icons';
 import { artUrl } from '../images';
 import { isPortrait } from '../form';
-import { t, textLanguage, type TextKey } from '../text';
+import { t, type TextKey } from '../text';
 import { ROGUE_ICONS } from './icons';
 import type { HistoryRun, RogueHistoryPage } from '../protocol';
 
@@ -16,12 +16,6 @@ const OUTCOMES: Record<string, [string, string, TextKey]> = {
 /** The icon of each side node by its kind. An unknown kind is an empty mark. */
 const SIDES: Record<string, string> = { SANCTUM: ROGUE_ICONS.sanctum, BAZAAR: ROGUE_ICONS.bazaar, EVENT: ROGUE_ICONS.event, CHEST: ROGUE_ICONS.chest };
 const background = (key: string | null | undefined) => (key ? { backgroundImage: `url("${artUrl(key)}")` } : undefined);
-
-/** iso is yyyy-mm-dd, as the run's history keeps it. */
-function day(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(textLanguage(), { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 /** A phone leaves out the date, and the traits by its stylesheet. */
 function Run({ run, deck }: { run: HistoryRun; deck: (id: number) => void }) {
@@ -40,7 +34,7 @@ function Run({ run, deck }: { run: HistoryRun; deck: (id: number) => void }) {
       <div class="traits">{run.traits.map((tr, i) => <span key={i} class="tn" title={tr.tip ?? undefined}>{tr.name}</span>)}</div>
       <div class="end">
         {outcome ? <span class={`rg-out ${outcome[0]}`}><Icon d={outcome[1]} cls="rg-ic" />{t(outcome[2])}</span> : <span class="rg-out">{run.outcome}</span>}
-        <span>{isPortrait() ? run.time : `${day(run.date)} · ${run.time}`}</span>
+        <span>{isPortrait() ? run.time : `${run.date} · ${run.time}`}</span>
         {run.deck && <button onClick={() => deck(run.id)}>{t('lblViewDeck')}</button>}
       </div>
     </div>

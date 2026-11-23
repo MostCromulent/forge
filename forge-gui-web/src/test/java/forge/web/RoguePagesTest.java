@@ -60,12 +60,12 @@ public class RoguePagesTest {
     }
 
     private RogueMap map() {
-        return RoguePages.build(flow, RogueMetaProgress.getInstance(), 1).pages().stream()
+        return RoguePages.build(flow, RogueMetaProgress.getInstance(), 1, null).pages().stream()
                 .filter(RogueMap.class::isInstance).map(RogueMap.class::cast).findFirst().orElseThrow();
     }
 
     private RogueTraits traits() {
-        return RoguePages.build(flow, RogueMetaProgress.getInstance(), 1).pages().stream()
+        return RoguePages.build(flow, RogueMetaProgress.getInstance(), 1, null).pages().stream()
                 .filter(RogueTraits.class::isInstance).map(RogueTraits.class::cast).findFirst().orElseThrow();
     }
 
@@ -152,7 +152,7 @@ public class RoguePagesTest {
         progress.updateStat(RogueStats.RUNS_COMPLETED, 1, run);
         progress.addSparks(3);
         Assert.assertFalse(progress.isDescensionModeUnlocked());
-        final List<Record> pages = RoguePages.build(flow, progress, 1).pages();
+        final List<Record> pages = RoguePages.build(flow, progress, 1, null).pages();
         final RogueHome home = pages.stream().filter(RogueHome.class::isInstance).map(RogueHome.class::cast).findFirst().orElseThrow();
         Assert.assertTrue(home.bar().balances().stream().noneMatch(b -> "ICO_QUEST_ELIXIR".equals(b.icon())), "the bar shows Sparks");
         final RogueAether aether = pages.stream().filter(RogueAether.class::isInstance).map(RogueAether.class::cast).findFirst().orElseThrow();

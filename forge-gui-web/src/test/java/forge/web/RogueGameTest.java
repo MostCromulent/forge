@@ -358,6 +358,20 @@ public class RogueGameTest extends WebHubTest {
         Assert.assertEquals(announced(host, "image").stream().filter(muldrotha::equals).count(), 1);
     }
 
+    // Fails if an announcement the page has not shown is lost when the pages are sent again, as after a reload, or one it has shown comes back
+    @Test(timeOut = 120_000)
+    public void anAnnouncementIsSentAgainUntilShown() throws Exception {
+        final TestBrowser host = openRun(NodeChest.class);
+        Assert.assertTrue(game.submit(snapshot(host), -1, () -> GuiBase.getInterface().showImageDialog(null, "Rogue's own", "Rogue")));
+        final int id = host.awaitMatching("rogueAnnounce", a -> "Rogue".equals(str(a, "title")), "the announcement did not arrive").get("id").getAsInt();
+        awaitIdle();
+        game.home();
+        Assert.assertEquals(announced(host, "title"), List.of("Rogue", "Rogue"));
+        sessions.onMessage(host, message("rogueAnnounced", "id", id));
+        game.home();
+        Assert.assertEquals(announced(host, "title"), List.of("Rogue", "Rogue"));
+    }
+
     // Fails if another mode's trophy, announced while Rogue's flow is idle, is shown on Rogue's pages
     @Test(timeOut = 120_000)
     public void anotherModesTrophyIsNotAnnounced() throws Exception {

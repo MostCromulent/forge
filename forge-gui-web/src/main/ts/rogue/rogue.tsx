@@ -22,6 +22,7 @@ import { TraitsPage } from './traits';
 import { AetherPage, aetherMenu } from './aether';
 import { CodexPage, type CodexTab } from './codex';
 import { HistoryPage } from './history';
+import { heldBack } from './gains';
 import type { RogueTab } from './register';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -38,7 +39,7 @@ const RESETS: Record<string, [TextKey, TextKey]> = {
   tutorials: ['lblRogueResetTutorials', 'lblRogueResetTutorialsConfirm'],
   progress: ['lblRogueResetGameProgression', 'lblRogueResetProgressConfirm'],
 };
-/** The dev mode tools, as desktop's dev buttons. Two of them switch, and their names say what the next press does. */
+/** The dev mode tools that change the progress, offered between runs as desktop does. Two of them switch, and their names say what the next press does. */
 const devTools = (home: RogueHome): [string, TextKey][] => [
   ['unlockAll', home.devUnlockAll ? 'lblRogueDevLockCommanders' : 'lblRogueDevUnlockAll'], ['npcProgress', 'lblRogueDevNpcProgress'],
   ['maxAether', home.aetherMaxed ? 'lblRogueDevResetAether' : 'lblRogueDevMaxAether'], ['echoes', 'lblRogueDevGainEchoes'],
@@ -150,6 +151,11 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const alone = !!fresh && isPortrait() && (choice.customOpen || !!run);
   const bar = alone ? { ...home.bar, name: t(choice.customOpen ? 'lblRogueCustomRun' : 'lblRogueStartNewRun') } : home.bar;
   const runBar = model.rogueMap?.bar;
+  const held = heldBack(model.rogueQuestion?.tell?.gains, ui.rogueLanded);
+  // Life is written out of its maximum, so an amount the summary holds back is taken off that text too
+  const lifeHeld = held.rogueLife;
+  const runBalances = runBar && run && lifeHeld
+    ? { ...runBar.bar, balances: runBar.bar.balances.map(b => (b.icon === 'rogueLife' ? { ...b, text: `${b.amount - lifeHeld} / ${run.maxLife}` } : b)) } : runBar?.bar;
   const abandon = (close: () => void) => { close(); setAbandoning(true); };
   const resetRow = (close: () => void, kind: string, label: TextKey) => <button role="menuitem" onClick={() => { close(); setResetting(kind); }}>{t(label)}</button>;
   // A phone has the resets and the Aether Upgrade in the header's menu, in place of the wide page's buttons
@@ -159,11 +165,12 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       ? (close: () => void) => <>{resetRow(close, 'tutorials', 'lblRogueResetTutorials')}{resetRow(close, 'progress', 'lblRogueResetProgress')}</>
       : tab === 'history' && model.rogueHistoryPage?.runs.length ? (close: () => void) => resetRow(close, 'history', 'lblRogueResetHistory') : undefined;
   const dev = (tool: string) => actions.rogueDev(home.snapshot, tool);
+  const tools = inRun ? RUN_TOOLS : devTools(home);
   // A wide screen opens the tools from a button beside the balances, and a phone lists them at the end of its header's menu
   const devTool = setting('devMode') && (isPortrait() ? <>
     <hr class="ph-menu-sep" />
     <small class="ph-menu-head">{t('lblDevMode')}</small>
-    {[...devTools(home), ...(inRun ? RUN_TOOLS : [])].map(([tool, label]) => <button key={tool} role="menuitem" onClick={() => dev(tool)}>{t(label)}</button>)}
+    {tools.map(([tool, label]) => <button key={tool} role="menuitem" onClick={() => dev(tool)}>{t(label)}</button>)}
   </> : (
     <button class="camp-dev" title={t('lblDevMode')} aria-label={t('lblDevMode')} aria-expanded={devOpen} onPointerDown={e => e.stopPropagation()}
       onClick={() => setDevOpen(!devOpen)}><Icon d={ROGUE_ICONS.code} cls="rg-ic" /></button>
@@ -183,13 +190,13 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     </div>
   ));
   return <>
-    {inRun ? <CampaignBar bar={runBar?.bar ?? bar} tabs={RUN_TABS} tab={aside} setTab={to => {
+    {inRun ? <CampaignBar bar={runBalances ?? bar} tabs={RUN_TABS} tab={aside} setTab={to => {
       // During a decision the deck is read only
       if (to === 'deck' && deciding) changeUi(u => { u.rogueDeckView = true; });
       else if (to === 'deck') editDeck();
       else changeUi(u => { u.roguePage = to; });
     }} mark={id => id === 'traits' && runBar && <sup class="rg-count">{runBar.traits}</sup>} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
-      held={{}} leave={back} under={dialog} lineTerm={runBar?.tip} glyph={glyph} moreIcon={glyph('dots')} more={more} extra={devTool} />
+      held={held} leave={back} under={dialog} lineTerm={runBar?.tip} glyph={glyph} moreIcon={glyph('dots')} more={more} extra={devTool} />
       : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog}
         more={isPortrait() ? phoneMenu : undefined} extra={devTool} />}
     {!isPortrait() ? <div class="rg-body">{main}{question}</div>
@@ -198,7 +205,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     {devOpen && !isPortrait() && (
       <div class="rg-menu" ref={devMenu}>
         <h6 style={{ border: 0, paddingTop: '4px' }}>{t('lblDev')}</h6>
-        {devTools(home).map(([tool, label]) => <button key={tool} onClick={() => { setDevOpen(false); dev(tool); }}>{t(label)}</button>)}
+        {tools.map(([tool, label]) => <button key={tool} onClick={() => { setDevOpen(false); dev(tool); }}>{t(label)}</button>)}
       </div>
     )}
     {abandoning && run && (
@@ -233,8 +240,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     )}
     {tell && model.rogueQuestion && <Message tell={tell} ok={() => actions.rogueAnswer(model.rogueQuestion!.id, null)} />}
     <Terms />
-    {!tell && announced && <Announcement key={`${announced.title}
-${announced.text}`} announced={announced} ok={actions.rogueAnnounced} />}
+    {!tell && announced && <Announcement key={announced.id} announced={announced} ok={actions.rogueAnnounced} />}
   </>;
 }
 

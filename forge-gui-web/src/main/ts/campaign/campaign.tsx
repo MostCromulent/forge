@@ -11,7 +11,7 @@ import { isPortrait } from '../form';
 import { ICONS, Icon } from '../icons';
 import { changeUi, eased, type UiState } from '../ui';
 import { Backdrop } from '../dialog';
-import { make, reducedMotion } from '../dom';
+import { reducedMotion } from '../dom';
 import { useDismiss } from '../hooks';
 
 /** The amounts a reveal has not shown yet, by the icon of the balance they were paid into. */
@@ -51,14 +51,16 @@ export function capBalance(icon: string, most: number | null): void {
 
 /** Animates an amount from a card to the bar's balance with that icon. The bar counts the amount when it arrives. */
 export function flyShards(from: DOMRect, arrived: () => void, icon: string): void {
-  const to = document.querySelector(`.camp-purse .camp-coin[data-icon="${icon}"]`)?.getBoundingClientRect();
+  const coin = document.querySelector(`.camp-purse .camp-coin[data-icon="${icon}"]`);
+  const to = coin?.getBoundingClientRect();
   if (!to || reducedMotion()) {
     arrived();
     return;
   }
-  const mote = make('img', 'camp-mote');
-  mote.alt = '';
-  mote.src = skinIconUrl(icon);
+  // The mote is the balance's own picture, which is a skin image or a drawn glyph
+  const mote = coin!.firstElementChild!.cloneNode(true) as HTMLElement;
+  mote.classList.add('camp-mote');
+  mote.setAttribute('aria-hidden', 'true');
   mote.dataset.icon = icon;
   document.body.append(mote);
   const x0 = from.left + from.width / 2, y0 = from.top + from.height * .4;

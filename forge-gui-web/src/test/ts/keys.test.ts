@@ -54,7 +54,7 @@ describe('a Rogue Commander scene', () => {
   it('keys are ignored while typing or while a dialog is open', () => {
     expect(keyCommand(press('1', true), boon(), rogueUi, KEYS, {})).toBeNull();
     const announced = boon();
-    announced.rogueAnnounced = [{ t: 'rogueAnnounce', kind: 'unlock', title: '', text: '' }];
+    announced.rogueAnnounced = [{ t: 'rogueAnnounce', id: 1, kind: 'unlock', title: '', text: '' }];
     expect(keyCommand(press('1'), announced, rogueUi, KEYS, {})).toBeNull();
     expect(keyCommand(press('1'), boon(), { ...rogueUi, rogueFolded: 4 } as UiState, KEYS, {})).toBeNull();
   });

@@ -109,6 +109,11 @@ public class RogueMatchTest extends RogueSessionTest {
         return asked.getAsJsonObject("tell");
     }
 
+    private static int gold(final TestBrowser host) {
+        return StreamSupport.stream(host.last("rogueMap").getAsJsonObject("bar").getAsJsonObject("bar").getAsJsonArray("balances").spliterator(), false)
+                .map(b -> b.getAsJsonObject()).filter(b -> "ICO_QUEST_COIN".equals(str(b, "icon"))).findFirst().orElseThrow().get("amount").getAsInt();
+    }
+
     private static RogueRunHistoryEntry lastRun() {
         final List<RogueRunHistoryEntry> history = RogueMetaProgress.getInstance().getRunHistory();
         return history.get(history.size() - 1);
@@ -162,10 +167,11 @@ public class RogueMatchTest extends RogueSessionTest {
         Assert.assertTrue(host.got.subList(from, host.got.size()).stream().noneMatch(m -> "rogueQuestion".equals(str(m, "t"))), "a reward was asked over the result");
     }
 
-    // Fails if leaving the result does not go on to the rewards, or they are not taken into the run
+    // Fails if leaving the result does not go on to the rewards, they are not taken into the run, or the bar shows the gold won before the summary counts it in
     @Test(timeOut = 300_000)
     public void rewardsAreAskedAfterLeaving() throws Exception {
         final TestBrowser host = atRun(NodePlanebound.class, 8);
+        final int before = gold(host);
         toBattle(host, PLANE);
         opponentConcedes();
         result(host);
@@ -173,10 +179,13 @@ public class RogueMatchTest extends RogueSessionTest {
         final JsonObject reward = host.awaitMatching("rogueQuestion", q -> q.has("cards") && "REWARD".equals(str(q.getAsJsonObject("cards"), "kind")),
                 "no reward was asked");
         handled.add(reward.get("id").getAsInt());
+        Assert.assertEquals(gold(host), before);
         final JsonArray first = new JsonArray();
         first.add(0);
         sessions.onMessage(host, answer(reward.get("id").getAsInt(), first));
         final JsonObject gains = summary(host);
+        Assert.assertTrue(gains.getAsJsonObject("gains").get("gold").getAsInt() > 0);
+        Assert.assertEquals(gold(host), before + gains.getAsJsonObject("gains").get("gold").getAsInt());
         Assert.assertEquals(gains.getAsJsonObject("gains").get("credits").getAsInt(), 1);
         Assert.assertEquals(gains.getAsJsonArray("sections").get(0).getAsJsonObject().getAsJsonArray("cards").size(), 1);
         settle(host);

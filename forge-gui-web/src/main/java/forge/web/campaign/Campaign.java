@@ -63,6 +63,10 @@ public interface Campaign {
     default void disconnected() {
     }
 
+    /** The host's browser came back to this mode's match. Its pages are sent again through home and page instead. Called as disconnected is. */
+    default void reconnectedToMatch() {
+    }
+
     /** The session took the host's seat. */
     default void becameHost(final Host host) {
     }

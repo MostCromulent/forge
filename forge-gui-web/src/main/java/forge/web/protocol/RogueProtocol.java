@@ -46,10 +46,15 @@ public final class RogueProtocol {
 
     /**
      * Something won or unlocked, shown over whichever Rogue page is open. kind is "unlock" or "spark".
-     * The first line of text is its name. image is a card's picture, or null.
+     * The first line of text is its name. image is a card's picture, or null. It is sent again after a reload until the browser says it was shown.
      */
     @Message("rogueAnnounce")
-    public record RogueAnnounce(String kind, String title, String text, @Nullable String image) {
+    public record RogueAnnounce(int id, String kind, String title, String text, @Nullable String image) {
+    }
+
+    /** The announcement was shown. */
+    @Command("rogueAnnounced")
+    public record RogueAnnounced(int id) {
     }
 
     /**

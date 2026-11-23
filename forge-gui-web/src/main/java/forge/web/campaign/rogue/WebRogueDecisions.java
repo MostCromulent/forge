@@ -392,7 +392,7 @@ final class WebRogueDecisions implements RogueDecisions {
     @Override
     public void showResult(final ResultKind kind, final String title, final String text, final List<Section> sections) {
         if (kind == ResultKind.SPARK) {
-            game.announce(new RogueAnnounce("spark", title, text, null));
+            game.announce("spark", title, text, null);
             return;
         }
         final RogueRun run = game.run();

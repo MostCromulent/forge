@@ -7,6 +7,7 @@ import forge.StaticData;
 import forge.deck.CardPool;
 import forge.game.GameType;
 import forge.game.GameView;
+import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.match.PreparedMatch.Looks;
 import forge.gamemodes.rogue.AetherUpgrade;
@@ -93,8 +94,11 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     private volatile Host host;
     /** The question the flow thread waits on. It is set and sent while holding pages, so it always follows the pages it was asked over. */
     private volatile Open question;
-    /** What was won or unlocked and has not reached the host's browser on Rogue's pages yet. Guarded by pages. */
+    /** What was won or unlocked and the browser has not shown yet, oldest first. Guarded by pages. */
     private final List<RogueAnnounce> announced = new ArrayList<>();
+    /** How many of announced the browser was sent since it last asked for all the pages. Guarded by pages. */
+    private int told;
+    private int announcements;
     /** The pages last sent to the host's browser by type, so a publish leaves out those it already holds. Guarded by pages. */
     private final Map<Class<?>, Record> sent = new HashMap<>();
     private final RogueDecisions decisions;
@@ -108,6 +112,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         /** The host's view of the game whose result is taken. A match has one. */
         volatile GameView game;
         volatile CampaignResult result;
+        /** Whether the summary of what the battle gave was shown, which the run's bar waits for. */
+        volatile boolean gainsShown;
         /** The button the match was left by, or null. */
         final CompletableFuture<String> left = new CompletableFuture<>();
         RogueWinLoseController controller;
@@ -262,7 +268,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             return;
         }
         synchronized (pages) {
-            latest = RoguePages.build(flow, progress, latest.number() + 1);
+            latest = RoguePages.build(flow, progress, latest.number() + 1, held());
             send();
         }
     }
@@ -286,34 +292,30 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         if (asked != null) {
             h.session().tell(asked.message());
         }
-        final RogueRun timed = latest.timed();
         if (h.session().browser() == null) {
             pause();
         } else if (paused) {
-            paused = false;
-            if (timed != null) {
-                timed.getRunTimer().start();
-            }
+            resume();
         } else if (RUN.equals(c.save()) && latest.run() != null) {
             latest.run().getRunTimer().start();
         }
     }
 
-    /** Sends what was announced while the host's browser is on Rogue's pages. Call it holding pages. */
+    /** Sends what was announced and not yet sent while the host's browser is on Rogue's pages. Call it holding pages. */
     private void sendAnnounced(final Host h) {
         if (h.session().browser() != null && h.session().stage() instanceof InCampaign c && MODE.equals(c.mode())) {
-            announced.forEach(h.session()::tell);
-            announced.clear();
+            announced.subList(told, announced.size()).forEach(h.session()::tell);
+            told = announced.size();
         }
     }
 
     /** Only announcements made while a job runs are kept, so another mode's trophies are not shown on Rogue's pages. Called on any thread. */
-    void announce(final RogueAnnounce announcement) {
+    void announce(final String kind, final String title, final String text, final String image) {
         if (!busy.get()) {
             return;
         }
         synchronized (pages) {
-            announced.add(announcement);
+            announced.add(new RogueAnnounce(++announcements, kind, title, text, image));
             final Host h = host;
             if (h != null) {
                 sendAnnounced(h);
@@ -322,7 +324,29 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     }
 
     private void announce(final ISkinImage image, final String message, final String title) {
-        announce(new RogueAnnounce("unlock", title, message, image instanceof CardImage c ? c.card().getImageKey(false) : null));
+        announce("unlock", title, message, image instanceof CardImage c ? c.card().getImageKey(false) : null);
+    }
+
+    private void shown(final int id) {
+        synchronized (pages) {
+            for (int i = 0; i < announced.size(); i++) {
+                if (announced.get(i).id() == id) {
+                    announced.remove(i);
+                    if (i < told) {
+                        told--;
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    /** Starts the clock the browser's going stopped. Call it holding pages. */
+    private void resume() {
+        paused = false;
+        if (latest.timed() != null) {
+            latest.timed().getRunTimer().start();
+        }
     }
 
     /** Call it holding pages. */
@@ -418,6 +442,15 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     }
 
     @Override
+    public void reconnectedToMatch() {
+        synchronized (pages) {
+            if (paused) {
+                resume();
+            }
+        }
+    }
+
+    @Override
     public String current() {
         synchronized (pages) {
             return latest.run() != null ? RUN : null;
@@ -484,6 +517,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     public List<Record> home() {
         synchronized (pages) {
             sent.clear();
+            told = 0;
             send();
         }
         return List.of();
@@ -541,7 +575,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             }
             awaitLeaving(b);
             final String choice = b.left.join();
-            if (b.controller.hasWonMatch() && !b.controller.hasFailedRun()) {
+            if (summarised(b)) {
+                b.gainsShown = true;
                 ((WebRogueDecisions) decisions).showGains(b.controller.getGains());
             }
             boolean endless = false;
@@ -557,6 +592,16 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         } finally {
             battle = null;
         }
+    }
+
+    private static boolean summarised(final Battle b) {
+        return b.controller.hasWonMatch() && !b.controller.hasFailedRun();
+    }
+
+    /** What the battle gave until its summary shows it, which the run's bar holds back so the summary can count it in. Only the flow thread calls this. */
+    private RogueWinLoseController.Gains held() {
+        final Battle b = battle;
+        return b == null || b.controller == null || b.gainsShown || !summarised(b) ? null : b.controller.getGains();
     }
 
     /** Sends the result the first time, then waits until the match is left. */
@@ -601,10 +646,16 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         return b == null || b.left.isDone() ? null : b.result;
     }
 
+    /**
+     * Only a game still being played when the player leaves is ended by the leaving. A game already over ended by its own play,
+     * and its result may still be queued for gameOver. A second call comes with the table closed and changes nothing.
+     */
     @Override
     public void leavingMatch() {
         final Battle b = battle;
-        if (b != null) {
+        final Host h = host;
+        final HostedMatch match = h == null ? null : h.session().local().hostedMatch();
+        if (b != null && match != null && match.getGame() != null && !match.getGame().isGameOver()) {
             b.leaving = true;
         }
     }
@@ -651,14 +702,20 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         final AetherUpgrade next = AetherUpgrade.forLevel(progress.getAetherUpgradeLevel() + 1);
         if (progress.isDescensionModeUnlocked() && next != null && progress.purchaseAetherUpgrade(next.level)) {
             final Localizer text = Localizer.getInstance();
-            announce(new RogueAnnounce("unlock", text.getMessage("lblRogueAetherUpgradeUnlocked"),
-                    text.getMessage("lblRogueUnlockedAetherUpgrade", next.name, next.description), null));
+            announce("unlock", text.getMessage("lblRogueAetherUpgradeUnlocked"), text.getMessage("lblRogueUnlockedAetherUpgrade", next.name, next.description), null);
         }
     }
 
-    private static void reset(final RogueMetaProgress progress, final String kind) {
+    /** Desktop says how many Echoes a reset of the Aetherworks gave back. */
+    private void reset(final RogueMetaProgress progress, final String kind) {
         switch (kind) {
-            case "aether" -> progress.resetAetherEffects();
+            case "aether" -> {
+                final int refunded = progress.resetAetherEffects();
+                if (refunded > 0) {
+                    final Localizer text = Localizer.getInstance();
+                    decisions.showMessage(text.getMessage("lblRogueAetherworksReset"), text.getMessage("lblRogueRefundedEchoes", refunded));
+                }
+            }
             case "history" -> progress.clearRunHistory();
             case "tutorials" -> progress.resetTutorials();
             case "progress" -> progress.reset();
@@ -712,7 +769,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
     }
 
-    /** Runs a dev mode tool as desktop's dev buttons do. Nothing happens while dev mode is off. Only the flow thread calls this. */
+    /** Runs a dev mode tool as desktop's dev buttons do. Nothing happens while dev mode is off, and the run is not moved on during a battle. Only the flow thread calls this. */
     private void dev(final String tool) {
         if (!ForgePreferences.DEV_MODE) {
             return;
@@ -728,8 +785,16 @@ public final class RogueGame implements Campaign, IHasForgeLog {
                 CodexHelper.unlockCodex();
                 RogueCommanderAchievements.getInstance().evaluateCodexAchievements(progress);
             }
-            case "nextNode" -> flow.devNextNode();
-            case "winRun" -> flow.devWinRun();
+            case "nextNode" -> {
+                if (battle == null) {
+                    flow.devNextNode();
+                }
+            }
+            case "winRun" -> {
+                if (battle == null) {
+                    flow.devWinRun();
+                }
+            }
             default -> { }
         }
     }
@@ -791,12 +856,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             .on(RogueAbandon.class, (g, ch, a) -> g.submit(a.snapshot(), -1, g.flow::abandon))
             .on(RogueEditDeck.class, (g, ch, d) -> g.submit(d.snapshot(), -1, () -> g.openEditor(ch)))
             .on(RogueAnswer.class, (g, ch, a) -> g.answer(ch, a.id(), a.value()))
-            .on(RogueAetherUpgrade.class, (g, ch, u) -> g.work(u.snapshot(), u.work(), (progress, work) -> {
-                final boolean built = progress.getAetherEffectRank(work) > 0;
-                if (progress.upgradeAetherEffect(work) && !built) {
-                    progress.activateAetherEffect(work);
-                }
-            }))
+            .on(RogueAnnounced.class, (g, ch, a) -> g.shown(a.id()))
+            .on(RogueAetherUpgrade.class, (g, ch, u) -> g.work(u.snapshot(), u.work(), RogueMetaProgress::upgradeAndActivateAetherEffect))
             .on(RogueAetherToggle.class, (g, ch, a) -> g.work(a.snapshot(), a.work(), (progress, work) -> {
                 if (a.on()) {
                     progress.activateAetherEffect(work);
@@ -805,7 +866,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
                 }
             }))
             .on(RogueAetherExpand.class, (g, ch, e) -> g.change(e.snapshot(), g::expand))
-            .on(RogueReset.class, (g, ch, r) -> g.change(r.snapshot(), progress -> reset(progress, r.kind())))
+            .on(RogueReset.class, (g, ch, r) -> g.change(r.snapshot(), progress -> g.reset(progress, r.kind())))
             .on(RogueCodex.class, (g, ch, c) -> g.codex(ch, c))
             .on(RogueHistory.class, (g, ch, h) -> g.read(ch, () -> RoguePages.history(RogueMetaProgress.getInstance())))
             .on(RogueHistoryDeck.class, (g, ch, d) -> g.read(ch, () -> {

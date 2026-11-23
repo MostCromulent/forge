@@ -15,6 +15,7 @@ import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RoguePlaneboundType;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueRunHistoryEntry;
+import forge.gamemodes.rogue.RogueWinLoseController.Gains;
 import forge.gamemodes.rogue.TextHelper;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.ChestEffect;
@@ -86,7 +87,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -108,9 +108,6 @@ public final class RoguePages {
     private static final String AETHER_ART = "Teferi, Temporal Archmage";
     private static final String CODEX_ART = "The Maelstrom";
 
-    /** The Codex's trait groups in the order desktop lists them. */
-    private static final List<TraitCategory> TRAIT_GROUPS = List.of(TraitCategory.CHEST, TraitCategory.NPC, TraitCategory.EVENT, TraitCategory.WOUND);
-
     /** The picture of each planebound's commander by its deck's path, read from the deck file the first time it is drawn. */
     private static final Map<String, String> PLANEBOUND_ART = new ConcurrentHashMap<>();
 
@@ -121,8 +118,13 @@ public final class RoguePages {
     public record Snapshot(long number, RogueRun run, RogueRun timed, int node, List<Record> pages) {
     }
 
-    /** Runs on the flow thread only, because it reads the run and reveals the planes now in view. */
-    public static Snapshot build(final RogueFlow flow, final RogueMetaProgress progress, final long number) {
+    private static final Gains NOTHING = new Gains(null, 0, 0, 0, 0, List.of(), List.of());
+
+    /**
+     * Runs on the flow thread only, because it reads the run and reveals the planes now in view.
+     * held is what a won battle gave and the run's bar does not show until the summary counts it in, or null.
+     */
+    public static Snapshot build(final RogueFlow flow, final RogueMetaProgress progress, final long number, final Gains held) {
         final RogueRun run = flow.run();
         final List<Record> pages = new ArrayList<>();
         if (run == null) {
@@ -135,7 +137,7 @@ public final class RoguePages {
         pages.add(home(run, progress, number));
         pages.add(roster(progress));
         pages.add(aether(progress));
-        pages.add(map(flow, run, progress, number));
+        pages.add(map(flow, run, progress, number, held == null ? NOTHING : held));
         pages.add(new RogueRunDeck(details("rogue:run", run.getCurrentCommanderName(), run.getCurrentDeck())));
         pages.add(new RogueTraits(RogueEffectComposite.getAllEffects(run).stream().map(e -> trait(e, run))
                 .sorted(Comparator.comparing(t -> Source.valueOf(t.source()))).toList(), carry(run)));
@@ -311,7 +313,7 @@ public final class RoguePages {
         final List<CodexGroup> groups = List.of(
                 new CodexGroup(text.getMessage("lblRogueRewardPoolNonMythics"), items(nonMythics, c -> CodexHelper.state(progress, chosen, c), states)),
                 new CodexGroup(text.getMessage("lblRogueRewardPoolMythics"), items(mythics, c -> CodexHelper.state(progress, chosen, c), states)),
-                new CodexGroup(text.getMessage("lblRogueStartDeck"), items(eachBasicOnce(chosen.getStartDeck().getMain().toFlatList()), c -> CodexState.ACQUIRED,
+                new CodexGroup(text.getMessage("lblRogueStartDeck"), items(CodexHelper.eachBasicOnce(chosen.getStartDeck().getMain().toFlatList()), c -> CodexState.ACQUIRED,
                         new ArrayList<>())));
         final String name = chosen.getCommanderCardName();
         final List<CodexFact> facts = List.of(new CodexFact("runs", String.valueOf(progress.getRunsStartedWithCommander(name))),
@@ -353,7 +355,7 @@ public final class RoguePages {
         }
         final Deck deck = RogueConfig.loadPlaneboundDeck(chosen);
         final List<CodexState> states = new ArrayList<>();
-        final List<CodexItem> items = items(deck == null ? List.of() : eachBasicOnce(deck.getAllCardsInASinglePool(false, false).toFlatList()),
+        final List<CodexItem> items = items(deck == null ? List.of() : CodexHelper.eachBasicOnce(deck.getAllCardsInASinglePool(false, false).toFlatList()),
                 c -> CodexHelper.state(progress, chosen, c), states);
         final PaperCard plane = CodexHelper.getPlaneCard(chosen);
         final List<CodexFact> facts = List.of(new CodexFact("slain", String.valueOf(progress.getPlaneboundWins(chosen))),
@@ -390,17 +392,11 @@ public final class RoguePages {
                 }).toList();
     }
 
-    private static List<PaperCard> eachBasicOnce(final List<PaperCard> cards) {
-        final Set<String> basics = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        return cards.stream().filter(c -> c.getRules() != null && (!c.getRules().getType().isBasicLand() || basics.add(c.getName()))).toList();
-    }
-
     private static CodexEntry traitCodex(final RogueMetaProgress progress) {
-        final Localizer text = Localizer.getInstance();
         final Map<TraitCategory, List<RogueEffect>> traits = CodexHelper.getCodexTraitsByCategory();
         final List<CodexGroup> groups = new ArrayList<>();
         final List<CodexState> states = new ArrayList<>();
-        for (final TraitCategory category : TRAIT_GROUPS) {
+        for (final TraitCategory category : TraitCategory.values()) {
             final List<CodexItem> items = new ArrayList<>();
             for (final RogueEffect effect : traits.getOrDefault(category, List.of())) {
                 final CodexState state = CodexHelper.state(progress, effect);
@@ -408,12 +404,7 @@ public final class RoguePages {
                 items.add(state == CodexState.UNKNOWN ? new CodexItem("unknown", null, null, null)
                         : new CodexItem(state.name().toLowerCase(Locale.ROOT), null, null, trait(effect, null)));
             }
-            groups.add(new CodexGroup(text.getMessage(switch (category) {
-                case CHEST -> "lblRogueChest";
-                case NPC -> "lblRogueNpc";
-                case EVENT -> "lblRogueEvent";
-                case WOUND -> "lblRogueWound";
-            }), items));
+            groups.add(new CodexGroup(category.label(), items));
         }
         return new CodexEntry(null, null, null, null, null, List.of(new CodexFact("seen", CodexHelper.countSeen(states) + " / " + states.size()),
                 new CodexFact("acquired", CodexHelper.countAcquired(states) + " / " + states.size())), groups, List.of());
@@ -439,7 +430,7 @@ public final class RoguePages {
                 chosen.speaker().avatarIndex, List.of(), List.of(), List.of(chosen.text().split("\n\n"))));
     }
 
-    /** The finished runs, newest first, behind the latest run's commander. Null while History is locked. */
+    /** The finished runs, newest first, behind the latest run's commander, or with none the commander started most. Null while History is locked. */
     public static RogueHistoryPage history(final RogueMetaProgress progress) {
         if (!RogueStart.tabsUnlocked(progress)) {
             return null;
@@ -459,7 +450,11 @@ public final class RoguePages {
                     line(detail, entry.getDescensionLevel(), entry.getEndlessLevel()), steps, traits, entry.getTimestamp(), entry.getFormattedRunTime(),
                     entry.getDeckSnapshot() != null));
         }
-        return new RogueHistoryPage(runs, runs.isEmpty() ? null : runs.get(0).image());
+        if (!runs.isEmpty()) {
+            return new RogueHistoryPage(runs, runs.get(0).image());
+        }
+        return new RogueHistoryPage(runs, Decks.ALL.stream().filter(d -> progress.getRunsStartedWithCommander(d.getCommanderCardName()) > 0)
+                .max(Comparator.comparingInt(d -> progress.getRunsStartedWithCommander(d.getCommanderCardName()))).map(RoguePages::commanderImage).orElse(null));
     }
 
     /** The deck a finished run ended with, read only, or null for one not kept or while History is locked. */
@@ -499,7 +494,7 @@ public final class RoguePages {
                 List.of(), null, 0, null);
     }
 
-    private static RogueMap map(final RogueFlow flow, final RogueRun run, final RogueMetaProgress progress, final long number) {
+    private static RogueMap map(final RogueFlow flow, final RogueRun run, final RogueMetaProgress progress, final long number, final Gains held) {
         final RoguePath path = run.getPath();
         final RoguePathNode current = run.getCurrentNode();
         final int row = current == null ? -1 : current.getRowIndex();
@@ -523,12 +518,11 @@ public final class RoguePages {
             e.onPathUpdate(context, run);
             return context.hidePlanes;
         }).map(RogueEffect::getDescription).toList();
-        return new RogueMap(number, rows, links, run.getCurrentNodeIndex(), runBar(run, progress), reroll.left(), reroll.enabled() ? null : reroll.reason(),
+        return new RogueMap(number, rows, links, run.getCurrentNodeIndex(), runBar(run, progress, held), reroll.left(), reroll.enabled() ? null : reroll.reason(),
                 hiding.isEmpty() ? null : String.join("\n", hiding), MAP_TERMS);
     }
 
     private static MapNode node(final RogueFlow flow, final RogueRun run, final RoguePathNode node, final int index, final String state) {
-        final Localizer text = Localizer.getInstance();
         final String enter = flow.enterText(node);
         return switch (node.getType()) {
             case PLANEBOUND -> {
@@ -546,15 +540,9 @@ public final class RoguePages {
                         card == null ? null : card.getImageKey(false), card == null ? null : card.getRules().getOracleText().replace("\\n", "\n"),
                         life, elite, boss, plane.getWrathfulCount(), plane.getCursedCount(), plane.getGoldReward(), plane.getEchoReward(), enter);
             }
-            case SANCTUM -> side(node, index, state, text.getMessage("lblRogueSanctum"), text.getMessage("lblRogueSanctumTooltip"), enter);
-            case BAZAAR -> side(node, index, state, text.getMessage("lblRogueBazaar"), text.getMessage("lblRogueBazaarTooltip"), enter);
-            case EVENT -> side(node, index, state, text.getMessage("lblRogueEvent"), text.getMessage("lblRogueEventTooltip"), enter);
-            case CHEST -> side(node, index, state, text.getMessage("lblRogueChest"), text.getMessage("lblRogueChestTooltip"), enter);
+            case SANCTUM, BAZAAR, EVENT, CHEST -> new MapNode(index, node.getType().name(), state, false, node.getType().sideName(), null, null, null,
+                    node.getType().sideTooltip(), 0, false, false, 0, 0, 0, 0, enter);
         };
-    }
-
-    private static MapNode side(final RoguePathNode node, final int index, final String state, final String name, final String text, final String enter) {
-        return new MapNode(index, node.getType().name(), state, false, name, null, null, null, text, 0, false, false, 0, 0, 0, 0, enter);
     }
 
     /** The plane of the last battle the run won, which a side node's scene is drawn over, or null before the first. */
@@ -571,14 +559,14 @@ public final class RoguePages {
         });
     }
 
-    private static RogueRunBar runBar(final RogueRun run, final RogueMetaProgress progress) {
+    private static RogueRunBar runBar(final RogueRun run, final RogueMetaProgress progress, final Gains held) {
         final Localizer text = Localizer.getInstance();
+        final int life = run.getCurrentLife() - held.life();
         final List<Balance> balances = List.of(
-                new Balance("rogueLife", run.getCurrentLife(), KeywordHint.MAX_LIFE.getTitle(), run.getCurrentLife() + " / " + run.getMaxLife(), "heart",
-                        KeywordHint.MAX_LIFE.getHintText()),
-                new Balance("ICO_QUEST_COIN", run.getCurrentGold(), KeywordHint.GOLD.getTitle(), null, null, KeywordHint.GOLD.getHintText()),
-                new Balance("ICO_QUEST_GOLD", progress.getTotalEchoes(), KeywordHint.ECHOES.getTitle(), null, null, KeywordHint.ECHOES.getHintText()),
-                new Balance("rogueCredits", run.getRemovalCredits(), KeywordHint.REMOVAL_CREDITS.getTitle(), null, "cut",
+                new Balance("rogueLife", life, KeywordHint.MAX_LIFE.getTitle(), life + " / " + run.getMaxLife(), "heart", KeywordHint.MAX_LIFE.getHintText()),
+                new Balance("ICO_QUEST_COIN", run.getCurrentGold() - held.gold(), KeywordHint.GOLD.getTitle(), null, null, KeywordHint.GOLD.getHintText()),
+                new Balance("ICO_QUEST_GOLD", progress.getTotalEchoes() - held.echoes(), KeywordHint.ECHOES.getTitle(), null, null, KeywordHint.ECHOES.getHintText()),
+                new Balance("rogueCredits", run.getRemovalCredits() - held.credits(), KeywordHint.REMOVAL_CREDITS.getTitle(), null, "cut",
                         KeywordHint.REMOVAL_CREDITS.getHintText()));
         final List<String> tip = new ArrayList<>();
         for (int level = 1; level <= run.getDescensionLevel(); level++) {

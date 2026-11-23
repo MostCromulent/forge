@@ -94,7 +94,7 @@ public class RogueBetweenRunsTest extends RogueSessionTest {
         Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 1);
     }
 
-    // Fails if resetting the Aetherworks keeps a rank, misses Echoes spent on one, or takes back Sparks or an Aether Upgrade
+    // Fails if resetting the Aetherworks keeps a rank, misses Echoes spent on one, takes back Sparks or an Aether Upgrade, or does not say what it refunded
     @Test(timeOut = 120_000)
     public void resetRefundsEchoesOnly() throws Exception {
         final TestBrowser host = hub(p -> {
@@ -105,6 +105,10 @@ public class RogueBetweenRunsTest extends RogueSessionTest {
             Assert.assertTrue(p.upgradeAetherEffect(AetherEffect.ZHALFIRIN_SANCTUARY));
         });
         command(host, message("rogueReset", "kind", "aether"));
+        final int refunded = AetherEffect.ZHALFIRIN_SANCTUARY.getEchoCostForRank(1) + AetherEffect.ZHALFIRIN_SANCTUARY.getEchoCostForRank(2)
+                + AetherEffect.AETHER_EXCHANGE.getEchoCostForRank(1);
+        host.awaitMatching("rogueQuestion", q -> q.has("tell") && q.getAsJsonObject("tell").get("text").toString().contains(" " + refunded + " "),
+                "the refund was not told");
         final RogueMetaProgress progress = RogueMetaProgress.getInstance();
         Assert.assertEquals(progress.getTotalEchoes(), 100);
         Assert.assertEquals(progress.getTotalSparks(), 5);

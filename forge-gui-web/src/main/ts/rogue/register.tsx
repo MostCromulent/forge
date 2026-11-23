@@ -52,6 +52,8 @@ declare module '../ui' {
     rogueCodexTab: CodexTab;
     /** The Codex entry chosen, or null for the first, which a phone shows as the list. */
     rogueCodexId: string | null;
+    /** The run bar's balances, by icon, that a battle's summary has counted in so far. */
+    rogueLanded: string[];
   }
 }
 
@@ -87,13 +89,13 @@ declare module '../actions' {
   interface Actions extends RogueActions {}
 }
 
-/** The pages' fields when Rogue is not open. Announcements not yet shown wait for the next visit. */
+/** The pages' fields when Rogue is not open. Announcements not yet shown are kept, and the server sends them again on the next visit. */
 const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueMap: null, rogueRunDeck: null, rogueTraits: null, rogueAether: null, rogueCodexPage: null, rogueHistoryPage: null, rogueChoice: null, rogueQuestion: null } satisfies Partial<Model>;
 
 // A winding trail between two points
 const ICON = <><circle cx="12" cy="37" r="4" /><circle cx="36" cy="11" r="4" /><path d="M16 37h10a7 7 0 0 0 0-14h-4a7 7 0 0 1 0-12h10" /></>;
 
-Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null });
+Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null, rogueLanded: [] });
 
 registerMode({
   mode: 'rogue',
@@ -101,13 +103,14 @@ registerMode({
   hello: (model, msg) => {
     if (msg.campaign !== 'rogue') {
       Object.assign(model, NO_ROGUE);
-      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null });
+      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null, rogueLanded: [] });
     }
   },
   stored: ['rogueHome', 'rogueRoster', 'rogueMap', 'rogueRunDeck', 'rogueTraits', 'rogueAether', 'rogueCodexPage', 'rogueHistoryPage', 'rogueChoice', 'rogueQuestion'],
   message: (model, msg) => {
     if (msg.t !== 'rogueAnnounce') return false;
-    model.rogueAnnounced = [...model.rogueAnnounced, msg];
+    // The server sends again what this page may already hold after each visit or reload
+    if (!model.rogueAnnounced.some(a => a.id === msg.id)) model.rogueAnnounced = [...model.rogueAnnounced, msg];
     return true;
   },
   actions: (send, model, schedule): RogueActions => ({
@@ -134,6 +137,7 @@ registerMode({
       schedule();
     },
     rogueAnnounced: () => {
+      send({ t: 'rogueAnnounced', id: model.rogueAnnounced[0].id });
       model.rogueAnnounced = model.rogueAnnounced.slice(1);
       schedule();
     },

@@ -1,6 +1,9 @@
 // What a node or a won battle did, drawn as a scene: the text or the figures, then the cards lost and gained
 
 import { Fragment } from 'preact';
+import { useEffect, useRef } from 'preact/hooks';
+import { flyShards } from '../campaign/campaign';
+import { changeUi } from '../ui';
 import { Icon } from '../icons';
 import { imageUrl, skinIconUrl } from '../images';
 import { isPortrait } from '../form';
@@ -32,17 +35,29 @@ function Card({ card, small }: { card: RogueCard; small: boolean }) {
   );
 }
 
-/** The figures a won battle gave. One of 0 is left out, and a phone words removal credits shorter. */
+/** The run bar's balance each figure counts into, by icon. */
+const figureIcons = (gains: TellGains): [string, number][] =>
+  [['ICO_QUEST_COIN', gains.gold], ['ICO_QUEST_GOLD', gains.echoes], ['rogueLife', gains.life], ['rogueCredits', gains.credits]];
+
+/** What a battle's summary has not yet counted into the run's bar, by balance icon. The server's bar already counts all of it. */
+export const heldBack = (gains: TellGains | null | undefined, landed: string[]): Record<string, number> =>
+  gains ? Object.fromEntries(figureIcons(gains).filter(([icon]) => !landed.includes(icon))) : {};
+
+/** The figures a won battle gave. One of 0 is left out, and a phone words removal credits shorter. Each flies to its balance in the bar, which counts it as it lands. */
 function Figures({ gains }: { gains: TellGains }) {
-  const figures = [
-    [gains.gold, <img alt="" src={skinIconUrl('ICO_QUEST_COIN')} />, t('lblWebRogueGold')],
-    [gains.echoes, <img alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />, t('lblWebRogueEchoes')],
-    [gains.life, <Icon d={ROGUE_ICONS.heart} cls="rg-ic" />, t('lblLife')],
-    [gains.credits, <Icon d={ROGUE_ICONS.cut} cls="rg-ic" />, t(isPortrait() ? 'lblCredits' : 'lblWebRogueRemovalCredits')],
-  ] as const;
+  const row = useRef<HTMLDivElement>(null);
+  const pictures = [<img alt="" src={skinIconUrl('ICO_QUEST_COIN')} />, <img alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />,
+    <Icon d={ROGUE_ICONS.heart} cls="rg-ic" />, <Icon d={ROGUE_ICONS.cut} cls="rg-ic" />];
+  const labels = [t('lblWebRogueGold'), t('lblWebRogueEchoes'), t('lblLife'), t(isPortrait() ? 'lblCredits' : 'lblWebRogueRemovalCredits')];
+  const figures = figureIcons(gains).map(([icon, n], i) => ({ icon, n, picture: pictures[i], label: labels[i] })).filter(f => f.n > 0);
+  useEffect(() => {
+    const land = (icon: string) => changeUi(u => { u.rogueLanded = [...u.rogueLanded, icon]; });
+    row.current?.querySelectorAll('.rg-gain').forEach((figure, i) => flyShards(figure.getBoundingClientRect(), () => land(figures[i].icon), figures[i].icon));
+    return () => changeUi(u => { u.rogueLanded = []; });
+  }, []);
   return (
-    <div class="rg-gain-row">
-      {figures.filter(([n]) => n > 0).map(([n, icon, label]) => <div key={label} class="rg-gain">{icon}<div><b>{`+${n}`}</b><span>{label}</span></div></div>)}
+    <div class="rg-gain-row" ref={row}>
+      {figures.map(f => <div key={f.icon} class="rg-gain">{f.picture}<div><b>{`+${f.n}`}</b><span>{f.label}</span></div></div>)}
     </div>
   );
 }
