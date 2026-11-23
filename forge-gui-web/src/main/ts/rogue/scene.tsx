@@ -149,16 +149,16 @@ export function Question({ model, actions }: { model: Model; actions: Actions })
   return asked.choice ? <Choosing key={asked.id} choice={asked.choice} answer={answer} fold={fold} /> : <Gains key={asked.id} tell={asked.tell!} ok={() => answer(null)} />;
 }
 
-/** The run's deck, read only, over a decision. back names the decision it returns to. */
-export function DeckView({ details, back, close }: { details: DeckDetails; back: string; close: () => void }) {
+/** A deck, read only: a commander's start deck, or the run's deck over a decision. */
+export function DeckView({ details, line, button, close }: { details: DeckDetails; line: string; button: string; close: () => void }) {
   return (
     <Backdrop layer="rg-dialog" dismiss={close}>
       <div class="dialog" role="dialog" aria-label={details.name}>
         <h3>{details.name}</h3>
-        <p>{t('lblWebNCards', details.stats.main)}</p>
+        <p>{line}</p>
         <Curve curve={details.stats.curve} spells={details.stats.spells} px={44} />
         <div class="dk-cards" data-list style={{ maxHeight: '55vh', overflowY: 'auto' }}>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
-        <div class="actions"><button class="primary" onClick={close}>{t('lblWebRogueBackTo', back)}</button></div>
+        <div class="actions"><button class="primary" onClick={close}>{button}</button></div>
       </div>
     </Backdrop>
   );

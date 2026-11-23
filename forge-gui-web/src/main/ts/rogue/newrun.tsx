@@ -6,11 +6,10 @@ import { Icon } from '../icons';
 import { artUrl, imageUrl } from '../images';
 import { isPortrait } from '../form';
 import { t } from '../text';
-import { CardGroup, Curve } from '../deck/deckview';
 import { ROGUE_ICONS } from './icons';
 import { place, rolling } from './carousel';
 import { CustomRun } from './custom';
-import type { DeckDetails, DescensionStep, RogueChoice, RogueCommander, RogueRoster } from '../protocol';
+import type { DescensionStep, RogueChoice, RogueCommander, RogueRoster } from '../protocol';
 
 /** What the player has chosen so far. pick is the place of the commander in front, or null for the first unlocked one. */
 export interface Choice {
@@ -277,21 +276,6 @@ export function DescensionSheet({ roster, choice, set }: { roster: RogueRoster; 
           {roster.descension && level > 0 && <p>{roster.levels[level - 1].text}</p>}
         </div>
         <div class="ft2"><button class="primary" onClick={close}>{t('lblDone')}</button></div>
-      </div>
-    </Backdrop>
-  );
-}
-
-/** A commander's start deck, read only. */
-export function StartDeck({ details, close }: { details: DeckDetails; close: () => void }) {
-  return (
-    <Backdrop layer="rg-dialog" dismiss={close}>
-      <div class="dialog" role="dialog" aria-label={details.name}>
-        <h3>{details.name}</h3>
-        <p>{t('lblRogueStartingDeck')}</p>
-        <Curve curve={details.stats.curve} spells={details.stats.spells} px={44} />
-        <div class="dk-cards" data-list style={{ maxHeight: '55vh', overflowY: 'auto' }}>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
-        <div class="actions"><button class="primary" onClick={close}>{t('lblClose')}</button></div>
       </div>
     </Backdrop>
   );

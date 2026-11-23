@@ -10,7 +10,7 @@ import { changeUi, ui } from '../ui';
 import { t, type TextKey } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { Landing } from './landing';
-import { DescensionSheet, NO_CHOICE, NewRun, StartDeck, backFrom, chosenDeck, type Choice } from './newrun';
+import { DescensionSheet, NO_CHOICE, NewRun, backFrom, chosenDeck, type Choice } from './newrun';
 import { isScene } from './questions';
 import { DeckView, Question } from './scene';
 import { MapPage } from './map';
@@ -19,7 +19,7 @@ import { Terms } from './terms';
 import type { RogueTab } from './register';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { AskChoice, RogueAnnounce, Tell } from '../protocol';
+import type { RogueAnnounce, Tell } from '../protocol';
 
 const TABS: [RogueTab, TextKey][] = [['runs', 'lblWebRogueRuns'], ['aether', 'lblRogueAether'], ['codex', 'lblRogueCodex'], ['history', 'lblRogueHistory']];
 /** The run's tabs. Deck opens the deck editor over the map, so the map stays the tab shown. */
@@ -118,27 +118,25 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       // On a phone a scene takes the page's place, and the bar it folds to lies over the page
       : scene && !folded ? <div class="camp-main" inert={dialog}><div class="rg-pbody">{question}</div></div> : <>{main}{question}</>}
     {abandoning && run && (
-      <Backdrop layer="rg-dialog" dismiss={() => setAbandoning(false)}>
-        <div class="dialog" role="alertdialog" aria-label={t('lblRogueAbandonRun')}>
-          <h3>{t('lblRogueAbandonRun')}</h3>
-          <p>{t('lblRogueAbandonRunConfirm')}</p>
-          <div class="actions">
-            <button onClick={() => setAbandoning(false)}>{t('lblCancel')}</button>
-            <button class="danger" style={{ color: 'var(--concede)' }} onClick={() => {
-              setAbandoning(false);
-              playSound({ t: 'sound', name: 'lose_duel', sync: false });
-              actions.rogueAbandon(home.snapshot);
-            }}>{t('lblRogueAbandonRun')}</button>
-          </div>
-        </div>
-      </Backdrop>
+      <Confirm title={t('lblRogueAbandonRun')} text={t('lblRogueAbandonRunConfirm')} back={t('lblCancel')} go={t('lblRogueAbandonRun')} danger
+        onBack={() => setAbandoning(false)} dismiss={() => setAbandoning(false)} onGo={() => {
+          setAbandoning(false);
+          playSound({ t: 'sound', name: 'lose_duel', sync: false });
+          actions.rogueAbandon(home.snapshot);
+        }} />
     )}
     {inRun && isPortrait() && ui.rogueSheet && model.rogueMap && !scene && <PlaneSheet model={model} actions={actions} />}
     {fresh && choice.sheet && <DescensionSheet roster={fresh} choice={choice} set={setChoice} />}
-    {fresh && details && <StartDeck details={details} close={() => setChoice(c => ({ ...c, deck: null }))} />}
-    {replace && <Replace choice={replace} answer={answer} />}
+    {fresh && details && (
+      <DeckView details={details} line={t('lblRogueStartingDeck')} button={t('lblClose')} close={() => setChoice(c => ({ ...c, deck: null }))} />
+    )}
+    {replace && (
+      <Confirm title={replace.title} text={replace.paragraphs.flat().map(p => p.text).join('')} back={replace.options[replace.options.length - 1].label}
+        go={replace.options[0].label} onBack={() => answer(replace.options.length - 1)} onGo={() => answer(0)} />
+    )}
     {scene && ui.rogueDeckView && model.rogueMap && (
-      <DeckView details={model.rogueMap.deck} back={(model.rogueQuestion!.cards ?? model.rogueQuestion!.choice)?.title ?? ''}
+      <DeckView details={model.rogueMap.deck} line={t('lblWebNCards', model.rogueMap.deck.stats.main)}
+        button={t('lblWebRogueBackTo', (model.rogueQuestion!.cards ?? model.rogueQuestion!.choice)?.title ?? '')}
         close={() => changeUi(u => { u.rogueDeckView = false; })} />
     )}
     {tell && model.rogueQuestion && <Message tell={tell} ok={() => actions.rogueAnswer(model.rogueQuestion!.id, null)} />}
@@ -148,18 +146,18 @@ ${announced.text}`} announced={announced} ok={actions.rogueAnnounced} />}
   </>;
 }
 
-/** Asked when a new run would abandon the unfinished one. The first option starts the new run and the last cancels. */
-function Replace({ choice, answer }: { choice: AskChoice; answer: (value: number) => void }) {
-  const lines = choice.paragraphs.flat().map(p => p.text).join('').split('\n');
-  const last = choice.options.length - 1;
+/** Asks before a step that cannot be taken back: abandoning the run, or abandoning it for a new one. go is drawn red. */
+function Confirm({ title, text, back, go, danger, onBack, onGo, dismiss }: {
+  title: string; text: string; back: string; go: string; danger?: boolean; onBack: () => void; onGo: () => void; dismiss?: () => void;
+}) {
   return (
-    <Backdrop layer="rg-dialog">
-      <div class="dialog" role="alertdialog" aria-label={choice.title}>
-        <h3>{choice.title}</h3>
-        <p>{lines.flatMap((line, i) => (i ? [<br key={i} />, line] : [line]))}</p>
+    <Backdrop layer="rg-dialog" dismiss={dismiss}>
+      <div class="dialog" role="alertdialog" aria-label={title}>
+        <h3>{title}</h3>
+        <p>{text.split('\n').flatMap((line, i) => (i ? [<br key={i} />, line] : [line]))}</p>
         <div class="actions">
-          <button onClick={() => answer(last)}>{choice.options[last].label}</button>
-          <button style={{ color: 'var(--concede)' }} onClick={() => answer(0)}>{choice.options[0].label}</button>
+          <button onClick={onBack}>{back}</button>
+          <button class={danger ? 'danger' : undefined} style={{ color: 'var(--concede)' }} onClick={onGo}>{go}</button>
         </div>
       </div>
     </Backdrop>
