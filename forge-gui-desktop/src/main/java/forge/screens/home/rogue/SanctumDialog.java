@@ -6,6 +6,7 @@ import forge.gamemodes.rogue.TextHelper;
 import forge.gamemodes.rogue.effect.SanctumContext;
 import forge.gamemodes.rogue.flow.RogueDecisions.SanctumAction;
 import forge.gamemodes.rogue.flow.RogueDecisions.SanctumAnswer;
+import forge.gamemodes.rogue.flow.RogueDecisions.SanctumOption;
 import forge.sound.SoundEffectType;
 import forge.sound.SoundSystem;
 import forge.screens.home.rogue.RogueUIHelper.PreviewTarget;
@@ -40,12 +41,9 @@ public class SanctumDialog {
   /**
    * Create a Sanctum dialog.
    *
-   * @param restDescription Text shown on the Rest choice
-   * @param restEnabled Whether REST should be selectable
-   * @param restDisabledReason Tooltip shown when REST is disabled
+   * @param options The choices, in the order they are shown
    */
-  public SanctumDialog(String restDescription, boolean restEnabled, String restDisabledReason,
-                       SanctumContext sanctumCtx) {
+  public SanctumDialog(List<SanctumOption> options) {
     panel = new MainPanel();
 
     FLabel lblTitle = new FLabel.Builder()
@@ -62,76 +60,31 @@ public class SanctumDialog {
         .build();
     int choiceButtonWidth = (DIALOG_WIDTH - 2 * PANEL_INSETS) * 4 / 5;
 
-    FButton btnRest = RogueButtonHelper.createChoiceButton(
-        Localizer.getInstance().getMessage("lblRogueRest"), TextHelper.stripPreviewMarkers(restDescription),
-        TextHelper.extractPreviewReferences(restDescription));
-    RogueButtonHelper.setChoiceButtonSizeHint(btnRest, choiceButtonWidth);
-    btnRest.addActionListener(e -> {
-      hidePreview();
-      choice = SanctumAction.HEAL;
-      optionPane.setResult(CHOICE_RESULT);
-      optionPane.setVisible(false);
-    });
-    btnRest.setEnabled(restEnabled);
-    if (!restEnabled && restDisabledReason != null && !restDisabledReason.isEmpty()) {
-      btnRest.setToolTipText(restDisabledReason);
-    }
-    previewTargets.add(new PreviewTarget(btnRest, TextHelper.extractPreviewReferences(restDescription)));
-
-    String cookDescription = Localizer.getInstance().getMessage("lblRogueCookDescription", "{{Item}}");
-    FButton btnCook = RogueButtonHelper.createChoiceButton(
-        Localizer.getInstance().getMessage("lblRogueCook"), TextHelper.stripPreviewMarkers(cookDescription),
-        TextHelper.extractPreviewReferences(cookDescription));
-    RogueButtonHelper.setChoiceButtonSizeHint(btnCook, choiceButtonWidth);
-    btnCook.addActionListener(e -> {
-      hidePreview();
-      choice = SanctumAction.COOK;
-      optionPane.setResult(CHOICE_RESULT);
-      optionPane.setVisible(false);
-    });
-    previewTargets.add(new PreviewTarget(btnCook, TextHelper.extractPreviewReferences(cookDescription)));
-
-    String reflectDescription = Localizer.getInstance().getMessage("lblRogueReflectDescription", "{{Removal Credits}}");
-    FButton btnReflect = RogueButtonHelper.createChoiceButton(
-        Localizer.getInstance().getMessage("lblRogueReflect"), TextHelper.stripPreviewMarkers(reflectDescription),
-        TextHelper.extractPreviewReferences(reflectDescription));
-    RogueButtonHelper.setChoiceButtonSizeHint(btnReflect, choiceButtonWidth);
-    btnReflect.addActionListener(e -> {
-      hidePreview();
-      choice = SanctumAction.REFLECT;
-      optionPane.setResult(CHOICE_RESULT);
-      optionPane.setVisible(false);
-    });
-    previewTargets.add(new PreviewTarget(btnReflect, TextHelper.extractPreviewReferences(reflectDescription)));
-
     int desiredHeight = PANEL_INSETS;
 
     panel.add(lblTitle, "w 100%!, h 60px!, ax center, gap 0 0 20px 10px, wrap");
     desiredHeight += 60 + 20 + 10;
     panel.add(lblDescription, "w 100%!, h 30px!, ax center, gap 0 0 10px 20px, wrap");
     desiredHeight += 30 + 10 + 20;
-    panel.add(btnRest, "w 80%!, ax center, gap 0 0 10px 10px, wrap");
-    desiredHeight += btnRest.getPreferredSize().height + 10 + 10;
-    panel.add(btnCook, "w 80%!, ax center, gap 0 0 10px 10px, wrap");
-    desiredHeight += btnCook.getPreferredSize().height + 10 + 10;
-    panel.add(btnReflect, "w 80%!, ax center, gap 0 0 10px 10px, wrap");
-    desiredHeight += btnReflect.getPreferredSize().height + 10 + 10;
-    for (SanctumContext.SanctumChoice extraChoice : sanctumCtx.extraChoices) {
-      FButton btnExtraChoice = RogueButtonHelper.createChoiceButton(
-          extraChoice.label(), TextHelper.stripPreviewMarkers(extraChoice.description()),
-          TextHelper.extractPreviewReferences(extraChoice.description()));
-      RogueButtonHelper.setChoiceButtonSizeHint(btnExtraChoice, choiceButtonWidth);
-      btnExtraChoice.addActionListener(e -> {
+    for (SanctumOption option : options) {
+      FButton btnOption = RogueButtonHelper.createChoiceButton(
+          option.label(), TextHelper.stripPreviewMarkers(option.description()),
+          TextHelper.extractPreviewReferences(option.description()));
+      RogueButtonHelper.setChoiceButtonSizeHint(btnOption, choiceButtonWidth);
+      btnOption.addActionListener(e -> {
         hidePreview();
-        choice = SanctumAction.CUSTOM;
-        customChoice = extraChoice;
+        choice = option.action();
+        customChoice = option.custom();
         optionPane.setResult(CHOICE_RESULT);
         optionPane.setVisible(false);
       });
-      previewTargets.add(new PreviewTarget(btnExtraChoice,
-          TextHelper.extractPreviewReferences(extraChoice.description())));
-      panel.add(btnExtraChoice, "w 80%!, ax center, gap 0 0 10px 10px, wrap");
-      desiredHeight += btnExtraChoice.getPreferredSize().height + 10 + 10;
+      btnOption.setEnabled(option.enabled());
+      if (!option.enabled() && option.disabledReason() != null && !option.disabledReason().isEmpty()) {
+        btnOption.setToolTipText(option.disabledReason());
+      }
+      previewTargets.add(new PreviewTarget(btnOption, TextHelper.extractPreviewReferences(option.description())));
+      panel.add(btnOption, "w 80%!, ax center, gap 0 0 10px 10px, wrap");
+      desiredHeight += btnOption.getPreferredSize().height + 10 + 10;
     }
 
     int dialogHeight = Math.min(Math.max(desiredHeight + PANEL_INSETS, MIN_DIALOG_HEIGHT),

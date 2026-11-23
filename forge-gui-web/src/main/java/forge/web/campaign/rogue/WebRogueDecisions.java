@@ -14,7 +14,6 @@ import forge.gamemodes.rogue.effect.ChoiceRerollContext;
 import forge.gamemodes.rogue.effect.CursedEffect;
 import forge.gamemodes.rogue.effect.NPCEffect;
 import forge.gamemodes.rogue.effect.RogueEffect;
-import forge.gamemodes.rogue.effect.SanctumContext.SanctumChoice;
 import forge.gamemodes.rogue.effect.WrathfulEffect;
 import forge.gamemodes.rogue.flow.RogueDecisions;
 import forge.gamemodes.rogue.npc.NPCContext;
@@ -217,20 +216,11 @@ final class WebRogueDecisions implements RogueDecisions {
 
     @Override
     public SanctumAnswer chooseSanctum(final SanctumOffer offer) {
-        final List<Option> options = new ArrayList<>();
-        options.add(new Option(text("lblRogueRest"), parts(offer.restDescription()), offer.restEnabled(), offer.restEnabled() ? null : offer.restDisabledReason()));
-        options.add(new Option(text("lblRogueCook"), parts(text("lblRogueCookDescription", "{{Item}}")), true, null));
-        options.add(new Option(text("lblRogueReflect"), parts(text("lblRogueReflectDescription", "{{Removal Credits}}")), true, null));
-        final List<SanctumChoice> extra = offer.context().extraChoices;
-        extra.forEach(c -> options.add(new Option(c.label(), parts(c.description()), true, null)));
+        final List<SanctumOption> offered = offer.options();
+        final List<Option> options = offered.stream().map(o -> new Option(o.label(), parts(o.description()), o.enabled(),
+                o.enabled() ? null : o.disabledReason())).collect(Collectors.toList());
         final int picked = choose(new AskChoice("sanctum", null, text("lblRogueSanctum"), List.of(parts(text("lblRogueChooseAction"))), options, 0, true));
-        return switch (picked) {
-            case -2 -> new SanctumAnswer(SanctumAction.SKIP, null);
-            case 0 -> new SanctumAnswer(SanctumAction.HEAL, null);
-            case 1 -> new SanctumAnswer(SanctumAction.COOK, null);
-            case 2 -> new SanctumAnswer(SanctumAction.REFLECT, null);
-            default -> new SanctumAnswer(SanctumAction.CUSTOM, extra.get(picked - 3));
-        };
+        return picked == -2 ? new SanctumAnswer(SanctumAction.SKIP, null) : offered.get(picked).answer();
     }
 
     @Override
@@ -256,19 +246,14 @@ final class WebRogueDecisions implements RogueDecisions {
         return read.apply(answer);
     }
 
-    /** rerollLabel is the only place the reroll's price is given, as its last number. */
     @Override
     public List<PaperCard> show(final String title, final List<PaperCard> cards, final int maxSelections, final String rerollLabel,
-            final boolean rerollEnabled, final int gold) {
+            final int rerollCost, final boolean rerollEnabled, final int gold) {
         final boolean mayReroll = rerollLabel != null && rerollEnabled;
-        final JsonElement answer = ask("reward", new AskCards("REWARD", title, null, cards(cards), 0, maxSelections, rerollCost(rerollLabel), gold),
+        final JsonElement answer = ask("reward", new AskCards("REWARD", title, null, cards(cards), 0, maxSelections,
+                rerollLabel == null ? null : rerollCost, gold),
                 a -> is(a, REROLL) ? mayReroll : indexes(a, cards.size()) != null && indexes(a, cards.size()).size() <= maxSelections);
         return is(answer, REROLL) ? null : pick(cards, indexes(answer, cards.size()));
-    }
-
-    private static Integer rerollCost(final String rerollLabel) {
-        final String digits = rerollLabel == null ? "" : rerollLabel.replaceAll("^.*?(\\d+)\\D*$", "$1");
-        return digits.matches("\\d+") ? Integer.valueOf(digits) : null;
     }
 
     @Override
@@ -288,8 +273,8 @@ final class WebRogueDecisions implements RogueDecisions {
         final List<Omen> omens = new ArrayList<>();
         wrathful.forEach(w -> omens.add(new Omen("wrathful", w.getDisplayName(), parts(w.getRawDescription()))));
         cursed.forEach(c -> omens.add(new Omen("cursed", c.getDisplayName(), parts(c.getRawDescription()))));
-        final String key = wrathful.isEmpty() ? "lblRogueCursed" : cursed.isEmpty() ? "lblRogueWrathful" : "lblRogueWrathfulAndCursed";
-        tell("omen", new TellOmen(text(key), text(key + "Message"), omens));
+        final Heading heading = RogueDecisions.planeboundEffects(wrathful, cursed);
+        tell("omen", new TellOmen(heading.title(), heading.text(), omens));
     }
 
     @Override

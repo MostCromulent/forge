@@ -61,6 +61,7 @@ public final class RogueFlow {
     private final NodeEventHelper nodeEventHelper = new NodeEventHelper(this, nodeEffectResultHelper);
 
     private RogueRun currentRun;
+    private RogueRun starting;
     private NodePlanebound pendingBattle;
 
     public RogueFlow(RogueDecisions decisions) {
@@ -78,6 +79,12 @@ public final class RogueFlow {
 
     public void setRun(RogueRun run) {
         this.currentRun = run;
+        this.starting = null;
+    }
+
+    /** The run whose time is counting: the one begin is asking its start-of-run questions for, else the current one. */
+    public RogueRun timedRun() {
+        return starting != null ? starting : currentRun;
     }
 
     /** The run in memory, else the most recent one that can be continued. */
@@ -480,6 +487,8 @@ public final class RogueFlow {
         for (CustomRunModification modification : modifications) {
             newRun.addCustomRunModification(modification);
         }
+        newRun.getRunTimer().start();
+        starting = newRun;
         newRun.setDescensionLevel(start.descension());
         newRun.snapshotAetherEffects(progress);
 
@@ -501,6 +510,7 @@ public final class RogueFlow {
         abandonPreviousRuns(runsToAbandon, newRun, progress);
 
         currentRun = newRun;
+        starting = null;
         decisions.runStarted(newRun);
         return true;
     }

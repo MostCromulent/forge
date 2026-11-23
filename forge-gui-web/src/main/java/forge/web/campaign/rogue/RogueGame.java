@@ -6,6 +6,7 @@ import forge.game.GameView;
 import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueDeck;
 import forge.gamemodes.rogue.RogueMetaProgress;
+import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.effect.CustomRunModification;
 import forge.gamemodes.rogue.flow.RogueDecisions;
 import forge.gamemodes.rogue.flow.RogueFlow;
@@ -49,7 +50,9 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     private final RogueFlow flow;
     /** Guards the latest snapshot and the sending of pages, so pages reach the browser in the order they were numbered. */
     private final Object pages = new Object();
-    private Snapshot latest = new Snapshot(0, null, -1, List.of());
+    private Snapshot latest = new Snapshot(0, null, null, -1, List.of());
+    /** Whether the browser's going stopped the timed run's clock, so its return starts it again. Guarded by pages. */
+    private boolean paused;
     private volatile Host host;
     /** The question the flow thread waits on. It is set and sent while holding pages, so it always follows the pages it was asked over. */
     private volatile Open question;
@@ -143,7 +146,10 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
     }
 
-    /** Sends the latest pages if the host is at Rogue, and runs the run's timer while the host's browser is on the run's pages. Call it holding pages. */
+    /**
+     * Sends the latest pages if the host is at Rogue. The run's time counts while the host's browser is on the run's pages,
+     * and during a new run's start-of-run questions, as on desktop. Call it holding pages.
+     */
     private void send() {
         final Host h = host;
         if (h == null || !(h.session().stage() instanceof InCampaign c) || !MODE.equals(c.mode())) {
@@ -154,8 +160,25 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         if (asked != null) {
             h.session().tell(asked.message());
         }
-        if (RUN.equals(c.save()) && latest.run() != null && h.session().browser() != null) {
+        final RogueRun timed = latest.timed();
+        if (h.session().browser() == null) {
+            pause();
+        } else if (paused) {
+            paused = false;
+            if (timed != null) {
+                timed.getRunTimer().start();
+            }
+        } else if (RUN.equals(c.save()) && latest.run() != null) {
             latest.run().getRunTimer().start();
+        }
+    }
+
+    /** Call it holding pages. */
+    private void pause() {
+        final RogueRun timed = latest.timed();
+        if (timed != null && timed.getRunTimer().isRunning()) {
+            timed.getRunTimer().stop();
+            paused = true;
         }
     }
 
@@ -207,8 +230,9 @@ public final class RogueGame implements Campaign, IHasForgeLog {
 
     private void stopTimer() {
         synchronized (pages) {
-            if (latest.run() != null) {
-                latest.run().getRunTimer().stop();
+            paused = false;
+            if (latest.timed() != null) {
+                latest.timed().getRunTimer().stop();
             }
         }
     }
@@ -231,7 +255,9 @@ public final class RogueGame implements Campaign, IHasForgeLog {
 
     @Override
     public void disconnected() {
-        stopTimer();
+        synchronized (pages) {
+            pause();
+        }
     }
 
     @Override

@@ -6,7 +6,10 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import forge.gamemodes.rogue.RogueIO;
+import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.flow.RogueStart;
+import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.path.NodeBazaar;
 import forge.gamemodes.rogue.path.NodeEvent;
 import forge.gamemodes.rogue.path.RoguePathNode;
@@ -264,5 +267,30 @@ public class RogueQuestionsTest extends WebHubTest {
         host.awaitMatching("hello", h -> str(h, "campaign") == null, "Conquest was not left");
         reopen(host, asked);
         settle(host);
+    }
+
+    // Fails if the time spent in a new run's start-of-run question is not counted, as desktop counts it, or a disconnect does not stop it
+    @Test(timeOut = 120_000)
+    public void timeInAStartOfRunQuestionCountsUntilTheBrowserGoes() throws Exception {
+        final TestBrowser host = seat("host");
+        send(host, message("campaignOpen", "mode", RogueGame.MODE, "resume", false));
+        host.awaitMatching("hello", h -> RogueGame.MODE.equals(str(h, "campaign")), "Rogue did not open");
+        settle(host);
+        // Tyvar's third level offers a boon at the start of a run
+        RogueMetaProgress.getInstance().setNPCLevel(NPC.TYVAR.id, 3);
+        final JsonObject begin = message("rogueBegin", "snapshot", snapshot(host), "deck", RogueStart.roster(false).get(0).getName(),
+                "custom", false, "descension", 0);
+        begin.add("modifications", new JsonArray());
+        sessions.onMessage(host, begin);
+        final JsonObject boon = host.awaitMatching("rogueQuestion", q -> q.has("choice") && !handled.contains(q.get("id").getAsInt()),
+                "the run asked nothing as it started");
+        Thread.sleep(300);
+        sessions.disconnected(host);
+        Thread.sleep(600);
+        final TestBrowser back = connect("host");
+        back.awaitMatching("rogueQuestion", q -> q.get("id").equals(boon.get("id")), "the question did not come back");
+        settle(back);
+        final long elapsed = RogueIO.loadMostRecentContinuableRun().orElseThrow(AssertionError::new).getRunTimer().getElapsedMillis();
+        Assert.assertTrue(elapsed >= 250 && elapsed < 700, "the run counted " + elapsed + " ms for 300 ms with the browser and 600 ms without");
     }
 }

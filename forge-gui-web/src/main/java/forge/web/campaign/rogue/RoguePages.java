@@ -24,8 +24,11 @@ public final class RoguePages {
     private RoguePages() {
     }
 
-    /** One numbered set of pages. Commands made from it are checked against its number and its run's current node, which is -1 with no run. */
-    public record Snapshot(long number, RogueRun run, int node, List<Record> pages) {
+    /**
+     * One numbered set of pages. Commands made from it are checked against its number and its run's current node, which is -1 with no run.
+     * timed is the run whose time counts, which is a new run while it asks its start-of-run questions.
+     */
+    public record Snapshot(long number, RogueRun run, RogueRun timed, int node, List<Record> pages) {
     }
 
     /** Runs on the flow thread only, because it reads the run and reveals the planes now in view. */
@@ -34,14 +37,14 @@ public final class RoguePages {
         final List<Record> pages = new ArrayList<>();
         if (run == null) {
             pages.add(home(null, progress, number));
-            return new Snapshot(number, null, -1, pages);
+            return new Snapshot(number, null, flow.timedRun(), -1, pages);
         }
         run.getPath().revealVisible(run);
         pages.add(home(run, progress, number));
         pages.add(new RogueMap(number, run.getCurrentNodeIndex(), flow.rerollsLeft(), deck(run)));
         pages.add(new RogueTraits(number, RogueEffectComposite.getAllEffects(run).stream()
                 .map(RogueEffect::getEffectCardDisplayName).collect(Collectors.toList())));
-        return new Snapshot(number, run, run.getCurrentNodeIndex(), pages);
+        return new Snapshot(number, run, flow.timedRun(), run.getCurrentNodeIndex(), pages);
     }
 
     private static RogueHome home(final RogueRun run, final RogueMetaProgress progress, final long number) {
