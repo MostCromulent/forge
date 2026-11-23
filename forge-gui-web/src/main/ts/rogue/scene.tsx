@@ -9,6 +9,7 @@ import { playSound } from '../audio';
 import { isPortrait } from '../form';
 import { reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
+import { useSceneKeys } from '../hooks';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { Words } from './terms';
@@ -20,23 +21,6 @@ import { CardGroup, Curve } from '../deck/deckview';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { AskChoice, DeckDetails, Option, Part, TellOmen } from '../protocol';
-
-/** What the number keys and the OK key do in the scene on screen. */
-let keyed: { pick: (i: number) => void; ok: () => void } | null = null;
-
-/** Answers the scene on screen as a number key does, or as the OK key does when choice is null. */
-export function pressScene(choice: number | null): void {
-  if (choice === null) keyed?.ok();
-  else keyed?.pick(choice);
-}
-
-export function useSceneKeys(pick: (i: number) => void, ok: () => void): void {
-  useEffect(() => {
-    const own = { pick, ok };
-    keyed = own;
-    return () => { if (keyed === own) keyed = null; };
-  });
-}
 
 /**
  * The scene that fills the body under the bar. Focus moves to it, to its main button if it has one, and back when it closes.

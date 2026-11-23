@@ -3,6 +3,7 @@ import { keyCommand, rebind, type KeyBindings } from '../../main/ts/keys';
 import { createModel } from '../../main/ts/model';
 import type { Prompt, Request } from '../../main/ts/protocol';
 import type { UiState } from '../../main/ts/ui';
+import '../../main/ts/rogue/register';
 
 const KEYS: KeyBindings = { ok: ' ', nextFace: 'f', cardText: 'c' };
 const ESCAPE = { key: 'Escape', code: 27, ctrl: false, shift: false, alt: false, meta: false, typing: false };

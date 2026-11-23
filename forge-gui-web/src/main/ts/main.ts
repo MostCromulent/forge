@@ -33,7 +33,7 @@ import { behindItsBoard, passingFor } from './match/pauserules';
 import { createPacer } from './match/pacer';
 import { setVersion } from './links';
 import { goBack } from './header';
-import { pressScene } from './rogue/scene';
+import { pressScene } from './hooks';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { rememberStops, restoreStops } from './match/stopmemory';
 import { byId, isTyping, relayout, saveText } from './dom';

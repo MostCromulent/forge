@@ -6,6 +6,7 @@ import type { CampaignDraft, EndingPanel } from '../campaigns';
 import type { Model } from '../model';
 import type { CampaignResult, Hello, Send, ServerMessage } from '../protocol';
 import type { TextKey } from '../text';
+import type { UiState } from '../ui';
 
 /** What a mode adds. The hooks with the names of CampaignHooks' do the same for this mode alone. */
 export interface CampaignModeHooks {
@@ -22,6 +23,8 @@ export interface CampaignModeHooks {
   /** The start page's entry. art is the card picture behind it. */
   tile: { icon: VNode; art: string; name: TextKey; blurb: TextKey; resumeLabel(save: string): string; order: number };
   draft?(model: Model): CampaignDraft | null;
+  /** The choices the number keys pick from in the scene the mode shows, empty when the OK key only continues it, or null when no scene takes keys. */
+  sceneKeys?(model: Model, ui: UiState): { enabled: boolean }[] | null;
   /** What the result's buttons of the mode's own do, by their action. A button with no function here leaves the match with its action as the choice. redraw shows the result's buttons again after a question. */
   ending?(model: Model, actions: Actions, result: CampaignResult, panel: EndingPanel, redraw: () => void): Record<string, () => void>;
 }

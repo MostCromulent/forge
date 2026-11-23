@@ -2,6 +2,7 @@ import { t } from '../text';
 import { ui } from '../ui';
 import { registerMode } from '../campaign/modes';
 import { RogueHub } from './rogue';
+import { sceneOptions } from './questions';
 import type { CodexTab } from './codex';
 import type { Model } from '../model';
 import type { RogueAether, RogueAnnounce, RogueChoice, RogueCodexPage, RogueHistoryPage, RogueHome, RogueMap, RogueQuestion, RogueRoster, RogueRunDeck, RogueTraits } from '../protocol';
@@ -142,6 +143,11 @@ registerMode({
       schedule();
     },
   }),
+  // A scene folded away, or under an announcement, takes no keys
+  sceneKeys: (model, state) => {
+    const options = sceneOptions(model.rogueQuestion);
+    return options && !model.rogueAnnounced.length && state.rogueFolded !== model.rogueQuestion!.id ? options : null;
+  },
   Page: RogueHub,
   tile: {
     icon: ICON, art: 'c:Jund|PC2|1', name: 'lblRogueCommander', blurb: 'lblRogueCommanderDesc',

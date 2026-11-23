@@ -9,7 +9,8 @@ import { imageUrl, skinIconUrl } from '../images';
 import { isPortrait } from '../form';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
-import { Scene, useSceneKeys } from './scene';
+import { useSceneKeys } from '../hooks';
+import { Scene } from './scene';
 import { TERM_ICONS, Words } from './terms';
 import type { RogueCard, Tell, TellGains } from '../protocol';
 

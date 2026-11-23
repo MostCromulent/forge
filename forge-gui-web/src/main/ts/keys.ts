@@ -1,7 +1,7 @@
 // Decides what each key does, checking the top layer first, so a key does exactly one thing. Escape is the exception: a Preact dialog or menu closes on it by itself
 
 import { cardMenu, cardPrompt, oldestRequest, stackPick, type Model } from './model';
-import { sceneOptions } from './rogue/questions';
+import { modes } from './campaign/modes';
 import type { UiState } from './ui';
 
 export type KeyCommand =
@@ -160,9 +160,9 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
     if (escape && !press.typing) {
       return 'back';
     }
-    // A Rogue Commander scene takes the number keys and OK, unless it is folded away or something lies over it
-    const options = sceneOptions(model.rogueQuestion);
-    if (options && !press.typing && !ui.volumeOpen && !model.rogueAnnounced.length && ui.rogueFolded !== model.rogueQuestion!.id) {
+    // A campaign's scene takes the number keys and OK
+    const options = modes().map(m => m.sceneKeys?.(model, ui) ?? null).find(o => o !== null);
+    if (options && !press.typing && !ui.volumeOpen) {
       if (/^[1-9]$/.test(key)) return options[Number(key) - 1]?.enabled ? `pickChoice${key as Digit}` : null;
       if (ok && !options.length) return 'continueScene';
     }

@@ -101,3 +101,20 @@ export function useHoverIntent(ms = 300): { later: (action: () => void) => void;
     stay,
   };
 }
+
+/** What the number keys and the OK key do in the scene a campaign mode shows. */
+let keyed: { pick: (i: number) => void; ok: () => void } | null = null;
+
+/** Answers the scene on screen as a number key does, or as the OK key does when choice is null. */
+export function pressScene(choice: number | null): void {
+  if (choice === null) keyed?.ok();
+  else keyed?.pick(choice);
+}
+
+export function useSceneKeys(pick: (i: number) => void, ok: () => void): void {
+  useEffect(() => {
+    const own = { pick, ok };
+    keyed = own;
+    return () => { if (keyed === own) keyed = null; };
+  });
+}
