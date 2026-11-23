@@ -2,9 +2,7 @@ package forge.web;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import forge.deck.CardPool;
 import forge.gamemodes.rogue.RogueDeck;
 import forge.gamemodes.rogue.RogueIO;
@@ -16,15 +14,12 @@ import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.path.NodeBazaar;
 import forge.gamemodes.rogue.path.NodeEvent;
 import forge.gamemodes.rogue.path.NodeSanctum;
-import forge.gamemodes.rogue.path.RoguePathNode;
 import forge.item.PaperCard;
 import forge.localinstance.achievements.Achievement;
 import forge.localinstance.achievements.RogueCommanderAchievements;
-import forge.localinstance.properties.ForgePreferences;
 import forge.util.Localizer;
 import forge.web.campaign.rogue.RogueGame;
 import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.w3c.dom.Element;
 
@@ -34,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -43,113 +37,9 @@ import java.util.stream.StreamSupport;
  * Also tests the run's deck in the browser's deck editor: removal credits, undo, the run's basics, and the editor against the flow.
  */
 @Test(singleThreaded = true)
-public class RogueQuestionsTest extends WebHubTest {
+public class RogueQuestionsTest extends RogueSessionTest {
     private static final int EVENT = 8;
     private static final int BAZAAR = 7;
-    private final Set<Integer> handled = ConcurrentHashMap.newKeySet();
-    private RogueRun run;
-
-    @Override
-    void afterDisconnecting() {
-        RogueFixture.clean();
-    }
-
-    @BeforeMethod
-    public void clean() {
-        RogueFixture.clean();
-        ForgePreferences.DEV_MODE = false;
-    }
-
-    private static RogueGame game() {
-        return RogueGame.shared();
-    }
-
-    private TestBrowser seat(final String id) {
-        final TestBrowser browser = connect(id);
-        sessions.onMessage(browser, TestBrowser.action("claimHost"));
-        sessions.onMessage(browser, message("setName", "name", id));
-        awaitTrue(() -> game().mayLeave(null), "the game's job never finished");
-        return browser;
-    }
-
-    /** Opens the fixture's run at a node of the given type, with 3 removal credits and the gold given, with every question on the way answered. */
-    private TestBrowser atRun(final Class<? extends RoguePathNode> at, final int gold) throws InterruptedException {
-        run = RogueFixture.run(at);
-        run.setRemovalCredits(3);
-        run.setCurrentGold(gold);
-        RogueIO.saveRun(run);
-        final TestBrowser host = seat("host");
-        send(host, message("campaignOpen", "mode", RogueGame.MODE, "resume", false));
-        host.awaitMatching("hello", h -> RogueGame.MODE.equals(str(h, "campaign")), "Rogue did not open");
-        settle(host);
-        send(host, message("campaignLoad", "name", RogueGame.RUN));
-        host.awaitMatching("hello", h -> RogueGame.RUN.equals(str(h, "campaignSave")), "the run did not open");
-        settle(host);
-        return host;
-    }
-
-    private static long snapshot(final TestBrowser browser) {
-        return browser.last("rogueHome").get("snapshot").getAsLong();
-    }
-
-    private JsonObject enter(final TestBrowser host, final int node) throws InterruptedException {
-        sessions.onMessage(host, message("rogueEnter", "snapshot", snapshot(host), "node", node));
-        return host.awaitMatching("rogueQuestion", q -> !handled.contains(q.get("id").getAsInt()), "the node asked nothing");
-    }
-
-    private static JsonObject answer(final int id, final JsonElement value) {
-        final JsonObject m = message("rogueAnswer", "id", id);
-        m.add("value", value);
-        return m;
-    }
-
-    /** An answer each shape accepts: the first enabled choice, the fewest cards, leaving a shop. A Tell is answered with null. */
-    private static JsonElement acceptable(final JsonObject question) {
-        if (question.has("choice")) {
-            final JsonArray options = question.getAsJsonObject("choice").getAsJsonArray("options");
-            for (int i = 0; i < options.size(); i++) {
-                if (options.get(i).getAsJsonObject().get("enabled").getAsBoolean()) {
-                    return new JsonPrimitive(i);
-                }
-            }
-            return options.isEmpty() ? JsonNull.INSTANCE : new JsonPrimitive("skip");
-        }
-        if (question.has("cards")) {
-            final JsonArray picked = new JsonArray();
-            for (int i = 0; i < question.getAsJsonObject("cards").get("min").getAsInt(); i++) {
-                picked.add(i);
-            }
-            return picked;
-        }
-        if (question.has("shop")) {
-            return leaveTheShop();
-        }
-        return JsonNull.INSTANCE;
-    }
-
-    private static JsonObject leaveTheShop() {
-        final JsonObject leave = new JsonObject();
-        leave.add("selected", new JsonArray());
-        leave.addProperty("reroll", false);
-        leave.addProperty("tab", 0);
-        return leave;
-    }
-
-    /** Answers every question until the flow is idle. A step that does nothing is accepted only then. */
-    private void settle(final TestBrowser browser) {
-        final boolean[] idle = {false};
-        awaitTrue(() -> {
-            final JsonObject question = browser.last("rogueQuestion");
-            if (question != null && handled.add(question.get("id").getAsInt())) {
-                sessions.onMessage(browser, answer(question.get("id").getAsInt(), acceptable(question)));
-                return false;
-            }
-            final JsonObject home = browser.last("rogueHome");
-            idle[0] |= home != null && game().submit(home.get("snapshot").getAsLong(), -1, () -> { });
-            return idle[0];
-        }, "the flow never became idle");
-        awaitTrue(() -> game().mayLeave(null), "the last step never finished");
-    }
 
     /** The runs page asks its story again before it can be left. */
     private void toMenu(final TestBrowser browser) throws InterruptedException {

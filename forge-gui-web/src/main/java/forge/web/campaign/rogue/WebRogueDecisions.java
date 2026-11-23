@@ -411,7 +411,15 @@ final class WebRogueDecisions implements RogueDecisions {
 
     @Override
     public void startMatch(final RogueMatch match) {
-        throw new UnsupportedOperationException("Rogue Commander battles cannot be played in the browser yet");
+        game.play(match);
+    }
+
+    /** The boss's result was left without choosing how the run ends. Returns whether it goes Endless. */
+    boolean chooseEnding(final boolean unlocked) {
+        return choose(new AskChoice("ending", null, text("lblRogueRunCompleted"), null, null, List.of(),
+                List.of(new Option(text("lblRogueCompleteRun"), List.of(), true, null, null),
+                        new Option(text("lblRogueGoEndless"), List.of(), unlocked, unlocked ? null : text("lblRogueUnlockEndlessHint"), null)),
+                0, false, null, 0)) == 1;
     }
 
     @Override

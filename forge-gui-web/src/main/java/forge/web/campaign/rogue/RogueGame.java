@@ -2,14 +2,19 @@ package forge.web.campaign.rogue;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
+import forge.LobbyPlayer;
 import forge.StaticData;
 import forge.deck.CardPool;
 import forge.game.GameType;
 import forge.game.GameView;
+import forge.gamemodes.match.PreparedMatch;
+import forge.gamemodes.match.PreparedMatch.Looks;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.RogueWinLoseController;
 import forge.gamemodes.rogue.effect.CustomRunModification;
 import forge.gamemodes.rogue.flow.RogueDecisions;
+import forge.gamemodes.rogue.flow.RogueDecisions.RogueMatch;
 import forge.gamemodes.rogue.flow.RogueFlow;
 import forge.gamemodes.rogue.flow.RogueStart;
 import forge.localinstance.achievements.RogueCommanderAchievements;
@@ -23,12 +28,14 @@ import forge.web.WebSession.InCampaign;
 import forge.web.WebSession.Menu;
 import forge.web.WebSession.Stage;
 import forge.web.campaign.Campaign;
+import forge.web.campaign.RecordedWinLoseView;
 import forge.web.campaign.rogue.RoguePages.Snapshot;
 import forge.web.campaign.rogue.WebRogueDecisions.Open;
 import forge.web.deck.DeckEditor;
 import forge.web.deck.DeckWorkspace;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.CampaignResult;
+import forge.web.protocol.CampaignProtocol.ResultButton;
 import forge.web.protocol.Commands;
 import forge.web.protocol.FromBrowser.Bare;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
@@ -45,6 +52,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -59,6 +67,10 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     public static final String MODE = "rogue";
     /** The save name of the open run. The hub has none. */
     public static final String RUN = "run";
+    /** The result's buttons: on to the map or out of the run, and after the boss the two endings. */
+    private static final String CONTINUE = "continue";
+    private static final String COMPLETE = "complete";
+    private static final String ENDLESS = "endless";
 
     private final Executor worker = WebGuiBase.worker("WebRogue");
     private final AtomicBoolean busy = new AtomicBoolean(true);
@@ -75,6 +87,22 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     private final List<RogueAnnounce> announced = new ArrayList<>();
     /** The pages last sent to the host's browser by type, so a publish leaves out those it already holds. Guarded by pages. */
     private final Map<Class<?>, Record> sent = new HashMap<>();
+    private final RogueDecisions decisions;
+    private volatile Battle battle;
+
+    /** A match from its start until what follows its result is done. */
+    private static final class Battle {
+        volatile boolean failed;
+        /** Set as the player leaves, so the draw that closing the table causes is not taken for the result. */
+        volatile boolean leaving;
+        /** The host's view of the game whose result is taken. A match has one. */
+        volatile GameView game;
+        volatile CampaignResult result;
+        /** The button the match was left by, or null. */
+        final CompletableFuture<String> left = new CompletableFuture<>();
+        RogueWinLoseController controller;
+        RecordedWinLoseView view;
+    }
 
     private static final class Shared {
         static final RogueGame GAME = new RogueGame(WebRogueDecisions::new);
@@ -91,7 +119,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
 
     /** decisions is given the game, so tests can answer the flow's questions from a script. */
     public RogueGame(final Function<RogueGame, RogueDecisions> decisions) {
-        flow = new RogueFlow(decisions.apply(this));
+        this.decisions = decisions.apply(this);
+        flow = new RogueFlow(this.decisions);
         worker.execute(job(this::loadSaves));
     }
 
@@ -120,6 +149,14 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             step.run();
         }));
         return true;
+    }
+
+    /** Runs work the server starts itself, such as what follows a match, as a job after any job queued. It is never refused. */
+    private void follow(final Runnable step) {
+        worker.execute(job(() -> {
+            busy.set(true);
+            step.run();
+        }));
     }
 
     /** Closes the run's deck editor, which drops its undo. Only the flow thread calls this. */
@@ -287,8 +324,12 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
     }
 
-    /** Waits on the flow thread, with no timeout, for an answer the question's check accepts. */
+    /** Waits on the flow thread, with no timeout, for an answer the question's check accepts. A match's questions wait until its result screen is left. */
     JsonElement ask(final Open asked) {
+        final Battle b = battle;
+        if (b != null && b.view != null) {
+            awaitLeaving(b);
+        }
         synchronized (pages) {
             question = asked;
         }
@@ -443,13 +484,134 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         return home();
     }
 
+    /**
+     * Starts the match on the flow thread and returns once it has started, with the looks the flow gave the human.
+     * It throws when the match does not start, so the flow goes back to the last save.
+     */
+    void play(final RogueMatch match) {
+        final Host h = host;
+        if (h == null) {
+            throw new IllegalStateException("No browser to play in");
+        }
+        final Battle b = new Battle();
+        battle = b;
+        final LobbyPlayer human = match.human().getPlayer();
+        final Looks looks = new Looks(human.getAvatarIndex(), human.getSleeveIndex());
+        try {
+            h.startMatch(MODE, RUN, () -> new PreparedMatch(match.rules(), match.variants(), match.players(), match.human(), looks), () -> b.failed = true);
+            // The match may have started on the UI thread, but no result of it is taken
+            if (Thread.interrupted()) {
+                b.failed = true;
+            }
+        } catch (final RuntimeException | Error e) {
+            b.failed = true;
+            throw e;
+        } finally {
+            if (b.failed) {
+                battle = null;
+            }
+        }
+        if (b.failed) {
+            throw new IllegalStateException("The match did not start");
+        }
+        match.run().setHostedMatch(h.session().local().hostedMatch());
+    }
+
+    /** Runs the result's script on the flow thread. The result is sent at its first question or its end, and the rest waits until the match is left. */
+    private void settle(final Battle b) {
+        if (b.failed || battle != b) {
+            return;
+        }
+        try {
+            b.view = new RecordedWinLoseView();
+            b.controller = flow.matchOver(b.game, b.view);
+            final Runnable script = b.view.takeScript();
+            if (script != null) {
+                script.run();
+            }
+            awaitLeaving(b);
+            final String choice = b.left.join();
+            boolean endless = false;
+            if (flow.offersEnding(b.controller)) {
+                final boolean unlocked = RogueMetaProgress.getInstance().isEndlessModeUnlocked();
+                if (ENDLESS.equals(choice) && unlocked) {
+                    endless = true;
+                } else if (!COMPLETE.equals(choice)) {
+                    endless = ((WebRogueDecisions) decisions).chooseEnding(unlocked);
+                }
+            }
+            flow.resultLeft(b.controller, endless);
+        } finally {
+            battle = null;
+        }
+    }
+
+    /** Sends the result the first time, then waits until the match is left. */
+    private void awaitLeaving(final Battle b) {
+        if (b.result == null) {
+            b.result = result(b);
+            final Host h = host;
+            if (h != null && !b.left.isDone()) {
+                h.session().tell(b.result);
+            }
+        }
+        b.left.join();
+    }
+
+    private CampaignResult result(final Battle b) {
+        final Localizer text = Localizer.getInstance();
+        final List<ResultButton> buttons;
+        if (flow.offersEnding(b.controller)) {
+            final boolean unlocked = RogueMetaProgress.getInstance().isEndlessModeUnlocked();
+            buttons = List.of(new ResultButton(text.getMessage("lblRogueCompleteRun"), COMPLETE, true, null),
+                    new ResultButton(text.getMessage("lblRogueGoEndless"), ENDLESS, false, unlocked ? null : text.getMessage("lblRogueUnlockEndlessHint")));
+        } else {
+            buttons = List.of(new ResultButton(b.view.getBtnQuit().getText(), CONTINUE, true, null));
+        }
+        return new CampaignResult(b.controller.hasWonMatch(), true, flow.resultTitle(b.controller), flow.resultDetail(b.controller), buttons);
+    }
+
+    /** Hands the game to the flow thread and sends the result from there, so this returns null. */
     @Override
     public CampaignResult gameOver(final GameView hostGame) {
+        final Battle b = battle;
+        if (b != null && hostGame != null && !b.leaving && b.game == null) {
+            b.game = hostGame;
+            follow(() -> settle(b));
+        }
         return null;
     }
 
     @Override
+    public CampaignResult result() {
+        final Battle b = battle;
+        return b == null || b.left.isDone() ? null : b.result;
+    }
+
+    @Override
+    public void leavingMatch() {
+        final Battle b = battle;
+        if (b != null) {
+            b.leaving = true;
+        }
+    }
+
+    /**
+     * A match left with no result loses the charges and the Wrathful and Cursed effects spent on it, as the last save has neither.
+     * Where the boss's result offers the two endings, any other choice than one the result allows asks for the ending.
+     */
+    @Override
     public void left(final String choice) {
+        final Battle b = battle;
+        if (b == null) {
+            return;
+        }
+        if (b.game == null) {
+            battle = null;
+            follow(this::reloadRun);
+        } else {
+            b.left.complete(choice);
+        }
     }
 
     /** Null when a name is not a modification. */
