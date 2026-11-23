@@ -156,6 +156,8 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const lifeHeld = held.rogueLife;
   const runBalances = runBar && run && lifeHeld
     ? { ...runBar.bar, balances: runBar.bar.balances.map(b => (b.icon === 'rogueLife' ? { ...b, text: `${b.amount - lifeHeld} / ${run.maxLife}` } : b)) } : runBar?.bar;
+  // A phone's header has room for the balances only, as the phone mockups draw it
+  const runShown = runBalances && isPortrait() ? { ...runBalances, line: '' } : runBalances;
   const abandon = (close: () => void) => { close(); setAbandoning(true); };
   const resetRow = (close: () => void, kind: string, label: TextKey) => <button role="menuitem" onClick={() => { close(); setResetting(kind); }}>{t(label)}</button>;
   // A phone has the resets and the Aether Upgrade in the header's menu, in place of the wide page's buttons
@@ -190,13 +192,13 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     </div>
   ));
   return <>
-    {inRun ? <CampaignBar bar={runBalances ?? bar} tabs={RUN_TABS} tab={aside} setTab={to => {
+    {inRun ? <CampaignBar bar={runShown ?? bar} tabs={RUN_TABS} tab={aside} setTab={to => {
       // During a decision the deck is read only
       if (to === 'deck' && deciding) changeUi(u => { u.rogueDeckView = true; });
       else if (to === 'deck') editDeck();
       else changeUi(u => { u.roguePage = to; });
-    }} mark={id => id === 'traits' && runBar && <sup class="rg-count">{runBar.traits}</sup>} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
-      held={held} leave={back} under={dialog} lineTerm={runBar?.tip} glyph={glyph} moreIcon={glyph('dots')} more={more} extra={devTool} />
+    }} mark={id => id === 'traits' && !!runBar?.traits && <sup class="rg-count">{runBar.traits}</sup>} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
+      held={held} leave={back} under={dialog} lineTerm={isPortrait() ? undefined : runBar?.tip} glyph={glyph} moreIcon={glyph('dots')} more={more} extra={devTool} />
       : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog}
         more={isPortrait() ? phoneMenu : undefined} extra={devTool} />}
     {!isPortrait() ? <div class="rg-body">{main}{question}</div>
@@ -209,7 +211,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       </div>
     )}
     {abandoning && run && (
-      <Confirm title={t('lblRogueAbandonRun')} text={t('lblRogueAbandonRunConfirm')} back={t('lblCancel')} go={t('lblRogueAbandonRun')} danger
+      <Confirm title={t('lblRogueAbandonRun')} text={t('lblRogueAbandonRunConfirm')} back={t('lblCancel')} go={t('lblRogueAbandonRun')} danger={!isPortrait()}
         onBack={() => setAbandoning(false)} dismiss={() => setAbandoning(false)} onGo={() => {
           setAbandoning(false);
           playSound({ t: 'sound', name: 'lose_duel', sync: false });
