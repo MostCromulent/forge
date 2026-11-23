@@ -934,7 +934,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                 final Deck deck = new Deck(name.trim());
                 quest().getMyDecks().add(deck);
                 quest().save();
-                c.host().decks().openCollectionDeck(deck, quest().getMyDecks(), deckType(), collection(), true, ch);
+                c.host().decks().openCollectionDeck(deck, new DeckEditor.Stored(quest().getMyDecks()), deckType(), collection(), true, ch);
                 ch.send(c.game().duelsPage());
                 ch.send(c.game().decksPage());
             }))
@@ -1049,7 +1049,7 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                 return;
             }
             case questDeckEdit -> {
-                c.host().decks().openCollectionDeck(deck, decks, deckType(), collection(), true, channel);
+                c.host().decks().openCollectionDeck(deck, new DeckEditor.Stored(decks), deckType(), collection(), true, channel);
                 return;
             }
             case questDeckDelete -> {

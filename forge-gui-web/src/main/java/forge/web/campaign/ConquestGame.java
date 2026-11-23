@@ -947,7 +947,7 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
                         ch.send(c.game().state(List.of()));
                     }
                     case conquestViewDeck -> ch.send(new DeckDetailsMessage(deckDetails(commander)));
-                    case conquestEditDeck -> c.host().decks().openCollectionDeck(commander.getDeck(), FModel.getConquest().getDecks(),
+                    case conquestEditDeck -> c.host().decks().openCollectionDeck(commander.getDeck(), new DeckEditor.Stored(FModel.getConquest().getDecks()),
                             GameType.PlanarConquest, collection(commander), true, ch);
                 }
             }))

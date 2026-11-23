@@ -263,10 +263,10 @@ public final class DeckWorkspace implements IHasForgeLog {
         }
     }
 
-    /** Opens a game mode's own deck, built from that mode's collection and saved among its decks. */
-    public synchronized void openCollectionDeck(final Deck deck, final IStorage<Deck> storage, final GameType type,
+    /** Opens a game mode's own deck, built from that mode's collection and saved where the mode keeps it. */
+    public synchronized void openCollectionDeck(final Deck deck, final DeckEditor.Target target, final GameType type,
             final DeckEditor.Collection collection, final boolean exists, final BrowserChannel channel) {
-        editor = new DeckEditor(deck, false, exists, new DeckEditor.Stored(storage), LegalityScope.of(type, null), storages, false,
+        editor = new DeckEditor(deck, false, exists, target, LegalityScope.of(type, null), storages, false,
                 this::sendDeviceDeck, collection);
         eventPool = false;
         editorSeat = null;
@@ -295,7 +295,7 @@ public final class DeckWorkspace implements IHasForgeLog {
         return editor != null && editor.collection() != null ? editor : null;
     }
 
-    /** Closes an editor that is open on a collection whose owner is being left. channel may be null. */
+    /** Closes an editor that is open on a collection whose owner is being left. Its undo history is lost. channel may be null. */
     public synchronized void closeCollectionDeck(final BrowserChannel channel) {
         if (editor == null || editor.collection() == null) {
             return;

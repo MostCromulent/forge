@@ -8,14 +8,19 @@ import forge.game.GameType;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
-import forge.util.storage.StorageBase;
 import forge.web.WebTestSupport;
+import forge.web.protocol.BrowserChannel;
+import forge.web.protocol.FromBrowser.Bare;
+import forge.web.protocol.FromBrowser.EditOp;
+import forge.web.protocol.FromBrowser.EditorEdit;
+import forge.web.protocol.FromBrowser.Plain;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +31,7 @@ public class DeckCollectionRulesTest {
     private final DeckStore.Storages storages = format -> {
         throw new AssertionError("a run's deck is not stored with the player's decks");
     };
+    private final List<Deck> saved = new ArrayList<>();
     private int credits;
 
     /** Each card but a basic land costs a credit to take out. */
@@ -69,6 +75,7 @@ public class DeckCollectionRulesTest {
     @BeforeMethod
     public void twoCredits() {
         credits = 2;
+        saved.clear();
     }
 
     private static PaperCard card(final String name) {
@@ -85,18 +92,13 @@ public class DeckCollectionRulesTest {
         return deck;
     }
 
-    private static DeckEditor.Collection collection(final boolean mainOnly, final DeckEditor.Rules rules) {
+    private DeckEditor.Collection collection(final boolean mainOnly) {
         return new DeckEditor.Collection("Run", CardPool::new, c -> false, () -> { }, d -> List.of(), () -> { }, mainOnly, rules);
     }
 
     private DeckEditor editor(final Deck deck, final boolean mainOnly) {
-        final Map<String, Deck> stored = new HashMap<>();
-        return new DeckEditor(deck, false, true, new DeckEditor.Stored(new StorageBase<>("Runs", null, stored) {
-            @Override
-            public void add(final Deck saved) {
-                stored.put(saved.getName(), saved);
-            }
-        }), LegalityScope.of(GameType.RogueCommander, null), storages, false, (id, text, f) -> { }, collection(mainOnly, rules));
+        return new DeckEditor(deck, false, true, new DeckEditor.Run(saved::add), LegalityScope.of(GameType.RogueCommander, null), storages,
+                false, (id, text, f) -> { }, collection(mainOnly));
     }
 
     private static void assertMain(final DeckEditor e, final Deck wanted) {
@@ -235,5 +237,42 @@ public class DeckCollectionRulesTest {
         Assert.assertEquals(deck.getMain().countAll(), 64);
         Assert.assertNotNull(Legality.check(deck, LegalityScope.of(GameType.RogueCommander, null)).verdict());
         Assert.assertNull(editor(deck, true).state().verdict());
+    }
+
+    // Fails if a change is not saved, if a refused one is, or if a saved deck changes with the next change
+    @Test
+    public void eachChangeIsSavedThroughTheTarget() {
+        final DeckEditor e = editor(deck(), true);
+        Assert.assertNull(e.remove("Sol Ring", DeckSection.Main, 1));
+        Assert.assertNull(e.setLands(Map.of("Forest", 5)));
+        credits = 0;
+        Assert.assertEquals(e.remove("Shock", DeckSection.Main, 1), NO_CREDITS);
+        Assert.assertNull(e.undo());
+        Assert.assertEquals(saved.stream().map(d -> d.getMain().countAll()).toList(), List.of(6, 7, 6));
+        Assert.assertEquals(saved.get(0).getCommanders().size(), 1);
+    }
+
+    // Fails if an undo sent after the editor closed changes the run's deck, or if an editor opened since can undo what the closed one did
+    @Test
+    public void aClosedEditorCannotUndo() {
+        final BrowserChannel channel = message -> { };
+        final DeckWorkspace decks = new DeckWorkspace(null, null, () -> true, () -> false, new HashMap<>());
+        final Runnable open = () -> decks.openCollectionDeck(deck(), new DeckEditor.Run(saved::add), GameType.RogueCommander, collection(true),
+                true, channel);
+        final Runnable remove = () -> DeckWorkspace.COMMANDS.run(decks, channel,
+                new EditorEdit(EditOp.remove, "Sol Ring", DeckSection.Main, null, 1, null, null));
+        final Runnable undo = () -> DeckWorkspace.COMMANDS.run(decks, channel, new Bare(Plain.editorUndo));
+        open.run();
+        remove.run();
+        undo.run();
+        Assert.assertEquals(saved.size(), 2);
+        remove.run();
+        Assert.assertEquals(credits, 1);
+        decks.closeCollectionDeck(channel);
+        undo.run();
+        open.run();
+        undo.run();
+        Assert.assertEquals(saved.size(), 3);
+        Assert.assertEquals(credits, 1);
     }
 }

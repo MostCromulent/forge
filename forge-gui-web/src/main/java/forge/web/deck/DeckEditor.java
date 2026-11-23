@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -645,6 +646,12 @@ public final class DeckEditor {
                 saved = true;
                 return null;
             }
+            if (target instanceof Run r) {
+                r.save().accept(new Deck(deck, deck.getName()));
+                saved = true;
+                collection.saved().run();
+                return null;
+            }
             final IStorage<Deck> storage = ((Stored) target).storage();
             synchronized (DeckCatalog.DECKS) {
                 // Storage overwrites by file name, so a deck saved for the first time gets a name that no other deck uses
@@ -946,11 +953,11 @@ public final class DeckEditor {
                 newLand(name).getImageKey(false))).toList();
     }
 
-    sealed interface Target permits Stored, Device, Group {
+    public sealed interface Target permits Stored, Device, Group, Run {
     }
 
     /** A folder of the host's decks: a format's own, or a subfolder of it. */
-    record Stored(IStorage<Deck> storage) implements Target {
+    public record Stored(IStorage<Deck> storage) implements Target {
     }
 
     /** A guest's browser, which stores the deck under this id. */
@@ -959,6 +966,10 @@ public final class DeckEditor {
 
     /** A sealed or draft pool. The deck is the human deck of the group with its name, and the group's opponents stay unchanged. */
     record Group(IStorage<DeckGroup> storage) implements Target {
+    }
+
+    /** A collection's mode that keeps the deck in its own state. save is given a copy of the deck after each change. */
+    public record Run(Consumer<Deck> save) implements Target {
     }
 
     /**
