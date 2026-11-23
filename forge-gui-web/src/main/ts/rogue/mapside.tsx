@@ -21,12 +21,13 @@ const kind = (map: RogueMap, n: MapNode) => (n.boss ? t('lblRogueBossPlanebound'
 /** What the buttons under the panel do with the node shown. Only the current node is entered, and only its plane rerolled. */
 function useNode(model: Model, actions: Actions) {
   const map = model.rogueMap!;
+  const snapshot = model.rogueHome!.snapshot;
   const n = shownNode(map);
   const current = n.index === map.selected && enterable(n);
   return {
     map, n,
-    enter: current ? () => actions.rogueEnter(map.snapshot, n.index) : undefined,
-    reroll: current && n.kind === 'PLANEBOUND' && map.rerolls > 0 ? () => actions.rogueReroll(map.snapshot, n.index) : undefined,
+    enter: current ? () => actions.rogueEnter(snapshot, n.index) : undefined,
+    reroll: current && n.kind === 'PLANEBOUND' && map.rerolls > 0 ? () => actions.rogueReroll(snapshot, n.index) : undefined,
   };
 }
 
@@ -59,7 +60,7 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
   const run = model.rogueHome?.run;
   const foot = <>
     {run && <DeckRow image={run.image} name={run.commander} line={t('lblWebNCards', run.cards)} problem={false} zoom={setZoom}
-      change={() => actions.rogueEditDeck(map.snapshot)} changeLabel={t('lblEdit')} />}
+      change={() => actions.rogueEditDeck(model.rogueHome!.snapshot)} changeLabel={t('lblEdit')} />}
     {reroll && <button disabled={!!map.rerollReason} title={map.rerollReason} onClick={reroll}>{glyph('reroll')}{` ${t('lblRogueRerollPlaneCount', map.rerolls)}`}</button>}
     <button class="primary rg-go" disabled={!enter} onClick={enter}>{n.enter}</button>
   </>;

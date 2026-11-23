@@ -137,7 +137,7 @@ public final class RoguePages {
         pages.add(home(run, progress, number));
         pages.add(roster(progress));
         pages.add(aether(progress));
-        pages.add(map(flow, run, progress, number, held == null ? NOTHING : held));
+        pages.add(map(flow, run, progress, held == null ? NOTHING : held));
         pages.add(new RogueRunDeck(details("rogue:run", run.getCurrentCommanderName(), run.getCurrentDeck())));
         pages.add(new RogueTraits(RogueEffectComposite.getAllEffects(run).stream().map(e -> trait(e, run))
                 .sorted(Comparator.comparing(t -> Source.valueOf(t.source()))).toList(), carry(run)));
@@ -494,7 +494,7 @@ public final class RoguePages {
                 List.of(), null, 0, null);
     }
 
-    private static RogueMap map(final RogueFlow flow, final RogueRun run, final RogueMetaProgress progress, final long number, final Gains held) {
+    private static RogueMap map(final RogueFlow flow, final RogueRun run, final RogueMetaProgress progress, final Gains held) {
         final RoguePath path = run.getPath();
         final RoguePathNode current = run.getCurrentNode();
         final int row = current == null ? -1 : current.getRowIndex();
@@ -518,7 +518,7 @@ public final class RoguePages {
             e.onPathUpdate(context, run);
             return context.hidePlanes;
         }).map(RogueEffect::getDescription).toList();
-        return new RogueMap(number, rows, links, run.getCurrentNodeIndex(), runBar(run, progress, held), reroll.left(), reroll.enabled() ? null : reroll.reason(),
+        return new RogueMap(rows, links, run.getCurrentNodeIndex(), runBar(run, progress, held), reroll.left(), reroll.enabled() ? null : reroll.reason(),
                 hiding.isEmpty() ? null : String.join("\n", hiding), MAP_TERMS);
     }
 

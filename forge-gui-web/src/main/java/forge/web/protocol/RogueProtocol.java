@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Rogue Commander's messages in both directions. The home page and the map carry the number of the snapshot they were taken from,
- * and each command names the snapshot it was made from, so a command made from a page the player no longer sees is refused.
+ * Rogue Commander's messages in both directions. The home page carries the number of the snapshot it was taken from, and is sent with each one.
+ * Each command names the snapshot it was made from, so a command made from a page the player no longer sees is refused.
  * The other pages are sent only when they change, so they carry no number.
  */
 public final class RogueProtocol {
@@ -112,7 +112,7 @@ public final class RogueProtocol {
      * by KeywordHint name.
      */
     @Message("rogueMap")
-    public record RogueMap(long snapshot, List<List<MapNode>> rows, List<MapLink> links, int selected, RogueRunBar bar, int rerolls,
+    public record RogueMap(List<List<MapNode>> rows, List<MapLink> links, int selected, RogueRunBar bar, int rerolls,
             @Nullable String rerollReason, @Nullable String hidden, Map<String, Part> terms) {
     }
 

@@ -42,9 +42,9 @@ export function shownNode(map: RogueMap): MapNode {
 const readable = (n: MapNode) => n.kind === 'PLANEBOUND' && !n.faceDown;
 
 /** Choosing an open node makes it the current node. Choosing any other that can be read only shows its panel. */
-export function choose(map: RogueMap, n: MapNode, actions: Actions): void {
+export function choose(n: MapNode, select: (node: number) => void): void {
   changeUi(u => { u.rogueViewing = n.state === 'open' || n.state === 'selected' ? null : n.index; });
-  if (n.state === 'open') actions.rogueSelect(map.snapshot, n.index);
+  if (n.state === 'open') select(n.index);
 }
 
 const edge = (from: MapNode, to: MapNode): string => {
@@ -91,7 +91,7 @@ function Node({ n, box, phone, pick }: { n: MapNode; box: { x: number; y: number
 }
 
 /** The trail of nodes. It opens with the current row at 56% of its height, and planes revealed since it was last drawn turn over. */
-function Trail({ map, phone, whole, actions }: { map: RogueMap; phone: boolean; whole: boolean; actions: Actions }) {
+function Trail({ map, phone, whole, select }: { map: RogueMap; phone: boolean; whole: boolean; select: (node: number) => void }) {
   const scroller = useRef<HTMLDivElement>(null);
   const shown = useRef<Map<number, boolean> | null>(null);
   const at = new Map<number, [number, number]>();
@@ -124,7 +124,7 @@ function Trail({ map, phone, whole, actions }: { map: RogueMap; phone: boolean; 
             return <path key={k} class={`rg-e ${edge(map.rows[r][i], map.rows[r + 1][j])}`} d={plan.paths[k]} />;
           })}
         </svg>
-        {map.rows.map((row, r) => row.map((n, i) => <Node key={n.index} n={n} box={plan.boxes[r][i]} phone={phone} pick={() => choose(map, n, actions)} />))}
+        {map.rows.map((row, r) => row.map((n, i) => <Node key={n.index} n={n} box={plan.boxes[r][i]} phone={phone} pick={() => choose(n, select)} />))}
       </div>
     </div>
   );
@@ -154,10 +154,11 @@ export function MapPage({ model, actions }: { model: Model; actions: Actions }) 
   const box = useRef<HTMLDivElement>(null);
   useFit(box, map, phone, whole);
   const toggle = () => changeUi(u => { u.rogueWhole = !u.rogueWhole; });
+  const select = (node: number) => actions.rogueSelect(model.rogueHome!.snapshot, node);
   if (phone) {
     return (
       <div style={{ display: 'grid', gridTemplateRows: 'minmax(0,1fr) auto', minHeight: 0 }}>
-        {whole ? <div class="rg-pfit" ref={box}><Trail map={map} phone whole actions={actions} /></div> : <Trail map={map} phone whole={false} actions={actions} />}
+        {whole ? <div class="rg-pfit" ref={box}><Trail map={map} phone whole select={select} /></div> : <Trail map={map} phone whole={false} select={select} />}
         {whole ? <div class="rg-sheetbar"><div class="go" style={{ gridTemplateColumns: '1fr' }}><button onClick={toggle}>{t('lblWebRogueBackToPlace')}</button></div></div>
           : <SheetBar model={model} actions={actions} />}
       </div>
@@ -166,7 +167,7 @@ export function MapPage({ model, actions }: { model: Model; actions: Actions }) 
   return (
     <div class="rg-vmap">
       <div class={whole ? 'rg-vstage fit' : 'rg-vstage'} style={whole ? undefined : { '--z': 0 }} ref={box}>
-        <Trail map={map} phone={false} whole={whole} actions={actions} />
+        <Trail map={map} phone={false} whole={whole} select={select} />
         <button class="rg-vbtn" onClick={toggle}>{t(whole ? 'lblWebRogueBackToPlace' : 'lblWebRogueWholeMap')}</button>
       </div>
       <MapSide model={model} actions={actions} />
