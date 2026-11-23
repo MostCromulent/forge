@@ -737,6 +737,18 @@ public class RogueMetaProgress {
         return true;
     }
 
+    /** Upgrades the Aetherwork as upgradeAetherEffect does, and activates it when this upgrade first built it. */
+    public boolean upgradeAndActivateAetherEffect(AetherEffect aetherEffect) {
+        boolean built = getAetherEffectRank(aetherEffect) > 0;
+        if (!upgradeAetherEffect(aetherEffect)) {
+            return false;
+        }
+        if (!built) {
+            activateAetherEffect(aetherEffect);
+        }
+        return true;
+    }
+
     /**
      * Get all currently active Aetherworks.
      */
