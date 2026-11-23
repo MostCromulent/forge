@@ -1,6 +1,7 @@
 package forge.gamemodes.rogue.flow;
 
 import forge.deck.Deck;
+import forge.game.GameRules;
 import forge.game.GameType;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.HostedMatch;
@@ -96,7 +97,14 @@ public interface RogueDecisions extends CardRewardHelper.RewardDialog {
     record Section(String label, String text, List<PaperCard> cards) { }
     /** recordPublicCards is for the end of the game. */
     record RogueMatch(RogueRun run, NodePlanebound node, Set<GameType> variants, List<RegisteredPlayer> players,
-                      RegisteredPlayer human, Consumer<HostedMatch> recordPublicCards) { }
+                      RegisteredPlayer human, Consumer<HostedMatch> recordPublicCards) {
+        /** The flow reads each game's result as the battle's, so a match is one game. */
+        public GameRules rules() {
+            GameRules rules = HostedMatch.getDefaultRules(GameType.RogueCommander);
+            rules.setGamesPerMatch(1);
+            return rules;
+        }
+    }
 
     /** Whether they are one eligible commander, or two that partner. */
     static boolean commanders(List<PaperCard> picked) {
