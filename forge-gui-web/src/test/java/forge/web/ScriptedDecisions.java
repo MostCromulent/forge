@@ -111,8 +111,8 @@ final class ScriptedDecisions implements RogueDecisions {
 
     @Override
     public List<PaperCard> show(final String title, final List<PaperCard> cards, final int maxSelections, final String rerollLabel,
-            final boolean rerollEnabled, final int gold) {
-        return ask("show", title, cards, maxSelections, rerollLabel, rerollEnabled, gold);
+            final int rerollCost, final boolean rerollEnabled, final int gold) {
+        return ask("show", title, cards, maxSelections, rerollLabel, rerollCost, rerollEnabled, gold);
     }
 
     @Override

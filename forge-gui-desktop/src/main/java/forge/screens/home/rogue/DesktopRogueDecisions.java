@@ -109,8 +109,7 @@ class DesktopRogueDecisions implements RogueDecisions {
 
     @Override
     public SanctumAnswer chooseSanctum(SanctumOffer offer) {
-        return new SanctumDialog(offer.restDescription(), offer.restEnabled(), offer.restDisabledReason(),
-            offer.context()).show();
+        return new SanctumDialog(offer.options()).show();
     }
 
     @Override
@@ -128,7 +127,7 @@ class DesktopRogueDecisions implements RogueDecisions {
 
     @Override
     public List<PaperCard> show(String title, List<PaperCard> cards, int maxSelections, String rerollLabel,
-                                boolean rerollEnabled, int gold) {
+                                int rerollCost, boolean rerollEnabled, int gold) {
         return new CardRewardDialog(title, cards, maxSelections, rerollLabel, rerollEnabled, gold).show();
     }
 
@@ -160,23 +159,9 @@ class DesktopRogueDecisions implements RogueDecisions {
             createEffectLabel(pentagramIcon, effectsPanel, c.getDisplayName(), c.getDescription());
         }
 
-        boolean hasWrathful = !wrathful.isEmpty();
-        boolean hasCursed = !cursed.isEmpty();
-        String titleKey;
-        String messageKey;
-        if (hasWrathful && hasCursed) {
-            titleKey = "lblRogueWrathfulAndCursed";
-            messageKey = "lblRogueWrathfulAndCursedMessage";
-        } else if (hasCursed) {
-            titleKey = "lblRogueCursed";
-            messageKey = "lblRogueCursedMessage";
-        } else {
-            titleKey = "lblRogueWrathful";
-            messageKey = "lblRogueWrathfulMessage";
-        }
-        Localizer localizer = Localizer.getInstance();
-        FOptionPane.showOptionDialog(localizer.getMessage(messageKey), localizer.getMessage(titleKey),
-            null, effectsPanel, List.of(localizer.getMessage("lblOK")), 0);
+        Heading heading = RogueDecisions.planeboundEffects(wrathful, cursed);
+        FOptionPane.showOptionDialog(heading.text(), heading.title(),
+            null, effectsPanel, List.of(Localizer.getInstance().getMessage("lblOK")), 0);
     }
 
     private void createEffectLabel(ImageIcon pentagramIcon, SkinnedPanel effectsPanel,

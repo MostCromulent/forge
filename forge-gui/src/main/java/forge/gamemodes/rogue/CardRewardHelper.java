@@ -34,8 +34,9 @@ public class CardRewardHelper {
      */
     @FunctionalInterface
     public interface RewardDialog {
+        /** rerollLabel is null when there is no reroll. rerollCost is its price in gold. */
         List<PaperCard> show(String title, List<PaperCard> cards, int maxSelections,
-                             String rerollLabel, boolean rerollEnabled, int gold);
+                             String rerollLabel, int rerollCost, boolean rerollEnabled, int gold);
     }
 
     /**
@@ -132,7 +133,8 @@ public class CardRewardHelper {
                                                     boolean customReward) {
         String rerollLabel = customReward ? null : buildRerollLabel(freeRerolls, rerollCount);
         boolean rerollEnabled = !customReward && canAffordReroll(freeRerolls, rerollCount, run.getCurrentGold());
-        return dialog.show(title, rewardOptions, maxPicks, rerollLabel, rerollEnabled, run.getCurrentGold());
+        return dialog.show(title, rewardOptions, maxPicks, rerollLabel, getRerollCost(freeRerolls, rerollCount), rerollEnabled,
+            run.getCurrentGold());
     }
 
     private static boolean isPaidReroll(List<PaperCard> chosenCards, int freeRerolls, int rerollCount,

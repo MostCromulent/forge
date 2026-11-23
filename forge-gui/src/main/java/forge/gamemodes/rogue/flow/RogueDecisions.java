@@ -20,6 +20,7 @@ import forge.gamemodes.rogue.effect.WrathfulEffect;
 import forge.gamemodes.rogue.npc.NPCContext;
 import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.item.PaperCard;
+import forge.util.Localizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -37,6 +38,22 @@ public interface RogueDecisions extends CardRewardHelper.RewardDialog {
     record Pick<T>(boolean reroll, T choice) { }
     record SanctumOffer(String restDescription, boolean restEnabled, String restDisabledReason,
                         SanctumContext context, RogueRun run) {
+        /** In the order they are shown: Rest, Cook, Reflect, then the context's own. */
+        public List<SanctumOption> options() {
+            Localizer localizer = Localizer.getInstance();
+            List<SanctumOption> options = new ArrayList<>();
+            options.add(new SanctumOption(SanctumAction.HEAL, localizer.getMessage("lblRogueRest"), restDescription,
+                restEnabled, restDisabledReason, null));
+            options.add(new SanctumOption(SanctumAction.COOK, localizer.getMessage("lblRogueCook"),
+                localizer.getMessage("lblRogueCookDescription", "{{Item}}"), true, null, null));
+            options.add(new SanctumOption(SanctumAction.REFLECT, localizer.getMessage("lblRogueReflect"),
+                localizer.getMessage("lblRogueReflectDescription", "{{Removal Credits}}"), true, null, null));
+            for (SanctumContext.SanctumChoice choice : context.extraChoices) {
+                options.add(new SanctumOption(SanctumAction.CUSTOM, choice.label(), choice.description(), true, null, choice));
+            }
+            return options;
+        }
+
         public boolean accepts(SanctumAnswer answer) {
             return switch (answer.action()) {
                 case HEAL -> restEnabled;
@@ -46,6 +63,14 @@ public interface RogueDecisions extends CardRewardHelper.RewardDialog {
         }
     }
     record SanctumAnswer(SanctumAction action, SanctumContext.SanctumChoice custom) { }
+    /** description may hold card and keyword markers. custom is set for a choice of the context's own. */
+    record SanctumOption(SanctumAction action, String label, String description, boolean enabled, String disabledReason,
+                         SanctumContext.SanctumChoice custom) {
+        public SanctumAnswer answer() {
+            return new SanctumAnswer(action, custom);
+        }
+    }
+    record Heading(String title, String text) { }
     /** rerollLabel is null in a shop that has no reroll. */
     record ShopOffer(List<BazaarItem> items, RogueRun run, int gold, String title, String rerollLabel,
                      int rerollCost, boolean rerollEnabled, int tab) {
@@ -75,6 +100,13 @@ public interface RogueDecisions extends CardRewardHelper.RewardDialog {
     /** Whether they are one eligible commander, or two that partner. */
     static boolean commanders(List<PaperCard> picked) {
         return !RogueCustomDeckGenerator.findChosenCommanders(picked).isEmpty();
+    }
+
+    /** What showPlaneboundEffects says above the effects. */
+    static Heading planeboundEffects(List<WrathfulEffect> wrathful, List<CursedEffect> cursed) {
+        String key = !wrathful.isEmpty() && !cursed.isEmpty() ? "lblRogueWrathfulAndCursed"
+            : !cursed.isEmpty() ? "lblRogueCursed" : "lblRogueWrathful";
+        return new Heading(Localizer.getInstance().getMessage(key), Localizer.getInstance().getMessage(key + "Message"));
     }
 
     /** Empty when the player cancels. */
