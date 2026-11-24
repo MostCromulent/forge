@@ -77,7 +77,7 @@ public final class RogueFlow {
         return currentRun;
     }
 
-    /** A match left with no result replaces the run with its last save, so the human gets back the looks the match lent it. */
+    /** Replacing the run gives back the looks a match lent the human. */
     public void setRun(RogueRun run) {
         nodePlaneboundHelper.restoreHuman();
         this.currentRun = run;
