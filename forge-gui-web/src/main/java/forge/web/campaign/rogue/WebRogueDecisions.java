@@ -147,7 +147,7 @@ final class WebRogueDecisions implements RogueDecisions {
 
     static List<Part> parts(final String raw) {
         final List<Part> parts = new ArrayList<>();
-        for (final TextHelper.Part p : TextHelper.parts(raw)) {
+        for (final TextHelper.Part p : TextHelper.parts(raw, null)) {
             final KeywordHint hint = p.type() == PreviewReferenceType.KEYWORD ? KeywordHint.fromToken(p.token()) : null;
             if (p.type() == PreviewReferenceType.CARD) {
                 final PaperCard card = TextHelper.resolveCard(p.token());

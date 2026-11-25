@@ -45,12 +45,12 @@ public class RogueTextTest {
 
     @Test
     public void aReferenceSplitsIntoItsOwnPart() {
-        Assert.assertEquals(TextHelper.parts("Gain [[The One Ring|LTR]]."), List.of(text("Gain "),
+        Assert.assertEquals(TextHelper.parts("Gain [[The One Ring|LTR]].", null), List.of(text("Gain "),
                 new Part(PreviewReferenceType.CARD, "The One Ring", "The One Ring|LTR"), text(".")));
         Assert.assertEquals(TextHelper.resolveCard("The One Ring|LTR").getEdition(), "LTR");
         Assert.assertNull(TextHelper.resolveCard("No Such Card"));
         final Part traits = new Part(PreviewReferenceType.KEYWORD, "Traits", "Traits");
-        Assert.assertEquals(TextHelper.parts("Gain 2 {{Traits}}."), List.of(text("Gain 2 "), traits, text(".")));
+        Assert.assertEquals(TextHelper.parts("Gain 2 {{Traits}}.", null), List.of(text("Gain 2 "), traits, text(".")));
         Assert.assertEquals(KeywordHint.fromToken("Traits"), KeywordHint.TRAIT);
         Assert.assertEquals(KeywordHint.fromToken("Echoes"), KeywordHint.ECHOES);
         Assert.assertNull(KeywordHint.fromToken("Bananas"));
@@ -59,9 +59,9 @@ public class RogueTextTest {
     @Test
     public void aHiddenReferenceHasNoText() {
         final Part ring = new Part(PreviewReferenceType.CARD, "", "Sol Ring");
-        Assert.assertEquals(TextHelper.parts("Gain a card. ![[Sol Ring]]"), List.of(ring, text("Gain a card.")));
-        Assert.assertEquals(TextHelper.parts("Gain ![[Sol Ring]] a card"), List.of(ring, text("Gain a card")));
-        Assert.assertEquals(TextHelper.parts("{{Gold}} ![[Sol Ring]], then"), List.of(
+        Assert.assertEquals(TextHelper.parts("Gain a card. ![[Sol Ring]]", null), List.of(ring, text("Gain a card.")));
+        Assert.assertEquals(TextHelper.parts("Gain ![[Sol Ring]] a card", null), List.of(ring, text("Gain a card")));
+        Assert.assertEquals(TextHelper.parts("{{Gold}} ![[Sol Ring]], then", null), List.of(
                 new Part(PreviewReferenceType.KEYWORD, "Gold", "Gold"), ring, text(", then")));
     }
 
@@ -69,7 +69,7 @@ public class RogueTextTest {
     public void everyDescriptionSplits() {
         Stream.<RogueEffect[]>of(NPCEffect.values(), ChestEffect.values(), EventEffect.values(), AetherEffect.values())
                 .flatMap(Stream::of).forEach(effect -> {
-                    final List<Part> parts = TextHelper.parts(effect.getRawDescription());
+                    final List<Part> parts = TextHelper.parts(effect.getRawDescription(), null);
                     Assert.assertEquals(parts.stream().map(Part::text).collect(Collectors.joining()), effect.getDescription().replace("**", ""));
                     for (final Part part : parts) {
                         if (part.type() == PreviewReferenceType.KEYWORD) {

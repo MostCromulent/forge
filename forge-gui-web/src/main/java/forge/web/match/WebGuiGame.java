@@ -958,11 +958,11 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     @Override
-    public List<CardView> manipulateCardList(final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable, final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
+    public List<CardView> manipulateCardList(final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable, final ZoneType secondPile) {
         final List<CardView> list = Lists.newArrayList(cards);
         // The original order is always a valid answer. arrangeForMove throws on an empty list
         final ManipulateRequest request = new ManipulateRequest(title, options(list, null),
-                Answers.indicesOf(list, Lists.newArrayList(manipulable)), toTop, toBottom, IntStream.range(0, list.size()).boxed().toList());
+                Answers.indicesOf(list, Lists.newArrayList(manipulable)), true, true, IntStream.range(0, list.size()).boxed().toList());
         return Answers.pick(list, ask(request, Answers.indexList(list.size(), list.size(), list.size())));
     }
 
