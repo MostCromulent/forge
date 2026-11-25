@@ -648,7 +648,7 @@ public final class RoguePages {
         final Localizer text = Localizer.getInstance();
         final String card = effect.getEffectCardDisplayName();
         final String name = card.isEmpty() ? effect.getDisplayName() : card;
-        final List<Part> words = WebRogueDecisions.parts(effect.getActiveDescription(run).replace("\\n", "\n"));
+        final List<Part> words = WebRogueDecisions.parts(effect.getActiveDescription(run).replace("\\n", "\n"), effect.getEffectCardReference());
         final boolean loot = effect.getEffectType() == RogueEffect.EffectType.ONESHOT;
         final Source source = source(effect);
         return switch (source) {

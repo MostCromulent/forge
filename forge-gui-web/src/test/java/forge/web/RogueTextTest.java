@@ -69,7 +69,7 @@ public class RogueTextTest {
     public void everyDescriptionSplits() {
         Stream.<RogueEffect[]>of(NPCEffect.values(), ChestEffect.values(), EventEffect.values(), AetherEffect.values())
                 .flatMap(Stream::of).forEach(effect -> {
-                    final List<Part> parts = TextHelper.parts(effect.getRawDescription(), null);
+                    final List<Part> parts = TextHelper.parts(effect.getRawDescription(), effect.getEffectCardReference());
                     Assert.assertEquals(parts.stream().map(Part::text).collect(Collectors.joining()), effect.getDescription().replace("**", ""));
                     for (final Part part : parts) {
                         if (part.type() == PreviewReferenceType.KEYWORD) {

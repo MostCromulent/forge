@@ -146,8 +146,13 @@ final class WebRogueDecisions implements RogueDecisions {
     }
 
     static List<Part> parts(final String raw) {
+        return parts(raw, null);
+    }
+
+    /** effectCardReference, which may be null, names the effect card whose name in the text is drawn as that card. */
+    static List<Part> parts(final String raw, final String effectCardReference) {
         final List<Part> parts = new ArrayList<>();
-        for (final TextHelper.Part p : TextHelper.parts(raw, null)) {
+        for (final TextHelper.Part p : TextHelper.parts(raw, effectCardReference)) {
             final KeywordHint hint = p.type() == PreviewReferenceType.KEYWORD ? KeywordHint.fromToken(p.token()) : null;
             if (p.type() == PreviewReferenceType.CARD) {
                 final PaperCard card = TextHelper.resolveCard(p.token());
@@ -205,7 +210,7 @@ final class WebRogueDecisions implements RogueDecisions {
     }
 
     private static Option option(final RogueEffect effect) {
-        return new Option(effect.getDisplayName(), parts(effect.getRawDescription()), true, null, null);
+        return new Option(effect.getDisplayName(), parts(effect.getRawDescription(), effect.getEffectCardReference()), true, null, null);
     }
 
     private static String text(final String key, final Object... args) {
@@ -286,7 +291,7 @@ final class WebRogueDecisions implements RogueDecisions {
     public Pick<NPCEffect> chooseBoon(final NPCContext context, final ChoiceRerollContext rerolls) {
         final List<NPCContext.NPCChoice> choices = context.choices();
         final List<Option> options = choices.stream().map(c -> new Option(c.label(),
-                c.npcEffect() == null ? List.of() : parts(c.npcEffect().getRawDescription()), true, null, null)).collect(Collectors.toList());
+                c.npcEffect() == null ? List.of() : parts(c.npcEffect().getRawDescription(), c.npcEffect().getEffectCardReference()), true, null, null)).collect(Collectors.toList());
         final PaperCard npc = TextHelper.resolveCard(context.displayName());
         boonArt = npc == null ? null : npc.getImageKey(false);
         final AskChoice choice = new AskChoice(choices.isEmpty() ? "story" : "boon", context.avatarIndex(), context.displayName(), null, null,
@@ -314,7 +319,7 @@ final class WebRogueDecisions implements RogueDecisions {
         final List<RogueEvent.EventChoice> choices = event.getChoices();
         final List<Option> options = choices.stream().map(c -> {
             final boolean enabled = c.effect().isChoiceAvailable(run);
-            return new Option(c.label(), parts(c.effect().getRawDescription()), enabled, enabled ? null : c.effect().getUnavailableReason(run), null);
+            return new Option(c.label(), parts(c.effect().getRawDescription(), c.effect().getEffectCardReference()), enabled, enabled ? null : c.effect().getUnavailableReason(run), null);
         }).collect(Collectors.toList());
         final int picked = choose(new AskChoice("event", null, event.getDisplayName(), text("lblRogueEvent"), event.getDisplayName(),
                 List.of(parts(event.getRawDescription())), options, rerolls.remainingRerolls, false, RoguePages.lastPlane(run), 0));
@@ -382,8 +387,8 @@ final class WebRogueDecisions implements RogueDecisions {
     @Override
     public void showPlaneboundEffects(final NodePlanebound node, final List<WrathfulEffect> wrathful, final List<CursedEffect> cursed) {
         final List<Omen> omens = new ArrayList<>();
-        wrathful.forEach(w -> omens.add(new Omen("wrathful", KeywordHint.WRATHFUL.getTitle(), w.getDisplayName(), parts(w.getRawDescription()))));
-        cursed.forEach(c -> omens.add(new Omen("cursed", KeywordHint.CURSED.getTitle(), c.getDisplayName(), parts(c.getRawDescription()))));
+        wrathful.forEach(w -> omens.add(new Omen("wrathful", KeywordHint.WRATHFUL.getTitle(), w.getDisplayName(), parts(w.getRawDescription(), w.getEffectCardReference()))));
+        cursed.forEach(c -> omens.add(new Omen("cursed", KeywordHint.CURSED.getTitle(), c.getDisplayName(), parts(c.getRawDescription(), c.getEffectCardReference()))));
         final PaperCard plane = CodexHelper.getPlaneCard(node.getRoguePlanebound());
         tell(new TellOmen(RogueDecisions.planeboundEffects(wrathful, cursed).title(), RoguePages.planeboundArt(node.getRoguePlanebound()),
                 plane == null ? null : plane.getImageKey(false), omens));
