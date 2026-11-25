@@ -1,8 +1,9 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, test, type Page } from '@playwright/test';
-import { PROBE_SEED, startServer, type Server } from './server';
+import { expect, type Page } from '@playwright/test';
+import { probeTest as test } from './probe';
+import { PROBE_SEED, type Server } from './server';
 import { enterName, toPriority } from './steps';
 
 const fixture = join(dirname(fileURLToPath(import.meta.url)), '../src/test/resources/conquest/Fixture_conquest');
@@ -13,17 +14,18 @@ const saved = 'conquest/saves/Fixture_conquest';
 const PICTURE = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../src/main/resources/web/playmats/selesnya-thumb.jpg'));
 const standInPictures = (page: Page) => page.route('**/img?key=*', route => route.fulfill({ contentType: 'image/jpeg', body: PICTURE }));
 
-let server: Server;
-test.beforeEach(async () => {
-  server = await startServer(undefined, {
+test.use({
+  seed: {
     ...PROBE_SEED,
     files: {
       [`${saved}/data.xml`]: readFileSync(join(fixture, 'data.xml'), 'utf8'),
       [`${saved}/decks/${deck}`]: readFileSync(join(fixture, 'decks', deck), 'utf8'),
     },
-  });
+  },
 });
-test.afterEach(async () => { await server.stop(); });
+
+let server: Server;
+test.beforeEach(({ server: own }) => { server = own; });
 
 /** Opens the fixture's conquest from the shelf. */
 async function playFixture(page: Page): Promise<void> {
