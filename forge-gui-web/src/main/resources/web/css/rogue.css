@@ -703,3 +703,30 @@ html[data-form="portrait"] .rg-run .traits { display: none; }
   .rgt-tile h3 { font-size: 15.5px; }
   .rgt-tile p { font-size: 13.5px; }
 }
+/* Motion timed as the mobile client's: pow3Out for screens and sheets, swingOut (libgdx, scale 2) for a dialog's spring */
+:root { --rg-out: cubic-bezier(.215, .61, .355, 1); --rg-swing: linear(0, .233, .433, .603, .744, .859, .951, 1.021, 1.072, 1.106, 1.125, 1.132, 1.128, 1.116, 1.099, 1.078, 1.056, 1.035, 1.017, 1.005, 1); }
+@keyframes rg-fade { from { opacity: 0; } }
+@keyframes rg-pop { from { scale: .7; } }
+@keyframes rg-rise { from { translate: 0 100%; } }
+@keyframes rg-drop { to { translate: 0 100%; } }
+@keyframes rg-dim { to { filter: brightness(.45); } }
+@keyframes rg-undim { from { filter: brightness(.45); } }
+/* A dialog springs in from 70% while it fades in over the first half */
+.rg-dialog { animation: rg-fade .15s linear; }
+.rg-dialog > .dialog { animation: rg-pop .3s var(--rg-swing), rg-fade .15s linear; }
+.rg-psheet { animation: rg-fade .3s var(--rg-out); }
+.rg-psheet > .box { animation: rg-rise .3s var(--rg-out); }
+/* A scene rising in or dropping away stays inside the body under the bar (motion.ts) */
+:is(.rg-body, .rg-pbody):has(> .rg-scene) { overflow: clip; }
+.rg-leaving { position: fixed; z-index: 12; overflow: clip; pointer-events: none; }
+/* A balance's icon is larger while it counts (campaign.tsx useTally) */
+.camp-coin.counting > :first-child { scale: 1.15; }
+/* A move to a new screen rises the whole screen over the old one, which dims, and going back drops it away. The page and header are captured with the screen, so all of it moves together */
+html[data-rogue] #campaign :is(.camp-main, .page-head, .ph, .camp-tab-line) { view-transition-name: none; }
+html[data-rogue]::view-transition-group(screen) { animation: none; }
+html[data-rogue]::view-transition-old(screen), html[data-rogue]::view-transition-new(screen) { mix-blend-mode: normal; }
+html[data-rogue="rise"]::view-transition-old(screen) { animation: rg-dim .5s var(--rg-out) both; }
+html[data-rogue="rise"]::view-transition-new(screen) { animation: rg-rise .5s var(--rg-out) both; }
+html[data-rogue="drop"]::view-transition-old(screen) { z-index: 1; animation: rg-drop .5s var(--rg-out) both; }
+html[data-rogue="drop"]::view-transition-new(screen) { animation: rg-undim .5s var(--rg-out) both; }
+html[data-motion="reduced"] :is(.rg-dialog, .rg-dialog > .dialog, .rg-psheet, .rg-psheet > .box) { animation: none; }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { CampaignBar, CampaignShell } from '../campaign/campaign';
+import { CampaignBar, CampaignShell, forgetTallies, slideTab } from '../campaign/campaign';
 import { Backdrop } from '../dialog';
 import { Icon } from '../icons';
 import { hideBroken, imageUrl } from '../images';
@@ -8,12 +8,13 @@ import { playSound } from '../audio';
 import { useEscapeBack } from '../header';
 import { useDismiss } from '../hooks';
 import { setting } from '../settings';
-import { changeUi, ui } from '../ui';
+import { changeUi, eased, easedLocal, ui } from '../ui';
 import { t, type TextKey } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { Sprite, barGlyph, glyph, tabSprite } from './kit';
 import { Landing } from './landing';
-import { DescensionSheet, NO_CHOICE, NewRun, backFrom, chosenDeck, type Choice } from './newrun';
+import { DescensionSheet, NO_CHOICE, NewRun, backFrom, chosenDeck, type Choice, type SetChoice } from './newrun';
+import { screenWay } from './motion';
 import { isScene } from './questions';
 import { DeckView, Question } from './scene';
 import { MapPage } from './map';
@@ -82,7 +83,15 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const replace = model.rogueQuestion?.choice?.kind === 'replace' ? model.rogueQuestion.choice : undefined;
   const announced = model.rogueAnnounced[0];
   const fresh = !inRun && tab === 'runs' && (!run || ui.rogueNewRun) && roster ? roster : null;
-  const setTab = (to: RogueTab) => changeUi(u => { u.rogueTab = to; u.rogueNewRun = false; });
+  const setTab = (to: RogueTab) => slideTab(TABS, tab, to, u => { u.rogueTab = to; u.rogueNewRun = false; });
+  // The commanders, Custom Run and a run are screens of their own, which rise over the one they open from and drop away back to it
+  const newRun = (on: boolean) => eased(u => { u.rogueNewRun = on; }, screenWay(!on));
+  const enterRun = (go: () => void) => eased(go, screenWay(false), () => model.campaignSave !== null && !!model.rogueMap);
+  const moveChoice: SetChoice = change => {
+    const next = change(choice);
+    if (next.customOpen !== choice.customOpen) easedLocal(() => setChoice(next), screenWay(!next.customOpen));
+    else setChoice(change);
+  };
   const answer = (value: unknown) => actions.rogueAnswer(model.rogueQuestion!.id, value);
   // Back goes from the run to Runs, from another tab to Runs, from the commanders to the unfinished run, and from Runs to the play menu
   const back = () => {
@@ -96,9 +105,10 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     else if (aside !== 'map') changeUi(u => { u.roguePage = 'map'; });
     else if (replace) answer(replace.options.length - 1);
     else if (tell || announced) return;
-    else if (step) setChoice(step);
+    else if (step) moveChoice(() => step);
     else if (!inRun && tab !== 'runs') setTab('runs');
-    else if (!inRun && ui.rogueNewRun && run) changeUi(u => { u.rogueNewRun = false; });
+    else if (!inRun && ui.rogueNewRun && run) newRun(false);
+    else if (inRun) eased(() => actions.campaignLeave(), screenWay(true), () => model.campaignSave === null);
     else actions.campaignLeave();
   };
   useEscapeBack(back);
@@ -110,7 +120,11 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     editDeck();
   }, [inRun, home?.snapshot]);
   useEffect(() => { if (choice.deck) actions.rogueStartDeck(choice.deck); }, [choice.deck]);
-  useEffect(() => { if (!inRun) ui.roguePage = 'map'; }, [inRun]);
+  useEffect(() => {
+    if (inRun) return;
+    ui.roguePage = 'map';
+    forgetTallies();
+  }, [inRun]);
   // The Codex is asked for again after each step, such as a reset
   useEffect(() => { if (codex) actions.rogueCodex(ui.rogueCodexTab, ui.rogueCodexId); }, [codex, ui.rogueCodexTab, ui.rogueCodexId, home?.snapshot]);
   useEffect(() => { if (!inRun && tab === 'history') actions.rogueHistory(); }, [inRun, tab, home?.snapshot]);
@@ -135,16 +149,16 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
         setTab={(to: CodexTab) => changeUi(u => { u.rogueCodexTab = to; u.rogueCodexId = null; })}
         choose={id => changeUi(u => { u.rogueCodexId = id; })} reset={inRun ? undefined : setResetting} />
     ) : inRun ? model.rogueMap && <MapPage model={model} actions={actions} /> : tab === 'runs' && run && !ui.rogueNewRun ? (
-    <Landing home={home} run={run} go={() => actions.campaignLoad('run')}
+    <Landing home={home} run={run} go={() => enterRun(() => actions.campaignLoad('run'))}
       deck={() => { ui.rogueRunTab = 'deck'; actions.campaignLoad('run'); }}
-      abandon={() => setAbandoning(true)} fresh={() => changeUi(u => { u.rogueNewRun = true; })} />
+      abandon={() => setAbandoning(true)} fresh={() => newRun(true)} />
   ) : tab === 'history' ? (
     <HistoryPage page={model.rogueHistoryPage} reset={() => setResetting('history')} deck={id => { setHistoryDeck(id); actions.rogueHistoryDeck(id); }} />
   ) : tab === 'aether' ? model.rogueAether && (
     <AetherPage aether={model.rogueAether} raise={id => actions.rogueAetherUpgrade(home.snapshot, id)} toggle={(id, on) => actions.rogueAetherToggle(home.snapshot, id, on)}
       expand={() => actions.rogueAetherExpand(home.snapshot)} reset={() => setResetting('aether')} />
-  ) : fresh && <NewRun roster={fresh} choice={choice} set={setChoice} runs={run ? () => changeUi(u => { u.rogueNewRun = false; }) : null}
-    begin={(deck, level) => actions.rogueBegin(home.snapshot, deck, choice.custom, choice.custom ? choice.mods : [], level)}
+  ) : fresh && <NewRun roster={fresh} choice={choice} set={moveChoice} runs={run ? () => newRun(false) : null}
+    begin={(deck, level) => enterRun(() => actions.rogueBegin(home.snapshot, deck, choice.custom, choice.custom ? choice.mods : [], level))}
     answer={model.rogueChoice} toggle={id => actions.rogueChoose(deck, choice.mods, choice.level, id)} />;
   const details = choice.deck && model.deckDetails?.key === `rogue:start:${choice.deck}` ? model.deckDetails : null;
   const pastDeck = historyDeck !== null && model.deckDetails?.key === `rogue:history:${historyDeck}` ? model.deckDetails : null;
@@ -201,9 +215,9 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       // During a decision the deck is read only
       if (to === 'deck' && deciding) changeUi(u => { u.rogueDeckView = true; });
       else if (to === 'deck') editDeck();
-      else changeUi(u => { u.roguePage = to; });
+      else slideTab(RUN_TABS, aside, to, u => { u.roguePage = to; });
     }} lead={tabSprite} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
-      held={held} leave={back} under={dialog} lineTerm={isPortrait() ? undefined : runBar?.tip} glyph={barGlyph} moreIcon={glyph('dots')} more={more} extra={devTool} />
+      held={held} counted leave={back} under={dialog} lineTerm={isPortrait() ? undefined : runBar?.tip} glyph={barGlyph} moreIcon={glyph('dots')} more={more} extra={devTool} />
       : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} lead={tabSprite} disabledTabs={locked} held={{}} leave={back} under={dialog} glyph={barGlyph}
         more={isPortrait() ? phoneMenu : undefined} extra={devTool} />}
     {!isPortrait() ? <div class="rg-body">{main}{question}</div>

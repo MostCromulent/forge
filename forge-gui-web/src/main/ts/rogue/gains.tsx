@@ -2,7 +2,7 @@
 
 import { Fragment } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
-import { flyShards } from '../campaign/campaign';
+import { coinsFrom } from '../campaign/campaign';
 import { changeUi } from '../ui';
 import { Icon } from '../icons';
 import { hideBroken, imageUrl } from '../images';
@@ -45,16 +45,27 @@ const figureIcons = (gains: TellGains): [string, number][] =>
 export const heldBack = (gains: TellGains | null | undefined, landed: string[]): Record<string, number> =>
   gains ? Object.fromEntries(figureIcons(gains).filter(([icon]) => !landed.includes(icon))) : {};
 
-/** The figures a won battle gave. One of 0 is left out, and a phone words removal credits shorter. Each flies to its balance in the bar, which counts it as it lands. */
+/**
+ * The figures a won battle gave. One of 0 is left out, and a phone words removal credits shorter. Once the scene has risen,
+ * the bar counts them in, its coins flying from the figures.
+ */
 function Figures({ gains }: { gains: TellGains }) {
   const row = useRef<HTMLDivElement>(null);
   const pictures = [<Sprite k="coin" px={32} />, <Sprite k="shards" px={32} />, glyph('heart', 32), glyph('cut', 32)];
   const labels = [t('lblWebRogueGold'), t('lblWebRogueEchoes'), t('lblLife'), t(isPortrait() ? 'lblCredits' : 'lblWebRogueRemovalCredits')];
   const figures = figureIcons(gains).map(([icon, n], i) => ({ icon, n, picture: pictures[i], label: labels[i] })).filter(f => f.n > 0);
   useEffect(() => {
-    const land = (icon: string) => changeUi(u => { u.rogueLanded = [...u.rogueLanded, icon]; });
-    row.current?.querySelectorAll('.rg-gain').forEach((figure, i) => flyShards(figure.getBoundingClientRect(), () => land(figures[i].icon), figures[i].icon));
-    return () => changeUi(u => { u.rogueLanded = []; });
+    row.current!.querySelectorAll('.rg-gain').forEach((figure, i) => coinsFrom(figures[i].icon, figure.firstElementChild));
+    let open = true;
+    const scene = row.current!.closest('.rg-scene');
+    Promise.allSettled(scene?.getAnimations().map(a => a.finished) ?? []).then(() => {
+      if (open) changeUi(u => { u.rogueLanded = figureIcons(gains).map(([icon]) => icon); });
+    });
+    return () => {
+      open = false;
+      for (const f of figures) coinsFrom(f.icon, null);
+      changeUi(u => { u.rogueLanded = []; });
+    };
   }, []);
   return (
     <div class="rg-gain-row" ref={row}>

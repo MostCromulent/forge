@@ -14,6 +14,7 @@ import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { glyph, ringClass, sealGlyph } from './kit';
 import { Words } from './terms';
+import { useRise } from './motion';
 import { CardPick, CommanderPick, LootPick, RewardPick } from './pick';
 import { Gains } from './gains';
 import { Bazaar } from './bazaar';
@@ -40,6 +41,8 @@ export function Scene({ art, foot, children, fold, viewDeck, tip, onScroll }: {
     (root.current!.querySelector<HTMLElement>('.ft .primary') ?? root.current!).focus({ preventScroll: true });
     return () => { if (before?.isConnected) before.focus({ preventScroll: true }); };
   }, []);
+  // A scene folded to its bar or left for another tab is still open, so it does not drop away
+  useRise(root, () => ui.roguePage !== 'map' || !!document.querySelector('.rg-folded'));
   return (
     <div class="rg-scene" ref={root} tabIndex={-1}>
       <div class="bg" style={art ? { backgroundImage: `url("${artUrl(art)}")` } : undefined} />

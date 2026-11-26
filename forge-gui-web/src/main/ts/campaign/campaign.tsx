@@ -1,4 +1,4 @@
-import type { ComponentChildren, FunctionComponent } from 'preact';
+import type { ComponentChildren, FunctionComponent, RefObject } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl, skinIconUrl } from '../images';
 import { artUrl } from '../sleeves';
@@ -22,18 +22,105 @@ export interface RevealProps { reward: Reward; onOwed: (owed: Owed) => void; don
 /** The attributes of something a tooltip explains: the term's name and the tooltip's text. */
 const explained = (name: string, text?: string | null) => (text ? { 'data-term': name, 'data-tip': text, tabIndex: 0 } : {});
 
-/** drawGlyph draws the glyph in place of the skin's icon, for a mode with icons of its own. */
-export function Purse({ icon, n, label, text, glyph, term, drawGlyph }: {
-  icon: string; n: number; label: string; drawGlyph?: (name: string) => ComponentChildren;
+/** drawGlyph draws the glyph in place of the skin's icon, for a mode with icons of its own. counted makes a change count up or down (useTally). */
+export function Purse({ icon, n, label, text, glyph, term, drawGlyph, counted }: {
+  icon: string; n: number; label: string; drawGlyph?: (name: string) => ComponentChildren; counted?: boolean;
 } & Partial<Pick<Balance, 'text' | 'glyph' | 'term'>>) {
-  const amount = text ?? formatNumber(n);
+  const coin = useRef<HTMLSpanElement>(null);
+  const [shown, counting] = useTally(icon, n, !!counted, coin);
+  // A text such as life out of its maximum starts with the amount, which counts in its place
+  const amount = text != null ? (shown === n ? text : text.replace(formatNumber(n), formatNumber(shown))) : formatNumber(shown);
   return (
-    <span class="camp-coin" data-icon={icon} title={term ? undefined : label} role={glyph ? 'img' : undefined} aria-label={glyph ? `${label}: ${amount}` : undefined}
-      {...explained(label, term)}>
+    <span ref={coin} class={counting ? 'camp-coin counting' : 'camp-coin'} data-icon={icon} title={term ? undefined : label} role={glyph ? 'img' : undefined}
+      aria-label={glyph ? `${label}: ${amount}` : undefined} {...explained(label, term)}>
       {glyph ? drawGlyph?.(glyph) ?? <Icon d={ICONS[glyph as keyof typeof ICONS]} /> : <img alt={label} src={skinIconUrl(icon)} />}
       <b>{amount}</b>
     </span>
   );
+}
+
+const TALLY_MS = 700;
+/** libgdx's pow3Out, which the mobile client counts with. */
+const pow3Out = (p: number) => 1 - (1 - p) ** 3;
+// The amount each counted balance last went to, by icon. It outlives the bar, so a bar drawn again counts what changed while it was gone
+const tallies = new Map<string, number>();
+// Where the coins of a change fly from, by balance icon, while something on the page shows that change
+const coinSources = new Map<string, Element>();
+
+/** Forgets the counted amounts, so the next bar shows its balances as they are. A mode calls it when its save closes. */
+export function forgetTallies(): void {
+  tallies.clear();
+}
+
+/** Makes the coins of a change to the balance with that icon fly from el, or with null from the middle of the page again. */
+export function coinsFrom(icon: string, el: Element | null): void {
+  if (el) coinSources.set(icon, el);
+  else coinSources.delete(icon);
+}
+
+/**
+ * The amount a balance shows and whether it is counting. When counted, a change counts from the old amount to the new over 0.7 s
+ * while coins fly into the balance for a gain or out of it for a loss, as the mobile client's run bar does. The first amount shows as it is.
+ */
+function useTally(icon: string, n: number, counted: boolean, coin: RefObject<HTMLElement>): [number, boolean] {
+  const [shown, setShown] = useState(() => (counted ? tallies.get(icon) ?? n : n));
+  const [counting, setCounting] = useState(false);
+  const now = useRef(shown);
+  useEffect(() => {
+    if (!counted) return;
+    const from = tallies.get(icon);
+    tallies.set(icon, n);
+    if (from === undefined || from === n || reducedMotion()) {
+      now.current = n;
+      setShown(n);
+      setCounting(false);
+      return;
+    }
+    flyCoins(icon, coin.current!, n - from);
+    const start = now.current;
+    const began = performance.now();
+    let frame = requestAnimationFrame(function step(at) {
+      const p = Math.min(1, (at - began) / TALLY_MS);
+      now.current = start + (n - start) * pow3Out(p);
+      setShown(Math.round(now.current));
+      setCounting(p < 1);
+      if (p < 1) frame = requestAnimationFrame(step);
+    });
+    setCounting(true);
+    return () => cancelAnimationFrame(frame);
+  }, [n, counted]);
+  return [counted ? shown : n, counted && counting];
+}
+
+/** Flies 3 to 8 copies of a balance's picture from its source into it for a gain, or out of it for a loss, each rising on an arc. */
+function flyCoins(icon: string, coin: HTMLElement, change: number): void {
+  const to = coin.firstElementChild!.getBoundingClientRect();
+  // A bar that hides its balances, as some Rogue pages do, has nowhere for the coins to go
+  if (!to.width) return;
+  const source = coinSources.get(icon);
+  const from = source?.isConnected ? source.getBoundingClientRect() : null;
+  const midX = from ? from.left + from.width / 2 : innerWidth / 2;
+  const midY = from ? from.top + from.height / 2 : innerHeight * .4;
+  const barX = to.left + to.width / 2, barY = to.top + to.height / 2;
+  const coins = Math.max(3, Math.min(8, Math.abs(change)));
+  for (let c = 0; c < coins; c++) {
+    const spread = (c - coins / 2) * 12;
+    const out = { x: midX + spread, y: midY, scale: 1.6 };
+    const bar = { x: barX, y: barY, scale: 1 };
+    const [a, b] = change > 0 ? [out, bar] : [bar, out];
+    const mote = coin.firstElementChild!.cloneNode(true) as HTMLElement;
+    mote.classList.add('camp-mote');
+    mote.setAttribute('aria-hidden', 'true');
+    mote.dataset.icon = icon;
+    mote.style.opacity = '0';
+    document.body.append(mote);
+    const frames = Array.from({ length: 13 }, (_, i) => {
+      const p = i / 12, e = pow3Out(p);
+      const x = a.x + (b.x - a.x) * e, y = a.y + (b.y - a.y) * e - 40 * Math.sin(Math.PI * p);
+      return { transform: `translate(${x}px, ${y}px) scale(${a.scale + (b.scale - a.scale) * e})`, opacity: 1 };
+    });
+    mote.animate(frames, { duration: 500, delay: c * 50 }).finished.then(() => mote.remove(), () => mote.remove());
+  }
 }
 
 export const balance = (bar: Bar | null, icon: string): number => bar?.balances.find(b => b.icon === icon)?.amount ?? 0;
@@ -90,15 +177,15 @@ ${tab}`;
  * extra is a dev tool: a control beside the balances, or on a phone a row of the header's menu. mark draws what follows a tab's name.
  * disabledTabs holds the tabs that cannot be opened, with why. lineTerm is the text of the line's tooltip.
  * more draws the mode's own menu in place of Preferences: the panel its button opens, or on a phone rows of the header's menu.
- * glyph draws a balance's glyph, and moreIcon the icon of the menu's button, for a mode with icons of its own.
+ * glyph draws a balance's glyph, and moreIcon the icon of the menu's button, for a mode with icons of its own. counted makes the balances count their changes.
  */
-export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, lead, mark, disabledTabs, held, extra, prefs, more, leave, under, lineTerm, glyph, moreIcon }: {
+export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, lead, mark, disabledTabs, held, extra, prefs, more, leave, under, lineTerm, glyph, moreIcon, counted }: {
   bar: Bar; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void;
   lead?: (tab: Tab) => ComponentChildren; mark?: (tab: Tab) => ComponentChildren; disabledTabs?: Partial<Record<Tab, string>>;
   /** The amounts a reward reveal has not shown yet, by balance icon. The server's balances already include them, so the bar subtracts them. */
   held: Record<string, number>;
   extra?: ComponentChildren; prefs?: () => void; more?: (close: () => void) => ComponentChildren; leave: () => void; under: boolean; lineTerm?: string;
-  glyph?: (name: string) => ComponentChildren; moreIcon?: ComponentChildren;
+  glyph?: (name: string) => ComponentChildren; moreIcon?: ComponentChildren; counted?: boolean;
 }) {
   const strip = useRef<HTMLElement>(null);
   const purse = useRef<HTMLDivElement>(null);
@@ -121,7 +208,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, lead, 
       ))}
     </nav>
   );
-  const balances = bar.balances.map(b => <Purse key={b.icon} {...b} n={Math.min(b.amount - (held[b.icon] ?? 0), ceilings.get(b.icon) ?? Infinity)} drawGlyph={glyph} />);
+  const balances = bar.balances.map(b => <Purse key={b.icon} {...b} n={Math.min(b.amount - (held[b.icon] ?? 0), ceilings.get(b.icon) ?? Infinity)} drawGlyph={glyph} counted={counted} />);
   const line = <span {...explained(bar.line, lineTerm)}>{bar.line}</span>;
   if (isPortrait()) {
     return (
