@@ -880,3 +880,9 @@ html.kit.kit .camp-tabs > .camp-tab:not([aria-current]) { padding-bottom: 6px; }
 html.kit.kit .camp-tabs > .camp-tab[aria-current] { padding-bottom: 8px; }
 /* Room between the balances and the keys */
 html.kit .camp-purse > .camp-coin + button { margin-left: 16px; }
+/* The deck dialog's Cards / List: the deck editor's segmented control drawn for parchment, one ink box with the chosen half filled */
+html.kit.kit .rg-deckview .view-seg.view-seg { display: inline-flex; border: 1.5px solid var(--kit-ink, #2a1d10); border-radius: 6px; overflow: hidden; background: none; box-shadow: none; padding: 0; gap: 0; }
+html.kit.kit .rg-deckview .view-seg.view-seg > button { background: none; border: 0; border-image: none; border-radius: 0; box-shadow: none; outline-offset: -3px; min-height: 0; height: auto; width: auto;
+  padding: 5px 14px; font: 600 13.5px system-ui, sans-serif; color: var(--kit-ink, #2a1d10); text-shadow: none; }
+html.kit.kit .rg-deckview .view-seg.view-seg > button + button { border-left: 1.5px solid var(--kit-ink, #2a1d10); }
+html.kit.kit .rg-deckview .view-seg.view-seg > button[aria-pressed="true"] { background: var(--kit-ink, #2a1d10); color: #f1e7cf; }
