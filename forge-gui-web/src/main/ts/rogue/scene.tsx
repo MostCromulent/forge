@@ -157,7 +157,7 @@ export function Question({ model, actions }: { model: Model; actions: Actions })
 export function DeckView({ details, line, button, close }: { details: DeckDetails; line: string; button: string; close: () => void }) {
   return (
     <Backdrop layer="rg-dialog" dismiss={close}>
-      <div class="dialog" role="dialog" aria-label={details.name}>
+      <div class="dialog rg-deckview" role="dialog" aria-label={details.name}>
         <h3>{details.name}</h3>
         <p>{line}</p>
         <Curve curve={details.stats.curve} spells={details.stats.spells} px={44} />

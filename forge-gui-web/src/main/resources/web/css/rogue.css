@@ -836,10 +836,18 @@ html.kit[data-motion="reduced"] .kit-rays::before { animation: none; }
 html.kit:not([data-form="portrait"]) .rg-tale > .rg-face > .pic.pic { margin-top: 0; }
 /* The paper's torn edge reaches above the words' box, so the face rises to meet it */
 html.kit:not([data-form="portrait"]) .rg-tale > .rg-face { margin-top: -26px; }
-/* Icons sit inside the stone key's dark window, which its black inner frame makes smaller than the border leaves */
-html.kit .camp-purse :is(.icon-button, .camp-dev) { padding: 0; display: inline-grid; place-items: center; width: 40px; }
-html.kit .rg-vbtn { height: 36px; padding: 0 12px; }
-html.kit .camp-purse :is(.icon-button, .camp-dev) :is(svg, .rg-ic) { width: 14px; height: 14px; }
+/* The bar's keys: the key's frame takes 8px above and 14px below at twice its size, so a key 40px tall leaves an 18px window, and the content centres in it */
+html.kit.kit .camp-purse > button { height: 40px; display: inline-grid; place-items: center; padding: 0 10px; line-height: 1; }
+html.kit.kit .camp-purse > :is(.icon-button, .camp-dev) { width: 40px; min-width: 40px; padding: 0; }
+html.kit .camp-purse > :is(.icon-button, .camp-dev) > :is(svg, .rg-ic) { width: 16px; height: 16px; }
+/* Whole map: mobile's square key with only the magnifier, pressed while the whole map shows */
+html.kit.kit .rg-vbtn { width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-grid; place-items: center; font-size: 0; }
+html.kit.kit .rg-vbtn::before { margin: 0; width: 16px; height: 16px; background-size: 16px 16px; }
+html.kit.kit .rg-vbtn[aria-pressed="true"] { border-image-source: url("../adventure?s=skin&r=125,175,14,16"); }
+/* The map's paper: its torn corners show what is behind, not the paper's colour */
+html.kit .rg-vstage { background-clip: padding-box !important; }
+/* The ledge runs in front of every tab, the current one included */
+html.kit.kit .camp-tabs > .camp-tab[aria-current] { z-index: 0 !important; }
 /* Phone map: the paper's inks, which the generated sheet sets only on the wide map's stage, and the sheet bar's Plane and Reroll as stone keys like every other key */
 html.kit .rg-vtrail { --ink: #2a1d10; --ink-soft: rgba(42, 29, 16, .62); --ink-faint: rgba(42, 29, 16, .28); --paper: #f1e8d2; --paper-hi: #f8f2e3; --gold: #e2b23c; }
 html.kit .rg-vtrail .rg-n:not(.side) .nm { text-shadow: none; }
@@ -848,3 +856,12 @@ html.kit .rg-sheetbar .go button:not(.primary) { image-rendering: pixelated; bac
 html.kit[data-form="portrait"] .rg-tale { row-gap: 40px; }
 /* A plane's picture clips, so a squeezed sheet would shrink its row to nothing and lay the text over it; rows keep their content's height and the sheet scrolls */
 .rg-psheet .bd { grid-auto-rows: max-content; grid-template-rows: none; }
+/* Faded nodes blend toward the paper with a filter, not opacity, so the trail does not show through them (map.tsx Fades) */
+.rg-fades { position: absolute; }
+html.kit.kit .rg-n.far { opacity: 1 !important; filter: url(#rg-fade62) sepia(.2); }
+html.kit.kit .rg-n.far:not(.side) { filter: url(#rg-fade70); }
+html.kit.kit :is(.rg-n.past, .rg-n.dead) { opacity: 1 !important; filter: grayscale(1) sepia(.35) url(#rg-fade32); }
+/* A deck's list in a dialog: wide enough for two columns of card names, each column held to its share */
+.rg-dialog .dialog.rg-deckview { width: min(720px, calc(100vw - 32px)); max-width: none; }
+.rg-deckview .dk-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html[data-form="portrait"] .rg-deckview .dk-cards { grid-template-columns: minmax(0, 1fr); }

@@ -79,7 +79,7 @@ function Entry({ entry, tab, back }: { entry: CodexEntry; tab: CodexTab; back: (
     <div class="rg-scroll">
       <div class="rg-top">
         {entry.image && <img onError={hideBroken} alt="" data-image={entry.image} src={imageUrl(entry.image)} />}
-        {entry.plane && <span class="rg-plane pl"><img onError={hideBroken} alt={entry.planeName ?? ''} data-image={entry.plane} src={imageUrl(entry.plane)} /></span>}
+        {entry.plane && <span class="rg-plane pl" data-sideways=""><img onError={hideBroken} alt={entry.planeName ?? ''} data-image={entry.plane} src={imageUrl(entry.plane)} /></span>}
         <div class="t">{link}<h2>{entry.title}</h2>{!phone && <Facts facts={entry.facts} tab={tab} />}</div>
       </div>
       {phone && <Facts facts={entry.facts} tab={tab} />}

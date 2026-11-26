@@ -85,7 +85,7 @@ function Node({ n, box, phone, pick }: { n: MapNode; box: { x: number; y: number
   }
   return (
     <button class={`rg-n ${n.boss ? 'kit-boss ' : ''}${state}`} style={{ ...place, backgroundImage: n.planeImage ? `url("${artUrl(n.planeImage)}")` : undefined }} data-node={n.index}
-      data-image={n.planeImage} disabled={off} onClick={pick}>
+      data-image={n.planeImage} data-sideways={n.planeImage ? '' : undefined} disabled={off} onClick={pick}>
       <i class="opp" style={n.art ? { backgroundImage: `url("${artUrl(n.art)}")` } : undefined} />
       <span class="mk"><Marks n={n} /></span>
       {ok}
@@ -222,6 +222,7 @@ function Trail({ map, phone, whole, covered, locked, select, open }: {
   return (
     <div class={phone ? 'rg-trail rg-vtrail' : 'rg-trail'} style={phone ? { padding: '8px 12px' } : undefined} ref={scroller}>
       <div class="rg-trail-in" style={{ width: `${fit?.width ?? plan.width}px`, height: `${fit?.height ?? plan.height}px`, margin: '0 auto' }}>
+        <Fades />
         {ray && <i class="kit-rays" aria-hidden="true" style={{ left: `${ray.x - ray.r}px`, top: `${ray.y - ray.r}px`, width: `${2 * ray.r}px`, height: `${2 * ray.r}px`, '--pw': `${ray.w}px`, '--ph': `${ray.h}px` }} />}
         <svg width={fit?.svgWidth ?? plan.width} height={fit?.height ?? plan.height} viewBox={`0 0 ${plan.width} ${plan.height}`} style={fit ? { left: `${fit.left}px` } : undefined}>
           {map.links.map((l, k) => {
@@ -232,6 +233,27 @@ function Trail({ map, phone, whole, covered, locked, select, open }: {
         {map.rows.map((row, r) => row.map((n, i) => <Node key={n.index} n={n} box={boxes[r][i]} phone={phone} pick={() => tap(n)} />))}
       </div>
     </div>
+  );
+}
+
+// The map paper's colour, 228/210/170, and how much of a faded node shows over it
+const PAPER = [228 / 255, 210 / 255, 170 / 255];
+const FADES = [['rg-fade70', 0.7], ['rg-fade62', 0.62], ['rg-fade32', 0.32]] as const;
+
+/** Filters that fade a node toward the paper while keeping it opaque, so the trail under it stays hidden, as opacity would show it. */
+function Fades() {
+  return (
+    <svg class="rg-fades" width="0" height="0" aria-hidden="true">
+      {FADES.map(([id, a]) => (
+        <filter key={id} id={id} color-interpolation-filters="sRGB">
+          <feComponentTransfer>
+            <feFuncR type="linear" slope={a} intercept={(1 - a) * PAPER[0]} />
+            <feFuncG type="linear" slope={a} intercept={(1 - a) * PAPER[1]} />
+            <feFuncB type="linear" slope={a} intercept={(1 - a) * PAPER[2]} />
+          </feComponentTransfer>
+        </filter>
+      ))}
+    </svg>
   );
 }
 
@@ -278,7 +300,7 @@ export function MapPage({ model, actions, covered }: { model: Model; actions: Ac
     <div class="rg-vmap">
       <div class={whole ? 'rg-vstage fit' : 'rg-vstage'} style={whole ? undefined : { '--z': 0 }} ref={box}>
         <Trail map={map} phone={false} whole={whole} covered={covered} locked={locked} select={select} />
-        <button class="rg-vbtn" onClick={toggle}>{t(whole ? 'lblWebRogueBackToPlace' : 'lblWebRogueWholeMap')}</button>
+        <button class="rg-vbtn" aria-pressed={whole} title={t(whole ? 'lblWebRogueBackToPlace' : 'lblWebRogueWholeMap')} aria-label={t(whole ? 'lblWebRogueBackToPlace' : 'lblWebRogueWholeMap')} onClick={toggle} />
       </div>
       <MapSide model={model} actions={actions} />
     </div>

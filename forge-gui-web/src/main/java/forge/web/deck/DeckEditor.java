@@ -597,7 +597,7 @@ public final class DeckEditor {
                 limited(), landSet, limited() || collection == null ? LandSets.ALL
                         : collection.landSets().apply(deck).stream().map(e -> new LandSet(e.getCode(), e.getName())).toList(),
                 collection == null ? null : collection.owner(), collection != null && collection.mainOnly(), sections(legality),
-                rules == null ? null : rules.counter(), rules != null && rules.spent(), rules == null);
+                rules == null ? null : rules.counter(), rules != null && rules.spent(), rules == null, rules == null);
     }
 
     /** Every section beyond the main deck that a constructed deck can have, as desktop's editor offers them. A pool, a collection or a planar deck has none. */

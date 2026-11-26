@@ -20,7 +20,8 @@ export type Owed = Record<string, number>;
 export interface RevealProps { reward: Reward; onOwed: (owed: Owed) => void; done: () => void }
 
 /** The attributes of something a tooltip explains: the term's name and the tooltip's text. */
-const explained = (name: string, text?: string | null) => (text ? { 'data-term': name, 'data-tip': text, tabIndex: 0 } : {});
+/** The marks that give an element a term tooltip, when it has a text. */
+export const explained = (name: string, text?: string | null) => (text ? { 'data-term': name, 'data-tip': text, tabIndex: 0 } : {});
 
 /** drawGlyph draws the glyph in place of the skin's icon, for a mode with icons of its own. counted makes a change count up or down (useTally). */
 export function Purse({ icon, n, label, text, glyph, term, drawGlyph, counted }: {

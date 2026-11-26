@@ -153,14 +153,14 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
           <button class="primary" onClick={() => actions.closeEditor()}>{t('lblDone')}</button>
         </div>
       </PageHeader>
-      <div class="editor-tabs" role="group">
+      {state.catalogue && <div class="editor-tabs" role="group">
         <button aria-pressed={half === 'find'} onClick={() => setHalf('find')}>{t(planar ? 'lblWebPlanarFind' : 'lblWebEditorFindCards')}</button>
         <button aria-pressed={half === 'deck'} onClick={() => setHalf('deck')}>
           {t(planar ? 'lblPlanarDeck' : 'lblDeck')} <span class={state.verdict ? 'n no' : 'n'}>{state.verdict ? '! ' : ''}{planar ? planarCount(state) : state.stats.main}</span>
         </button>
-      </div>
-      <div class={`editor-shell${half === 'deck' ? ' deck' : ''}${planar ? ' planar' : ''}`}>
-        <Catalogue model={model} actions={actions} state={state} handlers={planar ? noHandlers : handlers} adding={adding} stopAdding={() => setAddingTo(null)} />
+      </div>}
+      <div class={`editor-shell${half === 'deck' || !state.catalogue ? ' deck' : ''}${planar ? ' planar' : ''}${state.catalogue ? '' : ' alone'}`}>
+        {state.catalogue && <Catalogue model={model} actions={actions} state={state} handlers={planar ? noHandlers : handlers} adding={adding} stopAdding={() => setAddingTo(null)} />}
         {planar ? <PlanarDeck actions={actions} state={state} /> : <DeckHalf actions={actions} state={state} handlers={handlers} check={check} adding={adding} addTo={section => {
           setAddingTo(section);
           if (section) setHalf('find');

@@ -328,3 +328,5 @@ button.land-set[aria-expanded="true"] { border-color: var(--accent-2); box-shado
 .planar-line b { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .planar-line button { width: 28px; height: 28px; padding: 0; border-radius: 7px; font-size: 16px; line-height: 1; }
 .planar-foot { padding: 11px 14px; border-top: 1px solid var(--line); display: grid; }
+/* A deck with nothing to find, such as a Rogue run's, which adds only basic lands: the deck takes the whole width */
+.editor-shell.alone { grid-template-columns: minmax(0, 1fr); }

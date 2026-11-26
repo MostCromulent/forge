@@ -2,7 +2,7 @@
 // and a sheet that opens from the bar
 
 import { useState } from 'preact/hooks';
-import { SidePanel } from '../campaign/campaign';
+import { SidePanel, explained } from '../campaign/campaign';
 import { artUrl, hideBroken, imageUrl } from '../images';
 import { changeUi } from '../ui';
 import { t } from '../text';
@@ -66,10 +66,10 @@ function Commander({ model, actions, zoom }: { model: Model; actions: Actions; z
     <div class="kit-cmd">
       <div class="kc-top">
         <button class="kc-face" aria-label={run.commander} data-image={run.image} style={{ backgroundImage: `url("${artUrl(run.image)}")` }} onClick={() => zoom(run.image)} />
-        <div class="kc-id"><b>{bar.name}</b>{bar.line && <span>{bar.line}</span>}</div>
+        <div class="kc-id"><b>{bar.name}</b>{bar.line && <span {...explained(bar.line, model.rogueMap!.bar.tip)}>{bar.line}</span>}</div>
       </div>
       <div class="kc-stats">
-        {bar.balances.map(b => <span key={b.icon} class="kc-stat" title={b.label}>{b.glyph && barGlyph(b.glyph, 32)}<b>{b.text ?? b.amount}</b></span>)}
+        {bar.balances.map(b => <span key={b.icon} class="kc-stat" title={b.term ? undefined : b.label} {...explained(b.label, b.term)}>{b.glyph && barGlyph(b.glyph, 32)}<b>{b.text ?? b.amount}</b></span>)}
       </div>
       <div class="kc-deck">
         <span>{`${t('lblDeck')}: ${t('lblWebNCards', run.cards)}`}</span>
@@ -109,7 +109,7 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
   return (
     <SidePanel kicker={<span {...explains(map.terms.PLANEBOUND)}>{kind(map, n)}</span>} title={n.name} art={n.art} zoom={zoom} setZoom={setZoom} foot={foot} top={top}>
       <div class="camp-chips"><Chips map={map} n={n} cls="camp-chip" /></div>
-      <div class="rg-sec"><h4>{t('lblPlane')}</h4><span class="rg-plane">{n.planeImage && <img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} />}</span></div>
+      <div class="rg-sec"><h4>{t('lblPlane')}</h4><span class="rg-plane" data-sideways="">{n.planeImage && <img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} />}</span></div>
       <div class="rg-sec">{paragraphs(n.text).map((p, i) => <p key={i}>{p}</p>)}</div>
       {reward}
     </SidePanel>
@@ -150,7 +150,7 @@ export function PlaneSheet({ model, actions }: { model: Model; actions: Actions 
           <div class="camp-kicker">{kind(map, n)}</div>
           <h3>{n.faceDown ? '???' : n.name}</h3>
           <div class="ln"><Chips map={map} n={n} cls="" /></div>
-          {n.planeImage && <span class="rg-plane"><img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} /></span>}
+          {n.planeImage && <span class="rg-plane" data-sideways=""><img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} /></span>}
           {n.faceDown && map.hidden && <p>{map.hidden}</p>}
           {paragraphs(n.text).map((p, i) => <p key={i}>{p}</p>)}
           <div class="camp-kicker">{t('lblWebRogueReward')}</div>
