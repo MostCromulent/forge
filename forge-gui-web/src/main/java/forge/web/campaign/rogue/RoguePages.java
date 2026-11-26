@@ -174,8 +174,17 @@ public final class RoguePages {
             modifications.add(new Modification(m.name(), m.getDisplayName(), m.getRawDescription(), m.getGroup().getDisplayName(),
                     m.isGeneratedCommander(), m == CustomRunModification.EXPERIMENT));
         }
+        final List<List<Trait>> starting = new ArrayList<>();
+        for (int level = 0; level <= DescensionLevel.getMaxLevel(); level++) {
+            starting.add(startingTraits(new RogueStart(null, false, Set.of(), level), progress));
+        }
         return new RogueRoster(commanders(progress, false), commanders(progress, true), progress.isCustomRunsUnlocked(),
-                progress.isDescensionModeUnlocked(), RogueStart.descensionLockText(progress, null, 0, true), levels, modifications);
+                progress.isDescensionModeUnlocked(), RogueStart.descensionLockText(progress, null, 0, true), levels, modifications, starting);
+    }
+
+    /** The traits a run would start with, as the run's traits page draws them, each at the rank the run would take it at. */
+    static List<Trait> startingTraits(final RogueStart start, final RogueMetaProgress progress) {
+        return start.startingTraits(progress).stream().map(e -> trait(e, null, RogueStart.startingTraitText(e, progress))).toList();
     }
 
     private static List<RogueCommander> commanders(final RogueMetaProgress progress, final boolean experimental) {
@@ -185,7 +194,7 @@ public final class RoguePages {
             if (!deck.isUnlocked()) {
                 final String unlock = deck.getUnlockDescription();
                 commanders.add(new RogueCommander(deck.getName(), null, null, "", "", List.of(), text.getMessage("lblRogueLocked"), 0, 0, 0, 0, -1,
-                        null, null, unlock == null || unlock.isEmpty() ? text.getMessage("lblRogueLocked") : unlock));
+                        null, null, unlock == null || unlock.isEmpty() ? text.getMessage("lblRogueLocked") : unlock, deck.getSleeveIndex()));
                 continue;
             }
             final String name = deck.getCommanderCardName();
@@ -205,7 +214,7 @@ public final class RoguePages {
             commanders.add(new RogueCommander(deck.getName(), name, card.getImageKey(false), CardCatalog.letters(card.getRules().getColorIdentity()),
                     deck.getDescription() == null ? "" : deck.getDescription(), themes,
                     runs == 0 ? text.getMessage("lblWebRogueNotPlayed") : record(runs, wins),
-                    runs, wins, progress.getMaxDescensionWon(name), seen, startable, lock, next, null));
+                    runs, wins, progress.getMaxDescensionWon(name), seen, startable, lock, next, null, null));
         }
         return commanders;
     }
@@ -402,7 +411,7 @@ public final class RoguePages {
                 final CodexState state = CodexHelper.state(progress, effect);
                 states.add(state);
                 items.add(state == CodexState.UNKNOWN ? new CodexItem("unknown", null, null, null)
-                        : new CodexItem(state.name().toLowerCase(Locale.ROOT), null, null, trait(effect, null)));
+                        : new CodexItem(state.name().toLowerCase(Locale.ROOT), null, effectImage(effect), trait(effect, null)));
             }
             groups.add(new CodexGroup(category.label(), items));
         }
@@ -410,16 +419,29 @@ public final class RoguePages {
                 new CodexFact("acquired", CodexHelper.countAcquired(states) + " / " + states.size())), groups, List.of());
     }
 
-    /** The tutorials already shown, then the story, each group headed. The art is that of the card named as the entry's teller, where there is one. */
+    private static String effectImage(final RogueEffect effect) {
+        final PaperCard card = effect.getEffectCard();
+        return card == null ? null : card.getImageKey(false);
+    }
+
+    /**
+     * The tutorials already shown, then the story, each group headed. An empty group has one row with no id that says so.
+     * The art is that of the card named as the entry's teller, where there is one.
+     */
     private static RogueCodexPage journal(final RogueMetaProgress progress, final String id, final String art) {
         final Localizer text = Localizer.getInstance();
         final List<JournalEntry> journal = CodexHelper.journal(progress);
         final List<CodexRow> rows = new ArrayList<>();
-        for (int i = 0; i < journal.size(); i++) {
-            final JournalEntry entry = journal.get(i);
-            final boolean starts = i == 0 || journal.get(i - 1).story() != entry.story();
-            rows.add(new CodexRow(entry.id(), entry.title(), null, entry.story() ? entry.speaker().name : null,
-                    starts ? text.getMessage(entry.story() ? "lblRogueJournalStory" : "lblRogueJournalTutorials") : null));
+        for (final boolean story : new boolean[] {false, true}) {
+            final List<JournalEntry> group = journal.stream().filter(e -> e.story() == story).toList();
+            final String heading = text.getMessage(story ? "lblRogueJournalStory" : "lblRogueJournalTutorials");
+            if (group.isEmpty()) {
+                rows.add(new CodexRow(null, text.getMessage(story ? "lblRogueJournalNoStory" : "lblRogueJournalNoTutorials"), null, null, heading));
+            }
+            for (int i = 0; i < group.size(); i++) {
+                final JournalEntry entry = group.get(i);
+                rows.add(new CodexRow(entry.id(), entry.title(), null, story ? entry.speaker().name : null, i == 0 ? heading : null));
+            }
         }
         final JournalEntry chosen = journal.stream().filter(e -> e.id().equals(id)).findFirst().orElse(journal.isEmpty() ? null : journal.get(0));
         if (chosen == null) {
@@ -647,10 +669,15 @@ public final class RoguePages {
      * The Codex has no run, and passes null, which only Aetherworks and Endless Mode need.
      */
     static Trait trait(final RogueEffect effect, final RogueRun run) {
+        return trait(effect, run, effect.getActiveDescription(run));
+    }
+
+    /** The trait with description as its text. */
+    private static Trait trait(final RogueEffect effect, final RogueRun run, final String description) {
         final Localizer text = Localizer.getInstance();
         final String card = effect.getEffectCardDisplayName();
         final String name = card.isEmpty() ? effect.getDisplayName() : card;
-        final List<Part> words = WebRogueDecisions.parts(effect.getActiveDescription(run).replace("\\n", "\n"), effect.getEffectCardReference());
+        final List<Part> words = WebRogueDecisions.parts(description.replace("\\n", "\n"), effect.getEffectCardReference());
         final boolean loot = effect.getEffectType() == RogueEffect.EffectType.ONESHOT;
         final Source source = source(effect);
         return switch (source) {

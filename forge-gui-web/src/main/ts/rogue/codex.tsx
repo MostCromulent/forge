@@ -22,6 +22,8 @@ const FACTS: Record<string, TextKey> = {
   runs: 'lblWebRogueRuns', wins: 'lblWins', descension: 'lblWebRogueMaxDescension', endless: 'lblWebRogueMaxEndless', slain: 'lblWebRogueSlain', defeats: 'lblWebRogueDefeatedBy',
 };
 const background = (key: string | null | undefined) => (key ? { backgroundImage: `url("${artUrl(key)}")` } : undefined);
+/** What a list tab shows in place of an entry when it has none to show, as mobile words it. */
+const NO_ENTRY: Partial<Record<CodexTab, TextKey>> = { commanders: 'lblRogueNoUnlockedCommanders', planebounds: 'lblRogueEncounterAPlaneboundToUnlockItsDeck' };
 
 /** A phone names the cards seen and acquired shortly, and leaves out the highest levels won. */
 function Facts({ facts, tab }: { facts: CodexFact[]; tab: CodexTab }) {
@@ -35,7 +37,7 @@ function Facts({ facts, tab }: { facts: CodexFact[]; tab: CodexTab }) {
   return <div class="rg-facts">{shown.map(f => <div key={f.kind}><b>{f.value}</b><span>{label(f.kind)}</span></div>)}</div>;
 }
 
-/** An unknown card is a back, a seen one grey, an acquired one in full colour. */
+/** An unknown card is a back, a seen one grey, an acquired one in full colour. A known trait previews its effect card. */
 function Dex({ item }: { item: CodexItem }) {
   if (item.state === 'unknown') return <div><div class="unk" /></div>;
   return <div class={item.state === 'seen' ? 'seen' : ''}><img onError={hideBroken} alt="" data-image={item.image ?? undefined} src={imageUrl(item.image!)} /></div>;
@@ -46,7 +48,7 @@ function TraitItem({ item }: { item: CodexItem }) {
     if (item.state === 'unknown') return <div class="rg-prow unk" />;
     const seen = item.state === 'seen';
     return (
-      <div class={seen ? 'rg-prow seen' : 'rg-prow'}>
+      <div class={seen ? 'rg-prow seen' : 'rg-prow'} data-image={item.image ?? undefined}>
         <Seal trait={item.trait!} />
         <span><b>{item.trait!.name}</b><em><Words parts={item.trait!.text} /></em></span>
         {seen && <small>{t('lblWebRogueSeen')}</small>}
@@ -54,7 +56,7 @@ function TraitItem({ item }: { item: CodexItem }) {
     );
   }
   if (item.state === 'unknown') return <div><div class="unk" /></div>;
-  return <div class={item.state === 'seen' ? 'seen' : ''}><TraitCard trait={item.trait!} small /></div>;
+  return <div class={item.state === 'seen' ? 'seen' : ''} data-image={item.image ?? undefined}><TraitCard trait={item.trait!} small /></div>;
 }
 
 /** The entry shown: a commander's or planebound's cards, or a journal entry's text. back returns a phone to the list. */
@@ -112,7 +114,8 @@ export function CodexPage({ page, tab, id, setTab, choose, reset }: {
     <div class="rg-list">
       {shown.rows.map((r, i) => <Fragment key={i}>
         {r.group && <div class="rg-ls-h">{r.group}</div>}
-        {tab === 'journal' ? <button class="line" aria-pressed={!phone && r.id === shown.id} onClick={() => choose(r.id ?? null)}><b>{r.name}</b>{r.line && <span>{r.line}</span>}</button>
+        {tab === 'journal' ? r.id ? <button class="line" aria-pressed={!phone && r.id === shown.id} onClick={() => choose(r.id ?? null)}><b>{r.name}</b>{r.line && <span>{r.line}</span>}</button>
+          : <p class="rg-ls-none">{r.name}</p>
           : (
             <button class={r.id ? '' : 'q'} aria-pressed={!phone && !!r.id && r.id === shown.id} onClick={() => { if (r.id) choose(r.id); }}>
               {r.id ? <i style={background(r.art)} /> : <i>?</i>}<b>{r.name}</b><span>{r.line}</span>
@@ -142,7 +145,9 @@ export function CodexPage({ page, tab, id, setTab, choose, reset }: {
     );
     body = phone ? traits : <div class="rg-codex full">{traits}</div>;
   } else if (shown) {
-    const entry = shown.entry && <Entry entry={shown.entry} tab={tab} back={() => choose(null)} />;
+    const none = NO_ENTRY[tab];
+    const entry = shown.entry ? <Entry entry={shown.entry} tab={tab} back={() => choose(null)} />
+      : none && <div class="rg-scroll"><p class="rg-pnote">{t(none)}</p></div>;
     body = !phone ? <div class="rg-codex">{rows}{entry}</div> : id ? entry : rows;
   }
   return (

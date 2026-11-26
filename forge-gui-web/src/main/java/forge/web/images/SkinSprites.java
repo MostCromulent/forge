@@ -83,8 +83,11 @@ public final class SkinSprites implements IHasForgeLog {
     }
 
     /** The Adventure sheets Rogue Commander's look is cut from, as mobile's Rogue screens draw them. */
-    private static final Map<String, String> ADVENTURE_SHEETS = Map.of(
-            "skin", "skin/ui_skin.png", "items", "sprites/items.png", "buildings", "maps/tileset/buildings.png", "ground", "ui/title_bg.png", "portals", "sprites/portals.png");
+    private static final Map<String, String> ADVENTURE_SHEETS = Map.ofEntries(Map.entry("skin", "skin/ui_skin.png"), Map.entry("items", "sprites/items.png"),
+            Map.entry("buildings", "maps/tileset/buildings.png"), Map.entry("ground", "ui/title_bg.png"), Map.entry("portals", "sprites/portals.png"),
+            Map.entry("ground_portrait", "ui/title_bg_portrait.png"), Map.entry("shardalley", "ui/shardalley.png"),
+            Map.entry("shardalley_portrait", "ui/shardalley_portrait.png"), Map.entry("tavern", "ui/tavern.png"), Map.entry("tavern_portrait", "ui/tavern_portrait.png"),
+            Map.entry("spellsmith", "ui/spellsmith.png"), Map.entry("spellsmith_portrait", "ui/spellsmith_portrait.png"));
 
     /** PNG bytes of a rectangle x,y,w,h of an Adventure sheet, or the whole sheet when rect is null. Null for an unknown sheet or a rectangle outside it. */
     public static byte[] adventurePng(final String sheet, final String rect) {

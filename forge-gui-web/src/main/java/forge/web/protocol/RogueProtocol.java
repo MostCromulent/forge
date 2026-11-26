@@ -32,7 +32,7 @@ public final class RogueProtocol {
     }
 
     /**
-     * A dev mode tool, refused when dev mode is off: unlockAll and maxAether switch, npcProgress asks each NPC's level, echoes and sparks add 10,
+     * A dev mode tool, refused when dev mode is off: unlockAll and maxAether switch, npcProgress asks every NPC's level on one page, echoes and sparks add 10,
      * codex unlocks the whole Codex, and nextNode and winRun move the open run on.
      */
     @Command("rogueDev")
@@ -60,11 +60,12 @@ public final class RogueProtocol {
     /**
      * What a new run can start with. commanders and experimental are the official roster and the one Experiment shows, in the shared order.
      * custom and descension say whether Custom Run and Descension Mode are unlocked. customLock says why a custom run cannot have Descension,
-     * and is null when it can. levels are the Descension levels from level 1.
+     * and is null when it can. levels are the Descension levels from level 1. starting holds the traits a run outside Custom Run starts with,
+     * by its Descension level from 0.
      */
     @Message("rogueRoster")
     public record RogueRoster(List<RogueCommander> commanders, List<RogueCommander> experimental, boolean custom, boolean descension,
-            @Nullable String customLock, List<DescensionStep> levels, List<Modification> modifications) {
+            @Nullable String customLock, List<DescensionStep> levels, List<Modification> modifications, List<List<Trait>> starting) {
     }
 
     /**
@@ -72,9 +73,11 @@ public final class RogueProtocol {
      * record is the line above the name. seen counts the reward pool's cards seen, as the Codex does.
      * startable is the highest Descension level a run outside Custom Run may start with, 0 for none, and -1 when no run may start with it.
      * lock says why it cannot have Descension, and is null when it can. next says how the level after startable is unlocked, and is null with none.
+     * sleeve is the card back a locked commander is drawn with, and is null for an unlocked one.
      */
     public record RogueCommander(String deck, @Nullable String name, @Nullable String image, String colors, String text, List<String> themes, String record,
-            int runs, int wins, int maxDescension, int seen, int startable, @Nullable String lock, @Nullable String next, @Nullable String unlock) {
+            int runs, int wins, int maxDescension, int seen, int startable, @Nullable String lock, @Nullable String next, @Nullable String unlock,
+            @Nullable Integer sleeve) {
     }
 
     public record DescensionStep(String name, String text) {
@@ -100,9 +103,9 @@ public final class RogueProtocol {
     public record RogueChoose(String deck, List<String> modifications, int descension, @Nullable String toggle) {
     }
 
-    /** The custom run asked about, with modifications as they are after the toggle. forced are those that cannot be changed. */
+    /** The custom run asked about, with modifications as they are after the toggle. forced are those that cannot be changed. traits are those it starts with. */
     @Message("rogueChoice")
-    public record RogueChoice(String deck, List<String> modifications, int descension, List<String> forced, boolean ready) {
+    public record RogueChoice(String deck, List<String> modifications, int descension, List<String> forced, boolean ready, List<Trait> traits) {
     }
 
     /**
@@ -241,7 +244,7 @@ public final class RogueProtocol {
     public record CodexGroup(String title, List<CodexItem> items) {
     }
 
-    /** state is unknown, seen or acquired. An unknown card or trait has no name, image or trait. */
+    /** state is unknown, seen or acquired. An unknown card or trait has no name, image or trait. A trait's image is its effect card's picture. */
     public record CodexItem(String state, @Nullable String name, @Nullable String image, @Nullable Trait trait) {
     }
 
@@ -313,7 +316,15 @@ public final class RogueProtocol {
      */
     @Message("rogueQuestion")
     public record RogueQuestion(int id, @Nullable AskChoice choice, @Nullable AskCards cards, @Nullable AskCommander commander,
-            @Nullable AskShop shop, @Nullable TellOmen omen, @Nullable Tell tell) {
+            @Nullable AskShop shop, @Nullable TellOmen omen, @Nullable Tell tell, @Nullable AskNpcs npcs) {
+    }
+
+    /** The dev mode NPC levels, all on one page. Answered with the index of each NPC's level, in order, or null to cancel. */
+    public record AskNpcs(String title, String text, List<NpcLevels> npcs) {
+    }
+
+    /** levels are the labels of the levels to choose from, the first being the level the NPC has. */
+    public record NpcLevels(String name, int avatar, List<String> levels) {
     }
 
     /** A piece of text. kind is "text", "card" or "term"; image is a card's picture, term a keyword's name and tip what the keyword means. */

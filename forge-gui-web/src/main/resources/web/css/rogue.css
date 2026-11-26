@@ -773,4 +773,53 @@ html[data-form="portrait"] .rg-spoil p { font-size: 12.5px; }
 .rg-work .rk { display: inline-block; transform-origin: 0 50%; }
 .rg-flare { position: absolute; border-radius: 50%; background: rgb(255, 245, 191); pointer-events: none; opacity: 0; }
 .rg-glow { position: absolute; z-index: 3; box-sizing: border-box; border: solid rgb(255, 214, 94); pointer-events: none; opacity: 0; }
+/* New Run's panel: the commander or the run's starting traits, by tab; the chosen tab is darker and underlined, as on mobile */
+.rgm-tabs { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 14px; }
+.rgm-tabs button { background: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 6px 4px 5px; min-height: 0; font-weight: 600; font-size: 13.5px; color: var(--muted); }
+.rgm-tabs button[aria-selected="true"] { color: var(--text); border-bottom: 3px solid var(--accent); padding-bottom: 3px; font-weight: 700; }
+.rgt-tiles.rgm-traits { grid-template-columns: minmax(0, 1fr); margin-top: 0; }
+.rgm-lvtext { display: grid; gap: 6px; margin-top: 10px; }
+.rgm-lvtext p { margin: 0; font-size: 13px; line-height: 1.4; }
+/* A locked commander's card back, with a lock on a paper disc */
+.rgc-c.lock.sl { background-position: center; background-size: cover; }
+.rgc-c.sl > .rg-ic { box-sizing: content-box; width: 40px; height: 40px; padding: 10px; border-radius: 50%; background: #f1e7cf; color: #2a1d10; box-shadow: 0 0 0 3px #2a1d10, 0 6px 14px rgba(0, 0, 0, .6); }
+/* Phone Custom Run: the limitations beside the commander's card */
+.rg-phead { display: flex; gap: 12px; align-items: flex-start; }
+.rg-phead > .rg-pnote { flex: 1; }
+.rg-phead > img { width: 72px; flex: none; border-radius: 4px; aspect-ratio: 488 / 680; box-shadow: 0 4px 12px rgba(0, 0, 0, .6); }
+/* The next Aether Upgrade, or why there is none yet, heading a phone's Aetherworks */
+.rg-upcard { display: grid; gap: 4px; margin: 0; padding: 8px 10px; background: #f1e7cf; color: #2a1d10; border: 1px solid rgba(42, 29, 16, .5); font-size: 13px; line-height: 1.4; }
+.rg-upcard b { color: #7f520e; font-size: 15px; }
+.rg-upcard p { margin: 0; }
+.rg-upcard .f { display: flex; align-items: center; gap: 12px; }
+.rg-upcard .rg-price { color: #2a1d10; }
+.rg-upcard .sp { flex: 1; }
+html[data-form="portrait"] .rg-sheetbar .top .t p { margin: 0; font-size: 12px; line-height: 1.35; }
+html[data-form="portrait"] .rg-sheetbar .top .t p b { font: inherit; font-weight: 700; color: inherit; }
+/* A journal group with no entries */
+.rg-ls-none { margin: 0; padding: 4px 14px 8px; font-size: 13px; color: var(--muted); }
+/* The dev tool's NPC levels */
+.rg-npcs .rows { display: grid; gap: 8px; max-height: 55vh; overflow-y: auto; text-align: left; }
+.rg-npcs label { display: grid; grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: center; }
+.rg-npcs .pic { width: 40px; height: 40px; background: center / cover; image-rendering: pixelated; }
+/* A pixel arrow at the foot of a scroll pane while more lies below, as mobile's RogueScrollPane draws it */
+.rg-scroll::after { content: ''; position: sticky; bottom: 8px; justify-self: center; width: 20px; height: 10px; margin-top: -26px; visibility: hidden; pointer-events: none;
+  background: #f1e7cf; filter: drop-shadow(0 0 1px #000) drop-shadow(0 1px 0 #000);
+  clip-path: polygon(0 0, 20px 0, 20px 2px, 18px 2px, 18px 4px, 16px 4px, 16px 6px, 14px 6px, 14px 8px, 12px 8px, 12px 10px, 8px 10px, 8px 8px, 6px 8px, 6px 6px, 4px 6px, 4px 4px, 2px 4px, 2px 2px, 0 2px); }
+html[data-form="portrait"] .rg-scroll::after { margin-top: -22px; }
+.rg-scroll.rg-more::after { visibility: visible; }
+/* Each hub page stands on its Adventure scene, as mobile's RogueScreen.background picks it. The web sets text on the scene, not on paper, so it dims more */
+html.kit .rgl { background: linear-gradient(rgba(0, 0, 0, .05), rgba(0, 0, 0, .05)), var(--kit-ground) center / cover no-repeat, #0e0b08 !important; }
+html.kit :is(.rg-aether, .rg-start, .rg-cx, .rg-hpage) > .rg-haze, html.kit .rgt > .haze { inset: 0; filter: none !important;
+  background: linear-gradient(rgba(0, 0, 0, var(--dim)), rgba(0, 0, 0, var(--dim))), var(--scene) center / cover no-repeat, #0e0b08 !important; }
+html.kit .rg-start > .rg-haze { --scene: var(--kit-ground); --dim: .55; }
+html.kit .rg-aether > .rg-haze { --scene: url("../adventure?s=shardalley"); --dim: .55; }
+html.kit .rg-hpage > .rg-haze { --scene: url("../adventure?s=tavern"); --dim: .6; }
+html.kit .rgt > .haze { --scene: url("../adventure?s=tavern"); --dim: .55; }
+html.kit .rg-cx > .rg-haze { --scene: url("../adventure?s=spellsmith"); --dim: .55; }
+html.kit[data-form="portrait"] .rgl { background: linear-gradient(rgba(0, 0, 0, .05), rgba(0, 0, 0, .05)), url("../adventure?s=ground_portrait") center / cover no-repeat, #0e0b08 !important; }
+html.kit[data-form="portrait"] .rg-start > .rg-haze { --scene: url("../adventure?s=ground_portrait"); }
+html.kit[data-form="portrait"] .rg-aether > .rg-haze { --scene: url("../adventure?s=shardalley_portrait"); }
+html.kit[data-form="portrait"] :is(.rg-hpage > .rg-haze, .rgt > .haze) { --scene: url("../adventure?s=tavern_portrait"); }
+html.kit[data-form="portrait"] .rg-cx > .rg-haze { --scene: url("../adventure?s=spellsmith_portrait"); }
 html[data-motion="reduced"] :is(.rg-dialog, .rg-dialog > .dialog, .rg-psheet, .rg-psheet > .box, .rg-card.on > img) { animation: none; }

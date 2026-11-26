@@ -38,7 +38,7 @@ export function Landing({ home, run, go, deck, abandon, fresh }: {
               )}
               <div class="go">
                 <button class="primary" onClick={go}>{t('lblRogueContinueRun')}</button>
-                <button onClick={deck}>{t('lblDeck')}</button>
+                <button onClick={deck}>{t('lblViewDeck')}</button>
                 <button onClick={abandon}>{t('lblRogueAbandonRun')}</button>
               </div>
             </div>

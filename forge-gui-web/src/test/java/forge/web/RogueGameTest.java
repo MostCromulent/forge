@@ -290,7 +290,7 @@ public class RogueGameTest extends WebHubTest {
     // Fails if the start page's hello reads the saves, which is slow and may fail
     @Test(timeOut = 120_000)
     public void helloReadsNoFiles() throws Exception {
-        openRun(NodeChest.class);
+        final TestBrowser host = openRun(NodeChest.class);
         final Path dir = Path.of(RogueIO.ROGUE_SAVE_DIR);
         final Path away = dir.resolveSibling(dir.getFileName() + "-away");
         Files.move(dir, away);
@@ -298,7 +298,8 @@ public class RogueGameTest extends WebHubTest {
             Files.writeString(dir, "not a folder");
             Assert.assertEquals(game.current(), RogueGame.RUN);
             final TestBrowser again = connect("host");
-            Assert.assertEquals(str(again.hello.getAsJsonObject("campaignResume"), RogueGame.MODE), RogueGame.RUN);
+            Assert.assertEquals(str(again.hello.getAsJsonObject("campaignResume"), RogueGame.MODE), game.resumeText());
+            Assert.assertTrue(game.resumeText().startsWith(str(host.last("rogueHome").getAsJsonObject("run"), "commander")));
         } finally {
             Files.delete(dir);
             Files.move(away, dir);

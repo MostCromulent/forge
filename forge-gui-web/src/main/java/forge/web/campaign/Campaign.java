@@ -92,6 +92,11 @@ public interface Campaign {
     /** The save played last, or null. */
     String current();
 
+    /** What the start page says of the save played last, or null with none. */
+    default String resumeText() {
+        return current();
+    }
+
     /** Asked before the player leaves this mode or its open save, and before this mode opens another save or its home. save is null on the pages shown with no save open. */
     default boolean mayLeave(final String save) {
         return true;

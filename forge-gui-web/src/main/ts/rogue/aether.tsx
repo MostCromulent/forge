@@ -52,18 +52,22 @@ function Raise({ work, cls, shard, raise }: { work: AetherWork; cls: string; sha
   return <button class={cls} disabled={!work.afford} onClick={built(raise)}>{`${t(work.rank ? 'lblRogueUpgradeLabel' : 'lblWebRogueBuildLabel')} `}{echo(shard)}{work.cost}</button>;
 }
 
-/** The menu rows a phone has in place of the wide page's reset and upgrade buttons. */
-export function aetherMenu(aether: RogueAether, close: () => void, expand: () => void, reset: () => void) {
-  const upgrade = aether.upgrade;
-  return <>
-    {upgrade && (
-      <button role="menuitem" disabled={!upgrade.afford} onClick={() => { close(); built(expand)(); }}>
-        {t('lblWebRogueBuyUpgrade', upgrade.name, upgrade.sparks, upgrade.echoes)}
-      </button>
-    )}
-    <button role="menuitem" onClick={() => { close(); reset(); }}>{t('lblRogueResetAetherworks')}</button>
-  </>;
+/** The menu row a phone has in place of the wide page's reset button. */
+export function aetherMenu(close: () => void, reset: () => void) {
+  return <button role="menuitem" onClick={() => { close(); reset(); }}>{t('lblRogueResetAetherworks')}</button>;
 }
+
+/** The Aetherworks later upgrades unlock, locked. */
+const lockedGroups = (aether: RogueAether) => aether.locked.map(group => (
+  <div key={group.title} class="rg-group">
+    <h4>{group.title}</h4>
+    <div class="rg-works" style={{ opacity: 0.6 }}>
+      {group.works.map(name => (
+        <div key={name} class="rg-work unbuilt" style={{ minHeight: 0 }}><span class="h"><Icon d={ROGUE_ICONS.lock} cls="rg-ic" /><b>{name}</b></span></div>
+      ))}
+    </div>
+  </div>
+));
 
 /** raise builds or ranks a work, toggle switches it, expand buys the next Aether Upgrade and reset asks before refunding every work. */
 export function AetherPage({ aether, raise, toggle, expand, reset }: {
@@ -95,18 +99,31 @@ export function AetherPage({ aether, raise, toggle, expand, reset }: {
     </button>
   );
   const works = <div class="rg-works">{aether.works.map(w => <Work key={w.id} work={w} chosen={w === work} choose={() => choose(w.id)} />)}</div>;
+  const upgrade = aether.upgrade;
   if (phone) {
+    // As on mobile, the next Aether Upgrade, or before Descension why there is none, heads the list
     return (
       <div class="rg-aether" ref={page}>
         <span class="rg-haze" style={{ backgroundImage: aether.art ? `url("${artUrl(aether.art)}")` : undefined }} />
         <div class="rg-scroll">
           <span class="rg-energy">{t('lblWebRogueAetherEnergy')}{pips}{`${aether.used} / ${aether.slots}`}</span>
+          {upgrade ? (
+            <div class="rg-upcard">
+              <b>{upgrade.name}</b>
+              <p>{upgrade.text}</p>
+              <div class="f">
+                <span class="rg-price">{spark}{upgrade.sparks}</span><span class="rg-price">{echo()}{upgrade.echoes}</span><span class="sp" />
+                <button class="primary" disabled={!upgrade.afford} onClick={built(expand)}>{t('lblRogueUpgrade')}</button>
+              </div>
+            </div>
+          ) : !aether.descension && <p class="rg-upcard">{t('lblRogueAetherEnergyHint').replace(/\n/g, ' ')}</p>}
           {works}
+          {lockedGroups(aether)}
         </div>
         {work && (
           <div class="rg-sheetbar">
             <div class="top">
-              <div class="t"><b>{work.name}</b><span>{work.ranks[Math.min(work.rank, work.ranks.length - 1)]?.text}</span></div>
+              <div class="t"><b>{work.name}</b><span>{t('lblRogueRank', work.rank, work.ranks.length)}</span><Ranked work={work} /></div>
               {switcher}
             </div>
             <div class="go" style={{ gridTemplateColumns: '1fr' }}><Raise work={work} cls="primary" raise={() => raiseWork(work)} /></div>
@@ -115,7 +132,6 @@ export function AetherPage({ aether, raise, toggle, expand, reset }: {
       </div>
     );
   }
-  const upgrade = aether.upgrade;
   return (
     <div class="rg-aether" ref={page}>
       <span class="rg-haze" style={{ backgroundImage: aether.art ? `url("${artUrl(aether.art)}")` : undefined }} />
@@ -128,16 +144,7 @@ export function AetherPage({ aether, raise, toggle, expand, reset }: {
         </div>
         {works}
         {!aether.descension && <p class="rg-pnote">{t('lblRogueAetherEnergyHint').replace(/\n/g, ' ')}</p>}
-        {aether.locked.map(group => (
-          <div key={group.title} class="rg-group">
-            <h4>{group.title}</h4>
-            <div class="rg-works" style={{ opacity: 0.6 }}>
-              {group.works.map(name => (
-                <div key={name} class="rg-work unbuilt" style={{ minHeight: 0 }}><span class="h"><Icon d={ROGUE_ICONS.lock} cls="rg-ic" /><b>{name}</b></span></div>
-              ))}
-            </div>
-          </div>
-        ))}
+        {lockedGroups(aether)}
       </div>
       {work && (
         <SidePanel kicker={t('lblWebRogueAetherwork')} title={work.name} noArt zoom={null} setZoom={() => {}}

@@ -35,8 +35,6 @@ declare module '../ui' {
     rogueTab: RogueTab;
     /** Start New Run was pressed over an unfinished run, so Runs shows the commanders instead of the run. */
     rogueNewRun: boolean;
-    /** The run's page that opens next, such as its deck after Deck on Runs. */
-    rogueRunTab: string | null;
     /** The question whose scene View Map folded, so the page beneath can be read. */
     rogueFolded: number | null;
     /** The run's deck is open, read only, over a decision. */
@@ -101,7 +99,7 @@ const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueMap: null, rogueRunD
 // A winding trail between two points
 const ICON = <><circle cx="12" cy="37" r="4" /><circle cx="36" cy="11" r="4" /><path d="M16 37h10a7 7 0 0 0 0-14h-4a7 7 0 0 1 0-12h10" /></>;
 
-Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null, rogueLanded: 0, rogueEchoesOwed: 0, rogueIntro: false });
+Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null, rogueLanded: 0, rogueEchoesOwed: 0, rogueIntro: false });
 
 registerMode({
   mode: 'rogue',
@@ -109,7 +107,7 @@ registerMode({
   hello: (model, msg) => {
     if (msg.campaign !== 'rogue') {
       Object.assign(model, NO_ROGUE);
-      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null, rogueLanded: 0, rogueEchoesOwed: 0, rogueIntro: false });
+      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null, rogueLanded: 0, rogueEchoesOwed: 0, rogueIntro: false });
     }
   },
   stored: ['rogueHome', 'rogueRoster', 'rogueMap', 'rogueRunDeck', 'rogueTraits', 'rogueAether', 'rogueCodexPage', 'rogueHistoryPage', 'rogueChoice', 'rogueQuestion'],
@@ -160,6 +158,6 @@ registerMode({
   tile: {
     // The icon mobile's game menus give the mode, drawn at half its 80px
     icon: ICON, picture: skinIconUrl('ICO_QUEST_MAP'), art: 'c:Jund|PC2|1', name: 'lblRogueCommander', blurb: 'lblRogueCommanderDesc',
-    resumeLabel: () => t('lblRogueContinueRun'), order: 3,
+    resumeLabel: summary => `${t('lblRogueContinueRun')} · ${summary}`, order: 3,
   },
 });

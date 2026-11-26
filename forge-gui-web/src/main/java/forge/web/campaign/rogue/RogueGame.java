@@ -61,6 +61,7 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -474,6 +475,21 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
     }
 
+    /** The unfinished run's commander, Descension level and life, as mobile's Load Game page writes them. */
+    @Override
+    public String resumeText() {
+        synchronized (pages) {
+            final RogueRun run = latest.run();
+            if (run == null) {
+                return null;
+            }
+            final Localizer text = Localizer.getInstance();
+            final int level = run.getDescensionLevel();
+            return String.join(" · ", run.getCurrentCommanderName(), text.getMessage("lblRogueDescensionLevel", level == 0 ? text.getMessage("lblOff") : level),
+                    text.getMessage("lblRogueLifeTotal", run.getCurrentLife(), run.getMaxLife()));
+        }
+    }
+
     @Override
     public boolean mayLeave(final String save) {
         return !busy.get() || question != null;
@@ -835,17 +851,22 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
     }
 
-    /** Asks each NPC's level in turn, as desktop's NPC progress dialog lists them. Skipping one keeps its level. */
+    /** Asks every NPC's level on one page, as mobile's NPC progress screen does. Cancel keeps them all. */
     private void npcProgress(final RogueMetaProgress progress) {
+        final Map<NPC, List<LevelChoice>> choices = new LinkedHashMap<>();
         for (final NPC npc : NPC.values()) {
-            final List<LevelChoice> choices = NPCEncounterComposite.levelChoices(npc, progress.getNPCLevel(npc.id));
-            if (choices.isEmpty()) {
-                continue;
+            final List<LevelChoice> levels = NPCEncounterComposite.levelChoices(npc, progress.getNPCLevel(npc.id));
+            if (!levels.isEmpty()) {
+                choices.put(npc, levels);
             }
-            final int level = decisions.devPick(npc.name, choices, List.of(choices.get(0)), 1).get(0).level();
-            if (level != progress.getNPCLevel(npc.id)) {
-                progress.setNPCLevel(npc.id, level);
-            }
+        }
+        final List<Integer> picked = web == null ? null : web.npcLevels(choices);
+        if (picked == null) {
+            return;
+        }
+        int i = 0;
+        for (final Map.Entry<NPC, List<LevelChoice>> entry : choices.entrySet()) {
+            progress.setNPCLevel(entry.getKey().id, entry.getValue().get(picked.get(i++)).level());
         }
         final Localizer text = Localizer.getInstance();
         decisions.showMessage(text.getMessage("lblRogueDevNpcProgressTitle"), text.getMessage("lblRogueNpcProgressUpdated"));
@@ -883,8 +904,9 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
         final Set<CustomRunModification> on = toggle == null ? asOn : RogueStart.toggle(asOn, toggle, !asOn.contains(toggle));
         final RogueStart start = new RogueStart(RoguePages.deck(asked.deck()), true, on, asked.descension());
+        final RogueMetaProgress progress = RogueMetaProgress.getInstance();
         return new RogueChoice(asked.deck(), on.stream().map(Enum::name).toList(), asked.descension(),
-                on.stream().filter(m -> RogueStart.isForced(on, m)).map(Enum::name).toList(), start.canBegin(RogueMetaProgress.getInstance()));
+                on.stream().filter(m -> RogueStart.isForced(on, m)).map(Enum::name).toList(), start.canBegin(progress), RoguePages.startingTraits(start, progress));
     }
 
     public static final Commands<RogueGame> COMMANDS = new Commands<RogueGame>()

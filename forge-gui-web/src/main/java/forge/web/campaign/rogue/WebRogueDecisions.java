@@ -22,7 +22,9 @@ import forge.gamemodes.rogue.effect.NPCEffect;
 import forge.gamemodes.rogue.effect.RogueEffect;
 import forge.gamemodes.rogue.effect.WrathfulEffect;
 import forge.gamemodes.rogue.flow.RogueDecisions;
+import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.npc.NPCContext;
+import forge.gamemodes.rogue.npc.NPCEncounterComposite.LevelChoice;
 import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
@@ -87,7 +89,7 @@ final class WebRogueDecisions implements RogueDecisions {
     private JsonElement ask(final Record shape, final Predicate<JsonElement> valid, final List<PaperCard> offer) {
         final RogueQuestion question = new RogueQuestion(++ids, shape instanceof AskChoice c ? c : null, shape instanceof AskCards c ? c : null,
                 shape instanceof AskCommander c ? c : null, shape instanceof AskShop s ? s : null,
-                shape instanceof TellOmen o ? o : null, shape instanceof Tell t ? t : null);
+                shape instanceof TellOmen o ? o : null, shape instanceof Tell t ? t : null, shape instanceof AskNpcs n ? n : null);
         return game.ask(new Open(question, answer -> {
             try {
                 return valid.test(answer);
@@ -383,6 +385,32 @@ final class WebRogueDecisions implements RogueDecisions {
         final JsonElement answer = ask(new AskChoice("dev", null, title, null, null, List.of(), options, 0, true, null, count),
                 a -> is(a, SKIP) || indexes(a, all.size()) != null && indexes(a, all.size()).size() == count);
         return is(answer, SKIP) ? current : pick(all, indexes(answer, all.size()));
+    }
+
+    /** Asks every NPC's level on one page: the index of each one's choice, in order, or null when cancelled. */
+    List<Integer> npcLevels(final Map<NPC, List<LevelChoice>> choices) {
+        final List<NpcLevels> npcs = choices.entrySet().stream().map(e -> new NpcLevels(e.getKey().name, e.getKey().avatarIndex,
+                e.getValue().stream().map(LevelChoice::label).toList())).toList();
+        final List<Integer> sizes = choices.values().stream().map(List::size).toList();
+        final JsonElement answer = ask(new AskNpcs(text("lblRogueSetNPCProgressLevels"), text("lblRogueAdjustStoredNPCProgressionValuesForDevelopment"), npcs),
+                a -> a.isJsonNull() || levels(a, sizes) != null);
+        return answer.isJsonNull() ? null : levels(answer, sizes);
+    }
+
+    /** One index for each of sizes, each below its size, or null. Unlike indexes, two may be equal. */
+    private static List<Integer> levels(final JsonElement answer, final List<Integer> sizes) {
+        if (!answer.isJsonArray() || answer.getAsJsonArray().size() != sizes.size()) {
+            return null;
+        }
+        final List<Integer> picked = new ArrayList<>();
+        for (int i = 0; i < sizes.size(); i++) {
+            final int at = index(answer.getAsJsonArray().get(i), sizes.get(i));
+            if (at < 0) {
+                return null;
+            }
+            picked.add(at);
+        }
+        return picked;
     }
 
     @Override

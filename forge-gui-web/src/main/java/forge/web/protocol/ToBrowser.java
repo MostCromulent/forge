@@ -43,7 +43,7 @@ public final class ToBrowser {
     public enum Screen { menu, opening, setup, event, campaign, playing }
 
     /**
-     * eventKind is set on the event screen, and campaign on the campaign screen. campaignResume is the save each campaign mode resumes, for the host.
+     * eventKind is set on the event screen, and campaign on the campaign screen. campaignResume says, by campaign mode, what the start page writes of the save it resumes, for the host.
      * hostPassword says the host's seat needs the password from this browser.
      */
     @Message("hello")

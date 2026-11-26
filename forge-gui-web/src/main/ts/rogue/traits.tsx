@@ -40,6 +40,16 @@ export function TraitCard({ trait, small }: { trait: Trait; small?: boolean }) {
   );
 }
 
+/** A trait as the run's Effects page lists it, its mark explaining where it came from. */
+export function TraitTile({ trait }: { trait: Trait }) {
+  return (
+    <article class={trait.source === 'WOUND' ? 'rgt-tile wound' : 'rgt-tile'}>
+      <Seal trait={trait} explained />
+      <div><h3>{trait.name}</h3><p><Words parts={trait.text} /></p></div>
+    </article>
+  );
+}
+
 /** Your Traits as a page of the run. haze is the commander's picture behind it. */
 export function TraitsPage({ traits, carry, haze }: { traits: Trait[]; carry: RogueCard[]; haze: string }) {
   return (
@@ -52,12 +62,7 @@ export function TraitsPage({ traits, carry, haze }: { traits: Trait[]; carry: Ro
             <p>{t('lblWebRogueTraitsHint')}</p>
           </header>
           <div class="rgt-tiles">
-            {traits.map((trait, i) => (
-              <article key={i} class={trait.source === 'WOUND' ? 'rgt-tile wound' : 'rgt-tile'}>
-                <Seal trait={trait} explained />
-                <div><h3>{trait.name}</h3><p><Words parts={trait.text} /></p></div>
-              </article>
-            ))}
+            {traits.map((trait, i) => <TraitTile key={i} trait={trait} />)}
           </div>
         </section>
         <aside class="rgt-carry">

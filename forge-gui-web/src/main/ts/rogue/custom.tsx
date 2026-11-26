@@ -1,10 +1,10 @@
 // Custom Run: the run's modifications by what each changes, beside the commander and the Descension levels
 
 import { SidePanel } from '../campaign/campaign';
-import { artUrl } from '../images';
+import { artUrl, hideBroken, imageUrl } from '../images';
 import { isPortrait } from '../form';
 import { t } from '../text';
-import { Levels, Lock, answerFor, descensionLabel, picked, ready, shown, type Choice, type SetChoice } from './newrun';
+import { LevelTexts, Levels, Lock, answerFor, descensionLabel, picked, ready, shown, type Choice, type SetChoice } from './newrun';
 import type { RogueChoice, RogueRoster } from '../protocol';
 
 /** The art behind the page. Custom Run has no subject of its own, so it is always the same. */
@@ -26,7 +26,13 @@ export function CustomRun({ roster, choice, set, begin, answer, toggle }: {
     <div class="rg-start">
       <span class="rg-haze" style={{ backgroundImage: `url("${artUrl(HAZE)}")` }} />
       <div class="rg-scroll">
-        {phone ? <p class="rg-pnote">{t('lblRogueCustomRunLimitations')}</p> : (
+        {phone ? (
+          <div class="rg-phead">
+            <p class="rg-pnote">{t('lblRogueCustomRunLimitations')}</p>
+            {generated ? <p class="rg-pnote">{t('lblRogueCommanderChosenAtStart')}</p>
+              : commander?.image && <img onError={hideBroken} alt={commander.name ?? ''} data-image={commander.image} src={imageUrl(commander.image)} />}
+          </div>
+        ) : (
           <div class="rg-head"><h2>{t('lblRogueCustomRun')}</h2><span class="sp" /><span class="rg-pnote">{t('lblRogueCustomRunLimitations')}</span></div>
         )}
         {groups.map(group => (
@@ -47,7 +53,8 @@ export function CustomRun({ roster, choice, set, begin, answer, toggle }: {
       </div>
       {phone ? (
         <div class="rg-sheetbar">
-          <div class="go" style={{ gridTemplateColumns: 'auto 1fr' }}>
+          <div class="go" style={{ gridTemplateColumns: 'auto auto 1fr' }}>
+            <button disabled={!!generated} onClick={() => set(c => ({ ...c, customOpen: false }))}>{t('lblCommander')}</button>
             <button disabled={!roster.descension} onClick={() => set(c => ({ ...c, sheet: true }))}>{descensionLabel(choice.level)}</button>
             {start}
           </div>
@@ -61,7 +68,7 @@ export function CustomRun({ roster, choice, set, begin, answer, toggle }: {
             {roster.customLock ? <Lock text={roster.customLock} /> : <>
               <h4>{t('lblRogueDescensionMode')}</h4>
               <Levels levels={roster.levels} level={choice.level} startable={roster.levels.length} choose={level => set(c => ({ ...c, level }))} />
-              {choice.level > 0 && <p>{roster.levels[choice.level - 1].text}</p>}
+              <LevelTexts levels={roster.levels} startable={roster.levels.length} />
             </>}
           </div>
         </SidePanel>

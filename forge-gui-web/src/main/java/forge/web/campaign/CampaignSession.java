@@ -273,7 +273,7 @@ public final class CampaignSession implements Campaigns {
     public Map<String, String> resume() {
         final Map<String, String> saves = new LinkedHashMap<>();
         modes.forEach((mode, campaign) -> {
-            final String save = campaign.current();
+            final String save = campaign.resumeText();
             if (save != null) {
                 saves.put(mode, save);
             }

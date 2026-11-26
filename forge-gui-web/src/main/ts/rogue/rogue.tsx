@@ -8,6 +8,9 @@ import { playSound } from '../audio';
 import { useEscapeBack } from '../header';
 import { useDismiss } from '../hooks';
 import { setting } from '../settings';
+import { inspectCard } from '../preview';
+import { isTouch } from '../press';
+import { avatarUrl } from '../avatarsleeves';
 import { changeUi, eased, easedLocal, ui } from '../ui';
 import { t, type TextKey } from '../text';
 import { ROGUE_ICONS } from './icons';
@@ -28,7 +31,7 @@ import { heldBack } from './gains';
 import type { RogueTab } from './register';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
-import type { RogueAnnounce, RogueHome, Tell } from '../protocol';
+import type { AskNpcs, RogueAnnounce, RogueHome, Tell } from '../protocol';
 
 const TABS: [RogueTab, TextKey][] = [['runs', 'lblWebRogueRuns'], ['aether', 'lblRogueAether'], ['codex', 'lblRogueCodex'], ['history', 'lblRogueHistory']];
 /** The run's tabs. Deck opens the deck editor over the map, so the map stays the tab shown. */
@@ -56,6 +59,8 @@ export function RogueHub({ model, actions }: { model: Model; actions: Actions })
     document.documentElement.classList.add('kit');
     return () => document.documentElement.classList.remove('kit');
   }, []);
+  useEffect(tapToZoom, []);
+  useEffect(scrollHints, []);
   return <CampaignShell model={model} actions={actions} icons={[]} always class="rg-shell" open={() => <Pages model={model} actions={actions} />} />;
 }
 
@@ -66,6 +71,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const devMenu = useRef<HTMLDivElement>(null);
   useDismiss(devOpen, devMenu, () => setDevOpen(false));
   const [historyDeck, setHistoryDeck] = useState<number | null>(null);
+  const [runDeck, setRunDeck] = useState(false);
   const [choice, setChoice] = useState<Choice>(NO_CHOICE);
   const home = model.rogueHome;
   const roster = model.rogueRoster;
@@ -81,6 +87,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const folded = scene && ui.rogueFolded === model.rogueQuestion!.id;
   const tell = deciding ? undefined : model.rogueQuestion?.tell;
   const replace = model.rogueQuestion?.choice?.kind === 'replace' ? model.rogueQuestion.choice : undefined;
+  const npcs = model.rogueQuestion?.npcs;
   const announced = model.rogueAnnounced[0];
   const fresh = !inRun && tab === 'runs' && (!run || ui.rogueNewRun) && roster ? roster : null;
   const setTab = (to: RogueTab) => slideTab(TABS, tab, to, u => { u.rogueTab = to; u.rogueNewRun = false; });
@@ -98,12 +105,14 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     const step = fresh && backFrom(fresh, choice);
     if (devOpen) setDevOpen(false);
     else if (historyDeck !== null) setHistoryDeck(null);
+    else if (runDeck) setRunDeck(false);
     else if (abandoning) setAbandoning(false);
     else if (resetting) setResetting(null);
     else if (inRun && ui.rogueSheet) changeUi(u => { u.rogueSheet = false; });
     else if (codex && isPortrait() && ui.rogueCodexId) changeUi(u => { u.rogueCodexId = null; });
     else if (aside !== 'map') changeUi(u => { u.roguePage = 'map'; });
     else if (replace) answer(replace.options.length - 1);
+    else if (npcs) answer(null);
     else if (tell || announced) return;
     else if (step) moveChoice(() => step);
     else if (!inRun && tab !== 'runs') setTab('runs');
@@ -113,12 +122,6 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   };
   useEscapeBack(back);
   const editDeck = () => { if (home) actions.rogueEditDeck(home.snapshot); };
-  // Deck on Runs opens the run with its deck
-  useEffect(() => {
-    if (!inRun || ui.rogueRunTab !== 'deck' || !home) return;
-    ui.rogueRunTab = null;
-    editDeck();
-  }, [inRun, home?.snapshot]);
   useEffect(() => { if (choice.deck) actions.rogueStartDeck(choice.deck); }, [choice.deck]);
   useEffect(() => {
     if (inRun) return;
@@ -151,7 +154,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
         choose={id => changeUi(u => { u.rogueCodexId = id; })} reset={inRun ? undefined : setResetting} />
     ) : inRun ? model.rogueMap && <MapPage model={model} actions={actions} covered={scene && !folded} /> : tab === 'runs' && run && !ui.rogueNewRun ? (
     <Landing home={home} run={run} go={() => enterRun(() => { ui.rogueIntro = false; actions.campaignLoad('run'); })}
-      deck={() => { ui.rogueRunTab = 'deck'; actions.campaignLoad('run'); }}
+      deck={() => setRunDeck(true)}
       abandon={() => setAbandoning(true)} fresh={() => newRun(true)} />
   ) : tab === 'history' ? (
     <HistoryPage page={model.rogueHistoryPage} reset={() => setResetting('history')} deck={id => { setHistoryDeck(id); actions.rogueHistoryDeck(id); }} />
@@ -160,10 +163,11 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       expand={() => actions.rogueAetherExpand(home.snapshot)} reset={() => setResetting('aether')} />
   ) : fresh && <NewRun roster={fresh} choice={choice} set={moveChoice} runs={run ? () => newRun(false) : null}
     begin={(deck, level) => enterRun(() => actions.rogueBegin(home.snapshot, deck, choice.custom, choice.custom ? choice.mods : [], level))}
-    answer={model.rogueChoice} toggle={id => actions.rogueChoose(deck, choice.mods, choice.level, id)} />;
+    answer={model.rogueChoice} toggle={id => actions.rogueChoose(deck, choice.mods, choice.level, id)} unlocked={home.unlocked} />;
   const details = choice.deck && model.deckDetails?.key === `rogue:start:${choice.deck}` ? model.deckDetails : null;
   const pastDeck = historyDeck !== null && model.deckDetails?.key === `rogue:history:${historyDeck}` ? model.deckDetails : null;
-  const dialog = abandoning || !!resetting || !!tell || !!replace || !!announced || !!fresh && (choice.sheet || !!details) || !!pastDeck
+  const shownRunDeck = runDeck && !inRun && model.rogueRunDeck ? model.rogueRunDeck.deck : null;
+  const dialog = abandoning || !!resetting || !!tell || !!replace || !!npcs || !!announced || !!fresh && (choice.sheet || !!details) || !!pastDeck || !!shownRunDeck
     || inRun && ui.rogueSheet && isPortrait();
   const main = <div class="camp-main" inert={dialog || scene && !folded}>{page}</div>;
   const question = scene && <Question model={model} actions={actions} />;
@@ -183,7 +187,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const resetRow = (close: () => void, kind: string, label: TextKey) => <button role="menuitem" onClick={() => { close(); setResetting(kind); }}>{t(label)}</button>;
   // A phone has the resets and the Aether Upgrade in the header's menu, in place of the wide page's buttons
   const phoneMenu = tab === 'aether' && model.rogueAether
-    ? (close: () => void) => aetherMenu(model.rogueAether!, close, () => actions.rogueAetherExpand(home.snapshot), () => setResetting('aether'))
+    ? (close: () => void) => aetherMenu(close, () => setResetting('aether'))
     : tab === 'codex' && ui.rogueCodexTab === 'stats'
       ? (close: () => void) => <>{resetRow(close, 'tutorials', 'lblRogueResetTutorials')}{resetRow(close, 'progress', 'lblRogueResetProgress')}</>
       : tab === 'history' && model.rogueHistoryPage?.runs.length ? (close: () => void) => resetRow(close, 'history', 'lblRogueResetHistory') : undefined;
@@ -249,6 +253,8 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     {inRun && isPortrait() && ui.rogueSheet && model.rogueMap && !deciding && aside === 'map' && <PlaneSheet model={model} actions={actions} />}
     {fresh && choice.sheet && <DescensionSheet roster={fresh} choice={choice} set={setChoice} />}
     {pastDeck && <DeckView details={pastDeck} line={t('lblWebNCards', pastDeck.stats.main)} button={t('lblClose')} close={() => setHistoryDeck(null)} />}
+    {shownRunDeck && <DeckView details={shownRunDeck} line={t('lblWebNCards', shownRunDeck.stats.main)} button={t('lblClose')} close={() => setRunDeck(false)} />}
+    {npcs && <NpcLevelsPage asked={npcs} answer={answer} />}
     {fresh && details && (
       <DeckView details={details} line={t('lblRogueStartingDeck')} button={t('lblClose')} close={() => setChoice(c => ({ ...c, deck: null }))} />
     )}
@@ -265,6 +271,77 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     <Terms />
     {!tell && announced && <Announcement key={announced.id} announced={announced} ok={actions.rogueAnnounced} />}
   </>;
+}
+
+/** On a touch screen a tap on a card in the Codex, or on a card's name in Rogue's text, zooms the card, as mobile does. */
+function tapToZoom() {
+  const tap = (e: MouseEvent) => {
+    if (!isTouch(e) || !(e.target instanceof Element)) return;
+    const el = e.target.closest<HTMLElement>('.rg-cn[data-image], .rg-cx [data-image]');
+    if (!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+    inspectCard(el);
+  };
+  document.addEventListener('click', tap, true);
+  return () => document.removeEventListener('click', tap, true);
+}
+
+/** Marks each of Rogue's scroll panes that has more below, which rogue.css draws an arrow on, as mobile's RogueScrollPane does. */
+function scrollHints() {
+  const mark = () => {
+    for (const pane of document.querySelectorAll<HTMLElement>('.rg-scroll')) {
+      pane.classList.toggle('rg-more', pane.scrollTop + pane.clientHeight < pane.scrollHeight - 2);
+    }
+  };
+  let queued = 0;
+  const soon = () => {
+    if (!queued) queued = requestAnimationFrame(() => { queued = 0; mark(); });
+  };
+  // Pages change under the panes without a scroll, so changes to the page are watched too
+  const watch = new MutationObserver(soon);
+  watch.observe(document.body, { childList: true, subtree: true });
+  document.addEventListener('scroll', soon, true);
+  document.addEventListener('load', soon, true);
+  addEventListener('resize', soon);
+  return () => {
+    watch.disconnect();
+    cancelAnimationFrame(queued);
+    document.removeEventListener('scroll', soon, true);
+    document.removeEventListener('load', soon, true);
+    removeEventListener('resize', soon);
+  };
+}
+
+/** The dev tool that sets every NPC's level on one page, as mobile's NPC progress screen does. Cancel changes none. */
+function NpcLevelsPage({ asked, answer }: { asked: AskNpcs; answer: (value: unknown) => void }) {
+  const [picked, setPicked] = useState(() => asked.npcs.map(() => 0));
+  return (
+    <Backdrop layer="rg-dialog" dismiss={() => answer(null)}>
+      <div class="dialog rg-npcs" role="dialog" aria-label={asked.title}>
+        <h3>{asked.title}</h3>
+        <p>{asked.text}</p>
+        <div class="rows">
+          {asked.npcs.map((npc, i) => (
+            <label key={npc.name}>
+              <span class="pic" style={{ backgroundImage: `url("${avatarUrl(npc.avatar)}")` }} />
+              <b>{npc.name}</b>
+              <select value={picked[i]} onChange={e => {
+                const at = Number((e.target as HTMLSelectElement).value);
+                setPicked(p => p.map((x, j) => (j === i ? at : x)));
+              }}>
+                {npc.levels.map((level, j) => <option key={j} value={j}>{level}</option>)}
+              </select>
+            </label>
+          ))}
+        </div>
+        <div class="actions">
+          <button onClick={() => answer(null)}>{t('lblCancel')}</button>
+          <button class="primary" onClick={() => answer(picked)}>{t('lblOK')}</button>
+        </div>
+      </div>
+    </Backdrop>
+  );
 }
 
 /** Asks before a step that cannot be taken back: abandoning the run, or abandoning it for a new one. go is drawn red. */
