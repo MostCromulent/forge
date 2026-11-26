@@ -892,3 +892,6 @@ html.kit.kit .rg-deckview .view-seg.view-seg > button[aria-pressed="true"] { bac
 html.kit.kit .rgl-new { background: linear-gradient(rgba(14, 11, 8, .66), rgba(14, 11, 8, .6) 30%, rgba(14, 11, 8, .78) 58%, #0e0b08 84%) padding-box, var(--kit-ground) -330px 0 / 1024px 576px no-repeat padding-box, #0e0b08 !important; }
 /* A phone's run keys wrap rather than run past the panel's edge */
 html[data-form="portrait"] .rgl-run .go { flex-wrap: wrap; }
+/* An unknown plane shows only a question mark, not the portal */
+html.kit .rg-n.hid:not(.side) { background: #e7dcc0 padding-box; }
+html.kit .rg-n.hid:not(.side) .q { display: grid; place-items: center; position: absolute; inset: 0 0 10px; font: 700 46px/1 Georgia, serif; color: var(--ink-soft, rgba(42, 29, 16, .62)); }
