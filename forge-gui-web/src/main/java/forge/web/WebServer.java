@@ -420,6 +420,11 @@ public final class WebServer implements AutoCloseable, IHasForgeLog {
                 respondOrNotFound(ctx, SkinSprites.coinPng(!"tails".equals(param(q, "side"))), "image/png", ifNoneMatch);
                 return;
             }
+            if ("/adventure".equals(path)) {
+                final String sheet = param(q, "s");
+                respondOrNotFound(ctx, sheet == null ? null : SkinSprites.adventurePng(sheet, param(q, "r")), "image/png", ifNoneMatch);
+                return;
+            }
             if ("/skinicon".equals(path)) {
                 final String icon = param(q, "k");
                 respondOrNotFound(ctx, icon == null ? null : SkinSprites.iconPng(icon), "image/png", ifNoneMatch);

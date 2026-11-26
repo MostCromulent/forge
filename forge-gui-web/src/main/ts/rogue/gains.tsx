@@ -5,10 +5,11 @@ import { useEffect, useRef } from 'preact/hooks';
 import { flyShards } from '../campaign/campaign';
 import { changeUi } from '../ui';
 import { Icon } from '../icons';
-import { hideBroken, imageUrl, skinIconUrl } from '../images';
+import { hideBroken, imageUrl } from '../images';
 import { isPortrait } from '../form';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
+import { Sprite, glyph, ringClass, sealGlyph } from './kit';
 import { useSceneKeys } from '../hooks';
 import { Scene } from './scene';
 import { TERM_ICONS, Words } from './terms';
@@ -47,8 +48,7 @@ export const heldBack = (gains: TellGains | null | undefined, landed: string[]):
 /** The figures a won battle gave. One of 0 is left out, and a phone words removal credits shorter. Each flies to its balance in the bar, which counts it as it lands. */
 function Figures({ gains }: { gains: TellGains }) {
   const row = useRef<HTMLDivElement>(null);
-  const pictures = [<img onError={hideBroken} alt="" src={skinIconUrl('ICO_QUEST_COIN')} />, <img onError={hideBroken} alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />,
-    <Icon d={ROGUE_ICONS.heart} cls="rg-ic" />, <Icon d={ROGUE_ICONS.cut} cls="rg-ic" />];
+  const pictures = [<Sprite k="coin" px={32} />, <Sprite k="shards" px={32} />, glyph('heart', 32), glyph('cut', 32)];
   const labels = [t('lblWebRogueGold'), t('lblWebRogueEchoes'), t('lblLife'), t(isPortrait() ? 'lblCredits' : 'lblWebRogueRemovalCredits')];
   const figures = figureIcons(gains).map(([icon, n], i) => ({ icon, n, picture: pictures[i], label: labels[i] })).filter(f => f.n > 0);
   useEffect(() => {
@@ -72,7 +72,7 @@ export function Gains({ tell, ok }: { tell: Tell; ok: () => void }) {
   return (
     <Scene art={tell.art} foot={<button class="primary" onClick={ok}>{t(tell.kind === 'DEFEAT' ? 'lblRogueEndRun' : 'lblContinue')}</button>}>
       <div class="rg-gains">
-        {face && <span class="rg-face"><span class="pic icon"><Icon d={ROGUE_ICONS[face]} cls="rg-ic" /></span></span>}
+        {face && <span class="rg-face"><span class={`pic icon${ringClass(face)}`}>{sealGlyph(face, 64)}</span></span>}
         <h3>{led ? <Words parts={tell.text} /> : tell.title}</h3>
         {tell.gains && <Figures gains={tell.gains} />}
         {!led && tell.text.length > 0 && <p><Words parts={tell.text} /></p>}

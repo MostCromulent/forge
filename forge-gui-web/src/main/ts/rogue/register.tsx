@@ -1,4 +1,5 @@
 import { t } from '../text';
+import { skinIconUrl } from '../images';
 import { ui } from '../ui';
 import { registerMode } from '../campaign/modes';
 import { RogueHub } from './rogue';
@@ -150,7 +151,8 @@ registerMode({
   },
   Page: RogueHub,
   tile: {
-    icon: ICON, art: 'c:Jund|PC2|1', name: 'lblRogueCommander', blurb: 'lblRogueCommanderDesc',
+    // The icon mobile's game menus give the mode, drawn at half its 80px
+    icon: ICON, picture: skinIconUrl('ICO_QUEST_MAP'), art: 'c:Jund|PC2|1', name: 'lblRogueCommander', blurb: 'lblRogueCommanderDesc',
     resumeLabel: () => t('lblRogueContinueRun'), order: 3,
   },
 });

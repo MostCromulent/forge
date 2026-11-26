@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { CampaignBar, CampaignShell } from '../campaign/campaign';
 import { Backdrop } from '../dialog';
 import { Icon } from '../icons';
-import { hideBroken, imageUrl, skinIconUrl } from '../images';
+import { hideBroken, imageUrl } from '../images';
 import { isPortrait } from '../form';
 import { playSound } from '../audio';
 import { useEscapeBack } from '../header';
@@ -11,6 +11,7 @@ import { setting } from '../settings';
 import { changeUi, ui } from '../ui';
 import { t, type TextKey } from '../text';
 import { ROGUE_ICONS } from './icons';
+import { Sprite, barGlyph, glyph, tabSprite } from './kit';
 import { Landing } from './landing';
 import { DescensionSheet, NO_CHOICE, NewRun, backFrom, chosenDeck, type Choice } from './newrun';
 import { isScene } from './questions';
@@ -30,7 +31,7 @@ import type { RogueAnnounce, RogueHome, Tell } from '../protocol';
 
 const TABS: [RogueTab, TextKey][] = [['runs', 'lblWebRogueRuns'], ['aether', 'lblRogueAether'], ['codex', 'lblRogueCodex'], ['history', 'lblRogueHistory']];
 /** The run's tabs. Deck opens the deck editor over the map, so the map stays the tab shown. */
-const RUN_TABS: [RunTab, TextKey][] = [['map', 'lblWebRogueMap'], ['traits', 'lblRogueTraits'], ['deck', 'lblDeck'], ['codex', 'lblRogueCodex']];
+const RUN_TABS: [RunTab, TextKey][] = [['map', 'lblWebRogueMap'], ['traits', 'lblRogueEffects'], ['deck', 'lblDeck'], ['codex', 'lblRogueCodex']];
 type RunTab = 'map' | 'traits' | 'deck' | 'codex';
 /** The title and question of each reset, by kind. */
 const RESETS: Record<string, [TextKey, TextKey]> = {
@@ -46,10 +47,14 @@ const devTools = (home: RogueHome): [string, TextKey][] => [
   ['sparks', 'lblRogueDevGainSparks'], ['codex', 'lblRogueDevUnlockCodex'],
 ];
 const RUN_TOOLS: [string, TextKey][] = [['nextNode', 'lblRogueDevNextNode'], ['winRun', 'lblRogueDevWinRun']];
-const glyph = (name: string) => <Icon d={ROGUE_ICONS[name as keyof typeof ROGUE_ICONS]} cls="rg-ic" />;
 
 /** Rogue Commander's page. The mode has no shelf of saved games, so the shell is always open. */
 export function RogueHub({ model, actions }: { model: Model; actions: Actions }) {
+  // Rogue is drawn in Adventure's look (rogue-adventure.css) while it is open
+  useEffect(() => {
+    document.documentElement.classList.add('kit');
+    return () => document.documentElement.classList.remove('kit');
+  }, []);
   return <CampaignShell model={model} actions={actions} icons={[]} always class="rg-shell" open={() => <Pages model={model} actions={actions} />} />;
 }
 
@@ -197,9 +202,9 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       if (to === 'deck' && deciding) changeUi(u => { u.rogueDeckView = true; });
       else if (to === 'deck') editDeck();
       else changeUi(u => { u.roguePage = to; });
-    }} mark={id => id === 'traits' && !!runBar?.traits && <sup class="rg-count">{runBar.traits}</sup>} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
-      held={held} leave={back} under={dialog} lineTerm={isPortrait() ? undefined : runBar?.tip} glyph={glyph} moreIcon={glyph('dots')} more={more} extra={devTool} />
-      : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} disabledTabs={locked} held={{}} leave={back} under={dialog}
+    }} lead={tabSprite} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
+      held={held} leave={back} under={dialog} lineTerm={isPortrait() ? undefined : runBar?.tip} glyph={barGlyph} moreIcon={glyph('dots')} more={more} extra={devTool} />
+      : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} lead={tabSprite} disabledTabs={locked} held={{}} leave={back} under={dialog} glyph={barGlyph}
         more={isPortrait() ? phoneMenu : undefined} extra={devTool} />}
     {!isPortrait() ? <div class="rg-body">{main}{question}</div>
       // On a phone a scene takes the page's place, and the bar it folds to lies over the page
@@ -294,7 +299,7 @@ function Announcement({ announced, ok }: { announced: RogueAnnounce; ok: () => v
     <Backdrop layer="rg-dialog">
       <div class="dialog trophy" role="alertdialog" aria-label={announced.title}>
         <span class="camp-chip brass"><Icon d={ROGUE_ICONS.trophy} cls="rg-ic" /> {announced.title}</span>
-        {announced.kind === 'spark' ? <img onError={hideBroken} class="sparkpic" alt="" src={skinIconUrl('ICO_QUEST_ELIXIR')} />
+        {announced.kind === 'spark' ? <Sprite k="spark" px={32} cls="sparkpic" />
           : announced.image && <img onError={hideBroken} alt="" data-image={announced.image} src={imageUrl(announced.image)} />}
         <h3>{name}</h3>
         {rest.length > 0 && <p>{rest.join('\n')}</p>}

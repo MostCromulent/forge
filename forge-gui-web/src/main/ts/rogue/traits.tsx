@@ -5,23 +5,25 @@ import { artUrl, hideBroken, imageUrl } from '../images';
 import { avatarUrl } from '../avatarsleeves';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
+import { Sprite, sealGlyph } from './kit';
 import { Words } from './terms';
 import type { RogueCard, Trait } from '../protocol';
 
 /** The icon of each source drawn with one. An NPC's trait shows its face and a Descension level its number; any other source has an empty mark. */
-const SEALS: Record<string, string> = {
-  AETHER: ROGUE_ICONS.gem, CUSTOM: ROGUE_ICONS.cog, EVENT: ROGUE_ICONS.event, CHEST: ROGUE_ICONS.chest, WOUND: ROGUE_ICONS.wound,
-  WRATHFUL: ROGUE_ICONS.flame, CURSED: ROGUE_ICONS.curse, ENDLESS: ROGUE_ICONS.reroll,
+const SEALS: Record<string, keyof typeof ROGUE_ICONS> = {
+  AETHER: 'gem', CUSTOM: 'cog', EVENT: 'event', CHEST: 'chest', WOUND: 'wound', WRATHFUL: 'flame', CURSED: 'curse', ENDLESS: 'reroll',
 };
 
 /** A trait's mark. explained gives it the tooltip that says where the trait came from. */
 export function Seal({ trait, explained }: { trait: Trait; explained?: boolean }) {
   const face = trait.avatar != null;
   const icon = SEALS[trait.source];
+  // A Descension level's number sits on Adventure's status sprite
+  const level = !face && trait.mark != null;
   return (
-    <span class={face ? 'rgt-seal face' : 'rgt-seal'} style={face ? { backgroundImage: `url("${avatarUrl(trait.avatar!)}")` } : undefined}
+    <span class={face ? 'rgt-seal face' : level ? 'rgt-seal lvl' : 'rgt-seal'} style={face ? { backgroundImage: `url("${avatarUrl(trait.avatar!)}")` } : undefined}
       {...(explained ? { 'data-term': trait.term, 'data-tip': trait.tip, tabIndex: 0 } : {})}>
-      {face ? null : trait.mark ?? (icon && <Icon d={icon} cls="rg-ic" />)}
+      {face ? null : level ? <><Sprite k="status" px={32} /><i class="ks-n">{trait.mark}</i></> : trait.source === 'TREASURE' ? <Sprite k="coin" px={32} /> : icon && sealGlyph(icon)}
     </span>
   );
 }
@@ -46,7 +48,7 @@ export function TraitsPage({ traits, carry, haze }: { traits: Trait[]; carry: Ro
       <div class="rgt-in">
         <section class="rgt-main">
           <header>
-            <h1><Icon d={ROGUE_ICONS.trait} cls="rg-ic" />{t('lblWebRogueYourTraits')}</h1>
+            <h1>{t('lblRogueYourEffects')}</h1>
             <p>{t('lblWebRogueTraitsHint')}</p>
           </header>
           <div class="rgt-tiles">

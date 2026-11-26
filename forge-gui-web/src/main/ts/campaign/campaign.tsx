@@ -92,9 +92,9 @@ ${tab}`;
  * more draws the mode's own menu in place of Preferences: the panel its button opens, or on a phone rows of the header's menu.
  * glyph draws a balance's glyph, and moreIcon the icon of the menu's button, for a mode with icons of its own.
  */
-export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, mark, disabledTabs, held, extra, prefs, more, leave, under, lineTerm, glyph, moreIcon }: {
+export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, lead, mark, disabledTabs, held, extra, prefs, more, leave, under, lineTerm, glyph, moreIcon }: {
   bar: Bar; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void;
-  mark?: (tab: Tab) => ComponentChildren; disabledTabs?: Partial<Record<Tab, string>>;
+  lead?: (tab: Tab) => ComponentChildren; mark?: (tab: Tab) => ComponentChildren; disabledTabs?: Partial<Record<Tab, string>>;
   /** The amounts a reward reveal has not shown yet, by balance icon. The server's balances already include them, so the bar subtracts them. */
   held: Record<string, number>;
   extra?: ComponentChildren; prefs?: () => void; more?: (close: () => void) => ComponentChildren; leave: () => void; under: boolean; lineTerm?: string;
@@ -116,7 +116,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, mark, 
       {tabs.map(([id, name]) => (
         <button key={id} class="camp-tab" data-tab={id} aria-current={id === tab ? 'page' : undefined} disabled={!!disabledTabs?.[id]} title={disabledTabs?.[id]}
           onClick={() => setTab(id)}>
-          {t(name)}{mark?.(id)}{unseen(bar, id, id === tab) && <span class="new-card">{t('lblNew')}</span>}{id === tab && <span class="camp-tab-line" />}
+          {lead?.(id)}{t(name)}{mark?.(id)}{unseen(bar, id, id === tab) && <span class="new-card">{t('lblNew')}</span>}{id === tab && <span class="camp-tab-line" />}
         </button>
       ))}
     </nav>
@@ -157,22 +157,27 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, mark, 
  * fold makes the title a button that opens and closes the rest of the panel, for a panel drawn as a small card over the page.
  * noArt leaves out the picture's place, for an item that never has one.
  */
-export function SidePanel({ kicker, where, title, art, noArt, zoom, setZoom, children, foot, fold }: {
+export function SidePanel({ kicker, where, title, art, noArt, zoom, setZoom, children, foot, fold, top }: {
   kicker: ComponentChildren; where?: ComponentChildren; title?: string; art?: string | null; noArt?: boolean;
   zoom: string | null; setZoom: (image: string | null) => void; children: ComponentChildren; foot: ComponentChildren;
   fold?: { open: boolean; toggle: () => void };
+  /** A panel stacked above this one, such as Rogue's commander. The two then sit in separate frames. */
+  top?: ComponentChildren;
 }) {
+  const body = <>
+    <div class="camp-panel">
+      <div class={art ? 'camp-side-head' : 'camp-side-head bare'}>
+        <div class="camp-where"><span class="camp-kicker">{kicker}</span>{where}</div>
+        {fold ? <h3><button class="camp-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3> : <h3>{title}</h3>}
+        {!noArt && <div class="camp-art" data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }} />}
+      </div>
+      {children}
+    </div>
+    <div class="camp-foot">{foot}</div>
+  </>;
   return (
     <aside class={fold?.open ? 'camp-side open' : 'camp-side'}>
-      <div class="camp-panel">
-        <div class={art ? 'camp-side-head' : 'camp-side-head bare'}>
-          <div class="camp-where"><span class="camp-kicker">{kicker}</span>{where}</div>
-          {fold ? <h3><button class="camp-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3> : <h3>{title}</h3>}
-          {!noArt && <div class="camp-art" data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }} />}
-        </div>
-        {children}
-      </div>
-      <div class="camp-foot">{foot}</div>
+      {top ? <>{top}<div class="camp-side-body">{body}</div></> : body}
       {zoom && <div class="backdrop" onClick={() => setZoom(null)}><img class="camp-zoom" alt="" src={imageUrl(zoom)} /></div>}
     </aside>
   );

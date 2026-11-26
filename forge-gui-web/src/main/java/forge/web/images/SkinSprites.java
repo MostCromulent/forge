@@ -11,6 +11,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +82,34 @@ public final class SkinSprites implements IHasForgeLog {
         return encoded.computeIfAbsent("c" + name, k -> cell(iconSheet(prop.getType().getFilename()), prop, k));
     }
 
+    /** The Adventure sheets Rogue Commander's look is cut from, as mobile's Rogue screens draw them. */
+    private static final Map<String, String> ADVENTURE_SHEETS = Map.of(
+            "skin", "skin/ui_skin.png", "items", "sprites/items.png", "buildings", "maps/tileset/buildings.png", "ground", "ui/title_bg.png", "portals", "sprites/portals.png");
+
+    /** PNG bytes of a rectangle x,y,w,h of an Adventure sheet, or the whole sheet when rect is null. Null for an unknown sheet or a rectangle outside it. */
+    public static byte[] adventurePng(final String sheet, final String rect) {
+        final String file = ADVENTURE_SHEETS.get(sheet);
+        if (file == null) {
+            return null;
+        }
+        return encoded.computeIfAbsent("a" + sheet + ":" + rect, k -> {
+            final BufferedImage image = adventureSheet(file);
+            if (image == null || rect == null) {
+                return image == null ? null : encode(image, k);
+            }
+            final int[] at;
+            try {
+                at = Arrays.stream(rect.split(",")).mapToInt(Integer::parseInt).toArray();
+            } catch (final NumberFormatException e) {
+                return null;
+            }
+            if (at.length != 4 || at[0] < 0 || at[1] < 0 || at[2] < 1 || at[3] < 1 || at[0] + at[2] > image.getWidth() || at[1] + at[3] > image.getHeight()) {
+                return null;
+            }
+            return encode(image.getSubimage(at[0], at[1], at[2], at[3]), k);
+        });
+    }
+
     /** A face of the coin tossed before a match's first game. The art is mobile's. */
     public static byte[] coinPng(final boolean heads) {
         final String name = heads ? "coin_heads.png" : "coin_tails.png";
@@ -100,6 +129,10 @@ public final class SkinSprites implements IHasForgeLog {
 
     private static synchronized BufferedImage iconSheet(final String file) {
         return iconSheets.computeIfAbsent(file, f -> read(skinFile(f)));
+    }
+
+    private static synchronized BufferedImage adventureSheet(final String file) {
+        return iconSheets.computeIfAbsent("adventure/" + file, f -> read(new File(ForgeConstants.ADVENTURE_COMMON_DIR + file)));
     }
 
     private static synchronized BufferedImage manaSheet() {

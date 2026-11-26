@@ -12,6 +12,7 @@ import { changeUi, ui } from '../ui';
 import { useSceneKeys } from '../hooks';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
+import { glyph, ringClass, sealGlyph } from './kit';
 import { Words } from './terms';
 import { CardPick, CommanderPick, LootPick, RewardPick } from './pick';
 import { Gains } from './gains';
@@ -204,7 +205,7 @@ function Choosing({ choice, answer, fold, viewDeck }: { choice: AskChoice; answe
   const buttons = [
     !options.length && <button key="go" class="primary" onClick={next}>{t('lblContinue')}</button>,
     options.length > 0 && choice.rerolls > 0 && (
-      <button key="reroll" onClick={() => answer('reroll')}><Icon d={ROGUE_ICONS.reroll} cls="rg-ic" />{` ${t('lblRogueRerollsRemaining', choice.rerolls)}`}</button>
+      <button key="reroll" onClick={() => answer('reroll')}>{glyph('reroll')}{` ${t('lblRogueRerollsRemaining', choice.rerolls)}`}</button>
     ),
     options.length > 0 && choice.skip && <button key="skip" onClick={() => answer('skip')}>{t('lblSkip')}</button>,
     options.length > 0 && choice.count > 1 && (
@@ -217,7 +218,7 @@ function Choosing({ choice, answer, fold, viewDeck }: { choice: AskChoice; answe
       <div class="rg-tale" onClick={() => setTyping(false)}>
         <div class="rg-face">
           {face !== null ? <span class="pic" style={{ backgroundImage: `url("${avatarUrl(face)}")` }} />
-            : <span class="pic icon">{choice.kind in ROGUE_ICONS && <Icon d={ROGUE_ICONS[choice.kind as keyof typeof ROGUE_ICONS]} cls="rg-ic" />}</span>}
+            : <span class={`pic icon${choice.kind in ROGUE_ICONS ? ringClass(choice.kind as keyof typeof ROGUE_ICONS) : ''}`}>{choice.kind in ROGUE_ICONS && sealGlyph(choice.kind as keyof typeof ROGUE_ICONS, 64)}</span>}
           <b>{phone ? choice.title : choice.label ?? choice.title}</b>
         </div>
         <div class="rg-words">
@@ -242,8 +243,8 @@ function Omens({ omen, ok }: { omen: TellOmen; ok: () => void }) {
         <ul>
           {omen.omens.map((o, i) => (
             <li key={i} class={o.kind === 'cursed' ? 'curse' : undefined}>
-              {o.kind === 'wrathful' && <Icon d={ROGUE_ICONS.flame} cls="rg-ic" />}
-              {o.kind === 'cursed' && <Icon d={ROGUE_ICONS.curse} cls="rg-ic" />}
+              {o.kind === 'wrathful' && glyph('flame', 32)}
+              {o.kind === 'cursed' && glyph('curse', 32)}
               <b><small>{o.label}</small>{o.name}</b>
               <span><Words parts={o.text} /></span>
             </li>

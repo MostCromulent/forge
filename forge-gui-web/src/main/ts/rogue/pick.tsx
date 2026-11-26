@@ -3,16 +3,15 @@
 import { Fragment } from 'preact';
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Backdrop } from '../dialog';
-import { hideBroken, imageUrl, skinIconUrl } from '../images';
+import { hideBroken, imageUrl } from '../images';
 import { reducedMotion } from '../dom';
 import { avatarUrl } from '../avatarsleeves';
 import { isPortrait } from '../form';
 import { useDebounced, useSceneKeys } from '../hooks';
 import { useCataloguePages } from '../deck/catalogue';
 import { t, formatNumber } from '../text';
-import { Icon } from '../icons';
 import { playSound } from '../audio';
-import { ROGUE_ICONS } from './icons';
+import { Sprite, glyph } from './kit';
 import { Scene } from './scene';
 import { TraitCard } from './traits';
 import type { Actions } from '../actions';
@@ -134,8 +133,8 @@ export function RewardPick({ asked, answer, fold, viewDeck }: { asked: AskCards;
   const foot = <>
     {asked.rerollCost != null && (
       <button disabled={!asked.rerollEnabled} onClick={() => answer('reroll')}>
-        <Icon d={ROGUE_ICONS.reroll} cls="rg-ic" />
-        {phone ? ` ${asked.rerollCost}` : <>{` ${t('lblWebRogueReroll')} `}<img onError={hideBroken} class="camp-shard" alt="" src={skinIconUrl('ICO_QUEST_COIN')} />{asked.rerollCost}</>}
+        {glyph('reroll')}
+        {phone ? ` ${asked.rerollCost}` : <>{` ${t('lblWebRogueReroll')} `}<Sprite k="coin" cls="camp-shard" />{asked.rerollCost}</>}
       </button>
     )}
     <button class="primary" onClick={() => answer(picked)}>
@@ -173,7 +172,7 @@ export function LootPick({ choice, answer, fold, viewDeck }: { choice: AskChoice
   useSceneKeys(i => { if (choice.options[i]?.enabled) pick(i); }, () => {});
   const foot = <>
     {choice.rerolls > 0 && (
-      <button onClick={() => answer('reroll')}><Icon d={ROGUE_ICONS.reroll} cls="rg-ic" />{` ${phone ? choice.rerolls : t('lblRogueRerollsRemaining', choice.rerolls)}`}</button>
+      <button onClick={() => answer('reroll')}>{glyph('reroll')}{` ${phone ? choice.rerolls : t('lblRogueRerollsRemaining', choice.rerolls)}`}</button>
     )}
     {choice.skip && <button onClick={() => answer('skip')}>{t(phone ? 'lblSkip' : 'lblRogueSkipLoot')}</button>}
   </>;

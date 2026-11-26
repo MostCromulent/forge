@@ -20,8 +20,8 @@ export interface CampaignModeHooks {
   message?(model: Model, msg: ServerMessage): boolean;
   actions(send: Send, model: Model, schedule: () => void): object;
   Page: FunctionComponent<{ model: Model; actions: Actions }>;
-  /** The start page's entry. art is the card picture behind it. */
-  tile: { icon: VNode; art: string; name: TextKey; blurb: TextKey; resumeLabel(save: string): string; order: number };
+  /** The start page's entry. art is the card picture behind it, and picture a pixel icon drawn in place of icon. */
+  tile: { icon: VNode; picture?: string; art: string; name: TextKey; blurb: TextKey; resumeLabel(save: string): string; order: number };
   draft?(model: Model): CampaignDraft | null;
   /** The choices the number keys pick from in the scene the mode shows, empty when the OK key only continues it, or null when no scene takes keys. */
   sceneKeys?(model: Model, ui: UiState): { enabled: boolean }[] | null;

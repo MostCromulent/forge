@@ -148,9 +148,9 @@ public final class RoguePages {
         final Localizer text = Localizer.getInstance();
         final int runs = progress.getTotalRunsCompleted();
         final List<Balance> balances = new ArrayList<>();
-        balances.add(new Balance("ICO_QUEST_GOLD", progress.getTotalEchoes(), KeywordHint.ECHOES.getTitle(), null, null, KeywordHint.ECHOES.getHintText()));
+        balances.add(new Balance("ICO_QUEST_GOLD", progress.getTotalEchoes(), KeywordHint.ECHOES.getTitle(), null, "shards", KeywordHint.ECHOES.getHintText()));
         if (progress.isDescensionModeUnlocked()) {
-            balances.add(new Balance("ICO_QUEST_ELIXIR", progress.getTotalSparks(), text.getMessage("lblWebRogueSparks"), null, null, null));
+            balances.add(new Balance("ICO_QUEST_ELIXIR", progress.getTotalSparks(), text.getMessage("lblWebRogueSparks"), null, "spark", null));
         }
         final CampaignBar bar = new CampaignBar(text.getMessage("lblRogueCommander"),
                 runs == 0 ? text.getMessage("lblWebRogueNoRuns") : record(runs, progress.getTotalRunsWon()), balances, Map.of());
@@ -564,8 +564,8 @@ public final class RoguePages {
         final int life = run.getCurrentLife() - held.life();
         final List<Balance> balances = List.of(
                 new Balance("rogueLife", life, KeywordHint.MAX_LIFE.getTitle(), life + " / " + run.getMaxLife(), "heart", KeywordHint.MAX_LIFE.getHintText()),
-                new Balance("ICO_QUEST_COIN", run.getCurrentGold() - held.gold(), KeywordHint.GOLD.getTitle(), null, null, KeywordHint.GOLD.getHintText()),
-                new Balance("ICO_QUEST_GOLD", progress.getTotalEchoes() - held.echoes(), KeywordHint.ECHOES.getTitle(), null, null, KeywordHint.ECHOES.getHintText()),
+                new Balance("ICO_QUEST_COIN", run.getCurrentGold() - held.gold(), KeywordHint.GOLD.getTitle(), null, "coin", KeywordHint.GOLD.getHintText()),
+                new Balance("ICO_QUEST_GOLD", progress.getTotalEchoes() - held.echoes(), KeywordHint.ECHOES.getTitle(), null, "shards", KeywordHint.ECHOES.getHintText()),
                 new Balance("rogueCredits", run.getRemovalCredits() - held.credits(), KeywordHint.REMOVAL_CREDITS.getTitle(), null, "cut",
                         KeywordHint.REMOVAL_CREDITS.getHintText()));
         final List<String> tip = new ArrayList<>();
@@ -630,11 +630,13 @@ public final class RoguePages {
     }
 
     /** Where a trait came from, in the order the traits page lists them. TRAIT is any other source, which the page draws without a mark. */
-    private enum Source { AETHER, CUSTOM, EVENT, CHEST, NPC, WRATHFUL, CURSED, TRAIT, WOUND, DESCENSION, ENDLESS }
+    /** Where a trait came from, which picks its seal. Treasure is a chest's, and is sealed with coins, as mobile draws it. */
+    private enum Source { AETHER, CUSTOM, EVENT, CHEST, TREASURE, NPC, WRATHFUL, CURSED, TRAIT, WOUND, DESCENSION, ENDLESS }
 
     private static Source source(final RogueEffect effect) {
         return effect instanceof AetherEffect ? Source.AETHER : effect instanceof CustomRunModification ? Source.CUSTOM
-                : effect instanceof EventEffect ? Source.EVENT : effect instanceof ChestEffect ? Source.CHEST : effect instanceof NPCEffect ? Source.NPC
+                : effect instanceof EventEffect ? Source.EVENT : effect == ChestEffect.TREASURE ? Source.TREASURE : effect instanceof ChestEffect ? Source.CHEST
+                : effect instanceof NPCEffect ? Source.NPC
                 : effect instanceof WrathfulEffect ? Source.WRATHFUL : effect instanceof CursedEffect ? Source.CURSED
                 : effect instanceof WoundEffect ? Source.WOUND : effect instanceof DescensionLevel ? Source.DESCENSION
                 : effect instanceof EndlessMode ? Source.ENDLESS : Source.TRAIT;
@@ -653,7 +655,7 @@ public final class RoguePages {
         final Source source = source(effect);
         return switch (source) {
             case AETHER -> hinted(name, words, source, KeywordHint.AETHERWORK, loot);
-            case CHEST -> hinted(name, words, source, KeywordHint.CHEST, loot);
+            case CHEST, TREASURE -> hinted(name, words, source, KeywordHint.CHEST, loot);
             case WRATHFUL -> hinted(name, words, source, KeywordHint.WRATHFUL, loot);
             case CURSED -> hinted(name, words, source, KeywordHint.CURSED, loot);
             case WOUND -> hinted(name, words, source, KeywordHint.WOUND, loot);

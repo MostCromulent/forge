@@ -1,9 +1,8 @@
 // Runs with an unfinished run: the run, which continues from here, beside Start New Run
 
-import { artUrl, hideBroken, imageUrl, skinIconUrl } from '../images';
+import { artUrl, hideBroken, imageUrl } from '../images';
 import { t } from '../text';
-import { Icon } from '../icons';
-import { ROGUE_ICONS } from './icons';
+import { Sprite, glyph } from './kit';
 import type { RogueHome, RogueRunCard } from '../protocol';
 
 const art = (key: string) => ({ backgroundImage: `url("${artUrl(key)}")` });
@@ -26,10 +25,10 @@ export function Landing({ home, run, go, deck, abandon, fresh }: {
                 {run.line && <p>{run.line}</p>}
               </div>
               <div class="figs">
-                <div><Icon d={ROGUE_ICONS.heart} cls="rg-ic" /><b>{`${run.life} / ${run.maxLife}`}</b><span>{t('lblLife')}</span></div>
-                <div><img onError={hideBroken} alt="" src={skinIconUrl('ICO_QUEST_COIN')} /><b>{run.gold}</b><span>{t('lblWebRogueGold')}</span></div>
-                <div><Icon d={ROGUE_ICONS.deck} cls="rg-ic" /><b>{run.cards}</b><span>{t('lblCards')}</span></div>
-                <div><Icon d={ROGUE_ICONS.cut} cls="rg-ic" /><b>{run.credits}</b><span>{t('lblWebRogueRemovalCredits')}</span></div>
+                <div>{glyph('heart')}<b>{`${run.life} / ${run.maxLife}`}</b><span>{t('lblLife')}</span></div>
+                <div><Sprite k="coin" /><b>{run.gold}</b><span>{t('lblWebRogueGold')}</span></div>
+                <div>{glyph('deck')}<b>{run.cards}</b><span>{t('lblCards')}</span></div>
+                <div>{glyph('cut')}<b>{run.credits}</b><span>{t('lblWebRogueRemovalCredits')}</span></div>
               </div>
               {run.carry.length > 0 && (
                 <div class="sec">

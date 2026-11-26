@@ -2,18 +2,18 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { Icon } from '../icons';
-import { hideBroken, imageUrl, skinIconUrl } from '../images';
+import { hideBroken, imageUrl } from '../images';
 import { isPortrait } from '../form';
 import { playSound } from '../audio';
 import { t } from '../text';
-import { ROGUE_ICONS } from './icons';
+import { Sprite, glyph } from './kit';
 import { Scene } from './scene';
 import { TERM_ICONS, Words } from './terms';
 import { Seal, TraitCard } from './traits';
 import { shopTotal } from './shop';
 import type { AskShop, ShopItem } from '../protocol';
 
-const coin = (alt: string, cls?: string) => <img onError={hideBroken} class={cls} alt={alt} src={skinIconUrl('ICO_QUEST_COIN')} />;
+const coin = (alt: string, cls?: string) => <Sprite k="coin" alt={alt} cls={cls} />;
 
 /** An item as a tile: a card with its carry type or Mythic over it, or a trait as a card, and its price. A struck price is a discount. */
 function Item({ item, on, no, toggle }: { item: ShopItem; on: boolean; no: boolean; toggle: () => void }) {
@@ -57,7 +57,7 @@ export function Bazaar({ asked, answer, fold, viewDeck }: { asked: AskShop; answ
   const send = (selected: number[], reroll: boolean) => answer({ selected, reroll, tab });
   const reroll = asked.rerollCost != null && (
     <button disabled={!asked.rerollEnabled} onClick={() => send([], true)}>
-      <Icon d={ROGUE_ICONS.reroll} cls="rg-ic" />{phone ? ` ${asked.rerollCost}` : <>{` ${t('lblWebRogueReroll')} `}{coin('', 'camp-shard')}{asked.rerollCost}</>}
+      {glyph('reroll')}{phone ? ` ${asked.rerollCost}` : <>{` ${t('lblWebRogueReroll')} `}{coin('', 'camp-shard')}{asked.rerollCost}</>}
     </button>
   );
   const foot = <>

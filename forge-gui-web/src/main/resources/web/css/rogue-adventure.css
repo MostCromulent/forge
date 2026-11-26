@@ -1,0 +1,670 @@
+/* Rogue Commander in Adventure's look: adventure's skin frames and item sprites, cut by the server from Adventure's own sheets (../adventure). Every rule is under .kit, which the page root has while Rogue is open, except the play menu's Rogue tile. */
+/* Textured map: a photographed paper sheet that scrolls with the map, inked by hand, inside the client's dark shell.
+   One font: the client's own. */
+.kit .rg-vstage {
+  --ink: #2a1d10; --ink-soft: rgba(42, 29, 16, .62); --ink-faint: rgba(42, 29, 16, .28); --paper: #f1e8d2; --paper-hi: #f8f2e3; --gold: #e2b23c;
+  background: #eee4cb;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .4);
+}
+.kit .rg-vstage .rg-trail {
+  background: radial-gradient(100% 90% at 50% 45%, transparent 66%, rgba(120, 88, 40, .14) 100%), none 0 0 / 700px 700px repeat;
+  background-attachment: scroll, local;
+}
+
+/* Paths: ink dots with a slight nib wobble */
+.kit .rg-trail-in > svg { filter: url(#nib); }
+.kit .rg-vstage .rg-e { stroke: var(--ink-faint); stroke-width: 3.4; stroke-dasharray: .1 9; stroke-linecap: round; }
+.kit .rg-vstage .rg-e.dead { stroke: rgba(42, 29, 16, .13); }
+.kit .rg-vstage .rg-e.next { stroke: var(--ink-soft); stroke-width: 4; stroke-dasharray: .1 8; }
+.kit .rg-vstage .rg-e.walked { stroke: var(--ink); stroke-width: 3; stroke-dasharray: none; opacity: .85; }
+.kit .rg-vstage .rg-e.can { stroke: var(--ink); stroke-width: 5.5; stroke-dasharray: .1 8; }
+
+/* Planebound: a framed plate. Art fills the top, a paper band holds the name, an inner rule runs round the art. */
+.kit .rg-n { border-radius: 3px; color: var(--ink); background-color: var(--paper); background-size: 100% 50%; background-position: top; background-repeat: no-repeat;
+  box-shadow: 0 0 0 1.5px var(--ink), 0 3px 0 -1px rgba(42, 29, 16, .25), 0 6px 12px -4px rgba(42, 29, 16, .35); }
+.kit .rg-n::before { inset: 4px 4px auto; height: calc(50% - 4px); background: none; border: 1px solid rgba(248, 242, 227, .75); border-radius: 1px; box-shadow: inset 0 0 0 1px rgba(42, 29, 16, .35); }
+.kit .rg-n::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: var(--ink); }
+.kit .rg-n .nm { left: 8px; right: 8px; bottom: 6px; text-shadow: none; }
+.kit .rg-n .nm b { font-size: 12px; font-weight: 700; color: var(--ink); line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.kit .rg-n .nm span { color: var(--ink-soft); }
+.kit .rg-n .opp { top: 6px; left: 6px; width: 30px; height: 30px; box-shadow: 0 0 0 2px var(--paper-hi), 0 0 0 3.5px var(--ink); }
+.kit .rg-n .rg-mark { background: var(--paper-hi); color: var(--ink); border: 1px solid var(--ink); }
+.kit .rg-n.hid { background: repeating-linear-gradient(45deg, rgba(42, 29, 16, .14) 0 1px, transparent 1px 6px), var(--paper); box-shadow: 0 0 0 1.5px var(--ink-soft); }
+.kit .rg-n.hid::before, .kit .rg-n.hid::after { display: none; }
+.kit .rg-n.hid .q { color: var(--ink-soft); font-family: inherit; font-weight: 700; inset: 0 0 26px; }
+
+/* Side nodes: an inked ring on a lighter paper disc, the mark inside */
+.kit .rg-n.side { border-radius: 50%; font-size: 24px; color: var(--ink); background: radial-gradient(circle at 45% 40%, var(--paper-hi), var(--paper) 70%);
+  box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px rgba(248, 242, 227, .85), 0 0 0 6px var(--ink-faint), 0 4px 8px -2px rgba(42, 29, 16, .3); }
+.kit .rg-n.side .rg-ic { stroke-width: 2; }
+.kit .rg-n.side::before, .kit .rg-n.side::after { display: none; }
+
+/* States by weight and fading, never by hue alone */
+.kit .rg-n.past, .kit .rg-n.dead { opacity: .32 !important; filter: grayscale(1) sepia(.35); }
+.kit .rg-n.far { opacity: .62 !important; filter: sepia(.2); }
+.kit .rg-n.walked { opacity: .82 !important; filter: sepia(.4) saturate(.7); }
+.kit .rg-n.open { box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px var(--paper-hi), 0 0 0 7px var(--ink), 0 0 18px 6px rgba(226, 178, 60, .45); }
+.kit .rg-n.open.side { color: var(--ink); }
+.kit .rg-n.sel { box-shadow: 0 0 0 3px var(--ink), 0 0 0 7px var(--gold), 0 0 0 9.5px var(--ink), 0 0 26px 8px rgba(226, 178, 60, .5), 0 10px 18px -6px rgba(42, 29, 16, .5); z-index: 4; }
+.kit .rg-n .ok { background: var(--ink); color: var(--paper-hi); box-shadow: 0 0 0 2px var(--paper-hi); }
+
+/* Side nodes get a coloured wash per kind; the mark inside still says which kind it is */
+.kit .rg-n.side { --wash: #6b5a44; color: #fbf5e6; background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--wash) 72%, #fff), var(--wash) 72%); }
+.kit .rg-n.side[data-kind="SANCTUM"] { --wash: #3f7470; }
+.kit .rg-n.side[data-kind="BAZAAR"] { --wash: #9a5530; }
+.kit .rg-n.side[data-kind="CHEST"] { --wash: #a8822c; }
+.kit .rg-n.side[data-kind="EVENT"] { --wash: #5d4c80; }
+.kit .rg-n.open.side { color: #fbf5e6; }
+
+/* Side marks B: adventure mode's own town buildings, as the mobile client draws them, on paper inside a coloured ring */
+.kit .rg-n.side[data-kind="SANCTUM"] { background: url("../adventure?s=buildings&r=160,240,32,32") center / 64px 64px no-repeat, radial-gradient(circle at 45% 40%, var(--paper-hi), var(--paper) 72%); }
+.kit .rg-n.side[data-kind="BAZAAR"] { background: url("../adventure?s=buildings&r=192,240,32,32") center / 64px 64px no-repeat, radial-gradient(circle at 45% 40%, var(--paper-hi), var(--paper) 72%); }
+.kit .rg-n.side[data-kind="CHEST"] { background: url("../adventure?s=buildings&r=432,272,16,16") center / 48px 48px no-repeat, radial-gradient(circle at 45% 40%, var(--paper-hi), var(--paper) 72%); }
+.kit .rg-n.side[data-kind="EVENT"] { background: url("../adventure?s=buildings&r=240,272,16,16") center / 48px 48px no-repeat, radial-gradient(circle at 45% 40%, var(--paper-hi), var(--paper) 72%); }
+.kit .rg-n.side { image-rendering: pixelated; box-shadow: 0 0 0 1.5px var(--ink), 0 0 0 5.5px var(--wash), 0 0 0 7px var(--ink), 0 4px 8px -2px rgba(42, 29, 16, .35); }
+.kit .rg-n.side > .rg-ic { display: none; }
+.kit .rg-n.open.side { box-shadow: 0 0 0 1.5px var(--ink), 0 0 0 5.5px var(--wash), 0 0 0 7px var(--ink), 0 0 0 10px var(--paper-hi), 0 0 0 11.5px var(--ink), 0 0 18px 8px rgba(226, 178, 60, .45); }
+.kit .rg-n.side { width: 76px !important; height: 76px !important; margin: -8px 0 0 -8px; }
+
+
+/* Adventure kit: mobile's parchment panel, stone keys and item sprites around the textured map. Pixel art at whole-number scales; the client's font. */
+.kit { --kit-ink: #2a1d10; --kit-pale: #f1e7cf; --kit-gold: #ffd75e; }
+.kit .camp-shell { background: #1a1612; border-color: #000; }
+.kit .camp-bar { background: #221c16; border-bottom: 2px solid #000; gap: 0 14px; padding: 6px 14px; align-items: center; }
+.kit .camp-id b { color: var(--kit-pale); }
+.kit .camp-id span { color: #b9a888; }
+.kit .camp-tabs { gap: 6px; align-items: center; }
+.kit :is(.camp-tab, .camp-purse > button, .camp-purse .icon-button, .camp-dev, .rg-vbtn, .camp-foot button:not(.primary):not(.camp-face2)) {
+  image-rendering: pixelated; background: none; border-style: solid; border-width: 8px 8px 14px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 8px 8px 14px repeat;
+  border-radius: 0; color: var(--kit-pale); min-height: 0; padding: 0 6px; box-shadow: none; }
+.kit :is(.camp-tab, .camp-purse > button, .camp-purse .icon-button, .camp-dev, .rg-vbtn, .camp-foot button:not(.primary):not(.camp-face2)):active { border-image-source: url("../adventure?s=skin&r=125,175,14,16"); }
+.kit .camp-tab { height: 40px; font-size: 13.5px; }
+.kit .camp-tab[aria-current] { color: var(--kit-gold); }
+.kit .camp-tab-line { display: none; }
+.kit .camp-purse > button, .kit .camp-purse .icon-button, .kit .camp-dev { height: 38px; min-width: 38px; }
+.kit .camp-coin { color: var(--kit-pale); gap: 6px; }
+.kit .camp-coin b { font-size: 15px; }
+
+.kit .camp-side { image-rendering: pixelated; background: none; border-style: solid; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 26px 32px 22px 34px repeat; margin: 8px 8px 8px 4px; color: var(--kit-ink); }
+.kit .camp-side, .kit .camp-side :is(p, span, b, small, li, h4, .camp-chip, .camp-kicker, .camp-mine) { color: var(--kit-ink); }
+.kit .camp-side .rg-sec :is(p, b, span) { color: var(--kit-ink) !important; }
+.kit .camp-side-head:not(.bare) > .camp-art { order: -1; position: relative; inset: auto; height: 120px; margin: -6px -10px 8px; border-radius: 0; box-shadow: 0 0 0 2px var(--kit-ink); }
+.kit .camp-side-head:not(.bare) > .camp-art::after { display: none; }
+.kit .camp-side-head:not(.bare) h3 { color: var(--kit-ink); text-shadow: none; font-size: 21px; }
+.kit .camp-side-head:not(.bare) .camp-kicker { color: #6e5843; text-shadow: none; }
+.kit .camp-side .camp-chip { background: none; border: 0; }
+.kit .camp-foot { border-top: 2px solid rgba(42, 29, 16, .35); padding: 10px 2px 2px; }
+.kit .camp-foot button:not(.primary):not(.camp-face2) { height: 44px; }
+.kit .camp-foot button.primary { image-rendering: pixelated; background: none; border-style: solid; border-width: 12px 10px 14px; border-image: url("../adventure?s=skin&r=75,165,32,16") 6 5 7 fill / 12px 10px 14px repeat; border-radius: 0; box-shadow: none; color: var(--kit-gold); height: 54px; font-size: 15px; text-shadow: 0 1px 0 #000; }
+.kit .rg-vbtn { height: 44px; }
+.kit .rg-vbtn::before { content: ""; width: 32px; height: 32px; margin-right: 4px; background: url("../adventure?s=items&r=448,63,16,16") center / 32px 32px no-repeat; image-rendering: pixelated; display: inline-block; vertical-align: middle; }
+.kit .camp-side .camp-panel { padding-top: 0; }
+.kit .camp-side-head:not(.bare) { display: flex; flex-direction: column; gap: 2px; }
+.kit .camp-side-head:not(.bare) > :not(.camp-art) { position: static; }
+.kit .camp-side .camp-side-head > .camp-art { position: relative !important; inset: auto !important; height: 130px !important; flex: none; }
+.kit .camp-side .camp-side-head > .camp-art { padding: 0 !important; }
+.kit .camp-side .camp-side-head > .camp-art::after, .kit .camp-side .camp-side-head > .camp-art::before { content: none !important; }
+.kit .camp-side .camp-side-head > :not(.camp-art) { background: none !important; }
+.kit .camp-side .camp-side-head { background: none !important; }
+
+/* Commander panel: a second parchment panel above the plane, as adventure and the mobile client stack them */
+.kit-cmd { display: none; }
+.camp-side-body { display: contents; }
+.kit .kit-cmd { display: grid; gap: 8px; image-rendering: pixelated; border-style: solid; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 26px 32px 22px 34px repeat; color: var(--kit-ink); margin: -4px -6px 0; }
+.kit .kc-top { display: flex; gap: 12px; align-items: center; margin: -8px -10px 0; }
+.kit .kc-face { width: 52px; height: 52px; flex: none; background: center 20% / cover; box-shadow: 0 0 0 2px var(--kit-ink); }
+.kit .kc-id { display: grid; min-width: 0; }
+.kit .kc-id b { font-size: 16px; color: var(--kit-ink); }
+.kit .kc-id span { font-size: 12px; color: #6e5843; }
+.kit .kc-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 -10px; }
+.kit .kc-stat { display: inline-flex; align-items: center; gap: 4px; }
+.kit .kc-stat img { width: 32px; height: 32px; image-rendering: pixelated; }
+.kit .kc-stat b { font-size: 15px; color: var(--kit-ink); }
+.kit .kc-deck { display: flex; align-items: center; justify-content: space-between; margin: -4px -10px -6px; font-size: 13px; color: var(--kit-ink); }
+.kit .kc-deck button { image-rendering: pixelated; background: none; border-style: solid; border-width: 8px 8px 14px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 8px 8px 14px repeat; border-radius: 0; color: var(--kit-pale); padding: 0 8px; height: 38px; min-height: 0; }
+.kit .camp-side:has(> .kit-cmd) { border: 0; border-image: none; margin: 8px 8px 8px 4px; gap: 10px; display: flex; flex-direction: column; overflow: hidden; }
+.kit .camp-side-body { display: flex; flex-direction: column; flex: 1; min-height: 0; image-rendering: pixelated; border-style: solid; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 26px 32px 22px 34px repeat; margin: 0 -6px -4px; }
+.kit .camp-side-body .camp-panel { flex: 1; min-height: 0; overflow-y: auto; }
+.kit .camp-side-head:not(.bare) > .camp-art, .kit .camp-side .camp-side-head > .camp-art { height: 96px !important; }
+.kit .camp-shell:has(.kit-cmd):not(:has(.rg-scene)) :is(.camp-purse .camp-coin, .camp-id) { display: none !important; } .kit .camp-foot .camp-mine { display: none !important; }
+
+
+/* Plate D: the art fills the plate inside a thin pixel frame from adventure's skin (stone, or the gold key when the plane can be entered).
+   The name and life hang below on a torn parchment label; Elite and Wrathful sit on the top edge as adventure's sprites; a hidden plane is a portal. */
+.kit .rg-n:not(.side) { image-rendering: pixelated; overflow: visible; border-radius: 0; filter: none; background-size: cover; background-position: center 30%; background-clip: padding-box;
+  border-style: solid; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 / 4px 4px 7px repeat; box-shadow: 0 6px 10px -4px rgba(42, 29, 16, .45); }
+.kit .rg-n:not(.side)::before, .kit .rg-n:not(.side)::after { display: none; }
+.kit .rg-n:not(.side) .opp { display: none; }
+.kit .rg-n:not(.side) .nm { left: 50%; right: auto; bottom: auto; top: calc(100% - 10px); transform: translateX(-50%); width: 148px; padding: 0 6px; display: flex; flex-direction: column; align-items: center; text-align: center;
+  border-style: solid; border-width: 7px 8px 6px 9px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 7px 8px 6px 9px repeat; text-shadow: none; z-index: 2; }
+.kit .rg-n:not(.side) .nm b { color: var(--ink); font-size: 11.5px; line-height: 1.15; -webkit-line-clamp: 2; }
+.kit .rg-n:not(.side) .nm span { color: var(--ink); font-weight: 700; gap: 4px; }
+.kit .rg-n:not(.side) .nm span > svg { display: none; }
+.kit .rg-n:not(.side) .nm span::before { content: ""; width: 16px; height: 16px; background: url("../adventure?s=items&r=48,16,16,16") center / 16px 16px no-repeat; image-rendering: pixelated; }
+.kit .rg-n .mk { top: -14px; right: -10px; gap: 0; }
+.kit .rg-n .rg-mark { height: 32px; min-width: 32px; padding: 0 0 0 30px; border: 0; border-radius: 0; background: url("../adventure?s=buildings&r=304,288,16,16") left center / 32px 32px no-repeat; color: #fbf5e6; font-weight: 800; font-size: 13px; text-shadow: 0 1px 0 #000, 0 0 3px #000; image-rendering: pixelated; }
+.kit .rg-n .rg-mark.star { background-image: url("../adventure?s=items&r=464,16,16,16"); }
+.kit .rg-n .rg-mark > svg { display: none; }
+.kit .rg-n.hid { background: url("../adventure?s=portals&r=16,16,16,16") center 40% / 48px 48px no-repeat, #e7dcc0; background-clip: padding-box; }
+.kit .rg-n.hid .q { display: none; }
+.kit .rg-n.hid .nm b { display: none; }
+.kit .rg-n:not(.side) .ok { top: -10px; left: -10px; right: auto; }
+.kit .rg-n.open:not(.side), .kit .rg-n.sel:not(.side) { border-width: 6px 5px 7px; border-image: url("../adventure?s=skin&r=75,165,32,16") 6 5 7 / 6px 5px 7px repeat; }
+.kit .rg-n.open:not(.side) { box-shadow: 0 0 14px 3px rgba(255, 215, 94, .55), 0 6px 10px -4px rgba(42, 29, 16, .45); }
+.kit .rg-n.sel:not(.side) { box-shadow: 0 0 0 2px #fff4c2, 0 0 24px 8px rgba(255, 215, 94, .8), 0 10px 14px -6px rgba(42, 29, 16, .5); transform: translateY(-3px); z-index: 4; }
+.kit .rg-n.walked:not(.side) { filter: sepia(.45) saturate(.7); opacity: .85 !important; }
+.kit .rg-n:is(.past, .dead):not(.side) { filter: grayscale(1); opacity: .35 !important; }
+.kit .rg-n.far:not(.side) { opacity: .7 !important; }
+
+/* Adventure look for every Rogue screen: adventure's parchment, stone keys, gold key and item sprites inside the client's dark shell.
+   Pixel art only at whole-number scales; border images repeat their edges rather than stretch them. One font: the client's own. */
+.kit { --kit-ink: #2a1d10; --kit-ink2: #5d5244; --kit-name: #7f520e; --kit-card: #0f6f7c; --kit-pale: #f1e7cf; --kit-gold: #ffd75e; }
+
+/* Paper: the ink set every panel on parchment uses. The client's own colour names are pointed at ink, so rules written for the dark look read on paper. */
+.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, #rg-tipbox, .rg-folded, .rg-gain, .rg-sub-tabs, .rg-opt, .rg-ladder, .rg-psheet .box, .rg-prow) {
+  --text: #2a1d10; --muted: #5d5244; --faint: #786953; --accent: #7f520e; --accent-2: #7f520e; --gold: #7f520e;
+  --line: rgba(42, 29, 16, .32); --line-bright: rgba(42, 29, 16, .5); --edge: rgba(42, 29, 16, .45);
+  --surface: rgba(255, 249, 232, .45); --surface-2: rgba(42, 29, 16, .07); --surface-3: rgba(42, 29, 16, .16);
+  --tile: rgba(255, 250, 236, .5); --accent-soft: rgba(127, 82, 14, .13); --accent-glow: rgba(127, 82, 14, .2);
+  color: var(--text); text-shadow: none;
+}
+.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, #rg-tipbox, .rg-folded, .rg-gain, .rg-opt, .rg-ladder) :is(h1, h2, h3, h4, h5, p, b, span, small, li, em, i:not(.opp), dt, dd, label, strong) { text-shadow: none; }
+
+/* Large paper: adventure's paper10Patch at twice its size */
+.kit :is(.dialog, .rg-words, .rg-list, .rg-deckcol) {
+  image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 26px 32px 22px 34px repeat;
+}
+/* Small paper: the same patch at its own size, for tiles in a grid */
+.kit :is(.rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-omen li, .rg-menu, .rg-gain, .rg-folded), .kit #rg-tipbox {
+  image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat;
+}
+/* Pale insets with a thin ink edge sit on paper, as mobile draws its tiles */
+.kit :is(.camp-side, .rgm-side, .rg-words, .dialog, .rg-deckcol, .rg-list) :is(.rg-opt, .rgm-facts, .rgm-lv button, .rg-loot span, .rg-facts div, .rg-li) {
+  background: rgba(255, 250, 236, .55); border: 1px solid rgba(42, 29, 16, .45); border-radius: 0; box-shadow: none; color: var(--kit-ink);
+}
+.kit .rg-opt { background: rgba(255, 250, 236, .55); border: 1px solid rgba(42, 29, 16, .45); border-radius: 0; box-shadow: none; }
+.kit .rg-opt b { color: var(--kit-name); }
+.kit .rg-opt .d, .kit .rg-opt span { color: var(--kit-ink); }
+.kit .rg-opt.hot, .kit .rg-opt:not(.no):hover { background: rgba(255, 244, 205, .9); box-shadow: 0 0 0 1px var(--kit-ink), inset 0 0 0 2px #c99a2e; border-color: var(--kit-ink); }
+.kit .rg-opt.no { background: rgba(42, 29, 16, .06); border-style: dashed; }
+.kit .rg-opt.no :is(b, .d, span) { color: var(--kit-ink2); }
+.kit .rg-opt .k { color: var(--kit-ink2); background: none; border: 0; box-shadow: none; border-radius: 0; font-weight: 700; }
+
+/* Card names and terms keep their marks on paper: card names in mobile's teal, solid underline; terms dotted */
+.kit :is(.camp-side, .rg-words, .dialog, .rg-opt, .rgm-side, .rg-tcard, .rgt-tile, .rg-work, #rg-tipbox, .rg-gain) .rg-cn { color: var(--kit-card); text-shadow: none; }
+.kit :is(.camp-side, .rg-words, .dialog, .rg-opt, .rgm-side, .rg-tcard, .rgt-tile, .rg-work, #rg-tipbox, .rg-gain) .rg-kw { color: var(--kit-ink); text-shadow: none; }
+
+/* Stone keys, small: unpressed10patch at its own size. Pressed and current use pressed10Patch with gold words; disabled uses the grey key. */
+.kit :is(.rg-scene .ft > button:not(.primary), .rg-shell .seg > button, .rg-sub-tabs > button, .rg-head > button:not(.primary), .dialog .actions button:not(.primary), .rgl-run .go button:not(.primary),
+  .rgx-rand, .rgx-mid > button, .rgm-opt > button:not(.rg-toggle), .rg-run .end button, .panel .actions button:not(.primary), .camp-panel > button:not(.primary), .rg-sec > button:not(.primary),
+  .kc-deck button, .rg-folded button:not(.primary), .rg-psheet .menu button, .crumb .link, .rgl-crumb .link) {
+  image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat; color: var(--kit-pale); text-shadow: none; min-height: 0;
+}
+.kit :is(.rg-shell .seg > button, .rg-sub-tabs > button):is([aria-pressed="true"], [aria-current], .on) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 6px 4px 5px; border-image: url("../adventure?s=skin&r=125,175,14,16") 6 4 5 fill / 6px 4px 5px repeat; color: var(--kit-gold); }
+.kit :is(.rg-scene .ft > button, .rg-shell .seg > button, .rg-sub-tabs > button, .rg-head > button, .dialog .actions button, .rgx-mid > button, .rgm-opt > button, .camp-panel > button, .rg-sec > button):disabled { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 3px 3px 6px; border-image: url("../adventure?s=skin&r=1,1,14,16") 3 3 6 fill / 3px 3px 6px repeat; color: #9a9a9a; }
+.kit :is(.rg-scene .ft > button:not(.primary), .rg-shell .seg > button, .rg-sub-tabs > button, .rg-head > button:not(.primary), .rgx-rand, .rgx-mid > button, .rgm-opt > button:not(.rg-toggle), .camp-panel > button:not(.primary), .rg-sec > button:not(.primary), .dialog .actions button:not(.primary)):active { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 6px 4px 5px; border-image: url("../adventure?s=skin&r=125,175,14,16") 6 4 5 fill / 6px 4px 5px repeat; }
+.kit .rg-shell .seg, .kit .rg-sub-tabs { background: none; border: 0; box-shadow: none; gap: 4px; padding: 0; }
+.kit .rg-shell .seg { display: inline-flex; }
+
+/* Gold key: the one main action on a screen, at the keys' own size everywhere; width makes it primary (R6) */
+.kit :is(.rg-start-btn, .rg-go, .camp-foot .primary) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 6px 5px 7px; border-image: url("../adventure?s=skin&r=75,165,32,16") 6 5 7 fill / 6px 5px 7px repeat; min-height: 0; color: var(--kit-gold); text-shadow: 0 1px 0 #000; }
+.kit .rg-shell .primary:not(.rg-start-btn):not(.rg-go), .kit :is(.dialog, .panel, #game-over, .rg-scene) .primary:not(.rg-start-btn):not(.rg-go) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 6px 5px 7px; border-image: url("../adventure?s=skin&r=75,165,32,16") 6 5 7 fill / 6px 5px 7px repeat; min-height: 0; color: var(--kit-gold); text-shadow: 0 1px 0 #000; }
+.kit :is(.rg-shell, .dialog, .panel, #game-over) .primary:disabled { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 3px 3px 6px; border-image: url("../adventure?s=skin&r=1,1,14,16") 3 3 6 fill / 3px 3px 6px repeat; color: #a3a3a3; text-shadow: none; }
+.kit :is(.rg-start-btn, .rg-go):disabled { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 3px 3px 6px; border-image: url("../adventure?s=skin&r=1,1,14,16") 3 3 6 fill / 3px 3px 6px repeat; color: #a3a3a3; text-shadow: none; }
+
+/* Item sprites put in place of line icons by the gallery's script */
+.kit img.ks { image-rendering: pixelated; flex: none; vertical-align: middle; display: inline-block; }
+.kit .camp-coin img.ks { margin-right: 0; }
+
+/* The commander panel's stats */
+.kit .kc-stat img { image-rendering: pixelated; }
+
+/* Scenes: the words stand on a parchment sheet; the avatar keeps its ring */
+.kit .rg-words { padding: 20px 26px 22px 30px; margin: -26px -30px -22px -34px; }
+.kit .rg-words h3 { color: var(--kit-name); }
+.kit .rg-words p.flav, .kit .rg-words p { color: var(--kit-ink); }
+.kit .rg-face b { color: var(--kit-pale); }
+.kit .rg-face .pic.icon { background: radial-gradient(circle at 45% 40%, #f8f2e3, #e7dcc0 72%); box-shadow: 0 0 0 2px var(--kit-ink), 0 0 0 7px #6b5a44, 0 0 0 9px var(--kit-ink); image-rendering: pixelated; }
+.kit .rg-face .pic.icon .rg-ic { color: var(--kit-ink); }
+
+/* Dialogs */
+.kit .dialog { border-radius: 0; box-shadow: 0 18px 40px #000a; }
+.kit .dialog :is(h2, h3) { color: var(--kit-name); }
+.kit .dialog p { color: var(--kit-ink); }
+
+/* New Run: the side panel is parchment */
+.kit .rgm-side { border-radius: 0; }
+.kit .rgm-words h1 { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--kit-name); -webkit-text-fill-color: var(--kit-name); text-shadow: none; filter: none; }
+.kit .rgm-words p { color: var(--kit-ink); }
+.kit .rgm-lv button[aria-pressed="true"] { background: rgba(255, 244, 205, .95); box-shadow: 0 0 0 1px var(--kit-ink), inset 0 0 0 2px #c99a2e; color: var(--kit-ink); }
+.kit .rgm-lv button:disabled { opacity: .55; border-style: dashed; }
+.kit .rg-toggle .sw { background: rgba(42, 29, 16, .25); box-shadow: inset 0 0 0 1px rgba(42, 29, 16, .5); }
+.kit .rg-toggle.on .sw { background: #c99a2e; box-shadow: inset 0 0 0 1px var(--kit-ink); }
+.kit .rg-toggle.on .sw::after { background: var(--kit-ink); }
+.kit .rg-toggle .sw::after { background: #f8f2e3; box-shadow: 0 0 0 1px var(--kit-ink); }
+
+/* Landing: the current run and New Run are dark panels on the stage (R1, R2) */
+.kit :is(.rgl-run, .rgl-new) > .haze { display: none; }
+.kit :is(.rgl-run, .rgl-new) { border-radius: 0; box-shadow: none; }
+
+/* Tiles on dark pages: small parchment */
+.kit :is(.rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-omen li, .rg-gain) { border-radius: 0; box-shadow: none; }
+.kit .rg-shell :is(.rg-tcard, .rgt-tile, .rg-work) :is(h3, b, .t > b) { color: var(--kit-name); }
+.kit .rg-work.unbuilt { border-radius: 0; }
+
+/* Codex and Aether side lists */
+.kit .rg-list { border-radius: 0; }
+.kit .rg-list button { color: var(--kit-ink); }
+.kit .rg-list button[aria-pressed="true"] { background: rgba(255, 244, 205, .95); box-shadow: inset 0 0 0 1px var(--kit-ink), inset 0 0 0 3px #c99a2e; }
+.kit .rg-list button b { color: var(--kit-name); }
+
+/* Tooltip and menus */
+.kit #rg-tipbox { border-radius: 0; box-shadow: 0 10px 24px #0009; }
+.kit #rg-tipbox b { color: var(--kit-name); }
+.kit .rg-menu { border-radius: 0; box-shadow: 0 12px 28px #000a; }
+.kit .rg-menu button { color: var(--kit-ink); border-radius: 0; }
+.kit .rg-menu button:hover { background: rgba(42, 29, 16, .1); }
+
+/* Text the client draws in light greys reads as ink on paper; labels take the softer ink */
+.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, .rg-folded, .rg-gain, .rg-opt, .rg-ladder)
+  :is(p, span, small, em, li, dd, dt, label, figcaption, div):not(.rg-cn):not(.rg-kw):not(.kc-stat *):not(.no):not(.myth) { color: var(--kit-ink); }
+.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, .rg-folded, .rg-gain, .rg-opt, .rg-ladder)
+  :is(.camp-kicker, h4, h5, .rg-ls-h, .camp-figure span, .rgm-facts span, .k, small) { color: var(--kit-ink2); }
+.kit :is(.camp-side, .rg-words, .dialog, .rgm-side, .rg-deckcol, .rg-list) .rg-sec > h4::after { background: rgba(42, 29, 16, .3); }
+.kit #rg-tipbox, .kit #rg-tipbox * { color: var(--kit-ink); }
+.kit #rg-tipbox b { color: var(--kit-name); }
+
+/* Seals of traits: a pale disc in an ink ring, as the side nodes are drawn, so the mark reads */
+.kit .rgt-seal { background: radial-gradient(circle at 45% 40%, #f8f2e3, #e7dcc0 72%); color: var(--kit-ink); box-shadow: 0 0 0 1.5px var(--kit-ink), 0 0 0 4px #8a7556, 0 0 0 5.5px var(--kit-ink); border: 0; }
+.kit .rgt-seal .rg-ic { color: var(--kit-ink); }
+.kit :is(.rgt-tile, .rg-tcard).wound .rgt-seal { background: rgba(255, 250, 236, .4); border: 1.5px dashed var(--kit-ink); box-shadow: none; }
+.kit :is(.rgt-tile, .rg-tcard).wound { outline: 1.5px dashed rgba(42, 29, 16, .6); outline-offset: -6px; }
+.kit .rg-shell :is(.rgt-tile, .rg-tcard).wound b { color: var(--kit-ink); }
+/* Cursed keeps its double frame round the paper */
+.kit .rg-omen li.curse { box-shadow: 0 0 0 2px var(--kit-ink), 0 0 0 5px #e7dcc0, 0 0 0 7px var(--kit-ink); }
+.kit .rg-omen li b { color: var(--kit-name); }
+/* A term's explanation beside a scene */
+.kit .rg-tip .kw { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat; --text: #2a1d10; color: var(--kit-ink); }
+.kit .rg-tip .kw :is(b, h4) { color: var(--kit-name); }
+.kit .rg-tip .kw :is(p, span) { color: var(--kit-ink); }
+/* New Run side panel: keep its list inside the panel */
+.kit .rgm-side { padding: 0; }
+.kit .rgl-run .go button { white-space: nowrap; }
+/* History: side nodes on a run's path are pale discs in ink, the last step an ink ring */
+.kit .rg-steps i { box-shadow: 0 0 0 1px rgba(42, 29, 16, .6); }
+.kit .rg-steps i.s { background: radial-gradient(circle at 45% 40%, #f8f2e3, #e7dcc0 72%); color: var(--kit-ink); box-shadow: 0 0 0 1px var(--kit-ink); }
+.kit .rg-steps i.end-at { box-shadow: 0 0 0 2px var(--kit-ink), 0 0 0 4px #c99a2e; }
+.kit .rg-out:not(.win) { background: rgba(255, 250, 236, .6); color: var(--kit-ink); border-color: rgba(42, 29, 16, .5); }
+/* Deck page: the basics' steppers are small stone keys */
+.kit .rg-basics .n button { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat; color: var(--kit-pale); text-shadow: none; min-height: 0; }
+.kit .rg-basics .n button:disabled { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 3px 3px 6px; border-image: url("../adventure?s=skin&r=1,1,14,16") 3 3 6 fill / 3px 3px 6px repeat; color: #9a9a9a; }
+/* Phone: the bottom sheet, the Codex list and list rows are parchment too */
+.kit .rg-psheet .box { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 26px 32px 22px 34px repeat; border-bottom-width: 0; }
+html.kit[data-form="portrait"] .rg-list { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat; }
+.kit .rg-prow { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat; }
+.kit .rg-prow :is(b, h3) { color: var(--kit-name); }
+.kit .rg-prow.unk { border-image: none; border: 1px dashed rgba(255, 255, 255, .25); }
+.kit :is(.rg-psheet .box, .rg-prow) :is(p, span, small, em, li, label, div):not(.rg-cn):not(.no) { color: var(--kit-ink); }
+.kit :is(.rg-psheet .box, .rg-prow) :is(.camp-kicker, h4, small) { color: var(--kit-ink2); }
+.kit .rg-psheet .box .rgm-lv button { background: rgba(255, 250, 236, .55); border: 1px solid rgba(42, 29, 16, .45); color: var(--kit-ink); }
+.kit .rg-psheet .box .rgm-lv button[aria-pressed="true"] { background: rgba(255, 244, 205, .95); box-shadow: 0 0 0 1px var(--kit-ink), inset 0 0 0 2px #c99a2e; }
+.kit .rg-psheet .box .rgm-lv button:disabled { border-style: dashed; opacity: .6; }
+
+/* Main map (the user, 26/11): adventure's parchment as the map's ground, inside its torn edge; the side panels use the ornate gold-framed parchment. */
+.kit .rg-vstage { image-rendering: pixelated; background: #e6d3a6 !important; border-style: solid; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 / 26px 32px 22px 34px repeat; box-shadow: none !important; margin: 6px 0 6px 6px; }
+.kit .rg-vstage .rg-trail { background: url("../adventure?s=skin&r=18,122,15,24") 0 0 / 30px 48px repeat !important; background-attachment: local !important; image-rendering: pixelated; }
+.kit :is(.kit-cmd, .camp-side-body) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 32px 32px 38px 32px; border-image: url("../adventure?s=skin&r=41,1,48,48") 16 16 19 16 fill / 32px 32px 38px 32px repeat; color: var(--kit-ink); }
+.kit .kit-cmd { margin: -2px -4px 0; }
+.kit .camp-side-body { margin: 0 -4px -2px; }
+.kit .kit-cmd .kc-top { margin: -14px -14px 0; }
+.kit .kit-cmd .kc-stats { margin: 0 -14px; }
+.kit .kit-cmd .kc-deck { margin: -6px -14px -12px; }
+
+/* Larger plane plates on the map (the user, 26/11): 20% bigger, centred where the layout put them */
+.kit .rg-vstage:not(.fit) .rg-n:not(.side) { width: 164px !important; height: 118px !important; margin: -10px 0 0 -14px; }
+.kit .rg-vstage:not(.fit) .rg-n:not(.side) .nm { width: 172px; }
+.kit .rg-vstage:not(.fit) .rg-n:not(.side) .nm b { font-size: 12.5px; }
+
+/* Commander as a bar along the bottom of the map (the user, 26/11); the plane panel takes the right column's full height */
+.kit .rg-vmap:has(.kit-cmd) { position: relative; padding-bottom: 92px; }
+.kit .rg-vmap:has(.kit-cmd) .camp-side { position: static; }
+.kit .rg-vmap .kit-cmd { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 16px 16px 19px 16px; border-image: url("../adventure?s=skin&r=41,1,48,48") 16 16 19 16 fill / 16px 16px 19px 16px repeat; position: absolute; left: 6px; right: 6px; bottom: 6px; height: 82px; margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 0 22px; color: var(--kit-ink); }
+.kit .rg-vmap .kit-cmd .kc-top { margin: 0; gap: 12px; }
+.kit .rg-vmap .kit-cmd .kc-face { width: 44px; height: 44px; }
+.kit .rg-vmap .kit-cmd .kc-stats { margin: 0; gap: 0 18px; flex-wrap: nowrap; }
+.kit .rg-vmap .kit-cmd .kc-deck { margin: 0; gap: 12px; justify-content: end; }
+.kit .rg-vmap .camp-side-body { margin: 0 -4px -2px; flex: 1; }
+.kit .rg-vmap:has(.kit-cmd) .camp-side-head > .camp-art { height: 130px !important; }
+
+/* The commander bar replaces the top bar's name and stats wherever it is drawn */
+.kit .camp-shell:has(.kit-cmd) :is(.camp-purse .camp-coin, .camp-id) { display: none !important; }
+
+/* The style system from the design review (26/11): shared roles first, then each screen's own fixes. Loaded after adv-gallery.css. */
+.kit { --kit-dark: #15110d; --kit-tile: rgba(0, 0, 0, .3); --kit-line: rgba(241, 231, 207, .16); --kit-goldline: rgba(255, 215, 94, .32); --kit-ring: #c99a2e; --kit-soft: #d9cfb8; }
+
+/* R1, R2. Dark panel: the stage itself, with a 1px gold line. Cards and art sit on it; text is pale. */
+.kit :is(.rgl-run, .rgl-new, .rg-run, .rg-basics) { background: var(--kit-dark); border: 1px solid var(--kit-goldline); border-image: none; border-radius: 0; box-shadow: none; color: var(--kit-pale); }
+.kit .rgl-run h1, .kit .rgl-new b, .kit .rg-run .t > b { color: var(--kit-gold); }
+
+/* R4. Dark tile: a choice not yet taken, a locked or an unknown thing. A 1px line on the shell; selected takes the gold ring. */
+.kit :is(.rg-mod, .rg-work.unbuilt, .rg-traits .seen .rg-tcard) { background: var(--kit-tile); border: 1px solid var(--kit-line); border-image: none; border-radius: 0; box-shadow: none; filter: none; color: var(--kit-pale); }
+.kit :is(.rg-mod, .rg-work.unbuilt, .rg-traits .seen .rg-tcard) :is(b, h3) { color: var(--kit-gold); font-family: Georgia, serif; }
+.kit :is(.rg-mod, .rg-work.unbuilt, .rg-traits .seen .rg-tcard) :is(p, span, small) { color: var(--kit-soft); }
+.kit :is(.rg-mod[aria-pressed="true"], .rg-work[aria-pressed="true"], .rg-item.on > .rg-tcard) { box-shadow: 0 0 0 1px #000, 0 0 0 4px var(--kit-ring), 0 0 0 5px #000; }
+.kit .rg-mod[aria-pressed="true"] { background: var(--kit-tile); border-color: var(--kit-line); }
+/* The check box, drawn in ink for dark */
+.kit .rg-mod .box { background: none; border: 1px solid var(--kit-soft); border-radius: 0; color: #1a1612; }
+.kit .rg-mod[aria-pressed="true"] .box { background: var(--kit-ring); border-color: #000; box-shadow: inset 0 0 0 1px #f8e7a8; }
+
+/* R3. Decision panel: the gold-framed parchment, for the panel that carries the screen's gold key */
+.kit :is(.rgm-side, .camp-side:not(:has(> .kit-cmd))) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 32px 32px 38px 32px; border-image: url("../adventure?s=skin&r=41,1,48,48") 16 16 19 16 fill / 32px 32px 38px 32px repeat; color: var(--kit-ink); }
+.kit .camp-side:not(:has(> .kit-cmd)) { margin: 6px; padding: 0; }
+.kit .rgm-side { margin: 6px; }
+/* Paper is never laid on paper: the rank list is the pale inset */
+.kit .rg-ladder { border: 1px solid rgba(42, 29, 16, .45); border-image: none; background: rgba(255, 250, 236, .55); border-radius: 0; box-shadow: none; padding: 2px 10px; }
+/* Painted art on a panel takes the plates' thin stone frame */
+.kit .camp-side:not(:has(> .kit-cmd)) .camp-side-head > .camp-art { image-rendering: pixelated; border-style: solid; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 / 4px 4px 7px repeat; box-shadow: none; margin: 0 0 8px; }
+
+/* R6. Ink button: the control drawn on paper. Pale inset, 1px ink edge, bold ink label, gold inner ring when pressed. */
+.kit :is(.rgm-opt > button:not(.rg-toggle), .camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-menu button, .rg-folded button:not(.primary)) {
+  image-rendering: auto; border: 1px solid rgba(42, 29, 16, .6); border-image: none; border-radius: 0; background: rgba(255, 250, 236, .6); color: var(--kit-ink); font-weight: 700; text-shadow: none; box-shadow: none; min-height: 34px; padding: 6px 14px; }
+.kit :is(.rgm-opt > button:not(.rg-toggle), .camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-menu button):is(:hover, :active, [aria-pressed="true"]) { background: rgba(255, 244, 205, .95); box-shadow: inset 0 0 0 2px var(--kit-ring); }
+/* A switch on paper is an ink switch with a plain label, never a key */
+.kit .camp-side .camp-panel > button.rg-toggle, .kit .camp-side .rg-toggle { border: 0; border-image: none; background: none; box-shadow: none; color: var(--kit-ink); font-weight: 600; padding: 4px 0; min-height: 0; justify-content: start; }
+
+/* R6. The gold key: one per screen, at the keys' size, last in its row, at least 1.5 times its neighbours' width, label centred both ways */
+.kit :is(.rg-shell, .dialog, .panel, #game-over, .rg-scene) .primary, .kit .rg-start-btn, .kit .rg-go { display: inline-flex; align-items: center; justify-content: center; text-align: center; gap: 6px; }
+html.kit:not([data-form="portrait"]) :is(.rg-shell, .dialog, .panel, #game-over, .rg-scene) .primary { min-width: 168px; }
+.kit .camp-foot .primary, .kit .rgm-end .rg-start-btn { width: 100%; height: 46px; padding: 0 12px; font-size: 15px; line-height: 1; }
+
+/* R5, R6. Keys at their own size on desktop; the current page is a pressed key with a gold label, on the main bar as on the sub-tabs */
+.kit :is(.camp-tab, .camp-purse > button, .camp-purse .icon-button, .camp-dev) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat; color: var(--kit-pale); text-shadow: none; min-height: 0; padding: 0 10px; }
+.kit .camp-foot button:not(.primary):not(.camp-face2) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat; color: var(--kit-pale); text-shadow: none; min-height: 0; padding: 0 10px; }
+.kit .camp-tab { height: 34px; }
+.kit .camp-purse > button, .kit .camp-purse .icon-button, .kit .camp-dev { height: 34px; min-width: 34px; }
+.kit .camp-bar .camp-tab[aria-current] { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 6px 4px 5px; border-image: url("../adventure?s=skin&r=125,175,14,16") 6 4 5 fill / 6px 4px 5px repeat; color: var(--kit-gold) !important; padding: 0 10px; }
+.kit :is(.camp-tab, .camp-purse > button, .camp-purse .icon-button, .camp-dev):active { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 6px 4px 5px; border-image: url("../adventure?s=skin&r=125,175,14,16") 6 4 5 fill / 6px 4px 5px repeat; }
+
+/* R7. The purse: plain sprite-and-number pairs, as in the commander bar; no client pill */
+.kit .camp-purse .camp-coin { background: none; border: 0; border-radius: 0; padding: 0 4px; box-shadow: none; gap: 5px; }
+.kit .camp-purse .camp-coin img.ks { width: 32px !important; height: 32px !important; margin: 0; }
+.kit .camp-purse .camp-coin b { font: 700 15px/1 system-ui, sans-serif; color: var(--kit-pale); }
+
+/* R7. Seals: one construction, the map's. A pale disc, an ink line, a coloured band; a sprite at twice its size. */
+.kit .rgt-seal { width: 44px !important; height: 44px !important; border: 0 !important; box-shadow: 0 0 0 1.5px var(--kit-ink), 0 0 0 4.5px var(--wash, #8a7556), 0 0 0 6px var(--kit-ink) !important; image-rendering: pixelated; position: relative; flex: none; }
+.kit .rgt-seal:not(.face) { background: radial-gradient(circle at 45% 40%, #f8f2e3, #e7dcc0 72%) !important; }
+.kit .rgt-seal img.ks { width: 32px !important; height: 32px !important; }
+.kit .rg-tcard .rgt-seal { margin-bottom: 10px; }
+.kit .rgt-seal.lvl .ks-n { position: absolute; right: -9px; bottom: -7px; min-width: 18px; height: 18px; display: grid; place-items: center; font: 700 11px/1 system-ui, sans-serif; font-style: normal; color: var(--kit-ink); background: #f8f2e3; box-shadow: 0 0 0 1.5px var(--kit-ink); }
+.kit :is(.rgt-tile, .rg-tcard).wound .rgt-seal { box-shadow: 0 0 0 1.5px var(--kit-ink), 0 0 0 4.5px #f1e7cf, 0 0 0 6px var(--kit-ink) !important; outline: 1.5px dashed var(--kit-ink); outline-offset: 3px; }
+/* Unbuilt, seen-only or locked: an empty ink ring */
+.kit :is(.rg-work.unbuilt, .rg-traits .seen) .rgt-seal { background: none !important; box-shadow: 0 0 0 1px var(--kit-soft) !important; }
+.kit :is(.rg-work.unbuilt, .rg-traits .seen) .rgt-seal > * { display: none; }
+.kit .ring-sanctum { --wash: #3f7470; } .kit .ring-bazaar { --wash: #9a5530; } .kit .ring-chest { --wash: #a8822c; } .kit .ring-event { --wash: #5d4c80; }
+
+/* A scene's avatar: the map node just entered, as a 96px seal. Painted portraits keep the large disc. */
+html.kit:not([data-form="portrait"]) .rg-face .pic.icon { width: 96px; height: 96px; background: radial-gradient(circle at 45% 40%, #f8f2e3, #e7dcc0 72%); box-shadow: 0 0 0 2px var(--kit-ink), 0 0 0 8px var(--wash, #6b5a44), 0 0 0 10px var(--kit-ink); margin: 47px auto; image-rendering: pixelated; }
+.kit .rg-face .pic.icon img.ks { width: 64px !important; height: 64px !important; }
+.kit .rg-face .pic.icon:is(.ring-chest, .ring-event) img.ks { width: 32px !important; height: 32px !important; }
+
+/* R7. Fact chips are plain words with a sprite; a kicker is never a filled chip */
+.kit .camp-side .camp-chip, .kit .dialog .camp-chip { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; color: var(--kit-ink); font-weight: 600; }
+.kit .camp-side .camp-chips { gap: 4px 16px; }
+.kit .dialog .camp-chip.brass { text-transform: uppercase; letter-spacing: .08em; font: 700 11.5px/1.2 system-ui, sans-serif; color: var(--kit-ink2); }
+.kit .dialog .camp-chip.brass :is(svg, img) { display: none; }
+.kit .dialog .sparkpic { width: 32px !important; height: 32px !important; margin: 6px auto; display: block; }
+
+/* A breadcrumb is a link, drawn as text */
+.kit :is(.crumb, .rgl-crumb) .link { border: 0 !important; border-image: none !important; background: none !important; box-shadow: none !important; padding: 0 !important; min-height: 0 !important; height: auto !important; color: var(--kit-pale); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+
+/* Backdrop glows stay flat behind the content, as on the card pick screens */
+.kit .rg-haze, .kit :is(.rg-aether, .rg-start, .rg-cx, .rg-hpage) .rg-haze { filter: blur(60px) saturate(.5) brightness(.2); }
+
+/* One type role each: names in Georgia, numbers and labels in sans */
+.kit .rgl-run .figs b, .kit .rgm-facts b { font-family: system-ui, sans-serif; }
+
+/* ----- Screens ----- */
+
+/* Map: the banner goes, since the plane card shows the same art; the panel sits inside the stage with the map's margin */
+.kit .camp-side-body .camp-side-head > .camp-art { display: none !important; }
+.kit .rg-vmap:has(.kit-cmd) .camp-side { margin: 6px 6px 6px 0; overflow: visible; }
+.kit .rg-vmap .camp-side-body { margin: 0; }
+.kit .camp-side-body .camp-foot { padding: 10px 0 0; }
+.kit .camp-side-body .camp-foot button:not(.primary):not(.camp-face2) { height: 34px; width: 100%; }
+.kit .camp-foot button:not(.primary):not(.camp-face2)::before { width: 16px; height: 16px; background-size: 16px 16px; }
+/* Plate labels are always two lines high, so the life rows line up */
+.kit .rg-n:not(.side) .nm b { min-height: 2.3em; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+/* Whole map: a small key with its sprite at its own size, in the map sheet's top corner */
+.kit .rg-vbtn { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat; color: var(--kit-pale); text-shadow: none; min-height: 0; height: 30px; padding: 0 10px; right: 34px; bottom: auto; top: 30px; display: inline-flex; align-items: center; }
+.kit .rg-vbtn::before { width: 16px; height: 16px; background-size: 16px 16px; margin-right: 6px; }
+/* Side nodes: a 16px sprite is never drawn above twice its size */
+.kit .rg-n.side:is([data-kind="CHEST"], [data-kind="EVENT"]) { background-size: 32px 32px, auto !important; }
+
+/* Folded decision: a small sheet wholly inside the map, above the commander bar, with Show as the gold key */
+.kit .rg-folded { bottom: 118px; border-radius: 0; padding: 4px 8px 4px 16px; gap: 14px; }
+.kit .rg-folded span { color: var(--kit-ink); font-weight: 600; }
+
+/* Landing */
+.kit .rgl-run .go button:not(.primary) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat; color: var(--kit-pale); text-shadow: none; min-height: 0; padding: 0 16px; height: 40px; }
+.kit .rgl-run .go .primary { height: 40px; padding: 0 28px; }
+.kit .rgl-run .figs { border-color: var(--kit-line); }
+.kit :is(.rgl-run .figs span, .rgl-new .d, .rgl-run p, .rgl-run .camp-kicker) { color: #cdbfa3; }
+
+/* New Run: the facts box gets its padding back; the Descension list fades at its foot */
+.kit .rgm-facts { padding: 0 10px; box-sizing: border-box; }
+.kit .rgm-body { padding: 0 6px 18px; -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent); mask-image: linear-gradient(#000 calc(100% - 22px), transparent); }
+.kit .rgm-end { padding: 10px 2px 0; border-top: 2px solid rgba(42, 29, 16, .35); }
+
+/* Aether: selected is the gold ring; active is the filled pips and the word, so built tiles drop their gold frame */
+.kit .rg-work.on:not([aria-pressed="true"]) { box-shadow: none; }
+
+/* History: dark rows; the outcome is a sprite and a word; View Deck a stone key on dark */
+.kit .rg-run :is(.tn, .t > span, .end) { color: #cdbfa3; }
+.kit .rg-run.lost .t > b { color: var(--kit-pale); }
+.kit .rg-out { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; gap: 6px; color: var(--kit-pale) !important; font: 700 12px/1 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; display: inline-flex; align-items: center; }
+.kit .rg-out.win { color: var(--kit-gold) !important; }
+.kit .rg-steps { align-items: center; gap: 8px !important; }
+.kit .rg-steps i.s { width: 26px; height: 26px; background: radial-gradient(circle at 45% 40%, #f8f2e3, #e7dcc0 72%); border: 0; box-shadow: 0 0 0 1px var(--kit-ink), 0 0 0 3px var(--wash, #8a7556), 0 0 0 4px var(--kit-ink); display: inline-grid; place-items: center; overflow: hidden; image-rendering: pixelated; border-radius: 50%; }
+.kit .rg-steps i.s img.ks { width: 16px !important; height: 16px !important; }
+.kit .rg-steps i.s:is(.ring-sanctum, .ring-bazaar) img.ks { width: 32px !important; height: 32px !important; }
+
+/* Deck: the basics column is a dark panel, so the cards sit on dark */
+.kit .rg-basics :is(b, h4) { color: var(--kit-pale); }
+
+/* Bazaar offers: one fixed tile size; an unaffordable offer keeps full-strength paper and marks only its price */
+.kit .rg-stock .rg-item > .rg-tcard { box-sizing: border-box; width: 158px; height: 236px; overflow: hidden; }
+.kit .rg-item.no:has(> .rg-tcard), .kit .rg-item.no > .rg-tcard { opacity: 1 !important; filter: none !important; }
+.kit .rg-item.no:has(> .rg-tcard) .pr { background: none !important; border: 1px dashed var(--kit-soft) !important; color: var(--kit-soft) !important; opacity: 1 !important; filter: none !important; }
+
+/* Codex: sub-tabs clear of the sheet's edge */
+.kit .rg-sub-tabs { margin-bottom: 8px; }
+
+/* Summary: four gain tiles of one width */
+html.kit:not([data-form="portrait"]) .rg-gain { box-sizing: border-box; width: 156px; flex: none; }
+.kit .rg-work[aria-pressed="true"] { outline: 0 !important; }
+
+.kit .camp-side-body .camp-side-head { height: auto !important; min-height: max-content !important; justify-content: start !important; overflow: visible !important; margin-top: 0 !important; padding-top: 0 !important; }
+.kit .camp-side-body .camp-panel { grid-template-rows: none !important; grid-auto-rows: max-content !important; }
+.kit .rg-traits .seen .rg-tcard :is(p, span, small, div) { color: var(--kit-soft) !important; --text: var(--kit-soft); }
+.kit .rg-traits .seen .rg-tcard { --text: var(--kit-soft); --muted: #b9ac90; }
+.kit .rgt-tile { grid-template-columns: 56px minmax(0, 1fr) !important; column-gap: 14px !important; }
+.kit .rgt-tile .rgt-seal { margin: 6px; }
+
+/* Danger is carried by the words and the place, never by hue: a dashed edge, and never the last key in its row */
+.kit :is(.danger, [style*="--concede"]) { color: var(--kit-pale) !important; outline: 1px dashed rgba(241, 231, 207, .55); outline-offset: -6px; }
+.kit :is(.rg-menu, .rg-psheet) .danger { color: var(--kit-ink) !important; outline-color: rgba(42, 29, 16, .6); outline-offset: -4px; }
+.kit .dialog .actions :is(.danger, [style*="--concede"]) { order: -1; }
+
+/* Codex lists: a locked row is an empty ink ring with a lock */
+.kit .rg-list button.q > i { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232a1d10' stroke-width='2'%3E%3Crect x='6' y='11' width='12' height='9'/%3E%3Cpath d='M9 11V8a3 3 0 0 1 6 0v3'/%3E%3C/svg%3E") center / 14px 14px no-repeat !important; border-radius: 50% !important; box-shadow: inset 0 0 0 1px var(--kit-ink) !important; color: transparent !important; border: 0 !important; }
+
+/* ----- Phone ----- */
+/* The map's ground is parchment inside its torn edge here too, at the edge's own size, scrolling with the map */
+html.kit[data-form="portrait"] .rg-vtrail { image-rendering: pixelated; background: url("../adventure?s=skin&r=18,122,15,24") 0 0 / 30px 48px repeat !important; background-attachment: local !important; border-style: solid; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 / 13px 16px 11px 17px repeat; box-shadow: none !important; }
+/* Plate labels fit their plate, so neighbours never overlap */
+html.kit.kit[data-form="portrait"] .rg-n:not(.side) .nm { width: 96px; padding: 0 3px; }
+html.kit.kit[data-form="portrait"] .rg-n:not(.side) .nm b { font-size: 10px; }
+/* A scene's avatar on a phone: the same seal, at the size the phone header gives it */
+html.kit[data-form="portrait"] .rg-face .pic.icon { background: radial-gradient(circle at 45% 40%, #f8f2e3, #e7dcc0 72%); box-shadow: 0 0 0 1.5px var(--kit-ink), 0 0 0 5px var(--wash, #6b5a44), 0 0 0 6.5px var(--kit-ink); image-rendering: pixelated; }
+html.kit[data-form="portrait"] .rg-face .pic.icon img.ks { width: 32px !important; height: 32px !important; }
+/* Sheets show their whole torn edge, inset from the screen's sides */
+html.kit[data-form="portrait"] .rg-words { margin-left: 8px !important; margin-right: 8px !important; }
+/* Built Aetherworks are the small torn tile, as on desktop */
+html.kit[data-form="portrait"] .rg-work:not(.unbuilt) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat; }
+/* The bottom sheet: actions on paper are ink buttons; the foot is a dark strip holding stone keys and the gold key */
+html.kit .rg-psheet .menu button { image-rendering: auto; border: 1px solid rgba(42, 29, 16, .6); border-image: none; border-radius: 0; background: rgba(255, 250, 236, .6); color: var(--kit-ink); font-weight: 700; text-shadow: none; box-shadow: none; min-height: 44px; }
+html.kit .rg-psheet .menu { gap: 8px; }
+html.kit .rg-psheet .ft2 { background: #1a1612; margin: 10px -32px 0 -34px; padding: 10px 14px 12px; border-top: 2px solid #000; gap: 8px; }
+html.kit .rg-psheet .ft2 button:not(.primary) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat; color: var(--kit-pale); text-shadow: none; min-height: 0; color: var(--kit-pale); font-weight: 600; }
+html.kit .rg-psheet .ft2 button:not(.primary) :is(svg, img) { color: var(--kit-pale); }
+html.kit[data-form="portrait"] .rg-face .pic.icon { width: 64px !important; height: 64px !important; flex: none; }
+/* Phone bazaar rows: an unaffordable offer keeps full-strength paper */
+.kit .rg-prow.no { opacity: 1 !important; filter: none !important; }
+.kit .rg-prow.no :is(.pr, .rg-price) { border: 1px dashed var(--kit-ink2) !important; background: none !important; opacity: 1 !important; }
+/* Phone codex: a seen trait is a dark tile with its name, as on desktop */
+.kit .rg-prow.seen { border: 1px solid var(--kit-line) !important; border-image: none !important; background: var(--kit-tile) !important; filter: none !important; opacity: 1 !important; }
+.kit .rg-prow.seen :is(b, h3) { color: var(--kit-gold) !important; }
+.kit .rg-prow.seen :is(p, span, small, div) { color: var(--kit-soft) !important; }
+.kit .rg-prow.seen .rgt-seal { background: none !important; box-shadow: 0 0 0 1px var(--kit-soft) !important; }
+.kit .rg-prow.seen .rgt-seal > * { display: none; }
+/* Phone map paths: drawn in ink on the parchment, as on desktop */
+html.kit.kit[data-form="portrait"] .rg-vtrail .rg-e { stroke: var(--ink-faint); stroke-width: 3; stroke-dasharray: .1 8; stroke-linecap: round; }
+html.kit.kit[data-form="portrait"] .rg-vtrail .rg-e.dead { stroke: rgba(42, 29, 16, .13); }
+html.kit.kit[data-form="portrait"] .rg-vtrail .rg-e.next { stroke: var(--ink-soft); stroke-width: 3.5; }
+html.kit.kit[data-form="portrait"] .rg-vtrail .rg-e.walked { stroke: var(--ink); stroke-width: 2.5; stroke-dasharray: none; opacity: .85; }
+html.kit.kit[data-form="portrait"] .rg-vtrail .rg-e.can { stroke: var(--ink); stroke-width: 4.5; stroke-dasharray: .1 7; }
+html.kit[data-form="portrait"] .rg-words { padding: 6px 4px 8px !important; }
+html.kit .rg-psheet .menu button { border: 1px solid rgba(42, 29, 16, .6) !important; border-image: none !important; background: rgba(255, 250, 236, .6) !important; color: var(--kit-ink) !important; }
+html.kit[data-form="portrait"] .rg-face { gap: 14px; }
+
+/* The owner's feedback (26/11), as shared roles first and then each screen. Loaded after adv-review.css. */
+
+/* ----- Tabs: a joined row of stone tabs standing on the bar's lower edge, a sprite beside each word. The current tab is open to the page below. ----- */
+html.kit .camp-bar > .camp-tabs { align-self: stretch; align-items: flex-end; gap: 3px; margin-bottom: -8px; }
+html.kit .camp-tabs > .camp-tab {
+  image-rendering: pixelated; border-style: solid !important; border-width: 4px 4px 0 !important; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 0 repeat !important;
+  height: 40px !important; min-height: 0; padding: 0 15px 2px 12px !important; display: inline-flex; align-items: center; gap: 7px; background: none !important; box-shadow: none !important; border-radius: 0;
+  color: #cbc2ae !important; font: 600 14px/1 system-ui, sans-serif; text-shadow: 0 1px 0 #000; position: relative;
+}
+html.kit .camp-tabs > .camp-tab[aria-current] { height: 46px !important; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 / 4px 4px 0 repeat !important; background: var(--kit-dark) padding-box !important; color: var(--kit-gold) !important; z-index: 2; }
+html.kit .camp-tabs > .camp-tab:not([aria-current]):hover { color: var(--kit-pale) !important; }
+html.kit .camp-tabs > .camp-tab img.ks { width: 16px; height: 16px; }
+html.kit .camp-tabs > .camp-tab .camp-tab-line { display: none !important; }
+
+/* ----- One selection control: adventure's own check box, its empty and ticked pieces at twice their 8px. The tick is the mark mobile uses for every choice. ----- */
+.kit .rg-mod .box, .kit .rg-toggle .sw {
+  width: 16px !important; height: 16px !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: 0 !important;
+  background: url("../adventure?s=skin&r=293,375,8,8") 0 0 / 16px 16px no-repeat !important; image-rendering: pixelated; color: transparent !important; font-size: 0 !important; flex: none;
+}
+.kit :is(.rg-mod[aria-pressed="true"] .box, .rg-toggle.on .sw) { background-image: url("../adventure?s=skin&r=253,335,8,8") !important; }
+.kit .rg-toggle .sw::after { display: none !important; }
+.kit .rg-toggle { gap: 9px !important; }
+/* A choice tile: a thin stone rim. Chosen, the copper-cornered frame of the gold key, so gold still means chosen or primary. */
+.kit .rg-mod { border: 7px solid transparent !important; border-image: none !important; outline: 1px solid var(--kit-line); outline-offset: -1px; padding: 8px 10px 10px !important; background: var(--kit-tile) !important; box-shadow: none !important; image-rendering: pixelated; }
+.kit .rg-mod[aria-pressed="true"] { border-image: url("../adventure?s=skin&r=75,183,48,48") 7 / 7px repeat !important; outline: 0; background: rgba(60, 48, 26, .55) !important; }
+.kit .rg-mod .box { margin-top: 3px; }
+/* Tiles of paper that can be chosen take the same frame, laid just inside the torn edge */
+.kit :is(.rg-work[aria-pressed="true"], .rg-item.on > .rg-tcard) { box-shadow: none !important; outline: 0 !important; position: relative; }
+.kit :is(.rg-work[aria-pressed="true"], .rg-item.on > .rg-tcard)::after { content: ''; position: absolute; inset: -2px; border: 7px solid transparent; border-image: url("../adventure?s=skin&r=75,183,48,48") 7 / 7px repeat; image-rendering: pixelated; pointer-events: none; z-index: 2; }
+.kit .rg-work.unbuilt[aria-pressed="true"]::after { inset: -5px; }
+/* Buttons on paper are adventure's paper button; a chosen one is the same button pressed, with the tick */
+html.kit :is(.rgm-opt > button:not(.rg-toggle), .camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-folded button:not(.primary), .rg-psheet .menu button, .rgm-lv button, .kit-cmd .kc-deck button) {
+  image-rendering: pixelated !important; background: none !important; border-style: solid !important; border-radius: 0 !important; box-shadow: none !important; border-width: 3px 6px 4px !important; border-image: url("../adventure?s=skin&r=159,215,16,16") 3 6 4 fill / 3px 6px 4px repeat !important; color: var(--kit-ink) !important; font-weight: 700; text-shadow: none !important; padding-top: 4px; padding-bottom: 5px; min-height: 32px;
+}
+html.kit :is(.rgm-opt > button:not(.rg-toggle), .camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-psheet .menu button, .kit-cmd .kc-deck button):active,
+html.kit .rgm-lv button[aria-pressed="true"] { image-rendering: pixelated !important; background: none !important; border-style: solid !important; border-radius: 0 !important; box-shadow: none !important; border-width: 4px 6px 3px !important; border-image: url("../adventure?s=skin&r=51,133,16,16") 4 6 3 fill / 4px 6px 3px repeat !important; }
+html.kit .rgm-lv button { position: relative; font-weight: 600; justify-content: start; padding-right: 28px !important; }
+html.kit .rgm-lv button[aria-pressed="true"] { font-weight: 700; }
+html.kit .rgm-lv button[aria-pressed="true"]::after { content: ''; position: absolute; right: 9px; top: 50%; margin-top: -8px; width: 16px; height: 16px; background: url("../adventure?s=skin&r=253,335,8,8") 0 0 / 16px 16px; image-rendering: pixelated; }
+html.kit .rgm-lv button:disabled { opacity: .5 !important; }
+
+.kit { --kit-ground: url("../adventure?s=ground"); }
+/* ----- Runs: adventure's painted title ground at its own size, dimmed, with stone windows on it ----- */
+.kit .rgl { background: radial-gradient(ellipse 70% 80% at 50% 40%, #1a1510, #0e0b08 80%) !important; }
+.kit .rgm-stage { background:
+  linear-gradient(#0e0b08 calc(50% - 288px), transparent calc(50% - 170px), transparent calc(50% + 150px), #0e0b08 calc(50% + 288px)),
+  linear-gradient(90deg, #0e0b08 calc(50% - 512px), transparent calc(50% - 330px), transparent calc(50% + 330px), #0e0b08 calc(50% + 512px)),
+  linear-gradient(rgba(14, 11, 8, .55), rgba(14, 11, 8, .55)), var(--kit-ground) 50% 50% / 1024px 576px no-repeat, #0e0b08 !important; }
+.kit .rgm-stage .rgsh-haze, .kit .rgl .haze { display: none !important; }
+.kit :is(.rgl-run, .rgl-new) { image-rendering: pixelated; border-style: solid !important; border-width: 12px !important; border-image: url("../adventure?s=skin&r=203,385,48,48") 6 / 12px repeat !important; background: rgba(16, 13, 10, .8) padding-box !important; box-shadow: 0 14px 36px #000b !important; }
+.kit .rgl-run .rgl-card, .kit .rgl-new .fan i { image-rendering: auto; }
+.kit .rgl-run { background: rgba(16, 13, 10, .94) padding-box !important; }
+/* New Run is a window onto the painted ground, as adventure's title screen opens onto it */
+.kit .rgl-new { background: linear-gradient(rgba(14, 11, 8, .3), rgba(14, 11, 8, .05) 30%, rgba(14, 11, 8, .5) 58%, #0e0b08 84%) padding-box, var(--kit-ground) -330px 0 / 1024px 576px no-repeat padding-box, #0e0b08 !important; }
+.kit .rgl-new :is(b, .d) { text-shadow: 0 2px 0 #000, 0 0 12px #000; position: relative; }
+.kit .rgl-new b { font-family: Georgia, serif; }
+.kit .rgl-new .d { color: #d9cfb8 !important; }
+/* The carousel's place marks are square pips, gold for the commander shown */
+.kit .rgx-dots button { width: 8px !important; height: 8px !important; border-radius: 0 !important; background: #6b6355 !important; box-shadow: 0 0 0 1px #000 !important; border: 0 !important; min-width: 0 !important; padding: 0 !important; }
+.kit .rgx-dots button[aria-pressed="true"] { width: 12px !important; height: 12px !important; background: var(--kit-gold) !important; }
+.kit .rgx-dots button.lk { background: none !important; box-shadow: inset 0 0 0 1px #6b6355, 0 0 0 1px #000 !important; }
+
+/* ----- Scenes: a speaker's portrait at its own 100px, so it is never enlarged, in the seal's ring ----- */
+html.kit:not([data-form="portrait"]) .rg-face .pic:not(.icon) { width: 100px !important; height: 100px !important; box-shadow: 0 0 0 2px var(--kit-ink), 0 0 0 6px #8a7556, 0 0 0 8px var(--kit-ink), 0 12px 28px #000a !important; margin: 47px auto 6px; }
+html.kit:not([data-form="portrait"]) .rg-face b { font-size: 19px; }
+
+/* ----- Map: fitted to the stage's width by the script, so it never scrolls sideways ----- */
+.kit .rg-vstage:not(.fit) > .rg-trail { overflow-x: hidden !important; }
+.kit .rg-trail-in > svg path { vector-effect: non-scaling-stroke; }
+/* Room between the map and the panel to its right */
+.kit .rg-vmap:has(.kit-cmd) .camp-side { margin-left: 22px !important; }
+/* The last row: mobile's boss light, twelve rays 12 degrees wide every 30 degrees, five bands fading outwards, turning 30 degrees every 3 seconds */
+.kit .kit-rays { position: absolute; border-radius: 50%; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, rgb(196 64 41) 0deg 12deg, transparent 12deg 30deg);
+  -webkit-mask: radial-gradient(closest-side, rgb(0 0 0 / .35) 0 20%, rgb(0 0 0 / .28) 20% 40%, rgb(0 0 0 / .21) 40% 60%, rgb(0 0 0 / .13) 60% 80%, rgb(0 0 0 / .06) 80% 100%, transparent 100%);
+  mask: radial-gradient(closest-side, rgb(0 0 0 / .35) 0 20%, rgb(0 0 0 / .28) 20% 40%, rgb(0 0 0 / .21) 40% 60%, rgb(0 0 0 / .13) 60% 80%, rgb(0 0 0 / .06) 80% 100%, transparent 100%);
+  animation: kit-rays 3s linear infinite; }
+@keyframes kit-rays { to { transform: rotate(30deg); } }
+/* A boss shown face up for the first time turns over: its back narrows to an edge in a quarter second, then its face widens */
+.kit .rg-n .kit-back { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; background: rgb(115 99 79); color: #fff6dc; font: 700 40px/1 system-ui, sans-serif; pointer-events: none; opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .kit .kit-rays { animation: none !important; } }
+html.kit[data-motion="reduced"] .kit-rays { animation: none !important; }
+
+/* ----- Map panels, design 1 (the default): stone windows. The map is the only paper; the plane card and the keys sit on dark. ----- */
+html.kit.kit .rg-vmap :is(.camp-side-body, .kit-cmd) {
+  image-rendering: pixelated; border-style: solid !important; border-image: url("../adventure?s=skin&r=203,385,48,48") 6 fill / 12px repeat !important; border-width: 12px !important; background: none !important;
+  --kit-ink: #f1e7cf; --kit-ink2: #b8ac93; --kit-name: #ffd75e; --kit-card: #8fd3dc; --text: #f1e7cf; --muted: #b8ac93; --faint: #8f846f; --line: rgba(241, 231, 207, .16); --line-bright: rgba(241, 231, 207, .28);
+  color: var(--kit-pale) !important;
+}
+html.kit.kit .rg-vmap .camp-side-body { padding: 10px 12px 12px !important; }
+html.kit.kit .rg-vmap .camp-side-body h3 { color: var(--kit-gold) !important; font-family: Georgia, serif; }
+html.kit.kit .rg-vmap .camp-side-body .rg-sec > h4::after { background: rgba(241, 231, 207, .18) !important; }
+html.kit.kit .rg-vmap .camp-side-body .rg-loot span { background: none !important; border: 0 !important; padding: 0 12px 0 0 !important; color: var(--kit-pale) !important; }
+html.kit.kit .rg-vmap .camp-side-body .camp-panel { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent); mask-image: linear-gradient(#000 calc(100% - 26px), transparent); padding-bottom: 18px; }
+html.kit.kit .rg-vmap .camp-side-body .camp-foot { border-top: 2px solid #000; box-shadow: 0 -1px 0 rgba(241, 231, 207, .12); padding-top: 12px !important; }
+/* The commander bar: a stone strip, its stone at twice its size like every other stone panel */
+html.kit.kit .rg-vmap .kit-cmd { border-image: url("../adventure?s=skin&r=203,385,48,48") 6 fill / 12px repeat !important; border-width: 12px !important; padding: 0 16px 0 10px; gap: 0 26px; }
+html.kit.kit .rg-vmap .kit-cmd .kc-face { box-shadow: 0 0 0 1px #000, 0 0 0 3px #4b5266, 0 0 0 4px #000 !important; border-radius: 0; }
+html.kit.kit .rg-vmap .kit-cmd .kc-id b { color: var(--kit-gold) !important; font-family: Georgia, serif; font-size: 16px; }
+html.kit.kit .rg-vmap .kit-cmd .kc-id span, html.kit.kit .rg-vmap .kit-cmd .kc-deck span { color: #cdbfa3 !important; }
+html.kit.kit .rg-vmap .kit-cmd .kc-stat b { color: var(--kit-pale) !important; }
+html.kit.kit .rg-vmap .kit-cmd .kc-deck button { image-rendering: pixelated !important; background: none !important; border-style: solid !important; border-radius: 0 !important; box-shadow: none !important; border-width: 4px 4px 7px !important; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat !important; color: var(--kit-pale) !important; text-shadow: none !important; min-height: 0 !important; padding: 0 14px !important; height: 34px; color: var(--kit-pale) !important; font-weight: 600; }
+
+/* ----- Play menu: the mode's tile holds the map icon mobile's game menus use for it ----- */
+/* A painted icon reads on a dark disc, so the disc takes the shell's black inside the same gold rim */
+.kind-card .mode-art.pic { background: radial-gradient(circle at 50% 40%, #2b2318, #110d09 75%) !important; box-shadow: 0 0 0 2px #e2b64a, 0 0 0 3px #3a2a0c, 0 4px 10px #0009 !important; }
+.kind-card .mode-art.pic img { width: 40px; height: 40px; display: block; image-rendering: pixelated; }
+
+/* ----- Phone ----- */
+html.kit[data-form="portrait"] .camp-tabs { gap: 3px; align-items: flex-end; }
+html.kit[data-form="portrait"] .camp-tabs > .camp-tab { height: 36px !important; padding: 0 10px 2px 8px !important; gap: 6px; font-size: 13px; }
+html.kit[data-form="portrait"] .camp-tabs > .camp-tab[aria-current] { height: 40px !important; }
+/* Runs on a phone: the stone windows at their own size, so the run's keys keep their room */
+html.kit[data-form="portrait"] :is(.rgl-run, .rgl-new) { border-width: 6px !important; border-image: url("../adventure?s=skin&r=203,385,48,48") 6 / 6px repeat !important; }
+html.kit[data-form="portrait"] .rgl-top { grid-template-rows: auto auto !important; }
+html.kit[data-form="portrait"] .rgl-run .in { padding: 10px; }
+
+/* Tabs open into a stone ledge along the bar's foot (the owner, 26/11): the ledge is drawn in the stone key's own edge and fill, and the current tab, filled the same, runs down into it */
+html.kit .camp-bar { position: relative; border-bottom: 0 !important; }
+html.kit .camp-bar::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 10px; z-index: 1; pointer-events: none;
+  background: linear-gradient(#8b93af 0 2px, #4a5462 2px 4px, #242234 4px 6px, #060608 6px 8px, #8b93af 8px 10px); }
+html.kit .camp-shell:has(> .camp-bar) > :not(.camp-bar):first-of-type, html.kit .camp-bar + * { margin-top: 10px; }
+html.kit .camp-tabs > .camp-tab[aria-current] { background: #242234 padding-box !important; height: 54px !important; margin-bottom: -8px; }
+html.kit[data-form="portrait"] .camp-tabs > .camp-tab[aria-current] { height: 48px !important; margin-bottom: -8px; }
+/* The ledge runs in front of the other tabs; only the current tab breaks through it */
+html.kit .camp-tabs > .camp-tab:not([aria-current]) { z-index: 0; margin-bottom: -6px; height: 46px !important; }
+html.kit[data-form="portrait"] .camp-tabs > .camp-tab:not([aria-current]) { margin-bottom: -6px; height: 42px !important; }
+/* The hub drops the mode name and record from the bar; the tabs start at the frame's left edge on every screen (the owner, 26/11). The record stays in Codex, Global Stats. */
+html.kit .camp-bar > .camp-id { display: none !important; }
+/* A decision covers the map and its commander bar, so the top bar shows the stats again */
+html.kit .camp-shell:has(.kit-cmd):has(.rg-scene) .camp-purse .camp-coin { display: inline-flex !important; }

@@ -2,18 +2,16 @@
 // and a sheet that opens from the bar
 
 import { useState } from 'preact/hooks';
-import { DeckRow, SidePanel } from '../campaign/campaign';
-import { Icon } from '../icons';
-import { artUrl, hideBroken, imageUrl, skinIconUrl } from '../images';
+import { SidePanel } from '../campaign/campaign';
+import { artUrl, hideBroken, imageUrl } from '../images';
 import { changeUi } from '../ui';
 import { t } from '../text';
-import { ROGUE_ICONS } from './icons';
+import { Sprite, barGlyph, glyph, ringClass, sealGlyph } from './kit';
 import { enterable, explains, shownNode, sideIcon } from './map';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { MapNode, RogueMap } from '../protocol';
 
-const glyph = (name: keyof typeof ROGUE_ICONS) => <Icon d={ROGUE_ICONS[name]} cls="rg-ic" />;
 
 /** The planebound's kind, as the panel's kicker names it. */
 const kind = (map: RogueMap, n: MapNode) => (n.boss ? t('lblRogueBossPlanebound') : n.elite ? t('lblRogueElitePlanebound') : map.terms.PLANEBOUND?.text ?? '');
@@ -45,8 +43,8 @@ function Chips({ map, n, cls }: { map: RogueMap; n: MapNode; cls: string }) {
 /** Gold and Echoes of the node's kind, and the card reward every plane but the boss's gives. */
 function Loot({ map, n }: { map: RogueMap; n: MapNode }) {
   return <>
-    {n.gold > 0 && <span><img onError={hideBroken} alt={t('lblWebRogueGold')} src={skinIconUrl('ICO_QUEST_COIN')} />{n.gold}</span>}
-    <span><img onError={hideBroken} alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />{n.echoes}</span>
+    {n.gold > 0 && <span><Sprite k="coin" />{n.gold}</span>}
+    <span><Sprite k="shards" />{n.echoes}</span>
     {!n.boss && <span {...explains(map.terms.CARD_REWARD)}>{glyph('deck')}{` ${map.terms.CARD_REWARD?.text}`}</span>}
     {!n.boss && <span>{glyph('star')}{` ${t('lblMythic')}`}</span>}
   </>;
@@ -54,20 +52,40 @@ function Loot({ map, n }: { map: RogueMap; n: MapNode }) {
 
 const paragraphs = (text?: string) => (text ?? '').split('\n').filter(Boolean);
 
+/** The commander's panel above the node's, as Adventure stacks the player's panel: face, name, the run's balances, and the deck. */
+function Commander({ model, actions, zoom }: { model: Model; actions: Actions; zoom: (image: string) => void }) {
+  const run = model.rogueHome!.run!;
+  const bar = model.rogueMap!.bar.bar;
+  return (
+    <div class="kit-cmd">
+      <div class="kc-top">
+        <button class="kc-face" aria-label={run.commander} data-image={run.image} style={{ backgroundImage: `url("${artUrl(run.image)}")` }} onClick={() => zoom(run.image)} />
+        <div class="kc-id"><b>{bar.name}</b>{bar.line && <span>{bar.line}</span>}</div>
+      </div>
+      <div class="kc-stats">
+        {bar.balances.map(b => <span key={b.icon} class="kc-stat" title={b.label}>{b.glyph && barGlyph(b.glyph, 32)}<b>{b.text ?? b.amount}</b></span>)}
+      </div>
+      <div class="kc-deck">
+        <span>{`${t('lblDeck')}: ${t('lblWebNCards', run.cards)}`}</span>
+        <button onClick={() => actions.rogueEditDeck(model.rogueHome!.snapshot)}>{t('lblEdit')}</button>
+      </div>
+    </div>
+  );
+}
+
 export function MapSide({ model, actions }: { model: Model; actions: Actions }) {
   const [zoom, setZoom] = useState<string | null>(null);
   const { map, n, enter, reroll } = useNode(model, actions);
   const run = model.rogueHome?.run;
+  const top = run && <Commander model={model} actions={actions} zoom={setZoom} />;
   const foot = <>
-    {run && <DeckRow image={run.image} name={run.commander} line={t('lblWebNCards', run.cards)} problem={false} zoom={setZoom}
-      change={() => actions.rogueEditDeck(model.rogueHome!.snapshot)} changeLabel={t('lblEdit')} />}
     {reroll && <button disabled={!!map.rerollReason} title={map.rerollReason} onClick={reroll}>{glyph('reroll')}{` ${t('lblRogueRerollPlaneCount', map.rerolls)}`}</button>}
     <button class="primary rg-go" disabled={!enter} onClick={enter}>{n.enter}</button>
   </>;
   if (n.kind !== 'PLANEBOUND') {
     return (
-      <SidePanel kicker={t('lblWebRogueSideNode')} title={n.name} noArt zoom={zoom} setZoom={setZoom} foot={foot}>
-        <div class="rg-face" style={{ padding: '14px 0 6px' }}><span class="pic icon" style={{ width: '128px', height: '128px', fontSize: '58px' }}><Icon d={sideIcon(n.kind)} cls="rg-ic" /></span></div>
+      <SidePanel kicker={t('lblWebRogueSideNode')} title={n.name} noArt zoom={zoom} setZoom={setZoom} foot={foot} top={top}>
+        <div class="rg-face" style={{ padding: '14px 0 6px' }}><span class={`pic icon${ringClass(sideIcon(n.kind))}`} style={{ width: '128px', height: '128px', fontSize: '58px' }}>{sealGlyph(sideIcon(n.kind), 64)}</span></div>
         <div class="rg-sec"><p>{n.text}</p></div>
       </SidePanel>
     );
@@ -75,7 +93,7 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
   const reward = <div class="rg-sec"><h4>{t('lblWebRogueReward')}</h4><div class="rg-loot"><Loot map={map} n={n} /></div></div>;
   if (n.faceDown) {
     return (
-      <SidePanel kicker={kind(map, n)} title="???" noArt zoom={zoom} setZoom={setZoom} foot={foot}>
+      <SidePanel kicker={kind(map, n)} title="???" noArt zoom={zoom} setZoom={setZoom} foot={foot} top={top}>
         <div class="camp-chips"><Chips map={map} n={n} cls="camp-chip" /></div>
         {map.hidden && <div class="rg-lock">{glyph('wound')}<span>{map.hidden}</span></div>}
         {reward}
@@ -83,7 +101,7 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
     );
   }
   return (
-    <SidePanel kicker={<span {...explains(map.terms.PLANEBOUND)}>{kind(map, n)}</span>} title={n.name} art={n.art} zoom={zoom} setZoom={setZoom} foot={foot}>
+    <SidePanel kicker={<span {...explains(map.terms.PLANEBOUND)}>{kind(map, n)}</span>} title={n.name} art={n.art} zoom={zoom} setZoom={setZoom} foot={foot} top={top}>
       <div class="camp-chips"><Chips map={map} n={n} cls="camp-chip" /></div>
       <div class="rg-sec"><h4>{t('lblPlane')}</h4><span class="rg-plane">{n.planeImage && <img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} />}</span></div>
       <div class="rg-sec">{paragraphs(n.text).map((p, i) => <p key={i}>{p}</p>)}</div>

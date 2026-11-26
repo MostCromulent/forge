@@ -120,9 +120,9 @@ function useArt(key: string | undefined): string | null {
   return loaded;
 }
 
-/** A kind of game, drawn as a plaque like the start page's. It holds two buttons because a button cannot contain another. It is greyed when onClick is missing. icon and artKey replace the kind's own icon and art. */
-export function Kind({ id, icon, artKey, name, blurb, resume, resumeLabel, onClick }: {
-  id: string; icon?: ComponentChildren; artKey?: string; name: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
+/** A kind of game, drawn as a plaque like the start page's. It holds two buttons because a button cannot contain another. It is greyed when onClick is missing. icon and artKey replace the kind's own icon and art, and picture is a pixel icon drawn in place of the icon. */
+export function Kind({ id, icon, picture, artKey, name, blurb, resume, resumeLabel, onClick }: {
+  id: string; icon?: ComponentChildren; picture?: string; artKey?: string; name: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
 }) {
   const art = useArt(artKey ?? MENU_ART[id]);
   const drawn = <svg viewBox="0 0 48 48">{icon ?? KIND_ICONS[id]}</svg>;
@@ -131,7 +131,7 @@ export function Kind({ id, icon, artKey, name, blurb, resume, resumeLabel, onCli
       <span class="plaque-rim" aria-hidden="true" />
       <span class="plaque-mark" aria-hidden="true">{drawn}</span>
       <button class="kind-main" data-kind={id} disabled={!onClick} onClick={onClick}>
-        <span class="mode-art" aria-hidden="true">{drawn}</span>
+        <span class={picture ? 'mode-art pic' : 'mode-art'} aria-hidden="true">{picture ? <img alt="" src={picture} /> : drawn}</span>
         <span class="mode-text">
           <span class="mode-name">{name}</span>
           <span class="mode-blurb">{blurb}</span>

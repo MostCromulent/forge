@@ -1,20 +1,20 @@
 // The finished runs, each drawn with the planes and nodes its path went through
 
-import { Icon } from '../icons';
 import { artUrl } from '../images';
 import { isPortrait } from '../form';
 import { t, type TextKey } from '../text';
 import { ROGUE_ICONS } from './icons';
+import { Sprite, ringClass, sealGlyph, type SpriteName } from './kit';
 import type { HistoryRun, RogueHistoryPage } from '../protocol';
 
 /** Each outcome's frame, icon and word. An unknown outcome is drawn plain, with the word it was saved as. */
-const OUTCOMES: Record<string, [string, string, TextKey]> = {
-  VICTORY: ['win', ROGUE_ICONS.trophy, 'lblWebRogueVictory'],
-  DEFEAT: ['loss', ROGUE_ICONS.skull, 'lblRogueDefeat'],
-  ABANDONED: ['left', ROGUE_ICONS.flag, 'lblWebRogueAbandoned'],
+const OUTCOMES: Record<string, [string, SpriteName, TextKey]> = {
+  VICTORY: ['win', 'award', 'lblWebRogueVictory'],
+  DEFEAT: ['loss', 'xmark', 'lblRogueDefeat'],
+  ABANDONED: ['left', 'skull', 'lblWebRogueAbandoned'],
 };
 /** The icon of each side node by its kind. An unknown kind is an empty mark. */
-const SIDES: Record<string, string> = { SANCTUM: ROGUE_ICONS.sanctum, BAZAAR: ROGUE_ICONS.bazaar, EVENT: ROGUE_ICONS.event, CHEST: ROGUE_ICONS.chest };
+const SIDES: Record<string, keyof typeof ROGUE_ICONS> = { SANCTUM: 'sanctum', BAZAAR: 'bazaar', EVENT: 'event', CHEST: 'chest' };
 const background = (key: string | null | undefined) => (key ? { backgroundImage: `url("${artUrl(key)}")` } : undefined);
 
 /** A phone leaves out the date, and the traits by its stylesheet. */
@@ -28,12 +28,12 @@ function Run({ run, deck }: { run: HistoryRun; deck: (id: number) => void }) {
         <span>{run.line}</span>
         <div class="rg-steps">
           {run.steps.map((s, i) => (s.kind === 'PLANEBOUND' ? <i key={i} title={s.name ?? undefined} style={background(s.image)} />
-            : <i key={i} class="s">{SIDES[s.kind] && <Icon d={SIDES[s.kind]} cls="rg-ic" />}</i>))}
+            : <i key={i} class={`s${SIDES[s.kind] ? ringClass(SIDES[s.kind]) : ''}`}>{SIDES[s.kind] && sealGlyph(SIDES[s.kind], 16)}</i>))}
         </div>
       </div>
       <div class="traits">{run.traits.map((tr, i) => <span key={i} class="tn" title={tr.tip ?? undefined}>{tr.name}</span>)}</div>
       <div class="end">
-        {outcome ? <span class={`rg-out ${outcome[0]}`}><Icon d={outcome[1]} cls="rg-ic" />{t(outcome[2])}</span> : <span class="rg-out">{run.outcome}</span>}
+        {outcome ? <span class={`rg-out ${outcome[0]}`}><Sprite k={outcome[1]} />{t(outcome[2])}</span> : <span class="rg-out">{run.outcome}</span>}
         <span>{isPortrait() ? run.time : `${run.date} · ${run.time}`}</span>
         {run.deck && <button onClick={() => deck(run.id)}>{t('lblViewDeck')}</button>}
       </div>

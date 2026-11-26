@@ -2,16 +2,17 @@
 
 import { SidePanel } from '../campaign/campaign';
 import { Icon } from '../icons';
-import { artUrl, hideBroken, skinIconUrl } from '../images';
+import { artUrl } from '../images';
 import { isPortrait } from '../form';
 import { playSound } from '../audio';
 import { changeUi, ui } from '../ui';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
+import { Sprite, sealGlyph } from './kit';
 import type { AetherWork, RogueAether } from '../protocol';
 
-const echo = (cls?: string) => <img onError={hideBroken} class={cls} alt="" src={skinIconUrl('ICO_QUEST_GOLD')} />;
-const spark = <img onError={hideBroken} alt="" src={skinIconUrl('ICO_QUEST_ELIXIR')} />;
+const echo = (cls?: string) => <Sprite k="shards" cls={cls} />;
+const spark = <Sprite k="spark" />;
 const built = (play: () => void) => () => {
   playSound({ t: 'sound', name: 'artifact', sync: false });
   play();
@@ -30,7 +31,7 @@ function Work({ work, chosen, choose }: { work: AetherWork; chosen: boolean; cho
   const max = work.ranks.length;
   return (
     <button class={work.on ? 'rg-work on' : work.rank ? 'rg-work' : 'rg-work unbuilt'} aria-pressed={chosen} onClick={choose}>
-      <span class="h"><span class="rgt-seal"><Icon d={ROGUE_ICONS.gem} cls="rg-ic" /></span><b>{work.name}</b></span>
+      <span class="h"><span class="rgt-seal">{sealGlyph('gem')}</span><b>{work.name}</b></span>
       <Ranked work={work} />
       <span class="f">
         <span class="rg-rank">{work.ranks.map((_, i) => <i key={i} class={i < work.rank ? 'on' : ''} />)}</span>
