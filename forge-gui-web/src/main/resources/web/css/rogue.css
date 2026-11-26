@@ -824,3 +824,27 @@ html.kit[data-form="portrait"] .rg-aether > .rg-haze { --scene: url("../adventur
 html.kit[data-form="portrait"] :is(.rg-hpage > .rg-haze, .rgt > .haze) { --scene: url("../adventure?s=tavern_portrait"); }
 html.kit[data-form="portrait"] .rg-cx > .rg-haze { --scene: url("../adventure?s=spellsmith_portrait"); }
 html[data-motion="reduced"] :is(.rg-dialog, .rg-dialog > .dialog, .rg-psheet, .rg-psheet > .box, .rg-card.on > img) { animation: none; }
+/* The boss light stops at the boss's plate, as mobile draws it behind; a faded far plate would otherwise show the rays through it */
+html.kit .kit-rays { -webkit-mask: radial-gradient(closest-side, rgb(0 0 0 / .35) 0 20%, rgb(0 0 0 / .28) 20% 40%, rgb(0 0 0 / .21) 40% 60%, rgb(0 0 0 / .13) 60% 80%, rgb(0 0 0 / .06) 80% 100%, transparent 100%), linear-gradient(#000 0 0) center / var(--pw) var(--ph) no-repeat;
+  -webkit-mask-composite: source-out; mask-composite: subtract; }
+/* The rays turn inside the light, so the hole for the plate stays still */
+html.kit .kit-rays { background: none; animation: none; }
+html.kit .kit-rays::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgb(196 64 41) 0deg 12deg, transparent 12deg 30deg); animation: kit-rays 3s linear infinite; }
+html.kit[data-motion="reduced"] .kit-rays::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { html.kit .kit-rays::before { animation: none; } }
+/* The speaker stands level with the top of what they say */
+html.kit:not([data-form="portrait"]) .rg-tale > .rg-face > .pic.pic { margin-top: 0; }
+/* The paper's torn edge reaches above the words' box, so the face rises to meet it */
+html.kit:not([data-form="portrait"]) .rg-tale > .rg-face { margin-top: -26px; }
+/* Icons sit inside the stone key's dark window, which its black inner frame makes smaller than the border leaves */
+html.kit .camp-purse :is(.icon-button, .camp-dev) { padding: 0; display: inline-grid; place-items: center; width: 40px; }
+html.kit .rg-vbtn { height: 36px; padding: 0 12px; }
+html.kit .camp-purse :is(.icon-button, .camp-dev) :is(svg, .rg-ic) { width: 14px; height: 14px; }
+/* Phone map: the paper's inks, which the generated sheet sets only on the wide map's stage, and the sheet bar's Plane and Reroll as stone keys like every other key */
+html.kit .rg-vtrail { --ink: #2a1d10; --ink-soft: rgba(42, 29, 16, .62); --ink-faint: rgba(42, 29, 16, .28); --paper: #f1e8d2; --paper-hi: #f8f2e3; --gold: #e2b23c; }
+html.kit .rg-vtrail .rg-n:not(.side) .nm { text-shadow: none; }
+html.kit .rg-sheetbar .go button:not(.primary) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat; color: var(--kit-pale); text-shadow: none; min-height: 0; padding: 0 10px; }
+/* Phone story: the paper's torn edge reaches 26px above its box, so the speaker row leaves room for it */
+html.kit[data-form="portrait"] .rg-tale { row-gap: 40px; }
+/* A plane's picture clips, so a squeezed sheet would shrink its row to nothing and lay the text over it; rows keep their content's height and the sheet scrolls */
+.rg-psheet .bd { grid-auto-rows: max-content; grid-template-rows: none; }

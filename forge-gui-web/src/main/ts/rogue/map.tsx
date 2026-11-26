@@ -161,7 +161,7 @@ function Trail({ map, phone, whole, covered, locked, select, open }: {
   const here = boxes[sr][si];
   // Mobile's boss light: dark red rays turning slowly behind the act's final boss until it is beaten
   const boss = map.rows.flatMap((row, r) => row.map((n, i) => ({ n, box: boxes[r][i] }))).find(({ n }) => n.boss && n.state !== 'walked' && n.state !== 'past');
-  const ray = boss && { r: boss.box.w * 1.3, x: boss.box.x + boss.box.w / 2, y: boss.box.y + boss.box.h / 2 };
+  const ray = boss && { r: boss.box.w * 1.3, x: boss.box.x + boss.box.w / 2, y: boss.box.y + boss.box.h / 2, w: boss.box.w, h: boss.box.h };
   useLayoutEffect(() => {
     const el = scroller.current!;
     const target = Math.max(0, Math.min(el.scrollHeight - el.clientHeight, Math.round(here.y + here.h / 2) - el.clientHeight * .56));
@@ -222,7 +222,7 @@ function Trail({ map, phone, whole, covered, locked, select, open }: {
   return (
     <div class={phone ? 'rg-trail rg-vtrail' : 'rg-trail'} style={phone ? { padding: '8px 12px' } : undefined} ref={scroller}>
       <div class="rg-trail-in" style={{ width: `${fit?.width ?? plan.width}px`, height: `${fit?.height ?? plan.height}px`, margin: '0 auto' }}>
-        {ray && <i class="kit-rays" aria-hidden="true" style={{ left: `${ray.x - ray.r}px`, top: `${ray.y - ray.r}px`, width: `${2 * ray.r}px`, height: `${2 * ray.r}px` }} />}
+        {ray && <i class="kit-rays" aria-hidden="true" style={{ left: `${ray.x - ray.r}px`, top: `${ray.y - ray.r}px`, width: `${2 * ray.r}px`, height: `${2 * ray.r}px`, '--pw': `${ray.w}px`, '--ph': `${ray.h}px` }} />}
         <svg width={fit?.svgWidth ?? plan.width} height={fit?.height ?? plan.height} viewBox={`0 0 ${plan.width} ${plan.height}`} style={fit ? { left: `${fit.left}px` } : undefined}>
           {map.links.map((l, k) => {
             const [r, i] = at.get(l.from)!, j = at.get(l.to)![1];

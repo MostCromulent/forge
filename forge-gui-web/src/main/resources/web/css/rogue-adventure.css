@@ -321,7 +321,6 @@ html.kit[data-form="portrait"] .rg-list { image-rendering: pixelated; background
 .kit .kit-cmd .kc-deck { margin: -6px -14px -12px; }
 
 /* Larger plane plates on the map (the user, 26/11): 20% bigger, centred where the layout put them */
-.kit .rg-vstage:not(.fit) .rg-n:not(.side) { width: 164px !important; height: 118px !important; margin: -10px 0 0 -14px; }
 .kit .rg-vstage:not(.fit) .rg-n:not(.side) .nm { width: 172px; }
 .kit .rg-vstage:not(.fit) .rg-n:not(.side) .nm b { font-size: 12.5px; }
 
@@ -657,7 +656,7 @@ html.kit[data-form="portrait"] .rgl-run .in { padding: 10px; }
 /* Tabs open into a stone ledge along the bar's foot (the owner, 26/11): the ledge is drawn in the stone key's own edge and fill, and the current tab, filled the same, runs down into it */
 html.kit .camp-bar { position: relative; border-bottom: 0 !important; }
 html.kit .camp-bar::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 10px; z-index: 1; pointer-events: none;
-  background: linear-gradient(#8b93af 0 2px, #4a5462 2px 4px, #242234 4px 6px, #060608 6px 8px, #8b93af 8px 10px); }
+  background: linear-gradient(#8b93af 0 2px, #4a5462 2px 8px, #242234 8px 10px); }
 html.kit .camp-shell:has(> .camp-bar) > :not(.camp-bar):first-of-type, html.kit .camp-bar + * { margin-top: 10px; }
 html.kit .camp-tabs > .camp-tab[aria-current] { background: #242234 padding-box !important; height: 54px !important; margin-bottom: -8px; }
 html.kit[data-form="portrait"] .camp-tabs > .camp-tab[aria-current] { height: 48px !important; margin-bottom: -8px; }
