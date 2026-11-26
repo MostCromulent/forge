@@ -2,7 +2,7 @@
 
 .chooser { max-width: 920px; margin: 0 auto; display: grid; gap: 14px; }
 .chooser-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.chooser-more { margin: 14px 0 0; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.chooser-more { margin: 30px 0 2px; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .kind-main:disabled { opacity: .45; cursor: default; }
 /* A chooser card is a plaque, as on the start page, holding two buttons because a button cannot contain another. The main button fills the card.
    It keeps the art at its own zoom, and its fade starts lower so more of the art shows. */
