@@ -10,6 +10,7 @@ import { changeUi, ui } from '../ui';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { fit, layout, type Link } from './maplayout';
+import { isScene } from './questions';
 import { MapSide, SheetBar } from './mapside';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -40,6 +41,9 @@ export function shownNode(map: RogueMap): MapNode {
 
 /** A face-up plane can be chosen to read it, ahead or behind. */
 const readable = (n: MapNode) => n.kind === 'PLANEBOUND' && !n.faceDown;
+
+/** While a question is folded to read the map, the map can only be looked at, as on mobile. */
+export const mapLocked = (model: Model) => isScene(model.rogueQuestion) && ui.rogueFolded === model.rogueQuestion!.id;
 
 /** Choosing an open node makes it the current node. Choosing any other that can be read only shows its panel. */
 export function choose(n: MapNode, select: (node: number) => void): void {
@@ -86,7 +90,7 @@ function Node({ n, box, phone, pick }: { n: MapNode; box: { x: number; y: number
       <span class="mk"><Marks n={n} /></span>
       {ok}
       <span class="nm"><b>{phone ? n.name!.split(',')[0] : n.name}</b>{life}</span>
-      {n.boss && <i class="kit-back" aria-hidden="true">?</i>}
+      <i class="kit-back" aria-hidden="true">?</i>
     </button>
   );
 }
@@ -115,10 +119,23 @@ function fitted(map: RogueMap, plan: ReturnType<typeof layout>, k: number) {
   return { span, boxes, width: Math.round(span * k), height: Math.round(plan.height * k), left: Math.round(-x0 * k), svgWidth: Math.round(plan.width * k) };
 }
 
-/** The trail of nodes. It opens with the current row at 56% of its height, and planes revealed since it was last drawn turn over. */
-function Trail({ map, phone, whole, select }: { map: RogueMap; phone: boolean; whole: boolean; select: (node: number) => void }) {
+/** Which planes the map last showed face down in this run, or null before its first look, which shows the planes as they are. */
+let faces: Map<number, boolean> | null = null;
+export const forgetFaces = () => { faces = null; };
+
+/** Two taps on one node this close together, in ms, are a double tap, as libgdx counts them. */
+const DOUBLE_TAP = 400;
+
+/**
+ * The trail of nodes. It opens with the current row at 56% of its height, and planes revealed since the map last showed turn over.
+ * covered is true while a scene lies over it, so the intro and the turns wait to be seen. open shows the chosen plane's sheet.
+ */
+function Trail({ map, phone, whole, covered, locked, select, open }: {
+  map: RogueMap; phone: boolean; whole: boolean; covered: boolean; locked: boolean; select: (node: number) => void; open?: () => void;
+}) {
   const scroller = useRef<HTMLDivElement>(null);
-  const shown = useRef<Map<number, boolean> | null>(null);
+  const intro = useRef<{ target: number; frame: number } | null>(null);
+  const tapped = useRef<{ node: number; at: number } | null>(null);
   const at = new Map<number, [number, number]>();
   map.rows.forEach((row, r) => row.forEach((n, i) => at.set(n.index, [r, i])));
   const links = map.links.map(l => [...at.get(l.from)!, at.get(l.to)![1]] as Link);
@@ -147,26 +164,61 @@ function Trail({ map, phone, whole, select }: { map: RogueMap; phone: boolean; w
   const ray = boss && { r: boss.box.w * 1.3, x: boss.box.x + boss.box.w / 2, y: boss.box.y + boss.box.h / 2 };
   useLayoutEffect(() => {
     const el = scroller.current!;
-    el.scrollTop = Math.round(here.y + here.h / 2) - el.clientHeight * .56;
-  }, [map.selected, whole, k]);
+    const target = Math.max(0, Math.min(el.scrollHeight - el.clientHeight, Math.round(here.y + here.h / 2) - el.clientHeight * .56));
+    const running = intro.current;
+    if (running && !covered) {
+      running.target = target;
+      return;
+    }
+    // Cut short by a scene, the intro starts again when the map shows, as mobile's does
+    if (running) cancelAnimationFrame(running.frame);
+    intro.current = null;
+    if (!ui.rogueIntro || whole || covered || reducedMotion()) {
+      if (!whole && !covered) ui.rogueIntro = false;
+      el.scrollTop = target;
+      return;
+    }
+    // A new run's first look starts at the boss, waits half a second, then eases down to the current row over 1.2 s. It holds the scroll meanwhile, as mobile's does
+    el.scrollTop = 0;
+    const start = performance.now();
+    const step = (now: number) => {
+      const p = Math.min(1, Math.max(0, (now - start - 500) / 1200));
+      el.scrollTop = intro.current!.target * p * p * (3 - 2 * p);
+      if (p < 1) intro.current!.frame = requestAnimationFrame(step);
+      else {
+        intro.current = null;
+        ui.rogueIntro = false;
+      }
+    };
+    intro.current = { target, frame: requestAnimationFrame(step) };
+  }, [map.selected, whole, k, covered]);
+  useLayoutEffect(() => () => { if (intro.current) cancelAnimationFrame(intro.current.frame); }, []);
   useLayoutEffect(() => {
-    const before = shown.current;
-    shown.current = new Map(map.rows.flat().map(n => [n.index, n.faceDown]));
-    const turned = before ? map.rows.flat().filter(n => before.get(n.index) && !n.faceDown) : [];
+    if (covered) return;
+    const nodes = map.rows.flat();
+    const before = faces;
+    faces = new Map(nodes.map(n => [n.index, n.faceDown]));
+    const turned = before ? nodes.filter(n => before.get(n.index) && !n.faceDown) : [];
     if (!turned.length) return;
     playSound({ t: 'sound', name: 'flip_card', sync: false });
     if (reducedMotion()) return;
-    // A reveal turns each plane over in turn, 150 ms apart, as desktop does. The boss turns as mobile turns it: its back narrows to an edge, then its face widens
+    // Each revealed plane turns as mobile turns it, 150 ms apart: its back narrows to an edge, then its face widens
     turned.forEach((n, i) => {
       const plate = scroller.current!.querySelector<HTMLElement>(`[data-node="${n.index}"]`);
-      if (!n.boss) {
-        plate?.animate([{ transform: 'perspective(700px) rotateY(90deg)' }, { transform: 'none' }], { duration: 260, delay: i * 150, easing: 'ease-out', fill: 'backwards' });
-        return;
-      }
-      plate?.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 500, delay: 300, fill: 'backwards' });
-      plate?.querySelector('.kit-back')?.animate([{ opacity: 1 }, { opacity: 1, offset: 0.5 }, { opacity: 0, offset: 0.5 }, { opacity: 0 }], { duration: 500, delay: 300, fill: 'backwards' });
+      const turn = { duration: 500, delay: i * 150, fill: 'backwards' } as const;
+      plate?.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], turn);
+      plate?.querySelector('.kit-back')?.animate([{ opacity: 1 }, { opacity: 1, offset: 0.5 }, { opacity: 0, offset: 0.5 }, { opacity: 0 }], turn);
     });
-  }, [map]);
+  }, [map, covered]);
+  // A double tap on a plane of the current row chooses it and opens its sheet, as on mobile
+  const tap = (n: MapNode) => {
+    if (locked) return;
+    choose(n, select);
+    const now = performance.now();
+    const again = tapped.current?.node === n.index && now - tapped.current.at < DOUBLE_TAP;
+    tapped.current = again ? null : { node: n.index, at: now };
+    if (again && enterable(n) && n.kind === 'PLANEBOUND') open?.();
+  };
   return (
     <div class={phone ? 'rg-trail rg-vtrail' : 'rg-trail'} style={phone ? { padding: '8px 12px' } : undefined} ref={scroller}>
       <div class="rg-trail-in" style={{ width: `${fit?.width ?? plan.width}px`, height: `${fit?.height ?? plan.height}px`, margin: '0 auto' }}>
@@ -177,7 +229,7 @@ function Trail({ map, phone, whole, select }: { map: RogueMap; phone: boolean; w
             return <path key={k} class={`rg-e ${edge(map.rows[r][i], map.rows[r + 1][j])}`} d={plan.paths[k]} />;
           })}
         </svg>
-        {map.rows.map((row, r) => row.map((n, i) => <Node key={n.index} n={n} box={boxes[r][i]} phone={phone} pick={() => choose(n, select)} />))}
+        {map.rows.map((row, r) => row.map((n, i) => <Node key={n.index} n={n} box={boxes[r][i]} phone={phone} pick={() => tap(n)} />))}
       </div>
     </div>
   );
@@ -200,10 +252,14 @@ function useFit(box: { current: HTMLElement | null }, map: RogueMap, phone: bool
   }, [on, map, phone]);
 }
 
-export function MapPage({ model, actions }: { model: Model; actions: Actions }) {
+/** covered is true while a scene lies over the map. */
+export function MapPage({ model, actions, covered }: { model: Model; actions: Actions; covered: boolean }) {
   const map = model.rogueMap!;
   const phone = isPortrait();
   const whole = ui.rogueWhole;
+  const locked = mapLocked(model);
+  // Only a phone opens the sheet, because a wide screen's panel already shows the plane chosen
+  const sheet = () => changeUi(u => { u.rogueSheet = true; });
   const box = useRef<HTMLDivElement>(null);
   useFit(box, map, phone, whole);
   const toggle = () => changeUi(u => { u.rogueWhole = !u.rogueWhole; });
@@ -211,7 +267,8 @@ export function MapPage({ model, actions }: { model: Model; actions: Actions }) 
   if (phone) {
     return (
       <div style={{ display: 'grid', gridTemplateRows: 'minmax(0,1fr) auto', minHeight: 0 }}>
-        {whole ? <div class="rg-pfit" ref={box}><Trail map={map} phone whole select={select} /></div> : <Trail map={map} phone whole={false} select={select} />}
+        {whole ? <div class="rg-pfit" ref={box}><Trail map={map} phone whole covered={covered} locked={locked} select={select} open={sheet} /></div>
+          : <Trail map={map} phone whole={false} covered={covered} locked={locked} select={select} open={sheet} />}
         {whole ? <div class="rg-sheetbar"><div class="go" style={{ gridTemplateColumns: '1fr' }}><button onClick={toggle}>{t('lblWebRogueBackToPlace')}</button></div></div>
           : <SheetBar model={model} actions={actions} />}
       </div>
@@ -220,7 +277,7 @@ export function MapPage({ model, actions }: { model: Model; actions: Actions }) 
   return (
     <div class="rg-vmap">
       <div class={whole ? 'rg-vstage fit' : 'rg-vstage'} style={whole ? undefined : { '--z': 0 }} ref={box}>
-        <Trail map={map} phone={false} whole={whole} select={select} />
+        <Trail map={map} phone={false} whole={whole} covered={covered} locked={locked} select={select} />
         <button class="rg-vbtn" onClick={toggle}>{t(whole ? 'lblWebRogueBackToPlace' : 'lblWebRogueWholeMap')}</button>
       </div>
       <MapSide model={model} actions={actions} />

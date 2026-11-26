@@ -58,6 +58,8 @@ declare module '../ui' {
     rogueLanded: number;
     /** The Echoes an Aetherwork's rank-up has still to count off the bar. */
     rogueEchoesOwed: number;
+    /** A new run was begun, and its map's first look has still to scroll down from the boss. */
+    rogueIntro: boolean;
   }
 }
 
@@ -99,7 +101,7 @@ const NO_ROGUE = { rogueHome: null, rogueRoster: null, rogueMap: null, rogueRunD
 // A winding trail between two points
 const ICON = <><circle cx="12" cy="37" r="4" /><circle cx="36" cy="11" r="4" /><path d="M16 37h10a7 7 0 0 0 0-14h-4a7 7 0 0 1 0-12h10" /></>;
 
-Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null, rogueLanded: 0, rogueEchoesOwed: 0 });
+Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null, rogueLanded: 0, rogueEchoesOwed: 0, rogueIntro: false });
 
 registerMode({
   mode: 'rogue',
@@ -107,7 +109,7 @@ registerMode({
   hello: (model, msg) => {
     if (msg.campaign !== 'rogue') {
       Object.assign(model, NO_ROGUE);
-      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null, rogueLanded: 0, rogueEchoesOwed: 0 });
+      Object.assign(ui, { rogueTab: 'runs', rogueNewRun: false, rogueRunTab: null, rogueFolded: null, rogueDeckView: false, rogueViewing: null, rogueWhole: false, rogueSheet: false, roguePage: 'map', rogueWork: null, rogueCodexTab: 'stats', rogueCodexId: null, rogueLanded: 0, rogueEchoesOwed: 0, rogueIntro: false });
     }
   },
   stored: ['rogueHome', 'rogueRoster', 'rogueMap', 'rogueRunDeck', 'rogueTraits', 'rogueAether', 'rogueCodexPage', 'rogueHistoryPage', 'rogueChoice', 'rogueQuestion'],
@@ -123,7 +125,10 @@ registerMode({
     rogueReroll: (snapshot, node) => send({ t: 'rogueReroll', snapshot, node }),
     rogueAbandon: snapshot => send({ t: 'rogueAbandon', snapshot }),
     rogueEditDeck: snapshot => send({ t: 'rogueEditDeck', snapshot }),
-    rogueBegin: (snapshot, deck, custom, modifications, descension) => send({ t: 'rogueBegin', snapshot, deck, custom, modifications, descension }),
+    rogueBegin: (snapshot, deck, custom, modifications, descension) => {
+      ui.rogueIntro = true;
+      send({ t: 'rogueBegin', snapshot, deck, custom, modifications, descension });
+    },
     rogueStartDeck: deck => send({ t: 'rogueStartDeck', deck }),
     rogueChoose: (deck, modifications, descension, toggle) => send({ t: 'rogueChoose', deck, modifications, descension, toggle }),
     rogueAetherUpgrade: (snapshot, work) => send({ t: 'rogueAetherUpgrade', snapshot, work }),

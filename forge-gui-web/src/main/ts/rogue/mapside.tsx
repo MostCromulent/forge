@@ -7,7 +7,7 @@ import { artUrl, hideBroken, imageUrl } from '../images';
 import { changeUi } from '../ui';
 import { t } from '../text';
 import { Sprite, barGlyph, glyph, ringClass, sealGlyph } from './kit';
-import { enterable, explains, shownNode, sideIcon } from './map';
+import { enterable, explains, mapLocked, shownNode, sideIcon } from './map';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { MapNode, RogueMap } from '../protocol';
@@ -16,16 +16,22 @@ import type { MapNode, RogueMap } from '../protocol';
 /** The planebound's kind, as the panel's kicker names it. */
 const kind = (map: RogueMap, n: MapNode) => (n.boss ? t('lblRogueBossPlanebound') : n.elite ? t('lblRogueElitePlanebound') : map.terms.PLANEBOUND?.text ?? '');
 
-/** What the buttons under the panel do with the node shown. Only the current node is entered, and only its plane rerolled. */
+/**
+ * What the buttons under the panel do with the node shown. Only the current node is entered, and only its plane rerolled.
+ * A folded question disables both. why says why the plane cannot be rerolled, written out because a touch screen shows no tooltip.
+ */
 function useNode(model: Model, actions: Actions) {
   const map = model.rogueMap!;
   const snapshot = model.rogueHome!.snapshot;
   const n = shownNode(map);
   const current = n.index === map.selected && enterable(n);
+  const locked = mapLocked(model);
+  const reroll = current && n.kind === 'PLANEBOUND' && map.rerolls > 0 ? () => actions.rogueReroll(snapshot, n.index) : undefined;
   return {
-    map, n,
-    enter: current ? () => actions.rogueEnter(snapshot, n.index) : undefined,
-    reroll: current && n.kind === 'PLANEBOUND' && map.rerolls > 0 ? () => actions.rogueReroll(snapshot, n.index) : undefined,
+    map, n, reroll,
+    enter: current && !locked ? () => actions.rogueEnter(snapshot, n.index) : undefined,
+    rerollOff: locked || !!map.rerollReason,
+    why: reroll && map.rerollReason,
   };
 }
 
@@ -75,11 +81,11 @@ function Commander({ model, actions, zoom }: { model: Model; actions: Actions; z
 
 export function MapSide({ model, actions }: { model: Model; actions: Actions }) {
   const [zoom, setZoom] = useState<string | null>(null);
-  const { map, n, enter, reroll } = useNode(model, actions);
+  const { map, n, enter, reroll, rerollOff, why } = useNode(model, actions);
   const run = model.rogueHome?.run;
   const top = run && <Commander model={model} actions={actions} zoom={setZoom} />;
   const foot = <>
-    {reroll && <button disabled={!!map.rerollReason} title={map.rerollReason} onClick={reroll}>{glyph('reroll')}{` ${t('lblRogueRerollPlaneCount', map.rerolls)}`}</button>}
+    {reroll && <button disabled={rerollOff} title={map.rerollReason} onClick={reroll}>{glyph('reroll')}{` ${t('lblRogueRerollPlaneCount', map.rerolls)}`}</button>}
     <button class="primary rg-go" disabled={!enter} onClick={enter}>{n.enter}</button>
   </>;
   if (n.kind !== 'PLANEBOUND') {
@@ -90,7 +96,7 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
       </SidePanel>
     );
   }
-  const reward = <div class="rg-sec"><h4>{t('lblWebRogueReward')}</h4><div class="rg-loot"><Loot map={map} n={n} /></div></div>;
+  const reward = <div class="rg-sec"><h4>{t('lblWebRogueReward')}</h4><div class="rg-loot"><Loot map={map} n={n} /></div>{why && <p>{why}</p>}</div>;
   if (n.faceDown) {
     return (
       <SidePanel kicker={kind(map, n)} title="???" noArt zoom={zoom} setZoom={setZoom} foot={foot} top={top}>
@@ -112,7 +118,7 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
 
 /** The phone's bar under the trail: the node shown, Enter, the sheet of its plane, and the reroll. */
 export function SheetBar({ model, actions }: { model: Model; actions: Actions }) {
-  const { map, n, enter, reroll } = useNode(model, actions);
+  const { map, n, enter, reroll, rerollOff, why } = useNode(model, actions);
   const plane = n.kind === 'PLANEBOUND';
   const line = plane ? [n.plane ?? '???', `♥ ${n.life}`, n.elite && t('lblElite'), n.boss && t('lblWebRogueBoss'),
     n.wrathful > 0 && map.terms.WRATHFUL?.text, n.cursed > 0 && map.terms.CURSED?.text].filter(Boolean).join(' · ') : n.text;
@@ -123,17 +129,18 @@ export function SheetBar({ model, actions }: { model: Model; actions: Actions })
         <div class="t"><b>{n.faceDown ? '???' : n.name}</b><span>{line}</span></div>
       </div>
       <div class="go">
-        <button class="primary" disabled={!enter} onClick={enter}>{t('lblWebRogueEnter')}</button>
+        <button class="primary" disabled={!enter} onClick={enter}>{n.enter}</button>
         {plane && <button onClick={() => changeUi(u => { u.rogueSheet = true; })}>{t('lblPlane')}</button>}
-        {reroll && <button disabled={!!map.rerollReason} title={map.rerollReason} aria-label={t('lblRogueRerollPlane')} onClick={reroll}>{glyph('reroll')}{` ${map.rerolls}`}</button>}
+        {reroll && <button disabled={rerollOff} title={map.rerollReason} aria-label={t('lblRogueRerollPlane')} onClick={reroll}>{glyph('reroll')}{` ${map.rerolls}`}</button>}
       </div>
+      {why && <small class="rg-why">{why}</small>}
     </div>
   );
 }
 
 /** The phone's sheet of the plane shown: its planebound, plane, text and reward. */
 export function PlaneSheet({ model, actions }: { model: Model; actions: Actions }) {
-  const { map, n, enter, reroll } = useNode(model, actions);
+  const { map, n, enter, reroll, rerollOff, why } = useNode(model, actions);
   const close = () => changeUi(u => { u.rogueSheet = false; });
   return (
     <div class="rg-psheet" onClick={e => { if (e.target === e.currentTarget) close(); }}>
@@ -148,10 +155,11 @@ export function PlaneSheet({ model, actions }: { model: Model; actions: Actions 
           {paragraphs(n.text).map((p, i) => <p key={i}>{p}</p>)}
           <div class="camp-kicker">{t('lblWebRogueReward')}</div>
           <div class="ln"><Loot map={map} n={n} /></div>
+          {why && <small class="rg-why">{why}</small>}
         </div>
         <div class="ft2">
-          {reroll && <button disabled={!!map.rerollReason} title={map.rerollReason} onClick={reroll}>{glyph('reroll')}{` ${t('lblRogueRerollPlane')}`}</button>}
-          <button class="primary" disabled={!enter} onClick={() => { close(); enter?.(); }}>{t('lblWebRogueEnter')}</button>
+          {reroll && <button disabled={rerollOff} title={map.rerollReason} onClick={reroll}>{glyph('reroll')}{` ${t('lblRogueRerollPlane')}`}</button>}
+          <button class="primary" disabled={!enter} onClick={() => { close(); enter?.(); }}>{n.enter}</button>
         </div>
       </div>
     </div>

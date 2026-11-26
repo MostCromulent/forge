@@ -280,6 +280,8 @@ html[data-form="portrait"] .rg-sheetbar { border-top: 1px solid var(--line); pad
 .rg-sheetbar .top .t span { font-size: 12px; color: var(--muted); }
 .rg-sheetbar .go { display: grid; grid-template-columns: minmax(0px, 1fr) auto auto; gap: 8px; }
 .rg-sheetbar .go button { padding: 10px 12px; }
+.rg-sheetbar .rg-why { font-size: 12px; line-height: 1.4; color: var(--muted); }
+.rg-psheet .rg-why { font-size: 13px; line-height: 1.4; }
 .rg-shell .hv { display: none; }
 .rg-shell .hv.on { display: contents; }
 .rg-pips { display: inline-flex; gap: 5px; }

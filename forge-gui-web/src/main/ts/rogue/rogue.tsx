@@ -17,7 +17,7 @@ import { DescensionSheet, NO_CHOICE, NewRun, backFrom, chosenDeck, type Choice, 
 import { entrance, screenWay } from './motion';
 import { isScene } from './questions';
 import { DeckView, Question } from './scene';
-import { MapPage } from './map';
+import { MapPage, forgetFaces } from './map';
 import { PlaneSheet } from './mapside';
 import { Terms } from './terms';
 import { TraitsPage } from './traits';
@@ -124,6 +124,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     if (inRun) return;
     ui.roguePage = 'map';
     forgetTallies();
+    forgetFaces();
   }, [inRun]);
   // The Codex is asked for again after each step, such as a reset
   useEffect(() => { if (codex) actions.rogueCodex(ui.rogueCodexTab, ui.rogueCodexId); }, [codex, ui.rogueCodexTab, ui.rogueCodexId, home?.snapshot]);
@@ -148,8 +149,8 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       <CodexPage page={model.rogueCodexPage} tab={ui.rogueCodexTab} id={ui.rogueCodexId}
         setTab={(to: CodexTab) => changeUi(u => { u.rogueCodexTab = to; u.rogueCodexId = null; })}
         choose={id => changeUi(u => { u.rogueCodexId = id; })} reset={inRun ? undefined : setResetting} />
-    ) : inRun ? model.rogueMap && <MapPage model={model} actions={actions} /> : tab === 'runs' && run && !ui.rogueNewRun ? (
-    <Landing home={home} run={run} go={() => enterRun(() => actions.campaignLoad('run'))}
+    ) : inRun ? model.rogueMap && <MapPage model={model} actions={actions} covered={scene && !folded} /> : tab === 'runs' && run && !ui.rogueNewRun ? (
+    <Landing home={home} run={run} go={() => enterRun(() => { ui.rogueIntro = false; actions.campaignLoad('run'); })}
       deck={() => { ui.rogueRunTab = 'deck'; actions.campaignLoad('run'); }}
       abandon={() => setAbandoning(true)} fresh={() => newRun(true)} />
   ) : tab === 'history' ? (
