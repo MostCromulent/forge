@@ -72,6 +72,7 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
   return (
     <div class="chooser">
       <SetupHead trail={[{ label: t('lblStart'), go: back }, { label: WAY_NAMES[who] }]} title={t('lblWebMenuWhatMode')} />
+      {computer && <h3 class="chooser-more">{t('lblWebConstructedLimited')}</h3>}
       <div class="chooser-kinds">
         <Kind id="constructed" name={t('lblConstructed')} onClick={() => actions.openLobby(!computer)}
           blurb={t('lblWebMenuConstructedBlurb')} />
