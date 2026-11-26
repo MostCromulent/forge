@@ -157,6 +157,6 @@ registerMode({
   tile: {
     // The icon mobile's game menus give the mode, drawn at half its 80px
     icon: ICON, art: 'c:Path of Ancestry|C17|1', name: 'lblRogueCommander', blurb: 'lblWebRogueBlurb',
-    resumeLabel: summary => `${t('lblRogueContinueRun')} · ${summary}`, order: 3,
+    resumeLabel: summary => `${t('lblRogueContinueRun')} · ${summary}`, order: 0,
   },
 });
