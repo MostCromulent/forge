@@ -48,10 +48,11 @@ const SPOIL_PICTURES: Record<string, () => JSX.Element> = {
   ICO_QUEST_COIN: () => <Sprite k="coin" px={32} />, ICO_QUEST_GOLD: () => <Sprite k="shards" px={32} />, ICO_QUEST_CHARM: () => glyph('heart', 32),
   ICO_QUEST_ELIXIR: () => <Sprite k="spark" px={32} />, ICO_QUEST_MINUS: () => <Sprite k="xmark" px={32} />,
 };
+const LEDGER_PAUSE_MS = 700;
 const SPOIL_BALANCES: Record<string, string> = { ICO_QUEST_COIN: 'ICO_QUEST_COIN', ICO_QUEST_GOLD: 'ICO_QUEST_GOLD', ICO_QUEST_CHARM: 'rogueLife' };
 
 /**
- * A battle's spoils as mobile lists them: each with its picture under its title, a lost one fainter. Once the screen has risen the bar
+ * A battle's spoils as mobile lists them: each with its picture under its title, a lost one fainter. Shortly after the screen has risen the bar
  * counts in what they add, its coins flying from their pictures. The question id marks them landed, so a fold and unfold counts nothing twice.
  */
 export function Ledger({ spoils, id }: { spoils: Spoil[]; id: number }) {
@@ -62,11 +63,14 @@ export function Ledger({ spoils, id }: { spoils: Spoil[]; id: number }) {
     for (const [icon, el] of sources) coinsFrom(icon, el);
     let open = true;
     const scene = list.current!.closest('.rg-scene');
+    let pause = 0;
+    // The spoils are read for a moment after the screen has risen, before they fly to the bar
     Promise.allSettled(scene?.getAnimations().map(a => a.finished) ?? []).then(() => {
-      if (open) changeUi(u => { u.rogueLanded = id; });
+      if (open) pause = window.setTimeout(() => changeUi(u => { u.rogueLanded = id; }), LEDGER_PAUSE_MS);
     });
     return () => {
       open = false;
+      clearTimeout(pause);
       for (const [icon] of sources) coinsFrom(icon, null);
     };
   }, []);

@@ -489,8 +489,8 @@ html.kit:not([data-form="portrait"]) .rg-gain { box-sizing: border-box; width: 1
 .kit .rgt-tile { grid-template-columns: 56px minmax(0, 1fr) !important; column-gap: 14px !important; }
 .kit .rgt-tile .rgt-seal { margin: 6px; }
 
-/* Danger is carried by the words and the place, never by hue: a dashed edge, and never the last key in its row */
-.kit :is(.danger, [style*="--concede"]) { color: var(--kit-pale) !important; outline: 1px dashed rgba(241, 231, 207, .55); outline-offset: -6px; }
+/* Danger is carried by the words and the place, never by hue, and never the last key in its row */
+.kit :is(.danger, [style*="--concede"]) { color: var(--kit-pale) !important; }
 .kit :is(.rg-menu, .rg-psheet) .danger { color: var(--kit-ink) !important; outline-color: rgba(42, 29, 16, .6); outline-offset: -4px; }
 .kit .dialog .actions :is(.danger, [style*="--concede"]) { order: -1; }
 

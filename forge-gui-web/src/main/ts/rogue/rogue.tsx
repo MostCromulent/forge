@@ -193,7 +193,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       : tab === 'history' && model.rogueHistoryPage?.runs.length ? (close: () => void) => resetRow(close, 'history', 'lblRogueResetHistory') : undefined;
   const dev = (tool: string) => actions.rogueDev(home.snapshot, tool);
   const tools = inRun ? RUN_TOOLS : devTools(home);
-  // A wide screen opens the tools from a button beside the balances, and a phone lists them at the end of its header's menu
+  // A wide screen opens the hub's tools from a button beside the balances, and a run's from its menu, as mobile does. A phone lists them at the end of its header's menu
   const devTool = setting('devMode') && (isPortrait() ? <>
     <hr class="ph-menu-sep" />
     <small class="ph-menu-head">{t('lblDevMode')}</small>
@@ -223,7 +223,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       else if (to === 'deck') editDeck();
       else slideTab(RUN_TABS, aside, to, u => { u.roguePage = to; });
     }} lead={tabSprite} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
-      held={held} counted leave={back} under={dialog} lineTerm={isPortrait() ? undefined : runBar?.tip} glyph={barGlyph} moreIcon={glyph('dots')} more={more} extra={devTool} />
+      held={held} counted leave={back} under={dialog} lineTerm={isPortrait() ? undefined : runBar?.tip} glyph={barGlyph} moreIcon={glyph('dots')} more={more} extra={isPortrait() ? devTool : undefined} />
       : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} lead={tabSprite} disabledTabs={locked} held={ui.rogueEchoesOwed ? { ICO_QUEST_GOLD: -ui.rogueEchoesOwed } : {}} leave={back} under={dialog} glyph={barGlyph}
         more={isPortrait() ? phoneMenu : undefined} extra={devTool} />}
     {!isPortrait() ? <div class="rg-body">{main}{question}</div>

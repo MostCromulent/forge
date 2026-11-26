@@ -10,6 +10,7 @@ import { changeUi, ui } from '../ui';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { fit, layout, type Link } from './maplayout';
+import { POW3_OUT } from './motion';
 import { isScene } from './questions';
 import { MapSide, SheetBar } from './mapside';
 import type { Actions } from '../actions';
@@ -257,6 +258,25 @@ function Fades() {
   );
 }
 
+const ZOOM_MS = 450;
+
+/** Zooms the trail between the place and the whole map: the chosen node grows or shrinks from where it was to where it now is. */
+function zoomTrail(page: HTMLElement, selected: number, from: DOMRect): void {
+  const trail = page.querySelector<HTMLElement>('.rg-trail');
+  const to = page.querySelector(`[data-node="${selected}"]`)?.getBoundingClientRect();
+  if (!trail || !to || !to.width || reducedMotion()) return;
+  const box = trail.getBoundingClientRect();
+  const ox = to.left + to.width / 2 - box.left, oy = to.top + to.height / 2 - box.top;
+  const dx = from.left + from.width / 2 - (to.left + to.width / 2), dy = from.top + from.height / 2 - (to.top + to.height / 2);
+  // The stage clips the trail while it is larger than its box
+  const stage = trail.parentElement!;
+  stage.style.overflow = 'hidden';
+  const open = () => { stage.style.overflow = ''; };
+  trail.animate([{ transformOrigin: `${ox}px ${oy}px`, transform: `translate(${dx}px, ${dy}px) scale(${from.width / to.width})` },
+    { transformOrigin: `${ox}px ${oy}px`, transform: 'none' }], { duration: ZOOM_MS, easing: POW3_OUT })
+    .finished.then(open, open);
+}
+
 /** Keeps the whole map's zoom fitted to its box, as the box changes size. */
 function useFit(box: { current: HTMLElement | null }, map: RogueMap, phone: boolean, on: boolean): void {
   useLayoutEffect(() => {
@@ -284,11 +304,21 @@ export function MapPage({ model, actions, covered }: { model: Model; actions: Ac
   const sheet = () => changeUi(u => { u.rogueSheet = true; });
   const box = useRef<HTMLDivElement>(null);
   useFit(box, map, phone, whole);
-  const toggle = () => changeUi(u => { u.rogueWhole = !u.rogueWhole; });
+  const page = useRef<HTMLDivElement>(null);
+  const zoomFrom = useRef<DOMRect | null>(null);
+  const toggle = () => {
+    zoomFrom.current = page.current?.querySelector(`[data-node="${map.selected}"]`)?.getBoundingClientRect() ?? null;
+    changeUi(u => { u.rogueWhole = !u.rogueWhole; });
+  };
+  useLayoutEffect(() => {
+    const from = zoomFrom.current;
+    zoomFrom.current = null;
+    if (from) zoomTrail(page.current!, map.selected, from);
+  }, [whole]);
   const select = (node: number) => actions.rogueSelect(model.rogueHome!.snapshot, node);
   if (phone) {
     return (
-      <div style={{ display: 'grid', gridTemplateRows: 'minmax(0,1fr) auto', minHeight: 0 }}>
+      <div style={{ display: 'grid', gridTemplateRows: 'minmax(0,1fr) auto', minHeight: 0 }} ref={page}>
         {whole ? <div class="rg-pfit" ref={box}><Trail map={map} phone whole covered={covered} locked={locked} select={select} open={sheet} /></div>
           : <Trail map={map} phone whole={false} covered={covered} locked={locked} select={select} open={sheet} />}
         {whole ? <div class="rg-sheetbar"><div class="go" style={{ gridTemplateColumns: '1fr' }}><button onClick={toggle}>{t('lblWebRogueBackToPlace')}</button></div></div>
@@ -297,7 +327,7 @@ export function MapPage({ model, actions, covered }: { model: Model; actions: Ac
     );
   }
   return (
-    <div class="rg-vmap">
+    <div class="rg-vmap" ref={page}>
       <div class={whole ? 'rg-vstage fit' : 'rg-vstage'} style={whole ? undefined : { '--z': 0 }} ref={box}>
         <Trail map={map} phone={false} whole={whole} covered={covered} locked={locked} select={select} />
         <button class="rg-vbtn" aria-pressed={whole} title={t(whole ? 'lblWebRogueBackToPlace' : 'lblWebRogueWholeMap')} aria-label={t(whole ? 'lblWebRogueBackToPlace' : 'lblWebRogueWholeMap')} onClick={toggle} />

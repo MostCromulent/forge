@@ -836,12 +836,12 @@ html.kit[data-motion="reduced"] .kit-rays::before { animation: none; }
 html.kit:not([data-form="portrait"]) .rg-tale > .rg-face > .pic.pic { margin-top: 0; }
 /* The paper's torn edge reaches above the words' box, so the face rises to meet it */
 html.kit:not([data-form="portrait"]) .rg-tale > .rg-face { margin-top: -26px; }
-/* The bar's keys: the key's frame takes 8px above and 14px below at twice its size, so a key 40px tall leaves an 18px window, and the content centres in it */
-html.kit.kit .camp-purse > button { height: 40px; display: inline-grid; place-items: center; padding: 0 10px; line-height: 1; }
-html.kit.kit .camp-purse > :is(.icon-button, .camp-dev) { width: 40px; min-width: 40px; padding: 0; }
+/* The bar's keys, outranking the generated sheet's key rule, whose :is() counts as its longest selector: the key's frame takes 8px above and 14px below at twice its size, so a key 40px tall leaves an 18px window, and the content centres in it */
+html.kit.kit .camp-purse.camp-purse > button { height: 40px; display: inline-grid; place-items: center; padding: 0 10px; line-height: 1; }
+html.kit.kit .camp-purse.camp-purse > :is(.icon-button, .camp-dev) { width: 40px; min-width: 40px; padding: 0; }
 html.kit .camp-purse > :is(.icon-button, .camp-dev) > :is(svg, .rg-ic) { width: 16px; height: 16px; }
 /* Whole map: mobile's square key with only the magnifier, pressed while the whole map shows */
-html.kit.kit .rg-vbtn { width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-grid; place-items: center; font-size: 0; }
+html.kit.kit .rg-vbtn.rg-vbtn { width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-grid; place-items: center; font-size: 0; }
 html.kit.kit .rg-vbtn::before { margin: 0; width: 16px; height: 16px; background-size: 16px 16px; }
 html.kit.kit .rg-vbtn[aria-pressed="true"] { border-image-source: url("../adventure?s=skin&r=125,175,14,16"); }
 /* The map's paper: its torn corners show what is behind, not the paper's colour */
@@ -865,3 +865,13 @@ html.kit.kit :is(.rg-n.past, .rg-n.dead) { opacity: 1 !important; filter: graysc
 .rg-dialog .dialog.rg-deckview { width: min(720px, calc(100vw - 32px)); max-width: none; }
 .rg-deckview .dk-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 html[data-form="portrait"] .rg-deckview .dk-cards { grid-template-columns: minmax(0, 1fr); }
+/* A plane's name and life sit on the ornate gold-edged parchment */
+html.kit .rg-n:not(.side) .nm { border-width: 11px; border-image: url("../adventure?s=skin&r=41,1,48,48") 11 fill / 11px repeat; padding: 0 2px; }
+/* Start New Run brightens under the pointer, as a key would */
+html.kit .rgl-new { transition: filter .15s; }
+html.kit .rgl-new:is(:hover, :focus-visible) { filter: brightness(1.2); }
+/* The ledge hides the foot of each tab, so the label centres in what shows */
+html.kit.kit .camp-tabs > .camp-tab:not([aria-current]) { padding-bottom: 6px; }
+html.kit.kit .camp-tabs > .camp-tab[aria-current] { padding-bottom: 8px; }
+/* Room between the balances and the keys */
+html.kit .camp-purse > .camp-coin + button { margin-left: 16px; }

@@ -84,8 +84,9 @@ function dropAway(frame: HTMLElement, copy: HTMLElement): void {
     .finished.then(() => frame.remove(), () => frame.remove());
 }
 
-const MOVE_MS = 500;
-const TURN_MS = 350;
+// A little slower than mobile's 500 and 350 ms, which read as hurried on a large screen
+const MOVE_MS = 700;
+const TURN_MS = 450;
 const HALO_MS = 900;
 /** The card or trait in a tile, which is what is dealt and flown; a tile with none, such as a phone's trait row, moves whole. */
 const faceOf = (tile: HTMLElement): HTMLElement => tile.querySelector<HTMLElement>(':scope > img, :scope > .c, :scope > .rg-tcard') ?? tile;
@@ -94,7 +95,7 @@ const dealt = new WeakMap<object, Set<number>>();
 
 /**
  * Deals tiles as mobile does, the first time part of the set key is shown: each card flies face down from the bottom middle of its
- * scrolling box and turns over, up to 100 ms after the one before. A rare tile drops in from above instead, onto a halo that pulses
+ * scrolling box and turns over, up to 140 ms after the one before. A rare tile drops in from above instead, onto a halo that pulses
  * and fades. A tile cannot be pressed until it lands.
  */
 export function deal(key: object, part: number, tiles: HTMLElement[], rare: (i: number) => boolean): void {
@@ -105,7 +106,7 @@ export function deal(key: object, part: number, tiles: HTMLElement[], rare: (i: 
   const box = tiles[0].closest<HTMLElement>('.rg-sheet .grid, .rg-scene > .in')!;
   const view = box.getBoundingClientRect();
   const swing = getComputedStyle(document.documentElement).getPropertyValue('--rg-swing').trim() || POW3_OUT;
-  const step = Math.min(100, 1100 / tiles.length);
+  const step = Math.min(140, 1400 / tiles.length);
   // Cards on their way up from below would make the box scroll further, so it stops scrolling until all have landed
   if (box.scrollHeight > box.clientHeight) box.style.scrollbarGutter = 'stable';
   box.classList.add('rg-dealing');
@@ -180,7 +181,7 @@ function halo(tile: HTMLElement, face: HTMLElement, wait: number): void {
   ring.animate(frames, { duration: span, delay: wait, fill: 'backwards' }).finished.then(done, done);
 }
 
-/** Flies each tile's face, shrinking, into target, 60 ms after the one before, as mobile sends chosen cards into OK; then done runs. */
+/** Flies each tile's face, shrinking, into target, such as the Deck tab, 60 ms after the one before; then done runs. */
 export function flyInto(tiles: HTMLElement[], target: HTMLElement, done: () => void): void {
   if (!tiles.length || reducedMotion()) {
     done();
@@ -198,14 +199,14 @@ export function flyInto(tiles: HTMLElement[], target: HTMLElement, done: () => v
     tile.style.visibility = 'hidden';
     const dx = to.left + to.width / 2 - from.left - from.width / 2, dy = to.top + to.height / 2 - from.top - from.height / 2;
     copy.animate([{ transform: 'none' }, { transform: `translate(${dx}px, ${dy}px) scale(.12)` }],
-      { duration: 350, delay: i * 60, easing: POW3_OUT, fill: 'forwards' });
+      { duration: 500, delay: i * 60, easing: POW3_OUT, fill: 'forwards' });
     return copy;
   });
   // The answer goes by the clock, so it is sent even if the page stops drawing the flight
   setTimeout(() => {
     for (const copy of copies) copy.remove();
     done();
-  }, (tiles.length - 1) * 60 + 350);
+  }, (tiles.length - 1) * 60 + 500);
 }
 
 const LIGHT_MS = 2400;

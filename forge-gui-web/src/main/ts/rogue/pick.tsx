@@ -88,7 +88,7 @@ export function CardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; a
   // Cards taken out of the deck stay where they are, crossed out, as mobile leaves them
   const confirm = () => {
     setGoing(true);
-    flyInto(removing ? [] : chosenTiles(shown.current!, asked, picked), ok.current!, () => answer(picked));
+    flyInto(removing ? [] : chosenTiles(shown.current!, asked, picked), deckTab() ?? ok.current!, () => answer(picked));
   };
   const ask = <div class="rg-ask"><h3>{asked.title}</h3><span>{subtitle}</span></div>;
   const grid = asked.cards.map(c => {
@@ -122,6 +122,9 @@ export function CardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; a
   </>;
 }
 
+/** The run bar's Deck tab, which chosen cards fly into. */
+const deckTab = () => document.querySelector<HTMLElement>('.camp-tabs [data-tab="deck"]');
+
 /** The tiles of the picked cards, in the order they are shown. */
 function chosenTiles(grid: HTMLElement, asked: AskCards, picked: number[]): HTMLElement[] {
   return ([...grid.children] as HTMLElement[]).filter((_, i) => picked.includes(asked.cards[i].id));
@@ -129,7 +132,7 @@ function chosenTiles(grid: HTMLElement, asked: AskCards, picked: number[]): HTML
 
 /**
  * A battle's card reward: up to max of the cards dealt, none allowed, or a reroll at the cost the server names. The cards are dealt face down
- * and turn over one by one, as mobile deals them. Mythic is marked only among other cards, so a reward of mythics alone has no marks.
+ * and turn over one by one, as mobile deals them.
  * The battle's other spoils and the run's gold head it, as on mobile.
  */
 export function RewardPick({ id, asked, answer, fold, viewDeck }: {
@@ -141,7 +144,6 @@ export function RewardPick({ id, asked, answer, fold, viewDeck }: {
   const ok = useRef<HTMLButtonElement>(null);
   const phone = isPortrait();
   const n = picked.length;
-  const marked = !asked.cards.every(c => c.mythic);
   const toggle = (id: number) => setPicked(p => (p.includes(id) ? p.filter(x => x !== id) : p.length < asked.max ? [...p, id] : p));
   useLayoutEffect(() => {
     playSound({ t: 'sound', name: 'flip_card', sync: false });
@@ -149,7 +151,7 @@ export function RewardPick({ id, asked, answer, fold, viewDeck }: {
   }, []);
   const confirm = () => {
     setGoing(true);
-    flyInto(chosenTiles(dealt.current!, asked, picked), ok.current!, () => answer(picked));
+    flyInto(chosenTiles(dealt.current!, asked, picked), deckTab() ?? ok.current!, () => answer(picked));
   };
   const foot = <>
     {asked.rerollCost != null && (
@@ -177,7 +179,6 @@ export function RewardPick({ id, asked, answer, fold, viewDeck }: {
             return (
               <button key={c.id} class={at < 0 ? 'rg-card' : 'rg-card on'} aria-pressed={at >= 0} data-image={c.image} onClick={() => toggle(c.id)}>
                 <img onError={hideBroken} alt={c.name} src={imageUrl(c.image)} />
-                {marked && c.mythic && <span class="myth">{t('lblMythic')}</span>}
                 {at >= 0 && <span class="no">{at + 1}</span>}
               </button>
             );

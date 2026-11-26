@@ -3,7 +3,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from '../icons';
-import { artUrl, hideBroken, imageUrl } from '../images';
+import { artUrl } from '../images';
 import { avatarUrl } from '../avatarsleeves';
 import { playSound } from '../audio';
 import { isPortrait } from '../form';
@@ -26,11 +26,11 @@ import type { AskChoice, DeckDetails, Option, Part, TellOmen } from '../protocol
 
 /**
  * The scene that fills the body under the bar. Focus moves to it, to its main button if it has one, and back when it closes.
- * fold, when set, adds View Map, which folds the scene, and viewDeck adds View Deck. tip is drawn beside the scene's text.
+ * fold, when set, adds View Map, which folds the scene, and viewDeck adds View Deck.
  * onScroll is told when the scene's text and cards scroll. busy disables View Map and View Deck.
  */
-export function Scene({ art, foot, children, fold, viewDeck, tip, onScroll, busy }: {
-  art?: string | null; foot: ComponentChildren; children: ComponentChildren; fold?: () => void; viewDeck?: () => void; tip?: ComponentChildren;
+export function Scene({ art, foot, children, fold, viewDeck, onScroll, busy }: {
+  art?: string | null; foot: ComponentChildren; children: ComponentChildren; fold?: () => void; viewDeck?: () => void;
   onScroll?: (e: Event) => void; busy?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -46,7 +46,7 @@ export function Scene({ art, foot, children, fold, viewDeck, tip, onScroll, busy
   return (
     <div class="rg-scene" ref={root} tabIndex={-1}>
       <div class="bg" style={art ? { backgroundImage: `url("${artUrl(art)}")` } : undefined} />
-      <div class={tip ? 'in tip' : 'in'} onScroll={onScroll}>{children}{tip}</div>
+      <div class="in" onScroll={onScroll}>{children}</div>
       <div class="ft">
         {fold && (phone ? <button disabled={busy} onClick={fold}>{t('lblRogueViewMap')}</button>
           : <button disabled={busy} onClick={fold}><Icon d={ROGUE_ICONS.trail} cls="rg-ic" />{` ${t('lblRogueViewMap')}`}</button>)}
@@ -197,15 +197,6 @@ function Choosing({ choice, answer, fold, viewDeck }: { choice: AskChoice; answe
   const short = choice.count - picked.length;
   useSceneKeys(i => { if (options[i]?.enabled) pick(i); }, () => { if (!options.length) next(); });
   const words = lines(choice.paragraphs[part] ?? []);
-  const shown = hot === null || phone ? [] : options[hot]?.text ?? [];
-  const terms = shown.filter((p, i) => p.kind === 'term' && shown.findIndex(q => q.term === p.term) === i);
-  const cards = shown.filter((p, i) => p.kind === 'card' && p.image && shown.findIndex(q => q.image === p.image) === i);
-  const tip = (terms.length > 0 || cards.length > 0) && (
-    <div class="rg-tip">
-      {terms.map(p => <div key={p.term} class="kw"><b>{p.term}</b>{p.tip}</div>)}
-      {cards.map(p => <img onError={hideBroken} key={p.image} alt="" src={imageUrl(p.image!)} />)}
-    </div>
-  );
   const buttons = [
     !options.length && <button key="go" class="primary" onClick={next}>{t('lblContinue')}</button>,
     options.length > 0 && choice.rerolls > 0 && (
@@ -218,7 +209,7 @@ function Choosing({ choice, answer, fold, viewDeck }: { choice: AskChoice; answe
   ].filter(Boolean);
   const face = choice.face ?? null;
   return (
-    <Scene art={choice.art} fold={fold} viewDeck={viewDeck} tip={tip} foot={buttons.length ? buttons : null}>
+    <Scene art={choice.art} fold={fold} viewDeck={viewDeck} foot={buttons.length ? buttons : null}>
       <div class="rg-tale" onClick={() => setTyping(false)}>
         <div class="rg-face">
           {face !== null ? <span class="pic" style={{ backgroundImage: `url("${avatarUrl(face)}")` }} />
