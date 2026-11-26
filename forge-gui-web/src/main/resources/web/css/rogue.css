@@ -875,9 +875,11 @@ html.kit .rg-n:not(.side) .nm { border-width: 11px; border-image: url("../advent
 /* Start New Run brightens under the pointer, as a key would */
 html.kit .rgl-new { transition: filter .15s; }
 html.kit .rgl-new:is(:hover, :focus-visible) { filter: brightness(1.2); }
-/* The ledge hides the foot of each tab, so the label centres in what shows */
-html.kit.kit .camp-tabs > .camp-tab:not([aria-current]) { padding-bottom: 6px; }
-html.kit.kit .camp-tabs > .camp-tab[aria-current] { padding-bottom: 8px; }
+/* The ledge hides the foot of each tab (6px, or 8px of the current one), so the bottom padding is the hidden part plus the top frame, and the label centres in what shows. The generated sheet sets the padding with !important */
+html.kit.kit .camp-tabs > .camp-tab:not([aria-current]) { padding-bottom: 8px !important; }
+html.kit.kit .camp-tabs > .camp-tab[aria-current] { padding-bottom: 10px !important; }
+html.kit.kit[data-form="portrait"] .camp-tabs > .camp-tab:not([aria-current]) { padding-bottom: 6px !important; }
+html.kit.kit[data-form="portrait"] .camp-tabs > .camp-tab[aria-current] { padding-bottom: 8px !important; }
 /* Room between the balances and the keys */
 html.kit .camp-purse > .camp-coin + button { margin-left: 16px; }
 /* The deck dialog's Cards / List: the deck editor's segmented control drawn for parchment, one ink box with the chosen half filled */
@@ -886,3 +888,7 @@ html.kit.kit .rg-deckview .view-seg.view-seg > button { background: none; border
   padding: 5px 14px; font: 600 13.5px system-ui, sans-serif; color: var(--kit-ink, #2a1d10); text-shadow: none; }
 html.kit.kit .rg-deckview .view-seg.view-seg > button + button { border-left: 1.5px solid var(--kit-ink, #2a1d10); }
 html.kit.kit .rg-deckview .view-seg.view-seg > button[aria-pressed="true"] { background: var(--kit-ink, #2a1d10); color: #f1e7cf; }
+/* Start New Run dims its scene as far as the run beside it does, so the commander fan and the words stand out (the generated sheet sets it with !important) */
+html.kit.kit .rgl-new { background: linear-gradient(rgba(14, 11, 8, .66), rgba(14, 11, 8, .6) 30%, rgba(14, 11, 8, .78) 58%, #0e0b08 84%) padding-box, var(--kit-ground) -330px 0 / 1024px 576px no-repeat padding-box, #0e0b08 !important; }
+/* A phone's run keys wrap rather than run past the panel's edge */
+html[data-form="portrait"] .rgl-run .go { flex-wrap: wrap; }
