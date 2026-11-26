@@ -54,11 +54,13 @@ const RUN_TOOLS: [string, TextKey][] = [['nextNode', 'lblRogueDevNextNode'], ['w
 
 /** Rogue Commander's page. The mode has no shelf of saved games, so the shell is always open. */
 export function RogueHub({ model, actions }: { model: Model; actions: Actions }) {
-  // Rogue is drawn in Adventure's look (rogue-adventure.css) while it is open
+  // Rogue is drawn in Adventure's look (rogue-adventure.css) while it is open. The deck editor over it keeps the editor's own look, dialogs included
+  const editing = !!model.editor;
   useEffect(() => {
+    if (editing) return;
     document.documentElement.classList.add('kit');
     return () => document.documentElement.classList.remove('kit');
-  }, []);
+  }, [editing]);
   useEffect(tapToZoom, []);
   useEffect(scrollHints, []);
   return <CampaignShell model={model} actions={actions} icons={[]} always class="rg-shell" open={() => <Pages model={model} actions={actions} />} />;
