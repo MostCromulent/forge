@@ -77,7 +77,7 @@ public final class RogueFlow {
         return currentRun;
     }
 
-    /** Replacing the run gives back the looks a match lent the human. */
+    /** Replacing the run restores the player's own name, avatar and sleeve. */
     public void setRun(RogueRun run) {
         nodePlaneboundHelper.restoreHuman();
         this.currentRun = run;
