@@ -207,3 +207,126 @@ export function flyInto(tiles: HTMLElement[], target: HTMLElement, done: () => v
     done();
   }, (tiles.length - 1) * 60 + 350);
 }
+
+const LIGHT_MS = 2400;
+// Where five sparkles wink round a picture in turn, as fractions of its box
+const SPOTS = [[-.08, .05], [1.06, .2], [-.05, .85], [1.04, .92], [.5, -.06]];
+
+/** A part of an entrance laid over its parent, at the box given or where its class puts it. */
+function layer(cls: string, parent: HTMLElement, box?: [number, number, number, number]): HTMLElement {
+  const el = document.createElement('span');
+  el.className = cls;
+  el.setAttribute('aria-hidden', 'true');
+  if (box) Object.assign(el.style, { left: `${box[0]}px`, top: `${box[1]}px`, width: `${box[2]}px`, height: `${box[3]}px` });
+  parent.append(el);
+  return el;
+}
+
+/**
+ * Brings in a dialog's picture as mobile's notices do. With 'rays', gold rays turn behind it at 25 degrees a second, a shine sweeps across it
+ * twice and five sparkles wink round it, over 2.4 s. With 'drop' it drops from above with a swing onto a halo that grows, with the sparkles.
+ * frame wraps the picture, its first child. With reduced motion the rays and the halo show still.
+ */
+export function entrance(frame: HTMLElement, way: 'rays' | 'drop'): void {
+  const pic = frame.firstElementChild as HTMLElement;
+  const dialog = frame.closest<HTMLElement>('.dialog')!;
+  dialog.classList.add('rg-lit');
+  const x = pic.offsetLeft, y = pic.offsetTop, w = pic.offsetWidth, h = pic.offsetHeight;
+  const still = reducedMotion();
+  if (way === 'rays') {
+    const r = Math.max(dialog.offsetWidth, dialog.offsetHeight);
+    // The rays are clipped to the dialog by a layer of its size, so they never make it scroll
+    const rays = layer('rg-rays', layer('rg-light', dialog), [frame.offsetLeft + x + w / 2 - r, frame.offsetTop + y + h / 2 - r, 2 * r, 2 * r]);
+    if (!still) rays.animate([{ rotate: '0deg' }, { rotate: '60deg' }], { duration: LIGHT_MS, fill: 'forwards' });
+  } else {
+    // Three rings at 22% to 1.2 times three quarters of the picture's height, the inner disc and two shadows
+    const p = .75 * h, side = 1.0667 * p;
+    const halo = layer('rg-halo', frame, [x + (w - side) / 2, y + (h - side) / 2, side, side]);
+    Object.assign(halo.style, { zIndex: '-1', boxShadow: [.6667, .3333].map(f => `0 0 0 ${f * p}px rgba(255, 140, 102, .22)`).join(', ') });
+    if (!still) {
+      halo.animate(Array.from({ length: LIGHT_MS / 50 + 1 }, (_, k) => {
+        const s = k * .05;
+        return { transform: `scale(${Math.min(1, s / .8) * (1 + .08 * Math.sin(s * 6))})` };
+      }), { duration: LIGHT_MS, fill: 'forwards' });
+      const swing = getComputedStyle(document.documentElement).getPropertyValue('--rg-swing').trim() || POW3_OUT;
+      pic.animate([{ transform: `translateY(${-1.25 * h}px)` }, { transform: 'none' }], { duration: 600, easing: swing });
+    }
+  }
+  if (still) return;
+  const parts: HTMLElement[] = [];
+  if (way === 'rays') {
+    // A band 18% of the picture wide, leaning by 60% of its height, sweeps across it from 0.5 s and again from 1.4 s
+    const clip = layer('rg-shine', frame, [x, y, w, h]);
+    clip.style.borderRadius = getComputedStyle(pic).borderRadius;
+    const band = layer('', clip, [0, 0, .18 * w, h]);
+    const from = `translateX(${-.6 * h}px) skewX(-31deg)`, to = `translateX(${w + .6 * h}px) skewX(-31deg)`;
+    band.animate([
+      { offset: 0, transform: from }, { offset: 500 / 2100, transform: from }, { offset: 1200 / 2100, transform: to },
+      { offset: 1400 / 2100, transform: to }, { offset: 1400 / 2100, transform: from }, { offset: 1, transform: to },
+    ], { duration: 2100 });
+    parts.push(clip);
+  }
+  // Each sparkle's arms reach 2.2 times its half width, which is 6 of mobile's units on its picture's height
+  const s = h * 6 / (way === 'rays' ? 150 : 64);
+  SPOTS.forEach(([fx, fy], i) => {
+    const star = layer('rg-twinkle', frame, [x + w * fx - 2.2 * s, y + h * fy - 2.2 * s, 4.4 * s, 4.4 * s]);
+    star.animate(Array.from({ length: 9 }, (_, k) => ({ scale: `${Math.sin(Math.PI * k / 8)}` })), { duration: 500, delay: 400 + i * 350 });
+    parts.push(star);
+  });
+  setTimeout(() => parts.forEach(part => part.remove()), LIGHT_MS);
+}
+
+const RANK_MS = 900;
+
+/** sin(pi t) over a stretch of the rank-up's 0.9 s, sampled, for a part that swells and settles. */
+const swell = (from: number, to: number, frame: (v: number) => Keyframe): [Keyframe[], KeyframeAnimationOptions] =>
+  [Array.from({ length: 9 }, (_, k) => frame(Math.sin(Math.PI * k / 8))), { duration: (to - from) * RANK_MS, delay: from * RANK_MS }];
+
+/**
+ * Celebrates an Aetherwork's new rank as mobile does over 0.9 s: the new rank's pip fills, a flare bursts on it, the tile glows and its rank
+ * text pops. owed is given the Echoes paid that are still to count off the balance as they run down, pow3Out, in the first 0.36 s.
+ */
+export function rankUp(tile: HTMLElement, rank: number, paid: number, owed: (left: number) => void): void {
+  if (reducedMotion()) return;
+  const pip = tile.querySelectorAll<HTMLElement>('.rg-rank i')[rank - 1];
+  const began = performance.now();
+  let left = paid;
+  owed(left);
+  requestAnimationFrame(function step(at) {
+    const p = Math.min(1, (at - began) / (.4 * RANK_MS));
+    const now = Math.round(paid * (1 - p) ** 3);
+    if (now !== left) owed(left = now);
+    if (p < 1) requestAnimationFrame(step);
+  });
+  const raised = getComputedStyle(tile).position === 'static';
+  if (raised) tile.style.position = 'relative';
+  // Mobile's unit, as its pips are 13 wide
+  const u = pip ? pip.offsetWidth / 13 : 1.5;
+  const parts: HTMLElement[] = [];
+  if (pip) {
+    // The empty look is read from a pip without a rank, as the theme draws it
+    const empty = document.createElement('i');
+    pip.parentElement!.append(empty);
+    const off = getComputedStyle(empty), offColour = off.backgroundColor, offLine = off.boxShadow;
+    empty.remove();
+    const on = getComputedStyle(pip), onColour = on.backgroundColor, onLine = on.boxShadow;
+    pip.animate(Array.from({ length: 13 }, (_, k) => ({
+      background: `linear-gradient(90deg, ${onColour} ${k * 100 / 12}%, ${offColour} ${k * 100 / 12}%)`, boxShadow: k < 12 ? offLine : onLine,
+    })), { duration: .3 * RANK_MS, delay: .15 * RANK_MS, fill: 'backwards' });
+    const box = tile.getBoundingClientRect(), at = pip.getBoundingClientRect();
+    const cx = at.left + at.width / 2 - box.left - tile.clientLeft, cy = at.top + at.height / 2 - box.top - tile.clientTop;
+    const flare = layer('rg-flare', tile, [cx - 16 * u, cy - 16 * u, 32 * u, 32 * u]);
+    flare.animate([{ transform: 'scale(.375)', opacity: .8 }, { transform: 'none', opacity: 0 }], { duration: .33 * RANK_MS, delay: .42 * RANK_MS });
+    parts.push(flare);
+  }
+  const glow = layer('rg-glow', tile, [-tile.clientLeft - 2 * u, -tile.clientTop - 2 * u, tile.offsetWidth + 4 * u, tile.offsetHeight + 4 * u]);
+  glow.style.borderWidth = `${2.5 * u}px`;
+  glow.animate(...swell(.45, 1, v => ({ opacity: v })));
+  parts.push(glow);
+  const text = tile.querySelector<HTMLElement>('.rk');
+  text?.animate(...swell(.4, .65, v => ({ transform: `scale(${1 + .35 * v})` })));
+  setTimeout(() => {
+    parts.forEach(part => part.remove());
+    if (raised) tile.style.position = '';
+  }, RANK_MS);
+}

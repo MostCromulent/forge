@@ -45,7 +45,7 @@ public final class RogueProtocol {
     }
 
     /**
-     * Something won or unlocked, shown over whichever Rogue page is open. kind is "unlock" or "spark".
+     * Something won or unlocked, shown over whichever Rogue page is open. kind is "unlock", "upgrade" for an Aether Upgrade bought, or "spark".
      * The first line of text is its name. image is a card's picture, or null. It is sent again after a reload until the browser says it was shown.
      */
     @Message("rogueAnnounce")
@@ -339,10 +339,16 @@ public final class RogueProtocol {
 
     /**
      * Answered with the ids of the cards picked, or "reroll" where rerollCost is set and rerollEnabled is true. deck is the deck the picks go into
-     * or come out of, as it is before them, and is null when there is none to show. art is the picture behind them.
+     * or come out of, as it is before them, and is null when there is none to show. art is the picture behind them. A battle's card reward
+     * is headed by the battle's spoils and the run's gold, which is null for other picks.
      */
     public record AskCards(String kind, String title, @Nullable String subtitle, List<PickCard> cards, int min, int max,
-            @Nullable Integer rerollCost, boolean rerollEnabled, @Nullable PickDeck deck, @Nullable String art) {
+            @Nullable Integer rerollCost, boolean rerollEnabled, @Nullable PickDeck deck, @Nullable String art, List<Spoil> spoils,
+            @Nullable TellGains gains, @Nullable Integer gold) {
+    }
+
+    /** Something a battle gave or cost, worded by its reward script under its title. icon is the skin icon it is drawn with, or null. */
+    public record Spoil(String title, String text, @Nullable String icon) {
     }
 
     /** id is the card's place in the offer, so two equal copies are told apart. cmc is its mana value. */
@@ -385,14 +391,15 @@ public final class RogueProtocol {
     }
 
     /**
-     * A result or a message. kind is a ResultKind name, "MESSAGE", or "SUMMARY" for what a won battle gave, which alone has gains.
-     * art is the picture behind a result.
+     * A result or a message. kind is a ResultKind name, "MESSAGE", or "SPOILS" for a battle's spoils that no card reward showed, which alone has
+     * spoils. art is the picture behind a result.
      */
-    public record Tell(String kind, String title, List<Part> text, List<TellSection> sections, @Nullable TellGains gains, @Nullable String art) {
+    public record Tell(String kind, String title, List<Part> text, List<TellSection> sections, List<Spoil> spoils, @Nullable TellGains gains,
+            @Nullable String art) {
     }
 
-    /** The gold, Echoes, life and removal credits a won battle gave. */
-    public record TellGains(int gold, int echoes, int life, int credits) {
+    /** The gold, Echoes and life a battle's spoils add, which the run's bar holds back until the screen showing the spoils counts them in. */
+    public record TellGains(int gold, int echoes, int life) {
     }
 
     /** removed means the cards left the deck. */

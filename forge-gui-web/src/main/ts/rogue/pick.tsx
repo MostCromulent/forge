@@ -13,6 +13,7 @@ import { playSound } from '../audio';
 import { Sprite, glyph } from './kit';
 import { Scene } from './scene';
 import { deal, flyInto } from './motion';
+import { Ledger } from './gains';
 import { TraitCard } from './traits';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -129,8 +130,11 @@ function chosenTiles(grid: HTMLElement, asked: AskCards, picked: number[]): HTML
 /**
  * A battle's card reward: up to max of the cards dealt, none allowed, or a reroll at the cost the server names. The cards are dealt face down
  * and turn over one by one, as mobile deals them. Mythic is marked only among other cards, so a reward of mythics alone has no marks.
+ * The battle's other spoils and the run's gold head it, as on mobile.
  */
-export function RewardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; answer: (value: unknown) => void; fold?: () => void; viewDeck?: () => void }) {
+export function RewardPick({ id, asked, answer, fold, viewDeck }: {
+  id: number; asked: AskCards; answer: (value: unknown) => void; fold?: () => void; viewDeck?: () => void;
+}) {
   const [picked, setPicked] = useState<number[]>([]);
   const [going, setGoing] = useState(false);
   const dealt = useRef<HTMLDivElement>(null);
@@ -161,7 +165,12 @@ export function RewardPick({ asked, answer, fold, viewDeck }: { asked: AskCards;
   return (
     <Scene art={asked.art} fold={fold} viewDeck={viewDeck} foot={foot} busy={going}>
       <div class="rg-pick">
-        <div class="rg-ask"><h3>{t('lblRogueVictoryReward', asked.title)}</h3><span>{t('lblRogueCardRewardSelectionCount', asked.max, n)}</span></div>
+        <div class="rg-ask">
+          <h3>{t('lblRogueVictoryReward', asked.title)}</h3>
+          {asked.gold != null && <span>{t('lblRogueGoldTotal', asked.gold)}</span>}
+          <span>{t('lblRogueCardRewardSelectionCount', asked.max, n)}</span>
+        </div>
+        {asked.spoils.length > 0 && <Ledger spoils={asked.spoils} id={id} />}
         <div class="rg-cards seven" ref={dealt}>
           {asked.cards.map(c => {
             const at = picked.indexOf(c.id);

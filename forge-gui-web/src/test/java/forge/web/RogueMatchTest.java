@@ -1,18 +1,23 @@
 package forge.web;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import forge.game.Game;
+import forge.game.card.Card;
 import forge.game.player.Player;
+import forge.game.zone.ZoneType;
 import forge.gamemodes.match.DrawOfferCoordinator;
 import forge.gamemodes.rogue.RogueIO;
 import forge.gamemodes.rogue.RogueMetaProgress;
+import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueRunHistoryEntry;
 import forge.gamemodes.rogue.effect.CustomRunModification;
 import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.gui.GuiBase;
+import forge.model.FModel;
 import forge.util.Localizer;
 import forge.web.campaign.rogue.RogueGame;
 import org.testng.Assert;
@@ -98,13 +103,19 @@ public class RogueMatchTest extends RogueSessionTest {
         host.awaitMatching("hello", h -> RogueGame.MODE.equals(str(h, "campaign")) && !"playing".equals(str(h, "screen")), "the match was not left");
     }
 
-    /** Waits for what the won battle gave, and continues past it. */
-    private JsonObject summary(final TestBrowser host) throws InterruptedException {
-        final JsonObject asked = host.awaitMatching("rogueQuestion", q -> q.has("tell") && "SUMMARY".equals(str(q.getAsJsonObject("tell"), "kind")),
-                "what the battle gave was not told");
+    /** Waits for the battle's spoils that no card reward showed, and continues past them. */
+    private JsonObject spoils(final TestBrowser host) throws InterruptedException {
+        final JsonObject asked = host.awaitMatching("rogueQuestion", q -> q.has("tell") && "SPOILS".equals(str(q.getAsJsonObject("tell"), "kind")),
+                "the battle's spoils were not shown");
         handled.add(asked.get("id").getAsInt());
         sessions.onMessage(host, answer(asked.get("id").getAsInt(), JsonNull.INSTANCE));
         return asked.getAsJsonObject("tell");
+    }
+
+    /** The titles of the spoils a reward or a spoils screen lists, each with its icon. */
+    private static List<String> spoilTitles(final JsonObject shown) {
+        return StreamSupport.stream(shown.getAsJsonArray("spoils").spliterator(), false).map(JsonElement::getAsJsonObject)
+                .map(s -> str(s, "title") + " " + str(s, "icon")).toList();
     }
 
     private static int gold(final TestBrowser host) {
@@ -141,7 +152,8 @@ public class RogueMatchTest extends RogueSessionTest {
         Assert.assertEquals(lastRun().getOutcome(), "DEFEAT");
     }
 
-    // Fails if a reward is asked over the result screen, leaving the result does not go on to the rewards, they are not taken into the run, or the bar shows the gold won before the summary counts it in
+    // Fails if a reward is asked over the result screen, leaving the result does not go on to the rewards, they are not taken into the run,
+    // the reward does not list the gold won, or the gold it lists is not held back from the bar until the reward counts it in
     @Test(timeOut = 300_000)
     public void rewardsAreAskedAfterLeaving() throws Exception {
         final TestBrowser host = atRun(NodePlanebound.class, 8);
@@ -156,16 +168,18 @@ public class RogueMatchTest extends RogueSessionTest {
         final JsonObject reward = host.awaitMatching("rogueQuestion", q -> q.has("cards") && "REWARD".equals(str(q.getAsJsonObject("cards"), "kind")),
                 "no reward was asked");
         handled.add(reward.get("id").getAsInt());
-        Assert.assertEquals(gold(host), before);
+        final JsonObject cards = reward.getAsJsonObject("cards");
+        final int won = cards.getAsJsonObject("gains").get("gold").getAsInt();
+        Assert.assertTrue(won > 0);
+        Assert.assertTrue(spoilTitles(cards).contains(text("lblRogueGoldReward") + " ICO_QUEST_COIN"), spoilTitles(cards).toString());
+        Assert.assertEquals(gold(host), before + won);
+        Assert.assertEquals(cards.get("gold").getAsInt(), before + won);
         final JsonArray first = new JsonArray();
         first.add(0);
         sessions.onMessage(host, answer(reward.get("id").getAsInt(), first));
-        final JsonObject gains = summary(host);
-        Assert.assertTrue(gains.getAsJsonObject("gains").get("gold").getAsInt() > 0);
-        Assert.assertEquals(gold(host), before + gains.getAsJsonObject("gains").get("gold").getAsInt());
-        Assert.assertEquals(gains.getAsJsonObject("gains").get("credits").getAsInt(), 1);
-        Assert.assertEquals(gains.getAsJsonArray("sections").get(0).getAsJsonObject().getAsJsonArray("cards").size(), 1);
         settle(host);
+        Assert.assertTrue(host.all("rogueQuestion").stream().noneMatch(q -> q.has("tell") && "SPOILS".equals(str(q.getAsJsonObject("tell"), "kind"))),
+                "spoils the reward showed were shown again");
         Assert.assertTrue(RogueIO.loadRun(RogueIO.getRogueFile(run)).getPath().getNode(PLANE).isCompleted());
     }
 
@@ -183,7 +197,7 @@ public class RogueMatchTest extends RogueSessionTest {
         Assert.assertNull(str(button(result, 1), "disabled"));
         leave(host, null);
         host.awaitMatching("rogueAnnounce", a -> "Endless Mode Unlocked!".equals(str(a, "title")), "the unlock the battle earned was not announced");
-        Assert.assertEquals(summary(host).getAsJsonObject("gains").get("echoes").getAsInt(), 10);
+        Assert.assertEquals(spoils(host).getAsJsonObject("gains").get("echoes").getAsInt(), 10);
         sessions.disconnected(host);
         final TestBrowser back = connect("host");
         final JsonObject ending = back.awaitMatching("rogueQuestion", q -> q.has("choice") && "ending".equals(str(q.getAsJsonObject("choice"), "kind")),
@@ -203,7 +217,7 @@ public class RogueMatchTest extends RogueSessionTest {
         final JsonObject endless = button(result(host), 1);
         Assert.assertEquals(str(endless, "disabled"), text("lblRogueUnlockEndlessHint"));
         leave(host, "endless");
-        summary(host);
+        spoils(host);
         final JsonObject ending = host.awaitMatching("rogueQuestion", q -> q.has("choice"), "the ending was not asked");
         final int id = ending.get("id").getAsInt();
         Assert.assertFalse(ending.getAsJsonObject("choice").getAsJsonArray("options").get(1).getAsJsonObject().get("enabled").getAsBoolean());
@@ -213,6 +227,38 @@ public class RogueMatchTest extends RogueSessionTest {
         sessions.onMessage(host, answer(id, new JsonPrimitive(0)));
         settle(host);
         Assert.assertEquals(lastRun().getOutcome(), "VICTORY");
+    }
+
+    // Fails if the Spark an Endless run wins as it ends is not shown, as no card reward follows the battle
+    @Test(timeOut = 300_000)
+    public void aSparkWonOnRunDefeatIsShown() throws Exception {
+        run = RogueFixture.run(NodePlanebound.class);
+        run.setEndlessLevel(1);
+        run.setDescensionLevel(1);
+        final TestBrowser host = openRun();
+        toBattle(host, PLANE);
+        sessions.onMessage(host, TestBrowser.action("concede"));
+        leave(host, str(button(result(host), 0), "action"));
+        final JsonObject shown = spoils(host);
+        Assert.assertEquals(str(shown, "title"), text("lblRogueRunWon"));
+        Assert.assertTrue(spoilTitles(shown).contains(text("lblRogueSparkReward") + " ICO_QUEST_ELIXIR"), spoilTitles(shown).toString());
+    }
+
+    // Fails if a carry card lost in a won battle is not listed with the card reward
+    @Test(timeOut = 300_000)
+    public void lostCarryCardsAreListed() throws Exception {
+        run = RogueFixture.run(NodePlanebound.class);
+        run.addCarryCard(FModel.getMagicDb().getCommonCards().getCard("Sol Ring"), RogueRun.CarryCardType.ITEM, "test");
+        final TestBrowser host = openRun();
+        toBattle(host, PLANE);
+        final Card ring = human().getZone(ZoneType.Command).getCards().stream().filter(c -> "Sol Ring".equals(c.getName())).findFirst().orElseThrow();
+        human().getZone(ZoneType.Command).remove(ring);
+        opponentConcedes();
+        leave(host, str(button(result(host), 0), "action"));
+        final JsonObject reward = host.awaitMatching("rogueQuestion", q -> q.has("cards") && "REWARD".equals(str(q.getAsJsonObject("cards"), "kind")),
+                "no reward was asked");
+        Assert.assertTrue(spoilTitles(reward.getAsJsonObject("cards")).contains(text("lblRogueLostCarryCards") + " ICO_QUEST_MINUS"),
+                spoilTitles(reward.getAsJsonObject("cards")).toString());
     }
 
     // Fails if a match left before its end keeps the Wrathful effects spent on it, or the map cannot be used after

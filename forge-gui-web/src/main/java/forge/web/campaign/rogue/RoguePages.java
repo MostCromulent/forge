@@ -15,7 +15,6 @@ import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RoguePlaneboundType;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueRunHistoryEntry;
-import forge.gamemodes.rogue.RogueWinLoseController.Gains;
 import forge.gamemodes.rogue.TextHelper;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.ChestEffect;
@@ -76,6 +75,7 @@ import forge.web.protocol.RogueProtocol.RogueRunBar;
 import forge.web.protocol.RogueProtocol.RogueRunCard;
 import forge.web.protocol.RogueProtocol.RogueRunDeck;
 import forge.web.protocol.RogueProtocol.RogueTraits;
+import forge.web.protocol.RogueProtocol.TellGains;
 import forge.web.protocol.RogueProtocol.Trait;
 import forge.web.protocol.ToBrowser.DeckDetails;
 
@@ -118,13 +118,13 @@ public final class RoguePages {
     public record Snapshot(long number, RogueRun run, RogueRun timed, int node, List<Record> pages) {
     }
 
-    private static final Gains NOTHING = new Gains(null, 0, 0, 0, 0, List.of(), List.of());
+    private static final TellGains NOTHING = new TellGains(0, 0, 0);
 
     /**
      * Runs on the flow thread only, because it reads the run and reveals the planes now in view.
-     * held is what a won battle gave and the run's bar does not show until the summary counts it in, or null.
+     * held is what a battle's spoils add and the run's bar does not show until a screen showing them counts it in, or null.
      */
-    public static Snapshot build(final RogueFlow flow, final RogueMetaProgress progress, final long number, final Gains held) {
+    public static Snapshot build(final RogueFlow flow, final RogueMetaProgress progress, final long number, final TellGains held) {
         final RogueRun run = flow.run();
         final List<Record> pages = new ArrayList<>();
         if (run == null) {
@@ -494,7 +494,7 @@ public final class RoguePages {
                 List.of(), null, 0, null);
     }
 
-    private static RogueMap map(final RogueFlow flow, final RogueRun run, final RogueMetaProgress progress, final Gains held) {
+    private static RogueMap map(final RogueFlow flow, final RogueRun run, final RogueMetaProgress progress, final TellGains held) {
         final RoguePath path = run.getPath();
         final RoguePathNode current = run.getCurrentNode();
         final int row = current == null ? -1 : current.getRowIndex();
@@ -559,14 +559,14 @@ public final class RoguePages {
         });
     }
 
-    private static RogueRunBar runBar(final RogueRun run, final RogueMetaProgress progress, final Gains held) {
+    private static RogueRunBar runBar(final RogueRun run, final RogueMetaProgress progress, final TellGains held) {
         final Localizer text = Localizer.getInstance();
         final int life = run.getCurrentLife() - held.life();
         final List<Balance> balances = List.of(
                 new Balance("rogueLife", life, KeywordHint.MAX_LIFE.getTitle(), life + " / " + run.getMaxLife(), "heart", KeywordHint.MAX_LIFE.getHintText()),
                 new Balance("ICO_QUEST_COIN", run.getCurrentGold() - held.gold(), KeywordHint.GOLD.getTitle(), null, "coin", KeywordHint.GOLD.getHintText()),
                 new Balance("ICO_QUEST_GOLD", progress.getTotalEchoes() - held.echoes(), KeywordHint.ECHOES.getTitle(), null, "shards", KeywordHint.ECHOES.getHintText()),
-                new Balance("rogueCredits", run.getRemovalCredits() - held.credits(), KeywordHint.REMOVAL_CREDITS.getTitle(), null, "cut",
+                new Balance("rogueCredits", run.getRemovalCredits(), KeywordHint.REMOVAL_CREDITS.getTitle(), null, "cut",
                         KeywordHint.REMOVAL_CREDITS.getHintText()));
         final List<String> tip = new ArrayList<>();
         for (int level = 1; level <= run.getDescensionLevel(); level++) {

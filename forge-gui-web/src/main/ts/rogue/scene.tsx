@@ -138,14 +138,15 @@ export function Question({ model, actions }: { model: Model; actions: Actions })
   const inRun = model.campaignSave !== null;
   const fold = inRun && (asked.choice?.options.length || asked.cards || asked.shop) ? () => changeUi(u => { u.rogueFolded = asked.id; }) : undefined;
   if (asked.cards) {
-    const Pick = asked.cards.kind === 'REWARD' ? RewardPick : CardPick;
-    return <Pick key={asked.id} asked={asked.cards} answer={answer} fold={fold} viewDeck={() => changeUi(u => { u.rogueDeckView = true; })} />;
+    const deck = () => changeUi(u => { u.rogueDeckView = true; });
+    return asked.cards.kind === 'REWARD' ? <RewardPick key={asked.id} id={asked.id} asked={asked.cards} answer={answer} fold={fold} viewDeck={deck} />
+      : <CardPick key={asked.id} asked={asked.cards} answer={answer} fold={fold} viewDeck={deck} />;
   }
   if (asked.commander) return <CommanderPick key={asked.id} asked={asked.commander} model={model} actions={actions} answer={answer} />;
   if (asked.omen) return <Omens key={asked.id} omen={asked.omen} ok={() => answer(null)} />;
   const viewDeck = fold && (() => changeUi(u => { u.rogueDeckView = true; }));
   if (asked.shop) return <Bazaar key={asked.id} asked={asked.shop} answer={answer} fold={fold} viewDeck={viewDeck || undefined} />;
-  if (!asked.choice) return <Gains key={asked.id} tell={asked.tell!} ok={() => answer(null)} />;
+  if (!asked.choice) return <Gains key={asked.id} tell={asked.tell!} id={asked.id} ok={() => answer(null)} />;
   // Options that are traits or rewards to take are drawn as cards
   return asked.choice.options.length > 0 && asked.choice.options.every(o => o.trait)
     ? <LootPick key={asked.id} choice={asked.choice} answer={answer} fold={fold} viewDeck={viewDeck || undefined} />

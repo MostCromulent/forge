@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CampaignBar, CampaignShell, forgetTallies, slideTab } from '../campaign/campaign';
 import { Backdrop } from '../dialog';
 import { Icon } from '../icons';
@@ -14,7 +14,7 @@ import { ROGUE_ICONS } from './icons';
 import { Sprite, barGlyph, glyph, tabSprite } from './kit';
 import { Landing } from './landing';
 import { DescensionSheet, NO_CHOICE, NewRun, backFrom, chosenDeck, type Choice, type SetChoice } from './newrun';
-import { screenWay } from './motion';
+import { entrance, screenWay } from './motion';
 import { isScene } from './questions';
 import { DeckView, Question } from './scene';
 import { MapPage } from './map';
@@ -170,8 +170,9 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const alone = !!fresh && isPortrait() && (choice.customOpen || !!run);
   const bar = alone ? { ...home.bar, name: t(choice.customOpen ? 'lblRogueCustomRun' : 'lblRogueStartNewRun') } : home.bar;
   const runBar = model.rogueMap?.bar;
-  const held = heldBack(model.rogueQuestion?.tell?.gains, ui.rogueLanded);
-  // Life is written out of its maximum, so an amount the summary holds back is taken off that text too
+  const asked = model.rogueQuestion;
+  const held = heldBack(asked?.tell?.gains ?? asked?.cards?.gains, asked?.id === ui.rogueLanded);
+  // Life is written out of its maximum, so an amount the spoils hold back is taken off that text too
   const lifeHeld = held.rogueLife;
   const runBalances = runBar && run && lifeHeld
     ? { ...runBar.bar, balances: runBar.bar.balances.map(b => (b.icon === 'rogueLife' ? { ...b, text: `${b.amount - lifeHeld} / ${run.maxLife}` } : b)) } : runBar?.bar;
@@ -218,7 +219,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       else slideTab(RUN_TABS, aside, to, u => { u.roguePage = to; });
     }} lead={tabSprite} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
       held={held} counted leave={back} under={dialog} lineTerm={isPortrait() ? undefined : runBar?.tip} glyph={barGlyph} moreIcon={glyph('dots')} more={more} extra={devTool} />
-      : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} lead={tabSprite} disabledTabs={locked} held={{}} leave={back} under={dialog} glyph={barGlyph}
+      : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} lead={tabSprite} disabledTabs={locked} held={ui.rogueEchoesOwed ? { ICO_QUEST_GOLD: -ui.rogueEchoesOwed } : {}} leave={back} under={dialog} glyph={barGlyph}
         more={isPortrait() ? phoneMenu : undefined} extra={devTool} />}
     {!isPortrait() ? <div class="rg-body">{main}{question}</div>
       // On a phone a scene takes the page's place, and the bar it folds to lies over the page
@@ -304,17 +305,22 @@ function Message({ tell, ok }: { tell: Tell; ok: () => void }) {
   );
 }
 
-/** Something won or unlocked. The first line of its text is its name. */
+/**
+ * Something won or unlocked. The first line of its text is its name. An unlock's picture and an Aether Upgrade's Spark arrive in turning light,
+ * and a Spark won drops onto a halo, as on mobile.
+ */
 function Announcement({ announced, ok }: { announced: RogueAnnounce; ok: () => void }) {
   const button = useFocus();
+  const lit = useRef<HTMLSpanElement>(null);
   const [name, ...rest] = announced.text.split('\n');
   useEffect(() => { if (announced.kind === 'unlock') playSound({ t: 'sound', name: 'enchant', sync: false }); }, []);
+  useLayoutEffect(() => { if (lit.current) entrance(lit.current, announced.kind === 'spark' ? 'drop' : 'rays'); }, []);
   return (
     <Backdrop layer="rg-dialog">
       <div class="dialog trophy" role="alertdialog" aria-label={announced.title}>
         <span class="camp-chip brass"><Icon d={ROGUE_ICONS.trophy} cls="rg-ic" /> {announced.title}</span>
-        {announced.kind === 'spark' ? <Sprite k="spark" px={32} cls="sparkpic" />
-          : announced.image && <img onError={hideBroken} alt="" data-image={announced.image} src={imageUrl(announced.image)} />}
+        {announced.kind !== 'unlock' ? <span class="rg-lit-pic" ref={lit}><Sprite k="spark" px={32} cls="sparkpic" /></span>
+          : announced.image && <span class="rg-lit-pic" ref={lit}><img onError={hideBroken} alt="" data-image={announced.image} src={imageUrl(announced.image)} /></span>}
         <h3>{name}</h3>
         {rest.length > 0 && <p>{rest.join('\n')}</p>}
         <div class="actions"><button class="primary" ref={button} onClick={ok}>{t('lblContinue')}</button></div>

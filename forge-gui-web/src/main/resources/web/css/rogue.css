@@ -747,4 +747,28 @@ html[data-rogue="drop"]::view-transition-new(screen) { animation: rg-undim .5s v
 .rg-card.out::after { content: ''; position: absolute; inset: 0; border-radius: 9px; pointer-events: none;
   background: linear-gradient(to top right, transparent calc(50% - 3px), #f5ecd8 calc(50% - 3px), #f5ecd8 calc(50% - 2px), #1f1b16 calc(50% - 2px), #1f1b16 calc(50% + 2px), #f5ecd8 calc(50% + 2px), #f5ecd8 calc(50% + 3px), transparent calc(50% + 3px)),
     linear-gradient(to bottom right, transparent calc(50% - 3px), #f5ecd8 calc(50% - 3px), #f5ecd8 calc(50% - 2px), #1f1b16 calc(50% - 2px), #1f1b16 calc(50% + 2px), #f5ecd8 calc(50% + 2px), #f5ecd8 calc(50% + 3px), transparent calc(50% + 3px)); }
+/* A battle's spoils as mobile's ledger: small paper tiles, each its picture beside its title and words; a lost one is fainter */
+.rg-ledger { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 14px; }
+.rg-gain.rg-spoil { align-items: flex-start; }
+.rg-spoil small { display: block; font: 700 11px / 1.3 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.rg-spoil p { margin: 2px 0 0; font: 14px / 1.35 Georgia, serif; }
+.rg-spoil.lost p { opacity: .75; }
+html.kit:not([data-form="portrait"]) .rg-gain.rg-spoil { width: 232px; }
+html[data-form="portrait"] .rg-ledger { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
+html[data-form="portrait"] .rg-spoil small { font-size: 10px; }
+html[data-form="portrait"] .rg-spoil p { font-size: 12.5px; }
+/* An unlock's picture arriving in the light (motion.ts entrance): the rays turn over the dialog's paper and under its words */
+.rg-dialog .dialog.rg-lit { position: relative; isolation: isolate; }
+.rg-light { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.rg-rays { position: absolute; border-radius: 50%; background: repeating-conic-gradient(rgba(255, 214, 94, .35) 0deg 12deg, transparent 12deg 30deg); }
+.rg-lit-pic { position: relative; display: inline-block; line-height: 0; }
+.rg-dialog .trophy .rg-lit-pic > img:not(.ks) { aspect-ratio: 488 / 680; }
+.rg-shine { position: absolute; overflow: hidden; pointer-events: none; }
+.rg-shine > span { position: absolute; background: rgba(255, 255, 255, .55); transform-origin: 0 100%; }
+.rg-twinkle { position: absolute; pointer-events: none; scale: 0; background: rgb(255, 242, 176);
+  clip-path: polygon(50% 0, 65.6% 34.4%, 100% 50%, 65.6% 65.6%, 50% 100%, 34.4% 65.6%, 0 50%, 34.4% 34.4%); }
+/* An Aetherwork's rank-up (motion.ts rankUp): its rank text pops, a flare bursts on the new pip and the tile glows */
+.rg-work .rk { display: inline-block; transform-origin: 0 50%; }
+.rg-flare { position: absolute; border-radius: 50%; background: rgb(255, 245, 191); pointer-events: none; opacity: 0; }
+.rg-glow { position: absolute; z-index: 3; box-sizing: border-box; border: solid rgb(255, 214, 94); pointer-events: none; opacity: 0; }
 html[data-motion="reduced"] :is(.rg-dialog, .rg-dialog > .dialog, .rg-psheet, .rg-psheet > .box, .rg-card.on > img) { animation: none; }

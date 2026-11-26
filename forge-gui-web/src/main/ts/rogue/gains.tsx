@@ -1,19 +1,18 @@
-// What a node or a won battle did, drawn as a scene: the text or the figures, then the cards lost and gained
+// What a node or a battle did, drawn as a scene: the text or the battle's spoils, then the cards lost and gained
 
-import { Fragment } from 'preact';
+import { Fragment, type JSX } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { coinsFrom } from '../campaign/campaign';
 import { changeUi } from '../ui';
 import { Icon } from '../icons';
 import { hideBroken, imageUrl } from '../images';
-import { isPortrait } from '../form';
 import { t } from '../text';
 import { ROGUE_ICONS } from './icons';
 import { Sprite, glyph, ringClass, sealGlyph } from './kit';
 import { useSceneKeys } from '../hooks';
 import { Scene } from './scene';
 import { TERM_ICONS, Words } from './terms';
-import type { RogueCard, Tell, TellGains } from '../protocol';
+import type { RogueCard, Spoil, Tell, TellGains } from '../protocol';
 
 /** The face over a revive or a defeat at a side node. */
 const FACES: Record<string, keyof typeof ROGUE_ICONS> = { REVIVE: 'gem', DEFEAT: 'skull' };
@@ -37,45 +36,54 @@ function Card({ card, small }: { card: RogueCard; small: boolean }) {
   );
 }
 
-/** The run bar's balance each figure counts into, by icon. */
-const figureIcons = (gains: TellGains): [string, number][] =>
-  [['ICO_QUEST_COIN', gains.gold], ['ICO_QUEST_GOLD', gains.echoes], ['rogueLife', gains.life], ['rogueCredits', gains.credits]];
+/** The run bar's balances a battle's spoils count into, as held back from it until they have landed. */
+const heldIcons = (gains: TellGains): [string, number][] => [['ICO_QUEST_COIN', gains.gold], ['ICO_QUEST_GOLD', gains.echoes], ['rogueLife', gains.life]];
 
-/** What a battle's summary has not yet counted into the run's bar, by balance icon. The server's bar already counts all of it. */
-export const heldBack = (gains: TellGains | null | undefined, landed: string[]): Record<string, number> =>
-  gains ? Object.fromEntries(figureIcons(gains).filter(([icon]) => !landed.includes(icon))) : {};
+/** What the screen showing a battle's spoils has not yet counted into the run's bar, by balance icon. The server's bar already counts all of it. */
+export const heldBack = (gains: TellGains | null | undefined, landed: boolean): Record<string, number> =>
+  gains && !landed ? Object.fromEntries(heldIcons(gains)) : {};
+
+/** Each spoil's picture by the skin icon the reward script names, and the run bar's balance it counts into. */
+const SPOIL_PICTURES: Record<string, () => JSX.Element> = {
+  ICO_QUEST_COIN: () => <Sprite k="coin" px={32} />, ICO_QUEST_GOLD: () => <Sprite k="shards" px={32} />, ICO_QUEST_CHARM: () => glyph('heart', 32),
+  ICO_QUEST_ELIXIR: () => <Sprite k="spark" px={32} />, ICO_QUEST_MINUS: () => <Sprite k="xmark" px={32} />,
+};
+const SPOIL_BALANCES: Record<string, string> = { ICO_QUEST_COIN: 'ICO_QUEST_COIN', ICO_QUEST_GOLD: 'ICO_QUEST_GOLD', ICO_QUEST_CHARM: 'rogueLife' };
 
 /**
- * The figures a won battle gave. One of 0 is left out, and a phone words removal credits shorter. Once the scene has risen,
- * the bar counts them in, its coins flying from the figures.
+ * A battle's spoils as mobile lists them: each with its picture under its title, a lost one fainter. Once the screen has risen the bar
+ * counts in what they add, its coins flying from their pictures. The question id marks them landed, so a fold and unfold counts nothing twice.
  */
-function Figures({ gains }: { gains: TellGains }) {
-  const row = useRef<HTMLDivElement>(null);
-  const pictures = [<Sprite k="coin" px={32} />, <Sprite k="shards" px={32} />, glyph('heart', 32), glyph('cut', 32)];
-  const labels = [t('lblWebRogueGold'), t('lblWebRogueEchoes'), t('lblLife'), t(isPortrait() ? 'lblCredits' : 'lblWebRogueRemovalCredits')];
-  const figures = figureIcons(gains).map(([icon, n], i) => ({ icon, n, picture: pictures[i], label: labels[i] })).filter(f => f.n > 0);
+export function Ledger({ spoils, id }: { spoils: Spoil[]; id: number }) {
+  const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    row.current!.querySelectorAll('.rg-gain').forEach((figure, i) => coinsFrom(figures[i].icon, figure.firstElementChild));
+    const shown = [...list.current!.children];
+    const sources = spoils.map((s, i) => [SPOIL_BALANCES[s.icon ?? ''], shown[i].firstElementChild] as const).filter(([icon]) => icon);
+    for (const [icon, el] of sources) coinsFrom(icon, el);
     let open = true;
-    const scene = row.current!.closest('.rg-scene');
+    const scene = list.current!.closest('.rg-scene');
     Promise.allSettled(scene?.getAnimations().map(a => a.finished) ?? []).then(() => {
-      if (open) changeUi(u => { u.rogueLanded = figureIcons(gains).map(([icon]) => icon); });
+      if (open) changeUi(u => { u.rogueLanded = id; });
     });
     return () => {
       open = false;
-      for (const f of figures) coinsFrom(f.icon, null);
-      changeUi(u => { u.rogueLanded = []; });
+      for (const [icon] of sources) coinsFrom(icon, null);
     };
   }, []);
   return (
-    <div class="rg-gain-row" ref={row}>
-      {figures.map(f => <div key={f.icon} class="rg-gain">{f.picture}<div><b>{`+${f.n}`}</b><span>{f.label}</span></div></div>)}
+    <div class="rg-ledger" ref={list}>
+      {spoils.map((s, i) => (
+        <div key={i} class={s.icon === 'ICO_QUEST_MINUS' ? 'rg-gain rg-spoil lost' : 'rg-gain rg-spoil'}>
+          {s.icon && SPOIL_PICTURES[s.icon] ? SPOIL_PICTURES[s.icon]() : <span />}
+          <div><small>{s.title}</small><p>{s.text}</p></div>
+        </div>
+      ))}
     </div>
   );
 }
 
-/** A result, or what a won battle gave. When its one section has no label, the result's text heads it in place of the title. */
-export function Gains({ tell, ok }: { tell: Tell; ok: () => void }) {
+/** A result, or a battle's spoils that no card reward showed. When its one section has no label, the result's text heads it in place of the title. */
+export function Gains({ tell, id, ok }: { tell: Tell; id: number; ok: () => void }) {
   useSceneKeys(() => {}, ok);
   const led = tell.sections.length === 1 && !tell.sections[0].label;
   const small = tell.sections.length > 1;
@@ -85,7 +93,7 @@ export function Gains({ tell, ok }: { tell: Tell; ok: () => void }) {
       <div class="rg-gains">
         {face && <span class="rg-face"><span class={`pic icon${ringClass(face)}`}>{sealGlyph(face, 64)}</span></span>}
         <h3>{led ? <Words parts={tell.text} /> : tell.title}</h3>
-        {tell.gains && <Figures gains={tell.gains} />}
+        {tell.spoils.length > 0 && <Ledger spoils={tell.spoils} id={id} />}
         {!led && tell.text.length > 0 && <p><Words parts={tell.text} /></p>}
         {tell.sections.map((s, i) => <Fragment key={i}>
           {s.label && <span class="rg-sub">{s.label}</span>}

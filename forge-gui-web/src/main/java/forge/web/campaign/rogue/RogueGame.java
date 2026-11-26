@@ -14,6 +14,7 @@ import forge.gamemodes.rogue.AetherUpgrade;
 import forge.gamemodes.rogue.CodexHelper;
 import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueMetaProgress;
+import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RogueRun;
 import forge.gamemodes.rogue.RogueWinLoseController;
 import forge.gamemodes.rogue.effect.AetherEffect;
@@ -27,6 +28,7 @@ import forge.gamemodes.rogue.npc.NPCEncounterComposite;
 import forge.gamemodes.rogue.npc.NPCEncounterComposite.LevelChoice;
 import forge.localinstance.achievements.RogueCommanderAchievements;
 import forge.localinstance.properties.ForgePreferences;
+import forge.localinstance.skin.FSkinProp;
 import forge.localinstance.skin.ISkinImage;
 import forge.util.IHasForgeLog;
 import forge.util.Localizer;
@@ -45,6 +47,7 @@ import forge.web.deck.DeckWorkspace;
 import forge.web.protocol.BrowserChannel;
 import forge.web.protocol.CampaignProtocol.CampaignResult;
 import forge.web.protocol.CampaignProtocol.ResultButton;
+import forge.web.protocol.CampaignProtocol.RewardStep;
 import forge.web.protocol.Commands;
 import forge.web.protocol.FromBrowser.Bare;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
@@ -60,6 +63,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -117,12 +121,16 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         /** The host's view of the game whose result is taken. A match has one. */
         volatile GameView game;
         volatile CampaignResult result;
-        /** Whether the summary of what the battle gave was shown, which the run's bar waits for. */
-        volatile boolean gainsShown;
+        /** Whether the battle's spoils were sent to be shown, which the run's bar waits for. Only the flow thread uses it. */
+        boolean spoilsShown;
         /** The button the match was left by, or null. */
         final CompletableFuture<String> left = new CompletableFuture<>();
         RogueWinLoseController controller;
         RecordedWinLoseView view;
+    }
+
+    /** A battle's spoils for the screen about to show them. held is what of them the run's bar has not counted yet, or null after the first screen. */
+    record Spoils(List<Spoil> list, TellGains held) {
     }
 
     private static final class Shared {
@@ -594,9 +602,11 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             }
             awaitLeaving(b);
             final String choice = b.left.join();
-            if (summarised(b) && web != null) {
-                b.gainsShown = true;
-                web.showGains(b.controller.getGains());
+            // As mobile does, spoils that no card reward showed get a screen of their own
+            final Spoils spoils = web == null || b.spoilsShown ? null : spoils();
+            if (spoils != null && !spoils.list().isEmpty()) {
+                final RoguePlanebound beaten = b.controller.getGains().planebound();
+                web.showSpoils(flow.resultTitle(b.controller), spoils, beaten == null ? null : CodexHelper.getPlaneCard(beaten));
             }
             boolean endless = false;
             if (flow.offersEnding(b.controller)) {
@@ -613,14 +623,31 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
     }
 
-    private static boolean summarised(final Battle b) {
-        return b.controller.hasWonMatch() && !b.controller.hasFailedRun();
+    /** The spoils of the battle being settled, which then count as shown, or null outside one. Only the flow thread calls this. */
+    Spoils spoils() {
+        final Battle b = battle;
+        if (b == null || b.controller == null) {
+            return null;
+        }
+        final List<Spoil> list = b.view.steps.stream().filter(s -> "MESSAGE".equals(s.kind()))
+                .map(s -> new Spoil(s.title(), s.text() != null ? s.text() : String.join(" ", s.lines()), s.icon())).toList();
+        final TellGains held = b.spoilsShown ? null : held(b);
+        b.spoilsShown = true;
+        return new Spoils(list, held);
     }
 
-    /** What the battle gave until its summary shows it, which the run's bar holds back so the summary can count it in. Only the flow thread calls this. */
-    private RogueWinLoseController.Gains held() {
+    /** What the battle's spoils add to the bar's balances until a screen shows them, which the run's bar holds back. Only the flow thread calls this. */
+    private TellGains held() {
         final Battle b = battle;
-        return b == null || b.controller == null || b.gainsShown || !summarised(b) ? null : b.controller.getGains();
+        return b == null || b.controller == null || b.spoilsShown ? null : held(b);
+    }
+
+    /** A gain counts only when a spoil names it, so a gain no screen lists, such as a boss's gold, is not held back. */
+    private static TellGains held(final Battle b) {
+        final Set<String> icons = b.view.steps.stream().map(RewardStep::icon).filter(Objects::nonNull).collect(Collectors.toSet());
+        final RogueWinLoseController.Gains gains = b.controller.getGains();
+        return new TellGains(icons.contains(FSkinProp.ICO_QUEST_COIN.name()) ? gains.gold() : 0,
+                icons.contains(FSkinProp.ICO_QUEST_GOLD.name()) ? gains.echoes() : 0, icons.contains(FSkinProp.ICO_QUEST_CHARM.name()) ? gains.life() : 0);
     }
 
     /** Sends the result the first time, then waits until the match is left. */
@@ -721,7 +748,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         final AetherUpgrade next = AetherUpgrade.forLevel(progress.getAetherUpgradeLevel() + 1);
         if (progress.isDescensionModeUnlocked() && next != null && progress.purchaseAetherUpgrade(next.level)) {
             final Localizer text = Localizer.getInstance();
-            announce("unlock", text.getMessage("lblRogueAetherUpgradeUnlocked"), text.getMessage("lblRogueUnlockedAetherUpgrade", next.name, next.description), null);
+            announce("upgrade", text.getMessage("lblRogueAetherUpgradeUnlocked"), text.getMessage("lblRogueUnlockedAetherUpgrade", next.name, next.description), null);
         }
     }
 
