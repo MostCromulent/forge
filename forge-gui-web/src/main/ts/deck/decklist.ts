@@ -68,3 +68,9 @@ export function drawHand(state: EditorState, size: number, random: () => number 
   }
   return library.slice(0, size);
 }
+
+/** The hand with one more card drawn from what is left of the main deck, as drawing does; the hand is kept as it is. */
+export function drawOneMore(state: EditorState, hand: EditorCard[], random: () => number = Math.random): EditorCard[] {
+  const left = state.main.flatMap(g => g.cards).flatMap(c => Array.from({ length: c.count - hand.filter(h => h === c).length }, () => c));
+  return left.length ? [...hand, left[Math.floor(random() * left.length)]] : hand;
+}

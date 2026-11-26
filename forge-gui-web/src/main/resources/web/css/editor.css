@@ -330,3 +330,6 @@ button.land-set[aria-expanded="true"] { border-color: var(--accent-2); box-shado
 .planar-foot { padding: 11px 14px; border-top: 1px solid var(--line); display: grid; }
 /* A deck with nothing to find, such as a Rogue run's, which adds only basic lands: the deck takes the whole width */
 .editor-shell.alone { grid-template-columns: minmax(0, 1fr); }
+/* A sample hand's draws sit at the left, apart from Close at the right */
+.sample-hand .actions { justify-content: flex-start; }
+.sample-hand .actions > .primary { margin-left: auto; }

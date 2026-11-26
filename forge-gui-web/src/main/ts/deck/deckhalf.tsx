@@ -1,9 +1,9 @@
 // The editor's right half. It shows the deck as the deck finder does, but editable
 
 import type { ComponentChildren } from 'preact';
-import { useLayoutEffect, useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { flyingFor, land } from '../flight';
-import { drawHand, headingText, regroup, type GroupBy } from './decklist';
+import { drawHand, drawOneMore, headingText, regroup, type GroupBy } from './decklist';
 import { artUrl, hideBroken, imageUrl, smallImage } from '../images';
 import { Curve, useDeckView } from './deckview';
 import { Pip, Pips, SymbolText } from '../symbols';
@@ -13,6 +13,7 @@ import type { DeckSection, EditorCard, EditorSection, EditorState, LandSet } fro
 import { store, stored } from '../storage';
 import { t, tCap, tSentence } from '../text';
 import { Backdrop, Dropdown } from '../dialog';
+import { reducedMotion } from '../dom';
 import { Select } from '../select';
 
 const GROUP_KEY = 'forge.groupBy';
@@ -145,7 +146,7 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
         </span>}
       </div>
       {hand && <SampleHand hand={hand} again={() => setHand(drawHand(state, HAND))}
-        more={() => setHand(drawHand(state, hand.length + 1))} close={() => setHand(null)} />}
+        more={() => setHand(drawOneMore(state, hand))} close={() => setHand(null)} />}
     </section>
   );
 }
@@ -359,13 +360,26 @@ function LandSetMenu({ sets, current, choose }: { sets: LandSet[]; current: stri
   );
 }
 
+/** Cards dealt into a sample hand slide in from the left one after another; one drawn more slides in alone. */
 function SampleHand({ hand, again, more, close }: { hand: EditorCard[]; again: () => void; more: () => void; close: () => void }) {
+  const row = useRef<HTMLDivElement>(null);
+  const shown = useRef<EditorCard[]>([]);
+  useLayoutEffect(() => {
+    const before = shown.current;
+    shown.current = hand;
+    if (reducedMotion()) return;
+    const drawnOne = hand.length === before.length + 1 && before.every((c, i) => c === hand[i]);
+    const from = drawnOne ? before.length : 0;
+    ([...row.current!.children] as HTMLElement[]).slice(from).forEach((card, i) => card.animate(
+      [{ transform: 'translateX(-48px) rotate(-6deg)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+      { duration: 320, delay: i * 70, easing: 'cubic-bezier(.215, .61, .355, 1)', fill: 'backwards' }));
+  }, [hand]);
   return (
     <Backdrop dismiss={close}>
       <div class="dialog sample-hand">
         <h3>{tSentence('lblSampleHand')}</h3>
         <p class="hint">{t('lblWebEditorSampleHandHint')}</p>
-        <div class="hand-cards">{hand.map((c, i) => <img key={i} alt={c.name} title={c.name} src={imageUrl(c.image)} />)}</div>
+        <div class="hand-cards" ref={row}>{hand.map((c, i) => <img key={i} alt={c.name} title={c.name} src={imageUrl(c.image)} />)}</div>
         <div class="actions">
           <button onClick={more}>{t('lblWebEditorDrawOneMore')}</button>
           <button onClick={again}>{t('lblWebEditorNewHand')}</button>
