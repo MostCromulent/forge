@@ -19,7 +19,7 @@ import { CardPick, CommanderPick, LootPick, RewardPick } from './pick';
 import { Gains } from './gains';
 import { Bazaar } from './bazaar';
 import { Backdrop } from '../dialog';
-import { CardGroup, Curve } from '../deck/deckview';
+import { CardGroup, Curve, useDeckView } from '../deck/deckview';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { AskChoice, DeckDetails, Option, Part, TellOmen } from '../protocol';
@@ -155,13 +155,19 @@ export function Question({ model, actions }: { model: Model; actions: Actions })
 
 /** A deck, read only: a commander's start deck, or the run's deck over a decision. */
 export function DeckView({ details, line, button, close }: { details: DeckDetails; line: string; button: string; close: () => void }) {
+  const [cards, view] = useDeckView();
   return (
     <Backdrop layer="rg-dialog" dismiss={close}>
       <div class="dialog rg-deckview" role="dialog" aria-label={details.name}>
-        <h3>{details.name}</h3>
-        <p>{line}</p>
+        <div class="dv-head">
+          <div><h3>{details.name}</h3><p>{line}</p></div>
+          <span class="seg view-seg" role="group" aria-label={t('lblWebEditorShowDeckAs')}>
+            <button aria-pressed={cards} onClick={() => view(true)}>{t('lblCards')}</button>
+            <button aria-pressed={!cards} onClick={() => view(false)}>{t('lblWebDraftList')}</button>
+          </span>
+        </div>
         <Curve curve={details.stats.curve} spells={details.stats.spells} px={44} />
-        <div class="dk-cards" data-list style={{ maxHeight: '55vh', overflowY: 'auto' }}>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
+        <div class={cards ? 'dk-cards deck-cols' : 'dk-cards'} data-list>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} stacked={cards} />)}</div>
         <div class="actions"><button class="primary" onClick={close}>{button}</button></div>
       </div>
     </Backdrop>

@@ -861,10 +861,15 @@ html.kit[data-form="portrait"] .rg-tale { row-gap: 40px; }
 html.kit.kit .rg-n.far { opacity: 1 !important; filter: url(#rg-fade62) sepia(.2); }
 html.kit.kit .rg-n.far:not(.side) { filter: url(#rg-fade70); }
 html.kit.kit :is(.rg-n.past, .rg-n.dead) { opacity: 1 !important; filter: grayscale(1) sepia(.35) url(#rg-fade32); }
-/* A deck's list in a dialog: wide enough for two columns of card names, each column held to its share */
-.rg-dialog .dialog.rg-deckview { width: min(720px, calc(100vw - 32px)); max-width: none; }
-.rg-deckview .dk-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-html[data-form="portrait"] .rg-deckview .dk-cards { grid-template-columns: minmax(0, 1fr); }
+/* A deck in a dialog: as tall as the page allows, its cards scrolling between the heading and the close key, which stays in view */
+.rg-dialog .dialog.rg-deckview { width: min(1080px, calc(100vw - 32px)); max-width: none; max-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+.rg-dialog:has(> .rg-deckview) { grid-template-rows: minmax(0, 1fr); }
+.rg-deckview .dv-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; }
+.rg-deckview .dv-head p { margin: 4px 0 0; }
+.rg-deckview .dk-cards { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 2px; }
+.rg-deckview .dk-cards:not(.deck-cols) { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.rg-deckview .actions { flex: none; }
+html[data-form="portrait"] .rg-deckview .dk-cards:not(.deck-cols) { grid-template-columns: minmax(0, 1fr); }
 /* A plane's name and life sit on the ornate gold-edged parchment */
 html.kit .rg-n:not(.side) .nm { border-width: 11px; border-image: url("../adventure?s=skin&r=41,1,48,48") 11 fill / 11px repeat; padding: 0 2px; }
 /* Start New Run brightens under the pointer, as a key would */
