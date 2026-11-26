@@ -1,6 +1,6 @@
 // A bazaar: cards, and traits and carry cards on a tab of their own, priced in gold. Picked items are added up in the foot
 
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from '../icons';
 import { hideBroken, imageUrl } from '../images';
 import { isPortrait } from '../form';
@@ -11,6 +11,7 @@ import { Scene } from './scene';
 import { TERM_ICONS, Words } from './terms';
 import { Seal, TraitCard } from './traits';
 import { shopTotal } from './shop';
+import { deal } from './motion';
 import type { AskShop, ShopItem } from '../protocol';
 
 const coin = (alt: string, cls?: string) => <Sprite k="coin" alt={alt} cls={cls} />;
@@ -48,6 +49,8 @@ export function Bazaar({ asked, answer, fold, viewDeck }: { asked: AskShop; answ
   const tabbed = cards.length > 0 && special.length > 0;
   const [tab, setTab] = useState(tabbed ? Math.min(asked.tab, 1) : cards.length ? 0 : 1);
   const [picked, setPicked] = useState<number[]>([]);
+  const stock = useRef<HTMLDivElement>(null);
+  const traits = useRef<HTMLDivElement>(null);
   const phone = isPortrait();
   useEffect(() => playSound({ t: 'sound', name: 'coins_drop', sync: false }), []);
   const { cost, left, dimmed } = shopTotal(asked.items, picked, asked.gold);
@@ -75,6 +78,11 @@ export function Bazaar({ asked, answer, fold, viewDeck }: { asked: AskShop; answ
   </>;
   // A phone lists the traits as rows above the carry cards
   const rows = phone && tab ? shown.filter(i => i.trait) : [];
+  // Each tab is dealt the first time it shows, the special offers each dropping onto a halo, as mobile deals its one list
+  useLayoutEffect(() => {
+    const tiles = [...traits.current?.children ?? [], ...stock.current!.children] as HTMLElement[];
+    deal(asked, tab, tiles, () => tab === 1);
+  }, [tab]);
   return (
     // A phone's foot has room for four buttons, so View Map is left out there, as the mockups draw it
     <Scene art={asked.art} fold={phone ? undefined : fold} viewDeck={viewDeck} foot={foot}>
@@ -90,9 +98,9 @@ export function Bazaar({ asked, answer, fold, viewDeck }: { asked: AskShop; answ
           )}
         </div>
         {rows.length > 0 && (
-          <div class="rg-pstock">{rows.map(i => <Row key={i.id} item={i} on={picked.includes(i.id)} no={dimmed.has(i.id)} toggle={() => toggle(i.id)} />)}</div>
+          <div class="rg-pstock" ref={traits}>{rows.map(i => <Row key={i.id} item={i} on={picked.includes(i.id)} no={dimmed.has(i.id)} toggle={() => toggle(i.id)} />)}</div>
         )}
-        <div class="rg-stock">{shown.filter(i => !rows.includes(i)).map(tile)}</div>
+        <div class="rg-stock" ref={stock}>{shown.filter(i => !rows.includes(i)).map(tile)}</div>
       </div>
     </Scene>
   );

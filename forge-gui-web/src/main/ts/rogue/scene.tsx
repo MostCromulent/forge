@@ -27,11 +27,11 @@ import type { AskChoice, DeckDetails, Option, Part, TellOmen } from '../protocol
 /**
  * The scene that fills the body under the bar. Focus moves to it, to its main button if it has one, and back when it closes.
  * fold, when set, adds View Map, which folds the scene, and viewDeck adds View Deck. tip is drawn beside the scene's text.
- * onScroll is told when the scene's text and cards scroll.
+ * onScroll is told when the scene's text and cards scroll. busy disables View Map and View Deck.
  */
-export function Scene({ art, foot, children, fold, viewDeck, tip, onScroll }: {
+export function Scene({ art, foot, children, fold, viewDeck, tip, onScroll, busy }: {
   art?: string | null; foot: ComponentChildren; children: ComponentChildren; fold?: () => void; viewDeck?: () => void; tip?: ComponentChildren;
-  onScroll?: (e: Event) => void;
+  onScroll?: (e: Event) => void; busy?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   // The phone's buttons are words only, as the mockups draw them
@@ -48,10 +48,10 @@ export function Scene({ art, foot, children, fold, viewDeck, tip, onScroll }: {
       <div class="bg" style={art ? { backgroundImage: `url("${artUrl(art)}")` } : undefined} />
       <div class={tip ? 'in tip' : 'in'} onScroll={onScroll}>{children}{tip}</div>
       <div class="ft">
-        {fold && (phone ? <button onClick={fold}>{t('lblRogueViewMap')}</button>
-          : <button onClick={fold}><Icon d={ROGUE_ICONS.trail} cls="rg-ic" />{` ${t('lblRogueViewMap')}`}</button>)}
-        {viewDeck && (phone ? <button onClick={viewDeck}>{t('lblViewDeck')}</button>
-          : <button onClick={viewDeck}><Icon d={ROGUE_ICONS.deck} cls="rg-ic" />{` ${t('lblViewDeck')}`}</button>)}
+        {fold && (phone ? <button disabled={busy} onClick={fold}>{t('lblRogueViewMap')}</button>
+          : <button disabled={busy} onClick={fold}><Icon d={ROGUE_ICONS.trail} cls="rg-ic" />{` ${t('lblRogueViewMap')}`}</button>)}
+        {viewDeck && (phone ? <button disabled={busy} onClick={viewDeck}>{t('lblViewDeck')}</button>
+          : <button disabled={busy} onClick={viewDeck}><Icon d={ROGUE_ICONS.deck} cls="rg-ic" />{` ${t('lblViewDeck')}`}</button>)}
         {!phone && fold && foot && <span class="sp" />}
         {foot}
       </div>

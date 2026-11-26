@@ -4,7 +4,6 @@ import { Fragment } from 'preact';
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Backdrop } from '../dialog';
 import { hideBroken, imageUrl } from '../images';
-import { reducedMotion } from '../dom';
 import { avatarUrl } from '../avatarsleeves';
 import { isPortrait } from '../form';
 import { useDebounced, useSceneKeys } from '../hooks';
@@ -13,6 +12,7 @@ import { t, formatNumber } from '../text';
 import { playSound } from '../audio';
 import { Sprite, glyph } from './kit';
 import { Scene } from './scene';
+import { deal, flyInto } from './motion';
 import { TraitCard } from './traits';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
@@ -22,9 +22,10 @@ import type { AskCards, AskChoice, AskCommander, PickCard, PickDeck } from '../p
 const COMMANDERS = 'rogue-commanders';
 const COLOURS = ['W', 'U', 'B', 'R', 'G', 'C'];
 
-function Card({ name, image, at, toggle }: { name: string; image: string; at: string | null; toggle: () => void }) {
+/** A card to pick, numbered once picked; out draws a pick that takes it out of the deck crossed out. */
+function Card({ name, image, at, out, toggle }: { name: string; image: string; at: string | null; out?: boolean; toggle: () => void }) {
   return (
-    <button class={`rg-card sm ${at ? 'on' : ''}`} aria-pressed={!!at} data-image={image} onClick={toggle}>
+    <button class={['rg-card sm', at && 'on', at && out && 'out'].filter(Boolean).join(' ')} aria-pressed={!!at} data-image={image} onClick={toggle}>
       <img onError={hideBroken} alt={name} src={imageUrl(image)} />
       {at && <span class="no">{at}</span>}
     </button>
@@ -71,6 +72,9 @@ function DeckColumn({ deck, picked, removing }: { deck: PickDeck; picked: PickCa
 export function CardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; answer: (value: unknown) => void; fold?: () => void; viewDeck?: () => void }) {
   const [picked, setPicked] = useState<number[]>([]);
   const [deckOpen, setDeckOpen] = useState(false);
+  const [going, setGoing] = useState(false);
+  const shown = useRef<HTMLDivElement>(null);
+  const ok = useRef<HTMLButtonElement>(null);
   const phone = isPortrait();
   const cards = picked.map(id => asked.cards[id]);
   const removing = asked.kind === 'REMOVE';
@@ -79,23 +83,29 @@ export function CardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; a
   const subtitle = asked.min === asked.max ? t('lblRogueFixedCardSelectionCount', asked.subtitle ?? '', n, asked.max)
     : t('lblRogueVariableCardSelectionCount', asked.subtitle ?? '', n, asked.min, asked.max);
   const short = asked.min - n;
+  useLayoutEffect(() => deal(asked, 0, [...shown.current!.children] as HTMLElement[], i => asked.cards[i].mythic), []);
+  // Cards taken out of the deck stay where they are, crossed out, as mobile leaves them
+  const confirm = () => {
+    setGoing(true);
+    flyInto(removing ? [] : chosenTiles(shown.current!, asked, picked), ok.current!, () => answer(picked));
+  };
   const ask = <div class="rg-ask"><h3>{asked.title}</h3><span>{subtitle}</span></div>;
   const grid = asked.cards.map(c => {
     const at = picked.indexOf(c.id);
-    return <Card key={c.id} name={c.name} image={c.image} at={at < 0 ? null : String(at + 1)} toggle={() => toggle(c.id)} />;
+    return <Card key={c.id} name={c.name} image={c.image} at={at < 0 ? null : String(at + 1)} out={removing} toggle={() => toggle(c.id)} />;
   });
   const showDeck = fold ? viewDeck : phone && asked.deck ? () => setDeckOpen(true) : undefined;
   const foot = <>
-    {!fold && <button onClick={() => setPicked([])}>{t('lblWebRogueClear')}</button>}
-    <button class="primary" disabled={short > 0} onClick={() => answer(picked)}>
+    {!fold && <button disabled={going} onClick={() => setPicked([])}>{t('lblWebRogueClear')}</button>}
+    <button class="primary" ref={ok} disabled={going || short > 0} onClick={confirm}>
       {short > 0 ? t(phone ? 'lblWebRogueMore' : 'lblWebRogueChooseMore', short) : t('lblChoose')}
     </button>
   </>;
   return <>
-    <Scene art={asked.art} fold={fold} viewDeck={showDeck} foot={foot}>
-      {phone || !asked.deck ? <div class="rg-pick">{ask}<div class="rg-cards rg-pgrid">{grid}</div></div> : (
+    <Scene art={asked.art} fold={fold} viewDeck={showDeck} foot={foot} busy={going}>
+      {phone || !asked.deck ? <div class="rg-pick">{ask}<div class="rg-cards rg-pgrid" ref={shown}>{grid}</div></div> : (
         <div class="rg-sheet">
-          <div class="main">{ask}<div class="grid">{grid}</div></div>
+          <div class="main">{ask}<div class="grid" ref={shown}>{grid}</div></div>
           <DeckColumn deck={asked.deck} picked={cards} removing={removing} />
         </div>
       )}
@@ -111,38 +121,45 @@ export function CardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; a
   </>;
 }
 
+/** The tiles of the picked cards, in the order they are shown. */
+function chosenTiles(grid: HTMLElement, asked: AskCards, picked: number[]): HTMLElement[] {
+  return ([...grid.children] as HTMLElement[]).filter((_, i) => picked.includes(asked.cards[i].id));
+}
+
 /**
  * A battle's card reward: up to max of the cards dealt, none allowed, or a reroll at the cost the server names. The cards are dealt face down
- * and turn over one by one, as desktop turns them. Mythic is marked only among other cards, so a reward of mythics alone has no marks.
+ * and turn over one by one, as mobile deals them. Mythic is marked only among other cards, so a reward of mythics alone has no marks.
  */
 export function RewardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; answer: (value: unknown) => void; fold?: () => void; viewDeck?: () => void }) {
   const [picked, setPicked] = useState<number[]>([]);
+  const [going, setGoing] = useState(false);
   const dealt = useRef<HTMLDivElement>(null);
+  const ok = useRef<HTMLButtonElement>(null);
   const phone = isPortrait();
   const n = picked.length;
   const marked = !asked.cards.every(c => c.mythic);
   const toggle = (id: number) => setPicked(p => (p.includes(id) ? p.filter(x => x !== id) : p.length < asked.max ? [...p, id] : p));
   useLayoutEffect(() => {
     playSound({ t: 'sound', name: 'flip_card', sync: false });
-    if (reducedMotion()) return;
-    // Desktop turns the first card 200 ms after the dialog opens, then one every 100 ms
-    dealt.current!.querySelectorAll('.rg-card').forEach((card, k) => card.animate(
-      [{ opacity: 0, transform: 'perspective(700px) rotateY(90deg)' }, { opacity: 1, transform: 'none' }],
-      { duration: 260, delay: 200 + k * 100, easing: 'ease-out', fill: 'backwards' }));
+    deal(asked, 0, [...dealt.current!.children] as HTMLElement[], i => asked.cards[i].mythic);
   }, []);
+  const confirm = () => {
+    setGoing(true);
+    flyInto(chosenTiles(dealt.current!, asked, picked), ok.current!, () => answer(picked));
+  };
   const foot = <>
     {asked.rerollCost != null && (
-      <button disabled={!asked.rerollEnabled} onClick={() => answer('reroll')}>
+      <button disabled={going || !asked.rerollEnabled} onClick={() => answer('reroll')}>
         {glyph('reroll')}
         {phone ? ` ${asked.rerollCost}` : <>{` ${t('lblWebRogueReroll')} `}<Sprite k="coin" cls="camp-shard" />{asked.rerollCost}</>}
       </button>
     )}
-    <button class="primary" onClick={() => answer(picked)}>
+    <button class="primary" ref={ok} disabled={going} onClick={confirm}>
       {!n ? t('lblWebRogueTakeNone') : phone ? t('lblWebRogueAdd', n) : t(n === 1 ? 'lblWebRogueAddCard' : 'lblWebRogueAddCards', n)}
     </button>
   </>;
   return (
-    <Scene art={asked.art} fold={fold} viewDeck={viewDeck} foot={foot}>
+    <Scene art={asked.art} fold={fold} viewDeck={viewDeck} foot={foot} busy={going}>
       <div class="rg-pick">
         <div class="rg-ask"><h3>{t('lblRogueVictoryReward', asked.title)}</h3><span>{t('lblRogueCardRewardSelectionCount', asked.max, n)}</span></div>
         <div class="rg-cards seven" ref={dealt}>

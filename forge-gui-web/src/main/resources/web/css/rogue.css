@@ -729,4 +729,22 @@ html[data-rogue="rise"]::view-transition-old(screen) { animation: rg-dim .5s var
 html[data-rogue="rise"]::view-transition-new(screen) { animation: rg-rise .5s var(--rg-out) both; }
 html[data-rogue="drop"]::view-transition-old(screen) { z-index: 1; animation: rg-drop .5s var(--rg-out) both; }
 html[data-rogue="drop"]::view-transition-new(screen) { animation: rg-undim .5s var(--rg-out) both; }
-html[data-motion="reduced"] :is(.rg-dialog, .rg-dialog > .dialog, .rg-psheet, .rg-psheet > .box) { animation: none; }
+/* Cards dealt in (motion.ts deal): the box stops scrolling while cards come up from below it, and a card cannot be pressed until it lands */
+:is(.rg-scene > .in, .rg-sheet .grid).rg-dealing { overflow: hidden; }
+/* Card pictures keep their shape before they load, so a card is dealt from where it will be */
+.rg-card > img, .rg-item > img.c { aspect-ratio: 488 / 680; }
+.rg-dealt { pointer-events: none; }
+.rg-dealt > :is(.ty, .pr, .myth) { visibility: hidden; }
+.rg-back { position: absolute; box-sizing: border-box; border: 2px solid #ffd75e; border-radius: 9px; background: repeating-linear-gradient(#26304f 0 3px, #1d2640 3px 6px); pointer-events: none; }
+/* Where all three of the halo's rings overlap, each at 22% */
+.rg-halo { position: absolute; border-radius: 50%; pointer-events: none; background: rgba(255, 140, 102, .53); }
+.rg-flown { position: fixed; z-index: 40; margin: 0; border-radius: 9px; pointer-events: none; }
+/* A newly chosen card's frame starts wider and shrinks to size, as mobile's does */
+@keyframes rg-chosen { from { box-shadow: 0 0 0 8px var(--accent-2), 0 0 28px color-mix(in srgb, var(--accent-2) 55%, transparent); } }
+.rg-card.on > img { animation: rg-chosen .18s linear; }
+/* A card chosen to come out of the deck is faded and crossed out */
+.rg-card.out > img { opacity: .45; }
+.rg-card.out::after { content: ''; position: absolute; inset: 0; border-radius: 9px; pointer-events: none;
+  background: linear-gradient(to top right, transparent calc(50% - 3px), #f5ecd8 calc(50% - 3px), #f5ecd8 calc(50% - 2px), #1f1b16 calc(50% - 2px), #1f1b16 calc(50% + 2px), #f5ecd8 calc(50% + 2px), #f5ecd8 calc(50% + 3px), transparent calc(50% + 3px)),
+    linear-gradient(to bottom right, transparent calc(50% - 3px), #f5ecd8 calc(50% - 3px), #f5ecd8 calc(50% - 2px), #1f1b16 calc(50% - 2px), #1f1b16 calc(50% + 2px), #f5ecd8 calc(50% + 2px), #f5ecd8 calc(50% + 3px), transparent calc(50% + 3px)); }
+html[data-motion="reduced"] :is(.rg-dialog, .rg-dialog > .dialog, .rg-psheet, .rg-psheet > .box, .rg-card.on > img) { animation: none; }
