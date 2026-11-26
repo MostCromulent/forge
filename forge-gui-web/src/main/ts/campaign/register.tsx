@@ -111,7 +111,7 @@ registerCampaigns({
         {[...modes()].sort((a, b) => a.tile.order - b.tile.order).map(({ mode, tile }) => {
           const save = model.campaignResume[mode];
           return (
-            <Kind key={mode} id={mode} icon={tile.icon} picture={tile.picture} artKey={tile.art} name={t(tile.name)} blurb={t(tile.blurb)}
+            <Kind key={mode} id={mode} icon={tile.icon} artKey={tile.art} name={t(tile.name)} blurb={t(tile.blurb)}
               onClick={() => actions.campaignOpen(mode, false)}
               resume={save ? () => actions.campaignOpen(mode, true) : undefined}
               resumeLabel={save ? tile.resumeLabel(save) : undefined} />

@@ -641,8 +641,6 @@ html.kit.kit .rg-vmap .kit-cmd .kc-deck button { image-rendering: pixelated !imp
 
 /* ----- Play menu: the mode's tile holds the map icon mobile's game menus use for it ----- */
 /* A painted icon reads on a dark disc, so the disc takes the shell's black inside the same gold rim */
-.kind-card .mode-art.pic { background: radial-gradient(circle at 50% 40%, #2b2318, #110d09 75%) !important; box-shadow: 0 0 0 2px #e2b64a, 0 0 0 3px #3a2a0c, 0 4px 10px #0009 !important; }
-.kind-card .mode-art.pic img { width: 40px; height: 40px; display: block; image-rendering: pixelated; }
 
 /* ----- Phone ----- */
 html.kit[data-form="portrait"] .camp-tabs { gap: 3px; align-items: flex-end; }
