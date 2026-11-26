@@ -49,8 +49,8 @@ function Chips({ map, n, cls }: { map: RogueMap; n: MapNode; cls: string }) {
 /** Gold and Echoes of the node's kind, and the card reward every plane but the boss's gives. */
 function Loot({ map, n }: { map: RogueMap; n: MapNode }) {
   return <>
-    {n.gold > 0 && <span><Sprite k="coin" />{n.gold}</span>}
-    <span><Sprite k="shards" />{n.echoes}</span>
+    {n.gold > 0 && <span {...explains(map.terms.GOLD)}><Sprite k="coin" />{n.gold}</span>}
+    <span {...explains(map.terms.ECHOES)}><Sprite k="shards" />{n.echoes}</span>
     {!n.boss && <span {...explains(map.terms.CARD_REWARD)}>{glyph('deck')}{` ${map.terms.CARD_REWARD?.text}`}</span>}
     {!n.boss && <span>{glyph('star')}{` ${t('lblMythic')}`}</span>}
   </>;

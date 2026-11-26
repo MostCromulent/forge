@@ -102,7 +102,7 @@ public final class RoguePages {
     }
 
     private static final Map<String, Part> MAP_TERMS = Arrays.stream(new KeywordHint[] {KeywordHint.PLANEBOUND, KeywordHint.WRATHFUL, KeywordHint.CURSED,
-            KeywordHint.CARD_REWARD}).collect(Collectors.toMap(KeywordHint::name, h -> new Part("term", h.getTitle(), null, h.getTitle(), h.getHintText())));
+            KeywordHint.CARD_REWARD, KeywordHint.GOLD, KeywordHint.ECHOES}).collect(Collectors.toMap(KeywordHint::name, h -> new Part("term", h.getTitle(), null, h.getTitle(), h.getHintText())));
 
     /** The cards whose art is drawn behind the Aether, and behind the Codex where its tab has no subject of its own. */
     private static final String AETHER_ART = "Teferi, Temporal Archmage";

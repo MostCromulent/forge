@@ -40,8 +40,8 @@ export function shownNode(map: RogueMap): MapNode {
   return looked ?? nodes.find(n => n.index === map.selected) ?? nodes[0];
 }
 
-/** A face-up plane can be chosen to read it, ahead or behind. */
-const readable = (n: MapNode) => n.kind === 'PLANEBOUND' && !n.faceDown;
+/** A face-up plane can be chosen to read it, ahead or behind, and any node still ahead on the path to see what it is; neither can be entered. */
+const readable = (n: MapNode) => (n.kind === 'PLANEBOUND' && !n.faceDown) || n.state === 'far';
 
 /** While a question is folded to read the map, the map can only be looked at, as on mobile. */
 export const mapLocked = (model: Model) => isScene(model.rogueQuestion) && ui.rogueFolded === model.rogueQuestion!.id;
