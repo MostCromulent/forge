@@ -870,8 +870,13 @@ html.kit.kit :is(.rg-n.past, .rg-n.dead) { opacity: 1 !important; filter: graysc
 .rg-deckview .dk-cards:not(.deck-cols) { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
 .rg-deckview .actions { flex: none; }
 html[data-form="portrait"] .rg-deckview .dk-cards:not(.deck-cols) { grid-template-columns: minmax(0, 1fr); }
-/* A plane's name and life sit on the ornate gold-edged parchment */
-html.kit .rg-n:not(.side) .nm { border-width: 11px; border-image: url("../adventure?s=skin&r=41,1,48,48") 11 fill / 11px repeat; padding: 0 2px; }
+/* A plane's name and life sit in a dark title band at the foot of its plate, inside the plate's frame, so nothing hangs below the plate. The generated sheet hangs a parchment strip there with !important */
+html.kit.kit .rg-n:not(.side) .nm { top: auto !important; bottom: 0; left: 0; right: 0; width: auto !important; transform: none; border: 0 !important; border-top: 2px solid #120b05 !important; border-image: none !important;
+  padding: 4px 6px 3px !important; gap: 0; background: linear-gradient(#3a2814, #24180c); box-shadow: none; }
+html.kit.kit .rg-n:not(.side) .nm b { min-height: 0; -webkit-line-clamp: 1; font-size: 12px; color: #f1e7cf !important; text-shadow: 0 1px 0 #000; }
+html.kit.kit .rg-n:not(.side) .nm span { color: #f1e7cf !important; text-shadow: 0 1px 0 #000; }
+html.kit.kit[data-form="portrait"] .rg-n:not(.side) .nm { width: auto !important; padding: 2px 3px !important; }
+html.kit.kit[data-form="portrait"] .rg-n:not(.side) .nm b { font-size: 10px; }
 /* Start New Run brightens under the pointer, as a key would */
 html.kit .rgl-new { transition: filter .15s; }
 html.kit .rgl-new:is(:hover, :focus-visible) { filter: brightness(1.2); }
@@ -894,4 +899,4 @@ html.kit.kit .rgl-new { background: linear-gradient(rgba(14, 11, 8, .66), rgba(1
 html[data-form="portrait"] .rgl-run .go { flex-wrap: wrap; }
 /* An unknown plane shows only a question mark, not the portal */
 html.kit .rg-n.hid:not(.side) { background: #e7dcc0 padding-box; }
-html.kit .rg-n.hid:not(.side) .q { display: grid; place-items: center; position: absolute; inset: 0 0 10px; font: 700 46px/1 Georgia, serif; color: var(--ink-soft, rgba(42, 29, 16, .62)); }
+html.kit .rg-n.hid:not(.side) .q { display: grid; place-items: center; position: absolute; inset: 0 0 24px; font: 700 46px/1 Georgia, serif; color: var(--ink-soft, rgba(42, 29, 16, .62)); }
