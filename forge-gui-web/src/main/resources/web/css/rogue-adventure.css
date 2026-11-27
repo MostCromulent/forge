@@ -217,6 +217,8 @@
 
 /* Scenes: the words stand on a parchment sheet; the avatar keeps its ring */
 .kit .rg-words { padding: 20px 26px 22px 30px; margin: -26px -30px -22px -34px; }
+/* The paper's frame reaches 30px past the words, so a narrow scene keeps that much more room on its right */
+html.kit:not([data-form="portrait"]) .rg-scene > .in:not(.tip) { padding-right: 60px; }
 .kit .rg-words h3 { color: var(--kit-name); }
 .kit .rg-words p.flav, .kit .rg-words p { color: var(--kit-ink); }
 .kit .rg-face b { color: var(--kit-pale); }
@@ -273,9 +275,6 @@
 /* Seals of traits: a pale disc in an ink ring, as the side nodes are drawn, so the mark reads */
 .kit .rgt-seal { background: radial-gradient(circle at 45% 40%, #f8f2e3, #e7dcc0 72%); color: var(--kit-ink); box-shadow: 0 0 0 1.5px var(--kit-ink), 0 0 0 4px #8a7556, 0 0 0 5.5px var(--kit-ink); border: 0; }
 .kit .rgt-seal .rg-ic { color: var(--kit-ink); }
-.kit :is(.rgt-tile, .rg-tcard).wound .rgt-seal { background: rgba(255, 250, 236, .4); border: 1.5px dashed var(--kit-ink); box-shadow: none; }
-.kit :is(.rgt-tile, .rg-tcard).wound { outline: 1.5px dashed rgba(42, 29, 16, .6); outline-offset: -6px; }
-.kit .rg-shell :is(.rgt-tile, .rg-tcard).wound b { color: var(--kit-ink); }
 /* Cursed keeps its double frame round the paper */
 .kit .rg-omen li.curse { box-shadow: 0 0 0 2px var(--kit-ink), 0 0 0 5px #e7dcc0, 0 0 0 7px var(--kit-ink); }
 .kit .rg-omen li b { color: var(--kit-name); }
@@ -307,7 +306,7 @@ html.kit[data-form="portrait"] .rg-list { image-rendering: pixelated; background
 .kit .rg-psheet .box .rgm-lv button:disabled { border-style: dashed; opacity: .6; }
 
 /* Main map (the user, 26/11): adventure's parchment as the map's ground, inside its torn edge; the side panels use the ornate gold-framed parchment. */
-.kit .rg-vstage { image-rendering: pixelated; background: #e6d3a6; border-style: solid; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 / 26px 32px 22px 34px repeat; box-shadow: none !important; margin: 6px 0 6px 6px; }
+.kit .rg-vstage { image-rendering: pixelated; background: #e6d3a6; border-style: solid; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 / 26px 32px 22px 34px repeat; box-shadow: none !important; margin: 6px 6px 6px 0; }
 .kit .rg-vstage .rg-trail { background: url("../adventure?s=skin&r=18,122,15,24") 0 0 / 30px 48px repeat !important; background-attachment: local !important; image-rendering: pixelated; }
 .kit :is(.kit-cmd, .camp-side-body) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 32px 32px 38px 32px; border-image: url("../adventure?s=skin&r=41,1,48,48") 16 16 19 16 fill / 32px 32px 38px 32px repeat; color: var(--kit-ink); }
 .kit .kit-cmd { margin: -2px -4px 0; }
@@ -390,7 +389,17 @@ html.kit:not([data-form="portrait"]) :is(.rg-shell, .dialog, .panel, #game-over,
 .kit .rgt-seal img.ks { width: 32px !important; height: 32px !important; }
 .kit .rg-tcard .rgt-seal { margin-bottom: 10px; }
 .kit .rgt-seal.lvl .ks-n { position: absolute; right: -9px; bottom: -7px; min-width: 18px; height: 18px; display: grid; place-items: center; font: 700 11px/1 system-ui, sans-serif; font-style: normal; color: var(--kit-ink); background: #f8f2e3; box-shadow: 0 0 0 1.5px var(--kit-ink); }
-.kit :is(.rgt-tile, .rg-tcard).wound .rgt-seal { box-shadow: 0 0 0 1.5px var(--kit-ink), 0 0 0 4.5px #f1e7cf, 0 0 0 6px var(--kit-ink) !important; outline: 1.5px dashed var(--kit-ink); outline-offset: 3px; }
+/* A Wound is blood on drained paper: its parchment is greyed, its seal is dark red wax over a dried spray, and its name is red.
+   It reads by its grey paper and dark marks as well as by its red. The paper is a layer under the tile, so only the paper is greyed.
+   The tile isolates its blending, so the spray darkens only its own paper, and clips it to the tile */
+.kit :is(.rgt-tile, .rg-tcard).wound { position: relative; isolation: isolate; clip-path: inset(0); border-color: transparent; border-image: none; }
+.kit :is(.rgt-tile, .rg-tcard).wound::before { content: ""; position: absolute; z-index: -2; inset: -13px -16px -11px -17px; pointer-events: none; image-rendering: pixelated;
+  border-style: solid; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat; filter: grayscale(.7) brightness(.92); }
+.kit :is(.rgt-tile, .rg-tcard).wound .rgt-seal { position: relative; color: #f1e7cf; background: radial-gradient(circle at 38% 32%, #7a2018, #561109 55%, #350705) !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35), inset 0 2px 3px rgba(255, 200, 180, .18), 0 0 0 1.5px var(--kit-ink), 0 0 0 4.5px #f1e7cf, 0 0 0 6px var(--kit-ink) !important; }
+.kit :is(.rgt-tile, .rg-tcard).wound .rgt-seal::before { content: ""; position: absolute; z-index: -1; left: -135%; top: -40%; width: 300%; height: 210%; opacity: .85;
+  background: url("../rogue-blood.svg") center / contain no-repeat; mix-blend-mode: multiply; pointer-events: none; }
+.kit .rg-shell :is(.rgt-tile, .rg-tcard).wound :is(b, h3) { color: #8f1d14; }
 /* Unbuilt, seen-only or locked: an empty ink ring */
 .kit :is(.rg-work.unbuilt, .rg-traits .seen) .rgt-seal { background: none !important; box-shadow: 0 0 0 1px var(--kit-soft) !important; }
 .kit :is(.rg-work.unbuilt, .rg-traits .seen) .rgt-seal > * { display: none; }
@@ -421,7 +430,7 @@ html.kit:not([data-form="portrait"]) .rg-face .pic.icon { width: 96px; height: 9
 
 /* Map: the banner goes, since the plane card shows the same art; the panel sits inside the stage with the map's margin */
 .kit .camp-side-body .camp-side-head > .camp-art { display: none !important; }
-.kit .rg-vmap:has(.kit-cmd) .camp-side { margin: 6px 6px 6px 0; overflow: visible; }
+.kit .rg-vmap:has(.kit-cmd) .camp-side { margin: 6px 0 6px 6px; overflow: visible; }
 .kit .rg-vmap .camp-side-body { margin: 0; }
 .kit .camp-side-body .camp-foot { padding: 10px 0 0; }
 .kit .camp-side-body .camp-foot button:not(.primary):not(.camp-face2) { height: 34px; width: 100%; }
@@ -580,6 +589,8 @@ html.kit .rgm-lv button:disabled { opacity: .5 !important; }
 .kit .rgm-stage .rgsh-haze, .kit .rgl .haze { display: none !important; }
 .kit :is(.rgl-run, .rgl-new) { image-rendering: pixelated; border-style: solid !important; border-width: 12px !important; border-image: url("../adventure?s=skin&r=203,385,48,48") 6 / 12px repeat !important; background: rgba(16, 13, 10, .8) padding-box; box-shadow: 0 14px 36px #000b !important; }
 .kit .rgl-run .rgl-card, .kit .rgl-new .fan i { image-rendering: auto; }
+/* Card pictures are scaled photos, not pixel art, so they keep smooth scaling inside the pixel-art panels */
+.kit img[data-image] { image-rendering: auto; }
 .kit .rgl-run { background: rgba(16, 13, 10, .94) padding-box !important; }
 /* New Run is a window onto the painted ground, as adventure's title screen opens onto it */
 .kit .rgl-new :is(b, .d) { text-shadow: 0 2px 0 #000, 0 0 12px #000; position: relative; }
@@ -598,7 +609,7 @@ html.kit:not([data-form="portrait"]) .rg-face b { font-size: 19px; }
 .kit .rg-vstage:not(.fit) > .rg-trail { overflow-x: hidden !important; }
 .kit .rg-trail-in > svg path { vector-effect: non-scaling-stroke; }
 /* Room between the map and the panel to its right */
-.kit .rg-vmap:has(.kit-cmd) .camp-side { margin-left: 22px !important; }
+.kit .rg-vmap:has(.kit-cmd) .camp-side { margin-right: 22px; }
 /* The last row: mobile's boss light, twelve rays 12 degrees wide every 30 degrees, five bands fading outwards, turning 30 degrees every 3 seconds */
 .kit .kit-rays { position: absolute; border-radius: 50%; pointer-events: none;
   background: repeating-conic-gradient(from 0deg, rgb(196 64 41) 0deg 12deg, transparent 12deg 30deg);

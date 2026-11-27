@@ -70,7 +70,7 @@ function DeckColumn({ deck, picked, removing }: { deck: PickDeck; picked: PickCa
  * Choosing between min and max of the cards offered. A card is picked by its id, so two equal copies can both be picked.
  * fold, set in a run, offers View Map, and View Deck opens the run's deck. Before a run, View Deck shows the deck column on a phone.
  */
-export function CardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; answer: (value: unknown) => void; fold?: () => void; viewDeck?: () => void }) {
+export function CardPick({ id, asked, answer, fold, viewDeck }: { id: number; asked: AskCards; answer: (value: unknown) => void; fold?: () => void; viewDeck?: () => void }) {
   const [picked, setPicked] = useState<number[]>([]);
   const [deckOpen, setDeckOpen] = useState(false);
   const [going, setGoing] = useState(false);
@@ -84,7 +84,7 @@ export function CardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; a
   const subtitle = asked.min === asked.max ? t('lblRogueFixedCardSelectionCount', asked.subtitle ?? '', n, asked.max)
     : t('lblRogueVariableCardSelectionCount', asked.subtitle ?? '', n, asked.min, asked.max);
   const short = asked.min - n;
-  useLayoutEffect(() => deal(asked, 0, [...shown.current!.children] as HTMLElement[], i => asked.cards[i].mythic), []);
+  useLayoutEffect(() => deal(id, 0, [...shown.current!.children] as HTMLElement[], i => asked.cards[i].mythic), []);
   // Cards taken out of the deck stay where they are, crossed out, as mobile leaves them
   const confirm = () => {
     setGoing(true);
@@ -147,7 +147,7 @@ export function RewardPick({ id, asked, answer, fold, viewDeck }: {
   const toggle = (id: number) => setPicked(p => (p.includes(id) ? p.filter(x => x !== id) : p.length < asked.max ? [...p, id] : p));
   useLayoutEffect(() => {
     playSound({ t: 'sound', name: 'flip_card', sync: false });
-    deal(asked, 0, [...dealt.current!.children] as HTMLElement[], i => asked.cards[i].mythic);
+    deal(id, 0, [...dealt.current!.children] as HTMLElement[], i => asked.cards[i].mythic);
   }, []);
   const confirm = () => {
     setGoing(true);

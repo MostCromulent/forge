@@ -104,10 +104,14 @@ public class RogueMatchTest extends RogueSessionTest {
     }
 
     /** Waits for the battle's spoils that no card reward showed, and continues past them. */
+    /** The run's bar as the last spoils screen was asked, which holds back what they add. */
+    private JsonObject barAtSpoils;
+
     private JsonObject spoils(final TestBrowser host) throws InterruptedException {
         final JsonObject asked = host.awaitMatching("rogueQuestion", q -> q.has("tell") && "SPOILS".equals(str(q.getAsJsonObject("tell"), "kind")),
                 "the battle's spoils were not shown");
         handled.add(asked.get("id").getAsInt());
+        barAtSpoils = host.last("rogueMap").getAsJsonObject("bar");
         sessions.onMessage(host, answer(asked.get("id").getAsInt(), JsonNull.INSTANCE));
         return asked.getAsJsonObject("tell");
     }
@@ -169,7 +173,9 @@ public class RogueMatchTest extends RogueSessionTest {
                 "no reward was asked");
         handled.add(reward.get("id").getAsInt());
         final JsonObject cards = reward.getAsJsonObject("cards");
-        final int won = cards.getAsJsonObject("gains").get("gold").getAsInt();
+        final JsonObject bar = host.last("rogueMap").getAsJsonObject("bar");
+        Assert.assertEquals(bar.get("heldFor").getAsInt(), reward.get("id").getAsInt(), "the bar holds the gold back for another question");
+        final int won = bar.getAsJsonObject("held").get("gold").getAsInt();
         Assert.assertTrue(won > 0);
         Assert.assertTrue(spoilTitles(cards).contains(text("lblRogueGoldReward") + " ICO_QUEST_COIN"), spoilTitles(cards).toString());
         Assert.assertEquals(gold(host), before + won);
@@ -197,7 +203,8 @@ public class RogueMatchTest extends RogueSessionTest {
         Assert.assertNull(str(button(result, 1), "disabled"));
         leave(host, null);
         host.awaitMatching("rogueAnnounce", a -> "Endless Mode Unlocked!".equals(str(a, "title")), "the unlock the battle earned was not announced");
-        Assert.assertEquals(spoils(host).getAsJsonObject("gains").get("echoes").getAsInt(), 10);
+        spoils(host);
+        Assert.assertEquals(barAtSpoils.getAsJsonObject("held").get("echoes").getAsInt(), 10);
         sessions.disconnected(host);
         final TestBrowser back = connect("host");
         final JsonObject ending = back.awaitMatching("rogueQuestion", q -> q.has("choice") && "ending".equals(str(q.getAsJsonObject("choice"), "kind")),

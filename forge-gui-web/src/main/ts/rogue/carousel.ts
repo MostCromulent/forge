@@ -24,8 +24,8 @@ export function roll(from: number, to: number, n: number): { steps: number; wait
   return { steps, waits };
 }
 
-/** Plays a roll, showing each card as it steps onto it. The returned function ends the roll at once on to. */
-export function rolling(from: number, to: number, n: number, show: (index: number) => void, done: () => void): () => void {
+/** Plays a roll, showing each card as it steps onto it with the time until the next step. The returned function ends the roll at once on to. */
+export function rolling(from: number, to: number, n: number, show: (index: number, wait?: number) => void, done: () => void): () => void {
   const { steps, waits } = roll(from, to, n);
   let at = from, step = 0, over = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -36,7 +36,7 @@ export function rolling(from: number, to: number, n: number, show: (index: numbe
   };
   const next = () => {
     at = (at + 1) % n;
-    show(at);
+    show(at, waits[step]);
     if (++step >= steps) end();
     else timer = setTimeout(next, waits[step - 1]);
   };

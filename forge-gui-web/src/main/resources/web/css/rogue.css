@@ -64,6 +64,10 @@
 button.rg-n:not(:disabled):hover { transform: translateY(-3px); }
 .rg-plane { position: relative; display: block; width: 100%; aspect-ratio: 88 / 63; overflow: hidden; border-radius: 9px; box-shadow: 0 0 0 1px var(--line-bright); }
 .rg-plane img { position: absolute; left: 50%; top: 50%; width: 71.6%; height: 139.7%; object-fit: cover; transform: translate(-50%, -50%) rotate(90deg); }
+/* A strip of a plane's art over its name (mapside.tsx Plane): the card's height takes the picture's own shape, and it is enlarged so the strip shows only its art, from about 17% to 62% of the card, clear of the frame */
+.rg-plane.strip { aspect-ratio: 88 / 34; }
+.rg-plane.strip img { height: auto; top: 74%; transform: translate(-50%, -50%) rotate(90deg) scale(1.2); }
+.rg-plane-name { display: block; margin-top: 8px; font: 700 15px/1.3 Georgia, serif; }
 .rg-loot { display: flex; gap: 8px; flex-wrap: wrap; }
 .rg-loot span { display: inline-flex; gap: 6px; align-items: center; padding: 4px 10px; border-radius: 8px; background: var(--surface-2); font-size: 12.5px; font-weight: 600; }
 .rg-loot img { width: 17px; height: 17px; }
@@ -93,7 +97,7 @@ button.rg-n:not(:disabled):hover { transform: translateY(-3px); }
 .rg-tip img { width: 232px; border-radius: 11px; box-shadow: rgba(0, 0, 0, 0.867) 0px 18px 44px; }
 .rg-tip .kw { width: 232px; box-sizing: border-box; padding: 11px 13px; border-radius: 10px; border: 1px solid var(--line-bright); box-shadow: rgba(0, 0, 0, 0.867) 0px 14px 34px; font-size: 12.5px; line-height: 1.5; background: rgb(20, 27, 39); border-color: rgba(255, 255, 255, 0.22); color: rgb(214, 221, 230); }
 .rg-tip .kw b { display: block; margin-bottom: 4px; font-size: 13.5px; font: 700 15px / 1.3 Georgia, serif; color: var(--gold); }
-.rg-tcard { width: 232px; aspect-ratio: 63 / 88; border-radius: 11px; display: grid; color: var(--text); grid-template-rows: none; align-content: center; justify-items: center; text-align: center; gap: 9px; padding: 22px 18px; background: var(--tile); border: 1px solid var(--edge); box-shadow: rgba(0, 0, 0, 0.667) 0px 14px 34px; box-sizing: border-box; }
+.rg-tcard { width: clamp(232px, 26vw, 300px); aspect-ratio: 63 / 88; border-radius: 11px; display: grid; color: var(--text); grid-template-rows: none; align-content: center; justify-items: center; text-align: center; gap: 9px; padding: 22px 18px; background: var(--tile); border: 1px solid var(--edge); box-shadow: rgba(0, 0, 0, 0.667) 0px 14px 34px; box-sizing: border-box; }
 .rg-tcard p { margin: 0px; align-self: auto; font: 14.5px / 1.45 Georgia, serif; color: rgb(227, 233, 240); text-wrap: balance; }
 .rg-tcard.sm { width: 100%; box-shadow: rgba(0, 0, 0, 0.533) 0px 8px 20px; padding: 10px 9px; gap: 4px; aspect-ratio: 63 / 90; }
 .rg-pick { width: 100%; max-width: 1240px; display: grid; gap: 24px; justify-items: center; }
@@ -296,7 +300,9 @@ html[data-form="portrait"] .rg-sheetbar { border-top: 1px solid var(--line); pad
 .rg-start-btn:not(:disabled) { box-shadow: var(--accent) 0px 1px 0px, rgba(242, 195, 68, 0.35) 0px 0px 34px; }
 @keyframes rgsh-in { 0% { opacity: 0; } }
 @keyframes rgsh-rise { 0% { opacity: 0; transform: translateY(16px); } }
-.rg-vmap { display: grid; grid-template-columns: minmax(0px, 1fr) 352px; min-height: 0px; }
+.rg-vmap { display: grid; grid-template-columns: 420px minmax(0px, 1fr); min-height: 0px; }
+/* The chosen node's column stands left of the map, as on mobile */
+.rg-vmap > .camp-side { order: -1; }
 .rg-vstage { position: relative; min-height: 0px; display: flex; background: radial-gradient(75% 55% at 50% 0px, rgb(50, 34, 42) 0%, transparent 70%), radial-gradient(90% 70% at 50% 45%, rgb(23, 31, 45) 0%, rgb(8, 11, 17) 100%); }
 .rg-vstage .rg-trail { place-content: start center; padding: 30px 24px 40px; }
 .rg-vstage .rg-trail::-webkit-scrollbar { width: 8px; }
@@ -327,8 +333,8 @@ html[data-form="portrait"] .rg-sheetbar { border-top: 1px solid var(--line); pad
 .rgm-words h1 { margin: 0px; font: 700 37px / 1.06 Georgia, serif; text-wrap: balance; font-weight: 700; background: none; color: var(--gold); -webkit-text-fill-color: currentcolor; }
 .rgm-words > p { margin: 0px; font: 15px / 1.45 Georgia, serif; color: rgb(214, 221, 230); }
 .rgm-words .rg-sec { width: 100%; }
-.rgm-facts { width: 100%; display: grid; border: 1px solid var(--line); grid-template-columns: repeat(4, auto); justify-content: space-between; border-width: 1px 0px; border-right-style: initial; border-left-style: initial; border-right-color: initial; border-left-color: initial; border-image: initial; border-top-style: solid; border-top-color: rgba(255, 255, 255, 0.15); border-bottom-style: solid; border-bottom-color: rgba(255, 255, 255, 0.15); border-radius: 0px; background: none; }
-.rgm-facts div { display: grid; justify-items: start; text-align: left; padding: 11px 0px; gap: 2px; }
+.rgm-facts { width: 100%; display: grid; border: 1px solid var(--line); grid-template-columns: repeat(4, minmax(0, 1fr)); border-width: 1px 0px; border-right-style: initial; border-left-style: initial; border-right-color: initial; border-left-color: initial; border-image: initial; border-top-style: solid; border-top-color: rgba(255, 255, 255, 0.15); border-bottom-style: solid; border-bottom-color: rgba(255, 255, 255, 0.15); border-radius: 0px; background: none; }
+.rgm-facts div { display: grid; justify-items: center; text-align: center; padding: 11px 0px; gap: 2px; }
 .rgm-lv { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .rgm-lv button { display: flex; align-items: center; gap: 9px; font-size: 13px; text-align: left; background: rgba(11, 14, 20, 0.4); padding: 6px 10px; border-radius: 7px; border-color: rgba(255, 255, 255, 0.18); }
 .rgm-lv button b { width: 16px; color: var(--muted); text-align: center; }
@@ -355,7 +361,16 @@ html[data-form="portrait"] .rg-sheetbar { border-top: 1px solid var(--line); pad
 .rgx-mid { display: flex; align-items: center; gap: 22px; }
 .rgx-mid > button { width: 40px; height: 34px; padding: 0px; font-size: 20px; line-height: 1; background: rgba(11, 14, 20, 0.8); }
 .rgm-end .hv.on { display: grid; gap: 12px; }
-[data-rolling] .rgc-c { transition-duration: 0.16s; }
+/* Each step of Random moves for as long as it waits, so the ring turns steadily and slows to a stop rather than jumping */
+[data-rolling] .rgc-c { transition-duration: var(--roll); transition-timing-function: linear; }
+/* The commander in front has the light a playable card in the command zone has (hand.css's rise) */
+.rgc-c { --radius: 19px; --rise: var(--playable, #66ccff); }
+.rgc-c .rise { display: none; }
+.rgc-c.mid:not(.lock) .rise { display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter; }
+/* #campaign outranks hand.css's rise rule, whose :is() counts #hand */
+#campaign .rgc-c.mid:not(.lock) .rise { filter: url(#rise-wide); }
+[data-rolling] .rgc-c .rise { display: none; }
+html[data-motion="reduced"] #campaign .rgc-c .rise { filter: blur(4px); }
 html[data-form="portrait"] .rgm { grid-template-columns: minmax(0px, 1fr); grid-template-rows: minmax(0px, 1fr) auto; }
 html[data-form="portrait"] .rgc-c { width: min(230px, 34vh); }
 html[data-form="portrait"] .rgc-ring { bottom: 46px; }
@@ -381,13 +396,14 @@ html[data-form="portrait"] .rgl-crumb { display: none; }
 .rgl-top { display: grid; grid-template-columns: minmax(0px, 1fr) 330px; gap: 20px; min-height: 420px; }
 .rgl-run, .rgl-new { --gold: #f0d28a; position: relative; overflow: hidden; border: 1px solid color-mix(in srgb, var(--accent-2) 38%, #1b2230); border-radius: 14px; background: rgb(13, 18, 27); color: var(--text); }
 .rgl :is(.rgl-run, .rgl-new) > .haze { position: absolute; inset: -70px; background: center 30% / cover; filter: blur(44px) saturate(1.15) brightness(0.42); }
-.rgl-run > .in { position: relative; height: 100%; box-sizing: border-box; display: grid; grid-template-columns: auto minmax(0px, 1fr); gap: 48px; align-items: center; padding: 28px 46px; }
-.rgl-card { width: min(372px, 43vh); aspect-ratio: 63 / 88; border-radius: 18px; background: center center / cover rgb(17, 17, 17); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-2) 70%, transparent), 0 0 60px #f2c34433, 0 26px 60px #000c; }
+.rgl-run > .in { position: relative; height: 100%; box-sizing: border-box; container-type: inline-size; display: grid; grid-template-columns: auto minmax(0px, 1fr); gap: 48px; align-items: center; padding: 28px 46px; }
+/* The card takes at most 40% of the panel, so a narrow window leaves room for the run's words beside it */
+.rgl-card { width: min(372px, 43vh, 40cqw); aspect-ratio: 63 / 88; border-radius: 18px; background: center center / cover rgb(17, 17, 17); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-2) 70%, transparent), 0 0 60px #f2c34433, 0 26px 60px #000c; }
 .rgl-run .t { display: grid; min-width: 0px; max-width: 470px; gap: 28px; }
 .rgl .camp-kicker { color: rgb(185, 195, 209); }
 .rgl-run h1 { margin: 5px 0px 6px; font: 700 42px / 1.06 Georgia, "Times New Roman", serif; color: var(--gold); text-wrap: balance; text-shadow: rgba(0, 0, 0, 0.667) 0px 2px 14px; }
 .rgl-run p { margin: 0px; font: 15px / 1.4 Georgia, serif; color: rgb(214, 221, 230); }
-.rgl-run .figs { display: flex; justify-content: space-between; gap: 14px; padding: 14px 0px; border-top: 1px solid rgba(255, 255, 255, 0.15); border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
+.rgl-run .figs { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; padding: 14px 0px; border-top: 1px solid rgba(255, 255, 255, 0.15); border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
 .rgl-run .figs div { display: grid; gap: 1px 8px; align-items: center; justify-content: start; grid-template-columns: auto minmax(0px, 1fr); }
 .rgl-run .figs :is(svg, img) { width: 19px; height: 19px; color: var(--gold); }
 .rgl-run .figs b { font-style: normal; font-variant: lining-nums; font-size-adjust: none; font-kerning: auto; font-optical-sizing: auto; font-feature-settings: normal; font-variation-settings: normal; font-weight: 700; font-stretch: normal; font-size: 19px; line-height: 1.2; font-family: Georgia, serif; white-space: nowrap; }
@@ -395,7 +411,7 @@ html[data-form="portrait"] .rgl-crumb { display: none; }
 .rgl-run .sec { display: grid; gap: 9px; }
 .rgl-run .held { display: flex; gap: 9px; }
 .rgl-run .held img { box-shadow: rgba(0, 0, 0, 0.6) 0px 5px 14px; width: 84px; border-radius: 5px; }
-.rgl-run .go { display: flex; gap: 10px; }
+.rgl-run .go { display: flex; flex-wrap: wrap; gap: 10px; }
 .rgl-run .go button { padding: 12px 18px; }
 .rgl-run .go .primary { padding: 12px 34px; }
 .rgl-run .go button:not(.primary) { background: rgba(11, 14, 20, 0.5); border-color: rgba(255, 255, 255, 0.25); }
@@ -775,7 +791,7 @@ html[data-form="portrait"] .rg-spoil p { font-size: 12.5px; }
 .rg-flare { position: absolute; border-radius: 50%; background: rgb(255, 245, 191); pointer-events: none; opacity: 0; }
 .rg-glow { position: absolute; z-index: 3; box-sizing: border-box; border: solid rgb(255, 214, 94); pointer-events: none; opacity: 0; }
 /* New Run's panel: the commander or the run's starting traits, by tab; the chosen tab is darker and underlined, as on mobile */
-.rgm-tabs { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 14px; }
+.rgm-tabs { display: grid; grid-template-columns: repeat(3, 1fr); margin-bottom: 14px; }
 .rgm-tabs button { background: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 6px 4px 5px; min-height: 0; font-weight: 600; font-size: 13.5px; color: var(--muted); }
 .rgm-tabs button[aria-selected="true"] { color: var(--text); border-bottom: 3px solid var(--accent); padding-bottom: 3px; font-weight: 700; }
 .rgt-tiles.rgm-traits { grid-template-columns: minmax(0, 1fr); margin-top: 0; }
@@ -810,10 +826,10 @@ html[data-form="portrait"] .rg-sheetbar .top .t p b { font: inherit; font-weight
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 12' shape-rendering='crispEdges'%3E%3Cpath d='M1 1h20v2h-2v2h-2v2h-2v2h-2v2H9V9H7V7H5V5H3V3H1z' fill='%23f1e7cf' stroke='%23000'/%3E%3C/svg%3E") center calc(100% - 8px) / 22px 12px no-repeat, linear-gradient(rgba(10, 8, 6, 0), rgba(10, 8, 6, .92) 55%); }
 html[data-form="portrait"] .rg-scroll::after { bottom: -18px; margin-inline: -14px; }
 .rg-scroll.rg-more::after { visibility: visible; }
-/* Each hub page stands on its Adventure scene, as mobile's RogueScreen.background picks it. The web sets text on the scene, not on paper, so it dims more */
+/* Each hub page stands on its Adventure scene, as mobile's RogueScreen.background picks it. The web sets text on the scene, not on paper, so it dims more. The page sets the art it would blur as an inline background, so the scene needs !important */
 html.kit .rgl { background: linear-gradient(rgba(0, 0, 0, .05), rgba(0, 0, 0, .05)), var(--kit-ground) center / cover no-repeat, #0e0b08; }
 html.kit :is(.rg-aether, .rg-start, .rg-cx, .rg-hpage) > .rg-haze, html.kit .rgt > .haze { inset: 0; filter: none;
-  background: linear-gradient(rgba(0, 0, 0, var(--dim)), rgba(0, 0, 0, var(--dim))), var(--scene) center / cover no-repeat, #0e0b08; }
+  background: linear-gradient(rgba(0, 0, 0, var(--dim)), rgba(0, 0, 0, var(--dim))), var(--scene) center / cover no-repeat, #0e0b08 !important; }
 html.kit .rg-start > .rg-haze { --scene: var(--kit-ground); --dim: .55; }
 html.kit .rg-aether > .rg-haze { --scene: url("../adventure?s=shardalley"); --dim: .55; }
 html.kit .rg-hpage > .rg-haze { --scene: url("../adventure?s=tavern"); --dim: .6; }
@@ -874,7 +890,7 @@ html[data-form="portrait"] .rg-deckview .dk-cards:not(.deck-cols) { grid-templat
 /* A plane's name and life sit in a dark title band at the foot of its plate, inside the plate's frame, so nothing hangs below the plate */
 html.kit .rg-n:not(.side) .nm { top: auto; bottom: 0; left: 0; right: 0; width: auto; transform: none; border: 0; border-top: 2px solid #120b05; border-image: none;
   padding: 4px 6px 3px; gap: 0; background: linear-gradient(#3a2814, #24180c); box-shadow: none; }
-html.kit .rg-n:not(.side) .nm b { min-height: 0; -webkit-line-clamp: 1; font-size: 12px; color: #f1e7cf; text-shadow: 0 1px 0 #000; }
+html.kit .rg-n:not(.side) .nm b { min-height: 0; -webkit-line-clamp: 2; font-size: 12px; color: #f1e7cf; text-shadow: 0 1px 0 #000; }
 html.kit .rg-n:not(.side) .nm span { color: #f1e7cf; text-shadow: 0 1px 0 #000; }
 html.kit[data-form="portrait"] .rg-n:not(.side) .nm { padding: 2px 3px; }
 html.kit[data-form="portrait"] .rg-n:not(.side) .nm b { font-size: 10px; }
@@ -896,36 +912,34 @@ html.kit.kit .rg-deckview .view-seg.view-seg > button + button { border-left: 1.
 html.kit.kit .rg-deckview .view-seg.view-seg > button[aria-pressed="true"] { background: var(--kit-ink, #2a1d10); color: #f1e7cf; }
 /* Start New Run dims its scene as far as the run beside it does, so the commander fan and the words stand out */
 html.kit .rgl-new { background: linear-gradient(rgba(14, 11, 8, .66), rgba(14, 11, 8, .6) 30%, rgba(14, 11, 8, .78) 58%, #0e0b08 84%) padding-box, var(--kit-ground) -330px 0 / 1024px 576px no-repeat padding-box, #0e0b08; }
-/* A phone's run keys wrap rather than run past the panel's edge */
-html[data-form="portrait"] .rgl-run .go { flex-wrap: wrap; }
 /* An unknown plane shows only a question mark, not the portal */
 html.kit .rg-n.hid:not(.side) { background: #e7dcc0 padding-box; }
 html.kit .rg-n.hid:not(.side) .q { display: grid; place-items: center; position: absolute; inset: 0 0 24px; font: 700 46px/1 Georgia, serif; color: var(--ink-soft, rgba(42, 29, 16, .62)); }
 /* A phone's side nodes have 44px places, so the 76px ring centres on its place with -16px, where the generated sheet's -8px suits a wide map's 60px */
 html.kit[data-form="portrait"] .rg-vtrail .rg-n.side { margin: -16px 0 0 -16px; }
 
-/* A Rogue Commander run's deck editor in Adventure's look: a stone header, the deck on parchment, and the removal bar in stone under it.
-   It has its own class because the page's kit class is off while the editor is open, so the editor's dialogs keep the editor's look.
+/* A Rogue Commander run's deck editor in Adventure's look: the deck on parchment, and the removal bar in stone under it.
+   It is styled by its own class rather than the page's kit class, whose rules are written for Rogue's pages.
    #editor .rogue-deck.editor-page outranks the editor's own landscape and phone rules, which start html[...] #editor. */
-#editor .rogue-deck.editor-page .editor-head, #editor .rogue-deck.editor-page .removal-bar {
+#editor .rogue-deck.editor-page .removal-bar {
   --text: #f1e7cf; --muted: #cdbfa3; --faint: #a8987a; --line: rgba(241, 231, 207, .2);
   image-rendering: pixelated; border-style: solid; border-width: 12px; border-image: url("../adventure?s=skin&r=203,385,48,48") 6 fill / 12px repeat;
   border-radius: 0; background: none; box-shadow: none; color: var(--text);
 }
-#editor .rogue-deck.editor-page :is(.head-right > button:not(.primary), .deck-menu-button, .rm-keys > button:not(.primary)) {
+#editor .rogue-deck.editor-page :is(.deck-menu-button, .rm-keys > button:not(.primary)) {
   image-rendering: pixelated; background: none; border-style: solid; border-width: 8px 8px 14px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 8px 8px 14px repeat;
   border-radius: 0; box-shadow: none; color: var(--text); height: 40px; min-height: 0; padding: 0 12px;
 }
-#editor .rogue-deck.editor-page :is(.head-right > button:not(.primary), .deck-menu-button, .rm-keys > button:not(.primary)):active:not(:disabled) { border-image-source: url("../adventure?s=skin&r=125,175,14,16"); }
-#editor .rogue-deck.editor-page .deck-title button.deck-menu-button { width: 40px; padding: 0; }
-#editor .rogue-deck.editor-page :is(.head-right > button.primary, .rm-keys > button.primary) {
+#editor .rogue-deck.editor-page :is(.deck-menu-button, .rm-keys > button:not(.primary)):active:not(:disabled) { border-image-source: url("../adventure?s=skin&r=125,175,14,16"); }
+#editor .rogue-deck.editor-page .main-zone button.deck-menu-button { width: 40px; padding: 0; color: #f1e7cf; }
+/* The deck's menu opens over the cards, so it takes the paper's solid colour, not the deck's see-through surface */
+#editor .rogue-deck.editor-page .main-zone .deck-menu { background: #efe3c6; }
+#editor .rogue-deck.editor-page .rm-keys > button.primary {
   image-rendering: pixelated; background: none; border-style: solid; border-width: 8px 10px 14px; border-image: url("../adventure?s=skin&r=75,165,32,16") 6 5 7 fill / 12px 10px 14px repeat;
   border-radius: 0; box-shadow: none; color: #f2c344; height: 40px; min-height: 0; padding: 0 14px; text-shadow: 0 1px 0 #000;
 }
 /* The generic disabled look only fades a button, so a Remove the credits cannot pay for is the grey key at full strength */
 #editor .rogue-deck.editor-page .rm-keys > button.primary:disabled { border-width: 8px 8px 14px; border-image: url("../adventure?s=skin&r=1,1,14,16") 4 4 7 fill / 8px 8px 14px repeat; color: #8d8a84; text-shadow: none; opacity: 1; }
-#editor .rogue-deck.editor-page .deck-counter { border-color: #b8902f; background: #2a1f0c; color: #f2c344; }
-#editor .rogue-deck.editor-page .deck-counter.spent { border-color: rgba(241, 231, 207, .35); background: none; color: var(--muted); }
 #editor .rogue-deck.editor-page .ks, #editor .rogue-deck.editor-page .rc-ic { image-rendering: pixelated; flex: none; vertical-align: -3px; }
 
 /* The deck on parchment, as the run's deck dialog draws it, with the ink colours every Rogue paper panel uses */
@@ -952,7 +966,7 @@ html.kit[data-form="portrait"] .rg-vtrail .rg-n.side { margin: -16px 0 0 -16px; 
 #editor .rogue-deck.editor-page .deck-half :is(.select-button, .land-set, .land-tail > button, .land-step .step) { background: none; border: 1.5px solid #2a1d10; color: #2a1d10; box-shadow: none; }
 #editor .rogue-deck.editor-page .deck-half .land-step .step { border-radius: 5px; }
 /* The free basic lands stay on the parchment, under an ink line, named even in landscape */
-#editor .rogue-deck.editor-page .land-row { border-top: 1.5px solid rgba(42, 29, 16, .3); margin-top: 6px; padding: 10px 0 0; }
+#editor .rogue-deck.editor-page .land-row { margin-top: 6px; padding: 10px 0 0; }
 #editor .rogue-deck.editor-page .land-row > .band-lab { display: inline-block; margin-right: 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #5d5244; }
 #editor .rogue-deck.editor-page .land .n { color: #2a1d10; }
 
@@ -1000,3 +1014,44 @@ html[data-form="portrait"] #editor .rogue-deck.editor-page .removal-bar .rm-keys
 html[data-form="portrait"] #editor .rogue-deck.editor-page .removal-bar .rm-keys { gap: 6px; }
 html[data-form="portrait"] #editor .rogue-deck.editor-page .land-row { padding: 8px 0 4px; }
 html[data-form="portrait"] #editor .rogue-deck.editor-page .land-row > .band-lab { margin: 0; }
+
+/* A run's deck in the Deck tab (main.ts, rogue.tsx EditorSlot): the editor's own layer laid over the tab's content, under the tabs, with no scrim.
+   It has no header, so its shell takes the page's one row */
+.rg-deck-slot { width: 100%; height: 100%; min-height: 0; }
+html[data-editor-tab] #editor:not([hidden]) { position: fixed; inset: auto; z-index: 35; left: var(--tab-left); top: var(--tab-top); width: var(--tab-width); height: var(--tab-height); display: block; background: none; }
+html[data-editor-tab] #editor .editor-page { width: 100%; height: 100%; grid-template-rows: minmax(0, 1fr); border: 0; border-radius: 0; background: none; }
+
+/* The Codex as one sheet of parchment, as the map is drawn (the user, 28/11): the scene dimmed behind it, its tabs paper bookmarks along its top edge,
+   the index a column of the same sheet, and everything in ink. An unknown card is a blank paper card marked with a question mark */
+html.kit .rg-cx > .rg-haze { --dim: .78; }
+html.kit .rg-cx { padding: 10px 14px 14px; }
+html.kit .rg-cx > .rg-sub-tabs { margin: 0; padding: 0 24px; gap: 4px; align-items: end; border: 0; background: none; }
+html.kit .rg-cx > .rg-sub-tabs .seg { gap: 4px; align-items: end; }
+html.kit .rg-cx > .rg-sub-tabs .seg > button { height: 34px; padding: 0 16px; border: 0; border-image: none; border-radius: 6px 6px 0 0; background: #b9a47b;
+  box-shadow: inset 0 -3px 0 rgba(42, 29, 16, .25); color: #2a1d10; font: 600 14px system-ui, sans-serif; text-shadow: none; }
+html.kit .rg-cx > .rg-sub-tabs .seg > button[aria-pressed="true"] { height: 38px; background: #e6d3a6; box-shadow: none; color: #2a1d10; }
+html.kit .rg-cx > .rg-sub-tabs .seg > button:not([aria-pressed="true"]):hover { background: #c9b48a; }
+html.kit .rg-cx > .rg-sub-tabs > button.link { align-self: center; height: auto; padding: 0 0 0 18px; border: 0; border-image: none; background: none; box-shadow: none;
+  color: #cdbfa3; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+html.kit .rg-cx > .rg-sub-tabs > button.link.danger { color: #e8a08c; }
+html.kit .rg-cx > :is(.camp-stats, .rg-codex, .rg-scroll, .rg-list) { min-height: 0; overflow: auto; margin: 0; image-rendering: pixelated; border-style: solid; border-radius: 0; box-shadow: none; background: none;
+  border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 26px 32px 22px 34px repeat;
+  --text: #2a1d10; --muted: #5d5244; --line: rgba(42, 29, 16, .3); --gold: #7f520e; color: #2a1d10; }
+html.kit .rg-cx > .rg-codex > .rg-list { margin: 0; padding: 4px 14px 4px 0; border: 0; border-right: 1.5px solid rgba(42, 29, 16, .3); border-image: none; background: none; }
+html.kit .rg-cx :is(h2, h3) { color: #6b3f0b; text-shadow: none; }
+html.kit .rg-cx :is(.rg-facts b, .camp-figure b, .camp-figure p, .rg-read p, .rg-scroll p) { color: #2a1d10; text-shadow: none; }
+html.kit .rg-cx :is(.rg-facts span, .rg-group h4, .camp-figure span, .camp-figure small) { color: #5d5244; text-shadow: none; }
+html.kit .rg-cx :is(.rg-dex, .rg-traits) .unk { display: grid; place-items: center; background: #c9b48a; box-shadow: inset 0 0 0 2px rgba(42, 29, 16, .35); }
+html.kit .rg-cx :is(.rg-dex, .rg-traits) .unk::before { content: "?"; font: 700 34px Georgia, serif; color: rgba(42, 29, 16, .45); }
+html.kit .rg-cx :is(.rg-dex, .rg-traits) .seen::after { background: #2a1d10; color: #f1e7cf; }
+/* A seen trait is faded paper rather than a dark tile, and the scroll hint fades into the paper with an ink arrow */
+html.kit .rg-cx .rg-traits .seen .rg-tcard { border-style: solid; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat;
+  background: none; filter: grayscale(1); opacity: .6; --kit-soft: #5d5244; --kit-gold: #4a3a26; }
+html.kit .rg-cx .rg-scroll::after { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 12' shape-rendering='crispEdges'%3E%3Cpath d='M1 1h20v2h-2v2h-2v2h-2v2h-2v2H9V9H7V7H5V5H3V3H1z' fill='%232a1d10'/%3E%3C/svg%3E") center calc(100% - 8px) / 22px 12px no-repeat,
+  linear-gradient(rgba(226, 207, 163, 0), rgba(226, 207, 163, .95) 55%); }
+html.kit .rg-cx .link { color: #6b3f0b; }
+html.kit[data-form="portrait"] .rg-cx { padding: 6px 8px 8px; }
+html.kit[data-form="portrait"] .rg-cx > .rg-sub-tabs { padding: 0 8px; overflow-x: auto; }
+html.kit[data-form="portrait"] .rg-cx > .rg-sub-tabs .seg > button { height: 30px; padding: 0 10px; font-size: 12.5px; }
+html.kit[data-form="portrait"] .rg-cx > .rg-sub-tabs .seg > button[aria-pressed="true"] { height: 34px; }
+html.kit[data-form="portrait"] .rg-cx > :is(.camp-stats, .rg-codex, .rg-scroll, .rg-list) { border-width: 13px 16px 11px 17px; border-image-width: 13px 16px 11px 17px; }

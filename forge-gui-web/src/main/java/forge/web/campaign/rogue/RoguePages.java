@@ -75,7 +75,6 @@ import forge.web.protocol.RogueProtocol.RogueRunBar;
 import forge.web.protocol.RogueProtocol.RogueRunCard;
 import forge.web.protocol.RogueProtocol.RogueRunDeck;
 import forge.web.protocol.RogueProtocol.RogueTraits;
-import forge.web.protocol.RogueProtocol.TellGains;
 import forge.web.protocol.RogueProtocol.Trait;
 import forge.web.protocol.ToBrowser.DeckDetails;
 
@@ -108,7 +107,7 @@ public final class RoguePages {
     }
 
     private static final Map<String, Part> MAP_TERMS = Arrays.stream(new KeywordHint[] {KeywordHint.PLANEBOUND, KeywordHint.WRATHFUL, KeywordHint.CURSED,
-            KeywordHint.CARD_REWARD, KeywordHint.GOLD, KeywordHint.ECHOES}).collect(Collectors.toMap(KeywordHint::name, h -> new Part("term", h.getTitle(), null, h.getTitle(), h.getHintText())));
+            KeywordHint.CARD_REWARD, KeywordHint.GOLD, KeywordHint.ECHOES}).collect(Collectors.toMap(KeywordHint::name, h -> new Part("term", h.getTitle(), null, h.getTitle(), h.getHintText(), null)));
 
     /** The cards whose art is drawn behind the Aether, and behind the Codex where its tab has no subject of its own. */
     private static final String AETHER_ART = "Teferi, Temporal Archmage";
@@ -124,13 +123,11 @@ public final class RoguePages {
     public record Snapshot(long number, RogueRun run, RogueRun timed, int node, List<Record> pages) {
     }
 
-    private static final TellGains NOTHING = new TellGains(0, 0, 0);
-
     /**
      * Runs on the flow thread only, because it reads the run and reveals the planes now in view.
-     * held is what a battle's spoils add and the run's bar does not show until a screen showing them counts it in, or null.
+     * held is what of a battle's spoils the run's bar holds back, or null.
      */
-    public static Snapshot build(final RogueFlow flow, final RogueMetaProgress progress, final long number, final TellGains held) {
+    public static Snapshot build(final RogueFlow flow, final RogueMetaProgress progress, final long number, final RogueGame.RunBarHeld held) {
         final RogueRun run = flow.run();
         final List<Record> pages = new ArrayList<>();
         if (run == null) {
@@ -143,7 +140,7 @@ public final class RoguePages {
         pages.add(home(run, progress, number));
         pages.add(roster(progress));
         pages.add(aether(progress));
-        pages.add(map(flow, run, progress, held == null ? NOTHING : held));
+        pages.add(map(flow, run, progress, held));
         pages.add(new RogueRunDeck(details("rogue:run", run.getCurrentCommanderName(), run.getCurrentDeck())));
         pages.add(new RogueTraits(RogueEffectComposite.getAllEffects(run).stream().map(e -> trait(e, run))
                 .sorted(Comparator.comparing(t -> Source.valueOf(t.source()))).toList(), carry(run)));
@@ -549,7 +546,7 @@ public final class RoguePages {
                 List.of(), null, 0, null);
     }
 
-    private static RogueMap map(final RogueFlow flow, final RogueRun run, final RogueMetaProgress progress, final TellGains held) {
+    private static RogueMap map(final RogueFlow flow, final RogueRun run, final RogueMetaProgress progress, final RogueGame.RunBarHeld held) {
         final RoguePath path = run.getPath();
         final RoguePathNode current = run.getCurrentNode();
         final int row = current == null ? -1 : current.getRowIndex();
@@ -638,13 +635,13 @@ public final class RoguePages {
         });
     }
 
-    private static RogueRunBar runBar(final RogueRun run, final RogueMetaProgress progress, final TellGains held) {
+    private static RogueRunBar runBar(final RogueRun run, final RogueMetaProgress progress, final RogueGame.RunBarHeld held) {
         final Localizer text = Localizer.getInstance();
-        final int life = run.getCurrentLife() - held.life();
+        final int life = run.getCurrentLife();
         final List<Balance> balances = List.of(
                 new Balance("rogueLife", life, KeywordHint.MAX_LIFE.getTitle(), life + " / " + run.getMaxLife(), "heart", KeywordHint.MAX_LIFE.getHintText()),
-                new Balance("ICO_QUEST_COIN", run.getCurrentGold() - held.gold(), KeywordHint.GOLD.getTitle(), null, "coin", KeywordHint.GOLD.getHintText()),
-                new Balance("ICO_QUEST_GOLD", progress.getTotalEchoes() - held.echoes(), KeywordHint.ECHOES.getTitle(), null, "shards", KeywordHint.ECHOES.getHintText()),
+                new Balance("ICO_QUEST_COIN", run.getCurrentGold(), KeywordHint.GOLD.getTitle(), null, "coin", KeywordHint.GOLD.getHintText()),
+                new Balance("ICO_QUEST_GOLD", progress.getTotalEchoes(), KeywordHint.ECHOES.getTitle(), null, "shards", KeywordHint.ECHOES.getHintText()),
                 new Balance("rogueCredits", run.getRemovalCredits(), KeywordHint.REMOVAL_CREDITS.getTitle(), null, "cut",
                         KeywordHint.REMOVAL_CREDITS.getHintText()));
         final List<String> tip = new ArrayList<>();
@@ -661,7 +658,8 @@ public final class RoguePages {
         final int traits = (int) RogueEffectComposite.getAllEffects(run).stream()
                 .filter(e -> !(e instanceof DescensionLevel || e instanceof EndlessMode)).count();
         return new RogueRunBar(new CampaignBar(run.getCurrentCommanderName(), line(run), balances, Map.of()),
-                tip.isEmpty() ? null : String.join("\n", tip), traits);
+                tip.isEmpty() ? null : String.join("\n", tip), traits,
+                held == null ? null : held.gains(), held == null ? 0 : held.question());
     }
 
     /** The run's Descension and Endless levels, or an empty line with neither. */

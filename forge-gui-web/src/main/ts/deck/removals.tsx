@@ -42,7 +42,7 @@ export function settled(removal: Removal | null, state: EditorState): Removal | 
 const icon = <Sprite k="deck" cls="rc-ic" />;
 const credits = (n: number) => <>{n === 1 ? tNodes('lblWebRogueRemovalCreditOne', icon) : tNodes('lblWebRogueRemovalCreditMany', n, icon)}</>;
 
-/** The bar under a run's deck. It explains how to choose, what the choice costs, and after a removal how to take it back. */
+/** The bar under a run's deck. It explains how to choose, what the choice costs, and after a removal how to take it back. Its Undo takes back any change, as the editor's header does for other decks. */
 export function RemovalBar({ state, chosen, removal, clear, remove, undo }: {
   state: EditorState; chosen: [string, number][]; removal: Removal | null; clear: () => void; remove: (n: number, cost: number) => void; undo: () => void;
 }) {
@@ -86,11 +86,14 @@ export function RemovalBar({ state, chosen, removal, clear, remove, undo }: {
   return (
     <section ref={root} class="removal-bar" aria-live="polite">
       {words}
-      {n > 0 && <span class="rm-keys">
-        <button onClick={clear}>{t('lblWebRogueClear')}</button>
-        <button class="primary" disabled={over > 0 || (removal !== null && !removal.done)} onClick={() => remove(n, cost)}>
-          {n === 1 ? t('lblWebRogueRemoveCard') : t('lblWebRogueRemoveCards', n)}</button>
-      </span>}
+      <span class="rm-keys">
+        <button disabled={!state.canUndo} onClick={undo} title={`${t('lblUndo')} (Ctrl+Z)`}>&#8630; {t('lblUndo')}</button>
+        {n > 0 && <>
+          <button onClick={clear}>{t('lblWebRogueClear')}</button>
+          <button class="primary" disabled={over > 0 || (removal !== null && !removal.done)} onClick={() => remove(n, cost)}>
+            {n === 1 ? t('lblWebRogueRemoveCard') : t('lblWebRogueRemoveCards', n)}</button>
+        </>}
+      </span>
     </section>
   );
 }

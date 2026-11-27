@@ -43,7 +43,7 @@ function Row({ item, on, no, toggle }: { item: ShopItem; on: boolean; no: boolea
  * The bazaar. With both cards and special offers each has its tab, and the tab shown is told with the answer, so a reroll keeps it.
  * A picked item can always be put back, and one that no longer fits the gold left is dimmed and cannot be picked.
  */
-export function Bazaar({ asked, answer, fold, viewDeck }: { asked: AskShop; answer: (value: unknown) => void; fold?: () => void; viewDeck?: () => void }) {
+export function Bazaar({ id, asked, answer, fold, viewDeck }: { id: number; asked: AskShop; answer: (value: unknown) => void; fold?: () => void; viewDeck?: () => void }) {
   const cards = asked.items.filter(i => !i.special);
   const special = asked.items.filter(i => i.special);
   const tabbed = cards.length > 0 && special.length > 0;
@@ -81,7 +81,7 @@ export function Bazaar({ asked, answer, fold, viewDeck }: { asked: AskShop; answ
   // Each tab is dealt the first time it shows, the special offers each dropping onto a halo, as mobile deals its one list
   useLayoutEffect(() => {
     const tiles = [...traits.current?.children ?? [], ...stock.current!.children] as HTMLElement[];
-    deal(asked, tab, tiles, () => tab === 1);
+    deal(id, tab, tiles, () => tab === 1);
   }, [tab]);
   return (
     // A phone's foot has room for four buttons, so View Map is left out there

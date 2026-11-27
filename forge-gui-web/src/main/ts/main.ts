@@ -505,12 +505,15 @@ function draw(): void {
   const enteringMatch = under === 'match' && shownUnder !== 'match';
   shownUnder = under;
   byId('editor').hidden = page !== 'editor';
+  // A Rogue Commander run's deck is drawn in the run's Deck tab, so the run's page stays in use around it (rogue.css places it)
+  const tabbed = page === 'editor' && !!model.editor?.removals;
+  document.documentElement.toggleAttribute('data-editor-tab', tabbed);
   for (const id of ['menu', 'lobby', 'limited', 'drafting', 'campaign', 'match']) {
     const el = byId(id);
     // A phone's editor hides the page under it, and the page that started a match stays drawn until the board is on screen (match/matchentry.ts)
-    el.hidden = (id !== (under === 'name' ? 'menu' : under) || (page === 'editor' && isPortrait())) && !el.classList.contains('to-match');
+    el.hidden = (id !== (under === 'name' ? 'menu' : under) || (page === 'editor' && isPortrait() && !tabbed)) && !el.classList.contains('to-match');
     // On a desktop the page under the editor stays visible but cannot be used
-    el.inert = page === 'editor';
+    el.inert = page === 'editor' && !tabbed;
   }
   matchHistory(page === 'match');
   void keepAwake(page === 'match' && !model.gameOver);

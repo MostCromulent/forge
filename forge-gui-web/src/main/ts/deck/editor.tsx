@@ -19,7 +19,7 @@ import type { DeckSection, EditorState } from '../protocol';
 import { t } from '../text';
 import { FormatMenu, groupsOf, isCardPool } from '../formatmenu';
 import { Backdrop, Dropdown } from '../dialog';
-import { ICONS, Icon, Sprite } from '../icons';
+import { ICONS, Icon } from '../icons';
 import { showNotice } from '../notices';
 import { RemovalBar, heldMarks, settled, toggled, type Marks, type Removal } from './removals';
 
@@ -51,8 +51,8 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
     const pasted = (e: ClipboardEvent) => {
       const target = e.target as HTMLElement | null;
       const text = e.clipboardData?.getData('text') ?? '';
-      // The importer reads lists of cards for a main deck
-      if (target?.closest('input, textarea') || !text.trim() || (model.editor && isPlanar(model.editor))) return;
+      // The importer reads lists of cards for a main deck. A run's deck gains only basic lands, so it has no importer
+      if (target?.closest('input, textarea') || !text.trim() || (model.editor && (isPlanar(model.editor) || model.editor.removals))) return;
       e.preventDefault();
       changeUi(u => { u.importer = { from: 'editor', text }; });
     };
@@ -120,51 +120,54 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
     ? <span class="check-fixed">{state.format === 'CommanderDraft' ? state.check : t('lblWebEditorLimitedFixed')}</span>
     : state.collection ? <span class="check-fixed">{state.check}</span>
     : <CheckControl model={model} state={state} actions={actions} />;
+  const deckMenu = (
+    <div ref={nameMenu} class="menu-anchor name-menu">
+      <button class="deck-menu-button" aria-label={t('lblWebEditorDeckOptions')} title={t('lblWebEditorDeckOptions')}
+        aria-expanded={menu !== null} onClick={() => setMenu(menu ? null : 'menu')}><Icon d={ICONS.cog} /></button>
+      {/* On a phone the menu is a sheet over the page. A tap beside it closes it without reaching what is underneath */}
+      {menu !== null && <div class="menu-scrim" onClick={() => setMenu(null)} />}
+      {menu === 'menu' && (
+        <div class="deck-menu" role="menu">
+          {planar && item(ICONS.plus, t('lblWebLobbyNewPlanarDeck'), () => actions.openEditor({ newFormat: 'Planechase' }))}
+          {ownDeck && !planar && item(ICONS.plus, t('lblWebEditorNewDeck'), () => setMenu('new'), true)}
+          {ownDeck && (!planar || model.screen === 'setup') && item(ICONS.folder, t('lblWebEditorOpenAnother'), openAnother)}
+          {ownDeck && item(ICONS.copy, t('lblDuplicate'), () => actions.deckOp('duplicate'))}
+          {ownDeck && <hr />}
+          {!state.limited && !planar && !state.removals && item(ICONS.download, t('lblWebEditorImportList'), () => changeUi(u => { u.importer = { from: 'editor' }; }))}
+          {item(ICONS.copy, t('lblWebEditorCopyToClipboard'), copyDeck)}
+          {item(ICONS.upload, t('lblWebEditorExportDeckFile'), () => actions.deckOp('file'))}
+          {/* A deck opened as a copy, such as a precon or someone else's deck, has nothing of the player's to delete */}
+          {ownDeck && !state.copyOf && <hr />}
+          {ownDeck && !state.copyOf && item(ICONS.bin, t('lblWebEditorDeleteThisDeck'), () => setDialog('delete'), false, 'danger')}
+        </div>
+      )}
+      {menu === 'new' && (
+        <div class="deck-menu" role="menu">
+          <span class="menu-cap">{t('lblWebEditorNewDeckFor')}</span>
+          {DECK_FORMATS.map(([id, name]) => (
+            <button key={id} role="menuitem" onClick={() => { setMenu(null); actions.openEditor({ newFormat: id }); }}>{t(name)}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
   return (
     <div class={run ? 'editor-page rogue-deck' : 'editor-page'}>
-      <PageHeader class="editor-head">
+      {/* A run's deck is drawn in the run's Deck tab, whose bar shows its credits, so it has no header. Its menu sits by the deck's controls and Undo in its removal bar */}
+      {!run && <PageHeader class="editor-head">
         {state.collection && <span class="deck-owner">{state.collection} &rsaquo;</span>}
         <div class="deck-title">
           {ownDeck ? <NameField name={state.name} rename={actions.renameDeck} /> : <span class="deck-name-text">{state.name}</span>}
-          <div ref={nameMenu} class="menu-anchor name-menu">
-            <button class="deck-menu-button" aria-label={t('lblWebEditorDeckOptions')} title={t('lblWebEditorDeckOptions')}
-              aria-expanded={menu !== null} onClick={() => setMenu(menu ? null : 'menu')}><Icon d={ICONS.cog} /></button>
-            {/* On a phone the menu is a sheet over the page. A tap beside it closes it without reaching what is underneath */}
-            {menu !== null && <div class="menu-scrim" onClick={() => setMenu(null)} />}
-            {menu === 'menu' && (
-              <div class="deck-menu" role="menu">
-                {planar && item(ICONS.plus, t('lblWebLobbyNewPlanarDeck'), () => actions.openEditor({ newFormat: 'Planechase' }))}
-                {ownDeck && !planar && item(ICONS.plus, t('lblWebEditorNewDeck'), () => setMenu('new'), true)}
-                {ownDeck && (!planar || model.screen === 'setup') && item(ICONS.folder, t('lblWebEditorOpenAnother'), openAnother)}
-                {ownDeck && item(ICONS.copy, t('lblDuplicate'), () => actions.deckOp('duplicate'))}
-                {ownDeck && <hr />}
-                {!state.limited && !planar && item(ICONS.download, t('lblWebEditorImportList'), () => changeUi(u => { u.importer = { from: 'editor' }; }))}
-                {item(ICONS.copy, t('lblWebEditorCopyToClipboard'), copyDeck)}
-                {item(ICONS.upload, t('lblWebEditorExportDeckFile'), () => actions.deckOp('file'))}
-                {/* A deck opened as a copy, such as a precon or someone else's deck, has nothing of the player's to delete */}
-                {ownDeck && !state.copyOf && <hr />}
-                {ownDeck && !state.copyOf && item(ICONS.bin, t('lblWebEditorDeleteThisDeck'), () => setDialog('delete'), false, 'danger')}
-              </div>
-            )}
-            {menu === 'new' && (
-              <div class="deck-menu" role="menu">
-                <span class="menu-cap">{t('lblWebEditorNewDeckFor')}</span>
-                {DECK_FORMATS.map(([id, name]) => (
-                  <button key={id} role="menuitem" onClick={() => { setMenu(null); actions.openEditor({ newFormat: id }); }}>{t(name)}</button>
-                ))}
-              </div>
-            )}
-          </div>
+          {deckMenu}
         </div>
         {check}
         <div class="head-right">
           <span class="save-state">{saveState(state)}</span>
-          {state.removals && <span class={state.removals.credits === 0 ? 'deck-counter spent' : 'deck-counter'}><Sprite k="deck" />{t('lblWebRogueRemovalCreditCount', state.removals.credits)}</span>}
           <button disabled={!state.canUndo} onClick={() => actions.editorUndo()} title={`${t('lblUndo')} (Ctrl+Z)`} aria-label={t('lblUndo')}>&#8630;<span class="word"> {t('lblUndo')}</span></button>
           <HeadControls />
           <button class="primary" onClick={() => actions.closeEditor()}>{t('lblDone')}</button>
         </div>
-      </PageHeader>
+      </PageHeader>}
       {!run && <div class="editor-tabs" role="group">
         <button aria-pressed={half === 'find'} onClick={() => setHalf('find')}>{t(planar ? 'lblWebPlanarFind' : 'lblWebEditorFindCards')}</button>
         <button aria-pressed={half === 'deck'} onClick={() => setHalf('deck')}>
@@ -173,7 +176,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
       </div>}
       <div class={`editor-shell${half === 'deck' || run ? ' deck' : ''}${planar ? ' planar' : ''}${run ? ' alone' : ''}`}>
         {!run && <Catalogue model={model} actions={actions} state={state} handlers={planar ? noHandlers : handlers} adding={adding} stopAdding={() => setAddingTo(null)} />}
-        {planar ? <PlanarDeck actions={actions} state={state} /> : <DeckHalf actions={actions} state={state} handlers={run ? noHandlers : handlers} check={check}
+        {planar ? <PlanarDeck actions={actions} state={state} /> : <DeckHalf actions={actions} state={state} handlers={run ? noHandlers : handlers} check={check} tools={run ? deckMenu : undefined}
           adding={adding} marks={run ? new Map(chosen) : undefined} mark={card => {
             setMarks(toggled(new Map(chosen), card));
             setRemoval(null);

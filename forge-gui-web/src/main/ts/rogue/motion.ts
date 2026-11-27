@@ -90,17 +90,17 @@ const TURN_MS = 450;
 const HALO_MS = 900;
 /** The card or trait in a tile, which is what is dealt and flown; a tile with none, such as a phone's trait row, moves whole. */
 const faceOf = (tile: HTMLElement): HTMLElement => tile.querySelector<HTMLElement>(':scope > img, :scope > .c, :scope > .rg-tcard') ?? tile;
-// The parts of each set of cards already dealt, so a scene shown again after a fold or another tab does not deal again
-const dealt = new WeakMap<object, Set<number>>();
+// The parts of each question's cards already dealt, so a scene shown again after a fold or another tab, or sent again, does not deal again
+const dealt = new Map<number, Set<number>>();
 
 /**
- * Deals tiles as mobile does, the first time part of the set key is shown: each card flies face down from the bottom middle of its
+ * Deals tiles as mobile does, the first time part of question id is shown: each card flies face down from the bottom middle of its
  * scrolling box and turns over, up to 140 ms after the one before. A rare tile drops in from above instead, onto a halo that pulses
  * and fades. A tile cannot be pressed until it lands.
  */
-export function deal(key: object, part: number, tiles: HTMLElement[], rare: (i: number) => boolean): void {
-  const parts = dealt.get(key) ?? new Set<number>();
-  dealt.set(key, parts);
+export function deal(id: number, part: number, tiles: HTMLElement[], rare: (i: number) => boolean): void {
+  const parts = dealt.get(id) ?? new Set<number>();
+  dealt.set(id, parts);
   if (parts.has(part) || !tiles.length || reducedMotion()) return;
   parts.add(part);
   const box = tiles[0].closest<HTMLElement>('.rg-sheet .grid, .rg-scene > .in')!;

@@ -3,12 +3,14 @@ package forge.web.campaign.rogue;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.card.CardRarity;
+import forge.card.CardRules;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckSection;
 import forge.gamemodes.rogue.CodexHelper;
 import forge.gamemodes.rogue.KeywordHint;
 import forge.gamemodes.rogue.PreviewReferenceType;
+import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueCustomDeckGenerator;
 import forge.gamemodes.rogue.RogueEvent;
 import forge.gamemodes.rogue.RogueRun;
@@ -32,8 +34,10 @@ import forge.util.Localizer;
 import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
 import forge.web.images.SkinSprites;
+import forge.web.protocol.PropertyJson;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
 import forge.web.protocol.RogueProtocol.*;
+import forge.web.protocol.ToBrowser.CardFace;
 import forge.web.protocol.ToBrowser.CataloguePage;
 import forge.web.protocol.ToBrowser.EditorGroup;
 
@@ -157,14 +161,23 @@ final class WebRogueDecisions implements RogueDecisions {
             final KeywordHint hint = p.type() == PreviewReferenceType.KEYWORD ? KeywordHint.fromToken(p.token()) : null;
             if (p.type() == PreviewReferenceType.CARD) {
                 final PaperCard card = TextHelper.resolveCard(p.token());
-                parts.add(new Part("card", p.text(), card == null ? null : card.getImageKey(false), null, null));
+                parts.add(card != null && RogueConfig.getRogueCard(card.getName()) != null
+                        ? new Part("card", p.text(), null, null, null, face(card, p.text()))
+                        : new Part("card", p.text(), card == null ? null : card.getImageKey(false), null, null, null));
             } else if (hint != null) {
-                parts.add(new Part("term", p.text(), null, hint.getTitle(), hint.getHintText()));
+                parts.add(new Part("term", p.text(), null, hint.getTitle(), hint.getHintText(), null));
             } else {
-                parts.add(new Part("text", p.text(), null, null, null));
+                parts.add(new Part("text", p.text(), null, null, null, null));
             }
         }
         return parts;
+    }
+
+    /** A card's text as the preview shows it, under name, the name the text gives it. */
+    private static CardFace face(final PaperCard card, final String name) {
+        final CardRules rules = card.getRules();
+        return new CardFace(name, PropertyJson.manaCost(rules.getManaCost()), rules.getType().toString(), CardCatalog.pt(rules),
+                rules.getOracleText().replace("\n", "\n").replace("\r\n", "\n"), null, 0, null, null, null);
     }
 
     /** Equal cards merged by name, in the order they first appear. A card the run carries shows its carry type. */
@@ -277,7 +290,7 @@ final class WebRogueDecisions implements RogueDecisions {
         final List<PaperCard> commanders = deck == null ? List.of() : deck.getCommanders();
         final JsonElement answer = ask(new AskCards(choice.kind().name(), choice.title(), choice.subtitle(), pickCards(shown),
                 choice.min(), choice.max(), null, false, deck == null ? null : pickDeck(deck, choice.preview() != null),
-                commanders.isEmpty() ? null : commanders.get(0).getImageKey(false), List.of(), null, null), a -> picked(choice, shown, a) != null);
+                commanders.isEmpty() ? null : commanders.get(0).getImageKey(false), List.of(), null), a -> picked(choice, shown, a) != null);
         return picked(choice, shown, answer);
     }
 
@@ -367,10 +380,10 @@ final class WebRogueDecisions implements RogueDecisions {
             final int rerollCost, final boolean rerollEnabled, final int gold) {
         final boolean mayReroll = rerollLabel != null && rerollEnabled;
         final RogueRun run = game.run();
-        final RogueGame.Spoils spoils = game.spoils();
+        final List<Spoil> spoils = game.spoils();
         final JsonElement answer = ask(new AskCards("REWARD", title, null, pickCards(cards), 0, maxSelections,
                 rerollLabel == null ? null : rerollCost, mayReroll, null, run == null ? null : RoguePages.lastPlane(run),
-                spoils == null ? List.of() : spoils.list(), spoils == null ? null : spoils.held(), gold),
+                spoils == null ? List.of() : spoils, gold),
                 a -> is(a, REROLL) ? mayReroll : indexes(a, cards.size()) != null && indexes(a, cards.size()).size() <= maxSelections);
         return is(answer, REROLL) ? null : pick(cards, indexes(answer, cards.size()));
     }
@@ -434,18 +447,18 @@ final class WebRogueDecisions implements RogueDecisions {
         final String removed = Localizer.getInstance().getMessage("lblRogueCardsRemoved");
         tell(new Tell(kind.name(), title, parts(text), sections.stream()
                 .map(s -> new TellSection(s.label(), parts(s.text()), s.cards() == null ? List.of() : cards(s.cards()), removed.equals(s.label())))
-                .collect(Collectors.toList()), List.of(), null, kind == ResultKind.BOON ? boonArt : run == null ? null : RoguePages.lastPlane(run)));
+                .collect(Collectors.toList()), List.of(), kind == ResultKind.BOON ? boonArt : run == null ? null : RoguePages.lastPlane(run)));
     }
 
     @Override
     public void showMessage(final String title, final String text) {
-        tell(new Tell("MESSAGE", title, parts(text), List.of(), List.of(), null, null));
+        tell(new Tell("MESSAGE", title, parts(text), List.of(), List.of(), null));
     }
 
     /** A battle's spoils under its result's title, over the plane it was won on or else the last plane passed. */
-    void showSpoils(final String title, final RogueGame.Spoils spoils, final PaperCard plane) {
+    void showSpoils(final String title, final List<Spoil> spoils, final PaperCard plane) {
         final RogueRun run = game.run();
-        tell(new Tell("SPOILS", title, List.of(), List.of(), spoils.list(), spoils.held(),
+        tell(new Tell("SPOILS", title, List.of(), List.of(), spoils,
                 plane != null ? plane.getImageKey(false) : run == null ? null : RoguePages.lastPlane(run)));
     }
 

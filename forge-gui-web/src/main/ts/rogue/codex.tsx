@@ -157,8 +157,8 @@ export function CodexPage({ page, tab, id, setTab, choose, reset }: {
         <span class="seg">{TABS.map(([to, wide, short]) => <button key={to} aria-pressed={to === tab} onClick={() => setTab(to)}>{t(phone ? short : wide)}</button>)}</span>
         {!phone && <span class="sp" />}
         {!phone && tab === 'stats' && reset && <>
-          <button onClick={() => reset('tutorials')}>{t('lblRogueResetTutorials')}</button>
-          <button style={{ color: 'var(--concede)' }} onClick={() => reset('progress')}>{t('lblRogueResetProgress')}</button>
+          <button class="link" onClick={() => reset('tutorials')}>{t('lblRogueResetTutorials')}</button>
+          <button class="link danger" onClick={() => reset('progress')}>{t('lblRogueResetProgress')}</button>
         </>}
       </div>
       {body}

@@ -90,7 +90,8 @@ function afterRest(show: () => void): void {
 // el has data-key and data-zoom, which is empty when the viewer may not see the card. data-from marks a hand card that is in another zone
 export function hoverCard(el: HTMLElement | null): void {
   if (ui.inspect) return;
-  if (!el || !previewSrc(el)) {
+  // An item with no picture previews when it carries its own text
+  if (!el || (!previewSrc(el) && !itemFace(el))) {
     clearTimeout(opening);
     byId('zoom').classList.remove('settling');
     changeUi(u => { u.hover = null; u.faceIndex = 0; });

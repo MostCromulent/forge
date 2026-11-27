@@ -124,6 +124,9 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         volatile CampaignResult result;
         /** Whether the battle's spoils were sent to be shown, which the run's bar waits for. Only the flow thread uses it. */
         boolean spoilsShown;
+        /** What the screen showing the spoils counts into the run's bar, and that screen's question once asked, or null and 0. Only the flow thread uses them. */
+        TellGains shownGains;
+        int spoilsQuestion;
         /** The button the match was left by, or null. */
         final CompletableFuture<String> left = new CompletableFuture<>();
         RogueWinLoseController controller;
@@ -133,10 +136,6 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         /** The run's gold and the player's echoes before the result's rewards. */
         int goldBefore;
         int echoesBefore;
-    }
-
-    /** A battle's spoils for the screen about to show them. held is what of them the run's bar has not counted yet, or null after the first screen. */
-    record Spoils(List<Spoil> list, TellGains held) {
     }
 
     private static final class Shared {
@@ -631,8 +630,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             awaitLeaving(b);
             final String choice = b.left.join();
             // As mobile does, spoils that no card reward showed get a screen of their own
-            final Spoils spoils = web == null || b.spoilsShown ? null : spoils();
-            if (spoils != null && !spoils.list().isEmpty()) {
+            final List<Spoil> spoils = web == null || b.spoilsShown ? null : spoils();
+            if (spoils != null && !spoils.isEmpty()) {
                 final boolean beaten = b.controller.hasWonMatch() && b.plane != null;
                 web.showSpoils(flow.resultTitle(b.controller), spoils, beaten ? CodexHelper.getPlaneCard(b.plane) : null);
             }
@@ -652,22 +651,44 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     }
 
     /** The spoils of the battle being settled, which then count as shown, or null outside one. Only the flow thread calls this. */
-    Spoils spoils() {
+    List<Spoil> spoils() {
         final Battle b = battle;
         if (b == null || b.controller == null) {
             return null;
         }
         final List<Spoil> list = b.view.steps.stream().filter(s -> "MESSAGE".equals(s.kind()))
                 .map(s -> new Spoil(s.title(), s.text() != null ? s.text() : String.join(" ", s.lines()), s.icon())).toList();
-        final TellGains held = b.spoilsShown ? null : held(b);
+        if (!b.spoilsShown && !list.isEmpty()) {
+            b.shownGains = held(b);
+        }
         b.spoilsShown = true;
-        return new Spoils(list, held);
+        return list;
     }
 
-    /** What the battle's spoils add to the bar's balances until a screen shows them, which the run's bar holds back. Only the flow thread calls this. */
-    private TellGains held() {
+    /**
+     * What the run's bar holds back of the battle's spoils: all of them until a screen shows them, then what that screen counts in, for as long
+     * as its question is open, so each page sent is right whatever order the browser reads the page and the question in. Only the flow thread calls this.
+     */
+    private RunBarHeld held() {
         final Battle b = battle;
-        return b == null || b.controller == null || b.spoilsShown ? null : held(b);
+        if (b == null || b.controller == null) {
+            return null;
+        }
+        if (!b.spoilsShown) {
+            return new RunBarHeld(held(b), 0);
+        }
+        final Open asked = question;
+        if (b.shownGains == null || asked == null) {
+            return null;
+        }
+        if (b.spoilsQuestion == 0) {
+            b.spoilsQuestion = asked.message().id();
+        }
+        return asked.message().id() == b.spoilsQuestion ? new RunBarHeld(b.shownGains, b.spoilsQuestion) : null;
+    }
+
+    /** What the run's bar holds back, and the question that counts it in, or 0 before one shows it. */
+    record RunBarHeld(TellGains gains, int question) {
     }
 
     /**

@@ -12,7 +12,7 @@ import { Sprite, glyph, ringClass, sealGlyph } from './kit';
 import { useSceneKeys } from '../hooks';
 import { Scene } from './scene';
 import { TERM_ICONS, Words } from './terms';
-import type { RogueCard, Spoil, Tell, TellGains } from '../protocol';
+import type { RogueCard, RogueRunBar, Spoil, Tell } from '../protocol';
 
 /** The face over a revive or a defeat at a side node. */
 const FACES: Record<string, keyof typeof ROGUE_ICONS> = { REVIVE: 'gem', DEFEAT: 'skull' };
@@ -36,12 +36,9 @@ function Card({ card, small }: { card: RogueCard; small: boolean }) {
   );
 }
 
-/** The run bar's balances a battle's spoils count into, as held back from it until they have landed. */
-const heldIcons = (gains: TellGains): [string, number][] => [['ICO_QUEST_COIN', gains.gold], ['ICO_QUEST_GOLD', gains.echoes], ['rogueLife', gains.life]];
-
-/** What the screen showing a battle's spoils has not yet counted into the run's bar, by balance icon. The server's bar already counts all of it. */
-export const heldBack = (gains: TellGains | null | undefined, landed: boolean): Record<string, number> =>
-  gains && !landed ? Object.fromEntries(heldIcons(gains)) : {};
+/** What of a battle's spoils the run's bar holds back, by balance icon, until the question showing them has landed them. */
+export const heldBack = (bar: RogueRunBar | undefined, landed: number): Record<string, number> =>
+  bar?.held && !(bar.heldFor && bar.heldFor === landed) ? { ICO_QUEST_COIN: bar.held.gold, ICO_QUEST_GOLD: bar.held.echoes, rogueLife: bar.held.life } : {};
 
 /** Each spoil's picture by the skin icon the reward script names, and the run bar's balance it counts into. */
 const SPOIL_PICTURES: Record<string, () => JSX.Element> = {
@@ -63,13 +60,20 @@ export function Ledger({ spoils, id }: { spoils: Spoil[]; id: number }) {
     for (const [icon, el] of sources) coinsFrom(icon, el);
     let open = true;
     const scene = list.current!.closest('.rg-scene');
-    let pause = 0;
-    // The spoils are read for a moment after the screen has risen, before they fly to the bar
-    Promise.allSettled(scene?.getAnimations().map(a => a.finished) ?? []).then(() => {
+    let pause = 0, frame = 0;
+    // The spoils are read for a moment after the screen has risen, before they fly to the bar. After a match the page is still hidden
+    // under the board when they arrive, so the wait starts once they are on screen
+    const settle = () => Promise.allSettled(scene?.getAnimations().map(a => a.finished) ?? []).then(() => {
       if (open) pause = window.setTimeout(() => changeUi(u => { u.rogueLanded = id; }), LEDGER_PAUSE_MS);
     });
+    const look = () => {
+      if (list.current?.getClientRects().length) settle();
+      else frame = requestAnimationFrame(look);
+    };
+    look();
     return () => {
       open = false;
+      cancelAnimationFrame(frame);
       clearTimeout(pause);
       for (const [icon] of sources) coinsFrom(icon, null);
     };

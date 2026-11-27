@@ -54,13 +54,14 @@ const RUN_TOOLS: [string, TextKey][] = [['nextNode', 'lblRogueDevNextNode'], ['w
 
 /** Rogue Commander's page. The mode has no shelf of saved games, so it draws its pages in the campaign shell's box without CampaignShell. */
 export function RogueHub({ model, actions }: { model: Model; actions: Actions }) {
-  // Rogue is drawn in Adventure's look (rogue-adventure.css) while it is open. The deck editor over it keeps the editor's own look, dialogs included
-  const editing = !!model.editor;
+  // Rogue is drawn in Adventure's look (rogue-adventure.css) while it is open. A deck editor over it keeps the editor's own look, dialogs included.
+  // The run's deck is drawn in the Deck tab, so the page around it keeps the look
+  const covered = !!model.editor && !model.editor.removals;
   useEffect(() => {
-    if (editing) return;
+    if (covered) return;
     document.documentElement.classList.add('kit');
     return () => document.documentElement.classList.remove('kit');
-  }, [editing]);
+  }, [covered]);
   useEffect(tapToZoom, []);
   useEffect(scrollHints, []);
   return <div class="camp-shell rg-shell"><Pages model={model} actions={actions} /></div>;
@@ -79,6 +80,8 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const roster = model.rogueRoster;
   const run = home?.run;
   const inRun = model.campaignSave !== null;
+  // The run's deck is open in the Deck tab (main.ts)
+  const editing = !!model.editor?.removals;
   // Aether, Codex and History show only while they are unlocked
   const tab = inRun || home?.unlocked === false ? 'runs' : ui.rogueTab;
   const aside = inRun ? ui.roguePage : 'map';
@@ -105,7 +108,8 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   // Back goes from the run to Runs, from another tab to Runs, from the commanders to the unfinished run, and from Runs to the play menu
   const back = () => {
     const step = fresh && backFrom(fresh, choice);
-    if (devOpen) setDevOpen(false);
+    if (editing) actions.closeEditor();
+    else if (devOpen) setDevOpen(false);
     else if (historyDeck !== null) setHistoryDeck(null);
     else if (runDeck) setRunDeck(false);
     else if (abandoning) setAbandoning(false);
@@ -149,7 +153,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   }, [model.rogueChoice]);
   if (!home) return null;
   const locked = home.unlocked ? {} : { aether: t('lblRogueUnlockAetherHint'), codex: t('lblRogueUnlockCodexHint'), history: t('lblRogueUnlockHistoryHint') };
-  const page = aside === 'traits' ? model.rogueTraits && run && <TraitsPage traits={model.rogueTraits.traits} carry={model.rogueTraits.carry} haze={run.image} />
+  const page = editing ? <EditorSlot /> : aside === 'traits' ? model.rogueTraits && run && <TraitsPage traits={model.rogueTraits.traits} carry={model.rogueTraits.carry} haze={run.image} />
     : codex ? (
       <CodexPage page={model.rogueCodexPage} tab={ui.rogueCodexTab} id={ui.rogueCodexId}
         setTab={(to: CodexTab) => changeUi(u => { u.rogueCodexTab = to; u.rogueCodexId = null; })}
@@ -165,11 +169,11 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       expand={() => actions.rogueAetherExpand(home.snapshot)} reset={() => setResetting('aether')} />
   ) : fresh && <NewRun roster={fresh} choice={choice} set={moveChoice} runs={run ? () => newRun(false) : null}
     begin={(deck, level) => enterRun(() => actions.rogueBegin(home.snapshot, deck, choice.custom, choice.custom ? choice.mods : [], level))}
-    answer={model.rogueChoice} toggle={id => actions.rogueChoose(deck, choice.mods, choice.level, id)} unlocked={home.unlocked} />;
-  const details = choice.deck && model.deckDetails?.key === `rogue:start:${choice.deck}` ? model.deckDetails : null;
+    answer={model.rogueChoice} toggle={id => actions.rogueChoose(deck, choice.mods, choice.level, id)} unlocked={home.unlocked}
+    startDeck={choice.deck && model.deckDetails?.key === `rogue:start:${choice.deck}` ? model.deckDetails : null} />;
   const pastDeck = historyDeck !== null && model.deckDetails?.key === `rogue:history:${historyDeck}` ? model.deckDetails : null;
   const shownRunDeck = runDeck && !inRun && model.rogueRunDeck ? model.rogueRunDeck.deck : null;
-  const dialog = abandoning || !!resetting || !!tell || !!replace || !!npcs || !!announced || !!fresh && (choice.sheet || !!details) || !!pastDeck || !!shownRunDeck
+  const dialog = abandoning || !!resetting || !!tell || !!replace || !!npcs || !!announced || !!fresh && choice.sheet || !!pastDeck || !!shownRunDeck
     || inRun && ui.rogueSheet && isPortrait();
   const main = <div class="camp-main" inert={dialog || scene && !folded}>{page}</div>;
   const question = scene && <Question model={model} actions={actions} />;
@@ -178,11 +182,14 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const bar = alone ? { ...home.bar, name: t(choice.customOpen ? 'lblRogueCustomRun' : 'lblRogueStartNewRun') } : home.bar;
   const runBar = model.rogueMap?.bar;
   const asked = model.rogueQuestion;
-  const held = heldBack(asked?.tell?.gains ?? asked?.cards?.gains, asked?.id === ui.rogueLanded);
+  const held = heldBack(runBar, ui.rogueLanded);
   // Life is written out of its maximum, so an amount the spoils hold back is taken off that text too
   const lifeHeld = held.rogueLife;
-  const runBalances = runBar && run && lifeHeld
-    ? { ...runBar.bar, balances: runBar.bar.balances.map(b => (b.icon === 'rogueLife' ? { ...b, text: `${b.amount - lifeHeld} / ${run.maxLife}` } : b)) } : runBar?.bar;
+  // The open deck spends credits without the map being sent again, so the bar takes them from the editor
+  const credits = model.editor?.removals?.credits;
+  const runBalances = runBar && run && (lifeHeld || credits !== undefined)
+    ? { ...runBar.bar, balances: runBar.bar.balances.map(b => (b.icon === 'rogueLife' && lifeHeld ? { ...b, text: `${b.amount - lifeHeld} / ${run.maxLife}` }
+      : b.icon === 'rogueCredits' && credits !== undefined ? { ...b, amount: credits } : b)) } : runBar?.bar;
   // A phone's header has room for the balances only
   const runShown = runBalances && isPortrait() ? { ...runBalances, line: '' } : runBalances;
   const abandon = (close: () => void) => { close(); setAbandoning(true); };
@@ -219,11 +226,14 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     </div>
   ));
   return <>
-    {inRun ? <CampaignBar bar={runShown ?? bar} tabs={RUN_TABS} tab={aside} setTab={to => {
-      // During a decision the deck is read only
+    {inRun ? <CampaignBar bar={runShown ?? bar} tabs={RUN_TABS} tab={editing ? 'deck' : aside} setTab={to => {
+      // During a decision the deck is read only. Another tab closes the open deck
       if (to === 'deck' && deciding) changeUi(u => { u.rogueDeckView = true; });
-      else if (to === 'deck') editDeck();
-      else slideTab(RUN_TABS, aside, to, u => { u.roguePage = to; });
+      else if (to === 'deck') { if (!editing) editDeck(); }
+      else if (editing) {
+        actions.closeEditor();
+        changeUi(u => { u.roguePage = to; });
+      } else slideTab(RUN_TABS, aside, to, u => { u.roguePage = to; });
     }} lead={tabSprite} disabledTabs={home.unlocked ? {} : { codex: t('lblRogueUnlockCodexHint') }}
       held={held} counted leave={back} under={dialog} lineTerm={isPortrait() ? undefined : runBar?.tip} glyph={barGlyph} moreIcon={glyph('dots')} more={more} extra={isPortrait() ? devTool : undefined} />
       : <CampaignBar bar={bar} tabs={alone ? [] : TABS} tab={tab} setTab={setTab} lead={tabSprite} disabledTabs={locked} held={ui.rogueEchoesOwed ? { ICO_QUEST_GOLD: -ui.rogueEchoesOwed } : {}} leave={back} under={dialog} glyph={barGlyph}
@@ -257,9 +267,6 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     {pastDeck && <DeckView details={pastDeck} line={t('lblWebNCards', pastDeck.stats.main)} button={t('lblClose')} close={() => setHistoryDeck(null)} />}
     {shownRunDeck && <DeckView details={shownRunDeck} line={t('lblWebNCards', shownRunDeck.stats.main)} button={t('lblClose')} close={() => setRunDeck(false)} />}
     {npcs && <NpcLevelsPage asked={npcs} answer={answer} />}
-    {fresh && details && (
-      <DeckView details={details} line={t('lblRogueStartingDeck')} button={t('lblClose')} close={() => setChoice(c => ({ ...c, deck: null }))} />
-    )}
     {replace && (
       <Confirm layer="rg-dialog" danger title={replace.title} text={replace.paragraphs.flat().map(p => p.text).join('')}
         backLabel={replace.options[replace.options.length - 1].label} goLabel={replace.options[0].label}
@@ -274,6 +281,31 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     <Terms />
     {!tell && announced && <Announcement key={announced.id} announced={announced} ok={actions.rogueAnnounced} />}
   </>;
+}
+
+/** Where the Deck tab draws the run's deck. The editor stays in its own layer, so this tells rogue.css where to place it, as --tab-* on the page. */
+function EditorSlot() {
+  const slot = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const page = document.documentElement.style;
+    const place = () => {
+      const r = slot.current!.getBoundingClientRect();
+      page.setProperty('--tab-left', `${r.left}px`);
+      page.setProperty('--tab-top', `${r.top}px`);
+      page.setProperty('--tab-width', `${r.width}px`);
+      page.setProperty('--tab-height', `${r.height}px`);
+    };
+    place();
+    const watch = new ResizeObserver(place);
+    watch.observe(slot.current!);
+    window.addEventListener('resize', place);
+    return () => {
+      watch.disconnect();
+      window.removeEventListener('resize', place);
+      for (const k of ['left', 'top', 'width', 'height']) page.removeProperty(`--tab-${k}`);
+    };
+  }, []);
+  return <div ref={slot} class="rg-deck-slot" />;
 }
 
 /** On a touch screen a tap on a card in the Codex, or on a card's name in Rogue's text, zooms the card, as mobile does. */

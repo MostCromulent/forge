@@ -20,9 +20,12 @@ import type { Marks } from './removals';
 const GROUP_KEY = 'forge.groupBy';
 const HAND = 7;
 
-/** marks, for a run's deck, are the copies chosen for removal. A click on a main deck card then chooses a copy, and nothing else takes cards out. */
-export function DeckHalf({ actions, state, handlers, check, adding, addTo, marks, mark }: {
-  actions: Actions; state: EditorState; handlers: CardHandlers; check?: ComponentChildren;
+/**
+ * marks, for a run's deck, are the copies chosen for removal. A click on a main deck card then chooses a copy, and nothing else takes cards out.
+ * tools sit after the main deck's count, where a run's deck has its menu.
+ */
+export function DeckHalf({ actions, state, handlers, check, tools, adding, addTo, marks, mark }: {
+  actions: Actions; state: EditorState; handlers: CardHandlers; check?: ComponentChildren; tools?: ComponentChildren;
   adding: DeckSection | null; addTo: (section: DeckSection | null) => void; marks?: Marks; mark: (card: EditorCard) => void;
 }) {
   const [by, setBy] = useState<GroupBy>(storedGroup);
@@ -91,6 +94,7 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo, marks
         <h4>
           <span class="zn">{t('lblMainDeck')}</span>
           <span class="count">{state.stats.main}</span>
+          {tools}
           <span class="seg view-seg" role="group" aria-label={t('lblWebEditorShowDeckAs')}>
             <button aria-pressed={cards} onClick={() => view(true)}>{t('lblCards')}</button>
             <button aria-pressed={!cards} onClick={() => view(false)}>{t('lblWebDraftList')}</button>

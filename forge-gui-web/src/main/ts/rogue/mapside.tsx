@@ -58,8 +58,8 @@ function Loot({ map, n }: { map: RogueMap; n: MapNode }) {
 
 const paragraphs = (text?: string) => (text ?? '').split('\n').filter(Boolean);
 
-/** The commander's panel above the node's, as Adventure stacks the player's panel: face, name, the run's balances, and the deck. */
-function Commander({ model, actions, zoom }: { model: Model; actions: Actions; zoom: (image: string) => void }) {
+/** The commander's panel above the node's, as Adventure stacks the player's panel: face, name, the run's balances, and the deck's size. */
+function Commander({ model, zoom }: { model: Model; zoom: (image: string) => void }) {
   const run = model.rogueHome!.run!;
   const bar = model.rogueMap!.bar.bar;
   return (
@@ -73,7 +73,6 @@ function Commander({ model, actions, zoom }: { model: Model; actions: Actions; z
       </div>
       <div class="kc-deck">
         <span>{`${t('lblDeck')}: ${t('lblWebNCards', run.cards)}`}</span>
-        <button onClick={() => actions.rogueEditDeck(model.rogueHome!.snapshot)}>{t('lblEdit')}</button>
       </div>
     </div>
   );
@@ -83,7 +82,7 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
   const [zoom, setZoom] = useState<string | null>(null);
   const { map, n, enter, reroll, rerollOff, why } = useNode(model, actions);
   const run = model.rogueHome?.run;
-  const top = run && <Commander model={model} actions={actions} zoom={setZoom} />;
+  const top = run && <Commander model={model} zoom={setZoom} />;
   const foot = <>
     {reroll && <button disabled={rerollOff} title={map.rerollReason} onClick={reroll}>{glyph('reroll')}{` ${t('lblRogueRerollPlaneCount', map.rerolls)}`}</button>}
     <button class="primary rg-go" disabled={!enter} onClick={enter}>{n.enter}</button>
@@ -109,11 +108,20 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
   return (
     <SidePanel kicker={<span {...explains(map.terms.PLANEBOUND)}>{kind(map, n)}</span>} title={n.name} art={n.art} zoom={zoom} setZoom={setZoom} foot={foot} top={top}>
       <div class="camp-chips"><Chips map={map} n={n} cls="camp-chip" /></div>
-      <div class="rg-sec"><h4>{t('lblPlane')}</h4><span class="rg-plane" data-sideways="">{n.planeImage && <img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} />}</span></div>
+      <div class="rg-sec"><h4>{t('lblPlane')}</h4><Plane n={n} /></div>
       <div class="rg-sec">{paragraphs(n.text).map((p, i) => <p key={i}>{p}</p>)}</div>
       {reward}
     </SidePanel>
   );
+}
+
+/** The plane as mobile shows it: a strip of its art and its name, which preview the card. Its rules are the node's text under it. */
+function Plane({ n }: { n: MapNode }) {
+  if (!n.planeImage) return null;
+  return <>
+    <span class="rg-plane strip" data-sideways=""><img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} /></span>
+    <b class="rg-plane-name rg-cn" data-image={n.planeImage} data-sideways="">{n.plane}</b>
+  </>;
 }
 
 /** The phone's bar under the trail: the node shown, Enter, the sheet of its plane, and the reroll. */
@@ -150,7 +158,7 @@ export function PlaneSheet({ model, actions }: { model: Model; actions: Actions 
           <div class="camp-kicker">{kind(map, n)}</div>
           <h3>{n.faceDown ? '???' : n.name}</h3>
           <div class="ln"><Chips map={map} n={n} cls="" /></div>
-          {n.planeImage && <span class="rg-plane" data-sideways=""><img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} /></span>}
+          <Plane n={n} />
           {n.faceDown && map.hidden && <p>{map.hidden}</p>}
           {paragraphs(n.text).map((p, i) => <p key={i}>{p}</p>)}
           <div class="camp-kicker">{t('lblWebRogueReward')}</div>

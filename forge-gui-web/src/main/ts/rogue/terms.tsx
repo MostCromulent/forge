@@ -24,7 +24,10 @@ export function Words({ parts }: { parts: Part[] }) {
       const icon = TERM_ICONS[p.term!];
       return <span key={i} class={icon ? 'rg-kw ico' : 'rg-kw'} data-term={p.term} data-tip={p.tip} tabIndex={0}>{icon && <Icon d={icon} cls="rg-ic" />}{p.text}</span>;
     }
-    return p.kind === 'card' && p.text ? <span key={i} class="rg-cn" data-image={p.image}>{p.text}</span> : lines(p.text);
+    if (p.kind !== 'card' || !p.text) return lines(p.text);
+    // A card with no picture carries its text, and the preview draws that as it draws a card without a picture in a match
+    const face = p.face && { 'data-image': '', 'data-card': p.face.name, 'data-cost': p.face.cost, 'data-type': p.face.type, 'data-text': p.face.text, 'data-pt': p.face.pt ?? '' };
+    return <span key={i} class="rg-cn" data-image={p.image} {...face}>{p.text}</span>;
   })}</>;
 }
 

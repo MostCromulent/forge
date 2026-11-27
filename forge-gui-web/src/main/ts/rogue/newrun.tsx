@@ -11,7 +11,8 @@ import { ROGUE_ICONS } from './icons';
 import { place, rolling } from './carousel';
 import { CustomRun } from './custom';
 import { TraitTile } from './traits';
-import type { DescensionStep, RogueChoice, RogueCommander, RogueRoster, Trait } from '../protocol';
+import { CardGroup, Curve } from '../deck/deckview';
+import type { DeckDetails, DescensionStep, RogueChoice, RogueCommander, RogueRoster, Trait } from '../protocol';
 
 /** What the player has chosen so far. pick is the place of the commander in front, or null for the first unlocked one. */
 export interface Choice {
@@ -23,7 +24,7 @@ export interface Choice {
   mods: string[];
   /** The phone's Descension sheet is open. */
   sheet: boolean;
-  /** The deck whose start deck is shown. */
+  /** The commander's deck that the Starting Deck tab shows. */
   deck: string | null;
 }
 
@@ -86,35 +87,38 @@ export const descensionLabel = (level: number) => t('lblRogueDescensionLevel', l
 
 /**
  * runs goes back to the unfinished run, and is null with none. begin is given the deck, or an empty name when the commander is generated, and the level.
- * answer is the server's latest about the custom run, and toggle asks it to tick or untick a modification.
+ * answer is the server's latest about the custom run, and toggle asks it to tick or untick a modification. startDeck is choice.deck's cards once the server sends them.
  */
-export function NewRun({ roster, choice, set, runs, begin, answer, toggle, unlocked }: {
+export function NewRun({ roster, choice, set, runs, begin, answer, toggle, unlocked, startDeck }: {
   roster: RogueRoster; choice: Choice; set: SetChoice; runs: (() => void) | null; begin: (deck: string, level: number) => void;
-  answer: RogueChoice | null; toggle: (id: string) => void; unlocked: boolean;
+  answer: RogueChoice | null; toggle: (id: string) => void; unlocked: boolean; startDeck: DeckDetails | null;
 }) {
   const list = shown(roster, choice);
   const commander = list[picked(list, choice)];
   const go = () => begin(generates(roster, choice) ? '' : commander.deck, levelFor(commander, choice));
   return choice.customOpen
     ? <CustomRun roster={roster} choice={choice} set={set} begin={go} answer={answer} toggle={toggle} />
-    : <Carousel roster={roster} choice={choice} set={set} runs={runs} begin={go} answer={answer} unlocked={unlocked} />;
+    : <Carousel roster={roster} choice={choice} set={set} runs={runs} begin={go} answer={answer} unlocked={unlocked} startDeck={startDeck} />;
 }
 
-function Carousel({ roster, choice, set, runs, begin, answer, unlocked }: {
+function Carousel({ roster, choice, set, runs, begin, answer, unlocked, startDeck }: {
   roster: RogueRoster; choice: Choice; set: SetChoice; runs: (() => void) | null; begin: () => void; answer: RogueChoice | null; unlocked: boolean;
+  startDeck: DeckDetails | null;
 }) {
   const list = shown(roster, choice);
   const n = list.length;
   const at = picked(list, choice);
   const phone = isPortrait();
   const [stop, setStop] = useState<(() => void) | null>(null);
+  const [wait, setWait] = useState(0);
   const [traitsTab, setTraitsTab] = useState(false);
   const traits = startingTraits(roster, choice, answer);
   const press = useRef<number | null>(null);
   const swiped = useRef(false);
   useEffect(() => () => stop?.(), [stop]);
   // As on desktop, choosing another commander clears the Descension level outside Custom Run
-  const choose = (i: number) => set(c => (picked(list, c) === i ? c : { ...c, pick: i, level: c.custom ? c.level : 0 }));
+  const choose = (i: number) => set(c => (picked(list, c) === i ? c
+    : { ...c, pick: i, level: c.custom ? c.level : 0, deck: c.deck && !list[i].unlock ? list[i].deck : null }));
   const step = (by: number) => choose((at + by + n) % n);
   const random = () => {
     if (stop) {
@@ -124,21 +128,20 @@ function Carousel({ roster, choice, set, runs, begin, answer, unlocked }: {
     const others = list.map((x, i) => i).filter(i => i !== at && !list[i].unlock);
     if (!others.length) return;
     const to = others[Math.floor(Math.random() * others.length)];
-    const end = rolling(at, to, n, choose, () => setStop(null));
+    const end = rolling(at, to, n, (i, ms) => { setWait(ms ?? 0); choose(i); }, () => setStop(null));
     setStop(() => end);
   };
   const hv = (i: number) => (i === at ? 'hv on' : 'hv');
   const can = (i: number) => ready(roster, { ...choice, pick: i }, answer);
   const commander = list[at];
   const go = phone && !choice.sheet && (
-    <div class="go" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+    <div class="go" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
       <button disabled={!commander || !!commander.unlock} onClick={() => set(c => ({ ...c, sheet: true }))}>{descensionLabel(levelFor(commander, choice))}</button>
       <button disabled={!roster.custom} aria-pressed={choice.custom} onClick={() => set(c => ({ ...c, custom: true, customOpen: true }))}>{t('lblRogueCustomRun')}</button>
-      <button disabled={!commander || !!commander.unlock} onClick={() => set(c => ({ ...c, deck: commander.deck }))}>{t('lblRogueStartDeck')}</button>
     </div>
   );
   return (
-    <div class="rgm" data-pick={at} data-swipe="" data-rolling={stop ? '' : undefined}
+    <div class="rgm" data-pick={at} data-swipe="" data-rolling={stop ? '' : undefined} style={stop ? { '--roll': `${wait}ms` } : undefined}
       onPointerDown={e => { press.current = e.clientX; }}
       onPointerUp={e => {
         if (press.current === null) return;
@@ -170,6 +173,7 @@ function Carousel({ roster, choice, set, runs, begin, answer, unlocked }: {
               <button key={c.deck} class={cls} data-i={i} aria-pressed={i === at} aria-label={c.name ?? '???'} onClick={() => choose(i)}
                 style={{ backgroundImage: face, '--o': p.o, '--abs': p.abs, '--sg': p.sign }}>
                 {c.unlock && <Icon d={ROGUE_ICONS.lock} cls="rg-ic" />}
+                <i class="rise" />
               </button>
             );
           })}
@@ -189,10 +193,12 @@ function Carousel({ roster, choice, set, runs, begin, answer, unlocked }: {
       <aside class="rgm-side">
         <div class="rgm-body">
           <div class="rgm-tabs" role="tablist">
-            <button role="tab" aria-selected={!traitsTab} onClick={() => setTraitsTab(false)}>{t('lblCommander')}</button>
-            <button role="tab" aria-selected={traitsTab} onClick={() => setTraitsTab(true)}>{t('lblRogueTraitsCount', traits?.length ?? 0)}</button>
+            <button role="tab" aria-selected={!traitsTab && !choice.deck} onClick={() => { setTraitsTab(false); set(c => ({ ...c, deck: null })); }}>{t('lblCommander')}</button>
+            <button role="tab" aria-selected={traitsTab && !choice.deck} onClick={() => { setTraitsTab(true); set(c => ({ ...c, deck: null })); }}>{t('lblRogueTraitsCount', traits?.length ?? 0)}</button>
+            <button role="tab" aria-selected={!!choice.deck} disabled={!commander || !!commander.unlock} onClick={() => set(c => ({ ...c, deck: commander.deck }))}>{t('lblRogueStartingDeck')}</button>
           </div>
-          {traitsTab ? <StartingTraits traits={traits} />
+          {choice.deck ? <StartingDeck details={startDeck} />
+            : traitsTab ? <StartingTraits traits={traits} />
             : list.map((c, i) => <div key={c.deck} class={hv(i)} data-v={i}><Words roster={roster} commander={c} choice={choice} set={set} unlocked={unlocked} /></div>)}
         </div>
         <div class="rgm-end">
@@ -200,12 +206,11 @@ function Carousel({ roster, choice, set, runs, begin, answer, unlocked }: {
           {list.map((c, i) => (
             <div key={c.deck} class={hv(i)} data-v={i}>
               {c.unlock ? <button class="primary rg-start-btn" disabled>{t('lblRogueStartRun')}</button> : <>
-                <div class="rgm-opt" hidden={phone}>
-                  {roster.custom
-                    ? <button class={choice.custom ? 'rg-toggle on' : 'rg-toggle'} onClick={() => set(x => ({ ...x, custom: true, customOpen: true }))}><span class="sw" />{t('lblRogueCustomRun')}</button>
-                    : <span />}
-                  <button onClick={() => set(x => ({ ...x, deck: c.deck }))}><Icon d={ROGUE_ICONS.deck} cls="rg-ic" /> {t('lblRogueStartDeck')}</button>
-                </div>
+                {roster.custom && (
+                  <div class="rgm-opt" hidden={phone}>
+                    <button class={choice.custom ? 'rg-toggle on' : 'rg-toggle'} onClick={() => set(x => ({ ...x, custom: true, customOpen: true }))}><span class="sw" />{t('lblRogueCustomRun')}</button>
+                  </div>
+                )}
                 <button class="primary rg-start-btn" disabled={!can(i)} onClick={begin}>{t('lblRogueStartRun')}</button>
               </>}
             </div>
@@ -214,6 +219,15 @@ function Carousel({ roster, choice, set, runs, begin, answer, unlocked }: {
       </aside>
     </div>
   );
+}
+
+/** The commander's deck as a list, under its curve. */
+function StartingDeck({ details }: { details: DeckDetails | null }) {
+  if (!details) return null;
+  return <>
+    <Curve curve={details.stats.curve} spells={details.stats.spells} px={44} />
+    <div class="dk-cards" data-list>{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} stacked={false} />)}</div>
+  </>;
 }
 
 /** The run's starting traits as its Effects page draws them. */

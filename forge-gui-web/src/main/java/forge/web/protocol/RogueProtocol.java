@@ -7,6 +7,7 @@ import forge.web.protocol.MessageJson.Command;
 import forge.web.protocol.MessageJson.Message;
 import forge.web.protocol.MessageJson.Nullable;
 import forge.web.protocol.MessageJson.Ts;
+import forge.web.protocol.ToBrowser.CardFace;
 import forge.web.protocol.ToBrowser.DeckDetails;
 import forge.web.protocol.ToBrowser.EditorGroup;
 
@@ -138,7 +139,11 @@ public final class RogueProtocol {
     }
 
     /** The bar over the run's pages. tip explains its line. traits counts the run's traits, Descension and Endless left out. */
-    public record RogueRunBar(CampaignBar bar, @Nullable String tip, int traits) {
+    /**
+     * held is what a battle's spoils add that the bar holds back, until heldFor, the id of the question showing them, has counted them in.
+     * heldFor is 0 while no screen shows them yet.
+     */
+    public record RogueRunBar(CampaignBar bar, @Nullable String tip, int traits, @Nullable TellGains held, int heldFor) {
     }
 
     /** The run's traits, in the order they are listed, and its carry cards. */
@@ -327,8 +332,11 @@ public final class RogueProtocol {
     public record NpcLevels(String name, int avatar, List<String> levels) {
     }
 
-    /** A piece of text. kind is "text", "card" or "term"; image is a card's picture, term a keyword's name and tip what the keyword means. */
-    public record Part(String kind, String text, @Nullable String image, @Nullable String term, @Nullable String tip) {
+    /**
+     * A piece of text. kind is "text", "card" or "term"; image is a card's picture, term a keyword's name and tip what the keyword means.
+     * face is a card's text, which the preview shows for a card with no picture, as Rogue's own cards are.
+     */
+    public record Part(String kind, String text, @Nullable String image, @Nullable String term, @Nullable String tip, @Nullable CardFace face) {
     }
 
     /** count is how many equal copies it stands for, and type the term of a carry card's type, or null for another card. */
@@ -355,7 +363,7 @@ public final class RogueProtocol {
      */
     public record AskCards(String kind, String title, @Nullable String subtitle, List<PickCard> cards, int min, int max,
             @Nullable Integer rerollCost, boolean rerollEnabled, @Nullable PickDeck deck, @Nullable String art, List<Spoil> spoils,
-            @Nullable TellGains gains, @Nullable Integer gold) {
+            @Nullable Integer gold) {
     }
 
     /** Something a battle gave or cost, worded by its reward script under its title. icon is the skin icon it is drawn with, or null. */
@@ -405,11 +413,10 @@ public final class RogueProtocol {
      * A result or a message. kind is a ResultKind name, "MESSAGE", or "SPOILS" for a battle's spoils that no card reward showed, which alone has
      * spoils. art is the picture behind a result.
      */
-    public record Tell(String kind, String title, List<Part> text, List<TellSection> sections, List<Spoil> spoils, @Nullable TellGains gains,
-            @Nullable String art) {
+    public record Tell(String kind, String title, List<Part> text, List<TellSection> sections, List<Spoil> spoils, @Nullable String art) {
     }
 
-    /** The gold, Echoes and life a battle's spoils add, which the run's bar holds back until the screen showing the spoils counts them in. */
+    /** The gold, Echoes and life a battle's spoils add, which the run's bar holds back until the screen showing the spoils counts them in (RogueRunBar). */
     public record TellGains(int gold, int echoes, int life) {
     }
 
