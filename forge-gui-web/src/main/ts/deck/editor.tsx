@@ -19,9 +19,8 @@ import type { DeckSection, EditorState } from '../protocol';
 import { t } from '../text';
 import { FormatMenu, groupsOf, isCardPool } from '../formatmenu';
 import { Backdrop, Dropdown } from '../dialog';
-import { ICONS, Icon } from '../icons';
+import { ICONS, Icon, Sprite } from '../icons';
 import { showNotice } from '../notices';
-import { Sprite } from '../rogue/kit';
 import { RemovalBar, heldMarks, settled, toggled, type Marks, type Removal } from './removals';
 
 /** A planar deck has one section, so there is nowhere to drag its cards to, and they have no menu. A run's deck loses cards only through its removal bar. */

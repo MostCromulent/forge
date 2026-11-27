@@ -1,4 +1,4 @@
-// Every Lucide icon the page uses (ISC, see forge-gui/res/licenses/lucide-license.txt). Each entry is the shapes inside a 24-unit svg
+// Every Lucide icon the page uses (ISC, see forge-gui/res/licenses/lucide-license.txt). Each entry is the shapes inside a 24-unit svg. Below them, the Adventure sprites
 
 export const ICONS = {
   check: '<path d="M20 6 9 17l-5-5"/>',
@@ -52,3 +52,23 @@ export function Icon({ d, cls }: { d: string; cls?: string }) {
 
 /** A menu item's icon. It goes at the start of the item, or at the end when `end` is set. */
 export const MenuIcon = ({ d, end, cls }: { d: string; end?: boolean; cls?: string }) => <Icon d={d} cls={['menu-icon', end ? 'end' : '', cls ?? ''].filter(Boolean).join(' ')} />;
+
+/** Adventure's item and building sprites, as mobile's Rogue screens draw them: sheet, x, y and the square's side. The server cuts them (rogue-adventure.css). */
+export const SPRITES = {
+  life: ['items', 48, 16, 16], coin: ['items', 48, 0, 16], shards: ['items', 32, 768, 16], deck: ['items', 48, 48, 16],
+  refresh: ['items', 0, 80, 16], menu: ['items', 32, 64, 16], mag: ['items', 448, 63, 16], star: ['items', 464, 16, 16],
+  rune: ['items', 352, 80, 16], toolbox: ['items', 448, 79, 16], blood: ['items', 80, 528, 16], status: ['items', 16, 64, 16],
+  award: ['items', 144, 496, 16], skull: ['items', 0, 496, 16], xmark: ['items', 16, 80, 16], spark: ['items', 320, 160, 16],
+  dmap: ['items', 176, 848, 16], vs: ['items', 208, 928, 16], spellbook: ['items', 144, 688, 16], logbook: ['items', 240, 912, 16],
+  fire: ['buildings', 304, 288, 16], event: ['buildings', 240, 272, 16], chest: ['buildings', 432, 272, 16],
+  sanctum: ['buildings', 160, 240, 32], bazaar: ['buildings', 192, 240, 32],
+} as const;
+export type SpriteName = keyof typeof SPRITES;
+
+/** A sprite at a whole multiple of its own size nearest px, and never above twice it, so one texel is one size across the screen. */
+export function Sprite({ k, px = 16, cls, alt = '' }: { k: SpriteName; px?: number; cls?: string; alt?: string }) {
+  const [sheet, x, y, n] = SPRITES[k];
+  const s = n * Math.min(2, Math.max(1, Math.round(px / n)));
+  return <img class={cls ? `ks ks-${k} ${cls}` : `ks ks-${k}`} alt={alt} width={s} height={s} style={{ width: `${s}px`, height: `${s}px` }}
+    src={`adventure?s=${sheet}&r=${x},${y},${n},${n}`} />;
+}

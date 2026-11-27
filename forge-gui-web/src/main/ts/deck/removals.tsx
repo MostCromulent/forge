@@ -3,7 +3,7 @@
 import type { ComponentChild } from 'preact';
 import { useLayoutEffect, useRef } from 'preact/hooks';
 import type { EditorCard, EditorState } from '../protocol';
-import { Sprite } from '../rogue/kit';
+import { Sprite } from '../icons';
 import { t, tNodes } from '../text';
 
 /** How many copies of each card are chosen for removal, by name. */
