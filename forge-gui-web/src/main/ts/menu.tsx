@@ -100,7 +100,7 @@ const KIND_ICONS: Record<string, ComponentChildren> = {
 const MENU_ART: Record<string, string> = {
   play: 'c:Mirror Match|C15|1',
   multiplayer: 'c:Secret Rendezvous|SOC|1',
-  editor: 'c:Scroll Rack|TMP|1',
+  editor: 'c:Arcane Encyclopedia|M19|1',
   constructed: 'c:Jace, the Mind Sculptor|WWK|1',
   draft: 'c:Cogwork Librarian|CNS|1',
   sealed: 'c:Booster Tutor|UND|1',
