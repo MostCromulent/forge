@@ -19,12 +19,7 @@ import java.util.stream.Collectors;
 public record RogueStart(RogueDeck deck, boolean custom, Set<CustomRunModification> modifications, int descension) {
 
     public static List<RogueDeck> roster(boolean experimental) {
-        return roster(RogueConfig.loadRogueDecks(), experimental);
-    }
-
-    /** decks are all Rogue decks, as RogueConfig loads them. Reading them is slow, so a caller that asks often keeps them. */
-    public static List<RogueDeck> roster(List<RogueDeck> decks, boolean experimental) {
-        List<RogueDeck> availableDecks = new ArrayList<>(decks);
+        List<RogueDeck> availableDecks = RogueConfig.loadRogueDecks();
         availableDecks.removeIf(deck -> deck.isExperimental() != experimental);
 
         // Sort commanders: unlocked first (alphabetically), then locked (alphabetically)
@@ -110,8 +105,7 @@ public record RogueStart(RogueDeck deck, boolean custom, Set<CustomRunModificati
                 return false;
             }
         }
-        if (!isGeneratedCommander() && (deck == null || !deck.isUnlocked()
-            || deck.isExperimental() != runModifications.contains(CustomRunModification.EXPERIMENT))) {
+        if (!isGeneratedCommander() && (deck == null || !deck.isUnlocked())) {
             return false;
         }
         // The level after the last one counts as unlocked once the last one is won

@@ -101,6 +101,12 @@ public final class RoguePages {
         static final List<RogueDeck> ALL = RogueConfig.loadRogueDecks();
     }
 
+    /** The roster or the experimental commanders, unlocked first, each part by name. */
+    private static List<RogueDeck> roster(final boolean experimental) {
+        return Decks.ALL.stream().filter(d -> d.isExperimental() == experimental)
+                .sorted(Comparator.comparing((RogueDeck d) -> !d.isUnlocked()).thenComparing(RogueDeck::getName)).toList();
+    }
+
     private static final Map<String, Part> MAP_TERMS = Arrays.stream(new KeywordHint[] {KeywordHint.PLANEBOUND, KeywordHint.WRATHFUL, KeywordHint.CURSED,
             KeywordHint.CARD_REWARD, KeywordHint.GOLD, KeywordHint.ECHOES}).collect(Collectors.toMap(KeywordHint::name, h -> new Part("term", h.getTitle(), null, h.getTitle(), h.getHintText())));
 
@@ -155,7 +161,7 @@ public final class RoguePages {
         final CampaignBar bar = new CampaignBar(text.getMessage("lblRogueCommander"),
                 runs == 0 ? text.getMessage("lblWebRogueNoRuns") : record(runs, progress.getTotalRunsWon()), balances, Map.of());
         final String commander = run == null ? null : run.getCurrentCommanderName();
-        final List<String> fan = RogueStart.roster(Decks.ALL, false).stream().filter(d -> d.isUnlocked() && !d.getCommanderCardName().equals(commander))
+        final List<String> fan = roster(false).stream().filter(d -> d.isUnlocked() && !d.getCommanderCardName().equals(commander))
                 .limit(3).map(d -> d.getStartDeck().getCommanders().get(0).getImageKey(false)).collect(Collectors.toList());
         return new RogueHome(number, bar, run == null ? null : runCard(run), RogueStart.tabsUnlocked(progress), fan, progress.isDevUnlockAll(),
                 progress.getAetherUpgradeLevel() >= AetherUpgrade.getMaxLevel());
@@ -199,7 +205,7 @@ public final class RoguePages {
     private static List<RogueCommander> commanders(final RogueMetaProgress progress, final boolean experimental) {
         final Localizer text = Localizer.getInstance();
         final List<RogueCommander> commanders = new ArrayList<>();
-        for (final RogueDeck deck : RogueStart.roster(Decks.ALL, experimental)) {
+        for (final RogueDeck deck : roster(experimental)) {
             if (!deck.isUnlocked()) {
                 final String unlock = deck.getUnlockDescription();
                 commanders.add(new RogueCommander(deck.getName(), null, null, "", "", List.of(), text.getMessage("lblRogueLocked"), 0, 0, 0, 0, -1,

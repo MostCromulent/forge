@@ -935,6 +935,13 @@ public final class RogueGame implements Campaign, IHasForgeLog {
                 begin.custom(), modifications, begin.descension());
     }
 
+    /** As RogueStart.canBegin, which also lets an experimental commander start without Experiment and Experiment start a roster commander. */
+    public static boolean canBegin(final RogueStart start, final RogueMetaProgress progress) {
+        final boolean generated = start.custom() && start.modifications().stream().anyMatch(CustomRunModification::isGeneratedCommander);
+        final boolean experiment = start.custom() && start.modifications().contains(CustomRunModification.EXPERIMENT);
+        return start.canBegin(progress) && (generated || start.deck().isExperimental() == experiment);
+    }
+
     /** Runs on the flow thread, because it reads the progress. Null for an unknown modification. */
     private static RogueChoice choice(final RogueChoose asked) {
         final Set<CustomRunModification> asOn = modifications(asked.modifications());
@@ -946,7 +953,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         final RogueStart start = new RogueStart(RoguePages.deck(asked.deck()), true, on, asked.descension());
         final RogueMetaProgress progress = RogueMetaProgress.getInstance();
         return new RogueChoice(asked.deck(), on.stream().map(Enum::name).toList(), asked.descension(),
-                on.stream().filter(m -> RogueStart.isForced(on, m)).map(Enum::name).toList(), start.canBegin(progress), RoguePages.startingTraits(start, progress));
+                on.stream().filter(m -> RogueStart.isForced(on, m)).map(Enum::name).toList(), canBegin(start, progress), RoguePages.startingTraits(start, progress));
     }
 
     public static final Commands<RogueGame> COMMANDS = new Commands<RogueGame>()
@@ -986,7 +993,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             }))
             .on(RogueBegin.class, (g, ch, b) -> g.submit(b.snapshot(), -1, () -> {
                 final RogueStart start = start(b);
-                if (start != null) {
+                if (start != null && canBegin(start, RogueMetaProgress.getInstance())) {
                     g.flow.begin(start);
                 }
             }));

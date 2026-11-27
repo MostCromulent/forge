@@ -19,6 +19,7 @@ import forge.gamemodes.rogue.path.NodeSanctum;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
 import forge.util.MyRandom;
+import forge.web.campaign.rogue.RogueGame;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -92,8 +93,8 @@ public class RogueStartTest {
     public void anExperimentalCommanderNeedsExperiment() {
         unlockCustomRuns();
         final RogueDeck experimental = RogueStart.roster(true).get(0);
-        Assert.assertFalse(normal(experimental, 0).canBegin(progress), "an experimental commander needs Experiment");
-        Assert.assertTrue(new RogueStart(experimental, true, Set.of(CustomRunModification.EXPERIMENT), 0).canBegin(progress));
+        Assert.assertFalse(RogueGame.canBegin(normal(experimental, 0), progress), "an experimental commander needs Experiment");
+        Assert.assertTrue(RogueGame.canBegin(new RogueStart(experimental, true, Set.of(CustomRunModification.EXPERIMENT), 0), progress));
     }
 
     @Test
