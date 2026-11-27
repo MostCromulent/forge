@@ -2,7 +2,6 @@ package forge.web;
 
 import forge.LobbyPlayer;
 import forge.game.GameType;
-import forge.game.GameView;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueEvent;
@@ -13,7 +12,6 @@ import forge.gamemodes.rogue.RogueRun.CarryCardType;
 import forge.gamemodes.rogue.RogueRunHistoryEntry;
 import forge.gamemodes.rogue.RogueRunState;
 import forge.gamemodes.rogue.RogueWinLoseController;
-import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.ChestEffect;
 import forge.gamemodes.rogue.effect.CustomRunModification;
 import forge.gamemodes.rogue.effect.EventEffect;
@@ -81,15 +79,6 @@ public class RogueFlowTest {
         run = RogueFixture.run(at);
         flow.setRun(run);
         return run.getCurrentNode();
-    }
-
-    private void aetherwork(final AetherEffect effect) {
-        final RogueMetaProgress progress = RogueMetaProgress.getInstance();
-        progress.setAetherUpgradeLevel(3);
-        progress.setTotalEchoes(100);
-        Assert.assertTrue(progress.upgradeAetherEffect(effect));
-        progress.activateAetherEffect(effect);
-        run.snapshotAetherEffects(progress);
     }
 
     private static Pick<ChestEffect> loot(final ChestEffect effect) {
@@ -375,33 +364,6 @@ public class RogueFlowTest {
     }
 
     @Test
-    public void theSummaryHoldsWhatTheRunGained() {
-        start(NodePlanebound.class);
-        run.setCurrentNodeIndex(10);
-        aetherwork(AetherEffect.RESTORATION_CHAMBER);
-        final List<PaperCard> chosen = new ArrayList<>();
-        for (int i = 0; i < 2; i++) {
-            decisions.then("show", args -> {
-                chosen.add((PaperCard) ((List<?>) args[1]).get(0));
-                return List.of(chosen.get(chosen.size() - 1));
-            });
-        }
-        final RogueMatch match = startedMatch();
-        run.setHostedMatch(new HostedMatch());
-        final GameView game = RogueFixture.finished(match, true);
-        // Carried only after the match was dealt, so it is not on the battlefield at its end
-        run.addCarryCard(FModel.getMagicDb().getCommonCards().getCard("Gilded Goose"), CarryCardType.FELLOW, "test");
-        final RogueWinLoseController.Gains gains = flow.matchOver(game, resultScreen()).getGains();
-        Assert.assertSame(gains.planebound(), ((NodePlanebound) run.getPath().getNode(10)).getRoguePlanebound());
-        Assert.assertEquals(gains.gold(), 4);
-        Assert.assertEquals(gains.echoes(), 4);
-        Assert.assertEquals(gains.life(), 2);
-        Assert.assertEquals(gains.credits(), 2);
-        Assert.assertEquals(gains.cards(), chosen);
-        Assert.assertEquals(gains.lost().stream().map(RogueRun.CarryCard::cardName).toList(), List.of("Gilded Goose"));
-    }
-
-    @Test
     public void aLostBattleEndsTheRun() {
         final NodePlanebound plane = (NodePlanebound) start(NodePlanebound.class);
         final RogueWinLoseController result = fight(false);
@@ -423,12 +385,6 @@ public class RogueFlowTest {
         Assert.assertEquals(flow.resultTitle(result), "Run Completed!");
         Assert.assertEquals(flow.resultDetail(result), "Boss slain: " + ((NodePlanebound) run.getPath().getNode(15)).getRoguePlanebound().planeboundName());
         Assert.assertTrue(flow.offersEnding(result));
-        final RogueWinLoseController.Gains gains = result.getGains();
-        Assert.assertSame(gains.planebound(), ((NodePlanebound) run.getPath().getNode(15)).getRoguePlanebound());
-        Assert.assertEquals(gains.echoes(), 10);
-        Assert.assertEquals(gains.gold(), 0);
-        Assert.assertEquals(gains.life(), 0);
-        Assert.assertTrue(gains.cards().isEmpty());
         Assert.assertEquals(run.getRunState(), RogueRunState.STARTED, "the player has not chosen yet");
         flow.resultLeft(result, false);
         Assert.assertEquals(decisions.asked, List.of("startMatch", "runEnded"));

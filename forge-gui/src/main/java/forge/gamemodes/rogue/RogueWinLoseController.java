@@ -40,15 +40,6 @@ public class RogueWinLoseController {
 
     // Carry cards lost during the match (set by handleMatchData, shown by both victory/defeat)
     private List<CarryCard> lostCarryCards = ImmutableList.of();
-    private RoguePlanebound beaten;
-    private int goldWon;
-    private int echoesWon;
-    private int lifeGained;
-    private int creditsWon;
-    private List<PaperCard> cardsAdded = ImmutableList.of();
-
-    /** What a won match gave, for a client that shows it all at once. planebound is the one beaten, or null. */
-    public record Gains(RoguePlanebound planebound, int gold, int echoes, int life, int credits, List<PaperCard> cards, List<CarryCard> lost) { }
 
     public RogueWinLoseController(final GameView game0, final IWinLoseView<? extends IButton> view0,
                                  final RogueRun currentRun0, final CardRewardHelper.RewardDialog rewardDialog0) {
@@ -100,10 +91,6 @@ public class RogueWinLoseController {
         return currentRun != null && currentRun.isRunFailed();
     }
 
-    public Gains getGains() {
-        return new Gains(beaten, goldWon, echoesWon, lifeGained, creditsWon, cardsAdded, lostCarryCards);
-    }
-
     private void handleMatchVictory() {
         if (currentRun == null) {
             Logger.error("Cannot record Rogue match victory without an active run");
@@ -124,7 +111,6 @@ public class RogueWinLoseController {
             int lifeBefore = currentRun.getCurrentLife();
             RogueEffectComposite.INSTANCE.onMatchWin(currentRun);
             int gainedLife = currentRun.getCurrentLife() - lifeBefore;
-            lifeGained = Math.max(0, gainedLife);
             if (gainedLife > 0) {
                 view.showMessage(localizer.getMessage("lblRogueGainedLife", gainedLife), localizer.getMessage("lblRogueEffect"), FSkinProp.ICO_QUEST_CHARM);
             }
@@ -151,14 +137,11 @@ public class RogueWinLoseController {
         RogueEffectComposite.INSTANCE.onBeforeRewards(rewardCtx, currentRun);
 
         NodePlanebound planeboundNode = resolvePlanebound(currentNode);
-        beaten = planeboundNode == null ? null : planeboundNode.getRoguePlanebound();
 
         // Award gold and echo rewards for ALL planebound nodes (including Boss)
         if (planeboundNode != null && !rewardCtx.skipRewards) {
             goldReward = Math.max(0, planeboundNode.getGoldReward() + rewardCtx.goldRewardAdjustment);
             echoReward = planeboundNode.getEchoReward();
-            goldWon = goldReward;
-            echoesWon = echoReward;
 
             // Gold is run-specific (spent at Bazaar during the run)
             currentRun.addGold(goldReward);
@@ -257,7 +240,6 @@ public class RogueWinLoseController {
             view.showMessage(localizer.getMessage("lblRogueEchoesWon", echoReward), localizer.getMessage("lblRogueEchoReward"), FSkinProp.ICO_QUEST_GOLD);
         }
 
-        int creditsBefore = currentRun.getRemovalCredits();
         List<PaperCard> chosenCards = new ArrayList<>(CardRewardHelper.runReward(currentRun,
                 rewardDialog, false, rewardCtx, null));
 
@@ -267,8 +249,6 @@ public class RogueWinLoseController {
                     rewardDialog, true, rewardCtx, null);
             chosenCards.addAll(chosenMythics);
         }
-        cardsAdded = chosenCards;
-        creditsWon = currentRun.getRemovalCredits() - creditsBefore;
 
         if (!chosenCards.isEmpty()) {
             view.showCards(localizer.getMessage("lblRogueCardsAdded"), chosenCards);

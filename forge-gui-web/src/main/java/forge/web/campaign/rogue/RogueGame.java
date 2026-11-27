@@ -126,6 +126,11 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         final CompletableFuture<String> left = new CompletableFuture<>();
         RogueWinLoseController controller;
         RecordedWinLoseView view;
+        RogueRun run;
+        RoguePlanebound plane;
+        /** The run's gold and the player's echoes before the result's rewards. */
+        int goldBefore;
+        int echoesBefore;
     }
 
     /** A battle's spoils for the screen about to show them. held is what of them the run's bar has not counted yet, or null after the first screen. */
@@ -584,6 +589,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             throw new IllegalStateException("No browser to play in");
         }
         final Battle b = new Battle();
+        b.run = match.run();
+        b.plane = match.node() == null ? null : match.node().getRoguePlanebound();
         battle = b;
         try {
             h.startMatch(MODE, RUN, () -> new PreparedMatch(match.rules(), match.variants(), match.players(), match.human()), () -> b.failed = true);
@@ -612,6 +619,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
         try {
             b.view = new RecordedWinLoseView();
+            b.goldBefore = b.run.getCurrentGold();
+            b.echoesBefore = RogueMetaProgress.getInstance().getTotalEchoes();
             b.controller = flow.matchOver(b.game, b.view);
             final Runnable script = b.view.takeScript();
             if (script != null) {
@@ -622,8 +631,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             // As mobile does, spoils that no card reward showed get a screen of their own
             final Spoils spoils = web == null || b.spoilsShown ? null : spoils();
             if (spoils != null && !spoils.list().isEmpty()) {
-                final RoguePlanebound beaten = b.controller.getGains().planebound();
-                web.showSpoils(flow.resultTitle(b.controller), spoils, beaten == null ? null : CodexHelper.getPlaneCard(beaten));
+                final boolean beaten = b.controller.hasWonMatch() && b.plane != null;
+                web.showSpoils(flow.resultTitle(b.controller), spoils, beaten ? CodexHelper.getPlaneCard(b.plane) : null);
             }
             boolean endless = false;
             if (flow.offersEnding(b.controller)) {
@@ -659,12 +668,16 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         return b == null || b.controller == null || b.spoilsShown ? null : held(b);
     }
 
-    /** A gain counts only when a spoil names it, so a gain no screen lists, such as a boss's gold, is not held back. */
+    /**
+     * A gain counts only when a spoil names it, so a gain no screen lists, such as a boss's gold, is not held back.
+     * The life gained is what the run has over the life it kept from the match, which the win's effects add to.
+     */
     private static TellGains held(final Battle b) {
         final Set<String> icons = b.view.steps.stream().map(RewardStep::icon).filter(Objects::nonNull).collect(Collectors.toSet());
-        final RogueWinLoseController.Gains gains = b.controller.getGains();
-        return new TellGains(icons.contains(FSkinProp.ICO_QUEST_COIN.name()) ? gains.gold() : 0,
-                icons.contains(FSkinProp.ICO_QUEST_GOLD.name()) ? gains.echoes() : 0, icons.contains(FSkinProp.ICO_QUEST_CHARM.name()) ? gains.life() : 0);
+        final int kept = b.run.getMaxLife() > 0 ? Math.min(b.run.getLastMatchRawLife(), b.run.getMaxLife()) : b.run.getLastMatchRawLife();
+        return new TellGains(icons.contains(FSkinProp.ICO_QUEST_COIN.name()) ? Math.max(0, b.run.getCurrentGold() - b.goldBefore) : 0,
+                icons.contains(FSkinProp.ICO_QUEST_GOLD.name()) ? Math.max(0, RogueMetaProgress.getInstance().getTotalEchoes() - b.echoesBefore) : 0,
+                icons.contains(FSkinProp.ICO_QUEST_CHARM.name()) ? Math.max(0, b.run.getCurrentLife() - kept) : 0);
     }
 
     /** Sends the result the first time, then waits until the match is left. */
