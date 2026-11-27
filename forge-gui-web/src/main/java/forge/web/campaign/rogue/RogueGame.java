@@ -707,7 +707,6 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         return new CampaignResult(b.controller.hasWonMatch(), true, flow.resultTitle(b.controller), resultDetail(b.controller), buttons);
     }
 
-    /** A line under the result's title, or null. */
     private String resultDetail(final RogueWinLoseController controller) {
         final RogueRun run = flow.run();
         if (run == null) {
@@ -935,7 +934,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
                 begin.custom(), modifications, begin.descension());
     }
 
-    /** As RogueStart.canBegin, which also lets an experimental commander start without Experiment and Experiment start a roster commander. */
+    /** RogueStart.canBegin, and also an experimental commander only with Experiment and a roster commander only without it. */
     public static boolean canBegin(final RogueStart start, final RogueMetaProgress progress) {
         final boolean generated = start.custom() && start.modifications().stream().anyMatch(CustomRunModification::isGeneratedCommander);
         final boolean experiment = start.custom() && start.modifications().contains(CustomRunModification.EXPERIMENT);
