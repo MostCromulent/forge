@@ -18,11 +18,11 @@ export function Backdrop({ layer = 'backdrop', cls, dismiss, children, ...rest }
 }
 
 /** A question with a back button and a go button. A press outside also goes back. The go button is marked danger when it loses something. */
-export function Confirm({ title, label, text, back, backLabel, go, goLabel, danger, cls }: {
-  title: string; label?: string; text: string; back: () => void; backLabel: string; go: () => void; goLabel: string; danger?: boolean; cls?: string;
+export function Confirm({ title, label, text, back, backLabel, go, goLabel, danger, layer, cls }: {
+  title: string; label?: string; text: string; back: () => void; backLabel: string; go: () => void; goLabel: string; danger?: boolean; layer?: string; cls?: string;
 }) {
   return (
-    <Backdrop cls={cls} dismiss={back}>
+    <Backdrop layer={layer} cls={cls} dismiss={back}>
       <div class="dialog" role="alertdialog" aria-label={label ?? title}>
         <h3>{title}</h3>
         <p class="hint">{text}</p>

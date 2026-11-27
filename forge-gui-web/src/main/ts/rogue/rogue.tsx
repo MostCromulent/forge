@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CampaignBar, CampaignShell, forgetTallies, slideTab } from '../campaign/campaign';
-import { Backdrop } from '../dialog';
+import { Backdrop, Confirm } from '../dialog';
 import { Icon } from '../icons';
 import { hideBroken, imageUrl } from '../images';
 import { isPortrait } from '../form';
@@ -238,16 +238,16 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       </div>
     )}
     {abandoning && run && (
-      <Confirm title={t('lblRogueAbandonRun')} text={t('lblRogueAbandonRunConfirm')} back={t('lblCancel')} go={t('lblRogueAbandonRun')} danger={!isPortrait()}
-        onBack={() => setAbandoning(false)} dismiss={() => setAbandoning(false)} onGo={() => {
+      <Confirm layer="rg-dialog" danger title={t('lblRogueAbandonRun')} text={t('lblRogueAbandonRunConfirm')} backLabel={t('lblCancel')}
+        goLabel={t('lblRogueAbandonRun')} back={() => setAbandoning(false)} go={() => {
           setAbandoning(false);
           playSound({ t: 'sound', name: 'lose_duel', sync: false });
           actions.rogueAbandon(home.snapshot);
         }} />
     )}
     {resetting && (
-      <Confirm title={t(RESETS[resetting][0])} text={t(RESETS[resetting][1])} back={t('lblCancel')} go={t('lblReset')}
-        onBack={() => setResetting(null)} dismiss={() => setResetting(null)} onGo={() => {
+      <Confirm layer="rg-dialog" danger title={t(RESETS[resetting][0])} text={t(RESETS[resetting][1])} backLabel={t('lblCancel')} goLabel={t('lblReset')}
+        back={() => setResetting(null)} go={() => {
           setResetting(null);
           actions.rogueReset(home.snapshot, resetting);
         }} />
@@ -261,8 +261,9 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
       <DeckView details={details} line={t('lblRogueStartingDeck')} button={t('lblClose')} close={() => setChoice(c => ({ ...c, deck: null }))} />
     )}
     {replace && (
-      <Confirm title={replace.title} text={replace.paragraphs.flat().map(p => p.text).join('')} back={replace.options[replace.options.length - 1].label}
-        go={replace.options[0].label} onBack={() => answer(replace.options.length - 1)} onGo={() => answer(0)} />
+      <Confirm layer="rg-dialog" danger title={replace.title} text={replace.paragraphs.flat().map(p => p.text).join('')}
+        backLabel={replace.options[replace.options.length - 1].label} goLabel={replace.options[0].label}
+        back={() => answer(replace.options.length - 1)} go={() => answer(0)} />
     )}
     {deciding && ui.rogueDeckView && model.rogueRunDeck && (
       <DeckView details={model.rogueRunDeck.deck} line={t('lblWebNCards', model.rogueRunDeck.deck.stats.main)}
@@ -340,24 +341,6 @@ function NpcLevelsPage({ asked, answer }: { asked: AskNpcs; answer: (value: unkn
         <div class="actions">
           <button onClick={() => answer(null)}>{t('lblCancel')}</button>
           <button class="primary" onClick={() => answer(picked)}>{t('lblOK')}</button>
-        </div>
-      </div>
-    </Backdrop>
-  );
-}
-
-/** Asks before a step that cannot be taken back: abandoning the run, or abandoning it for a new one. go is drawn red. */
-function Confirm({ title, text, back, go, danger, onBack, onGo, dismiss }: {
-  title: string; text: string; back: string; go: string; danger?: boolean; onBack: () => void; onGo: () => void; dismiss?: () => void;
-}) {
-  return (
-    <Backdrop layer="rg-dialog" dismiss={dismiss}>
-      <div class="dialog" role="alertdialog" aria-label={title}>
-        <h3>{title}</h3>
-        <p>{text.split('\n').flatMap((line, i) => (i ? [<br key={i} />, line] : [line]))}</p>
-        <div class="actions">
-          <button onClick={onBack}>{back}</button>
-          <button class={danger ? 'danger' : undefined} style={{ color: 'var(--concede)' }} onClick={onGo}>{go}</button>
         </div>
       </div>
     </Backdrop>
