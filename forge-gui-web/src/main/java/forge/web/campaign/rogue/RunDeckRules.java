@@ -55,11 +55,6 @@ final class RunDeckRules implements DeckEditor.Rules, IHasForgeLog {
     }
 
     @Override
-    public String counter() {
-        return Localizer.getInstance().getMessage("lblWebRogueRemovalCreditCount", run.getRemovalCredits());
-    }
-
-    @Override
     public int credits() {
         return run.getRemovalCredits();
     }

@@ -60,11 +60,6 @@ public class DeckCollectionRulesTest {
         }
 
         @Override
-        public String counter() {
-            return credits + " credits";
-        }
-
-        @Override
         public int credits() {
             return credits;
         }
@@ -132,7 +127,6 @@ public class DeckCollectionRulesTest {
         Assert.assertNull(e.remove("Sol Ring", DeckSection.Main, 1));
         Assert.assertNull(e.remove("Shock", DeckSection.Main, 1));
         Assert.assertEquals(credits, 0);
-        Assert.assertEquals(e.state().counter(), "0 credits");
         Assert.assertEquals(e.remove("Llanowar Elves", DeckSection.Main, 1), NO_CREDITS);
         Assert.assertEquals(e.deck().getMain().countAll(), 5);
         Assert.assertEquals(e.deck().getMain().countByName("Llanowar Elves"), 1);
@@ -194,7 +188,6 @@ public class DeckCollectionRulesTest {
         final DeckEditor e = editor(deck(), true);
         final Deck other = new Deck("List");
         other.getMain().add(card("Forest"), 40);
-        Assert.assertFalse(e.state().canReplace());
         Assert.assertNotNull(e.replaceAll(other));
         assertMain(e, deck());
         Assert.assertEquals(credits, 2);

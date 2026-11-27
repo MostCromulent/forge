@@ -119,7 +119,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   const [secondary, primary]: [[ImportAction, string], [ImportAction, string]] = from === 'editor'
     ? [['replace', t('lblWebImportReplaceDeck')], ['add', t('lblWebImportAddToDeck')]]
     : [['edit', t('lblWebImportAndEdit')], from === 'seat' ? ['use', t('lblWebImportAndUse')] : ['save', t('lblImport')]];
-  const fixed = from === 'editor' && !!model.editor && !model.editor.canReplace;
+  const fixed = from === 'editor' && !!model.editor?.removals;
   return (
     <Backdrop cls="importer-back" dismiss={close}>
       <div class="importer">

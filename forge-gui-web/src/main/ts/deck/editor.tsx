@@ -160,20 +160,20 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
         {check}
         <div class="head-right">
           <span class="save-state">{saveState(state)}</span>
-          {state.counter && <span class={state.counterSpent ? 'deck-counter spent' : 'deck-counter'}>{run ? <Sprite k="deck" /> : <Icon d={ICONS.cut} />}{state.counter}</span>}
+          {state.removals && <span class={state.removals.credits === 0 ? 'deck-counter spent' : 'deck-counter'}><Sprite k="deck" />{t('lblWebRogueRemovalCreditCount', state.removals.credits)}</span>}
           <button disabled={!state.canUndo} onClick={() => actions.editorUndo()} title={`${t('lblUndo')} (Ctrl+Z)`} aria-label={t('lblUndo')}>&#8630;<span class="word"> {t('lblUndo')}</span></button>
           <HeadControls />
           <button class="primary" onClick={() => actions.closeEditor()}>{t('lblDone')}</button>
         </div>
       </PageHeader>
-      {state.catalogue && <div class="editor-tabs" role="group">
+      {!run && <div class="editor-tabs" role="group">
         <button aria-pressed={half === 'find'} onClick={() => setHalf('find')}>{t(planar ? 'lblWebPlanarFind' : 'lblWebEditorFindCards')}</button>
         <button aria-pressed={half === 'deck'} onClick={() => setHalf('deck')}>
           {t(planar ? 'lblPlanarDeck' : 'lblDeck')} <span class={state.verdict ? 'n no' : 'n'}>{state.verdict ? '! ' : ''}{planar ? planarCount(state) : state.stats.main}</span>
         </button>
       </div>}
-      <div class={`editor-shell${half === 'deck' || !state.catalogue ? ' deck' : ''}${planar ? ' planar' : ''}${state.catalogue ? '' : ' alone'}`}>
-        {state.catalogue && <Catalogue model={model} actions={actions} state={state} handlers={planar ? noHandlers : handlers} adding={adding} stopAdding={() => setAddingTo(null)} />}
+      <div class={`editor-shell${half === 'deck' || run ? ' deck' : ''}${planar ? ' planar' : ''}${run ? ' alone' : ''}`}>
+        {!run && <Catalogue model={model} actions={actions} state={state} handlers={planar ? noHandlers : handlers} adding={adding} stopAdding={() => setAddingTo(null)} />}
         {planar ? <PlanarDeck actions={actions} state={state} /> : <DeckHalf actions={actions} state={state} handlers={run ? noHandlers : handlers} check={check}
           adding={adding} marks={run ? new Map(chosen) : undefined} mark={card => {
             setMarks(toggled(new Map(chosen), card));

@@ -261,8 +261,6 @@ public final class ToBrowser {
     /**
      * inBrowser says the deck is saved in a guest's browser, not in the host's decks. copyOf names a read-only deck that the first change will copy.
      * commanderZone says the format has a commander. copyLimit is the most copies allowed of a card other than a basic land, or null for no limit.
-     * counter is what a collection's rules count, and counterSpent says it has come to its end. canReplace says an import may replace the deck's cards.
-     * catalogue says cards can be found to add; a collection with rules adds only basic lands, from the lands bar.
      */
     public record EditorState(String name, String check, String format, @Nullable String cardPool, boolean unrestricted,
             boolean inBrowser, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderZone, boolean commanderWanted,
@@ -270,11 +268,13 @@ public final class ToBrowser {
             List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
             @Nullable String verdict, boolean canUndo, @Nullable String landed,
             boolean limited, @Nullable String landSet, List<LandSet> landSets, @Nullable String collection, boolean mainOnly,
-            List<EditorSection> sections, @Nullable String counter, boolean counterSpent, boolean canReplace, boolean catalogue,
-            @Nullable EditorRemovals removals) {
+            List<EditorSection> sections, @Nullable EditorRemovals removals) {
     }
 
-    /** What taking cards out of a collection's main deck costs: the credits left, and the cards in it that cost none. Null when removals are free. */
+    /**
+     * What taking cards out of a collection's main deck costs: the credits left, and the cards in it that cost none. Null when removals are free.
+     * A deck with removals adds only basic lands, from the lands bar, and an import cannot replace its cards.
+     */
     public record EditorRemovals(int credits, List<String> free) {
     }
 

@@ -611,8 +611,7 @@ public final class DeckEditor {
                 DeckFacts.stats(deck), legality.verdict(), !undo.isEmpty(), landed,
                 limited(), landSet, limited() || collection == null ? LandSets.ALL
                         : collection.landSets().apply(deck).stream().map(e -> new LandSet(e.getCode(), e.getName())).toList(),
-                collection == null ? null : collection.owner(), collection != null && collection.mainOnly(), sections(legality),
-                rules == null ? null : rules.counter(), rules != null && rules.credits() == 0, rules == null, rules == null, removals());
+                collection == null ? null : collection.owner(), collection != null && collection.mainOnly(), sections(legality), removals());
     }
 
     private EditorRemovals removals() {
@@ -1051,9 +1050,6 @@ public final class DeckEditor {
 
         /** The main deck changed, by undo or not, and lost these cards. It runs before the deck is saved. */
         void changed(CardPool removed, boolean undo);
-
-        /** The counter's text, or null. */
-        String counter();
 
         /** How many cards that are not free may be taken out. */
         int credits();
