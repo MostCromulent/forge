@@ -414,20 +414,18 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
 /**
  * A campaign mode's page. It shows the saved games, the form that starts a new one in their place, or an open save's pages.
  * icons are the balance icons. They are loaded when the mode opens, because on a first visit they would otherwise load after every picture on the first page.
- * always is for a mode that has no shelf of saved games: open draws its pages also while no save is open.
  */
-export function CampaignShell({ model, actions, icons, shelf, open, always, class: cls }: {
+export function CampaignShell({ model, actions, icons, shelf, open }: {
   model: Model; actions: Actions; icons: string[];
-  shelf?: (creating: boolean, setCreating: (on: boolean) => void) => ComponentChildren; open: () => ComponentChildren;
-  always?: boolean; class?: string;
+  shelf: (creating: boolean, setCreating: (on: boolean) => void) => ComponentChildren; open: () => ComponentChildren;
 }) {
-  const inside = always || model.campaignSave !== null;
+  const inside = model.campaignSave !== null;
   useEffect(() => { for (const icon of icons) new Image().src = skinIconUrl(icon); }, []);
   // The new-save form closes and the saves list returns when the player goes back or the new save opens
   const [creating, setCreating] = useState(false);
   useEffect(() => { if (inside) setCreating(false); }, [inside]);
   return (
-    <div key={inside ? 'open' : 'shelf'} class={!inside ? 'limited-page' : cls ? `camp-shell ${cls}` : 'camp-shell'}>
+    <div key={inside ? 'open' : 'shelf'} class={inside ? 'camp-shell' : 'limited-page'}>
       {/* An open save has its back button on its bar. On a phone the shelf's trail draws the header */}
       {!inside && !isPortrait() && (
         <PageHeader class="limited-head">
@@ -437,7 +435,7 @@ export function CampaignShell({ model, actions, icons, shelf, open, always, clas
           </div>
         </PageHeader>
       )}
-      {inside ? open() : shelf?.(creating, setCreating)}
+      {inside ? open() : shelf(creating, setCreating)}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { CampaignBar, CampaignShell, forgetTallies, slideTab } from '../campaign/campaign';
+import { CampaignBar, forgetTallies, slideTab } from '../campaign/campaign';
 import { Backdrop, Confirm } from '../dialog';
 import { Icon } from '../icons';
 import { hideBroken, imageUrl } from '../images';
@@ -52,7 +52,7 @@ const devTools = (home: RogueHome): [string, TextKey][] => [
 ];
 const RUN_TOOLS: [string, TextKey][] = [['nextNode', 'lblRogueDevNextNode'], ['winRun', 'lblRogueDevWinRun']];
 
-/** Rogue Commander's page. The mode has no shelf of saved games, so the shell is always open. */
+/** Rogue Commander's page. The mode has no shelf of saved games, so it draws its pages in the campaign shell's box without CampaignShell. */
 export function RogueHub({ model, actions }: { model: Model; actions: Actions }) {
   // Rogue is drawn in Adventure's look (rogue-adventure.css) while it is open. The deck editor over it keeps the editor's own look, dialogs included
   const editing = !!model.editor;
@@ -63,7 +63,7 @@ export function RogueHub({ model, actions }: { model: Model; actions: Actions })
   }, [editing]);
   useEffect(tapToZoom, []);
   useEffect(scrollHints, []);
-  return <CampaignShell model={model} actions={actions} icons={[]} always class="rg-shell" open={() => <Pages model={model} actions={actions} />} />;
+  return <div class="camp-shell rg-shell"><Pages model={model} actions={actions} /></div>;
 }
 
 function Pages({ model, actions }: { model: Model; actions: Actions }) {
