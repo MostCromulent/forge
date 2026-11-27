@@ -21,8 +21,10 @@ import { FormatMenu, groupsOf, isCardPool } from '../formatmenu';
 import { Backdrop, Dropdown } from '../dialog';
 import { ICONS, Icon } from '../icons';
 import { showNotice } from '../notices';
+import { Sprite } from '../rogue/kit';
+import { RemovalBar, creditCost, heldMarks, settled, toggled, type Marks, type Removal } from './removals';
 
-/** A planar deck has one section, so there is nowhere to drag its cards to, and they have no menu. */
+/** A planar deck has one section, so there is nowhere to drag its cards to, and they have no menu. A run's deck loses cards only through its removal bar. */
 const noHandlers: CardHandlers = () => ({});
 
 export function Editor({ model, actions }: { model: Model; actions: Actions }) {
@@ -37,6 +39,14 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   const [half, setHalf] = useState<'find' | 'deck'>('find');
   /** The non-main section the catalogue adds to, such as planes. Null means the main deck. */
   const [addingTo, setAddingTo] = useState<DeckSection | null>(null);
+  const [marks, setMarks] = useState<Marks>(new Map());
+  const [removal, setRemoval] = useState<Removal | null>(null);
+  useEffect(() => {
+    const next = settled(removal, state!);
+    if (next === removal) return;
+    if (next?.done) setMarks(new Map());
+    setRemoval(next);
+  }, [state]);
   // A list pasted outside a text field opens the importer with it, as a file dropped on the page does
   useEffect(() => {
     const pasted = (e: ClipboardEvent) => {
@@ -54,6 +64,9 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
     return null;
   }
   const planar = isPlanar(state);
+  // A Rogue Commander run's deck, whose removals cost the run's credits
+  const run = !!state.removals;
+  const chosen = run ? heldMarks(marks, state) : [];
   // The section chosen for the previous deck may not exist in this one
   const adding = planar ? 'Planes' : addingTo && state.sections.some(s => s.section === addingTo) ? addingTo : null;
   const dropped = (carried: Carried, v: Verdict) => {
@@ -104,12 +117,12 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
     }}><Icon d={icon} /><span>{label}</span></button>
   );
   // Shown in the header, and on a phone in the deck summary, next to the verdict it explains
-  const check = planar ? null : state.limited
+  const check = planar || run ? null : state.limited
     ? <span class="check-fixed">{state.format === 'CommanderDraft' ? state.check : t('lblWebEditorLimitedFixed')}</span>
     : state.collection ? <span class="check-fixed">{state.check}</span>
     : <CheckControl model={model} state={state} actions={actions} />;
   return (
-    <div class="editor-page">
+    <div class={run ? 'editor-page rogue-deck' : 'editor-page'}>
       <PageHeader class="editor-head">
         {state.collection && <span class="deck-owner">{state.collection} &rsaquo;</span>}
         <div class="deck-title">
@@ -147,7 +160,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
         {check}
         <div class="head-right">
           <span class="save-state">{saveState(state)}</span>
-          {state.counter && <span class={state.counterSpent ? 'deck-counter spent' : 'deck-counter'}><Icon d={ICONS.cut} />{state.counter}</span>}
+          {state.counter && <span class={state.counterSpent ? 'deck-counter spent' : 'deck-counter'}>{run ? <Sprite k="deck" /> : <Icon d={ICONS.cut} />}{state.counter}</span>}
           <button disabled={!state.canUndo} onClick={() => actions.editorUndo()} title={`${t('lblUndo')} (Ctrl+Z)`} aria-label={t('lblUndo')}>&#8630;<span class="word"> {t('lblUndo')}</span></button>
           <HeadControls />
           <button class="primary" onClick={() => actions.closeEditor()}>{t('lblDone')}</button>
@@ -161,10 +174,22 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
       </div>}
       <div class={`editor-shell${half === 'deck' || !state.catalogue ? ' deck' : ''}${planar ? ' planar' : ''}${state.catalogue ? '' : ' alone'}`}>
         {state.catalogue && <Catalogue model={model} actions={actions} state={state} handlers={planar ? noHandlers : handlers} adding={adding} stopAdding={() => setAddingTo(null)} />}
-        {planar ? <PlanarDeck actions={actions} state={state} /> : <DeckHalf actions={actions} state={state} handlers={handlers} check={check} adding={adding} addTo={section => {
-          setAddingTo(section);
-          if (section) setHalf('find');
-        }} />}
+        {planar ? <PlanarDeck actions={actions} state={state} /> : <DeckHalf actions={actions} state={state} handlers={run ? noHandlers : handlers} check={check}
+          adding={adding} marks={run ? new Map(chosen) : undefined} mark={card => {
+            setMarks(toggled(new Map(chosen), card));
+            setRemoval(null);
+          }} addTo={section => {
+            setAddingTo(section);
+            if (section) setHalf('find');
+          }} />}
+        {run && <RemovalBar state={state} chosen={chosen} removal={removal} clear={() => {
+            setMarks(new Map());
+            setRemoval(null);
+          }} undo={() => actions.editorUndo()}
+          remove={() => {
+            setRemoval({ n: chosen.reduce((sum, [, k]) => sum + k, 0), cost: creditCost(chosen, state), at: state, done: false });
+            actions.edit({ op: 'removeCards', count: 0, cards: chosen.map(([name, count]) => ({ name, count })) });
+          }} />}
       </div>
       {dialog === 'text' && <TextDialog state={state} close={() => setDialog(null)} />}
       {dialog === 'delete' && (

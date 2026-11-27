@@ -902,3 +902,100 @@ html.kit .rg-n.hid:not(.side) { background: #e7dcc0 padding-box; }
 html.kit .rg-n.hid:not(.side) .q { display: grid; place-items: center; position: absolute; inset: 0 0 24px; font: 700 46px/1 Georgia, serif; color: var(--ink-soft, rgba(42, 29, 16, .62)); }
 /* A phone's side nodes have 44px places, so the 76px ring centres on its place with -16px, where the generated sheet's -8px suits a wide map's 60px */
 html.kit.kit[data-form="portrait"] .rg-vtrail .rg-n.side { margin: -16px 0 0 -16px; }
+
+/* A Rogue Commander run's deck editor in Adventure's look: a stone header, the deck on parchment, and the removal bar in stone under it.
+   It has its own class because the page's kit class is off while the editor is open, so the editor's dialogs keep the editor's look.
+   #editor .rogue-deck.editor-page outranks the editor's own landscape and phone rules, which start html[...] #editor. */
+#editor .rogue-deck.editor-page .editor-head, #editor .rogue-deck.editor-page .removal-bar {
+  --text: #f1e7cf; --muted: #cdbfa3; --faint: #a8987a; --line: rgba(241, 231, 207, .2);
+  image-rendering: pixelated; border-style: solid; border-width: 12px; border-image: url("../adventure?s=skin&r=203,385,48,48") 6 / 12px repeat;
+  border-radius: 0; background: rgba(16, 13, 10, .94) padding-box; box-shadow: none; color: var(--text);
+}
+#editor .rogue-deck.editor-page :is(.head-right > button:not(.primary), .deck-menu-button, .rm-keys > button:not(.primary)) {
+  image-rendering: pixelated; background: none; border-style: solid; border-width: 8px 8px 14px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 8px 8px 14px repeat;
+  border-radius: 0; box-shadow: none; color: var(--text); height: 40px; min-height: 0; padding: 0 12px;
+}
+#editor .rogue-deck.editor-page :is(.head-right > button:not(.primary), .deck-menu-button, .rm-keys > button:not(.primary)):active:not(:disabled) { border-image-source: url("../adventure?s=skin&r=125,175,14,16"); }
+#editor .rogue-deck.editor-page .deck-title button.deck-menu-button { width: 40px; padding: 0; }
+#editor .rogue-deck.editor-page :is(.head-right > button.primary, .rm-keys > button.primary) {
+  image-rendering: pixelated; background: none; border-style: solid; border-width: 12px 10px 14px; border-image: url("../adventure?s=skin&r=75,165,32,16") 6 5 7 fill / 12px 10px 14px repeat;
+  border-radius: 0; box-shadow: none; color: #f2c344; height: 44px; min-height: 0; padding: 0 14px; text-shadow: 0 1px 0 #000;
+}
+/* The generic disabled look only fades a button, so a Remove the credits cannot pay for is the grey key at full strength */
+#editor .rogue-deck.editor-page .rm-keys > button.primary:disabled { border-width: 8px 8px 14px; border-image: url("../adventure?s=skin&r=1,1,14,16") 4 4 7 fill / 8px 8px 14px repeat; color: #8d8a84; text-shadow: none; opacity: 1; }
+#editor .rogue-deck.editor-page .deck-counter { border-color: #b8902f; background: #2a1f0c; color: #f2c344; }
+#editor .rogue-deck.editor-page .deck-counter.spent { border-color: rgba(241, 231, 207, .35); background: none; color: var(--muted); }
+#editor .rogue-deck.editor-page .ks, #editor .rogue-deck.editor-page .rc-ic { image-rendering: pixelated; flex: none; vertical-align: -3px; }
+
+/* The deck on parchment, as the run's deck dialog draws it, with the ink colours every Rogue paper panel uses */
+#editor .rogue-deck.editor-page .deck-half {
+  --text: #2a1d10; --muted: #5d5244; --faint: #786953; --accent: #7f520e; --accent-2: #7f520e; --gold: #7f520e;
+  --line: rgba(42, 29, 16, .32); --line-bright: rgba(42, 29, 16, .5); --edge: rgba(42, 29, 16, .45);
+  --surface: rgba(255, 249, 232, .45); --surface-2: rgba(42, 29, 16, .07); --surface-3: rgba(42, 29, 16, .16);
+  --tile: rgba(255, 250, 236, .5); --accent-soft: rgba(127, 82, 14, .13); --accent-glow: rgba(127, 82, 14, .2);
+  color: var(--text); text-shadow: none; image-rendering: pixelated; border-style: solid; border-radius: 0; box-shadow: none;
+  border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 / 26px 32px 22px 34px repeat;
+  background: url("../adventure?s=skin&r=18,122,15,24") 0 0 / 30px 48px repeat padding-box;
+}
+#editor .rogue-deck.editor-page .deck-half img { image-rendering: auto; }
+#editor .rogue-deck.editor-page .deck-half h3 { font-family: Georgia, serif; color: #7f520e; }
+#editor .rogue-deck.editor-page .deck-half :is(.sizes, .curve-key, .bars .bar em, .share-key, .share-key small) { color: #3a2a18; font-size: 12.5px; }
+#editor .rogue-deck.editor-page .deck-half .deck-count { color: #f1e7cf; }
+#editor .rogue-deck.editor-page .deck-half .cmd-tag { background: #2a1d10; border-color: #2a1d10; color: #f1e7cf; }
+#editor .rogue-deck.editor-page .deck-half button.small { image-rendering: pixelated; background: none; border-style: solid; border-width: 4px 4px 7px;
+  border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat; border-radius: 0; box-shadow: none; color: #f1e7cf; padding: 2px 10px; }
+#editor .rogue-deck.editor-page .deck-half .view-seg { border: 1.5px solid #2a1d10; background: none; }
+#editor .rogue-deck.editor-page .deck-half .view-seg > button { background: none; color: #2a1d10; font-weight: 600; }
+#editor .rogue-deck.editor-page .deck-half .view-seg > button + button { border-left: 1.5px solid #2a1d10; }
+#editor .rogue-deck.editor-page .deck-half .view-seg > button[aria-pressed="true"] { background: #2a1d10; color: #f1e7cf; }
+#editor .rogue-deck.editor-page .deck-half :is(.select-button, .land-set, .land-tail > button, .land-step .step) { background: none; border: 1.5px solid #2a1d10; color: #2a1d10; box-shadow: none; }
+#editor .rogue-deck.editor-page .deck-half .land-step .step { border-radius: 5px; }
+/* The free basic lands stay on the parchment, under an ink line, named even in landscape */
+#editor .rogue-deck.editor-page .land-row { border-top: 1.5px solid rgba(42, 29, 16, .3); margin-top: 6px; padding: 10px 0 0; }
+#editor .rogue-deck.editor-page .land-row > .band-lab { display: inline-block; margin-right: 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #5d5244; }
+#editor .rogue-deck.editor-page .land .n { color: #2a1d10; }
+
+/* A copy chosen for removal: the card darkened under a gold cross with a dark edge, so it reads by brightness as well as colour */
+#editor .rogue-deck.editor-page .deck-stack { cursor: pointer; }
+#editor .rogue-deck.editor-page .deck-stack.marked img { filter: brightness(.45) saturate(.6); }
+#editor .rogue-deck.editor-page .deck-stack .rm-mark { position: absolute; inset: 0; padding: 4px; border-radius: 5px; pointer-events: none;
+  box-shadow: 0 0 0 3px #f2c344, 0 0 0 5px #2a1d10;
+  background: linear-gradient(to top right, transparent calc(50% - 4px), #2a1d10 calc(50% - 4px) calc(50% - 2px), #f2c344 calc(50% - 2px) calc(50% + 2px), #2a1d10 calc(50% + 2px) calc(50% + 4px), transparent calc(50% + 4px)),
+    linear-gradient(to top left, transparent calc(50% - 4px), #2a1d10 calc(50% - 4px) calc(50% - 2px), #f2c344 calc(50% - 2px) calc(50% + 2px), #2a1d10 calc(50% + 2px) calc(50% + 4px), transparent calc(50% + 4px)); }
+#editor .rogue-deck.editor-page .rm-mark b { display: inline-block; padding: 0 6px; border-radius: 999px; background: #2a1d10; color: #f2c344; font-size: 11px; font-variant-numeric: tabular-nums; }
+#editor .rogue-deck.editor-page .ed-line { cursor: pointer; }
+#editor .rogue-deck.editor-page .ed-line.marked { background: #2a1d10; color: #f1e7cf; padding-left: 4px; }
+#editor .rogue-deck.editor-page .ed-line.marked .cost { display: none; }
+#editor .rogue-deck.editor-page .ed-line.marked .n { color: #f1e7cf; }
+#editor .rogue-deck.editor-page .ed-line .rm-mark::before { content: '\2715'; color: #f2c344; font-weight: 700; }
+#editor .rogue-deck.editor-page .ed-line .rm-mark b { margin-left: 4px; padding: 0; background: none; }
+
+/* The removal bar is a stone panel of its own under the parchment */
+#editor .rogue-deck.editor-page .editor-shell { grid-template-rows: minmax(0, 1fr) auto; gap: 10px; }
+#editor .rogue-deck.editor-page .removal-bar { display: flex; align-items: center; gap: 12px; min-height: 76px; box-sizing: border-box; padding: 4px 8px; }
+#editor .rogue-deck.editor-page .rm-words { flex: 1; min-width: 0; margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 13.5px; color: var(--muted); }
+#editor .rogue-deck.editor-page .rm-words:is(.hint, .done) { display: block; }
+#editor .rogue-deck.editor-page .rm-words > b { color: #f2c344; }
+#editor .rogue-deck.editor-page .rm-words > b.warn { color: #fff3d0; }
+#editor .rogue-deck.editor-page .rm-words > b.warn::before { content: '\26A0\00a0'; }
+#editor .rogue-deck.editor-page .rm-words .link { color: #f2c344; text-decoration: underline; font-weight: 600; }
+#editor .rogue-deck.editor-page .rm-keys { flex: none; display: flex; align-items: center; gap: 10px; }
+
+/* A phone: the stone and paper at their own size, so the deck keeps its width, and a slim bar */
+html[data-form="portrait"] #editor .rogue-deck.editor-page .editor-shell { gap: 0; }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .deck-half { border-width: 13px 16px 11px 17px; border-image-width: 13px 16px 11px 17px; }
+/* A phone's deck numbers keep their small text, so the deck's sizes beside them keep their width */
+html[data-form="portrait"] #editor .rogue-deck.editor-page .deck-half :is(.curve-key, .bars .bar em) { font-size: 10px; }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .deck-half :is(.share-key, .share-key small) { font-size: 11px; }
+/* The parchment's edge already sets the deck off from the screen's sides. The deck's numbers wrap rather than take the width its sizes need */
+html[data-form="portrait"] #editor .rogue-deck.editor-page .deck-half :is(.zone > h4, .zone-body) { padding-left: 2px; padding-right: 2px; }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .deck-half .deck-head .bar { width: 14px; }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .deck-half .deck-numbers { max-width: 170px; }
+html[data-form="portrait"] body:has(#editor .rogue-deck) #dock .dock.folded { bottom: var(--removal-bar-h, 0px); }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .removal-bar { border-width: 6px; border-image-width: 6px; min-height: 0; padding: 4px 6px; gap: 8px; }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .rm-words { font-size: 12.5px; gap: 2px 8px; }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .removal-bar .rm-keys > button { height: 36px; border-width: 4px 4px 7px; border-image-width: 4px 4px 7px; padding: 0 8px; font-size: 13px; }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .removal-bar .rm-keys > button.primary:not(:disabled) { border-width: 6px 5px 7px; border-image-width: 6px 5px 7px; }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .removal-bar .rm-keys { gap: 6px; }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .land-row { padding: 8px 0 4px; }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .land-row > .band-lab { margin: 0; }

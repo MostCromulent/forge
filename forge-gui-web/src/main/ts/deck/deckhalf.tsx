@@ -19,9 +19,10 @@ import { Select } from '../select';
 const GROUP_KEY = 'forge.groupBy';
 const HAND = 7;
 
-export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
+/** marks, for a run's deck, are the copies chosen for removal. A click on a main deck card then chooses a copy, and nothing else takes cards out. */
+export function DeckHalf({ actions, state, handlers, check, adding, addTo, marks, mark }: {
   actions: Actions; state: EditorState; handlers: CardHandlers; check?: ComponentChildren;
-  adding: DeckSection | null; addTo: (section: DeckSection | null) => void;
+  adding: DeckSection | null; addTo: (section: DeckSection | null) => void; marks?: Map<string, number>; mark: (card: EditorCard) => void;
 }) {
   const [by, setBy] = useState<GroupBy>(storedGroup);
   const [cards, view] = useDeckView();
@@ -47,8 +48,10 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
     <div key={g.heading} class="group">
       <h4><span class="hn" title={headingText(g.heading)}>{headingText(g.heading)}</span><span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
       {g.cards.map(c => cards
-        ? <Stack key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} handlers={handlers} />
-        : <Line key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} actions={actions} handlers={handlers} mainOnly={state.mainOnly} />)}
+        ? <Stack key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} handlers={handlers}
+          marked={marks?.get(c.name)} mark={marks && (() => mark(c))} />
+        : <Line key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} actions={actions} handlers={handlers}
+          mainOnly={state.mainOnly} marked={marks?.get(c.name)} mark={marks && (() => mark(c))} />)}
     </div>
   );
   return (
@@ -123,7 +126,7 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo }: {
         </div>
       )}
       <div class="land-row" role="group" aria-label={t('lblWebEditorBasicLands')}>
-        <span class="band-lab">{t('lblWebEditorBasicLands')}</span>
+        <span class="band-lab">{t(state.removals ? 'lblWebRogueBasicLandsFree' : 'lblWebEditorBasicLands')}</span>
         {/* A land the deck may not hold, or outside the commander's colours, is listed only while the deck holds some, so it can be taken out */}
         {state.lands.filter(l => !l.refusal || l.count).map(l => (
           <span key={l.name} class={(l.refusal ? 'land off' : 'land') + (l.count ? '' : ' zero')} title={l.refusal ?? undefined}>
@@ -250,38 +253,47 @@ function twoColumns<G extends { cards: unknown[] }>(groups: G[]): [G[], G[]] {
   return [groups.slice(0, split), groups.slice(split)];
 }
 
+/** The mark on a card chosen for removal. A card with more copies than are chosen says how many are. */
+function RemovalMark({ card, marked }: { card: EditorCard; marked?: number }) {
+  if (!marked) return null;
+  return <span class="rm-mark">{marked < card.count && <b>{marked}/{card.count}</b>}</span>;
+}
+
 /** One card in a section, drawn as its picture with the copy count on it. Cards in a column overlap so their names stay visible. */
-function Stack({ card, zone, landed, handlers, takeOut }: {
-  card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; handlers: CardHandlers; takeOut: () => void;
+function Stack({ card, zone, landed, handlers, takeOut, marked, mark }: {
+  card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; handlers: CardHandlers; takeOut: () => void; marked?: number; mark?: () => void;
 }) {
   return (
-    <div class={`deck-stack${card.problem ? ' bad' : ''}${landed ? ' landed' : ''}`} data-image={card.image} data-card={card.name} data-from={zone}
-      title={card.problem} {...handlers(card.name, zone, card.image, card.count)} onDblClick={takeOut}>
+    <div class={`deck-stack${card.problem ? ' bad' : ''}${landed ? ' landed' : ''}${marked ? ' marked' : ''}`} data-image={card.image} data-card={card.name}
+      data-from={zone} title={card.problem} {...handlers(card.name, zone, card.image, card.count)} onClick={mark} onDblClick={mark ? undefined : takeOut}>
       <img alt={card.name} src={smallImage(imageUrl(card.image))} draggable={false} />
       {card.count > 1 && <span class="deck-count">×{card.count}</span>}
+      <RemovalMark card={card} marked={marked} />
     </div>
   );
 }
 
-function Line({ card, zone, landed, actions, handlers, mainOnly, takeOut }: {
+function Line({ card, zone, landed, actions, handlers, mainOnly, takeOut, marked, mark }: {
   card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; actions: Actions; handlers: CardHandlers; mainOnly?: boolean; takeOut: () => void;
+  marked?: number; mark?: () => void;
 }) {
   const other: DeckSection = zone === 'Main' ? 'Sideboard' : 'Main';
   return (
-    <div class={`dk-line ed-line${card.problem ? ' bad' : ''}${landed ? ' landed' : ''}`} data-image={card.image} data-card={card.name} data-from={zone}
-      {...handlers(card.name, zone, card.image, card.count)}
+    <div class={`dk-line ed-line${card.problem ? ' bad' : ''}${landed ? ' landed' : ''}${marked ? ' marked' : ''}`} data-image={card.image} data-card={card.name}
+      data-from={zone} {...handlers(card.name, zone, card.image, card.count)} onClick={mark}
       // A double-click on one of the line's buttons counts only as two presses of that button
-      onDblClick={e => { if (!(e.target as Element).closest('button')) takeOut(); }}>
+      onDblClick={e => { if (!mark && !(e.target as Element).closest('button')) takeOut(); }}>
       <span class="n">{card.count}</span>
       <span class="nm">{card.name}</span>
       {card.printings > 1 && <span class="prints">{t('lblWebEditorPrintings', card.printings)}</span>}
       {card.problem && <span class="flag">! {card.problem}</span>}
+      <RemovalMark card={card} marked={marked} />
       <span class="cost"><SymbolText text={card.cost} /></span>
-      <span class="ra">
+      {!mark && <span class="ra">
         <button aria-label={t('lblWebEditorOneFewer', card.name)} onClick={() => actions.edit({ op: 'remove', name: card.name, from: zone, count: 1 })}>&minus;</button>
         <button aria-label={t('lblWebEditorOneMore', card.name)} onClick={() => actions.edit({ op: 'add', name: card.name, to: zone, count: 1 })}>+</button>
         {!mainOnly && <button onClick={() => actions.edit({ op: 'move', name: card.name, from: zone, to: other, count: 1 })}>{other === 'Main' ? t('lblMain') : t('lblSide')}</button>}
-      </span>
+      </span>}
     </div>
   );
 }
