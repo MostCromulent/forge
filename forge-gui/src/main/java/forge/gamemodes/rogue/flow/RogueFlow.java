@@ -143,18 +143,14 @@ public final class RogueFlow {
     }
 
     public String enterText() {
-        return enterText(currentRun.getCurrentNode());
-    }
-
-    /** The label of the button that enters the node, whichever node is current. A face-down plane is not named. */
-    public String enterText(RoguePathNode node) {
+        RoguePathNode node = currentRun.getCurrentNode();
         if (node == null) {
             return Localizer.getInstance().getMessage("lblRogueNoNodeAvailable");
         }
         return switch (node.getType()) {
             case PLANEBOUND -> {
                 NodePlanebound nodePlanebound = (NodePlanebound) node;
-                String planeName = currentRun.getPath().isFaceDown(currentRun, nodePlanebound)
+                String planeName = pathContext().hidePlanes && !nodePlanebound.isRevealed()
                     ? "???" : nodePlanebound.getRoguePlanebound().planeName();
                 yield Localizer.getInstance().getMessage("lblRogueEnterPlane", planeName);
             }
@@ -331,29 +327,6 @@ public final class RogueFlow {
             return localizer.getMessage("lblRogueBattleLost");
         }
         return controller.hasWonRun() ? localizer.getMessage("lblRogueRunCompleted") : localizer.getMessage("lblRogueBattleWon");
-    }
-
-    /** A line under the result's title for a client that has room for one, or null. */
-    public String resultDetail(RogueWinLoseController controller) {
-        Localizer localizer = Localizer.getInstance();
-        if (currentRun == null) {
-            return null;
-        }
-        if (currentRun.getEndlessLevel() > 0 && currentRun.isRunWon()) {
-            return localizer.getMessage("lblRogueEndlessLevel", currentRun.getEndlessLevel());
-        }
-        if (controller.hasFailedRun()) {
-            List<RogueRunHistoryEntry> history = RogueMetaProgress.getInstance().getRunHistory();
-            String by = history.isEmpty() ? "" : history.get(history.size() - 1).getBossOrDefeatedBy();
-            return by.isEmpty() ? null : localizer.getMessage("lblRogueHistoryDefeatedBy", by);
-        }
-        if (!controller.hasWonMatch()) {
-            return localizer.getMessage("lblRogueContinuumRevive", currentRun.getCurrentLife());
-        }
-        if (controller.hasWonRun() && currentRun.getCurrentNode() instanceof NodePlanebound boss) {
-            return localizer.getMessage("lblRogueHistoryBossSlain", boss.getRoguePlanebound().planeboundName());
-        }
-        return null;
     }
 
     /** Whether the player chooses between completing the run and Endless Mode. */

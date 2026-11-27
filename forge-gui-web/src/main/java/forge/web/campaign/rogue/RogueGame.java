@@ -14,6 +14,7 @@ import forge.gamemodes.rogue.RogueConfig;
 import forge.gamemodes.rogue.RogueMetaProgress;
 import forge.gamemodes.rogue.RoguePlanebound;
 import forge.gamemodes.rogue.RogueRun;
+import forge.gamemodes.rogue.RogueRunHistoryEntry;
 import forge.gamemodes.rogue.RogueWinLoseController;
 import forge.gamemodes.rogue.effect.AetherEffect;
 import forge.gamemodes.rogue.effect.CustomRunModification;
@@ -24,6 +25,7 @@ import forge.gamemodes.rogue.flow.RogueStart;
 import forge.gamemodes.rogue.npc.NPC;
 import forge.gamemodes.rogue.npc.NPCEncounterComposite;
 import forge.gamemodes.rogue.npc.NPCEncounterComposite.LevelChoice;
+import forge.gamemodes.rogue.path.NodePlanebound;
 import forge.localinstance.achievements.RogueCommanderAchievements;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.skin.FSkinProp;
@@ -702,7 +704,31 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         } else {
             buttons = List.of(new ResultButton(b.view.getBtnQuit().getText(), CONTINUE, true, null));
         }
-        return new CampaignResult(b.controller.hasWonMatch(), true, flow.resultTitle(b.controller), flow.resultDetail(b.controller), buttons);
+        return new CampaignResult(b.controller.hasWonMatch(), true, flow.resultTitle(b.controller), resultDetail(b.controller), buttons);
+    }
+
+    /** A line under the result's title, or null. */
+    private String resultDetail(final RogueWinLoseController controller) {
+        final RogueRun run = flow.run();
+        if (run == null) {
+            return null;
+        }
+        final Localizer localizer = Localizer.getInstance();
+        if (run.getEndlessLevel() > 0 && run.isRunWon()) {
+            return localizer.getMessage("lblRogueEndlessLevel", run.getEndlessLevel());
+        }
+        if (controller.hasFailedRun()) {
+            final List<RogueRunHistoryEntry> history = RogueMetaProgress.getInstance().getRunHistory();
+            final String by = history.isEmpty() ? "" : history.get(history.size() - 1).getBossOrDefeatedBy();
+            return by.isEmpty() ? null : localizer.getMessage("lblRogueHistoryDefeatedBy", by);
+        }
+        if (!controller.hasWonMatch()) {
+            return localizer.getMessage("lblRogueContinuumRevive", run.getCurrentLife());
+        }
+        if (controller.hasWonRun() && run.getCurrentNode() instanceof NodePlanebound boss) {
+            return localizer.getMessage("lblRogueHistoryBossSlain", boss.getRoguePlanebound().planeboundName());
+        }
+        return null;
     }
 
     /** Hands the game to the flow thread and sends the result from there, so this returns null. */

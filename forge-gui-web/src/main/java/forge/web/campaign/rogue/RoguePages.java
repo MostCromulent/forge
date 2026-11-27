@@ -538,7 +538,7 @@ public final class RoguePages {
                 final int index = path.getNodes().indexOf(node);
                 final String state = node.isCompleted() ? "walked" : node == current ? "selected"
                         : r == row ? (open.contains(index) ? "open" : "dead") : r < row ? "past" : "far";
-                nodes.add(node(flow, run, node, index, state));
+                nodes.add(node(run, node, index, state));
                 path.getReachableNodeIndices(index).forEach(to -> links.add(new MapLink(index, to)));
             }
             rows.add(nodes);
@@ -553,8 +553,20 @@ public final class RoguePages {
                 hiding.isEmpty() ? null : String.join("\n", hiding), MAP_TERMS);
     }
 
-    private static MapNode node(final RogueFlow flow, final RogueRun run, final RoguePathNode node, final int index, final String state) {
-        final String enter = flow.enterText(node);
+    /** The label of the button that enters the node. A face-down plane is not named. */
+    private static String enterText(final RoguePathNode node, final boolean faceDown) {
+        final Localizer text = Localizer.getInstance();
+        return switch (node.getType()) {
+            case PLANEBOUND -> text.getMessage("lblRogueEnterPlane", faceDown ? "???" : ((NodePlanebound) node).getRoguePlanebound().planeName());
+            case SANCTUM -> text.getMessage("lblRogueEnterSanctum");
+            case BAZAAR -> text.getMessage("lblRogueEnterBazaar");
+            case EVENT -> text.getMessage("lblRogueEnterEvent");
+            case CHEST -> text.getMessage("lblRogueOpenChest");
+        };
+    }
+
+    private static MapNode node(final RogueRun run, final RoguePathNode node, final int index, final String state) {
+        final String enter = enterText(node, run.getPath().isFaceDown(run, node));
         return switch (node.getType()) {
             case PLANEBOUND -> {
                 final NodePlanebound plane = (NodePlanebound) node;

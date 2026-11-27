@@ -345,7 +345,6 @@ public class RogueFlowTest {
         final RogueWinLoseController result = fight(true);
         Assert.assertEquals(decisions.asked, List.of("startMatch", "show", "show"));
         Assert.assertEquals(flow.resultTitle(result), "Battle Won!");
-        Assert.assertNull(flow.resultDetail(result));
         Assert.assertFalse(flow.offersEnding(result));
         Assert.assertEquals(RogueMetaProgress.getInstance().getTotalEchoes(), 4);
 
@@ -368,7 +367,6 @@ public class RogueFlowTest {
         final NodePlanebound plane = (NodePlanebound) start(NodePlanebound.class);
         final RogueWinLoseController result = fight(false);
         Assert.assertEquals(flow.resultTitle(result), "Run Lost!");
-        Assert.assertEquals(flow.resultDetail(result), "Defeated by: " + plane.getRoguePlanebound().planeboundName());
         Assert.assertEquals(run.getRunState(), RogueRunState.LOST);
         Assert.assertEquals(onlyHistoryEntry().getOutcome(), "DEFEAT");
         Assert.assertEquals(onlyHistoryEntry().getBossOrDefeatedBy(), plane.getRoguePlanebound().planeboundName());
@@ -383,7 +381,6 @@ public class RogueFlowTest {
         startBoss();
         RogueWinLoseController result = fight(true);
         Assert.assertEquals(flow.resultTitle(result), "Run Completed!");
-        Assert.assertEquals(flow.resultDetail(result), "Boss slain: " + ((NodePlanebound) run.getPath().getNode(15)).getRoguePlanebound().planeboundName());
         Assert.assertTrue(flow.offersEnding(result));
         Assert.assertEquals(run.getRunState(), RogueRunState.STARTED, "the player has not chosen yet");
         flow.resultLeft(result, false);
