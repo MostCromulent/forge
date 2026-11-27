@@ -245,7 +245,6 @@ function Commanders({ actions, state, handlers }: { actions: Actions; state: Edi
   );
 }
 
-/** Splits the groups into two columns of about equal height, keeping their order. A heading counts as two lines. */
 /** Each group in the card view is a pile, and a pile is as wide as the narrowest column .deck-cols allows. */
 const PILE_WIDTH = 104;
 const PILE_GAP = 10;
@@ -267,6 +266,7 @@ function piles<G extends { cards: EditorCard[] }>(groups: G[], across: number): 
   });
 }
 
+/** Splits the groups into two columns of about equal height, keeping their order. A heading counts as two lines. */
 function twoColumns<G extends { cards: unknown[] }>(groups: G[]): [G[], G[]] {
   const lines = (g: G) => g.cards.length + 2;
   const total = groups.reduce((n, g) => n + lines(g), 0);

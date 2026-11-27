@@ -19,7 +19,6 @@ export type Owed = Record<string, number>;
 
 export interface RevealProps { reward: Reward; onOwed: (owed: Owed) => void; done: () => void }
 
-/** The attributes of something a tooltip explains: the term's name and the tooltip's text. */
 /** The marks that give an element a term tooltip, when it has a text. */
 export const explained = (name: string, text?: string | null) => (text ? { 'data-term': name, 'data-tip': text, tabIndex: 0 } : {});
 
