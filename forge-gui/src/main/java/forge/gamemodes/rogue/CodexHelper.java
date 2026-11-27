@@ -52,8 +52,8 @@ public final class CodexHelper {
 
     public enum CodexState { UNKNOWN, SEEN, ACQUIRED }
 
-    /** A tutorial, or a chapter of the story. speaker is the NPC who tells it. */
-    public record JournalEntry(String id, String title, String text, boolean story, NPC speaker) {
+    /** A tutorial, or a chapter of the story. */
+    public record JournalEntry(String id, String title, String text, boolean story) {
         @Override
         public String toString() {
             return title;
@@ -234,7 +234,7 @@ public final class CodexHelper {
         List<JournalEntry> journal = Arrays.stream(RogueTutorial.values())
             .filter(progress::hasSeenTutorial)
             .map(tutorial -> new JournalEntry(tutorial.getId(), tutorial.getTitle(),
-                String.join("\n\n", tutorial.getMessageChunks()), false, NPC.TEFERI))
+                String.join("\n\n", tutorial.getMessageChunks()), false))
             .collect(Collectors.toCollection(ArrayList::new));
 
         int storyLevel = progress.getNPCLevel(NPC.TEFERI.id);
@@ -245,14 +245,14 @@ public final class CodexHelper {
             List<String> text = chapter.getJournalText();
             if (!text.isEmpty()) {
                 journal.add(new JournalEntry("teferi:" + chapter.name(), chapter.getTitle(),
-                    String.join("\n\n", text), true, NPC.TEFERI));
+                    String.join("\n\n", text), true));
             }
         }
         TeferiOptionalEncounter anchor = TeferiOptionalEncounter.TEMPORAL_ANCHOR;
         if (progress.hasSeenNPCEncounter(anchor.getId())) {
             journal.add(new JournalEntry(anchor.getId(),
                 Localizer.getInstance().getMessage("lblRogueJournalTemporalAnchor"),
-                String.join("\n\n", anchor.getStoryTextChunks()), true, NPC.TEFERI));
+                String.join("\n\n", anchor.getStoryTextChunks()), true));
         }
         return journal;
     }
@@ -433,17 +433,16 @@ public final class CodexHelper {
             }
         }
 
-        Set<String> displayedBasicLandNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        for (PaperCard card : deck.getAllCardsInASinglePool(false, false).toFlatList()) {
-            if (isValidCard(card)) {
-                boolean shouldAddCard = !card.getRules().getType().isBasicLand()
-                    || displayedBasicLandNames.add(card.getName());
-                if (shouldAddCard) {
-                    cards.add(card);
-                }
-            }
-        }
+        cards.addAll(eachBasicOnce(deck.getAllCardsInASinglePool(false, false).toFlatList()));
         return cards;
+    }
+
+    /** The cards a Codex list shows: each basic land once, and no card without rules. */
+    public static List<PaperCard> eachBasicOnce(List<PaperCard> cards) {
+        Set<String> basics = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        return cards.stream()
+            .filter(card -> isValidCard(card) && (!card.getRules().getType().isBasicLand() || basics.add(card.getName())))
+            .collect(Collectors.toList());
     }
 
     private static boolean isValidCard(PaperCard card) {
@@ -535,13 +534,9 @@ public final class CodexHelper {
             .collect(Collectors.toList());
     }
 
-    /** The cards a Codex list shows: each basic land once, and no card without rules. */
-    public static List<PaperCard> eachBasicOnce(List<PaperCard> cards) {
-        Set<String> basics = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        return cards.stream()
-            .filter(card -> card != null && card.getRules() != null && (!card.getRules().getType().isBasicLand() || basics.add(card.getName())))
-            .collect(Collectors.toList());
-    }
+    /** Codex card lists group by card type, then sort by name. */
+    public static final Comparator<PaperCard> CODEX_CARD_ORDER = Comparator.comparingInt(CodexHelper::codexCardTypeOrder)
+        .thenComparing(PaperCard::getName, String.CASE_INSENSITIVE_ORDER);
 
     /** Codex card lists group by card type, then sort by name; a missing card goes last. */
     public static int codexCardTypeOrder(PaperCard card) {

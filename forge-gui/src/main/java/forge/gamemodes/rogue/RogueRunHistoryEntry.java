@@ -106,7 +106,7 @@ public class RogueRunHistoryEntry {
         List<PathStep> steps = new ArrayList<>();
         for (String label : getPath()) {
             NodeType side = Arrays.stream(NodeType.values()).filter(t -> label.equals(sideLabel(t))).findFirst().orElse(null);
-            int open = label.indexOf(" (");
+            int open = label.lastIndexOf(" (");
             if (side != null) {
                 steps.add(new PathStep(side, null, null));
             } else if (open > 0 && label.endsWith(")")) {
@@ -123,18 +123,17 @@ public class RogueRunHistoryEntry {
         return endlessLevel > 0 && "DEFEAT".equals(outcome) ? "VICTORY" : outcome;
     }
 
-    /** Who was beaten for a victory or who won a defeat, by the outcome saved, or empty when neither is known. */
+    /** Who was beaten for a victory or who won a defeat, or empty when neither is known. */
     public String getOutcomeDetail() {
         String key = switch (outcome) {
             case "VICTORY" -> "lblRogueHistoryBossSlain";
             case "DEFEAT" -> "lblRogueHistoryDefeatedBy";
             default -> null;
         };
-        String opponent = getBossOrDefeatedBy();
-        if (key == null || opponent == null || opponent.isEmpty()) {
+        if (key == null || bossOrDefeatedBy == null || bossOrDefeatedBy.isEmpty()) {
             return "";
         }
-        return Localizer.getInstance().getMessage(key, opponent);
+        return Localizer.getInstance().getMessage(key, bossOrDefeatedBy);
     }
 
     // Getters

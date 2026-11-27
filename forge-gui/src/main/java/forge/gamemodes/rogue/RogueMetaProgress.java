@@ -734,16 +734,8 @@ public class RogueMetaProgress {
         totalEchoes -= cost;
         aetherEffectRanks.put(aetherEffect.getId(), currentRank + 1);
         save();
-        return true;
-    }
-
-    /** Upgrades the Aetherwork as upgradeAetherEffect does, and activates it when this upgrade first built it. */
-    public boolean upgradeAndActivateAetherEffect(AetherEffect aetherEffect) {
-        boolean built = getAetherEffectRank(aetherEffect) > 0;
-        if (!upgradeAetherEffect(aetherEffect)) {
-            return false;
-        }
-        if (!built) {
+        // Auto-activate the Aetherwork when first built (rank goes from 0 to 1)
+        if (currentRank == 0) {
             activateAetherEffect(aetherEffect);
         }
         return true;

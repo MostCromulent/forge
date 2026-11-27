@@ -772,10 +772,7 @@ public enum VSubmenuRogueCodex implements IVSubmenu<CSubmenuRogueCodex> {
   }
 
   private void sortCodexCardEntries(List<CodexCardGrid.Entry> entries) {
-    entries.sort(Comparator
-        .comparingInt((CodexCardGrid.Entry entry) -> CodexHelper.codexCardTypeOrder(entry.card()))
-        .thenComparing(entry -> entry.card() == null ? entry.label() : entry.card().getName(),
-            String.CASE_INSENSITIVE_ORDER));
+    entries.sort(Comparator.comparing(CodexCardGrid.Entry::card, CodexHelper.CODEX_CARD_ORDER));
   }
 
 

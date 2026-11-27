@@ -96,8 +96,8 @@ public interface RogueDecisions extends CardRewardHelper.RewardDialog {
             return picked.stream().allMatch(left::remove);
         }
 
-        /** The candidates in the order they are shown: by card type, as the deck editor groups them, then by mana value. */
         public List<PaperCard> shown() {
+            // Sort by type (Deck Editor order), then by CMC
             List<PaperCard> shown = new ArrayList<>(candidates);
             shown.sort(Comparator.comparingInt(CodexHelper::codexCardTypeOrder)
                 .thenComparingInt(c -> c.getRules().getManaCost().getCMC()));
