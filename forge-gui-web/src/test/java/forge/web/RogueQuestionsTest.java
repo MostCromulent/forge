@@ -275,24 +275,24 @@ public class RogueQuestionsTest extends RogueSessionTest {
         return RogueIO.loadRun(RogueIO.getRogueFile(run));
     }
 
-    private static String counter(final int credits) {
-        return Localizer.getInstance().getMessage("lblWebRogueRemovalCreditCount", credits);
+    private static int credits(final JsonObject state) {
+        return state.getAsJsonObject("removals").get("credits").getAsInt();
     }
 
     // Fails if a removal is free, the run on disk does not hold the smaller deck and the spent credit, or undoing it does not give the credit back
     @Test(timeOut = 120_000)
     public void undoRefunds() throws Exception {
         final TestBrowser host = atRun(NodeSanctum.class, 8);
-        Assert.assertEquals(str(openEditor(host), "counter"), counter(3));
+        Assert.assertEquals(credits(openEditor(host)), 3);
         final String card = nonbasic(0);
         final int copies = run.getCurrentDeck().getMain().countByName(card);
-        Assert.assertEquals(str(edit(host, remove(card)), "counter"), counter(2));
+        Assert.assertEquals(credits(edit(host, remove(card))), 2);
         Assert.assertEquals(saved().getRemovalCredits(), 2);
         Assert.assertEquals(saved().getCurrentDeck().getMain().countByName(card), copies - 1);
         edit(host, landsTo("Forest", run.getCurrentDeck().getMain().countByName("Forest") + 1));
         edit(host, TestBrowser.action("editorUndo"));
         Assert.assertEquals(saved().getRemovalCredits(), 2, "undoing the added Forest gave a credit");
-        Assert.assertEquals(str(edit(host, TestBrowser.action("editorUndo")), "counter"), counter(3));
+        Assert.assertEquals(credits(edit(host, TestBrowser.action("editorUndo"))), 3);
         Assert.assertEquals(saved().getRemovalCredits(), 3);
         Assert.assertEquals(saved().getCurrentDeck().getMain().countByName(card), copies);
     }
@@ -321,7 +321,7 @@ public class RogueQuestionsTest extends RogueSessionTest {
         final JsonObject state = edit(host, remove(fourth));
         final JsonObject notice = host.awaitMatching("notice", n -> true, "the refusal was not told");
         Assert.assertEquals(str(notice, "title"), Localizer.getInstance().getMessage("lblRogueRemovalLimitHint"));
-        Assert.assertTrue(state.get("counterSpent").getAsBoolean());
+        Assert.assertEquals(credits(state), 0);
         Assert.assertEquals(saved().getCurrentDeck().getMain().countByName(fourth), copies);
         Assert.assertEquals(saved().getRemovalCredits(), 0);
     }
