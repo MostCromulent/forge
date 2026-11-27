@@ -40,8 +40,6 @@
 .kit .rg-n.side::before, .kit .rg-n.side::after { display: none; }
 
 /* States by weight and fading, never by hue alone */
-.kit .rg-n.past, .kit .rg-n.dead { opacity: .32 !important; filter: grayscale(1) sepia(.35); }
-.kit .rg-n.far { opacity: .62 !important; filter: sepia(.2); }
 .kit .rg-n.walked { opacity: .82 !important; filter: sepia(.4) saturate(.7); }
 .kit .rg-n.open { box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px var(--paper-hi), 0 0 0 7px var(--ink), 0 0 18px 6px rgba(226, 178, 60, .45); }
 .kit .rg-n.open.side { color: var(--ink); }
@@ -153,8 +151,6 @@
 .kit .rg-n.open:not(.side) { box-shadow: 0 0 14px 3px rgba(255, 215, 94, .55), 0 6px 10px -4px rgba(42, 29, 16, .45); }
 .kit .rg-n.sel:not(.side) { box-shadow: 0 0 0 2px #fff4c2, 0 0 24px 8px rgba(255, 215, 94, .8), 0 10px 14px -6px rgba(42, 29, 16, .5); transform: translateY(-3px); z-index: 4; }
 .kit .rg-n.walked:not(.side) { filter: sepia(.45) saturate(.7); opacity: .85 !important; }
-.kit .rg-n:is(.past, .dead):not(.side) { filter: grayscale(1); opacity: .35 !important; }
-.kit .rg-n.far:not(.side) { opacity: .7 !important; }
 
 /* Adventure look for every Rogue screen: adventure's parchment, stone keys, gold key and item sprites inside the client's dark shell.
    Pixel art only at whole-number scales; border images repeat their edges rather than stretch them. One font: the client's own. */
@@ -311,7 +307,7 @@ html.kit[data-form="portrait"] .rg-list { image-rendering: pixelated; background
 .kit .rg-psheet .box .rgm-lv button:disabled { border-style: dashed; opacity: .6; }
 
 /* Main map (the user, 26/11): adventure's parchment as the map's ground, inside its torn edge; the side panels use the ornate gold-framed parchment. */
-.kit .rg-vstage { image-rendering: pixelated; background: #e6d3a6 !important; border-style: solid; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 / 26px 32px 22px 34px repeat; box-shadow: none !important; margin: 6px 0 6px 6px; }
+.kit .rg-vstage { image-rendering: pixelated; background: #e6d3a6; border-style: solid; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 / 26px 32px 22px 34px repeat; box-shadow: none !important; margin: 6px 0 6px 6px; }
 .kit .rg-vstage .rg-trail { background: url("../adventure?s=skin&r=18,122,15,24") 0 0 / 30px 48px repeat !important; background-attachment: local !important; image-rendering: pixelated; }
 .kit :is(.kit-cmd, .camp-side-body) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 32px 32px 38px 32px; border-image: url("../adventure?s=skin&r=41,1,48,48") 16 16 19 16 fill / 32px 32px 38px 32px repeat; color: var(--kit-ink); }
 .kit .kit-cmd { margin: -2px -4px 0; }
@@ -321,7 +317,6 @@ html.kit[data-form="portrait"] .rg-list { image-rendering: pixelated; background
 .kit .kit-cmd .kc-deck { margin: -6px -14px -12px; }
 
 /* Larger plane plates on the map (the user, 26/11): 20% bigger, centred where the layout put them */
-.kit .rg-vstage:not(.fit) .rg-n:not(.side) .nm { width: 172px; }
 .kit .rg-vstage:not(.fit) .rg-n:not(.side) .nm b { font-size: 12.5px; }
 
 /* Commander as a bar along the bottom of the map (the user, 26/11); the plane panel takes the right column's full height */
@@ -501,7 +496,6 @@ html.kit:not([data-form="portrait"]) .rg-gain { box-sizing: border-box; width: 1
 /* The map's ground is parchment inside its torn edge here too, at the edge's own size, scrolling with the map */
 html.kit[data-form="portrait"] .rg-vtrail { image-rendering: pixelated; background: url("../adventure?s=skin&r=18,122,15,24") 0 0 / 30px 48px repeat !important; background-attachment: local !important; border-style: solid; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 / 13px 16px 11px 17px repeat; box-shadow: none !important; }
 /* Plate labels fit their plate, so neighbours never overlap */
-html.kit.kit[data-form="portrait"] .rg-n:not(.side) .nm { width: 96px; padding: 0 3px; }
 html.kit.kit[data-form="portrait"] .rg-n:not(.side) .nm b { font-size: 10px; }
 /* A scene's avatar on a phone: the same seal, at the size the phone header gives it */
 html.kit[data-form="portrait"] .rg-face .pic.icon { background: radial-gradient(circle at 45% 40%, #f8f2e3, #e7dcc0 72%); box-shadow: 0 0 0 1.5px var(--kit-ink), 0 0 0 5px var(--wash, #6b5a44), 0 0 0 6.5px var(--kit-ink); image-rendering: pixelated; }
@@ -545,7 +539,7 @@ html.kit .camp-tabs > .camp-tab {
   height: 40px !important; min-height: 0; padding: 0 15px 2px 12px !important; display: inline-flex; align-items: center; gap: 7px; background: none !important; box-shadow: none !important; border-radius: 0;
   color: #cbc2ae !important; font: 600 14px/1 system-ui, sans-serif; text-shadow: 0 1px 0 #000; position: relative;
 }
-html.kit .camp-tabs > .camp-tab[aria-current] { height: 46px !important; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 / 4px 4px 0 repeat !important; background: var(--kit-dark) padding-box !important; color: var(--kit-gold) !important; z-index: 2; }
+html.kit .camp-tabs > .camp-tab[aria-current] { height: 46px !important; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 / 4px 4px 0 repeat !important; background: var(--kit-dark) padding-box !important; color: var(--kit-gold) !important; }
 html.kit .camp-tabs > .camp-tab:not([aria-current]):hover { color: var(--kit-pale) !important; }
 html.kit .camp-tabs > .camp-tab img.ks { width: 16px; height: 16px; }
 html.kit .camp-tabs > .camp-tab .camp-tab-line { display: none !important; }
@@ -579,17 +573,15 @@ html.kit .rgm-lv button:disabled { opacity: .5 !important; }
 
 .kit { --kit-ground: url("../adventure?s=ground"); }
 /* ----- Runs: adventure's painted title ground at its own size, dimmed, with stone windows on it ----- */
-.kit .rgl { background: radial-gradient(ellipse 70% 80% at 50% 40%, #1a1510, #0e0b08 80%) !important; }
 .kit .rgm-stage { background:
   linear-gradient(#0e0b08 calc(50% - 288px), transparent calc(50% - 170px), transparent calc(50% + 150px), #0e0b08 calc(50% + 288px)),
   linear-gradient(90deg, #0e0b08 calc(50% - 512px), transparent calc(50% - 330px), transparent calc(50% + 330px), #0e0b08 calc(50% + 512px)),
   linear-gradient(rgba(14, 11, 8, .55), rgba(14, 11, 8, .55)), var(--kit-ground) 50% 50% / 1024px 576px no-repeat, #0e0b08 !important; }
 .kit .rgm-stage .rgsh-haze, .kit .rgl .haze { display: none !important; }
-.kit :is(.rgl-run, .rgl-new) { image-rendering: pixelated; border-style: solid !important; border-width: 12px !important; border-image: url("../adventure?s=skin&r=203,385,48,48") 6 / 12px repeat !important; background: rgba(16, 13, 10, .8) padding-box !important; box-shadow: 0 14px 36px #000b !important; }
+.kit :is(.rgl-run, .rgl-new) { image-rendering: pixelated; border-style: solid !important; border-width: 12px !important; border-image: url("../adventure?s=skin&r=203,385,48,48") 6 / 12px repeat !important; background: rgba(16, 13, 10, .8) padding-box; box-shadow: 0 14px 36px #000b !important; }
 .kit .rgl-run .rgl-card, .kit .rgl-new .fan i { image-rendering: auto; }
 .kit .rgl-run { background: rgba(16, 13, 10, .94) padding-box !important; }
 /* New Run is a window onto the painted ground, as adventure's title screen opens onto it */
-.kit .rgl-new { background: linear-gradient(rgba(14, 11, 8, .3), rgba(14, 11, 8, .05) 30%, rgba(14, 11, 8, .5) 58%, #0e0b08 84%) padding-box, var(--kit-ground) -330px 0 / 1024px 576px no-repeat padding-box, #0e0b08 !important; }
 .kit .rgl-new :is(b, .d) { text-shadow: 0 2px 0 #000, 0 0 12px #000; position: relative; }
 .kit .rgl-new b { font-family: Georgia, serif; }
 .kit .rgl-new .d { color: #d9cfb8 !important; }
