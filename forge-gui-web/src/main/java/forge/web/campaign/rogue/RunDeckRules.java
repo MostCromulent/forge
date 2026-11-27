@@ -32,7 +32,7 @@ final class RunDeckRules implements DeckEditor.Rules, IHasForgeLog {
 
     @Override
     public String refuse(final CardPool removed) {
-        return edits.refusal(removed);
+        return RogueRun.removalCost(removed) > run.getRemovalCredits() ? Localizer.getInstance().getMessage("lblRogueRemovalLimitHint") : null;
     }
 
     @Override
