@@ -430,8 +430,10 @@ final class WebRogueDecisions implements RogueDecisions {
             return;
         }
         final RogueRun run = game.run();
+        // A section carries no flag for cards that left the deck, and its cards cannot tell: the Sanctum's food is never in the deck
+        final String removed = Localizer.getInstance().getMessage("lblRogueCardsRemoved");
         tell(new Tell(kind.name(), title, parts(text), sections.stream()
-                .map(s -> new TellSection(s.label(), parts(s.text()), s.cards() == null ? List.of() : cards(s.cards()), s.removed()))
+                .map(s -> new TellSection(s.label(), parts(s.text()), s.cards() == null ? List.of() : cards(s.cards()), removed.equals(s.label())))
                 .collect(Collectors.toList()), List.of(), null, kind == ResultKind.BOON ? boonArt : run == null ? null : RoguePages.lastPlane(run)));
     }
 

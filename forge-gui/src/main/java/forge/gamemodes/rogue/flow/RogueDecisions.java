@@ -104,8 +104,7 @@ public interface RogueDecisions extends CardRewardHelper.RewardDialog {
             return shown;
         }
     }
-    /** removed means the cards left the deck. */
-    record Section(String label, String text, List<PaperCard> cards, boolean removed) { }
+    record Section(String label, String text, List<PaperCard> cards) { }
     /** recordPublicCards is for the end of the game. */
     record RogueMatch(RogueRun run, NodePlanebound node, Set<GameType> variants, List<RegisteredPlayer> players,
                       RegisteredPlayer human, Consumer<HostedMatch> recordPublicCards) {
