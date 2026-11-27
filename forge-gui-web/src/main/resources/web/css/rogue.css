@@ -908,8 +908,8 @@ html.kit.kit[data-form="portrait"] .rg-vtrail .rg-n.side { margin: -16px 0 0 -16
    #editor .rogue-deck.editor-page outranks the editor's own landscape and phone rules, which start html[...] #editor. */
 #editor .rogue-deck.editor-page .editor-head, #editor .rogue-deck.editor-page .removal-bar {
   --text: #f1e7cf; --muted: #cdbfa3; --faint: #a8987a; --line: rgba(241, 231, 207, .2);
-  image-rendering: pixelated; border-style: solid; border-width: 12px; border-image: url("../adventure?s=skin&r=203,385,48,48") 6 / 12px repeat;
-  border-radius: 0; background: rgba(16, 13, 10, .94) padding-box; box-shadow: none; color: var(--text);
+  image-rendering: pixelated; border-style: solid; border-width: 12px; border-image: url("../adventure?s=skin&r=203,385,48,48") 6 fill / 12px repeat;
+  border-radius: 0; background: none; box-shadow: none; color: var(--text);
 }
 #editor .rogue-deck.editor-page :is(.head-right > button:not(.primary), .deck-menu-button, .rm-keys > button:not(.primary)) {
   image-rendering: pixelated; background: none; border-style: solid; border-width: 8px 8px 14px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 8px 8px 14px repeat;
