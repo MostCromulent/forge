@@ -251,6 +251,11 @@ public final class CardCatalog {
         return DeckFormat.canHaveAnyNumberOf(card) ? Integer.MAX_VALUE : null;
     }
 
+    /** A card's rules text with real line breaks, where card scripts write them as \n. */
+    public static String oracle(final CardRules rules) {
+        return rules.getOracleText().replace("\\n", "\n").replace("\r\n", "\n");
+    }
+
     public static String pt(final CardRules rules) {
         if (rules.getType().isCreature()) {
             return rules.getPower() + "/" + rules.getToughness();

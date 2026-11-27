@@ -103,10 +103,10 @@ public class RogueMatchTest extends RogueSessionTest {
         host.awaitMatching("hello", h -> RogueGame.MODE.equals(str(h, "campaign")) && !"playing".equals(str(h, "screen")), "the match was not left");
     }
 
-    /** Waits for the battle's spoils that no card reward showed, and continues past them. */
     /** The run's bar as the last spoils screen was asked, which holds back what they add. */
     private JsonObject barAtSpoils;
 
+    /** Waits for the battle's spoils that no card reward showed, and continues past them. */
     private JsonObject spoils(final TestBrowser host) throws InterruptedException {
         final JsonObject asked = host.awaitMatching("rogueQuestion", q -> q.has("tell") && "SPOILS".equals(str(q.getAsJsonObject("tell"), "kind")),
                 "the battle's spoils were not shown");

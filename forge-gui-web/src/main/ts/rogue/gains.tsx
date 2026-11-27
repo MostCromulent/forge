@@ -60,20 +60,19 @@ export function Ledger({ spoils, id }: { spoils: Spoil[]; id: number }) {
     for (const [icon, el] of sources) coinsFrom(icon, el);
     let open = true;
     const scene = list.current!.closest('.rg-scene');
-    let pause = 0, frame = 0;
-    // The spoils are read for a moment after the screen has risen, before they fly to the bar. After a match the page is still hidden
-    // under the board when they arrive, so the wait starts once they are on screen
-    const settle = () => Promise.allSettled(scene?.getAnimations().map(a => a.finished) ?? []).then(() => {
-      if (open) pause = window.setTimeout(() => changeUi(u => { u.rogueLanded = id; }), LEDGER_PAUSE_MS);
+    let pause = 0;
+    // After a match the page is still hidden under the board, so the wait starts once the spoils are on screen
+    const shownAt = new ResizeObserver(() => {
+      if (!list.current?.getClientRects().length) return;
+      shownAt.disconnect();
+      Promise.allSettled(scene?.getAnimations().map(a => a.finished) ?? []).then(() => {
+        if (open) pause = window.setTimeout(() => changeUi(u => { u.rogueLanded = id; }), LEDGER_PAUSE_MS);
+      });
     });
-    const look = () => {
-      if (list.current?.getClientRects().length) settle();
-      else frame = requestAnimationFrame(look);
-    };
-    look();
+    shownAt.observe(list.current!);
     return () => {
       open = false;
-      cancelAnimationFrame(frame);
+      shownAt.disconnect();
       clearTimeout(pause);
       for (const [icon] of sources) coinsFrom(icon, null);
     };

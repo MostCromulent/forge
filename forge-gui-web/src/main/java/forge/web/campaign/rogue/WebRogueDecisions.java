@@ -34,8 +34,8 @@ import forge.util.Localizer;
 import forge.web.deck.CardCatalog;
 import forge.web.deck.DeckCatalog;
 import forge.web.images.SkinSprites;
-import forge.web.protocol.PropertyJson;
 import forge.web.protocol.FromBrowser.CatalogueQuery;
+import forge.web.protocol.PropertyJson;
 import forge.web.protocol.RogueProtocol.*;
 import forge.web.protocol.ToBrowser.CardFace;
 import forge.web.protocol.ToBrowser.CataloguePage;
@@ -177,7 +177,7 @@ final class WebRogueDecisions implements RogueDecisions {
     private static CardFace face(final PaperCard card, final String name) {
         final CardRules rules = card.getRules();
         return new CardFace(name, PropertyJson.manaCost(rules.getManaCost()), rules.getType().toString(), CardCatalog.pt(rules),
-                rules.getOracleText().replace("\n", "\n").replace("\r\n", "\n"), null, 0, null, null, null);
+                CardCatalog.oracle(rules), null, 0, null, null, null);
     }
 
     /** Equal cards merged by name, in the order they first appear. A card the run carries shows its carry type. */

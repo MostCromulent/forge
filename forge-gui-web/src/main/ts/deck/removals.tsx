@@ -42,7 +42,7 @@ export function settled(removal: Removal | null, state: EditorState): Removal | 
 const icon = <Sprite k="deck" cls="rc-ic" />;
 const credits = (n: number) => <>{n === 1 ? tNodes('lblWebRogueRemovalCreditOne', icon) : tNodes('lblWebRogueRemovalCreditMany', n, icon)}</>;
 
-/** The bar under a run's deck. It explains how to choose, what the choice costs, and after a removal how to take it back. Its Undo takes back any change, as the editor's header does for other decks. */
+/** The bar under a run's deck. It explains how to choose and what the choice costs. Its Undo takes back any change, a removal included, as the editor's header does for other decks. */
 export function RemovalBar({ state, chosen, removal, clear, remove, undo }: {
   state: EditorState; chosen: [string, number][]; removal: Removal | null; clear: () => void; remove: (n: number, cost: number) => void; undo: () => void;
 }) {
@@ -63,9 +63,8 @@ export function RemovalBar({ state, chosen, removal, clear, remove, undo }: {
   }, []);
   let words: ComponentChild;
   if (!n && removal?.done) {
-    const back = <button class="link" onClick={undo}>{t('lblUndo')}</button>;
-    words = <p class="rm-words done">{removal.n === 1 ? tNodes('lblWebRogueRemovedOne', credits(removal.cost), back)
-      : tNodes('lblWebRogueRemoved', removal.n, credits(removal.cost), back)}</p>;
+    words = <p class="rm-words done">{removal.n === 1 ? tNodes('lblWebRogueRemovedOne', credits(removal.cost))
+      : tNodes('lblWebRogueRemoved', removal.n, credits(removal.cost))}</p>;
   } else if (!n) {
     words = <p class="rm-words hint">{tNodes('lblWebRogueRemovalHint', credits(1))}</p>;
   } else if (over > 0) {

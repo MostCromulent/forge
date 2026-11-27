@@ -613,7 +613,7 @@ public final class RoguePages {
                 }
                 final PaperCard card = CodexHelper.getPlaneCard(planebound);
                 yield new MapNode(index, node.getType().name(), state, false, planebound.planeboundName(), planebound.planeName(), planeboundArt(planebound),
-                        card == null ? null : card.getImageKey(false), card == null ? null : card.getRules().getOracleText().replace("\\n", "\n"),
+                        card == null ? null : card.getImageKey(false), card == null ? null : CardCatalog.oracle(card.getRules()),
                         life, elite, boss, plane.getWrathfulCount(), plane.getCursedCount(), plane.getGoldReward(), plane.getEchoReward(), enter);
             }
             case SANCTUM, BAZAAR, EVENT, CHEST -> new MapNode(index, node.getType().name(), state, false, sideName(node.getType()), null, null, null,

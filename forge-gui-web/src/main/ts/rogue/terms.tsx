@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
 import { Icon } from '../icons';
+import { textData } from '../preview';
 import { ROGUE_ICONS } from './icons';
 import type { Part } from '../protocol';
 
@@ -26,7 +27,7 @@ export function Words({ parts }: { parts: Part[] }) {
     }
     if (p.kind !== 'card' || !p.text) return lines(p.text);
     // A card with no picture carries its text, and the preview draws that as it draws a card without a picture in a match
-    const face = p.face && { 'data-image': '', 'data-card': p.face.name, 'data-cost': p.face.cost, 'data-type': p.face.type, 'data-text': p.face.text, 'data-pt': p.face.pt ?? '' };
+    const face = p.face && { 'data-image': '', ...textData(p.face) };
     return <span key={i} class="rg-cn" data-image={p.image} {...face}>{p.text}</span>;
   })}</>;
 }

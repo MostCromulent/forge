@@ -119,7 +119,6 @@
 .kit .kc-stat img { width: 32px; height: 32px; image-rendering: pixelated; }
 .kit .kc-stat b { font-size: 15px; color: var(--kit-ink); }
 .kit .kc-deck { display: flex; align-items: center; justify-content: space-between; margin: -4px -10px -6px; font-size: 13px; color: var(--kit-ink); }
-.kit .kc-deck button { image-rendering: pixelated; background: none; border-style: solid; border-width: 8px 8px 14px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 8px 8px 14px repeat; border-radius: 0; color: var(--kit-pale); padding: 0 8px; height: 38px; min-height: 0; }
 .kit .camp-side:has(> .kit-cmd) { border: 0; border-image: none; margin: 8px 8px 8px 4px; gap: 10px; display: flex; flex-direction: column; overflow: hidden; }
 .kit .camp-side-body { display: flex; flex-direction: column; flex: 1; min-height: 0; image-rendering: pixelated; border-style: solid; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 26px 32px 22px 34px repeat; margin: 0 -6px -4px; }
 .kit .camp-side-body .camp-panel { flex: 1; min-height: 0; overflow-y: auto; }
@@ -192,13 +191,13 @@
 
 /* Stone keys, small: unpressed10patch at its own size. Pressed and current use pressed10Patch with gold words; disabled uses the grey key. */
 .kit :is(.rg-scene .ft > button:not(.primary), .rg-shell .seg > button, .rg-sub-tabs > button, .rg-head > button:not(.primary), .dialog .actions button:not(.primary), .rgl-run .go button:not(.primary),
-  .rgx-rand, .rgx-mid > button, .rgm-opt > button:not(.rg-toggle), .rg-run .end button, .panel .actions button:not(.primary), .camp-panel > button:not(.primary), .rg-sec > button:not(.primary),
-  .kc-deck button, .rg-folded button:not(.primary), .rg-psheet .menu button, .crumb .link, .rgl-crumb .link) {
+  .rgx-rand, .rgx-mid > button, .rg-run .end button, .panel .actions button:not(.primary), .camp-panel > button:not(.primary), .rg-sec > button:not(.primary),
+  .rg-folded button:not(.primary), .rg-psheet .menu button, .crumb .link, .rgl-crumb .link) {
   image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat; color: var(--kit-pale); text-shadow: none; min-height: 0;
 }
 .kit :is(.rg-shell .seg > button, .rg-sub-tabs > button):is([aria-pressed="true"], [aria-current], .on) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 6px 4px 5px; border-image: url("../adventure?s=skin&r=125,175,14,16") 6 4 5 fill / 6px 4px 5px repeat; color: var(--kit-gold); }
 .kit :is(.rg-scene .ft > button, .rg-shell .seg > button, .rg-sub-tabs > button, .rg-head > button, .dialog .actions button, .rgx-mid > button, .rgm-opt > button, .camp-panel > button, .rg-sec > button):disabled { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 3px 3px 6px; border-image: url("../adventure?s=skin&r=1,1,14,16") 3 3 6 fill / 3px 3px 6px repeat; color: #9a9a9a; }
-.kit :is(.rg-scene .ft > button:not(.primary), .rg-shell .seg > button, .rg-sub-tabs > button, .rg-head > button:not(.primary), .rgx-rand, .rgx-mid > button, .rgm-opt > button:not(.rg-toggle), .camp-panel > button:not(.primary), .rg-sec > button:not(.primary), .dialog .actions button:not(.primary)):active { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 6px 4px 5px; border-image: url("../adventure?s=skin&r=125,175,14,16") 6 4 5 fill / 6px 4px 5px repeat; }
+.kit :is(.rg-scene .ft > button:not(.primary), .rg-shell .seg > button, .rg-sub-tabs > button, .rg-head > button:not(.primary), .rgx-rand, .rgx-mid > button, .camp-panel > button:not(.primary), .rg-sec > button:not(.primary), .dialog .actions button:not(.primary)):active { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 6px 4px 5px; border-image: url("../adventure?s=skin&r=125,175,14,16") 6 4 5 fill / 6px 4px 5px repeat; }
 .kit .rg-shell .seg, .kit .rg-sub-tabs { background: none; border: 0; box-shadow: none; gap: 4px; padding: 0; }
 .kit .rg-shell .seg { display: inline-flex; }
 
@@ -359,9 +358,9 @@ html.kit[data-form="portrait"] .rg-list { image-rendering: pixelated; background
 .kit .camp-side:not(:has(> .kit-cmd)) .camp-side-head > .camp-art { image-rendering: pixelated; border-style: solid; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 / 4px 4px 7px repeat; box-shadow: none; margin: 0 0 8px; }
 
 /* R6. Ink button: the control drawn on paper. Pale inset, 1px ink edge, bold ink label, gold inner ring when pressed. */
-.kit :is(.rgm-opt > button:not(.rg-toggle), .camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-menu button, .rg-folded button:not(.primary)) {
+.kit :is(.camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-menu button, .rg-folded button:not(.primary)) {
   image-rendering: auto; border: 1px solid rgba(42, 29, 16, .6); border-image: none; border-radius: 0; background: rgba(255, 250, 236, .6); color: var(--kit-ink); font-weight: 700; text-shadow: none; box-shadow: none; min-height: 34px; padding: 6px 14px; }
-.kit :is(.rgm-opt > button:not(.rg-toggle), .camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-menu button):is(:hover, :active, [aria-pressed="true"]) { background: rgba(255, 244, 205, .95); box-shadow: inset 0 0 0 2px var(--kit-ring); }
+.kit :is(.camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-menu button):is(:hover, :active, [aria-pressed="true"]) { background: rgba(255, 244, 205, .95); box-shadow: inset 0 0 0 2px var(--kit-ring); }
 /* A switch on paper is an ink switch with a plain label, never a key */
 .kit .camp-side .camp-panel > button.rg-toggle, .kit .camp-side .rg-toggle { border: 0; border-image: none; background: none; box-shadow: none; color: var(--kit-ink); font-weight: 600; padding: 4px 0; min-height: 0; justify-content: start; }
 
@@ -570,10 +569,10 @@ html.kit .camp-tabs > .camp-tab .camp-tab-line { display: none !important; }
 .kit :is(.rg-work[aria-pressed="true"], .rg-item.on > .rg-tcard)::after { content: ''; position: absolute; inset: -2px; border: 7px solid transparent; border-image: url("../adventure?s=skin&r=75,183,48,48") 7 / 7px repeat; image-rendering: pixelated; pointer-events: none; z-index: 2; }
 .kit .rg-work.unbuilt[aria-pressed="true"]::after { inset: -5px; }
 /* Buttons on paper are adventure's paper button; a chosen one is the same button pressed, with the tick */
-html.kit :is(.rgm-opt > button:not(.rg-toggle), .camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-folded button:not(.primary), .rg-psheet .menu button, .rgm-lv button, .kit-cmd .kc-deck button) {
+html.kit :is(.camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-folded button:not(.primary), .rg-psheet .menu button, .rgm-lv button) {
   image-rendering: pixelated !important; background: none !important; border-style: solid !important; border-radius: 0 !important; box-shadow: none !important; border-width: 3px 6px 4px !important; border-image: url("../adventure?s=skin&r=159,215,16,16") 3 6 4 fill / 3px 6px 4px repeat !important; color: var(--kit-ink) !important; font-weight: 700; text-shadow: none !important; padding-top: 4px; padding-bottom: 5px; min-height: 32px;
 }
-html.kit :is(.rgm-opt > button:not(.rg-toggle), .camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-psheet .menu button, .kit-cmd .kc-deck button):active,
+html.kit :is(.camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-psheet .menu button):active,
 html.kit .rgm-lv button[aria-pressed="true"] { image-rendering: pixelated !important; background: none !important; border-style: solid !important; border-radius: 0 !important; box-shadow: none !important; border-width: 4px 6px 3px !important; border-image: url("../adventure?s=skin&r=51,133,16,16") 4 6 3 fill / 4px 6px 3px repeat !important; }
 html.kit .rgm-lv button { position: relative; font-weight: 600; justify-content: start; padding-right: 28px !important; }
 html.kit .rgm-lv button[aria-pressed="true"] { font-weight: 700; }
@@ -640,7 +639,6 @@ html.kit.kit .rg-vmap .kit-cmd .kc-face { box-shadow: 0 0 0 1px #000, 0 0 0 3px 
 html.kit.kit .rg-vmap .kit-cmd .kc-id b { color: var(--kit-gold) !important; font-family: Georgia, serif; font-size: 16px; }
 html.kit.kit .rg-vmap .kit-cmd .kc-id span, html.kit.kit .rg-vmap .kit-cmd .kc-deck span { color: #cdbfa3 !important; }
 html.kit.kit .rg-vmap .kit-cmd .kc-stat b { color: var(--kit-pale) !important; }
-html.kit.kit .rg-vmap .kit-cmd .kc-deck button { image-rendering: pixelated !important; background: none !important; border-style: solid !important; border-radius: 0 !important; box-shadow: none !important; border-width: 4px 4px 7px !important; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat !important; color: var(--kit-pale) !important; text-shadow: none !important; min-height: 0 !important; padding: 0 14px !important; height: 34px; color: var(--kit-pale) !important; font-weight: 600; }
 
 /* ----- Play menu: the mode's tile holds the map icon mobile's game menus use for it ----- */
 /* A painted icon reads on a dark disc, so the disc takes the shell's black inside the same gold rim */

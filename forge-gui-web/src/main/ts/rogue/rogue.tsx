@@ -54,8 +54,7 @@ const RUN_TOOLS: [string, TextKey][] = [['nextNode', 'lblRogueDevNextNode'], ['w
 
 /** Rogue Commander's page. The mode has no shelf of saved games, so it draws its pages in the campaign shell's box without CampaignShell. */
 export function RogueHub({ model, actions }: { model: Model; actions: Actions }) {
-  // Rogue is drawn in Adventure's look (rogue-adventure.css) while it is open. A deck editor over it keeps the editor's own look, dialogs included.
-  // The run's deck is drawn in the Deck tab, so the page around it keeps the look
+  // Adventure's look (rogue-adventure.css) stays on except under another deck editor, which keeps its own look; the run's deck is in the Deck tab
   const covered = !!model.editor && !model.editor.removals;
   useEffect(() => {
     if (covered) return;
@@ -185,11 +184,8 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const held = heldBack(runBar, ui.rogueLanded);
   // Life is written out of its maximum, so an amount the spoils hold back is taken off that text too
   const lifeHeld = held.rogueLife;
-  // The open deck spends credits without the map being sent again, so the bar takes them from the editor
-  const credits = model.editor?.removals?.credits;
-  const runBalances = runBar && run && (lifeHeld || credits !== undefined)
-    ? { ...runBar.bar, balances: runBar.bar.balances.map(b => (b.icon === 'rogueLife' && lifeHeld ? { ...b, text: `${b.amount - lifeHeld} / ${run.maxLife}` }
-      : b.icon === 'rogueCredits' && credits !== undefined ? { ...b, amount: credits } : b)) } : runBar?.bar;
+  const runBalances = runBar && run && lifeHeld
+    ? { ...runBar.bar, balances: runBar.bar.balances.map(b => (b.icon === 'rogueLife' ? { ...b, text: `${b.amount - lifeHeld} / ${run.maxLife}` } : b)) } : runBar?.bar;
   // A phone's header has room for the balances only
   const runShown = runBalances && isPortrait() ? { ...runBalances, line: '' } : runBalances;
   const abandon = (close: () => void) => { close(); setAbandoning(true); };

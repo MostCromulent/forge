@@ -389,6 +389,10 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             question = asked;
             askedAt = h != null && h.session().stage() instanceof InCampaign c ? c.save() : null;
         }
+        // The first question once the spoils are listed is the screen showing them
+        if (b != null && b.shownGains != null && b.spoilsQuestion == 0) {
+            b.spoilsQuestion = asked.message().id();
+        }
         publish();
         try {
             return asked.answer().join();
@@ -678,13 +682,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             return new RunBarHeld(held(b), 0);
         }
         final Open asked = question;
-        if (b.shownGains == null || asked == null) {
-            return null;
-        }
-        if (b.spoilsQuestion == 0) {
-            b.spoilsQuestion = asked.message().id();
-        }
-        return asked.message().id() == b.spoilsQuestion ? new RunBarHeld(b.shownGains, b.spoilsQuestion) : null;
+        return asked != null && b.spoilsQuestion != 0 && asked.message().id() == b.spoilsQuestion ? new RunBarHeld(b.shownGains, b.spoilsQuestion) : null;
     }
 
     /** What the run's bar holds back, and the question that counts it in, or 0 before one shows it. */

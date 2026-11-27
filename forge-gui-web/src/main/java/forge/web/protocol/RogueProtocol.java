@@ -138,8 +138,8 @@ public final class RogueProtocol {
     public record MapLink(int from, int to) {
     }
 
-    /** The bar over the run's pages. tip explains its line. traits counts the run's traits, Descension and Endless left out. */
     /**
+     * The bar over the run's pages. tip explains its line. traits counts the run's traits, Descension and Endless left out.
      * held is what a battle's spoils add that the bar holds back, until heldFor, the id of the question showing them, has counted them in.
      * heldFor is 0 while no screen shows them yet.
      */

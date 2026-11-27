@@ -993,7 +993,6 @@ html.kit[data-form="portrait"] .rg-vtrail .rg-n.side { margin: -16px 0 0 -16px; 
 #editor .rogue-deck.editor-page .rm-words > b { color: #f2c344; }
 #editor .rogue-deck.editor-page .rm-words > b.warn { color: #fff3d0; }
 #editor .rogue-deck.editor-page .rm-words > b.warn::before { content: '\26A0\00a0'; }
-#editor .rogue-deck.editor-page .rm-words .link { color: #f2c344; text-decoration: underline; font-weight: 600; }
 #editor .rogue-deck.editor-page .rm-keys { flex: none; display: flex; align-items: center; gap: 10px; }
 
 /* A phone: the stone and paper at their own size, so the deck keeps its width, and a slim bar */
@@ -1020,8 +1019,14 @@ html[data-form="portrait"] #editor .rogue-deck.editor-page .land-row > .band-lab
 .rg-deck-slot { width: 100%; height: 100%; min-height: 0; }
 html[data-editor-tab] #editor:not([hidden]) { position: fixed; inset: auto; z-index: 35; left: var(--tab-left); top: var(--tab-top); width: var(--tab-width); height: var(--tab-height); display: block; background: none; }
 html[data-editor-tab] #editor .editor-page { width: 100%; height: 100%; grid-template-rows: minmax(0, 1fr); border: 0; border-radius: 0; background: none; }
+/* The run's menus and questions open over the deck, so the page rises above the editor while one is open, see-through but for its bar, so the deck still shows */
+html[data-editor-tab]:not([data-form="portrait"]) #campaign:not([hidden]):has(.rg-menu, .rg-dialog) { z-index: 36; background: none; }
+html[data-editor-tab]:not([data-form="portrait"]) #campaign:has(.rg-menu, .rg-dialog) .camp-shell { background: none; }
+html[data-editor-tab]:not([data-form="portrait"]) #campaign:has(.rg-menu, .rg-dialog) .camp-bar { background: #1a1612; }
+html[data-editor-tab][data-form="portrait"] #campaign:has([role="menu"], .rg-dialog) { position: relative; z-index: 36; }
+html[data-editor-tab][data-form="portrait"] #campaign:has([role="menu"], .rg-dialog) .camp-shell { background: none; }
 
-/* The Codex as one sheet of parchment, as the map is drawn (the user, 28/11): the scene dimmed behind it, its tabs paper bookmarks along its top edge,
+/* The Codex as one sheet of parchment, as the map is drawn: the scene dimmed behind it, its tabs paper bookmarks along its top edge,
    the index a column of the same sheet, and everything in ink. An unknown card is a blank paper card marked with a question mark */
 html.kit .rg-cx > .rg-haze { --dim: .78; }
 html.kit .rg-cx { padding: 10px 14px 14px; }

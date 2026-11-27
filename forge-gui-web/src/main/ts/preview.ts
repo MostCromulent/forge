@@ -294,6 +294,10 @@ function listOf(item: HTMLElement): HTMLElement[] {
   return list ? [...list.querySelectorAll<HTMLElement>('[data-image]')].filter(c => c.offsetParent !== null) : [item];
 }
 
+/** The data attributes that give a menu item its own card text, which the preview shows when the card has no picture. */
+export const textData = (card: { name?: string | null; cost: string; type: string; text: string; pt?: string | null }) =>
+  ({ 'data-card': card.name ?? '', 'data-cost': card.cost, 'data-type': card.type, 'data-text': card.text, 'data-pt': card.pt ?? '' });
+
 /** A menu item's own card text. A draft card carries it so that a card with no picture can still be read. */
 function itemFace(el: HTMLElement | null | undefined): CardFace | undefined {
   const text = el?.dataset.text;

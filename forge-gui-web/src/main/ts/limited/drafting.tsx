@@ -11,7 +11,7 @@ import { SymbolText } from '../symbols';
 import { CARD_TYPES, colourHeading, mvGroup } from '../deck/decklist';
 import { changeUi } from '../ui';
 import { HeadControls, PageHeader } from '../header';
-import { hoverCard, inspectCard, isPinned } from '../preview';
+import { hoverCard, inspectCard, isPinned, textData } from '../preview';
 import { t, tCap, tNodes, shortDay, type TextKey } from '../text';
 import type { ComponentChildren } from 'preact';
 import type { Actions } from '../actions';
@@ -307,11 +307,6 @@ function packOrder(cards: DraftCard[], by: PackSort): number[] {
     rank: (a, b) => (b.rank ?? 0) - (a.rank ?? 0) || name(a, b),
   };
   return cards.map((_, i) => i).sort((a, b) => compare[by](cards[a], cards[b]));
-}
-
-/** A card's text on its pack slot or pick. The preview shows this text when the card has no picture. */
-function textData(card: DraftCard) {
-  return { 'data-card': card.name, 'data-cost': card.cost, 'data-type': card.type, 'data-text': card.text, 'data-pt': card.pt ?? '' };
 }
 
 /** A card's picture. If the picture fails to load, it shows the name, cost, type and rules text in the card's shape. */
