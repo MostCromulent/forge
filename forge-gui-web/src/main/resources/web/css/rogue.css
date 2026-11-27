@@ -919,7 +919,7 @@ html.kit.kit[data-form="portrait"] .rg-vtrail .rg-n.side { margin: -16px 0 0 -16
 #editor .rogue-deck.editor-page .deck-title button.deck-menu-button { width: 40px; padding: 0; }
 #editor .rogue-deck.editor-page :is(.head-right > button.primary, .rm-keys > button.primary) {
   image-rendering: pixelated; background: none; border-style: solid; border-width: 12px 10px 14px; border-image: url("../adventure?s=skin&r=75,165,32,16") 6 5 7 fill / 12px 10px 14px repeat;
-  border-radius: 0; box-shadow: none; color: #f2c344; height: 44px; min-height: 0; padding: 0 14px; text-shadow: 0 1px 0 #000;
+  border-radius: 0; box-shadow: none; color: #f2c344; height: 40px; min-height: 0; padding: 0 14px; text-shadow: 0 1px 0 #000;
 }
 /* The generic disabled look only fades a button, so a Remove the credits cannot pay for is the grey key at full strength */
 #editor .rogue-deck.editor-page .rm-keys > button.primary:disabled { border-width: 8px 8px 14px; border-image: url("../adventure?s=skin&r=1,1,14,16") 4 4 7 fill / 8px 8px 14px repeat; color: #8d8a84; text-shadow: none; opacity: 1; }

@@ -45,10 +45,19 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo, marks
     const place = document.querySelector<HTMLElement>(`.deck-half [data-from="${zone}"][data-card="${CSS.escape(state.landed)}"]`);
     land(place, place?.closest('.zone-body'), place?.closest('.zone')?.querySelector('h4'));
   }, [state]);
-  const group = (g: typeof groups[number]) => (
-    <div key={g.heading} class="group">
-      <h4><span class="hn" title={headingText(g.heading)}>{headingText(g.heading)}</span><span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
-      {g.cards.map(c => cards
+  const [across, setAcross] = useState(0);
+  const mainBody = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const body = mainBody.current;
+    if (!body || !cards) return;
+    const watch = new ResizeObserver(() => setAcross(Math.floor((body.clientWidth + PILE_GAP) / (PILE_WIDTH + PILE_GAP))));
+    watch.observe(body);
+    return () => watch.disconnect();
+  }, [cards]);
+  const group = (g: typeof groups[number], pile = g.cards, part = 0) => (
+    <div key={`${g.heading}:${part}`} class={part ? 'group more' : 'group'}>
+      <h4 aria-hidden={part ? true : undefined}><span class="hn" title={headingText(g.heading)}>{headingText(g.heading)}</span><span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
+      {pile.map(c => cards
         ? <Stack key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} handlers={handlers}
           marked={marks?.get(c.name)} mark={marks && (() => mark(c))} />
         : <Line key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} actions={actions} handlers={handlers}
@@ -92,11 +101,11 @@ export function DeckHalf({ actions, state, handlers, check, adding, addTo, marks
           }} choices={[{ value: 'type', label: t('lblType') }, { value: 'mv', label: t('lblCMC') },
             { value: 'colour', label: t('lblColor') }]} />
         </h4>
-        <div class={cards ? 'zone-body deck-cols' : 'zone-body cols'}>
+        <div ref={mainBody} class={cards ? 'zone-body deck-cols' : 'zone-body cols'}>
           {state.main.length === 0 && <p class="none">{state.commanderWanted ? t('lblWebEditorChooseCommanderFirst') : t('lblWebEditorClickToAdd')}</p>}
           {cards
-            ? groups.map(group)
-            : twoColumns(groups).map((column, i) => <div key={i}>{column.map(group)}</div>)}
+            ? piles(groups, across).map(([g, pile, part]) => group(g, pile, part))
+            : twoColumns(groups).map((column, i) => <div key={i}>{column.map(g => group(g))}</div>)}
         </div>
       </div>
       {!state.limited && !state.mainOnly && <div class="zone side-zone" data-zone="Sideboard">
@@ -237,6 +246,27 @@ function Commanders({ actions, state, handlers }: { actions: Actions; state: Edi
 }
 
 /** Splits the groups into two columns of about equal height, keeping their order. A heading counts as two lines. */
+/** Each group in the card view is a pile, and a pile is as wide as the narrowest column .deck-cols allows. */
+const PILE_WIDTH = 104;
+const PILE_GAP = 10;
+/** A pile this short is not split further. */
+const SHORT_PILE = 4;
+
+/** The groups as piles, filling the columns that fit across. The tallest group gets the next spare column, and its cards are shared out between its piles. */
+function piles<G extends { cards: EditorCard[] }>(groups: G[], across: number): [G, EditorCard[], number][] {
+  const split = groups.map(() => 1);
+  for (let spare = across - groups.length; spare > 0; spare--) {
+    const height = (i: number) => Math.ceil(groups[i].cards.length / split[i]);
+    const tallest = groups.reduce((best, _, i) => (height(i) > height(best) ? i : best), 0);
+    if (!groups.length || height(tallest) <= SHORT_PILE) break;
+    split[tallest]++;
+  }
+  return groups.flatMap((g, i) => {
+    const per = Math.ceil(g.cards.length / split[i]);
+    return Array.from({ length: Math.ceil(g.cards.length / per) || 1 }, (_, part): [G, EditorCard[], number] => [g, g.cards.slice(part * per, (part + 1) * per), part]);
+  });
+}
+
 function twoColumns<G extends { cards: unknown[] }>(groups: G[]): [G[], G[]] {
   const lines = (g: G) => g.cards.length + 2;
   const total = groups.reduce((n, g) => n + lines(g), 0);

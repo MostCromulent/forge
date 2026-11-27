@@ -333,3 +333,5 @@ button.land-set[aria-expanded="true"] { border-color: var(--accent-2); box-shado
 /* A sample hand's draws sit at the left, apart from Close at the right */
 .sample-hand .actions { justify-content: flex-start; }
 .sample-hand .actions > .primary { margin-left: auto; }
+/* A group split across several piles names itself over the first one only */
+.deck-cols .group.more h4 { visibility: hidden; }
