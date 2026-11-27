@@ -918,7 +918,7 @@ html.kit.kit[data-form="portrait"] .rg-vtrail .rg-n.side { margin: -16px 0 0 -16
 #editor .rogue-deck.editor-page :is(.head-right > button:not(.primary), .deck-menu-button, .rm-keys > button:not(.primary)):active:not(:disabled) { border-image-source: url("../adventure?s=skin&r=125,175,14,16"); }
 #editor .rogue-deck.editor-page .deck-title button.deck-menu-button { width: 40px; padding: 0; }
 #editor .rogue-deck.editor-page :is(.head-right > button.primary, .rm-keys > button.primary) {
-  image-rendering: pixelated; background: none; border-style: solid; border-width: 12px 10px 14px; border-image: url("../adventure?s=skin&r=75,165,32,16") 6 5 7 fill / 12px 10px 14px repeat;
+  image-rendering: pixelated; background: none; border-style: solid; border-width: 8px 10px 14px; border-image: url("../adventure?s=skin&r=75,165,32,16") 6 5 7 fill / 12px 10px 14px repeat;
   border-radius: 0; box-shadow: none; color: #f2c344; height: 40px; min-height: 0; padding: 0 14px; text-shadow: 0 1px 0 #000;
 }
 /* The generic disabled look only fades a button, so a Remove the credits cannot pay for is the grey key at full strength */
@@ -995,7 +995,7 @@ html[data-form="portrait"] body:has(#editor .rogue-deck) #dock .dock.folded { bo
 html[data-form="portrait"] #editor .rogue-deck.editor-page .removal-bar { border-width: 6px; border-image-width: 6px; min-height: 0; padding: 4px 6px; gap: 8px; }
 html[data-form="portrait"] #editor .rogue-deck.editor-page .rm-words { font-size: 12.5px; gap: 2px 8px; }
 html[data-form="portrait"] #editor .rogue-deck.editor-page .removal-bar .rm-keys > button { height: 36px; border-width: 4px 4px 7px; border-image-width: 4px 4px 7px; padding: 0 8px; font-size: 13px; }
-html[data-form="portrait"] #editor .rogue-deck.editor-page .removal-bar .rm-keys > button.primary:not(:disabled) { border-width: 6px 5px 7px; border-image-width: 6px 5px 7px; }
+html[data-form="portrait"] #editor .rogue-deck.editor-page .removal-bar .rm-keys > button.primary:not(:disabled) { border-width: 4px 5px 7px; border-image-width: 6px 5px 7px; }
 html[data-form="portrait"] #editor .rogue-deck.editor-page .removal-bar .rm-keys { gap: 6px; }
 html[data-form="portrait"] #editor .rogue-deck.editor-page .land-row { padding: 8px 0 4px; }
 html[data-form="portrait"] #editor .rogue-deck.editor-page .land-row > .band-lab { margin: 0; }
