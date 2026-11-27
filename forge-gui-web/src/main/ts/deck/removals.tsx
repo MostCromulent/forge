@@ -40,7 +40,7 @@ export function settled(removal: Removal | null, state: EditorState): Removal | 
 }
 
 const icon = <Sprite k="deck" cls="rc-ic" />;
-const credits = (n: number) => <>{n === 1 ? tNodes('lblWebRogueRemovalCreditOne', icon) : tNodes('lblWebRogueRemovalCredits', n, icon)}</>;
+const credits = (n: number) => <>{n === 1 ? tNodes('lblWebRogueRemovalCreditOne', icon) : tNodes('lblWebRogueRemovalCreditMany', n, icon)}</>;
 
 /** The bar under a run's deck. It explains how to choose, what the choice costs, and after a removal how to take it back. */
 export function RemovalBar({ state, chosen, removal, clear, remove, undo }: {
