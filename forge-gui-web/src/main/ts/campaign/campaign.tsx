@@ -175,14 +175,14 @@ ${tab}`;
 
 /**
  * The bar shared by every page of a campaign. It shows the save's name and line, the mode's tabs, the balances and the back button.
- * extra is a dev tool: a control beside the balances, or on a phone a row of the header's menu. mark draws what follows a tab's name.
+ * extra is a dev tool: a control beside the balances, or on a phone a row of the header's menu.
  * disabledTabs holds the tabs that cannot be opened, with why. lineTerm is the text of the line's tooltip.
  * more draws the mode's own menu in place of Preferences: the panel its button opens, or on a phone rows of the header's menu.
  * glyph draws a balance's glyph, and moreIcon the icon of the menu's button, for a mode with icons of its own. counted makes the balances count their changes.
  */
-export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, lead, mark, disabledTabs, held, extra, prefs, more, leave, under, lineTerm, glyph, moreIcon, counted }: {
+export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, lead, disabledTabs, held, extra, prefs, more, leave, under, lineTerm, glyph, moreIcon, counted }: {
   bar: Bar; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void;
-  lead?: (tab: Tab) => ComponentChildren; mark?: (tab: Tab) => ComponentChildren; disabledTabs?: Partial<Record<Tab, string>>;
+  lead?: (tab: Tab) => ComponentChildren; disabledTabs?: Partial<Record<Tab, string>>;
   /** The amounts a reward reveal has not shown yet, by balance icon. The server's balances already include them, so the bar subtracts them. */
   held: Record<string, number>;
   extra?: ComponentChildren; prefs?: () => void; more?: (close: () => void) => ComponentChildren; leave: () => void; under: boolean; lineTerm?: string;
@@ -204,7 +204,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, lead, 
       {tabs.map(([id, name]) => (
         <button key={id} class="camp-tab" data-tab={id} aria-current={id === tab ? 'page' : undefined} disabled={!!disabledTabs?.[id]} title={disabledTabs?.[id]}
           onClick={() => setTab(id)}>
-          {lead?.(id)}{t(name)}{mark?.(id)}{unseen(bar, id, id === tab) && <span class="new-card">{t('lblNew')}</span>}{id === tab && <span class="camp-tab-line" />}
+          {lead?.(id)}{t(name)}{unseen(bar, id, id === tab) && <span class="new-card">{t('lblNew')}</span>}{id === tab && <span class="camp-tab-line" />}
         </button>
       ))}
     </nav>
@@ -271,9 +271,8 @@ export function SidePanel({ kicker, where, title, art, noArt, zoom, setZoom, chi
   );
 }
 
-/** changeLabel names the change button, which says Change unless it is given. */
-export function DeckRow({ image, name, line, problem, zoom, change, changeLabel }: {
-  image?: string | null; name: string; line: string; problem: boolean; zoom: (image: string) => void; change?: () => void; changeLabel?: string;
+export function DeckRow({ image, name, line, problem, zoom, change }: {
+  image?: string | null; name: string; line: string; problem: boolean; zoom: (image: string) => void; change?: () => void;
 }) {
   return (
     <div class="camp-mine">
@@ -282,7 +281,7 @@ export function DeckRow({ image, name, line, problem, zoom, change, changeLabel 
         <b>{name}</b>
         {problem ? <span class="camp-warn">{t('lblInvalidDeck')}</span> : <span>{line}</span>}
       </div>
-      {change && <button onClick={change}>{changeLabel ?? t('lblWebMenuChange')}</button>}
+      {change && <button onClick={change}>{t('lblWebMenuChange')}</button>}
     </div>
   );
 }
