@@ -171,7 +171,7 @@ public final class RoguePages {
         final List<Modification> modifications = new ArrayList<>();
         for (final CustomRunModification m : CustomRunModification.values()) {
             // Desktop names Experiment as the one that swaps the roster
-            modifications.add(new Modification(m.name(), m.getDisplayName(), m.getRawDescription(), m.getGroup().getDisplayName(),
+            modifications.add(new Modification(m.name(), m.getDisplayName(), m.getRawDescription(), group(m),
                     m.isGeneratedCommander(), m == CustomRunModification.EXPERIMENT));
         }
         final List<List<Trait>> starting = new ArrayList<>();
@@ -180,6 +180,15 @@ public final class RoguePages {
         }
         return new RogueRoster(commanders(progress, false), commanders(progress, true), progress.isCustomRunsUnlocked(),
                 progress.isDescensionModeUnlocked(), RogueStart.descensionLockText(progress, null, 0, true), levels, modifications, starting);
+    }
+
+    /** What a modification changes. The start page lists the modifications under these headings, in the order they come in. */
+    private static String group(final CustomRunModification m) {
+        return switch (m) {
+            case EXPERIMENT, CHOSEN_ONE, MANIA -> "Commander";
+            case RANDOM_START, RANDOM_REWARDS, SEALED -> "Deck";
+            case PATHFINDER, RICH, USURPER, BORROWED_HEALTH, VOID, PATH_OF_THE_BANNED -> "Map";
+        };
     }
 
     /** The traits a run would start with, as the run's traits page draws them, each at the rank the run would take it at. */
