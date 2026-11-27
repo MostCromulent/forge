@@ -9,7 +9,6 @@ import forge.gamemodes.rogue.path.*;
 import forge.util.Localizer;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -77,7 +76,10 @@ public class RogueRunHistoryEntry {
                     RoguePlanebound planebound = ((NodePlanebound) node).getRoguePlanebound();
                     yield planebound == null ? null : planebound.planeName() + " (" + planebound.planeboundName() + ")";
                 }
-                case SANCTUM, BAZAAR, CHEST, EVENT -> sideLabel(node.getType());
+                case SANCTUM -> "Sanctum";
+                case BAZAAR -> "Bazaar";
+                case CHEST -> "Loot";
+                case EVENT -> "Event";
             };
             if (label != null) {
                 pathLabels.add(label);
@@ -85,37 +87,6 @@ public class RogueRunHistoryEntry {
         }
 
         return pathLabels;
-    }
-
-    private static String sideLabel(NodeType type) {
-        return switch (type) {
-            case PLANEBOUND -> null;
-            case SANCTUM -> "Sanctum";
-            case BAZAAR -> "Bazaar";
-            case CHEST -> "Loot";
-            case EVENT -> "Event";
-        };
-    }
-
-    /** One node of the path. A planebound's names are null for a side node, and its plane is null where the label names none. */
-    public record PathStep(NodeType type, String planeName, String planeboundName) {
-    }
-
-    /** The path read back from its labels, "Plane (Planebound)" for a planebound. A label that is no side node's is taken as a planebound's. */
-    public List<PathStep> getPathSteps() {
-        List<PathStep> steps = new ArrayList<>();
-        for (String label : getPath()) {
-            NodeType side = Arrays.stream(NodeType.values()).filter(t -> label.equals(sideLabel(t))).findFirst().orElse(null);
-            int open = label.lastIndexOf(" (");
-            if (side != null) {
-                steps.add(new PathStep(side, null, null));
-            } else if (open > 0 && label.endsWith(")")) {
-                steps.add(new PathStep(NodeType.PLANEBOUND, label.substring(0, open), label.substring(open + 2, label.length() - 1)));
-            } else {
-                steps.add(new PathStep(NodeType.PLANEBOUND, null, label));
-            }
-        }
-        return steps;
     }
 
     /** The outcome as History shows it. An Endless run was won before it went Endless, so its defeat shows as a victory. */

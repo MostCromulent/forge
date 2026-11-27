@@ -467,6 +467,25 @@ public final class RoguePages {
                 NPC.TEFERI.avatarIndex, List.of(), List.of(), List.of(chosen.text().split("\n\n"))));
     }
 
+    /** A node of a finished run's path, read back from the label the history saved: a side node's name, or "Plane (Planebound)". */
+    private static HistoryStep step(final String label) {
+        final NodeType side = switch (label) {
+            case "Sanctum" -> NodeType.SANCTUM;
+            case "Bazaar" -> NodeType.BAZAAR;
+            case "Loot" -> NodeType.CHEST;
+            case "Event" -> NodeType.EVENT;
+            default -> null;
+        };
+        if (side != null) {
+            return new HistoryStep(side.name(), null, null);
+        }
+        final int open = label.lastIndexOf(" (");
+        if (open > 0 && label.endsWith(")")) {
+            return new HistoryStep(NodeType.PLANEBOUND.name(), picture(label.substring(0, open)), label.substring(open + 2, label.length() - 1));
+        }
+        return new HistoryStep(NodeType.PLANEBOUND.name(), null, label);
+    }
+
     /** The finished runs, newest first, behind the latest run's commander, or with none the commander started most. Null while History is locked. */
     public static RogueHistoryPage history(final RogueMetaProgress progress) {
         if (!RogueStart.tabsUnlocked(progress)) {
@@ -480,8 +499,7 @@ public final class RoguePages {
             if (!entry.getOutcomeDetail().isEmpty()) {
                 detail.add(entry.getOutcomeDetail());
             }
-            final List<HistoryStep> steps = entry.getPathSteps().stream().map(step -> new HistoryStep(step.type().name(),
-                    step.planeName() == null ? null : picture(step.planeName()), step.planeboundName())).toList();
+            final List<HistoryStep> steps = entry.getPath().stream().map(RoguePages::step).toList();
             final List<HistoryTrait> traits = entry.getActiveEffects().stream().map(e -> new HistoryTrait(e.getDisplayText(), e.getTooltipText())).toList();
             runs.add(new HistoryRun(i, entry.getCommanderName(), picture(entry.getCommanderName()), entry.getShownOutcome(),
                     line(detail, entry.getDescensionLevel(), entry.getEndlessLevel()), steps, traits, entry.getTimestamp(), entry.getFormattedRunTime(),
@@ -559,6 +577,18 @@ public final class RoguePages {
                 hiding.isEmpty() ? null : String.join("\n", hiding), MAP_TERMS);
     }
 
+    /** A side node's name on the map. Null for a plane, which its planebound names. */
+    private static String sideName(final NodeType type) {
+        final Localizer text = Localizer.getInstance();
+        return switch (type) {
+            case PLANEBOUND -> null;
+            case SANCTUM -> text.getMessage("lblRogueSanctum");
+            case BAZAAR -> text.getMessage("lblRogueBazaar");
+            case EVENT -> text.getMessage("lblRogueEvent");
+            case CHEST -> text.getMessage("lblRogueChest");
+        };
+    }
+
     /** The label of the button that enters the node. A face-down plane is not named. */
     private static String enterText(final RoguePathNode node, final boolean faceDown) {
         final Localizer text = Localizer.getInstance();
@@ -589,7 +619,7 @@ public final class RoguePages {
                         card == null ? null : card.getImageKey(false), card == null ? null : card.getRules().getOracleText().replace("\\n", "\n"),
                         life, elite, boss, plane.getWrathfulCount(), plane.getCursedCount(), plane.getGoldReward(), plane.getEchoReward(), enter);
             }
-            case SANCTUM, BAZAAR, EVENT, CHEST -> new MapNode(index, node.getType().name(), state, false, node.getType().sideName(), null, null, null,
+            case SANCTUM, BAZAAR, EVENT, CHEST -> new MapNode(index, node.getType().name(), state, false, sideName(node.getType()), null, null, null,
                     node.getType().sideTooltip(), 0, false, false, 0, 0, 0, 0, enter);
         };
     }
