@@ -65,6 +65,16 @@ public class DeckCollectionRulesTest {
         }
 
         @Override
+        public int credits() {
+            return credits;
+        }
+
+        @Override
+        public boolean free(final PaperCard card) {
+            return card.getRules().getType().isBasicLand();
+        }
+
+        @Override
         public Set<String> basics() {
             return Set.of("Forest");
         }
@@ -163,6 +173,22 @@ public class DeckCollectionRulesTest {
         Assert.assertEquals(e.deck().getMain().countByName("Sol Ring"), 0);
     }
 
+    // Fails if a removal of several cards is charged or undone card by card rather than as one change
+    @Test
+    public void removingSeveralCardsIsOneChange() {
+        final DeckEditor e = editor(deck(), true);
+        Assert.assertEquals(e.state().removals().free(), List.of("Forest"));
+        Assert.assertNull(e.removeCards(Map.of("Sol Ring", 1, "Shock", 1, "Forest", 2)));
+        Assert.assertEquals(e.deck().getMain().countAll(), 3);
+        Assert.assertEquals(spent.size(), 1);
+        Assert.assertEquals(credits, 0);
+        Assert.assertEquals(e.state().removals().credits(), 0);
+        Assert.assertNull(e.undo());
+        assertMain(e, deck());
+        Assert.assertEquals(credits, 2);
+        Assert.assertFalse(e.state().canUndo());
+    }
+
     @Test
     public void importReplaceIsRefused() {
         final DeckEditor e = editor(deck(), true);
@@ -248,7 +274,7 @@ public class DeckCollectionRulesTest {
         final Runnable open = () -> decks.openCollectionDeck(deck(), new DeckEditor.Run(saved::add), GameType.RogueCommander, collection(true),
                 true, channel);
         final Runnable remove = () -> DeckWorkspace.COMMANDS.run(decks, channel,
-                new EditorEdit(EditOp.remove, "Sol Ring", DeckSection.Main, null, 1, null, null));
+                new EditorEdit(EditOp.remove, "Sol Ring", DeckSection.Main, null, 1, null, null, null));
         final Runnable undo = () -> DeckWorkspace.COMMANDS.run(decks, channel, new Bare(Plain.editorUndo));
         open.run();
         remove.run();

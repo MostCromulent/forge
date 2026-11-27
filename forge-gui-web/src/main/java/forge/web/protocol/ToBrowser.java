@@ -270,7 +270,12 @@ public final class ToBrowser {
             List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
             @Nullable String verdict, boolean canUndo, @Nullable String landed,
             boolean limited, @Nullable String landSet, List<LandSet> landSets, @Nullable String collection, boolean mainOnly,
-            List<EditorSection> sections, @Nullable String counter, boolean counterSpent, boolean canReplace, boolean catalogue) {
+            List<EditorSection> sections, @Nullable String counter, boolean counterSpent, boolean canReplace, boolean catalogue,
+            @Nullable EditorRemovals removals) {
+    }
+
+    /** What taking cards out of a collection's main deck costs: the credits left, and the cards in it that cost none. Null when removals are free. */
+    public record EditorRemovals(int credits, List<String> free) {
     }
 
     /** A section a deck may have beyond the main deck, sideboard and commander, such as planes or schemes. */

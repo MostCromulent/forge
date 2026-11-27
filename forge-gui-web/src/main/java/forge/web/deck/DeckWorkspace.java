@@ -325,6 +325,7 @@ public final class DeckWorkspace implements IHasForgeLog {
             case add -> e.printings() == null || e.printings().isEmpty() ? editor.add(e.name(), to, Math.max(1, e.count()))
                     : editor.addPrinting(e.name(), to, e.printings().get(0).name());
             case remove -> editor.remove(e.name(), from, Math.max(1, e.count()));
+            case removeCards -> editor.removeCards(counts(e.cards()));
             case move -> editor.move(e.name(), from, to, Math.max(1, e.count()));
             case commander -> editor.makeCommander(e.name(), e.from());
             case printings -> editor.setPrintings(e.name(), from, counts(e.printings()));

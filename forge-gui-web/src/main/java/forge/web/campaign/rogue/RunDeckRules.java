@@ -10,6 +10,7 @@ import forge.util.Localizer;
 import forge.web.deck.DeckEditor;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -61,6 +62,16 @@ final class RunDeckRules implements DeckEditor.Rules, IHasForgeLog {
     @Override
     public boolean spent() {
         return run.getRemovalCredits() == 0;
+    }
+
+    @Override
+    public int credits() {
+        return run.getRemovalCredits();
+    }
+
+    @Override
+    public boolean free(final PaperCard card) {
+        return RogueRun.removalCost(List.of(Map.entry(card, 1))) == 0;
     }
 
     @Override

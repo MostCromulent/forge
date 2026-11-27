@@ -176,15 +176,15 @@ public final class FromBrowser {
     public record EditorOpen(@Nullable String key, @Nullable String newFormat, @Nullable Integer seat, boolean copy) {
     }
 
-    public enum EditOp { add, remove, move, commander, printings, lands, landSet, suggestLands, foil, randomPlanes }
+    public enum EditOp { add, remove, removeCards, move, commander, printings, lands, landSet, suggestLands, foil, randomPlanes }
 
-    /** A name and a count. The name is a card printing's image key in a printings change, or a basic land's name in a lands change. */
+    /** A name and a count. The name is a card printing's image key in a printings change, a basic land's name in a lands change, or a card's name in a removeCards change. */
     public record CountedName(String name, int count) {
     }
 
     @Command("editorEdit")
     public record EditorEdit(EditOp op, @Nullable String name, @Nullable DeckSection from, @Nullable DeckSection to, int count,
-            @Nullable List<CountedName> printings, @Nullable List<CountedName> lands) {
+            @Nullable List<CountedName> printings, @Nullable List<CountedName> lands, @Nullable List<CountedName> cards) {
     }
 
     @Command("editorRename")

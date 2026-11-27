@@ -20,6 +20,7 @@ import forge.util.ImageUtil;
 import forge.util.Localizer;
 import forge.util.storage.IStorage;
 import forge.web.protocol.ToBrowser.EditorLand;
+import forge.web.protocol.ToBrowser.EditorRemovals;
 import forge.web.protocol.ToBrowser.EditorSection;
 import forge.web.protocol.ToBrowser.EditorState;
 import forge.web.protocol.ToBrowser.LandSet;
@@ -277,6 +278,25 @@ public final class DeckEditor {
             return Localizer.getInstance().getMessage("lblWebEditorNoneToRemove", String.valueOf(name));
         }
         return change(name, () -> take(pool, name, Math.min(count, have)));
+    }
+
+    /** Takes several cards out of the main deck as one change, so the collection's rules judge and charge it once and one undo puts it all back. */
+    String removeCards(final Map<String, Integer> countsByName) {
+        if (countsByName.isEmpty()) {
+            return null;
+        }
+        final CardPool main = deck.getMain();
+        for (final String name : countsByName.keySet()) {
+            if (main.countByName(name) == 0) {
+                return Localizer.getInstance().getMessage("lblWebEditorNoneToRemove", String.valueOf(name));
+            }
+        }
+        return change(null, () -> countsByName.forEach((name, count) -> {
+            final CardPool taken = take(main, name, Math.min(Math.max(1, count), main.countByName(name)));
+            if (limited()) {
+                deck.getOrCreate(DeckSection.Sideboard).addAll(taken);
+            }
+        }));
     }
 
     String move(final String name, final DeckSection from, final DeckSection to, final int count) {
@@ -597,7 +617,15 @@ public final class DeckEditor {
                 limited(), landSet, limited() || collection == null ? LandSets.ALL
                         : collection.landSets().apply(deck).stream().map(e -> new LandSet(e.getCode(), e.getName())).toList(),
                 collection == null ? null : collection.owner(), collection != null && collection.mainOnly(), sections(legality),
-                rules == null ? null : rules.counter(), rules != null && rules.spent(), rules == null, rules == null);
+                rules == null ? null : rules.counter(), rules != null && rules.spent(), rules == null, rules == null, removals());
+    }
+
+    private EditorRemovals removals() {
+        if (rules == null) {
+            return null;
+        }
+        final List<String> free = deck.getMain().toFlatList().stream().filter(rules::free).map(PaperCard::getName).distinct().toList();
+        return new EditorRemovals(rules.credits(), free);
     }
 
     /** Every section beyond the main deck that a constructed deck can have, as desktop's editor offers them. A pool, a collection or a planar deck has none. */
@@ -1036,6 +1064,12 @@ public final class DeckEditor {
         default boolean spent() {
             return false;
         }
+
+        /** How many cards that are not free may be taken out. */
+        int credits();
+
+        /** Whether taking this card out costs nothing. */
+        boolean free(PaperCard card);
 
         /** The names of the basic lands that may be added. */
         Set<String> basics();
