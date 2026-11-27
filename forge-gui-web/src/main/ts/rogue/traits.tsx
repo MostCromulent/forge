@@ -34,7 +34,7 @@ export function TraitCard({ trait, small }: { trait: Trait; small?: boolean }) {
     <div class={['rg-tcard', small && 'sm', trait.source === 'WOUND' && 'wound'].filter(Boolean).join(' ')}>
       <Seal trait={trait} />
       <b>{trait.name}</b>
-      <small>{trait.loot ? t('lblWebRogueLoot') : <><Icon d={ROGUE_ICONS.trait} cls="rg-ic" />{t('lblWebRogueTrait')}</>}</small>
+      <small>{trait.loot ? t('lblRogueLoot') : <><Icon d={ROGUE_ICONS.trait} cls="rg-ic" />{t('lblRogueTrait')}</>}</small>
       <p><Words parts={trait.text} /></p>
     </div>
   );
@@ -66,7 +66,7 @@ export function TraitsPage({ traits, carry, haze }: { traits: Trait[]; carry: Ro
           </div>
         </section>
         <aside class="rgt-carry">
-          <header><h2>{t('lblWebRogueCarryHeading')}</h2><p>{t('lblWebRogueCarryHint')}</p></header>
+          <header><h2>{t('lblRogueCarryCards')}</h2><p>{t('lblWebRogueCarryHint')}</p></header>
           <div class="pile">
             {carry.map((c, i) => (
               <figure key={i} style={{ '--i': i }}>

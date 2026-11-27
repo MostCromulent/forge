@@ -159,7 +159,7 @@ function Carousel({ roster, choice, set, runs, begin, answer, unlocked }: {
             {c.image ? <div class="rgsh-haze" style={{ backgroundImage: `url("${artUrl(c.image)}")` }} /> : <div class="rgsh-haze lockhaze" />}
           </div>
         ))}
-        {runs && <div class="rgl-crumb"><button class="link" onClick={runs}>{t('lblWebRogueRuns')}</button><span>›</span><b>{t('lblRogueStartNewRun')}</b></div>}
+        {runs && <div class="rgl-crumb"><button class="link" onClick={runs}>{t('lblRogueRuns')}</button><span>›</span><b>{t('lblRogueStartNewRun')}</b></div>}
         <div class="rgc-ring">
           {list.map((c, i) => {
             const p = place(i, at, n);
@@ -239,10 +239,10 @@ function Words({ roster, commander: c, choice, set, unlocked }: {
       <p>{c.text}</p>
       <div class="camp-chips">{c.themes.map(x => <span key={x} class="camp-chip">{x}</span>)}</div>
       <div class="rgm-facts">
-        <div><b>{c.runs}</b><span>{t('lblWebRogueRuns')}</span></div>
+        <div><b>{c.runs}</b><span>{t('lblRogueRuns')}</span></div>
         <div><b>{c.wins}</b><span>{t('lblWins')}</span></div>
         <div><b>{c.maxDescension}</b><span>{t('lblWebRogueMaxDescension')}</span></div>
-        <div><b>{c.seen}</b><span>{t('lblWebRogueCardsSeen')}</span></div>
+        <div><b>{c.seen}</b><span>{t('lblRogueCardsSeen')}</span></div>
       </div>
       {!roster.descension ? (
         <div class="rg-sec">

@@ -363,7 +363,7 @@ public final class RoguePages {
             String group = switch (type) {
                 case NORMAL -> text.getMessage("lblNormal");
                 case ELITE -> text.getMessage("lblElite");
-                case BOSS -> text.getMessage("lblWebRogueBoss");
+                case BOSS -> text.getMessage("lblRogueBoss");
             };
             for (final RoguePlanebound planebound : planebounds.stream().filter(p -> p.type() == type).toList()) {
                 rows.add(progress.hasEncounteredPlanebound(planebound)

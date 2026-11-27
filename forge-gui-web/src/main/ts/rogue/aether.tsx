@@ -106,7 +106,7 @@ export function AetherPage({ aether, raise, toggle, expand, reset }: {
       <div class="rg-aether" ref={page}>
         <span class="rg-haze" style={{ backgroundImage: aether.art ? `url("${artUrl(aether.art)}")` : undefined }} />
         <div class="rg-scroll">
-          <span class="rg-energy">{t('lblWebRogueAetherEnergy')}{pips}{`${aether.used} / ${aether.slots}`}</span>
+          <span class="rg-energy">{t('lblRogueAetherEnergyLabel')}{pips}{`${aether.used} / ${aether.slots}`}</span>
           {upgrade ? (
             <div class="rg-upcard">
               <b>{upgrade.name}</b>
@@ -138,7 +138,7 @@ export function AetherPage({ aether, raise, toggle, expand, reset }: {
       <div class="rg-scroll">
         <div class="rg-head">
           <h2>{t('lblRogueTheAether')}</h2>
-          <span class="rg-energy">{t('lblWebRogueAetherEnergy')}{pips}{t('lblWebRogueEnergyInUse', aether.used, aether.slots)}</span>
+          <span class="rg-energy">{t('lblRogueAetherEnergyLabel')}{pips}{t('lblWebRogueEnergyInUse', aether.used, aether.slots)}</span>
           <span class="sp" />
           <button onClick={reset}>{t('lblRogueResetAetherworks')}</button>
         </div>

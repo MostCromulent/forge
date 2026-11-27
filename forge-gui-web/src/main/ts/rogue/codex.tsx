@@ -19,7 +19,7 @@ export type CodexTab = 'stats' | 'commanders' | 'planebounds' | 'traits' | 'jour
 const TABS: [CodexTab, TextKey, TextKey][] = [['stats', 'lblRogueGlobalStats', 'lblWebRogueStats'], ['commanders', 'lblRogueCommanders', 'lblCommanders'],
   ['planebounds', 'lblRoguePlanebounds', 'lblRoguePlanebounds'], ['traits', 'lblRogueTraits', 'lblRogueTraits'], ['journal', 'lblRogueJournal', 'lblRogueJournal']];
 const FACTS: Record<string, TextKey> = {
-  runs: 'lblWebRogueRuns', wins: 'lblWins', descension: 'lblWebRogueMaxDescension', endless: 'lblWebRogueMaxEndless', slain: 'lblWebRogueSlain', defeats: 'lblWebRogueDefeatedBy',
+  runs: 'lblRogueRuns', wins: 'lblWins', descension: 'lblWebRogueMaxDescension', endless: 'lblWebRogueMaxEndless', slain: 'lblWebRogueSlain', defeats: 'lblWebRogueDefeatedBy',
 };
 const background = (key: string | null | undefined) => (key ? { backgroundImage: `url("${artUrl(key)}")` } : undefined);
 /** What a list tab shows in place of an entry when it has none to show, as mobile words it. */
@@ -29,7 +29,7 @@ const NO_ENTRY: Partial<Record<CodexTab, TextKey>> = { commanders: 'lblRogueNoUn
 function Facts({ facts, tab }: { facts: CodexFact[]; tab: CodexTab }) {
   const phone = isPortrait() && tab !== 'traits';
   const label = (kind: string): string => {
-    if (kind === 'seen') return t(tab === 'traits' ? 'lblWebRogueTraitsSeen' : phone ? 'lblWebRogueSeen' : 'lblWebRogueCardsSeen');
+    if (kind === 'seen') return t(tab === 'traits' ? 'lblWebRogueTraitsSeen' : phone ? 'lblWebRogueSeen' : 'lblRogueCardsSeen');
     if (kind === 'acquired') return t(tab === 'traits' ? 'lblWebRogueTraitsAcquired' : phone ? 'lblWebRogueAcquired' : 'lblWebRogueCardsAcquired');
     return FACTS[kind] ? t(FACTS[kind]) : kind;
   };

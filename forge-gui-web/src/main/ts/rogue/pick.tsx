@@ -99,7 +99,7 @@ export function CardPick({ asked, answer, fold, viewDeck }: { asked: AskCards; a
   const foot = <>
     {!fold && <button disabled={going} onClick={() => setPicked([])}>{t('lblWebRogueClear')}</button>}
     <button class="primary" ref={ok} disabled={going || short > 0} onClick={confirm}>
-      {short > 0 ? t(phone ? 'lblWebRogueMore' : 'lblWebRogueChooseMore', short) : t('lblChoose')}
+      {short > 0 ? t(phone ? 'lblWebRogueMore' : 'lblRogueChooseMore', short) : t('lblChoose')}
     </button>
   </>;
   return <>

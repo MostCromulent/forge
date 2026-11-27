@@ -210,7 +210,7 @@ function Choosing({ choice, answer, fold, viewDeck }: { choice: AskChoice; answe
     ),
     options.length > 0 && choice.skip && <button key="skip" onClick={() => answer('skip')}>{t('lblSkip')}</button>,
     options.length > 0 && choice.count > 1 && (
-      <button key="pick" class="primary" disabled={short > 0} onClick={() => answer(picked)}>{short > 0 ? t('lblWebRogueChooseMore', short) : t('lblChoose')}</button>
+      <button key="pick" class="primary" disabled={short > 0} onClick={() => answer(picked)}>{short > 0 ? t('lblRogueChooseMore', short) : t('lblChoose')}</button>
     ),
   ].filter(Boolean);
   const face = choice.face ?? null;

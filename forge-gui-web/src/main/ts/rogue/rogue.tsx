@@ -33,9 +33,9 @@ import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { AskNpcs, RogueAnnounce, RogueHome, Tell } from '../protocol';
 
-const TABS: [RogueTab, TextKey][] = [['runs', 'lblWebRogueRuns'], ['aether', 'lblRogueAether'], ['codex', 'lblRogueCodex'], ['history', 'lblRogueHistory']];
+const TABS: [RogueTab, TextKey][] = [['runs', 'lblRogueRuns'], ['aether', 'lblRogueAether'], ['codex', 'lblRogueCodex'], ['history', 'lblRogueHistory']];
 /** The run's tabs. Deck opens the deck editor over the map, so the map stays the tab shown. */
-const RUN_TABS: [RunTab, TextKey][] = [['map', 'lblWebRogueMap'], ['traits', 'lblRogueEffects'], ['deck', 'lblDeck'], ['codex', 'lblRogueCodex']];
+const RUN_TABS: [RunTab, TextKey][] = [['map', 'lblRogueMap'], ['traits', 'lblRogueEffects'], ['deck', 'lblDeck'], ['codex', 'lblRogueCodex']];
 type RunTab = 'map' | 'traits' | 'deck' | 'codex';
 /** The title and question of each reset, by kind. */
 const RESETS: Record<string, [TextKey, TextKey]> = {

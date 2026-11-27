@@ -26,7 +26,7 @@ export function Landing({ home, run, go, deck, abandon, fresh }: {
               </div>
               <div class="figs">
                 <div>{glyph('heart')}<b>{`${run.life} / ${run.maxLife}`}</b><span>{t('lblLife')}</span></div>
-                <div><Sprite k="coin" /><b>{run.gold}</b><span>{t('lblWebRogueGold')}</span></div>
+                <div><Sprite k="coin" /><b>{run.gold}</b><span>{t('lblRogueGold')}</span></div>
                 <div>{glyph('deck')}<b>{run.cards}</b><span>{t('lblCards')}</span></div>
                 <div>{glyph('cut')}<b>{run.credits}</b><span>{t('lblWebRogueRemovalCredits')}</span></div>
               </div>

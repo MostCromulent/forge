@@ -38,9 +38,9 @@ function useNode(model: Model, actions: Actions) {
 function Chips({ map, n, cls }: { map: RogueMap; n: MapNode; cls: string }) {
   const chip = (c: string) => (cls ? `${cls} ${c}`.trim() : undefined);
   return <>
-    <span class={chip('')}>{glyph('heart')}{` ${t('lblWebRogueLife', n.life)}`}</span>
+    <span class={chip('')}>{glyph('heart')}{` ${t('lblNLife', n.life)}`}</span>
     {n.elite && <span class={chip('brass')}>{glyph('star')}{` ${t('lblElite')}`}</span>}
-    {n.boss && <span class={chip('brass')}>{glyph('crown')}{` ${t('lblWebRogueBoss')}`}</span>}
+    {n.boss && <span class={chip('brass')}>{glyph('crown')}{` ${t('lblRogueBoss')}`}</span>}
     {n.wrathful > 0 && <span class={chip('')} {...explains(map.terms.WRATHFUL)}>{glyph('flame')}{` ${map.terms.WRATHFUL?.text}`}</span>}
     {n.cursed > 0 && <span class={chip('')} {...explains(map.terms.CURSED)}>{glyph('curse')}{` ${map.terms.CURSED?.text}`}</span>}
   </>;
@@ -120,7 +120,7 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
 export function SheetBar({ model, actions }: { model: Model; actions: Actions }) {
   const { map, n, enter, reroll, rerollOff, why } = useNode(model, actions);
   const plane = n.kind === 'PLANEBOUND';
-  const line = plane ? [n.plane ?? '???', `♥ ${n.life}`, n.elite && t('lblElite'), n.boss && t('lblWebRogueBoss'),
+  const line = plane ? [n.plane ?? '???', `♥ ${n.life}`, n.elite && t('lblElite'), n.boss && t('lblRogueBoss'),
     n.wrathful > 0 && map.terms.WRATHFUL?.text, n.cursed > 0 && map.terms.CURSED?.text].filter(Boolean).join(' · ') : n.text;
   return (
     <div class="rg-sheetbar">
