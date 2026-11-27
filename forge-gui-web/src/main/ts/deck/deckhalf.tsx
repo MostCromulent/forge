@@ -15,6 +15,7 @@ import { t, tCap, tSentence } from '../text';
 import { Backdrop, Dropdown } from '../dialog';
 import { reducedMotion } from '../dom';
 import { Select } from '../select';
+import type { Marks } from './removals';
 
 const GROUP_KEY = 'forge.groupBy';
 const HAND = 7;
@@ -22,7 +23,7 @@ const HAND = 7;
 /** marks, for a run's deck, are the copies chosen for removal. A click on a main deck card then chooses a copy, and nothing else takes cards out. */
 export function DeckHalf({ actions, state, handlers, check, adding, addTo, marks, mark }: {
   actions: Actions; state: EditorState; handlers: CardHandlers; check?: ComponentChildren;
-  adding: DeckSection | null; addTo: (section: DeckSection | null) => void; marks?: Map<string, number>; mark: (card: EditorCard) => void;
+  adding: DeckSection | null; addTo: (section: DeckSection | null) => void; marks?: Marks; mark: (card: EditorCard) => void;
 }) {
   const [by, setBy] = useState<GroupBy>(storedGroup);
   const [cards, view] = useDeckView();

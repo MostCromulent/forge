@@ -33,28 +33,22 @@ export function toggled(marks: Marks, card: EditorCard): Marks {
   return next;
 }
 
-/** What follows a state change: a sent removal becomes done when the deck lost its cards and credits, and anything after that clears it. */
+/** What follows a state change: the first state after a removal is sent is its reply, done if the deck got smaller, and anything after that clears it. */
 export function settled(removal: Removal | null, state: EditorState): Removal | null {
   if (!removal || removal.at === state) return removal;
-  const before = removal.at;
-  const landed = !removal.done && state.stats.main === before.stats.main - removal.n
-    && state.removals?.credits === (before.removals?.credits ?? 0) - removal.cost;
-  return landed ? { ...removal, at: state, done: true } : null;
+  return !removal.done && state.stats.main < removal.at.stats.main ? { ...removal, at: state, done: true } : null;
 }
-
-export const creditCost = (chosen: [string, number][], state: EditorState) =>
-  chosen.filter(([name]) => !state.removals?.free.includes(name)).reduce((sum, [, n]) => sum + n, 0);
 
 const icon = <Sprite k="deck" cls="rc-ic" />;
 const credits = (n: number) => <>{n === 1 ? tNodes('lblWebRogueRemovalCreditOne', icon) : tNodes('lblWebRogueRemovalCredits', n, icon)}</>;
 
 /** The bar under a run's deck. It explains how to choose, what the choice costs, and after a removal how to take it back. */
 export function RemovalBar({ state, chosen, removal, clear, remove, undo }: {
-  state: EditorState; chosen: [string, number][]; removal: Removal | null; clear: () => void; remove: () => void; undo: () => void;
+  state: EditorState; chosen: [string, number][]; removal: Removal | null; clear: () => void; remove: (n: number, cost: number) => void; undo: () => void;
 }) {
   const have = state.removals?.credits ?? 0;
   const n = chosen.reduce((sum, [, k]) => sum + k, 0);
-  const cost = creditCost(chosen, state);
+  const cost = chosen.filter(([name]) => !state.removals?.free.includes(name)).reduce((sum, [, k]) => sum + k, 0);
   const over = cost - have;
   const root = useRef<HTMLElement>(null);
   // A phone's chat chip sits on the bar's top edge rather than over its keys
@@ -94,7 +88,7 @@ export function RemovalBar({ state, chosen, removal, clear, remove, undo }: {
       {words}
       {n > 0 && <span class="rm-keys">
         <button onClick={clear}>{t('lblWebRogueClear')}</button>
-        <button class="primary" disabled={over > 0 || (removal !== null && !removal.done)} onClick={remove}>
+        <button class="primary" disabled={over > 0 || (removal !== null && !removal.done)} onClick={() => remove(n, cost)}>
           {n === 1 ? t('lblWebRogueRemoveCard') : t('lblWebRogueRemoveCards', n)}</button>
       </span>}
     </section>

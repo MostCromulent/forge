@@ -291,12 +291,7 @@ public final class DeckEditor {
                 return Localizer.getInstance().getMessage("lblWebEditorNoneToRemove", String.valueOf(name));
             }
         }
-        return change(null, () -> countsByName.forEach((name, count) -> {
-            final CardPool taken = take(main, name, Math.min(Math.max(1, count), main.countByName(name)));
-            if (limited()) {
-                deck.getOrCreate(DeckSection.Sideboard).addAll(taken);
-            }
-        }));
+        return change(null, () -> countsByName.forEach((name, count) -> take(main, name, Math.min(Math.max(1, count), main.countByName(name)))));
     }
 
     String move(final String name, final DeckSection from, final DeckSection to, final int count) {
@@ -617,7 +612,7 @@ public final class DeckEditor {
                 limited(), landSet, limited() || collection == null ? LandSets.ALL
                         : collection.landSets().apply(deck).stream().map(e -> new LandSet(e.getCode(), e.getName())).toList(),
                 collection == null ? null : collection.owner(), collection != null && collection.mainOnly(), sections(legality),
-                rules == null ? null : rules.counter(), rules != null && rules.spent(), rules == null, rules == null, removals());
+                rules == null ? null : rules.counter(), rules != null && rules.credits() == 0, rules == null, rules == null, removals());
     }
 
     private EditorRemovals removals() {
@@ -1059,11 +1054,6 @@ public final class DeckEditor {
 
         /** The counter's text, or null. */
         String counter();
-
-        /** Whether the counter is at its end, so it is drawn muted. */
-        default boolean spent() {
-            return false;
-        }
 
         /** How many cards that are not free may be taken out. */
         int credits();

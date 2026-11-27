@@ -22,7 +22,7 @@ import { Backdrop, Dropdown } from '../dialog';
 import { ICONS, Icon } from '../icons';
 import { showNotice } from '../notices';
 import { Sprite } from '../rogue/kit';
-import { RemovalBar, creditCost, heldMarks, settled, toggled, type Marks, type Removal } from './removals';
+import { RemovalBar, heldMarks, settled, toggled, type Marks, type Removal } from './removals';
 
 /** A planar deck has one section, so there is nowhere to drag its cards to, and they have no menu. A run's deck loses cards only through its removal bar. */
 const noHandlers: CardHandlers = () => ({});
@@ -186,8 +186,8 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
             setMarks(new Map());
             setRemoval(null);
           }} undo={() => actions.editorUndo()}
-          remove={() => {
-            setRemoval({ n: chosen.reduce((sum, [, k]) => sum + k, 0), cost: creditCost(chosen, state), at: state, done: false });
+          remove={(n, cost) => {
+            setRemoval({ n, cost, at: state, done: false });
             actions.edit({ op: 'removeCards', count: 0, cards: chosen.map(([name, count]) => ({ name, count })) });
           }} />}
       </div>

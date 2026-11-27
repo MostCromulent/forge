@@ -60,11 +60,6 @@ final class RunDeckRules implements DeckEditor.Rules, IHasForgeLog {
     }
 
     @Override
-    public boolean spent() {
-        return run.getRemovalCredits() == 0;
-    }
-
-    @Override
     public int credits() {
         return run.getRemovalCredits();
     }
