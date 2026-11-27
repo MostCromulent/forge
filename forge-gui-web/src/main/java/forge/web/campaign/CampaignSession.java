@@ -1,7 +1,6 @@
 package forge.web.campaign;
 
 import forge.gamemodes.match.PreparedMatch;
-import forge.gamemodes.match.PreparedMatch.Looks;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.web.Campaigns;
 import forge.web.WebGuiBase;
@@ -75,10 +74,10 @@ public final class CampaignSession implements Campaigns {
                 // The game names its winner by this name. The board finds the seat by the session's player name
                 prepared.human().getPlayer().setName(session.playerName());
                 // A mode may play as Forge's one shared human player. Its avatar and sleeve are whatever the last match set
-                final Looks looks = prepared.looks() != null ? prepared.looks()
-                        : new Looks(session.avatarIndex(), NetplaySeat.storedIndex(FPref.UI_SLEEVES, 0));
-                prepared.human().getPlayer().setAvatarIndex(looks.avatar());
-                prepared.human().getPlayer().setSleeveIndex(looks.sleeve());
+                if (!campaign.keepsLooks()) {
+                    prepared.human().getPlayer().setAvatarIndex(session.avatarIndex());
+                    prepared.human().getPlayer().setSleeveIndex(NetplaySeat.storedIndex(FPref.UI_SLEEVES, 0));
+                }
                 if (campaign.oneGame()) {
                     gui.oneGameOnly();
                 }

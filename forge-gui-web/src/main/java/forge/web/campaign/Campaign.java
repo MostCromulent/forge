@@ -135,6 +135,11 @@ public interface Campaign {
         return false;
     }
 
+    /** Whether the human plays with the avatar and sleeve the mode gave them, not the player's own. */
+    default boolean keepsLooks() {
+        return false;
+    }
+
     /** A game of the campaign's match ended. It is recorded and rewarded here. hostGame is the host's own view, the only view that knows the match. */
     CampaignResult gameOver(GameView hostGame);
 

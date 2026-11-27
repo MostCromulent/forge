@@ -192,7 +192,7 @@ public class ConquestController {
         rules.setManaBurn(FModel.getPreferences().getPrefBoolean(FPref.LEGACY_MANABURN));
         rules.setOrderCombatants(FModel.getPreferences().getPrefBoolean(FPref.LEGACY_ORDER_COMBATANTS));
         activeBattle = battle;
-        return new PreparedMatch(rules, variants, starter, humanStart, null);
+        return new PreparedMatch(rules, variants, starter, humanStart);
     }
 
     public void startBattle(ConquestBattle battle) {

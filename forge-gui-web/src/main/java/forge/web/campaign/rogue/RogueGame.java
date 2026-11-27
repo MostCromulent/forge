@@ -2,14 +2,12 @@ package forge.web.campaign.rogue;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
-import forge.LobbyPlayer;
 import forge.StaticData;
 import forge.deck.CardPool;
 import forge.game.GameType;
 import forge.game.GameView;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.PreparedMatch;
-import forge.gamemodes.match.PreparedMatch.Looks;
 import forge.gamemodes.rogue.AetherUpgrade;
 import forge.gamemodes.rogue.CodexHelper;
 import forge.gamemodes.rogue.RogueConfig;
@@ -446,6 +444,11 @@ public final class RogueGame implements Campaign, IHasForgeLog {
     }
 
     @Override
+    public boolean keepsLooks() {
+        return true;
+    }
+
+    @Override
     public void becameHost(final Host h) {
         stopTimer();
         host = h;
@@ -582,10 +585,8 @@ public final class RogueGame implements Campaign, IHasForgeLog {
         }
         final Battle b = new Battle();
         battle = b;
-        final LobbyPlayer human = match.human().getPlayer();
-        final Looks looks = new Looks(human.getAvatarIndex(), human.getSleeveIndex());
         try {
-            h.startMatch(MODE, RUN, () -> new PreparedMatch(match.rules(), match.variants(), match.players(), match.human(), looks), () -> b.failed = true);
+            h.startMatch(MODE, RUN, () -> new PreparedMatch(match.rules(), match.variants(), match.players(), match.human()), () -> b.failed = true);
             // The match may have started on the UI thread, but no result of it is taken
             if (Thread.interrupted()) {
                 b.failed = true;

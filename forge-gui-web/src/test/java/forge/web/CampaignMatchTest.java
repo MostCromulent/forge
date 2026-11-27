@@ -9,7 +9,6 @@ import forge.game.GameView;
 import forge.game.player.Player;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.PreparedMatch;
-import forge.gamemodes.match.PreparedMatch.Looks;
 import forge.player.GamePlayerUtil;
 import forge.player.LobbyPlayerHuman;
 import forge.web.campaign.Campaign;
@@ -36,6 +35,7 @@ public class CampaignMatchTest extends WebHubTest {
         private final AtomicInteger gameOvers = new AtomicInteger();
         private final List<String> leaving = new CopyOnWriteArrayList<>();
         private volatile boolean stays;
+        private volatile boolean keepsLooks;
 
         @Override
         public void becameHost(final Host h) {
@@ -78,6 +78,11 @@ public class CampaignMatchTest extends WebHubTest {
         }
 
         @Override
+        public boolean keepsLooks() {
+            return keepsLooks;
+        }
+
+        @Override
         public CampaignResult gameOver(final GameView hostGame) {
             gameOvers.incrementAndGet();
             return new CampaignResult(false, true, null, null, List.of());
@@ -116,6 +121,7 @@ public class CampaignMatchTest extends WebHubTest {
     @AfterMethod(alwaysRun = true)
     public void leaveTheMode() throws InterruptedException {
         mode.stays = false;
+        mode.keepsLooks = false;
         final TestBrowser host = connect("host");
         if ("playing".equals(host.hello.get("screen").getAsString())) {
             send(host, TestBrowser.action("leave"));
@@ -140,7 +146,7 @@ public class CampaignMatchTest extends WebHubTest {
         return host;
     }
 
-    private void startMatch(final Looks looks) {
+    private void startMatch() {
         mode.host.startMatch(MODE, SAVE, () -> {
             final LobbyPlayer counted = new LobbyPlayerHuman("Nobody") {
                 @Override
@@ -149,9 +155,11 @@ public class CampaignMatchTest extends WebHubTest {
                     return super.createIngamePlayer(game, id);
                 }
             };
+            counted.setAvatarIndex(7);
+            counted.setSleeveIndex(3);
             final RegisteredPlayer human = new RegisteredPlayer(TestDecks.of("Human", "Forest", 60)).setPlayer(counted);
             final RegisteredPlayer computer = new RegisteredPlayer(TestDecks.of("Computer", "Forest", 60)).setPlayer(GamePlayerUtil.createAiPlayer("Computer", -1, -1));
-            return new PreparedMatch(new GameRules(GameType.Constructed), Set.of(), List.of(human, computer), human, looks);
+            return new PreparedMatch(new GameRules(GameType.Constructed), Set.of(), List.of(human, computer), human);
         }, failures::incrementAndGet);
     }
 
@@ -159,13 +167,13 @@ public class CampaignMatchTest extends WebHubTest {
     @Test(timeOut = 120_000)
     public void aMatchDoesNotStartFromAnotherModesStage() throws Exception {
         Assert.assertEquals(session.stage(), new WebSession.Menu());
-        startMatch(null);
+        startMatch();
         Assert.assertEquals(failures.get(), 1);
         Assert.assertNull(sessions.hostLobby());
 
         hostIn("other");
         final WebSession.Stage before = session.stage();
-        startMatch(null);
+        startMatch();
         Assert.assertEquals(failures.get(), 2);
         Assert.assertSame(session.stage(), before);
         Assert.assertNull(sessions.hostLobby());
@@ -214,7 +222,8 @@ public class CampaignMatchTest extends WebHubTest {
     public void theHumanWearsTheLooksOfTheMatch() throws Exception {
         WebTestSupport.skipUnlessStress();
         hostIn(MODE);
-        startMatch(new Looks(7, 3));
+        mode.keepsLooks = true;
+        startMatch();
         Assert.assertEquals(failures.get(), 0);
         final Player human = sessions.hostLobby().getHostedMatch().getGame().getPlayers().stream().filter(WebTestSupport::isWebSeat).findFirst().orElseThrow();
         Assert.assertEquals(human.getView().getAvatarIndex(), 7);
@@ -227,7 +236,7 @@ public class CampaignMatchTest extends WebHubTest {
     public void aSecondGameIsRefusedInAOneGameMatch() throws Exception {
         WebTestSupport.skipUnlessStress();
         final TestBrowser host = hostIn(MODE);
-        startMatch(null);
+        startMatch();
         awaitPriority(host);
         sessions.onMessage(host, TestBrowser.action("concede"));
         host.awaitMatching("campaignResult", r -> true, "no result was sent");
@@ -242,7 +251,7 @@ public class CampaignMatchTest extends WebHubTest {
 
     private List<String> leaveWith(final String choice) throws InterruptedException {
         final TestBrowser host = hostIn(MODE);
-        startMatch(null);
+        startMatch();
         awaitPriority(host);
         mode.leaving.clear();
         send(host, message("leave", "choice", choice));

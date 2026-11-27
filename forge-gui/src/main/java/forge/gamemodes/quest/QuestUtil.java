@@ -614,7 +614,7 @@ public class QuestUtil {
         if(FModel.getQuest().getDeckConstructionRules() == DeckConstructionRules.Commander){
             variant.add(GameType.Commander);
         }
-        return new PreparedMatch(rules, variant, starter, humanStart, null);
+        return new PreparedMatch(rules, variant, starter, humanStart);
     }
 
     /**

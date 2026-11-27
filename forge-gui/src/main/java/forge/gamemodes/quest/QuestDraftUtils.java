@@ -262,7 +262,7 @@ public class QuestDraftUtils {
         final DeckGroup decks = FModel.getQuest().getAssets().getDraftDeckStorage().get(QuestEventDraft.DECK_NAME);
         final RegisteredPlayer you = humanPlayer(decks);
         final List<RegisteredPlayer> players = new ArrayList<>(List.of(you, aiPlayer(draft, decks, human == offset ? offset + 1 : offset)));
-        return new PreparedMatch(createQuestDraftRuleset(), EnumSet.noneOf(GameType.class), players, you, null);
+        return new PreparedMatch(createQuestDraftRuleset(), EnumSet.noneOf(GameType.class), players, you);
     }
 
     private static GameRules createQuestDraftRuleset() {
