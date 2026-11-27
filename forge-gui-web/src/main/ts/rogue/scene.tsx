@@ -34,7 +34,6 @@ export function Scene({ art, foot, children, fold, viewDeck, onScroll, busy }: {
   onScroll?: (e: Event) => void; busy?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  // The phone's buttons are words only, as the mockups draw them
   const phone = isPortrait();
   useEffect(() => {
     const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;

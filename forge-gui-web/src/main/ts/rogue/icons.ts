@@ -1,4 +1,4 @@
-// The mockups' icons by name: the shapes inside a 24-unit svg, drawn with Icon and the class rg-ic
+// Rogue Commander's icons by name: the shapes inside a 24-unit svg, drawn with Icon and the class rg-ic
 
 export const ROGUE_ICONS = {
   trait: '<path d="M12 3l2.200 6.800L21 12l-6.800 2.200L12 21l-2.200-6.800L3 12l6.800-2.200z"/>',

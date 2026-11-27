@@ -173,7 +173,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
     || inRun && ui.rogueSheet && isPortrait();
   const main = <div class="camp-main" inert={dialog || scene && !folded}>{page}</div>;
   const question = scene && <Question model={model} actions={actions} />;
-  // On a phone the commanders reached from a run, and Custom Run, are pages of their own with no tabs, as in the mockups
+  // On a phone the commanders reached from a run, and Custom Run, are pages of their own with no tabs
   const alone = !!fresh && isPortrait() && (choice.customOpen || !!run);
   const bar = alone ? { ...home.bar, name: t(choice.customOpen ? 'lblRogueCustomRun' : 'lblRogueStartNewRun') } : home.bar;
   const runBar = model.rogueMap?.bar;
@@ -183,7 +183,7 @@ function Pages({ model, actions }: { model: Model; actions: Actions }) {
   const lifeHeld = held.rogueLife;
   const runBalances = runBar && run && lifeHeld
     ? { ...runBar.bar, balances: runBar.bar.balances.map(b => (b.icon === 'rogueLife' ? { ...b, text: `${b.amount - lifeHeld} / ${run.maxLife}` } : b)) } : runBar?.bar;
-  // A phone's header has room for the balances only, as the phone mockups draw it
+  // A phone's header has room for the balances only
   const runShown = runBalances && isPortrait() ? { ...runBalances, line: '' } : runBalances;
   const abandon = (close: () => void) => { close(); setAbandoning(true); };
   const resetRow = (close: () => void, kind: string, label: TextKey) => <button role="menuitem" onClick={() => { close(); setResetting(kind); }}>{t(label)}</button>;

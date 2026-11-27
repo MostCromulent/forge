@@ -84,7 +84,7 @@ export function Bazaar({ asked, answer, fold, viewDeck }: { asked: AskShop; answ
     deal(asked, tab, tiles, () => tab === 1);
   }, [tab]);
   return (
-    // A phone's foot has room for four buttons, so View Map is left out there, as the mockups draw it
+    // A phone's foot has room for four buttons, so View Map is left out there
     <Scene art={asked.art} fold={phone ? undefined : fold} viewDeck={viewDeck} foot={foot}>
       <div class="rg-baz">
         <div class="rg-baz-head">
