@@ -917,7 +917,7 @@ public final class RogueGame implements Campaign, IHasForgeLog {
             .on(RogueEditDeck.class, (g, ch, d) -> g.submit(d.snapshot(), -1, () -> g.openEditor(ch)))
             .on(RogueAnswer.class, (g, ch, a) -> g.answer(ch, a.id(), a.value()))
             .on(RogueAnnounced.class, (g, ch, a) -> g.shown(a.id()))
-            .on(RogueAetherUpgrade.class, (g, ch, u) -> g.work(u.snapshot(), u.work(), RogueMetaProgress::upgradeAndActivateAetherEffect))
+            .on(RogueAetherUpgrade.class, (g, ch, u) -> g.work(u.snapshot(), u.work(), RogueMetaProgress::upgradeAetherEffect))
             .on(RogueAetherToggle.class, (g, ch, a) -> g.work(a.snapshot(), a.work(), (progress, work) -> {
                 if (a.on()) {
                     progress.activateAetherEffect(work);

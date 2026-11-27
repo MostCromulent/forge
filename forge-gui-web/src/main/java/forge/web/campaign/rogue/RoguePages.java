@@ -440,16 +440,16 @@ public final class RoguePages {
             }
             for (int i = 0; i < group.size(); i++) {
                 final JournalEntry entry = group.get(i);
-                rows.add(new CodexRow(entry.id(), entry.title(), null, story ? entry.speaker().name : null, i == 0 ? heading : null));
+                rows.add(new CodexRow(entry.id(), entry.title(), null, story ? NPC.TEFERI.name : null, i == 0 ? heading : null));
             }
         }
         final JournalEntry chosen = journal.stream().filter(e -> e.id().equals(id)).findFirst().orElse(journal.isEmpty() ? null : journal.get(0));
         if (chosen == null) {
             return new RogueCodexPage("journal", null, art, rows, List.of(), null);
         }
-        final String speaker = picture(chosen.speaker().name);
+        final String speaker = picture(NPC.TEFERI.name);
         return new RogueCodexPage("journal", chosen.id(), speaker == null ? art : speaker, rows, List.of(), new CodexEntry(chosen.title(), null, null, null,
-                chosen.speaker().avatarIndex, List.of(), List.of(), List.of(chosen.text().split("\n\n"))));
+                NPC.TEFERI.avatarIndex, List.of(), List.of(), List.of(chosen.text().split("\n\n"))));
     }
 
     /** The finished runs, newest first, behind the latest run's commander, or with none the commander started most. Null while History is locked. */
