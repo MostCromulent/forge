@@ -89,28 +89,29 @@ public final class SkinSprites implements IHasForgeLog {
             Map.entry("shardalley_portrait", "ui/shardalley_portrait.png"), Map.entry("tavern", "ui/tavern.png"), Map.entry("tavern_portrait", "ui/tavern_portrait.png"),
             Map.entry("spellsmith", "ui/spellsmith.png"), Map.entry("spellsmith_portrait", "ui/spellsmith_portrait.png"));
 
-    /** PNG bytes of a rectangle x,y,w,h of an Adventure sheet, or the whole sheet when rect is null. Null for an unknown sheet or a rectangle outside it. */
+    /**
+     * PNG bytes of a rectangle x,y,w,h of an Adventure sheet, or the whole sheet when rect is null. Null for an unknown sheet or a rectangle outside it.
+     * Only whole sheets are kept, because the browser names the rectangle, so keeping each one would let it fill the memory.
+     */
     public static byte[] adventurePng(final String sheet, final String rect) {
         final String file = ADVENTURE_SHEETS.get(sheet);
-        if (file == null) {
+        final BufferedImage image = file == null ? null : adventureSheet(file);
+        if (image == null) {
             return null;
         }
-        return encoded.computeIfAbsent("a" + sheet + ":" + rect, k -> {
-            final BufferedImage image = adventureSheet(file);
-            if (image == null || rect == null) {
-                return image == null ? null : encode(image, k);
-            }
-            final int[] at;
-            try {
-                at = Arrays.stream(rect.split(",")).mapToInt(Integer::parseInt).toArray();
-            } catch (final NumberFormatException e) {
-                return null;
-            }
-            if (at.length != 4 || at[0] < 0 || at[1] < 0 || at[2] < 1 || at[3] < 1 || at[0] + at[2] > image.getWidth() || at[1] + at[3] > image.getHeight()) {
-                return null;
-            }
-            return encode(image.getSubimage(at[0], at[1], at[2], at[3]), k);
-        });
+        if (rect == null) {
+            return encoded.computeIfAbsent("adventure:" + sheet, k -> encode(image, k));
+        }
+        final int[] at;
+        try {
+            at = Arrays.stream(rect.split(",")).mapToInt(Integer::parseInt).toArray();
+        } catch (final NumberFormatException e) {
+            return null;
+        }
+        if (at.length != 4 || at[0] < 0 || at[1] < 0 || at[2] < 1 || at[3] < 1 || at[0] + at[2] > image.getWidth() || at[1] + at[3] > image.getHeight()) {
+            return null;
+        }
+        return encode(image.getSubimage(at[0], at[1], at[2], at[3]), sheet + ":" + rect);
     }
 
     /** A face of the coin tossed before a match's first game. The art is mobile's. */
