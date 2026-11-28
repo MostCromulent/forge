@@ -35,8 +35,10 @@ public final class ConquestAether {
 
     public static Pools pools(ConquestData model, Filter filter) {
         final Set<PaperCard> locked = new HashSet<>();
-        for (PaperCard card : model.getCurrentPlane().getCardPool().getAllCards()) {
-            if (!model.hasUnlockedCard(card) && !card.getRules().getType().isBasicLand()) { //don't allow pulling basic lands
+        final ConquestPlane plane = model.getCurrentPlane();
+        for (PaperCard original : plane.getCardPool().getAllCards()) {
+            PaperCard card = plane.awardablePrint(original);
+            if (card != null && !model.hasUnlockedCard(card) && !model.hasUnlockedCard(original) && !card.getRules().getType().isBasicLand()) { //don't allow pulling basic lands
                 locked.add(card);
             }
         }

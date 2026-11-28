@@ -45,7 +45,7 @@ final class ConquestFixture {
         }
         final ConquestPlane plane = FModel.getPlanes().get(planeName);
         final PaperCard commander = plane.getCommanders().get(0);
-        final PaperCard planeswalker = ConquestUtil.getStartingPlaneswalkerOptions(commander).iterator().next();
+        final PaperCard planeswalker = ConquestUtil.getStartingPlaneswalkerOptions(commander, plane).iterator().next();
         final ConquestData data = FModel.getConquest().create(name, plane, planeswalker, commander);
         made.add(data);
         return data;

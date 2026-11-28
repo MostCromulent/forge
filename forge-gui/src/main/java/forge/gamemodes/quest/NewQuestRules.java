@@ -90,8 +90,8 @@ public final class NewQuestRules {
         return null;
     }
 
-    /** Makes the quest, saves it and makes it the current one. The choices must have no problem. */
-    public static void start(final Choices c) {
+    /** Makes the quest, saves it and makes it the current one, and answers whether the player's exclusions changed its starting deck. The choices must have no problem. */
+    public static boolean start(final Choices c) {
         final GameFormat worldFormat = worldFormat(c);
         final Deck startingDeck = worldFormat == null ? startingDeck(c) : null;
         GameFormat startingFormat = worldFormat;
@@ -132,12 +132,13 @@ public final class NewQuestRules {
 
         final String name = cleanName(c.name());
         final QuestController quest = FModel.getQuest();
-        quest.newGame(name, c.difficulty(), c.mode(), prizes, c.allowUnlocks(), startingDeck, startingFormat, world(c), c.distribution(),
+        final boolean deckChanged = quest.newGame(name, c.difficulty(), c.mode(), prizes, c.allowUnlocks(), startingDeck, startingFormat, world(c), c.distribution(),
                 c.commander() ? DeckConstructionRules.Commander : DeckConstructionRules.Default);
         quest.save();
         final QuestPreferences prefs = FModel.getQuestPreferences();
         prefs.setPref(QPref.CURRENT_QUEST, name + ".dat");
         prefs.save();
+        return deckChanged;
     }
 
     private static String world(final Choices c) {

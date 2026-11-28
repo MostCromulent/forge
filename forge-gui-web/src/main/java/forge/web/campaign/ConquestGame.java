@@ -186,7 +186,7 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
         PaperCard commander = null;
         if (plane != null) {
             commanders = new ArrayList<>();
-            for (final PaperCard card : plane.getCommanders()) {
+            for (final PaperCard card : plane.getAwardableCommanders()) {
                 String region = null;
                 for (final ConquestRegion r : plane.getRegions()) {
                     if (region == null && r.getCardPool().contains(card)) {
@@ -196,11 +196,11 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
                 commanders.add(new ConquestCardOption(card.getName(), card.getImageKey(false), CardCatalog.wubrg(card.getRules().getColorIdentity()), region));
             }
             commanders.sort(PICTURED_FIRST);
-            commander = named(plane.getCommanders(), commanderName);
+            commander = named(plane.getAwardableCommanders(), commanderName);
         }
         if (commander != null) {
             walkers = new ArrayList<>();
-            for (final PaperCard card : ConquestUtil.getStartingPlaneswalkerOptions(commander)) {
+            for (final PaperCard card : ConquestUtil.getStartingPlaneswalkerOptions(commander, plane)) {
                 walkers.add(new ConquestCardOption(card.getName(), card.getImageKey(false), CardCatalog.wubrg(card.getRules().getColorIdentity()), null));
             }
             walkers.sort(PICTURED_FIRST);
@@ -217,8 +217,8 @@ public final class ConquestGame implements Campaign, IHasForgeLog {
             return problem;
         }
         final ConquestPlane plane = plane(planeName);
-        final PaperCard commander = plane == null ? null : named(plane.getCommanders(), commanderName);
-        final PaperCard walker = commander == null ? null : named(ConquestUtil.getStartingPlaneswalkerOptions(commander), walkerName);
+        final PaperCard commander = plane == null ? null : named(plane.getAwardableCommanders(), commanderName);
+        final PaperCard walker = commander == null ? null : named(ConquestUtil.getStartingPlaneswalkerOptions(commander, plane), walkerName);
         if (walker == null) {
             return Localizer.getInstance().getMessage("lblWebConquestCannotStart");
         }

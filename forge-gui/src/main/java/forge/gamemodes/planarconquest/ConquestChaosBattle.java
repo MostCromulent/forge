@@ -174,7 +174,7 @@ public class ConquestChaosBattle extends ConquestBattle {
 
     public ConquestAwardPool getAwardPool() {
         if (awardPool == null) { //delay initializing until needed
-            awardPool = new ConquestAwardPool(world.getAllCards());
+            awardPool = ConquestAwardPool.of(world.getAllCards(), ConquestUtil::allowedPrint);
         }
         return awardPool;
     }

@@ -29,6 +29,7 @@ import forge.itemmanager.SItemManagerUtil;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.ItemPool;
+import forge.util.Localizer;
 
 public class QuestSpellShop {
     private static Map<String, Integer> mapPrices;
@@ -171,14 +172,19 @@ public class QuestSpellShop {
             return;
         }
 
-        if (confirmPurchase && !SOptionPane.showConfirmDialog("Pay " + totalCost + " credits to purchase the following " +
-                suffix.toLowerCase() + "?\n" + displayList, title, "Buy", "Cancel")) {
+        // the player is told before paying, even with confirmation turned off
+        boolean hiddenInPrecons = itemFlatList.stream()
+                .anyMatch(item -> item instanceof PreconDeck pd && QuestUtilCards.hasHiddenCards(pd.getDeck()));
+        String hiddenNote = hiddenInPrecons ? "\n\n" + Localizer.getInstance().getMessage("lblPurchaseHasHiddenCards") : "";
+        if ((confirmPurchase || hiddenInPrecons) && !SOptionPane.showConfirmDialog("Pay " + totalCost + " credits to purchase the following " +
+                suffix.toLowerCase() + "?\n" + displayList + hiddenNote, title, "Buy", "Cancel")) {
             return;
         }
 
         ItemPool<InventoryItem> itemsToAdd = buyItems(itemsToBuy);
 
         shopManager.removeItems(itemsToBuy);
+        FModel.getQuest().getCards().removeFromShop(itemsToBuy);
         inventoryManager.addItems(itemsToAdd);
     }
 
@@ -254,9 +260,9 @@ public class QuestSpellShop {
             else if (item instanceof PreconDeck) {
                 final PreconDeck deck = (PreconDeck) item;
                 for (int i = 0; i < qty; i++) {
-                    FModel.getQuest().getCards().buyPreconDeck(deck, value);
-
-                    itemsToAdd.addAllOfType(deck.getDeck().getMain());
+                    final Deck added = FModel.getQuest().getCards().buyPreconDeck(deck, value);
+                    if (added != null)
+                        itemsToAdd.addAllOfType(added.getMain());
                 }
 
                 boolean one = (qty == 1);
@@ -317,6 +323,7 @@ public class QuestSpellShop {
 
         inventoryManager.removeItems(itemsToSell);
         shopManager.addItems(itemsToSell);
+        FModel.getQuest().getCards().addToShop(itemsToSell);
     }
 
     /** Takes each card from the pool and its decks and pays its sale price. The shop's stock is left to the caller. */
@@ -337,6 +344,7 @@ public class QuestSpellShop {
 
         inventoryManager.removeItems(cardsToRemove);
         shopManager.addItems(cardsToRemove);
+        FModel.getQuest().getCards().addToShop(cardsToRemove);
 
         sellItems(cardsToRemove);
     }

@@ -219,13 +219,11 @@ final class QuestShop {
                         + SItemManagerUtil.getItemDisplayString(chosen.toFlatList(), 1, true).toLowerCase() + ".\n" + SItemManagerUtil.buildDisplayList(chosen);
             }
             QuestSpellShop.buyItems(chosen);
-            // On desktop and mobile, the shop's list widget removes bought items from the stock
-            stock.removeAll(chosen);
+            QuestGame.quest().getCards().removeFromShop(chosen);
         } else {
             QuestSpellShop.updateMultiplier();
             QuestSpellShop.sellItems(chosen);
-            // On desktop and mobile, the shop's list widget puts sold items back on sale
-            stock.addAll(chosen);
+            QuestGame.quest().getCards().addToShop(chosen);
         }
         QuestGame.quest().save();
         return null;

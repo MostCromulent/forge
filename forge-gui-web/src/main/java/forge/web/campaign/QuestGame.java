@@ -918,10 +918,14 @@ public final class QuestGame implements Campaign, IHasForgeLog {
                     ch.send(c.host().error(problem));
                     return;
                 }
-                NewQuestRules.start(choices);
+                final boolean deckChanged = NewQuestRules.start(choices);
                 c.game().duels = null;
                 c.game().reward = null;
                 c.host().opened(quest().getName());
+                if (deckChanged) {
+                    final Localizer text = Localizer.getInstance();
+                    ch.send(new Notice(text.getMessage("lblExcludedSets"), text.getMessage("lblStarterDeckChangedByExclusions"), false));
+                }
             }))
             .on(QuestDeckNew.class, inSave((c, ch, n) -> {
                 final String name = n.name();
