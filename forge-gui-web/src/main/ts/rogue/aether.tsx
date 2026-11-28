@@ -140,7 +140,7 @@ export function AetherPage({ aether, raise, toggle, expand, reset }: {
           <h2>{t('lblRogueTheAether')}</h2>
           <span class="rg-energy">{t('lblRogueAetherEnergyLabel')}{pips}{t('lblWebRogueEnergyInUse', aether.used, aether.slots)}</span>
           <span class="sp" />
-          <button onClick={reset}>{t('lblRogueResetAetherworks')}</button>
+          <button class="link" onClick={reset}>{t('lblRogueResetAetherworks')}</button>
         </div>
         {works}
         {!aether.descension && <p class="rg-pnote">{t('lblRogueAetherEnergyHint').replace(/\n/g, ' ')}</p>}

@@ -547,9 +547,6 @@ html[data-form="portrait"] .rgl-run .held img { width: 56px; }
 .rg-mod[aria-pressed="true"] b { color: var(--gold); }
 .rg-work p b { color: rgb(255, 255, 255); }
 .rg-work .rgt-seal { flex: 0 0 auto; }
-.rg-work.unbuilt { background: rgba(10, 13, 19, 0.7); border: 1px dashed rgba(255, 255, 255, 0.25); }
-.rg-work.unbuilt .h b { color: rgb(214, 221, 230); }
-.rg-work.unbuilt .rgt-seal { color: rgb(214, 221, 230); border: 1px dashed rgba(255, 255, 255, 0.45); box-shadow: rgb(11, 14, 21) 0px 0px 0px 3px; }
 .rg-sub-tabs, .rg-list { background: rgba(11, 15, 23, 0.6); border-color: rgba(255, 255, 255, 0.12); }
 .rg-sub-tabs button { white-space: nowrap; }
 .rg-list button[aria-pressed="true"] b { color: var(--gold); }
@@ -1052,7 +1049,7 @@ html.kit .rg-cx :is(.rg-dex, .rg-traits) .seen::after { background: #2a1d10; col
 /* A seen trait is faded paper rather than a dark tile, and the scroll hint fades into the paper with an ink arrow */
 html.kit .rg-cx .rg-traits .seen .rg-tcard { border-style: solid; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat;
   background: none; filter: grayscale(1); opacity: .6; --kit-soft: #5d5244; --kit-gold: #4a3a26; }
-html.kit .rg-cx .rg-scroll::after { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 12' shape-rendering='crispEdges'%3E%3Cpath d='M1 1h20v2h-2v2h-2v2h-2v2h-2v2H9V9H7V7H5V5H3V3H1z' fill='%232a1d10'/%3E%3C/svg%3E") center calc(100% - 8px) / 22px 12px no-repeat,
+html.kit :is(.rg-cx, .rg-aether) .rg-scroll::after { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 12' shape-rendering='crispEdges'%3E%3Cpath d='M1 1h20v2h-2v2h-2v2h-2v2h-2v2H9V9H7V7H5V5H3V3H1z' fill='%232a1d10'/%3E%3C/svg%3E") center calc(100% - 8px) / 22px 12px no-repeat,
   linear-gradient(rgba(226, 207, 163, 0), rgba(226, 207, 163, .95) 55%); }
 html.kit .rg-cx .link { color: #6b3f0b; }
 html.kit[data-form="portrait"] .rg-cx { padding: 6px 8px 8px; }
@@ -1060,3 +1057,22 @@ html.kit[data-form="portrait"] .rg-cx > .rg-sub-tabs { padding: 0 8px; overflow-
 html.kit[data-form="portrait"] .rg-cx > .rg-sub-tabs .seg > button { height: 30px; padding: 0 10px; font-size: 12.5px; }
 html.kit[data-form="portrait"] .rg-cx > .rg-sub-tabs .seg > button[aria-pressed="true"] { height: 34px; }
 html.kit[data-form="portrait"] .rg-cx > :is(.camp-stats, .rg-codex, .rg-scroll, .rg-list) { border-width: 13px 16px 11px 17px; border-image-width: 13px 16px 11px 17px; }
+
+/* The Aether as one sheet of parchment, as the Codex: each work a small paper tile, an unbuilt one greyed with a faded gem, the hint a note under a rule */
+html.kit .rg-aether > .rg-haze { --dim: .78; }
+html.kit .rg-aether { padding: 14px; }
+html.kit .rg-aether > .rg-scroll { image-rendering: pixelated; border-style: solid; border-radius: 0; background: none; padding: 6px 10px;
+  border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 26px 32px 22px 34px repeat;
+  --text: #2a1d10; --muted: #5d5244; color: #2a1d10; }
+html.kit .rg-aether .rg-head h2 { color: #6b3f0b; text-shadow: none; }
+html.kit .rg-aether :is(.rg-energy, .rg-group h4) { color: #5d5244; text-shadow: none; }
+html.kit .rg-aether .rg-energy { font-size: 15px; }
+html.kit .rg-aether .rg-energy .pips i { width: 16px; height: 16px; }
+html.kit .rg-aether .rg-head > button.link { height: auto; padding: 0; border: 0; border-image: none; background: none; box-shadow: none; color: #6b3f0b; text-decoration: underline; text-underline-offset: 3px; }
+html.kit .rg-aether .rg-work :is(b, h3) { color: #6b3f0b; }
+html.kit .rg-aether .rg-work :is(p, span, small) { color: #3d2f1f; }
+html.kit .rg-aether .rg-work.unbuilt { filter: grayscale(.7) contrast(.9); }
+html.kit .rg-aether .rg-work.unbuilt .rgt-seal { opacity: .6; }
+html.kit .rg-aether .rg-pnote { margin-top: 6px; padding-top: 12px; border-top: 1.5px solid rgba(42, 29, 16, .3); color: #5d5244; font-style: italic; text-shadow: none; }
+html.kit[data-form="portrait"] .rg-aether { padding: 6px 8px 8px; }
+html.kit[data-form="portrait"] .rg-aether > .rg-scroll { border-width: 13px 16px 11px 17px; border-image-width: 13px 16px 11px 17px; }

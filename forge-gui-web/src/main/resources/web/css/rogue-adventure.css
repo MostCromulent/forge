@@ -40,7 +40,7 @@
 .kit .rg-n.side::before, .kit .rg-n.side::after { display: none; }
 
 /* States by weight and fading, never by hue alone */
-.kit .rg-n.walked { opacity: .82 !important; filter: sepia(.4) saturate(.7); }
+.kit .rg-n.walked { filter: sepia(.4) saturate(.7) contrast(.85) brightness(1.06); }
 .kit .rg-n.open { box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px var(--paper-hi), 0 0 0 7px var(--ink), 0 0 18px 6px rgba(226, 178, 60, .45); }
 .kit .rg-n.open.side { color: var(--ink); }
 .kit .rg-n.sel { box-shadow: 0 0 0 3px var(--ink), 0 0 0 7px var(--gold), 0 0 0 9.5px var(--ink), 0 0 26px 8px rgba(226, 178, 60, .5), 0 10px 18px -6px rgba(42, 29, 16, .5); z-index: 4; }
@@ -149,28 +149,28 @@
 .kit .rg-n.open:not(.side), .kit .rg-n.sel:not(.side) { border-width: 6px 5px 7px; border-image: url("../adventure?s=skin&r=75,165,32,16") 6 5 7 / 6px 5px 7px repeat; }
 .kit .rg-n.open:not(.side) { box-shadow: 0 0 14px 3px rgba(255, 215, 94, .55), 0 6px 10px -4px rgba(42, 29, 16, .45); }
 .kit .rg-n.sel:not(.side) { box-shadow: 0 0 0 2px #fff4c2, 0 0 24px 8px rgba(255, 215, 94, .8), 0 10px 14px -6px rgba(42, 29, 16, .5); transform: translateY(-3px); z-index: 4; }
-.kit .rg-n.walked:not(.side) { filter: sepia(.45) saturate(.7); opacity: .85 !important; }
+.kit .rg-n.walked:not(.side) { filter: sepia(.45) saturate(.7) contrast(.85) brightness(1.06); }
 
 /* Adventure look for every Rogue screen: adventure's parchment, stone keys, gold key and item sprites inside the client's dark shell.
    Pixel art only at whole-number scales; border images repeat their edges rather than stretch them. One font: the client's own. */
 .kit { --kit-ink: #2a1d10; --kit-ink2: #5d5244; --kit-name: #7f520e; --kit-card: #0f6f7c; --kit-pale: #f1e7cf; --kit-gold: #ffd75e; }
 
 /* Paper: the ink set every panel on parchment uses. The client's own colour names are pointed at ink, so rules written for the dark look read on paper. */
-.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, #rg-tipbox, .rg-folded, .rg-gain, .rg-sub-tabs, .rg-opt, .rg-ladder, .rg-psheet .box, .rg-prow) {
+.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work, .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, #rg-tipbox, .rg-folded, .rg-gain, .rg-sub-tabs, .rg-opt, .rg-ladder, .rg-psheet .box, .rg-prow) {
   --text: #2a1d10; --muted: #5d5244; --faint: #786953; --accent: #7f520e; --accent-2: #7f520e; --gold: #7f520e;
   --line: rgba(42, 29, 16, .32); --line-bright: rgba(42, 29, 16, .5); --edge: rgba(42, 29, 16, .45);
   --surface: rgba(255, 249, 232, .45); --surface-2: rgba(42, 29, 16, .07); --surface-3: rgba(42, 29, 16, .16);
   --tile: rgba(255, 250, 236, .5); --accent-soft: rgba(127, 82, 14, .13); --accent-glow: rgba(127, 82, 14, .2);
   color: var(--text); text-shadow: none;
 }
-.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, #rg-tipbox, .rg-folded, .rg-gain, .rg-opt, .rg-ladder) :is(h1, h2, h3, h4, h5, p, b, span, small, li, em, i:not(.opp), dt, dd, label, strong) { text-shadow: none; }
+.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work, .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, #rg-tipbox, .rg-folded, .rg-gain, .rg-opt, .rg-ladder) :is(h1, h2, h3, h4, h5, p, b, span, small, li, em, i:not(.opp), dt, dd, label, strong) { text-shadow: none; }
 
 /* Large paper: adventure's paper10Patch at twice its size */
 .kit :is(.dialog, .rg-words, .rg-list, .rg-deckcol) {
   image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 26px 32px 22px 34px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 26px 32px 22px 34px repeat;
 }
 /* Small paper: the same patch at its own size, for tiles in a grid */
-.kit :is(.rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-omen li, .rg-menu, .rg-gain, .rg-folded), .kit #rg-tipbox {
+.kit :is(.rg-tcard, .rgt-tile, .rg-work, .rg-omen li, .rg-menu, .rg-gain, .rg-folded), .kit #rg-tipbox {
   image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat;
 }
 /* Pale insets with a thin ink edge sit on paper, as mobile draws its tiles */
@@ -245,9 +245,8 @@ html.kit:not([data-form="portrait"]) .rg-scene > .in:not(.tip) { padding-right: 
 .kit :is(.rgl-run, .rgl-new) { border-radius: 0; box-shadow: none; }
 
 /* Tiles on dark pages: small parchment */
-.kit :is(.rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-omen li, .rg-gain) { border-radius: 0; box-shadow: none; }
+.kit :is(.rg-tcard, .rgt-tile, .rg-work, .rg-omen li, .rg-gain) { border-radius: 0; box-shadow: none; }
 .kit .rg-shell :is(.rg-tcard, .rgt-tile, .rg-work) :is(h3, b, .t > b) { color: var(--kit-name); }
-.kit .rg-work.unbuilt { border-radius: 0; }
 
 /* Codex and Aether side lists */
 .kit .rg-list { border-radius: 0; }
@@ -263,9 +262,9 @@ html.kit:not([data-form="portrait"]) .rg-scene > .in:not(.tip) { padding-right: 
 .kit .rg-menu button:hover { background: rgba(42, 29, 16, .1); }
 
 /* Text the client draws in light greys reads as ink on paper; labels take the softer ink */
-.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, .rg-folded, .rg-gain, .rg-opt, .rg-ladder)
+.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work, .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, .rg-folded, .rg-gain, .rg-opt, .rg-ladder)
   :is(p, span, small, em, li, dd, dt, label, figcaption, div):not(.rg-cn):not(.rg-kw):not(.kc-stat *):not(.no):not(.myth) { color: var(--kit-ink); }
-.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work:not(.unbuilt), .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, .rg-folded, .rg-gain, .rg-opt, .rg-ladder)
+.kit :is(.camp-side, .kit-cmd, .rg-words, .dialog, .rgm-side, .rg-tcard, .rgt-tile, .rg-work, .rg-list, .rg-deckcol, .rg-omen li, .rg-menu, .rg-folded, .rg-gain, .rg-opt, .rg-ladder)
   :is(.camp-kicker, h4, h5, .rg-ls-h, .camp-figure span, .rgm-facts span, .k, small) { color: var(--kit-ink2); }
 .kit :is(.camp-side, .rg-words, .dialog, .rgm-side, .rg-deckcol, .rg-list) .rg-sec > h4::after { background: rgba(42, 29, 16, .3); }
 .kit #rg-tipbox, .kit #rg-tipbox * { color: var(--kit-ink); }
@@ -339,9 +338,9 @@ html.kit[data-form="portrait"] .rg-list { image-rendering: pixelated; background
 .kit .rgl-run h1, .kit .rgl-new b, .kit .rg-run .t > b { color: var(--kit-gold); }
 
 /* R4. Dark tile: a choice not yet taken, a locked or an unknown thing. A 1px line on the shell; selected takes the gold ring. */
-.kit :is(.rg-mod, .rg-work.unbuilt, .rg-traits .seen .rg-tcard) { background: var(--kit-tile); border: 1px solid var(--kit-line); border-image: none; border-radius: 0; box-shadow: none; filter: none; color: var(--kit-pale); }
-.kit :is(.rg-mod, .rg-work.unbuilt, .rg-traits .seen .rg-tcard) :is(b, h3) { color: var(--kit-gold); font-family: Georgia, serif; }
-.kit :is(.rg-mod, .rg-work.unbuilt, .rg-traits .seen .rg-tcard) :is(p, span, small) { color: var(--kit-soft); }
+.kit :is(.rg-mod, .rg-traits .seen .rg-tcard) { background: var(--kit-tile); border: 1px solid var(--kit-line); border-image: none; border-radius: 0; box-shadow: none; filter: none; color: var(--kit-pale); }
+.kit :is(.rg-mod, .rg-traits .seen .rg-tcard) :is(b, h3) { color: var(--kit-gold); font-family: Georgia, serif; }
+.kit :is(.rg-mod, .rg-traits .seen .rg-tcard) :is(p, span, small) { color: var(--kit-soft); }
 .kit :is(.rg-mod[aria-pressed="true"], .rg-work[aria-pressed="true"], .rg-item.on > .rg-tcard) { box-shadow: 0 0 0 1px #000, 0 0 0 4px var(--kit-ring), 0 0 0 5px #000; }
 .kit .rg-mod[aria-pressed="true"] { background: var(--kit-tile); border-color: var(--kit-line); }
 /* The check box, drawn in ink for dark */
@@ -400,8 +399,8 @@ html.kit:not([data-form="portrait"]) :is(.rg-shell, .dialog, .panel, #game-over,
   background: url("../rogue-blood.svg") center / contain no-repeat; mix-blend-mode: multiply; pointer-events: none; }
 .kit .rg-shell :is(.rgt-tile, .rg-tcard).wound :is(b, h3) { color: #8f1d14; }
 /* Unbuilt, seen-only or locked: an empty ink ring */
-.kit :is(.rg-work.unbuilt, .rg-traits .seen) .rgt-seal { background: none !important; box-shadow: 0 0 0 1px var(--kit-soft) !important; }
-.kit :is(.rg-work.unbuilt, .rg-traits .seen) .rgt-seal > * { display: none; }
+.kit .rg-traits .seen .rgt-seal { background: none !important; box-shadow: 0 0 0 1px var(--kit-soft) !important; }
+.kit .rg-traits .seen .rgt-seal > * { display: none; }
 .kit .ring-sanctum { --wash: #3f7470; } .kit .ring-bazaar { --wash: #9a5530; } .kit .ring-chest { --wash: #a8822c; } .kit .ring-event { --wash: #5d4c80; }
 
 /* A scene's avatar: the map node just entered, as a 96px seal. Painted portraits keep the large disc. */
@@ -511,7 +510,7 @@ html.kit[data-form="portrait"] .rg-face .pic.icon img.ks { width: 32px !importan
 /* Sheets show their whole torn edge, inset from the screen's sides */
 html.kit[data-form="portrait"] .rg-words { margin-left: 8px !important; margin-right: 8px !important; }
 /* Built Aetherworks are the small torn tile, as on desktop */
-html.kit[data-form="portrait"] .rg-work:not(.unbuilt) { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat; }
+html.kit[data-form="portrait"] .rg-work { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 13px 16px 11px 17px; border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat; }
 /* The bottom sheet: actions on paper are ink buttons; the foot is a dark strip holding stone keys and the gold key */
 html.kit .rg-psheet .menu button { image-rendering: auto; border: 1px solid rgba(42, 29, 16, .6); border-image: none; border-radius: 0; background: rgba(255, 250, 236, .6); color: var(--kit-ink); font-weight: 700; text-shadow: none; box-shadow: none; min-height: 44px; }
 html.kit .rg-psheet .menu { gap: 8px; }
@@ -567,7 +566,6 @@ html.kit .camp-tabs > .camp-tab .camp-tab-line { display: none !important; }
 /* Tiles of paper that can be chosen take the same frame, laid just inside the torn edge */
 .kit :is(.rg-work[aria-pressed="true"], .rg-item.on > .rg-tcard) { box-shadow: none !important; outline: 0 !important; position: relative; }
 .kit :is(.rg-work[aria-pressed="true"], .rg-item.on > .rg-tcard)::after { content: ''; position: absolute; inset: -2px; border: 7px solid transparent; border-image: url("../adventure?s=skin&r=75,183,48,48") 7 / 7px repeat; image-rendering: pixelated; pointer-events: none; z-index: 2; }
-.kit .rg-work.unbuilt[aria-pressed="true"]::after { inset: -5px; }
 /* Buttons on paper are adventure's paper button; a chosen one is the same button pressed, with the tick */
 html.kit :is(.camp-side .camp-panel > button:not(.primary):not(.rg-toggle), .camp-side .rg-sec > button:not(.primary), .rg-folded button:not(.primary), .rg-psheet .menu button, .rgm-lv button) {
   image-rendering: pixelated !important; background: none !important; border-style: solid !important; border-radius: 0 !important; box-shadow: none !important; border-width: 3px 6px 4px !important; border-image: url("../adventure?s=skin&r=159,215,16,16") 3 6 4 fill / 3px 6px 4px repeat !important; color: var(--kit-ink) !important; font-weight: 700; text-shadow: none !important; padding-top: 4px; padding-bottom: 5px; min-height: 32px;

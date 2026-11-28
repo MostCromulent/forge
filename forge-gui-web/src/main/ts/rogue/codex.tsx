@@ -1,7 +1,6 @@
 // The Codex: statistics, and what has been seen and acquired of the commanders, planebounds and traits, and the journal
 
 import { Fragment } from 'preact';
-import { useLayoutEffect, useRef } from 'preact/hooks';
 import { Figures } from '../campaign/campaign';
 import { artUrl, hideBroken, imageUrl } from '../images';
 import { avatarUrl } from '../avatarsleeves';
@@ -9,8 +8,6 @@ import { isPortrait } from '../form';
 import { t, type TextKey } from '../text';
 import { Seal, TraitCard } from './traits';
 import { Words } from './terms';
-import { POW3_OUT } from './motion';
-import { reducedMotion } from '../dom';
 import type { CodexEntry, CodexFact, CodexItem, RogueCodexPage } from '../protocol';
 
 export type CodexTab = 'stats' | 'commanders' | 'planebounds' | 'traits' | 'journal';
@@ -97,19 +94,6 @@ export function CodexPage({ page, tab, id, setTab, choose, reset }: {
 }) {
   const phone = isPortrait();
   const shown = page?.tab === tab ? page : null;
-  const root = useRef<HTMLDivElement>(null);
-  const drawn = useRef<CodexTab | null>(null);
-  // A tab's page slides in from the side its tab is on, once its data arrives
-  useLayoutEffect(() => {
-    if (!shown) return;
-    const order = TABS.map(([to]) => to);
-    const side = Math.sign(order.indexOf(shown.tab as CodexTab) - order.indexOf(drawn.current ?? shown.tab as CodexTab));
-    drawn.current = shown.tab as CodexTab;
-    const body = root.current!.lastElementChild;
-    if (side && body && !body.classList.contains('rg-sub-tabs') && !reducedMotion()) {
-      body.animate([{ transform: `translateX(${side * 100}%)` }, { transform: 'none' }], { duration: 350, easing: POW3_OUT });
-    }
-  }, [shown?.tab]);
   const rows = shown && (
     <div class="rg-list">
       {shown.rows.map((r, i) => <Fragment key={i}>
@@ -151,7 +135,7 @@ export function CodexPage({ page, tab, id, setTab, choose, reset }: {
     body = !phone ? <div class="rg-codex">{rows}{entry}</div> : id ? entry : rows;
   }
   return (
-    <div class="rg-cx" ref={root}>
+    <div class="rg-cx">
       <span class="rg-haze" style={background(shown?.art)} />
       <div class="rg-sub-tabs">
         <span class="seg">{TABS.map(([to, wide, short]) => <button key={to} aria-pressed={to === tab} onClick={() => setTab(to)}>{t(phone ? short : wide)}</button>)}</span>
