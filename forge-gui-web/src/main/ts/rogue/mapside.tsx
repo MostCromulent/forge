@@ -4,6 +4,7 @@
 import { useState } from 'preact/hooks';
 import { SidePanel, explained } from '../campaign/campaign';
 import { artUrl, hideBroken, imageUrl } from '../images';
+import { avatarUrl } from '../avatarsleeves';
 import { changeUi } from '../ui';
 import { t } from '../text';
 import { Sprite, barGlyph, glyph, ringClass, sealGlyph } from './kit';
@@ -14,7 +15,6 @@ import type { MapNode, RogueMap } from '../protocol';
 
 
 /** The planebound's kind, as the panel's kicker names it. */
-const kind = (map: RogueMap, n: MapNode) => (n.boss ? t('lblRogueBossPlanebound') : n.elite ? t('lblRogueElitePlanebound') : map.terms.PLANEBOUND?.text ?? '');
 
 /**
  * What the buttons under the panel do with the node shown. Only the current node is entered, and only its plane rerolled.
@@ -98,7 +98,7 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
   const reward = <div class="rg-sec"><h4>{t('lblWebRogueReward')}</h4><div class="rg-loot"><Loot map={map} n={n} /></div>{why && <p>{why}</p>}</div>;
   if (n.faceDown) {
     return (
-      <SidePanel kicker={kind(map, n)} title="???" noArt zoom={zoom} setZoom={setZoom} foot={foot} top={top}>
+      <SidePanel title="???" face={<Portrait n={n} />} subtitle={<span class="rg-plane-name">???</span>} noArt zoom={zoom} setZoom={setZoom} foot={foot} top={top}>
         <div class="camp-chips"><Chips map={map} n={n} cls="camp-chip" /></div>
         {map.hidden && <div class="rg-lock">{glyph('wound')}<span>{map.hidden}</span></div>}
         {reward}
@@ -106,22 +106,28 @@ export function MapSide({ model, actions }: { model: Model; actions: Actions }) 
     );
   }
   return (
-    <SidePanel kicker={<span {...explains(map.terms.PLANEBOUND)}>{kind(map, n)}</span>} title={n.name} art={n.art} zoom={zoom} setZoom={setZoom} foot={foot} top={top}>
+    <SidePanel title={n.name} face={<Portrait n={n} />} subtitle={<PlaneName n={n} />} noArt zoom={zoom} setZoom={setZoom} foot={foot} top={top}>
+      <PlaneStrip n={n} />
       <div class="camp-chips"><Chips map={map} n={n} cls="camp-chip" /></div>
-      <div class="rg-sec"><h4>{t('lblPlane')}</h4><Plane n={n} /></div>
       <div class="rg-sec">{paragraphs(n.text).map((p, i) => <p key={i}>{p}</p>)}</div>
       {reward}
     </SidePanel>
   );
 }
 
-/** The plane as mobile shows it: a strip of its art and its name, which preview the card. Its rules are the node's text under it. */
-function Plane({ n }: { n: MapNode }) {
-  if (!n.planeImage) return null;
-  return <>
-    <span class="rg-plane strip" data-sideways=""><img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} /></span>
-    <b class="rg-plane-name rg-cn" data-image={n.planeImage} data-sideways="">{n.plane}</b>
-  </>;
+/** The planebound's own portrait beside its name, as mobile draws it, or the unknown face for a face-down plane. */
+function Portrait({ n }: { n: MapNode }) {
+  return n.avatar == null ? null : <span class="rg-pb-face" style={{ backgroundImage: `url("${avatarUrl(n.avatar)}")` }} />;
+}
+
+/** A strip of the plane's art, which mobile draws at the top of the panel, and which previews the plane's card. */
+function PlaneStrip({ n }: { n: MapNode }) {
+  return n.planeImage ? <span class="rg-plane strip" data-sideways=""><img onError={hideBroken} alt={n.plane} data-image={n.planeImage} src={imageUrl(n.planeImage)} /></span> : null;
+}
+
+/** The plane's name under the planebound's, as mobile writes it; it previews the plane's card. */
+function PlaneName({ n }: { n: MapNode }) {
+  return <span class="rg-plane-name rg-cn" data-image={n.planeImage ?? undefined} data-sideways="">{n.plane}</span>;
 }
 
 /** The phone's bar under the trail: the node shown, Enter, the sheet of its plane, and the reroll. */
@@ -155,10 +161,9 @@ export function PlaneSheet({ model, actions }: { model: Model; actions: Actions 
       <div class="box">
         <i class="grab" />
         <div class="bd">
-          <div class="camp-kicker">{kind(map, n)}</div>
-          <h3>{n.faceDown ? '???' : n.name}</h3>
+          <PlaneStrip n={n} />
+          <div class="camp-titled"><Portrait n={n} /><div><h3>{n.faceDown ? '???' : n.name}</h3>{n.faceDown ? <span class="rg-plane-name">???</span> : <PlaneName n={n} />}</div></div>
           <div class="ln"><Chips map={map} n={n} cls="" /></div>
-          <Plane n={n} />
           {n.faceDown && map.hidden && <p>{map.hidden}</p>}
           {paragraphs(n.text).map((p, i) => <p key={i}>{p}</p>)}
           <div class="camp-kicker">{t('lblWebRogueReward')}</div>

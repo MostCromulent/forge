@@ -128,9 +128,9 @@ public final class RogueProtocol {
     /**
      * kind is a NodeType name, and state one of walked, open, selected, past, far or dead. A face-down plane has no name, plane, art,
      * planeImage or text, but its life and marks are known. name is the planebound's or the side node's. art is the planebound's card and
-     * planeImage the plane's. enter is the label of the button that enters the node.
+     * planeImage the plane's. avatar is the planebound's portrait, the question mark when face down. enter is the label of the button that enters the node.
      */
-    public record MapNode(int index, String kind, String state, boolean faceDown, @Nullable String name, @Nullable String plane, @Nullable String art,
+    public record MapNode(int index, String kind, String state, boolean faceDown, @Nullable String name, @Nullable String plane, @Nullable String art, @Nullable Integer avatar,
             @Nullable String planeImage, @Nullable String text, int life, boolean elite, boolean boss, int wrathful, int cursed, int gold, int echoes,
             String enter) {
     }

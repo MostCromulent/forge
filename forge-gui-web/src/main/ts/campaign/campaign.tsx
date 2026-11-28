@@ -244,8 +244,10 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, lead, 
  * fold makes the title a button that opens and closes the rest of the panel, for a panel drawn as a small card over the page.
  * noArt leaves out the picture's place, for an item that never has one.
  */
-export function SidePanel({ kicker, where, title, art, noArt, zoom, setZoom, children, foot, fold, top }: {
-  kicker: ComponentChildren; where?: ComponentChildren; title?: string; art?: string | null; noArt?: boolean;
+export function SidePanel({ kicker, where, title, face, subtitle, art, noArt, zoom, setZoom, children, foot, fold, top }: {
+  kicker?: ComponentChildren; where?: ComponentChildren; title?: string; art?: string | null; noArt?: boolean;
+  /** A picture beside the title, such as a Rogue planebound's portrait, and a line under the title beside it. */
+  face?: ComponentChildren; subtitle?: ComponentChildren;
   zoom: string | null; setZoom: (image: string | null) => void; children: ComponentChildren; foot: ComponentChildren;
   fold?: { open: boolean; toggle: () => void };
   /** A panel stacked above this one, such as Rogue's commander. The two then sit in separate frames. */
@@ -254,8 +256,9 @@ export function SidePanel({ kicker, where, title, art, noArt, zoom, setZoom, chi
   const body = <>
     <div class="camp-panel">
       <div class={art ? 'camp-side-head' : 'camp-side-head bare'}>
-        <div class="camp-where"><span class="camp-kicker">{kicker}</span>{where}</div>
-        {fold ? <h3><button class="camp-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3> : <h3>{title}</h3>}
+        {(kicker || where) && <div class="camp-where"><span class="camp-kicker">{kicker}</span>{where}</div>}
+        {fold ? <h3><button class="camp-fold" aria-expanded={fold.open} onClick={fold.toggle}>{title}</button></h3>
+          : face ? <div class="camp-titled">{face}<div><h3>{title}</h3>{subtitle}</div></div> : <h3>{title}</h3>}
         {!noArt && <div class="camp-art" data-image={art ?? undefined} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }} />}
       </div>
       {children}

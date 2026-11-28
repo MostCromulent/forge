@@ -106,7 +106,7 @@ public final class RoguePages {
                 .sorted(Comparator.comparing((RogueDeck d) -> !d.isUnlocked()).thenComparing(RogueDeck::getName)).toList();
     }
 
-    private static final Map<String, Part> MAP_TERMS = Arrays.stream(new KeywordHint[] {KeywordHint.PLANEBOUND, KeywordHint.WRATHFUL, KeywordHint.CURSED,
+    private static final Map<String, Part> MAP_TERMS = Arrays.stream(new KeywordHint[] {KeywordHint.WRATHFUL, KeywordHint.CURSED,
             KeywordHint.CARD_REWARD, KeywordHint.GOLD, KeywordHint.ECHOES}).collect(Collectors.toMap(KeywordHint::name, h -> new Part("term", h.getTitle(), null, h.getTitle(), h.getHintText(), null)));
 
     /** The cards whose art is drawn behind the Aether, and behind the Codex where its tab has no subject of its own. */
@@ -608,15 +608,15 @@ public final class RoguePages {
                 final boolean boss = plane.getPlaneboundType() == RoguePlaneboundType.BOSS;
                 final int life = plane.getPlaneboundLife(run.getPath().countPlaneboundRowsUpTo(node.getRowIndex()));
                 if (run.getPath().isFaceDown(run, node)) {
-                    yield new MapNode(index, node.getType().name(), state, true, null, null, null, null, null, life, elite, boss,
+                    yield new MapNode(index, node.getType().name(), state, true, null, null, null, WebRogueDecisions.AVATARS - 1, null, null, life, elite, boss,
                             plane.getWrathfulCount(), plane.getCursedCount(), plane.getGoldReward(), plane.getEchoReward(), enter);
                 }
                 final PaperCard card = CodexHelper.getPlaneCard(planebound);
-                yield new MapNode(index, node.getType().name(), state, false, planebound.planeboundName(), planebound.planeName(), planeboundArt(planebound),
+                yield new MapNode(index, node.getType().name(), state, false, planebound.planeboundName(), planebound.planeName(), planeboundArt(planebound), planebound.avatarIndex(),
                         card == null ? null : card.getImageKey(false), card == null ? null : CardCatalog.oracle(card.getRules()),
                         life, elite, boss, plane.getWrathfulCount(), plane.getCursedCount(), plane.getGoldReward(), plane.getEchoReward(), enter);
             }
-            case SANCTUM, BAZAAR, EVENT, CHEST -> new MapNode(index, node.getType().name(), state, false, sideName(node.getType()), null, null, null,
+            case SANCTUM, BAZAAR, EVENT, CHEST -> new MapNode(index, node.getType().name(), state, false, sideName(node.getType()), null, null, null, null,
                     node.getType().sideTooltip(), 0, false, false, 0, 0, 0, 0, enter);
         };
     }

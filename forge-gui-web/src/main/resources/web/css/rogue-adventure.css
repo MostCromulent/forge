@@ -145,7 +145,9 @@
 .kit .rg-n.hid { background: url("../adventure?s=portals&r=16,16,16,16") center 40% / 48px 48px no-repeat, #e7dcc0; background-clip: padding-box; }
 .kit .rg-n.hid .q { display: none; }
 .kit .rg-n.hid .nm b { display: none; }
-.kit .rg-n:not(.side) .ok { top: -10px; left: -10px; right: auto; }
+/* The walked check sits top left on every node, clear of a plane's marks at the top right */
+.kit .rg-n:not(.side) .ok { top: -13px; left: -13px; right: auto; }
+.kit .rg-n.side .ok { left: -5px; right: auto; }
 .kit .rg-n.open:not(.side), .kit .rg-n.sel:not(.side) { border-width: 6px 5px 7px; border-image: url("../adventure?s=skin&r=75,165,32,16") 6 5 7 / 6px 5px 7px repeat; }
 .kit .rg-n.open:not(.side) { box-shadow: 0 0 14px 3px rgba(255, 215, 94, .55), 0 6px 10px -4px rgba(42, 29, 16, .45); }
 .kit .rg-n.sel:not(.side) { box-shadow: 0 0 0 2px #fff4c2, 0 0 24px 8px rgba(255, 215, 94, .8), 0 10px 14px -6px rgba(42, 29, 16, .5); transform: translateY(-3px); z-index: 4; }

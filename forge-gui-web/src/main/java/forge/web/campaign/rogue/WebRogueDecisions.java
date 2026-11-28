@@ -73,7 +73,7 @@ final class WebRogueDecisions implements RogueDecisions {
     private static final String REROLL = "reroll";
     private static final String SKIP = "skip";
     /** Desktop's avatar tiles end at index 125, the question mark. */
-    private static final int AVATARS = 126;
+    static final int AVATARS = 126;
 
     private final RogueGame game;
     private int ids;
