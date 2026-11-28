@@ -52,7 +52,7 @@ export function HistoryPage({ page, reset, deck }: { page: RogueHistoryPage | nu
           <div class="rg-head">
             <h2>{t('lblRogueRunHistory')}</h2>
             <span class="sp" />
-            <button disabled={!runs.length} onClick={reset}>{t('lblRogueResetHistory')}</button>
+            <button class="link" disabled={!runs.length} onClick={reset}>{t('lblRogueResetHistory')}</button>
           </div>
         )}
         {page && (runs.length ? <div class="rg-hist">{runs.map(r => <Run key={r.id} run={r} deck={deck} />)}</div>

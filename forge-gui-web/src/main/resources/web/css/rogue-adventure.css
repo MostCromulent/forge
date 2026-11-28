@@ -289,7 +289,6 @@ html.kit:not([data-form="portrait"]) .rg-scene > .in:not(.tip) { padding-right: 
 .kit .rg-steps i { box-shadow: 0 0 0 1px rgba(42, 29, 16, .6); }
 .kit .rg-steps i.s { background: radial-gradient(circle at 45% 40%, #f8f2e3, #e7dcc0 72%); color: var(--kit-ink); box-shadow: 0 0 0 1px var(--kit-ink); }
 .kit .rg-steps i.end-at { box-shadow: 0 0 0 2px var(--kit-ink), 0 0 0 4px #c99a2e; }
-.kit .rg-out:not(.win) { background: rgba(255, 250, 236, .6); color: var(--kit-ink); border-color: rgba(42, 29, 16, .5); }
 /* Deck page: the basics' steppers are small stone keys */
 .kit .rg-basics .n button { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 4px 4px 7px; border-image: url("../adventure?s=skin&r=109,165,14,16") 4 4 7 fill / 4px 4px 7px repeat; color: var(--kit-pale); text-shadow: none; min-height: 0; }
 .kit .rg-basics .n button:disabled { image-rendering: pixelated; background: none; border-style: solid; border-radius: 0; box-shadow: none; border-width: 3px 3px 6px; border-image: url("../adventure?s=skin&r=1,1,14,16") 3 3 6 fill / 3px 3px 6px repeat; color: #9a9a9a; }
@@ -336,8 +335,8 @@ html.kit[data-form="portrait"] .rg-list { image-rendering: pixelated; background
 .kit { --kit-dark: #15110d; --kit-tile: rgba(0, 0, 0, .3); --kit-line: rgba(241, 231, 207, .16); --kit-goldline: rgba(255, 215, 94, .32); --kit-ring: #c99a2e; --kit-soft: #d9cfb8; }
 
 /* R1, R2. Dark panel: the stage itself, with a 1px gold line. Cards and art sit on it; text is pale. */
-.kit :is(.rgl-run, .rgl-new, .rg-run, .rg-basics) { background: var(--kit-dark); border: 1px solid var(--kit-goldline); border-image: none; border-radius: 0; box-shadow: none; color: var(--kit-pale); }
-.kit .rgl-run h1, .kit .rgl-new b, .kit .rg-run .t > b { color: var(--kit-gold); }
+.kit :is(.rgl-run, .rgl-new, .rg-basics) { background: var(--kit-dark); border: 1px solid var(--kit-goldline); border-image: none; border-radius: 0; box-shadow: none; color: var(--kit-pale); }
+.kit .rgl-run h1, .kit .rgl-new b { color: var(--kit-gold); }
 
 /* R4. Dark tile: a choice not yet taken, a locked or an unknown thing. A 1px line on the shell; selected takes the gold ring. */
 .kit :is(.rg-mod, .rg-traits .seen .rg-tcard) { background: var(--kit-tile); border: 1px solid var(--kit-line); border-image: none; border-radius: 0; box-shadow: none; filter: none; color: var(--kit-pale); }
@@ -462,10 +461,6 @@ html.kit:not([data-form="portrait"]) .rg-face .pic.icon { width: 96px; height: 9
 .kit .rg-work.on:not([aria-pressed="true"]) { box-shadow: none; }
 
 /* History: dark rows; the outcome is a sprite and a word; View Deck a stone key on dark */
-.kit .rg-run :is(.tn, .t > span, .end) { color: #cdbfa3; }
-.kit .rg-run.lost .t > b { color: var(--kit-pale); }
-.kit .rg-out { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; gap: 6px; color: var(--kit-pale) !important; font: 700 12px/1 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; display: inline-flex; align-items: center; }
-.kit .rg-out.win { color: var(--kit-gold) !important; }
 .kit .rg-steps { align-items: center; gap: 8px !important; }
 .kit .rg-steps i.s { width: 26px; height: 26px; background: radial-gradient(circle at 45% 40%, #f8f2e3, #e7dcc0 72%); border: 0; box-shadow: 0 0 0 1px var(--kit-ink), 0 0 0 3px var(--wash, #8a7556), 0 0 0 4px var(--kit-ink); display: inline-grid; place-items: center; overflow: hidden; image-rendering: pixelated; border-radius: 50%; }
 .kit .rg-steps i.s img.ks { width: 16px !important; height: 16px !important; }
@@ -666,3 +661,19 @@ html.kit[data-form="portrait"] .camp-tabs > .camp-tab:not([aria-current]) { marg
 html.kit .camp-bar > .camp-id { display: none !important; }
 /* A decision covers the map and its commander bar, so the top bar shows the stats again */
 html.kit .camp-shell:has(.kit-cmd):has(.rg-scene) .camp-purse .camp-coin { display: inline-flex !important; }
+
+/* History: each run a paper tile over the painting, its commander's art at the left, a lost or abandoned run greyed, the outcome a pill */
+.kit .rg-hpage > .rg-haze { --dim: .72; }
+html.kit .rg-hpage .rg-head > button.link { height: auto; padding: 0; border: 0; border-image: none; background: none; box-shadow: none; color: #cdbfa3; text-decoration: underline; text-underline-offset: 3px; }
+.kit .rg-hist { gap: 14px; }
+.kit .rg-run { image-rendering: pixelated; border-style: solid; border-width: 13px 16px 11px 17px; border-radius: 0; box-shadow: none; background: none; padding: 0 6px 0 0;
+  border-image: url("../adventure?s=skin&r=1,109,48,48") 13 16 11 17 fill / 13px 16px 11px 17px repeat;
+  grid-template-columns: 96px minmax(0, 1.3fr) minmax(0, 1fr) auto; --text: var(--kit-ink); --muted: var(--kit-ink2); color: var(--kit-ink); }
+.kit .rg-run .a { min-height: 92px; margin: 4px 0 4px 4px; box-shadow: 0 0 0 2px var(--kit-ink); image-rendering: auto; }
+.kit .rg-run.lost { filter: grayscale(.55); }
+.kit .rg-run .t > b { color: #6b3f0b; }
+.kit .rg-run :is(.t > span, .tn, .end) { color: var(--kit-ink2); }
+.kit .rg-out { padding: 3px 9px; border: 0; border-radius: 999px; background: var(--kit-ink); color: var(--kit-pale); }
+.kit .rg-out.win { background: linear-gradient(#f2c344, #c9962a); color: var(--kit-ink); }
+html.kit[data-form="portrait"] .rg-run { grid-template-columns: 62px minmax(0, 1fr); padding: 0 4px 4px 0; }
+html.kit[data-form="portrait"] .rg-run .a { align-self: start; min-height: 0; height: 62px; }
